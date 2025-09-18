@@ -1,0 +1,127 @@
+id,name,category,description,price
+1,Paneer Pakoda,Snacks VEG,Fried cottage cheese fritters (10 Pcs),120
+2,Pea Nut Masala,Snacks VEG,Spiced peanuts,80
+3,Finger Chips,Snacks VEG,French fries,100
+4,Masala Papad,Snacks VEG,Spiced crispy lentil wafer,50
+5,Plain Papad,Snacks VEG,Plain crispy lentil wafer,20
+6,Veg Pakoda,Snacks VEG,Mixed vegetable fritters (10 pcs),100
+7,Chilli Paneer,Snacks VEG,Spicy cottage cheese preparation,230
+8,Paneer Manchurian,Snacks VEG,Indo-Chinese cottage cheese,260
+9,Paneer Finger Chips,Snacks VEG,Cottage cheese fingers,240
+10,Hara Bhara,Snacks VEG,Green vegetable cutlets,120
+11,Cheese Corn Roll,Snacks VEG,Cheese and corn rolls,200
+12,Mushroom Chilli,Snacks VEG,Spicy mushroom preparation,180
+13,Veg Crispy,Snacks VEG,Crispy fried vegetables,180
+14,Crispy Paneer,Snacks VEG,Crispy fried cottage cheese,190
+15,Veg Manchurian Dry,Snacks VEG,Dry Indo-Chinese vegetables,160
+16,Veg Manchurian Gravy,Snacks VEG,Indo-Chinese vegetables in gravy,170
+17,Veg Spring Roll,Snacks VEG,Vegetable filled rolls,150
+18,Veg Cutlet,Snacks VEG,Vegetable patties,180
+19,Honey Chilli Potato,Snacks VEG,Sweet and spicy potatoes,200
+20,Chilli Potato,Snacks VEG,Spicy potato preparation,170
+21,Honey Chilli Corny Flower,Snacks VEG,Sweet spicy cauliflower,200
+22,Aaloo Chana Chat,Snacks VEG,Potato and chickpea snack,100
+23,Green Salad,Snacks VEG,Fresh vegetable salad,60
+24,Veg Raita,Snacks VEG,Vegetable yogurt side dish,80
+25,Bundi Raita,Snacks VEG,Yogurt with fried gram flour drops,60
+26,Chilli Gravy Momo,Snacks VEG,Dumplings in spicy sauce,200
+27,Fish Pakoda,Snacks NON-VEG,Fish fritters (10 Pcs),250
+28,Chicken Pakoda,Snacks NON-VEG,Chicken fritters (12 Pcs),250
+29,Chilli Chicken,Snacks NON-VEG,Spicy chicken preparation,250
+30,Chicken Manchurian,Snacks NON-VEG,Indo-Chinese style chicken (Bone Less),280
+31,Garlic Chicken,Snacks NON-VEG,Garlic flavored chicken (Bone Less Dry),280
+32,Chilly Chicken With Honey,Snacks NON-VEG,Sweet and spicy chicken,270
+33,Crispy Chicken,Snacks NON-VEG,Crispy fried chicken (Bone Less),280
+34,Chicken Lolypop,Snacks NON-VEG,Chicken winglets,250
+35,Paneer Tikka,Tandoori VEG,Grilled cottage cheese tikka,230
+36,Paneer Malai Tikka,Tandoori VEG,Creamy marinated cottage cheese tikka,250
+37,Tandoori Aloo,Tandoori VEG,Tandoor-roasted potatoes,140
+38,Soya Chap,Tandoori VEG,Grilled soya protein,180
+39,Mushroom Tikka,Tandoori VEG,Tandoor-grilled mushrooms,200
+40,Paneer Hariyali Tikka,Tandoori VEG,Green herbs marinated cottage cheese,260
+41,Paneer Aachari Tikka,Tandoori VEG,Pickle-spiced cottage cheese tikka,240
+42,Paneer Kali Mirch,Tandoori VEG,Black pepper seasoned cottage cheese,220
+43,Tandoori Chicken,Tandoori NON-VEG,Classic tandoori chicken,250
+44,Chicken Malai Tikka,Tandoori NON-VEG,Creamy marinated chicken tikka (8 pcs),280
+45,Chicken Tikka,Tandoori NON-VEG,Classic chicken tikka (8 pcs),250
+46,Achari Chicken,Tandoori NON-VEG,Pickle-spiced chicken (Bone Less),240
+47,Chicken Hariyali Tikka,Tandoori NON-VEG,Green herb marinated chicken (Bone Less),260
+48,Chicken Masala(Half),Curry NON-VEG,Spiced chicken curry,150
+49,Chicken Masala(Full),Curry NON-VEG,Spiced chicken curry,280
+50,Chicken Tikka Masala (Bone Less) (Half),Curry NON-VEG,Tandoori chicken in curry ,200
+51,Chicken Tikka Masala (Bone Less) (Full),Curry NON-VEG,Tandoori chicken in curry ,350
+52,Pahadi Chicken (Full),Curry NON-VEG,Mountain-style chicken curry,350
+53,Pahadi Chicken (Half),Curry NON-VEG,Mountain-style chicken curry,200
+54,Lemon Chicken (Half),Curry NON-VEG,Citrus flavored chicken (Bone Less),220
+55,Lemon Chicken (Full),Curry NON-VEG,Citrus flavored chicken (Bone Less),270
+56,Chicken Curry (Half),Curry NON-VEG,Traditional chicken curry,200
+57,Chicken Curry (Full),Curry NON-VEG,Traditional chicken curry,350
+58,Butter Chicken (Bone Less) (Half),Curry NON-VEG,Creamy tomato chicken curry (Bone Less),220
+59,Butter Chicken (Bone Less) (Full),Curry NON-VEG,Creamy tomato chicken curry (Bone Less),400
+60,Butter Chicken With Bone (Half),Curry NON-VEG,Creamy tomato chicken curry with bone,200
+61,Butter Chicken With Bone (Full),Curry NON-VEG,Creamy tomato chicken curry with bone,360
+62,Chicken Handi (FUll),Curry NON-VEG,Special pot-cooked chicken,320
+63,Chicken Handi (Half),Curry NON-VEG,Special pot-cooked chicken,180
+64,Kadahi Chicken (Full) ,Curry NON-VEG,Wok-style chicken curry,260
+65,Chicken Keema (FUll),Curry NON-VEG,Minced chicken curry,330
+66,Chicken Keema (Half),Curry NON-VEG,Minced chicken curry,180
+67,Chicken Afgani (Full),Curry NON-VEG,Afghan-style chicken curry,360
+68,Chicken Afgani (Half),Curry NON-VEG,Afghan-style chicken curry,200
+69,Chicken 65 (Bone Less) (Full) ,Curry NON-VEG,Spicy fried chicken ,300
+70,Chicken 65 (Bone Less) (Half),Curry NON-VEG,Spicy fried chicken ,170
+71,Egg Curry Masala,Curry NON-VEG,Spiced egg curry,170
+72,Chicken Hari Mirch (FUll),Curry NON-VEG,Green chili chicken,350
+73,Chicken Hari Mirch (Half),Curry NON-VEG,Green chili chicken,200
+74,Rahra Chicken (Full),Curry NON-VEG,Special chicken preparation,350
+75,Rahra Chicken (Half),Curry NON-VEG,Special chicken preparation,200
+76,Mutton Masala (Full),Curry NON-VEG,Spiced mutton curry,450
+77,Mutton Masala (Half),Curry NON-VEG,Spiced mutton curry,250
+78,Mutton Curry (Full),Curry NON-VEG,Traditional mutton curry,400
+79,Veg Biryani,Biryani,Vegetable biryani,160
+80,Egg Biryani,Biryani,Egg biryani,180
+81,Chicken Biryani,Biryani,Classic chicken biryani,300
+82,Chicken Dum Biryani,Biryani,Slow-cooked chicken biryani,270
+83,Tandoori Plain Roti,Roti Naan,Clay oven baked flatbread,15
+84,Tawa Roti,Roti Naan,Griddle-cooked flatbread,12
+85,Tawa Butter Roti,Roti Naan,Buttered griddle bread,15
+86,Tandoori Butter Roti,Roti Naan,Buttered tandoor bread,20
+87,Plain Naan,Roti Naan,Leavened flatbread,30
+88,Butter Naan,Roti Naan,Buttered leavened bread,40
+89,Garlic Naan,Roti Naan,Garlic flavored naan,50
+90,Cheese Chilli Garlic Naan,Roti Naan,Cheese and garlic naan,90
+91,Kulcha,Roti Naan,Refined flour flatbread,40
+92,Stuff Kulcha,Roti Naan,Stuffed refined flour bread,60
+93,Cheese Naan,Roti Naan,Cheese-filled naan,50
+94,Paneer Masala,Paneer Main Course,Classic cottage cheese curry,200
+95,Paneer Butter Masala,Paneer Main Course,Butter-based cottage cheese curry,240
+96,Paneer Tikka Masala,Paneer Main Course,Grilled cottage cheese curry,250
+97,Paneer Zingro Masala,Paneer Main Course,Special spiced paneer curry,220
+98,Kadai Paneer,Paneer Main Course,Wok-style cottage cheese,200
+99,Shahi Paneer,Paneer Main Course,Royal cottage cheese curry,250
+100,Paneer Laziz,Paneer Main Course,Rich cottage cheese preparation,220
+101,Kaju Paneer Masala,Paneer Main Course,Cashew and cottage cheese curry,260
+102,Mutter Paneer,Paneer Main Course,Peas and cottage cheese curry,230
+103,Paneer Bhurji,Paneer Main Course,Scrambled cottage cheese,200
+104,Paneer Do Pyaza,Paneer Main Course,Onion-rich cottage cheese curry,200
+105,Chicken Noodles,Noodles,Chicken hakka noodles,150
+106,Egg Noodles,Noodles,Egg hakka noodles,150
+107,Veg Chowmein,Noodles,Vegetable chow mein,120
+108,Shezwan Hakka Noodles,Noodles,Spicy vegetable noodles,130
+109,Shezwan Chicken Noodles,Noodles,Spicy chicken noodles,170
+110,Momo,Noodles,Vegetable dumplings (10 pcs),120
+111,Chicken Momo,Noodles,Chicken dumplings (10 pcs),150
+112,Fried Momo,Noodles,Fried dumplings (10 pcs),150
+120,Steam Rice,Rice VEG,Plain steamed rice,70
+121,Jeera Rice,Rice VEG,Cumin flavored rice,80
+122,Peas Pulao,Rice VEG,Green peas rice,90
+123,Veg Pulao,Rice VEG,Mixed vegetable rice,110
+124,Paneer Pulao,Rice VEG,Cottage cheese rice,140
+125,Cheese Pulao,Rice VEG,Cheese flavored rice,150
+126,Veg Fried Rice,Rice VEG,Chinese style vegetable rice,130
+127,Veg Sehezwine Fried Rice,Rice VEG,Spicy vegetable fried rice,140
+128,Chicken Fried Rice,Rice NON-VEG,Chinese style chicken rice,180
+129,Egg Fried Rice,Rice NON-VEG,Chinese style egg rice,150
+130,Jeeva Special Veg,Main Course VEG,Restaurant special vegetable dish,200
+131,Sabji ka Khajana,Main Course VEG,Mixed vegetable preparation,140
+
+

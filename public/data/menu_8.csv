@@ -1,0 +1,55 @@
+id,name,category,description,price,image
+1,Masala Dosa,South Indian,Crispy rice crepe with spiced potato filling,85,/images/masala-dosa.jpg
+2,Plain Dosa,South Indian,Traditional rice and lentil crepe,65,/images/plain-dosa.jpg
+3,Rava Dosa,South Indian,Semolina crepe with herbs,75,/images/rava-dosa.jpg
+4,Cheese Dosa,South Indian,Dosa filled with cheese,95,/images/cheese-dosa.jpg
+5,Paneer Dosa,South Indian,Dosa with spiced cottage cheese,110,/images/paneer-dosa.jpg
+6,Mysore Dosa,South Indian,Spicy red chutney dosa,90,/images/mysore-dosa.jpg
+7,Idli Sambar,South Indian,Steamed rice cakes with lentil curry,60,/images/idli-sambar.jpg
+8,Medu Vada,South Indian,Fried lentil donuts,70,/images/medu-vada.jpg
+9,Sambar Vada,South Indian,Lentil donuts in sambar,80,/images/sambar-vada.jpg
+10,Uttapam,South Indian,Thick pancake with vegetables,85,/images/uttapam.jpg
+11,Rava Uttapam,South Indian,Semolina pancake with vegetables,90,/images/rava-uttapam.jpg
+12,Rava Idli,South Indian,Steamed semolina cakes,65,/images/rava-idli.jpg
+13,Coconut Rice,South Indian,Rice with fresh coconut,80,/images/coconut-rice.jpg
+14,Lemon Rice,South Indian,Tangy lemon flavored rice,75,/images/lemon-rice.jpg
+15,Curd Rice,South Indian,Rice with yogurt and tempering,70,/images/curd-rice.jpg
+16,Rasam Rice,South Indian,Rice with spicy tomato rasam,85,/images/rasam-rice.jpg
+17,South Indian Thali,South Indian,Complete South Indian meal,220,/images/south-indian-thali.jpg
+18,Mini Thali,South Indian,Smaller portion traditional meal,150,/images/mini-thali.jpg
+19,Aloo Gobi,North Indian,Cauliflower and potato curry,140,/images/aloo-gobi.jpg
+20,Palak Paneer,North Indian,Cottage cheese in spinach gravy,180,/images/palak-paneer.jpg
+21,Paneer Butter Masala,North Indian,Cottage cheese in rich tomato gravy,200,/images/paneer-butter-masala.jpg
+22,Dal Tadka,North Indian,Tempered yellow lentils,120,/images/dal-tadka.jpg
+23,Dal Makhani,North Indian,Creamy black lentils,150,/images/dal-makhani.jpg
+24,Chana Masala,North Indian,Spiced chickpea curry,130,/images/chana-masala.jpg
+25,Rajma,North Indian,Kidney bean curry,140,/images/rajma.jpg
+26,Bhindi Masala,North Indian,Spiced okra preparation,130,/images/bhindi-masala.jpg
+27,Mix Vegetable,North Indian,Assorted vegetable curry,120,/images/mix-vegetable.jpg
+28,Jeera Rice,Rice,Cumin flavored rice,90,/images/jeera-rice.jpg
+29,Plain Rice,Rice,Steamed white rice,70,/images/plain-rice.jpg
+30,Vegetable Biryani,Rice,Fragrant rice with vegetables,180,/images/veg-biryani.jpg
+31,Paneer Biryani,Rice,Aromatic rice with cottage cheese,220,/images/paneer-biryani.jpg
+32,Roti,Breads,Plain wheat flatbread,15,/images/roti.jpg
+33,Butter Roti,Breads,Wheat flatbread with butter,20,/images/butter-roti.jpg
+34,Naan,Breads,Leavened bread from tandoor,35,/images/naan.jpg
+35,Butter Naan,Breads,Tandoor bread with butter,45,/images/butter-naan.jpg
+36,Garlic Naan,Breads,Naan with garlic topping,55,/images/garlic-naan.jpg
+37,Laccha Paratha,Breads,Multi-layered flaky bread,30,/images/laccha-paratha.jpg
+38,Aloo Paratha,Breads,Potato stuffed bread,55,/images/aloo-paratha.jpg
+39,Paneer Paratha,Breads,Cottage cheese stuffed bread,65,/images/paneer-paratha.jpg
+40,Raita,Sides,Yogurt with cucumber and spices,40,/images/raita.jpg
+41,Papad,Sides,Crispy lentil wafer,20,/images/papad.jpg
+42,Pickle,Sides,Spicy Indian pickle,15,/images/pickle.jpg
+43,Green Salad,Sides,Fresh vegetable salad,50,/images/green-salad.jpg
+44,Lassi,Beverages,Traditional yogurt drink,60,/images/lassi.jpg
+45,Mango Lassi,Beverages,Mango flavored yogurt drink,75,/images/mango-lassi.jpg
+46,Buttermilk,Beverages,Spiced yogurt drink,45,/images/buttermilk.jpg
+47,Fresh Lime Water,Beverages,Fresh lime with water,35,/images/lime-water.jpg
+48,Masala Chai,Beverages,Traditional spiced tea,25,/images/masala-chai.jpg
+49,Filter Coffee,Beverages,South Indian filter coffee,30,/images/filter-coffee.jpg
+50,Gulab Jamun,Desserts,Sweet milk dumplings in syrup,60,/images/gulab-jamun.jpg
+51,Rasgulla,Desserts,Spongy cottage cheese balls in syrup,55,/images/rasgulla.jpg
+52,Kheer,Desserts,Rice pudding with milk,65,/images/kheer.jpg
+53,Kulfi,Desserts,Traditional Indian ice cream,45,/images/kulfi.jpg
+54,Payasam,Desserts,South Indian sweet pudding,70,/images/payasam.jpg

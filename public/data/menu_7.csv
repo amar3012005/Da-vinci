@@ -1,0 +1,46 @@
+id,name,category,description,price,image
+1,Fresh Fruit Cake,Cakes,Seasonal fresh fruit topped sponge cake,350,/images/fresh-fruit-cake.jpg
+2,Chocolate Cake,Cakes,Rich chocolate sponge cake with chocolate frosting,320,/images/chocolate-cake.jpg
+3,Vanilla Cake,Cakes,Classic vanilla sponge cake,280,/images/vanilla-cake.jpg
+4,Black Forest Cake,Cakes,Chocolate cake with cherries and cream,380,/images/black-forest-cake.jpg
+5,Strawberry Cake,Cakes,Vanilla cake with fresh strawberries,360,/images/strawberry-cake.jpg
+6,Pineapple Cake,Cakes,Pineapple flavored cake with fruit chunks,340,/images/pineapple-cake.jpg
+7,Red Velvet Cake,Cakes,Classic red velvet with cream cheese frosting,400,/images/red-velvet-cake.jpg
+8,Butterscotch Cake,Cakes,Butterscotch flavored cake with caramel,350,/images/butterscotch-cake.jpg
+9,Croissant,Pastries,Buttery flaky French pastry,65,/images/croissant.jpg
+10,Danish Pastry,Pastries,Sweet Danish pastry with fruit filling,75,/images/danish-pastry.jpg
+11,Chocolate Pastry,Pastries,Individual chocolate pastry,45,/images/chocolate-pastry.jpg
+12,Vanilla Pastry,Pastries,Individual vanilla pastry,40,/images/vanilla-pastry.jpg
+13,Fruit Pastry,Pastries,Mixed fruit topped pastry,50,/images/fruit-pastry.jpg
+14,Eclair,Pastries,Cream filled choux pastry,55,/images/eclair.jpg
+15,Donut,Pastries,Glazed ring donut,35,/images/donut.jpg
+16,Chocolate Donut,Pastries,Chocolate glazed donut,40,/images/chocolate-donut.jpg
+17,Apple Pie,Pies,Traditional apple pie slice,85,/images/apple-pie.jpg
+18,Blueberry Pie,Pies,Fresh blueberry pie slice,95,/images/blueberry-pie.jpg
+19,Chocolate Pie,Pies,Rich chocolate pie slice,90,/images/chocolate-pie.jpg
+20,Fresh Fruit Salad,Fruits,Seasonal mixed fruit salad,120,/images/fruit-salad.jpg
+21,Strawberry Bowl,Fruits,Fresh strawberries with cream,150,/images/strawberry-bowl.jpg
+22,Banana Split,Fruits,Banana with ice cream and toppings,180,/images/banana-split.jpg
+23,Apple Slices,Fruits,Fresh apple slices with honey,80,/images/apple-slices.jpg
+24,Orange Juice,Fruit Juices,Fresh orange juice,60,/images/orange-juice.jpg
+25,Apple Juice,Fruit Juices,Fresh apple juice,60,/images/apple-juice.jpg
+26,Mixed Fruit Juice,Fruit Juices,Blend of seasonal fruits,75,/images/mixed-fruit-juice.jpg
+27,Watermelon Juice,Fruit Juices,Fresh watermelon juice,55,/images/watermelon-juice.jpg
+28,Pineapple Juice,Fruit Juices,Fresh pineapple juice,65,/images/pineapple-juice.jpg
+29,Mango Shake,Shakes,Thick mango milkshake,85,/images/mango-shake.jpg
+30,Chocolate Shake,Shakes,Rich chocolate milkshake,80,/images/chocolate-shake.jpg
+31,Vanilla Shake,Shakes,Classic vanilla milkshake,75,/images/vanilla-shake.jpg
+32,Strawberry Shake,Shakes,Fresh strawberry milkshake,85,/images/strawberry-shake.jpg
+33,Banana Shake,Shakes,Creamy banana milkshake,75,/images/banana-shake.jpg
+34,Chocolate Muffin,Muffins,Rich chocolate chip muffin,55,/images/chocolate-muffin.jpg
+35,Blueberry Muffin,Muffins,Fresh blueberry muffin,60,/images/blueberry-muffin.jpg
+36,Banana Muffin,Muffins,Moist banana muffin,50,/images/banana-muffin.jpg
+37,Vanilla Muffin,Muffins,Classic vanilla muffin,45,/images/vanilla-muffin.jpg
+38,Cookies,Bakery Items,Assorted cookies pack,40,/images/cookies.jpg
+39,Bread Loaf,Bakery Items,Fresh baked bread loaf,35,/images/bread-loaf.jpg
+40,Garlic Bread,Bakery Items,Herb garlic bread,65,/images/garlic-bread.jpg
+41,Sandwich Bread,Bakery Items,Sliced sandwich bread,30,/images/sandwich-bread.jpg
+42,Burger Buns,Bakery Items,Fresh burger buns pair,25,/images/burger-buns.jpg
+43,Hot Cross Buns,Bakery Items,Traditional spiced buns,45,/images/hot-cross-buns.jpg
+44,Cupcakes,Bakery Items,Assorted mini cupcakes set,120,/images/cupcakes.jpg
+45,Birthday Cake,Special Cakes,Custom birthday cake per kg,600,/images/birthday-cake.jpg

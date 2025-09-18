@@ -1,0 +1,79 @@
+id,name,category,description,price,image
+
+38,Paneer Maratha,Indian Main Course Veg,Cottage cheese in Maharashtrian style gravy,200,/images/paneer-maratha.jpg
+39,Paneer Punjabi,Indian Main Course Veg,Cottage cheese in traditional Punjabi gravy,220,/images/paneer-punjabi.jpg
+40,Paneer Lababdar,Indian Main Course Veg,Cottage cheese in rich creamy gravy,220,/images/paneer-lababdar.jpg
+41,Paneer Do Pyaza,Indian Main Course Veg,Cottage cheese with double onion gravy,180,/images/paneer-do-pyaza.jpg
+42,Paneer Masala,Indian Main Course Veg,Cottage cheese in aromatic spiced gravy,180,/images/paneer-masala.jpg
+43,Paneer Pasanda,Indian Main Course Veg,Stuffed cottage cheese in rich creamy gravy,250,/images/paneer-pasanda.jpg
+44,Shahi Paneer,Indian Main Course Veg,Cottage cheese in royal creamy gravy,250,/images/shahi-paneer.jpg
+45,Malai Kofta,Indian Main Course Veg,Cottage cheese dumplings in rich creamy gravy,250,/images/malai-kofta.jpg
+46,Palak Paneer,Indian Main Course Veg,Cottage cheese in spinach gravy,200,/images/palak-paneer.jpg
+47,Corn Palak,Indian Main Course Veg,Corn kernels in spinach gravy,200,/images/corn-palak.jpg
+48,Lahsuni Palak,Indian Main Course Veg,Garlicky spinach preparation,220,/images/lahsuni-palak.jpg
+49,Aloo Palak,Indian Main Course Veg,Potatoes in spinach gravy,180,/images/aloo-palak.jpg
+50,Kadahi Mashroom,Indian Main Course Veg,Mushrooms cooked in spicy kadai masala,200,/images/kadahi-mushroom.jpg
+51,Mashroom Masala,Indian Main Course Veg,Mushrooms in aromatic spiced gravy,180,/images/mushroom-masala.jpg
+52,Dum Aloo Punjabi,Indian Main Course Veg,Baby potatoes in rich Punjabi gravy,200,/images/dum-aloo-punjabi.jpg
+53,Shaam Savera,Indian Main Course Veg,Spinach koftas stuffed with cottage cheese,250,/images/shaam-savera.jpg
+54,Veg. Khaasiyat,Indian Main Course Veg,Special mixed vegetable preparation,180,/images/veg-khaasiyat.jpg
+55,Veg. Chilly Milli,Indian Main Course Veg,Mixed vegetables in spicy gravy,200,/images/veg-chilly-milli.jpg
+56,Mix Veg.,Indian Main Course Veg,Assorted vegetables in curry,160,/images/mix-veg.jpg
+57,Dal Makhani,Indian Main Course Veg,Creamy black lentils,160,/images/dal-makhani.jpg
+58,Dal Tadka,Indian Main Course Veg,Yellow lentils with tempered spices,160,/images/dal-tadka.jpg
+36,Kadahi Paneer,Indian Main Course Veg,Cottage cheese cooked in spicy kadai masala,200,/images/kadahi-paneer.jpg
+37,Paneer Butter Masala,Indian Main Course Veg,Cottage cheese in rich tomato-butter gravy,180,/images/paneer-butter-masala.jpg
+59,Dal Fry,Indian Main Course Veg,Yellow lentils preparation,150,/images/dal-fry.jpg
+60,Channa Masala,Indian Main Course Veg,Spiced chickpea curry,150,/images/channa-masala.jpg
+61,Chicken Maharaja,Indian Main Course Non-Veg,Royal preparation of chicken in rich gravy,600,/images/chicken-maharaja.jpg
+62,Chicken Patyala,Indian Main Course Non-Veg,Chicken in rich Patiala-style gravy,500,/images/chicken-patyala.jpg
+63,Chicken Tikka Masala,Indian Main Course Non-Veg,Grilled chicken pieces in spiced tomato gravy,300,/images/chicken-tikka-masala.jpg
+64,Chicken Sukka,Indian Main Course Non-Veg,Dry preparation of chicken with aromatic spices,350,/images/chicken-sukka.jpg
+65,Chicken Maratha (Half),Indian Main Course Non-Veg,Chicken in Maharashtrian style gravy (Half portion),260,/images/chicken-maratha-half.jpg
+106,Chicken Maratha (Full),Indian Main Course Non-Veg,Chicken in Maharashtrian style gravy (Full portion),500,/images/chicken-maratha-full.jpg
+66,Chicken Hariyali (Half),Indian Main Course Non-Veg,Chicken in green herbs gravy (Half portion),260,/images/chicken-hariyali-half.jpg
+107,Chicken Hariyali (Full),Indian Main Course Non-Veg,Chicken in green herbs gravy (Full portion),500,/images/chicken-hariyali-full.jpg
+67,Chicken Do Pyaza (Half),Indian Main Course Non-Veg,Chicken with double onion gravy (Half portion),260,/images/chicken-do-pyaza-half.jpg
+108,Chicken Do Pyaza (Full),Indian Main Course Non-Veg,Chicken with double onion gravy (Full portion),500,/images/chicken-do-pyaza-full.jpg
+68,Chicken Angara Masala (Half),Indian Main Course Non-Veg,Smoky flavored chicken in spicy gravy (Half portion),300,/images/chicken-angara-masala-half.jpg
+109,Chicken Angara Masala (Full),Indian Main Course Non-Veg,Smoky flavored chicken in spicy gravy (Full portion),580,/images/chicken-angara-masala-full.jpg
+69,Rara Chicken (Half),Indian Main Course Non-Veg,Chicken in minced chicken gravy (Half portion),300,/images/rara-chicken-half.jpg
+110,Rara Chicken (Full),Indian Main Course Non-Veg,Chicken in minced chicken gravy (Full portion),580,/images/rara-chicken-full.jpg
+70,Kadhai Chicken (Half),Indian Main Course Non-Veg,Chicken cooked in spicy kadai masala (Half portion),260,/images/kadhai-chicken-half.jpg
+111,Kadhai Chicken (Full),Indian Main Course Non-Veg,Chicken cooked in spicy kadai masala (Full portion),480,/images/kadhai-chicken-full.jpg
+71,Chicken Masala (Half),Indian Main Course Non-Veg,Chicken in aromatic spiced gravy (Half portion),260,/images/chicken-masala-half.jpg
+112,Chicken Masala (Full),Indian Main Course Non-Veg,Chicken in aromatic spiced gravy (Full portion),480,/images/chicken-masala-full.jpg
+72,Butter Chicken (Half),Indian Main Course Non-Veg,Chicken in rich tomato-butter gravy (Half portion),270,/images/butter-chicken-half.jpg
+113,Butter Chicken (Full),Indian Main Course Non-Veg,Chicken in rich tomato-butter gravy (Full portion),500,/images/butter-chicken-full.jpg
+17,Honey Chilly Potato,Veg. Starter Chinese,Crispy potatoes tossed in honey chili sauce,180,/images/honey-chilly-potato.jpg
+18,Paneer Chilly,Veg. Starter Chinese,Cottage cheese in spicy chili sauce,250,/images/paneer-chilly.jpg
+19,Paneer 65,Veg. Starter Chinese,Spicy Indo-Chinese style cottage cheese preparation,250,/images/paneer-65.jpg
+20,Paneer Crispy,Veg. Starter Chinese,Crispy fried cottage cheese in Indo-Chinese style,250,/images/paneer-crispy.jpg
+21,Gobhi 65,Veg. Starter Chinese,Spicy Indo-Chinese style cauliflower preparation,190,/images/gobhi-65.jpg
+22,Hara Bhara Kabab,Veg. Starter Chinese,Mixed vegetable patties with spinach and herbs,250,/images/hara-bhara-kabab.jpg
+23,Corn Tikki,Veg. Starter Chinese,Spiced corn patties,250,/images/corn-tikki.jpg
+24,Veg. Momos,Veg. Starter Chinese,Steamed vegetable dumplings,60,/images/veg-momos.jpg
+29,Chicken Hakka Noodles,Non-Veg. Rice Noodles,Stir-fried noodles with chicken in Hakka style,180,/images/chicken-hakka-noodles.jpg
+30,Chicken Sehzwan Noodles,Non-Veg. Rice Noodles,Spicy noodles with chicken in Schezwan sauce,200,/images/chicken-sehzwan-noodles.jpg
+31,Chicken Fried Rice,Non-Veg. Rice Noodles,Classic chicken fried rice,180,/images/chicken-fried-rice.jpg
+32,Chicken Sehzwan Fried Rice,Non-Veg. Rice Noodles,Spicy chicken fried rice with Schezwan sauce,200,/images/chicken-sehzwan-rice.jpg
+33,Egg. Fried Rice,Non-Veg. Rice Noodles,Classic egg fried rice,180,/images/egg-fried-rice.jpg
+34,Egg. Sehzwan Rice,Non-Veg. Rice Noodles,Spicy egg fried rice with Schezwan sauce,200,/images/egg-sehzwan-rice.jpg
+35,Egg. Hakka Noodles,Non-Veg. Rice Noodles,Stir-fried noodles with egg in Hakka style,180,/images/egg-hakka-noodles.jpg
+25,Veg. Hakka Noodles,Veg. Rice Noodles,Stir-fried noodles with vegetables in Hakka style,150,/images/veg-hakka-noodles.jpg
+26,Veg Sehzwan Noodles,Veg. Rice Noodles,Spicy noodles with vegetables in Schezwan sauce,160,/images/veg-sehzwan-noodles.jpg
+27,Veg. Fried Rice,Veg. Rice Noodles,Classic vegetable fried rice,150,/images/veg-fried-rice.jpg
+28,Veg. Sehzwan Fried Rice,Veg. Rice Noodles,Spicy fried rice with Schezwan sauce,160,/images/veg-sehzwan-fried-rice.jpg
+100,Tawa Roti (plain),Roti,Plain tawa roti,10,/images/tawa-roti.jpg
+198,Tawa Roti (butter),Roti,Tawa roti with butter,15,/images/tawa-roti-butter.jpg
+199,Tandoori Roti (plain),Roti,Tandoori roti,15,/images/tandoori-roti.jpg
+200,Tandoori Roti (butter),Roti,Tandoori roti with butter,20,/images/tandoori-roti-butter.jpg
+202,Plain Naan,Naan,Plain naan,30,/images/plain-naan.jpg
+201,Butter Naan,Naan,Naan with butter,40,/images/butter-naan.jpg
+102,Garlic Naan,Roti,Naan with garlic,60,/images/garlic-naan.jpg
+73,Plain Rice,Rice,Steamed white rice,130,/images/plain-rice.jpg
+74,Jeera Rice,Rice,Rice with cumin tempering,140,/images/jeera-rice.jpg
+75,Veg. Pulao,Rice,Mixed vegetable rice preparation,200,/images/veg-pulao.jpg
+76,Veg. Biryani,Rice,Fragrant rice with vegetables and spices,200,/images/veg-biryani.jpg
+77,Egg Biryani,Rice,Fragrant rice with egg and spices,200,/images/egg-biryani.jpg
+78,Chicken Biryani,Rice,Fragrant rice with chicken and spices,250,/images/chicken-biryani.jpg
