@@ -20,6 +20,8 @@ import {
   MessageCircle,
   Sparkles
 } from 'lucide-react';
+import { ShaderAnimation } from './ui/shader-lines';
+import { AIVoiceInput } from './ui/ai-voice-input';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -165,10 +167,10 @@ const HeroSection = () => {
           transition={{ duration: 1.5, delay: 1, ease: "easeOut" }}
         >
           <div className="text-white text-2xl md:text-3xl font-bold tracking-wider">
-            DA'VINCI
+            AGENTIC
           </div>
           <div className="text-white/70 text-lg md:text-xl font-light tracking-[0.3em]">
-            SOLUTIONS
+            PIPELINE
           </div>
         </motion.div>
       </div>
@@ -254,227 +256,155 @@ const HeroSection = () => {
   );
 };
 
-// Elegant 3D Pin Card Component
-const PinCard = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left - rect.width / 2) / rect.width;
-    const y = (e.clientY - rect.top - rect.height / 2) / rect.height;
-    setMousePosition({ x: x * 20, y: y * 20 });
-  };
-
-  return (
-    <div className="relative flex flex-col items-center space-y-8">
-      {/* Title above card */}
-      <motion.div
-        className="text-center"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <h3 className="text-3xl md:text-4xl font-light text-white/90 mb-2">
-          Meet <span className="font-medium text-white">TARA_x1</span>
-        </h3>
-        <div className="w-16 h-px bg-white/30 mx-auto"></div>
-      </motion.div>
-
-      {/* 3D Pin Container */}
-      <motion.div
-        className="relative w-80 h-[28rem] perspective-1000"
-        onMouseMove={handleMouseMove}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        style={{ perspective: '1000px' }}
-      >
-        {/* Pin at top */}
-        <motion.div
-          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 z-30"
-          animate={{
-            rotateY: mousePosition.x * 0.3,
-            rotateX: -mousePosition.y * 0.3,
-          }}
-          transition={{ type: "spring", stiffness: 150, damping: 20 }}
-        >
-          <div className="relative">
-            {/* Pin line */}
-            <div className="w-0.5 h-8 bg-white/60 mx-auto"></div>
-            {/* Pin head */}
-            <div className="w-4 h-4 bg-white/80 rounded-full absolute -top-2 left-1/2 transform -translate-x-1/2 
-                           shadow-lg border border-white/20"></div>
-          </div>
-        </motion.div>
-
-        {/* Main Card */}
-        <motion.div
-          className="relative w-full h-full"
-          animate={{
-            rotateY: mousePosition.x,
-            rotateX: -mousePosition.y,
-            scale: isHovered ? 1.02 : 1,
-          }}
-          transition={{ type: "spring", stiffness: 150, damping: 20 }}
-          style={{
-            transformStyle: 'preserve-3d',
-          }}
-        >
-          {/* Card Shadow */}
-          <motion.div
-            className="absolute inset-0 bg-black/40 rounded-3xl blur-2xl transform translate-y-6 scale-95"
-            animate={{
-              opacity: isHovered ? 0.6 : 0.4,
-              scale: isHovered ? 0.98 : 0.95,
-            }}
-          />
-
-          {/* Main Card Content */}
-          <motion.div
-            className="relative w-full h-full bg-black/90 backdrop-blur-xl border border-white/10 
-                       rounded-3xl overflow-hidden"
-            style={{ transformStyle: 'preserve-3d' }}
-          >
-            {/* Top section with TARA image */}
-            <div className="relative h-48 overflow-hidden">
-              <img 
-                src="/Tara.jpg" 
-                alt="TARA AI Agent"
-                className="w-full h-full object-cover grayscale filter brightness-110 contrast-110"
-              />
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80"></div>
-              
-              {/* Floating indicator */}
-              <motion.div
-                className="absolute top-4 right-4 w-3 h-3 bg-white/60 rounded-full"
-                animate={{
-                  opacity: [0.4, 1, 0.4],
-                  scale: [1, 1.2, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            </div>
-
-            {/* Content section */}
-            <div className="relative p-6 space-y-4">
-              {/* Title */}
-              <div>
-                <h3 className="text-xl font-medium text-white mb-1">
-                  TARA_x1
-                </h3>
-                <p className="text-white/60 text-sm">
-                  AI Conversational Agent
-                </p>
-              </div>
-
-              {/* Description */}
-              <p className="text-white/70 text-sm leading-relaxed">
-                Advanced conversational AI that delivers human-like interactions 
-                with enterprise-grade security and reliability.
-              </p>
-
-              {/* Features - only visible on hover */}
-              <motion.div
-                className="space-y-2"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ 
-                  opacity: isHovered ? 1 : 0, 
-                  height: isHovered ? 'auto' : 0 
-                }}
-                transition={{ duration: 0.3 }}
-              >
-                {['24/7 Availability', 'Multi-Language', 'Enterprise Security'].map((feature, index) => (
-                  <motion.div
-                    key={feature}
-                    className="flex items-center gap-2"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ 
-                      opacity: isHovered ? 1 : 0, 
-                      x: isHovered ? 0 : -10 
-                    }}
-                    transition={{ delay: index * 0.1, duration: 0.2 }}
-                  >
-                    <div className="w-1.5 h-1.5 bg-white/40 rounded-full"></div>
-                    <span className="text-white/50 text-xs">{feature}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/* Bottom gradient */}
-              <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/5 to-transparent"></div>
-            </div>
-
-            {/* URL indicator (like shadcn example) */}
-            <motion.div
-              className="absolute top-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-sm 
-                         border border-white/10 rounded-full"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ 
-                opacity: isHovered ? 1 : 0,
-                scale: isHovered ? 1 : 0.8 
-              }}
-              transition={{ duration: 0.2 }}
-            >
-              <span className="text-white/70 text-xs font-mono">/ai.davinci.io</span>
-            </motion.div>
-
-            {/* Hover overlay with call to action */}
-            <motion.div
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-3xl 
-                         flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: isHovered ? 1 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <motion.div
-                className="text-center p-6"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ 
-                  scale: isHovered ? 1 : 0.9, 
-                  opacity: isHovered ? 1 : 0 
-                }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-              >
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 
-                               rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-6 h-6 text-white/80" />
-                </div>
-                <h4 className="text-lg font-medium text-white mb-2">
-                  Flagship AI Agent
-                </h4>
-                <p className="text-white/60 text-sm max-w-xs">
-                  Experience next-generation conversational AI designed for enterprise excellence.
-                </p>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-};
 
 // Process/Roadmap Section
 const ProcessSection = () => {
   const { scrollY } = useScroll();
   const yTransform = useTransform(scrollY, [800, 1400], [100, -100]);
+  const [showVoicePopup, setShowVoicePopup] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const dataArrayRef = useRef(null);
+  const animationFrameRef = useRef(null);
+
+  // Audio control functions
+  const togglePlayPause = async () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsSpeaking(false);
+        stopAudioAnalysis();
+      } else {
+        // Setup audio analysis if not already done
+        if (!audioContextRef.current) {
+          await setupAudioAnalysis();
+        }
+        
+        try {
+          await audioRef.current.play();
+          setIsSpeaking(true);
+          startAudioAnalysis();
+        } catch (error) {
+          console.error('Failed to play audio:', error);
+        }
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setIsSpeaking(false);
+    stopAudioAnalysis();
+  };
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Web Audio API setup
+  const setupAudioAnalysis = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      // Create audio context
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Resume audio context if suspended
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      
+      // Create analyser
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 256;
+      analyserRef.current.smoothingTimeConstant = 0.8;
+      
+      // Create data array
+      const bufferLength = analyserRef.current.frequencyBinCount;
+      dataArrayRef.current = new Uint8Array(bufferLength);
+      
+      // Connect audio element to analyser
+      const source = audioContextRef.current.createMediaElementSource(audioRef.current);
+      source.connect(analyserRef.current);
+      analyserRef.current.connect(audioContextRef.current.destination);
+      
+      console.log('Audio analysis setup successful');
+      
+    } catch (error) {
+      console.error('Web Audio API setup failed:', error);
+    }
+  };
+
+  // Analyze audio data for visualizer
+  const analyzeAudio = () => {
+    if (!analyserRef.current || !dataArrayRef.current) return;
+
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+    
+    // Check if we're getting data
+    const hasData = dataArrayRef.current.some(value => value > 0);
+    if (hasData) {
+      console.log('Audio data received:', dataArrayRef.current.slice(0, 10));
+    }
+    
+    // Trigger visualizer update
+    const event = new CustomEvent('audioData', { 
+      detail: { data: Array.from(dataArrayRef.current) } 
+    });
+    window.dispatchEvent(event);
+    
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(analyzeAudio);
+    }
+  };
+
+  // Start audio analysis
+  const startAudioAnalysis = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    analyzeAudio();
+  };
+
+  // Stop audio analysis
+  const stopAudioAnalysis = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  };
 
   const phases = [
-    { id: "01", title: "Humanized Bi-Directional Flow", status: "completed", width: "w-full" },
-    { id: "02", title: "Past Semantic Memory", status: "completed", width: "w-full" },
-    { id: "03", title: "Multi-Indic Language Model", status: "active", width: "w-4/5" },
-    { id: "04", title: "Agentic Architecture", status: "pending", width: "w-1/2" },
-    { id: "05", title: "Development of additional styles", status: "pending", width: "w-1/3" },
-    { id: "06", title: "Components", status: "pending", width: "w-1/4" },
-    { id: "07", title: "First UX / UI", status: "pending", width: "w-1/5" },
-    { id: "08", title: "Presentation", status: "pending", width: "w-1/6" }
-  ];
+    { id: "01", title: "Real-Time Humanized Conversations", status: "completed", width: "w-full" },
+    { id: "02", title: "Context-Aware Memory Recall", status: "completed", width: "w-full" },
+    { id: "03", title: "Multilingual Indic Language Engine", status: "active", width: "w-4/5" },
+    { id: "04", title: "Autonomous Agentic Decision-Making", status: "pending", width: "w-1/2" },
+    { id: "05", title: "Enterprise Security & Compliance", status: "pending", width: "w-1/3" },
+    { id: "06", title: "Effortless Business Integrations", status: "pending", width: "w-1/4" },
+    { id: "07", title: "Adaptive User Experience", status: "pending", width: "w-1/5" },
+    { id: "08", title: "Instant Analytics & Insights", status: "pending", width: "w-1/6" }
+];
+
 
   return (
     <motion.section 
@@ -491,11 +421,23 @@ const ProcessSection = () => {
               <div className="w-px h-8 bg-white/20"></div>
             </div>
             <h2 className="text-6xl md:text-7xl font-light text-white text-center">
-              Roadmap
+              Meet TARA_x1
             </h2>
             <div className="text-white/40 font-mono text-sm">
-              Process
+              AI Agent
             </div>
+          </div>
+        </TextReveal>
+
+        {/* Subtitle */}
+        <TextReveal>
+          <div className="text-center mb-16">
+            <h3 className="text-2xl md:text-3xl font-light text-white/90 mb-4">
+              India's Flagship Conversational AI Agentic Pipeline
+            </h3>
+            <p className="text-white/70 text-lg max-w-3xl mx-auto leading-relaxed">
+            Delivering 24/7 multilingual, real-time, and human-like customer service—at a fraction of traditional costs.
+            </p>
           </div>
         </TextReveal>
 
@@ -551,7 +493,7 @@ const ProcessSection = () => {
             ))}
           </div>
 
-          {/* Right - 3D Pin Card */}
+          {/* Right - Shader Animation */}
           <motion.div 
             className="flex justify-center items-center"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -559,17 +501,180 @@ const ProcessSection = () => {
             transition={{ duration: 1.2, delay: 0.3 }}
             viewport={{ once: true }}
           >
-            <PinCard />
+            <div className="relative flex h-[650px] w-full flex-col items-center justify-center overflow-hidden rounded-xl">
+              <ShaderAnimation />
+              <span className="pointer-events-none  text-center text-7xl leading-none font-semibold tracking-tighter whitespace-pre-wrap text-white">
+                Shader Lines
+              </span>
+              
+              {/* Listen to TARA Button */}
+              <motion.button
+                className="absolute bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 
+                           bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg
+                           hover:bg-white/20 hover:border-white/40 transition-all duration-300"
+                onClick={() => setShowVoicePopup(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Listen to TARA
+              </motion.button>
+            </div>
           </motion.div>
           
         </div>
+      </div>
+
+      {/* Aesthetic Voice Demo Popup */}
+      {showVoicePopup && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowVoicePopup(false)}
+        >
+          <motion.div
+            className="relative w-full max-w-lg mx-4 bg-black/90 backdrop-blur-xl border border-white/10 rounded-3xl p-12"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              className="absolute top-6 right-6 w-8 h-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full 
+                         flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 
+                         transition-all duration-200"
+              onClick={() => setShowVoicePopup(false)}
+            >
+              ×
+            </button>
+
+            {/* Centered Voice Demo */}
+            <div className="text-center">
+              {/* Title */}
+              <h3 className="text-2xl font-light text-white mb-2">
+                TARA Voice Demo
+              </h3>
+              <p className="text-white/50 text-sm mb-12">
+                Experience TARA_x1's conversational AI
+              </p>
+
+              {/* Voice Animation */}
+              <div className="mb-8">
+                <AIVoiceInput 
+                  onStart={() => console.log('TARA voice demo started')}
+                  onStop={(duration) => console.log(`Demo duration: ${duration}s`)}
+                  demoMode={isSpeaking}
+                  demoInterval={100}
+                />
+              </div>
+
+              {/* Audio Player */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                {/* Hidden Audio Element */}
+                <audio
+                  ref={audioRef}
+                  src="/tara.mp3"
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onEnded={handleAudioEnded}
+                />
+                
+                <div className="flex items-center justify-center gap-4 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5 text-white/80" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-white font-medium text-sm">TARA_x1 Sample</h4>
+                    <p className="text-white/50 text-xs">Multilingual AI Assistant</p>
+                  </div>
+                </div>
+                
+                {/* Audio Controls */}
+                <div className="flex items-center gap-3">
+                  <motion.button 
+                    className="w-8 h-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
+                               flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200"
+                    onClick={togglePlayPause}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    {isPlaying ? (
+                      <div className="w-3 h-3 bg-white rounded-sm"></div>
+                    ) : (
+                      <Play className="w-3 h-3 ml-0.5" />
+                    )}
+                  </motion.button>
+                  <div className="flex-1 h-1 bg-white/10 rounded-full">
+                    <div 
+                      className="h-full bg-gradient-to-r from-white/60 to-white/40 rounded-full transition-all duration-300"
+                      style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-white/40 text-xs font-mono">
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </motion.section>
+  );
+};
+
+// Call to Action Section
+const CallToActionSection = () => {
+  const { scrollY } = useScroll();
+  const yTransform = useTransform(scrollY, [2000, 2800], [50, -50]);
+
+  return (
+    <motion.section 
+      className="py-32 relative overflow-hidden"
+      style={{ y: yTransform }}
+    >
+      <div className="container mx-auto px-16 relative z-10">
+        
+        <TextReveal>
+          <div className="text-center mb-16">
+            <h2 className="text-5xl md:text-6xl font-light text-white mb-8">
+              Ready to upgrade your customer care?
+            </h2>
+            <p className="text-white/70 text-xl max-w-4xl mx-auto leading-relaxed mb-12">
+              Book a demo or chat with TARA_x1 today—your customers will thank you.
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <motion.button
+                className="px-8 py-4 bg-white text-black font-medium text-lg rounded-lg
+                           hover:bg-white/90 transition-all duration-300 shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Book a Demo
+              </motion.button>
+              
+              <motion.button
+                className="px-8 py-4 border border-white/40 text-white font-medium text-lg rounded-lg
+                           hover:border-white/60 hover:bg-white/10 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Chat with TARA_x1
+              </motion.button>
+            </div>
+          </div>
+        </TextReveal>
       </div>
     </motion.section>
   );
 };
 
-// Typography Section
-const TypographySection = () => {
+// About/Founder Section
+const AboutSection = () => {
   const { scrollY } = useScroll();
   const scaleTransform = useTransform(scrollY, [1400, 2000], [0.9, 1.1]);
 
@@ -583,7 +688,7 @@ const TypographySection = () => {
         {/* Header */}
         <TextReveal>
           <div className="flex justify-between items-start mb-20">
-            {/* Left - Plus icon and Typography label */}
+            {/* Left - Plus icon and About label */}
             <div className="space-y-8">
               <motion.div 
                 className="w-12 h-12 border border-white/30 flex items-center justify-center cursor-pointer"
@@ -595,64 +700,127 @@ const TypographySection = () => {
               
               <div>
                 <div className="text-white/50 font-mono text-sm uppercase tracking-wider mb-4">
-                  Typography
+                  About
                 </div>
                 
-                {/* Team avatars */}
+                {/* Founder avatar */}
                 <div className="flex -space-x-3">
-                  {[1,2,3,4,5].map((i) => (
-                    <motion.div 
-                      key={i} 
-                      className="w-10 h-10 bg-gradient-to-br from-pink-500 to-red-500 rounded-full border-2 border-black"
-                      whileHover={{ scale: 1.2, zIndex: 10 }}
-                      transition={{ duration: 0.2 }}
-                    />
-                  ))}
+                  <motion.div 
+                    className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-full border-2 border-white/20"
+                    whileHover={{ scale: 1.2, zIndex: 10 }}
+                    transition={{ duration: 0.2 }}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Right - Font display */}
+            {/* Right - About title */}
             <div className="text-right">
               <div className="text-white/40 font-mono text-sm mb-4">
-                What font was used
+                Da'vinci Solutions
               </div>
               <h2 className="text-8xl font-light text-white mb-8">
-                Suisse Intl
+                About Us
               </h2>
-              
-              {/* Font samples */}
-              <div className="space-y-6 text-left max-w-2xl">
-                <div>
-                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
-                    Regular
-                  </div>
-                  <div className="text-white text-2xl font-light">
-                    Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
-                    Bold
-                  </div>
-                  <div className="text-white text-2xl font-bold">
-                    Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
-                    Numbers
-                  </div>
-                  <div className="text-white text-3xl font-mono">
-                    0123456789
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </TextReveal>
+
+        {/* About Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          
+          {/* Left - About Da'vinci Solutions */}
+          <TextReveal>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-4xl font-light text-white mb-4">
+                  About Da'vinci Solutions
+                </h3>
+                <p className="text-white/60 text-lg leading-relaxed">
+                  Founded by Amar Sai, Da'vinci Solutions aims to revolutionize enterprise automation for India and global markets.
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Vision
+                  </div>
+                  <div className="text-white text-lg font-light">Build AI agents that understand, support, and empower every user in their own language.</div>
+                </div>
+                
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Expertise
+                  </div>
+                  <div className="text-white text-lg font-light">Conversational AI, multilingual voice assistants, streamlined enterprise automation.</div>
+                </div>
+                
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Impact
+                  </div>
+                  <div className="text-white text-lg font-light">Enabling businesses—large and small—to deliver truly human, scalable, and cost-effective support.</div>
+                </div>
+              </div>
+            </div>
+          </TextReveal>
+
+          {/* Right - Founder Contact */}
+          <TextReveal>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-4xl font-light text-white mb-4">
+                  Contact the Founder
+                </h3>
+                <p className="text-white/60 text-lg">
+                  Get in touch with Amar Sai
+                </p>
+              </div>
+              
+              <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+                <div className="space-y-6">
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Name
+                    </div>
+                    <div className="text-white text-xl font-medium">Amar Sai</div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Email
+                    </div>
+                    <div className="text-white text-lg font-light">amarsai2005@gmail.com</div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Current Education
+                    </div>
+                    <div className="text-white text-lg font-light">B.Tech , IIT Mandi</div>
+                  </div>
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Location
+                    </div>
+                    <div className="text-white text-lg font-light">Himachal Pradesh, India</div>
+                  </div>
+                  
+                  {/* Contact Button */}
+                  <motion.button
+                    className="w-full mt-8 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg
+                               hover:bg-white/20 hover:border-white/40 transition-all duration-300"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Send Message
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </TextReveal>
+        </div>
       </div>
     </motion.section>
   );
@@ -660,28 +828,74 @@ const TypographySection = () => {
 
 // AI Solutions Showcase Section
 const SolutionsSection = () => {
-  const solutions = [
-    { 
-      icon: Brain, 
-      title: "TARA_x1 AI Agent", 
-      description: "Revolutionary customer service AI that handles conversations with human-like intelligence",
-      features: ["24/7 Availability", "Multi-language Support", "Context Awareness"],
-      color: "from-blue-500 to-cyan-500"
+  const competitors = [
+    {
+      name: "TARA_x1",
+      isWinner: true,
+      availability: "24/7",
+      languages: "20+ Indic + Eng",
+      cost: "₹9,800",
+      scalability: "Instant",
+      personalization: "High (memory)",
+      errorRate: "Very Low",
+      attrition: "0%",
+      deployment: "Weeks",
+      color: "from-blue-500 to-cyan-500",
+      badge: "Winner"
     },
-    { 
-      icon: Zap, 
-      title: "Process Automation", 
-      description: "Streamline complex workflows with intelligent automation systems",
-      features: ["Workflow Optimization", "Smart Routing", "Real-time Analytics"],
-      color: "from-purple-500 to-pink-500"
+    {
+      name: "Human Call Centers",
+      isWinner: false,
+      availability: "Limited hours",
+      languages: "2-3",
+      cost: "₹25,547",
+      scalability: "Manual hiring",
+      personalization: "Low",
+      errorRate: "High",
+      attrition: "45%",
+      deployment: "Months",
+      color: "from-gray-500 to-gray-600",
+      badge: ""
     },
-    { 
-      icon: Shield, 
-      title: "Enterprise Security", 
-      description: "Advanced AI-powered security solutions for enterprise environments",
-      features: ["Threat Detection", "Compliance Management", "Risk Assessment"],
-      color: "from-green-500 to-emerald-500"
+    {
+      name: "Airtel/Freshworks Bots",
+      isWinner: false,
+      availability: "24/7",
+      languages: "Mainly English",
+      cost: "₹18,000+",
+      scalability: "Complex config",
+      personalization: "Medium",
+      errorRate: "Medium",
+      attrition: "N/A",
+      deployment: "Weeks",
+      color: "from-orange-500 to-red-500",
+      badge: ""
+    },
+    {
+      name: "Others",
+      isWinner: false,
+      availability: "Varies",
+      languages: "Few",
+      cost: "₹20,000+",
+      scalability: "Manual setup",
+      personalization: "Medium",
+      errorRate: "Medium",
+      attrition: "N/A",
+      deployment: "Months",
+      color: "from-purple-500 to-pink-500",
+      badge: ""
     }
+  ];
+
+  const features = [
+    { label: "Availability", key: "availability" },
+    { label: "Languages", key: "languages" },
+    { label: "Cost per agent/month", key: "cost" },
+    { label: "Scalability", key: "scalability" },
+    { label: "Personalization", key: "personalization" },
+    { label: "Error Rate", key: "errorRate" },
+    { label: "Attrition", key: "attrition" },
+    { label: "Deployment Speed", key: "deployment" }
   ];
 
   return (
@@ -691,69 +905,127 @@ const SolutionsSection = () => {
         <TextReveal>
           <div className="text-center mb-20">
             <h2 className="text-6xl md:text-7xl font-light text-white mb-8">
-              AI Solutions
+              Why TARA_x1 Outperforms
               <br />
-              <span className="font-semibold">Portfolio</span>
+              <span className="font-semibold">Traditional & AI Competition</span>
             </h2>
-            <p className="text-xl text-white/60 max-w-3xl mx-auto">
-              Transforming enterprises with cutting-edge artificial intelligence
+            <div className="w-24 h-px bg-white/30 mx-auto mb-6"></div>
+            <p className="text-white/60 text-lg max-w-3xl mx-auto leading-relaxed">
+              See how TARA_x1 delivers superior performance across every key metric 
+              compared to traditional call centers and existing AI solutions.
             </p>
           </div>
         </TextReveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {solutions.map((solution, index) => (
-            <motion.div
-              key={index}
-              className="group"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: index * 0.2 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -10 }}
-            >
-              <div className="p-8 bg-gradient-to-br from-black/50 to-gray-900/50 backdrop-blur-sm 
-                            border border-white/10 h-full hover:border-white/30 transition-all duration-500">
-                
-                {/* Icon */}
-                <div className={`w-16 h-16 bg-gradient-to-br ${solution.color} rounded-lg 
-                               flex items-center justify-center mb-6 group-hover:scale-110 
-                               transition-transform duration-300`}>
-                  <solution.icon className="w-8 h-8 text-white" />
+        {/* Comparison Table */}
+        <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+          
+          {/* Header Row */}
+          <div className="grid grid-cols-5 gap-4 p-6 border-b border-white/10">
+            <div className="text-white/40 font-mono text-sm uppercase tracking-wider">
+              Feature
+            </div>
+            {competitors.map((competitor, index) => (
+              <div key={competitor.name} className="text-center">
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                  competitor.isWinner 
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white' 
+                    : 'bg-white/10 text-white/80'
+                }`}>
+                  {competitor.name}
+                  {competitor.isWinner && (
+                    <Star className="w-4 h-4 text-yellow-400" />
+                  )}
                 </div>
-                
-                {/* Content */}
-                <h3 className="text-2xl font-semibold text-white mb-4">
-                  {solution.title}
-                </h3>
-                
-                <p className="text-white/70 mb-6 leading-relaxed">
-                  {solution.description}
-                </p>
-                
-                {/* Features */}
-                <div className="space-y-2 mb-8">
-                  {solution.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                      <span className="text-white/60 text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* CTA */}
-                <motion.button
-                  className="flex items-center gap-2 text-white/80 hover:text-white 
-                           font-medium group-hover:translate-x-2 transition-all duration-300"
-                  whileHover={{ x: 5 }}
-                >
-                  Learn More
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
               </div>
+            ))}
+          </div>
+
+          {/* Feature Rows */}
+          {features.map((feature, featureIndex) => (
+            <motion.div
+              key={feature.key}
+              className="grid grid-cols-5 gap-4 p-6 border-b border-white/5 hover:bg-white/5 transition-colors duration-200"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: featureIndex * 0.05 }}
+              viewport={{ once: true }}
+            >
+              <div className="text-white/70 font-medium">
+                {feature.label}
+              </div>
+              {competitors.map((competitor, competitorIndex) => (
+                <div key={competitor.name} className="text-center">
+                  <span className={`text-sm ${
+                    competitor.isWinner 
+                      ? 'text-white font-medium' 
+                      : 'text-white/60'
+                  }`}>
+                    {competitor[feature.key]}
+                  </span>
+                  {competitor.isWinner && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full mx-auto mt-1"></div>
+                  )}
+                </div>
+              ))}
             </motion.div>
           ))}
         </div>
+
+        {/* Testimonial Quote */}
+        <motion.div
+          className="mt-16 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          viewport={{ once: true }}
+        >
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-4xl mx-auto">
+            <div className="text-white/80 text-lg italic mb-4">
+              "TARA_x1 reduced our customer service costs by 80% while improving response times. 
+              The multilingual support is exceptional."
+            </div>
+            <div className="text-white/60 text-sm">
+              — Enterprise Client, Mumbai
+            </div>
+          </div>
+        </motion.div>
+
+        {/* CTA Buttons */}
+        <motion.div
+          className="mt-16 flex flex-col sm:flex-row gap-6 justify-center items-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          viewport={{ once: true }}
+        >
+          <motion.button
+            className="px-8 py-4 bg-white text-black font-medium text-lg rounded-lg
+                       hover:bg-white/90 transition-all duration-300 shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Book a Demo
+          </motion.button>
+          
+          <motion.button
+            className="px-8 py-4 border border-white/40 text-white font-medium text-lg rounded-lg
+                       hover:border-white/60 hover:bg-white/10 transition-all duration-300"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Migrate to TARA_x1 Today
+          </motion.button>
+          
+          <motion.button
+            className="px-6 py-3 text-white/60 text-sm font-medium
+                       hover:text-white transition-colors duration-200"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            See Full Comparison →
+          </motion.button>
+        </motion.div>
       </div>
     </motion.section>
   );
@@ -973,7 +1245,7 @@ const MainHomepage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden relative">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden relative" style={{ zoom: '0.85' }}>
       {/* Enhanced Video Background */}
       <motion.div 
         className="fixed inset-0 z-0 pointer-events-none"
@@ -1010,7 +1282,8 @@ const MainHomepage = () => {
       <div className="relative z-10">
         <HeroSection />
         <ProcessSection />
-        <TypographySection />
+        <CallToActionSection />
+        <AboutSection />
         <SolutionsSection />
         <StatsSection />
         <CTASection />
