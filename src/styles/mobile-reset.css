@@ -1,0 +1,155 @@
+/* Mobile Reset CSS for MainHomepageMobile Component */
+
+/* Reset Desktop Scaling */
+.mobile-homepage-container {
+  transform: none !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  zoom: 1 !important;
+  scale: 1 !important;
+}
+
+/* Mobile-Specific Utilities */
+.mobile-section {
+  padding: 4rem 1rem;
+}
+
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-text-scale {
+  font-size: clamp(0.875rem, 2.5vw, 1.125rem);
+  line-height: 1.6;
+}
+
+/* Smooth scroll behavior for mobile */
+.mobile-homepage-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-specific spacing - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-section {
+    padding: 3rem 1rem;
+  }
+  
+  .mobile-touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Ensure proper mobile viewport */
+.mobile-homepage-container * {
+  box-sizing: border-box;
+}
+
+/* Mobile-friendly animations */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-homepage-container * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Touch-friendly interactions */
+.mobile-homepage-container button,
+.mobile-homepage-container [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile video optimization */
+.mobile-homepage-container video {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Mobile-specific backdrop blur fallback */
+@supports not (backdrop-filter: blur(10px)) {
+  .mobile-homepage-container .backdrop-blur-sm {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .mobile-homepage-container .backdrop-blur-md {
+    background-color: rgba(0, 0, 0, 0.85);
+  }
+  
+  .mobile-homepage-container .backdrop-blur-xl {
+    background-color: rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* Mobile typography scaling - Updated to use standardized breakpoints */
+@media (max-width: 374px) {
+  .mobile-homepage-container h1 {
+    font-size: 1.75rem;
+  }
+  
+  .mobile-homepage-container h2 {
+    font-size: 1.5rem;
+  }
+  
+  .mobile-homepage-container h3 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Mobile grid adjustments - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-homepage-container .grid-cols-2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Mobile popup adjustments - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-homepage-container .fixed {
+    padding: 1rem;
+  }
+  
+  .mobile-homepage-container .max-w-sm {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* Mobile radial timeline adjustments - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-homepage-container .h-\[600px\] {
+    height: 400px;
+  }
+  
+  .mobile-homepage-container .h-\[800px\] {
+    height: 500px;
+  }
+}
+
+/* Mobile shader animation adjustments - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-homepage-container .h-\[400px\] {
+    height: 300px;
+  }
+}
+
+/* Mobile floating button adjustments - Updated to use standardized breakpoints */
+@media (max-width: 639px) {
+  .mobile-homepage-container .fixed.bottom-6.right-6 {
+    bottom: 1rem;
+    right: 1rem;
+  }
+  
+  .mobile-homepage-container .w-14.h-14 {
+    width: 3rem;
+    height: 3rem;
+  }
+}

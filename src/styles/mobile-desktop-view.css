@@ -1,0 +1,189 @@
+/* Mobile Desktop View Enhancements */
+/* This CSS enhances the desktop view when displayed on mobile devices */
+
+/* Mobile-specific zoom and font scaling - Updated to use standardized breakpoints */
+@media screen and (max-width: 767px) {
+  /* Base body scaling for mobile */
+  body {
+    zoom: 1.2 !important;
+    -webkit-text-size-adjust: 120% !important;
+    -moz-text-size-adjust: 120% !important;
+    text-size-adjust: 120% !important;
+    font-size: 18px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Root element scaling */
+  html {
+    font-size: 18px !important;
+    zoom: 1.2 !important;
+  }
+
+  /* Ensure proper touch targets */
+  * {
+    touch-action: pan-x pan-y !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Button and interactive element scaling */
+  button, 
+  [role="button"], 
+  input, 
+  textarea, 
+  select,
+  a {
+    min-height: 48px !important;
+    min-width: 48px !important;
+    font-size: 16px !important;
+    padding: 12px 16px !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    touch-action: manipulation !important;
+  }
+
+  /* Text scaling for better readability */
+  h1 { font-size: 2.5rem !important; }
+  h2 { font-size: 2rem !important; }
+  h3 { font-size: 1.75rem !important; }
+  h4 { font-size: 1.5rem !important; }
+  h5 { font-size: 1.25rem !important; }
+  h6 { font-size: 1.125rem !important; }
+  
+  p, span, div, li {
+    font-size: 1.125rem !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Small text adjustments */
+  small, .text-xs, .text-sm {
+    font-size: 1rem !important;
+  }
+
+  /* Improve scrolling performance */
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-behavior: smooth !important;
+  }
+
+  /* Container adjustments */
+  .container, 
+  .max-w-7xl,
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-4xl {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 20px !important;
+  }
+}
+
+/* Tablet-specific adjustments - Updated to use standardized breakpoints */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  body {
+    zoom: 1.1 !important;
+    font-size: 16px !important;
+  }
+
+  html {
+    font-size: 16px !important;
+    zoom: 1.1 !important;
+  }
+
+  /* Text scaling for tablets */
+  h1 { font-size: 2.25rem !important; }
+  h2 { font-size: 1.875rem !important; }
+  h3 { font-size: 1.5rem !important; }
+  
+  p, span, div, li {
+    font-size: 1rem !important;
+  }
+}
+
+/* Small mobile devices - Updated to use standardized breakpoints */
+@media screen and (max-width: 639px) {
+  body {
+    zoom: 1.3 !important;
+    font-size: 20px !important;
+  }
+
+  html {
+    font-size: 20px !important;
+    zoom: 1.3 !important;
+  }
+
+  /* Enhanced text scaling for small screens */
+  h1 { font-size: 2.75rem !important; }
+  h2 { font-size: 2.25rem !important; }
+  h3 { font-size: 2rem !important; }
+  
+  p, span, div, li {
+    font-size: 1.25rem !important;
+    line-height: 1.7 !important;
+  }
+
+  /* Larger touch targets for small screens */
+  button, 
+  [role="button"], 
+  input, 
+  textarea, 
+  select,
+  a {
+    min-height: 56px !important;
+    min-width: 56px !important;
+    font-size: 18px !important;
+    padding: 16px 20px !important;
+  }
+}
+
+/* Landscape orientation adjustments - Updated to use standardized breakpoints */
+@media screen and (max-width: 767px) and (orientation: landscape) {
+  body {
+    zoom: 1.1 !important;
+    font-size: 16px !important;
+  }
+
+  html {
+    zoom: 1.1 !important;
+  }
+}
+
+/* Ensure animations and transforms work properly with zoom - Updated to use standardized breakpoints */
+@media screen and (max-width: 767px) {
+  * {
+    transform-origin: center center !important;
+  }
+
+  /* Shader container adjustments */
+  .shader-container,
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 400px !important;
+  }
+
+  /* Ensure proper rendering of complex elements */
+  [class*="shader"],
+  [class*="animation"],
+  [class*="canvas"] {
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+  }
+}
+
+/* Fix for viewport-related issues */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes - Updated to use standardized breakpoints */
+  @media screen and (max-width: 767px) {
+    body {
+      -webkit-text-size-adjust: 120% !important;
+    }
+  }
+}

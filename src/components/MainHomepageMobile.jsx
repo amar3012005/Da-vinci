@@ -1,86 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, useScroll, useTransform, useInView, useSpring } from 'framer-motion';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from 'lenis';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { 
-  ChevronDown,
-  Plus,
-  Play,
-  Users,
-  Zap,
-  Star,
-  Globe,
-  MessageCircle,
-  Sparkles,
-  TrendingUp,
-  DollarSign,
-  Target
+  Monitor,
+  Smartphone,
+  ArrowRight,
+  Settings,
+  Chrome,
+  Safari,
+  Firefox
 } from 'lucide-react';
-import { ShaderAnimation } from './ui/shader-lines';
-import { AIVoiceInput } from './ui/ai-voice-input';
-import MarketInsightsCarousel from './ui/market-insights-carousel';
-import EnhancedAboutSection from './ui/enhanced-about-section';
-import TaraVariants from './ui/tara-variants';
-import DemoRequestModal from './ui/demo-request-modal';
 
 gsap.registerPlugin(ScrollTrigger);
-
-// Navigation Component
-const NavigationMenu = () => {
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
-
-  const navItems = [
-    { label: 'Meet TARA_x1', sectionId: 'tara-variants-section' },
-    { label: 'About Us', sectionId: 'about-section' },
-    { label: 'Contact Us', sectionId: 'cta-section' }
-  ];
-
-  return (
-    <motion.nav
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 p-8"
-    >
-      <div className="container mx-auto">
-        <div className="flex justify-center items-center">
-          <div className="flex items-center gap-12 bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl px-8 py-4">
-            {navItems.map((item, index) => (
-              <motion.button
-                key={item.sectionId}
-                onClick={() => scrollToSection(item.sectionId)}
-                className="text-white/80 hover:text-white font-mono text-lg tracking-wide transition-all duration-300 relative group"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.7 + index * 0.1 }}
-              >
-                <span className="relative z-10">./{item.label}</span>
-                <motion.div
-                  className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  whileHover={{ scale: 1.1 }}
-                />
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                />
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </motion.nav>
-  );
-};
 
 // Project Info Card Component (matching reference design)
 const ProjectInfoCard = ({ title, value, className = "" }) => (
@@ -119,7 +49,39 @@ const TextReveal = ({ children, className = "", delay = 0 }) => {
   );
 };
 
-// AnimatedCounter component removed - not used in current implementation
+// Animated Counter Component
+const AnimatedCounter = ({ target, suffix = "", duration = 2000, delay = 0 }) => {
+  const [count, setCount] = useState(0);
+  const countRef = useRef(null);
+  const isInView = useInView(countRef, { once: true });
+
+  useEffect(() => {
+    if (!isInView) return;
+
+    const timer = setTimeout(() => {
+      let startTime;
+      const animate = (currentTime) => {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        
+        setCount(Math.floor(progress * target));
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      requestAnimationFrame(animate);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [isInView, target, duration, delay]);
+
+  return (
+    <span ref={countRef}>
+      {count.toLocaleString()}{suffix}
+    </span>
+  );
+};
 
 // Hero Section - Main Landing
 const HeroSection = () => {
@@ -148,9 +110,6 @@ const HeroSection = () => {
       className="relative h-screen flex items-center overflow-hidden"
       style={{ y: yParallax }}
     >
-      {/* Gradient Overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/50 z-10"></div>
-
       {/* Project Info Cards */}
       <ProjectInfoCard 
         title="project" 
@@ -461,12 +420,7 @@ const ProcessSection = () => {
         <TextReveal>
           <div className="text-center mb-16">
             <h3 className="text-2xl md:text-3xl font-light text-white/90 mb-4">
-              India's Flagship 
-              <span className="px-2 py-1 bg-pink-500 text-white rounded">
-                Conversational AI Agentic
-              </span>
-              
-               Pipeline
+              India's Flagship Conversational AI Agentic Pipeline
             </h3>
             <p className="text-white/70 text-lg max-w-3xl mx-auto leading-relaxed">
             Delivering 24/7 multilingual, real-time, and human-like customer service—at a fraction of traditional costs.
@@ -534,11 +488,8 @@ const ProcessSection = () => {
             transition={{ duration: 1.2, delay: 0.3 }}
             viewport={{ once: true }}
           >
-            <div className="relative flex h-[650px] w-full flex-col items-center justify-center overflow-hidden rounded-xl">
-              <ShaderAnimation />
-              <span className="pointer-events-none z-10 text-center text-7xl leading-none font-semibold tracking-tighter whitespace-pre-wrap text-white drop-shadow-lg">
-            
-              </span>
+            <div className="relative">
+              <DemoOne />
               
               {/* Listen to TARA Button */}
               <motion.button
@@ -658,65 +609,6 @@ const ProcessSection = () => {
   );
 };
 
-// Centered Button Section
-const CenteredButtonSection = ({ onRequestDemo }) => {
-  return (
-    <motion.section 
-      className="py-16 px-8 relative overflow-hidden"
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-      viewport={{ once: true }}
-    >
-      <div className="max-w-4xl mx-auto text-center relative z-10">
-
-        
-        
-        {/* Main Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          
-          {/* Join Waitlist Button */}
-          <motion.button
-            onClick={() => onRequestDemo(true)}
-            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-lg rounded-xl
-                       hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 
-                       flex items-center justify-center gap-3 group shadow-lg hover:shadow-xl active:scale-95"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            Join Waitlist & Request a Demo
-          </motion.button>
-          
-          {/* Request Demo Button */}
-          <motion.button
-            onClick={() => onRequestDemo(true)}
-            className="px-8 py-4 border-2 border-white/40 text-white font-semibold text-lg rounded-xl
-                       hover:border-white hover:bg-white/10 transition-all duration-300 
-                       flex items-center justify-center gap-3 group active:scale-95"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Try Demo Version
-          </motion.button>
-        </div>
-
-        {/* Subtitle */}
-        <motion.p 
-          className="mt-6 text-white/60 text-sm max-w-2xl mx-auto"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-        >
-          Be among the first to experience the future of AI-powered business automation
-        </motion.p>
-      </div>
-    </motion.section>
-  );
-};
-
 // Call to Action Section
 const CallToActionSection = () => {
   const { scrollY } = useScroll();
@@ -728,6 +620,196 @@ const CallToActionSection = () => {
       style={{ y: yTransform }}
     >
       <div className="container mx-auto px-16 relative z-10">
+        
+        <TextReveal>
+          <div className="text-center mb-16">
+            <h2 className="text-5xl md:text-6xl font-light text-white mb-8">
+              Ready to upgrade your customer care?
+            </h2>
+            <p className="text-white/70 text-xl max-w-4xl mx-auto leading-relaxed mb-12">
+              Book a demo or chat with TARA_x1 today—your customers will thank you.
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <motion.button
+                className="px-8 py-4 bg-white text-black font-medium text-lg rounded-lg
+                           hover:bg-white/90 transition-all duration-300 shadow-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Book a Demo
+              </motion.button>
+              
+              <motion.button
+                className="px-8 py-4 border border-white/40 text-white font-medium text-lg rounded-lg
+                           hover:border-white/60 hover:bg-white/10 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Chat with TARA_x1
+              </motion.button>
+            </div>
+          </div>
+        </TextReveal>
+      </div>
+    </motion.section>
+  );
+};
+
+// About/Founder Section
+const AboutSection = () => {
+  const { scrollY } = useScroll();
+  const scaleTransform = useTransform(scrollY, [1400, 2000], [0.9, 1.1]);
+
+  return (
+    <motion.section 
+      className="py-32 relative overflow-hidden"
+      style={{ scale: scaleTransform }}
+    >
+      <div className="container mx-auto px-16 relative z-10">
+        
+        {/* Header */}
+        <TextReveal>
+          <div className="flex justify-between items-start mb-20">
+            {/* Left - Plus icon and About label */}
+            <div className="space-y-8">
+              <motion.div 
+                className="w-12 h-12 border border-white/30 flex items-center justify-center cursor-pointer"
+                whileHover={{ rotate: 90, borderColor: "rgba(255,255,255,0.6)" }}
+                transition={{ duration: 0.3 }}
+              >
+                <Plus className="w-6 h-6 text-white/70" />
+              </motion.div>
+              
+              <div>
+                <div className="text-white/50 font-mono text-sm uppercase tracking-wider mb-4">
+                  About
+                </div>
+                
+                {/* Founder avatar */}
+                <div className="flex -space-x-3">
+                  <motion.div 
+                    className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-full border-2 border-white/20"
+                    whileHover={{ scale: 1.2, zIndex: 10 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right - About title */}
+            <div className="text-right">
+              <div className="text-white/40 font-mono text-sm mb-4">
+                Da'vinci Solutions
+              </div>
+              <h2 className="text-8xl font-light text-white mb-8">
+                About Us
+              </h2>
+            </div>
+          </div>
+        </TextReveal>
+
+        {/* About Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          
+          {/* Left - About Da'vinci Solutions */}
+          <TextReveal>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-4xl font-light text-white mb-4">
+                  About Da'vinci Solutions
+                </h3>
+                <p className="text-white/60 text-lg leading-relaxed">
+                  Founded by Amar Sai, Da'vinci Solutions aims to revolutionize enterprise automation for India and global markets.
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Vision
+                  </div>
+                  <div className="text-white text-lg font-light">Build AI agents that understand, support, and empower every user in their own language.</div>
+                </div>
+                
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Expertise
+                  </div>
+                  <div className="text-white text-lg font-light">Conversational AI, multilingual voice assistants, streamlined enterprise automation.</div>
+                </div>
+                
+                <div>
+                  <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                    Impact
+                  </div>
+                  <div className="text-white text-lg font-light">Enabling businesses—large and small—to deliver truly human, scalable, and cost-effective support.</div>
+                </div>
+              </div>
+            </div>
+          </TextReveal>
+
+          {/* Right - Founder Contact */}
+          <TextReveal>
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-4xl font-light text-white mb-4">
+                  Contact the Founder
+                </h3>
+                <p className="text-white/60 text-lg">
+                  Get in touch with Amar Sai
+                </p>
+              </div>
+              
+              <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+                <div className="space-y-6">
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Name
+                    </div>
+                    <div className="text-white text-xl font-medium">Amar Sai</div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Email
+                    </div>
+                    <div className="text-white text-lg font-light">amarsai2005@gmail.com</div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Current Education
+                    </div>
+                    <div className="text-white text-lg font-light">B.Tech , IIT Mandi</div>
+                  </div>
+                  <div>
+                    <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
+                      Location
+                    </div>
+                    <div className="text-white text-lg font-light">Himachal Pradesh, India</div>
+                  </div>
+                  
+                  {/* Contact Button */}
+                  <motion.button
+                    className="w-full mt-8 px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg
+                               hover:bg-white/20 hover:border-white/40 transition-all duration-300"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      const subject = encodeURIComponent("Regarding Davinci");
+                      const emailAddress = "amarsai2005@gmail.com";
+                      window.location.href = `mailto:${emailAddress}?subject=${subject}`;
+                    }}
+                  >
+                    Send Message
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          </TextReveal>
+        </div>
       </div>
     </motion.section>
   );
@@ -906,9 +988,32 @@ const SolutionsSection = () => {
           transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
         >
+          <motion.button
+            className="px-8 py-4 bg-white text-black font-medium text-lg rounded-lg
+                       hover:bg-white/90 transition-all duration-300 shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Book a Demo
+          </motion.button>
           
+          <motion.button
+            className="px-8 py-4 border border-white/40 text-white font-medium text-lg rounded-lg
+                       hover:border-white/60 hover:bg-white/10 transition-all duration-300"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Migrate to TARA_x1 Today
+          </motion.button>
           
-          
+          <motion.button
+            className="px-6 py-3 text-white/60 text-sm font-medium
+                       hover:text-white transition-colors duration-200"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            See Full Comparison →
+          </motion.button>
         </motion.div>
       </div>
     </motion.section>
@@ -993,18 +1098,19 @@ const StatsSection = () => {
         <TextReveal>
           <div className="text-center mb-20">
             <h2 className="text-6xl md:text-7xl font-light text-white mb-8">
-        
+              The AI Revolution
               <br />
-              <span className="font-semibold">" It's Now or Never "</span>
+              <span className="font-semibold">Market Landscape</span>
             </h2>
             <p className="text-xl text-white/60 max-w-4xl mx-auto leading-relaxed">
-              
+              Navigate the transformative AI ecosystem through our interactive orbital visualization. 
+              Discover market dynamics, growth trajectories, and enterprise transformation patterns.
             </p>
           </div>
         </TextReveal>
 
-        <div className="relative w-full">
-    
+        <div className="relative h-[800px] w-full">
+          <RadialOrbitalTimeline timelineData={aiMarketData} />
         </div>
 
         {/* Elegant Market Insights */}
@@ -1023,241 +1129,67 @@ const StatsSection = () => {
           </div>
 
           <div className="space-y-16">
-            {/* Enterprise Adoption - Slide from Left */}
+            {/* Enterprise Adoption */}
             <motion.div
               className="flex flex-col md:flex-row items-center gap-12"
-              initial={{ opacity: 0, x: -120, y: 50 }}
-              whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
-                ease: [0.22, 1, 0.36, 1],
-                delay: 0.2
-              }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
             >
-              <motion.div 
-                className="flex-1"
-                initial={{ opacity: 0, x: -100 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.4
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.h4 
-                  className="text-2xl font-light text-white mb-4"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  viewport={{ once: true }}
-                >
-                  Enterprise AI Adoption
-                </motion.h4>
-                <motion.p 
-                  className="text-white/70 text-lg leading-relaxed"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                  viewport={{ once: true }}
-                >
+              <div className="flex-1">
+                <h4 className="text-2xl font-light text-white mb-4">Enterprise AI Adoption</h4>
+                <p className="text-white/70 text-lg leading-relaxed">
                   72% of companies are using AI; half have rolled it out across multiple departments. 
                   75% of C-level executives rank AI in their top 3 priorities for 2025.
-                </motion.p>
-              </motion.div>
-              <motion.div 
-                className="flex-1 text-right"
-                initial={{ opacity: 0, x: 120, scale: 0.8 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.5
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.div 
-                  className="text-6xl font-light text-white/20"
-                  initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
-                    ease: "backOut",
-                    delay: 0.7
-                  }}
-                  viewport={{ once: true }}
-                >
-                  72%
-                </motion.div>
-                <motion.div 
-                  className="text-sm text-white/50 uppercase tracking-wider"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.9 }}
-                  viewport={{ once: true }}
-                >
-                  Adoption Rate
-                </motion.div>
-              </motion.div>
+                </p>
+              </div>
+              <div className="flex-1 text-right">
+                <div className="text-6xl font-light text-white/20">72%</div>
+                <div className="text-sm text-white/50 uppercase tracking-wider">Adoption Rate</div>
+              </div>
             </motion.div>
 
-            {/* Customer Experience Impact - Slide from Right */}
+            {/* Customer Experience Impact */}
             <motion.div
               className="flex flex-col md:flex-row-reverse items-center gap-12"
-              initial={{ opacity: 0, x: 120, y: 50 }}
-              whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
-                ease: [0.22, 1, 0.36, 1],
-                delay: 0.2
-              }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
             >
-              <motion.div 
-                className="flex-1"
-                initial={{ opacity: 0, x: 100 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.4
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.h4 
-                  className="text-2xl font-light text-white mb-4"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  viewport={{ once: true }}
-                >
-                  Customer Experience Transformation
-                </motion.h4>
-                <motion.p 
-                  className="text-white/70 text-lg leading-relaxed"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                  viewport={{ once: true }}
-                >
+              <div className="flex-1">
+                <h4 className="text-2xl font-light text-white mb-4">Customer Experience Transformation</h4>
+                <p className="text-white/70 text-lg leading-relaxed">
                   95% of all customer interactions will be AI-facilitated by end of 2025. 
                   68% average reduction in operational costs reported by companies using AI in customer service.
-                </motion.p>
-              </motion.div>
-              <motion.div 
-                className="flex-1 text-left"
-                initial={{ opacity: 0, x: -120, scale: 0.8 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.5
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.div 
-                  className="text-6xl font-light text-white/20"
-                  initial={{ opacity: 0, scale: 0.5, rotate: 10 }}
-                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
-                    ease: "backOut",
-                    delay: 0.7
-                  }}
-                  viewport={{ once: true }}
-                >
-                  95%
-                </motion.div>
-                <motion.div 
-                  className="text-sm text-white/50 uppercase tracking-wider"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.9 }}
-                  viewport={{ once: true }}
-                >
-                  AI-Facilitated
-                </motion.div>
-              </motion.div>
+                </p>
+              </div>
+              <div className="flex-1 text-left">
+                <div className="text-6xl font-light text-white/20">95%</div>
+                <div className="text-sm text-white/50 uppercase tracking-wider">AI-Facilitated</div>
+              </div>
             </motion.div>
 
-            {/* ROI Performance - Slide from Left */}
+            {/* ROI Performance */}
             <motion.div
               className="flex flex-col md:flex-row items-center gap-12"
-              initial={{ opacity: 0, x: -120, y: 50 }}
-              whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
-                ease: [0.22, 1, 0.36, 1],
-                delay: 0.2
-              }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
             >
-              <motion.div 
-                className="flex-1"
-                initial={{ opacity: 0, x: -100 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.4
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.h4 
-                  className="text-2xl font-light text-white mb-4"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                  viewport={{ once: true }}
-                >
-                  Return on Investment
-                </motion.h4>
-                <motion.p 
-                  className="text-white/70 text-lg leading-relaxed"
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                  viewport={{ once: true }}
-                >
+              <div className="flex-1">
+                <h4 className="text-2xl font-light text-white mb-4">Return on Investment</h4>
+                <p className="text-white/70 text-lg leading-relaxed">
                   Mature AI deployments see $3.50 value for every $1 invested. 
                   74% of mature AI users report solid ROI (but new adopters lag).
-                </motion.p>
-              </motion.div>
-              <motion.div 
-                className="flex-1 text-right"
-                initial={{ opacity: 0, x: 120, scale: 0.8 }}
-                whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
-                  ease: [0.22, 1, 0.36, 1],
-                  delay: 0.5
-                }}
-                viewport={{ once: true }}
-              >
-                <motion.div 
-                  className="text-6xl font-light text-white/20"
-                  initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
-                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
-                    ease: "backOut",
-                    delay: 0.7
-                  }}
-                  viewport={{ once: true }}
-                >
-                  3.5x
-                </motion.div>
-                <motion.div 
-                  className="text-sm text-white/50 uppercase tracking-wider"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.9 }}
-                  viewport={{ once: true }}
-                >
-                  Value Return
-                </motion.div>
-              </motion.div>
+                </p>
+              </div>
+              <div className="flex-1 text-right">
+                <div className="text-6xl font-light text-white/20">3.5x</div>
+                <div className="text-sm text-white/50 uppercase tracking-wider">Value Return</div>
+              </div>
             </motion.div>
           </div>
         </motion.div>
@@ -1297,9 +1229,27 @@ const CTASection = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-2xl mx-auto">
+              <motion.button
+                className="px-12 py-5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-lg
+                           hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 
+                           flex items-center gap-3 group w-full sm:w-auto"
+                whileHover={{ scale: 1.05, y: -3 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                Start Free Trial
+              </motion.button>
               
-              
-              
+              <motion.button
+                className="px-12 py-5 border border-white/40 text-white font-semibold text-lg
+                           hover:border-white hover:bg-white/5 transition-all duration-300 
+                           flex items-center gap-3 group w-full sm:w-auto"
+                whileHover={{ scale: 1.05, y: -3 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Play className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                Watch Demo
+              </motion.button>
             </div>
 
             {/* Contact Information */}
@@ -1371,7 +1321,6 @@ const MainHomepage = () => {
   const { scrollY } = useScroll();
   const backgroundY = useSpring(useTransform(scrollY, [0, 2000], [0, 200]));
   const backgroundScale = useSpring(useTransform(scrollY, [0, 3000], [1, 1.15]));
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
   useEffect(() => {
     // Enhanced smooth scrolling
@@ -1410,53 +1359,36 @@ const MainHomepage = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
           style={{ 
-            filter: 'brightness(0.85) contrast(1.2) saturate(1.1) blur(0.2px)',
-            opacity: 0.90
+            filter: 'brightness(0.65) contrast(1.1) saturate(0.9) blur(0.5px)',
+            opacity: 0.8
           }}
         >
           <source src="/intro.mp4" type="video/mp4" />
         </video>
         
-        {/* Sophisticated gradient overlay - reduced opacity for better video visibility */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40" />
+        {/* Sophisticated gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/70 to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/60" />
         
-        {/* Subtle texture overlay - reduced for better video visibility */}
-        <div className="absolute inset-0 bg-black/10" 
+        {/* Subtle texture overlay */}
+        <div className="absolute inset-0 bg-black/20" 
              style={{
-               backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+               backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 1px, transparent 1px)`,
                backgroundSize: '50px 50px'
              }} 
         />
       </motion.div>
       
-      {/* Navigation Menu */}
-      <NavigationMenu />
-      
       {/* Content */}
       <div className="relative z-10">
         <HeroSection />
-        <CenteredButtonSection onRequestDemo={setIsDemoModalOpen} />
         <ProcessSection />
-        <div id="tara-variants-section">
-          <TaraVariants />
-        </div>
         <CallToActionSection />
-        <div id="about-section">
-          <EnhancedAboutSection />
-        </div>
+        <AboutSection />
         <SolutionsSection />
         <StatsSection />
-        <div id="cta-section">
-          <CTASection />
-        </div>
+        <CTASection />
       </div>
-
-      {/* Demo Request Modal */}
-      <DemoRequestModal 
-        isOpen={isDemoModalOpen} 
-        onClose={() => setIsDemoModalOpen(false)} 
-      />
     </div>
   );
 };

@@ -160,8 +160,15 @@ module.exports = {
         'rotate-slow': 'rotate-slow 20s linear infinite',
         'bounce-slow': 'bounce-slow 3s infinite'
       },
+      // Screens configuration aligned with centralized breakpoint system
+      // These breakpoints are sourced from src/lib/breakpoints.js for consistency
       screens: {
-        'xs': '375px',
+        'xs': '375px',    // Extra small mobile devices
+        'sm': '640px',    // Small devices (matches Tailwind default)
+        'md': '768px',    // Tablet start (matches TABLET_MIN_WIDTH)
+        'lg': '1024px',   // Desktop start (matches DESKTOP_MIN_WIDTH)
+        'xl': '1280px',   // Large desktop (matches LARGE_DESKTOP_MIN)
+        '2xl': '1536px',  // Extra large desktop (matches EXTRA_LARGE_DESKTOP_MIN)
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

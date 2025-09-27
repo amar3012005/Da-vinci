@@ -2,9 +2,21 @@
 
 import { useEffect, useRef } from "react"
 
+declare global {
+  interface Window {
+    THREE: any
+  }
+}
+
 export function ShaderAnimation() {
-  const containerRef = useRef(null)
-  const sceneRef = useRef({
+  const containerRef = useRef<HTMLDivElement>(null)
+  const sceneRef = useRef<{
+    camera: any
+    scene: any
+    renderer: any
+    uniforms: any
+    animationId: number | null
+  }>({
     camera: null,
     scene: null,
     renderer: null,
@@ -15,7 +27,7 @@ export function ShaderAnimation() {
   useEffect(() => {
     // Load Three.js dynamically
     const script = document.createElement("script")
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r89/three.min.js"
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/89/three.min.js"
     script.onload = () => {
       if (containerRef.current && window.THREE) {
         initThreeJS()
