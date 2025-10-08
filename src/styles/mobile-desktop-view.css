@@ -3,83 +3,143 @@
 
 /* Mobile-specific zoom and font scaling - Updated to use standardized breakpoints */
 @media screen and (max-width: 767px) {
-  /* Base body scaling for mobile */
+  /* Base body scaling for mobile - optimized for better fit */
   body {
-    zoom: 1.2 !important;
-    -webkit-text-size-adjust: 120% !important;
-    -moz-text-size-adjust: 120% !important;
-    text-size-adjust: 120% !important;
-    font-size: 18px !important;
+    zoom: 1.1 !important;
+    -webkit-text-size-adjust: 110% !important;
+    -moz-text-size-adjust: 110% !important;
+    text-size-adjust: 110% !important;
+    font-size: clamp(16px, 4vw, 18px) !important;
     line-height: 1.6 !important;
+    transform-origin: top left !important;
+    will-change: transform !important;
   }
 
   /* Root element scaling */
   html {
-    font-size: 18px !important;
-    zoom: 1.2 !important;
+    font-size: clamp(16px, 4vw, 18px) !important;
+    zoom: 1.1 !important;
+    transform-origin: top left !important;
   }
 
   /* Ensure proper touch targets */
   * {
     touch-action: pan-x pan-y !important;
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
   }
 
-  /* Button and interactive element scaling */
+  /* Button and interactive element scaling - enhanced touch targets */
   button, 
   [role="button"], 
   input, 
   textarea, 
-  select,
-  a {
-    min-height: 48px !important;
-    min-width: 48px !important;
-    font-size: 16px !important;
-    padding: 12px 16px !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
+  select {
+    min-height: 56px !important;
+    min-width: 56px !important;
+    font-size: clamp(14px, 4vw, 16px) !important;
+    padding: 14px 18px !important;
+    margin: 4px !important;
     touch-action: manipulation !important;
+    box-sizing: border-box !important;
   }
 
-  /* Text scaling for better readability */
-  h1 { font-size: 2.5rem !important; }
-  h2 { font-size: 2rem !important; }
-  h3 { font-size: 1.75rem !important; }
-  h4 { font-size: 1.5rem !important; }
-  h5 { font-size: 1.25rem !important; }
-  h6 { font-size: 1.125rem !important; }
+  /* Dedicated interactive classes - enhanced touch targets */
+  .btn,
+  .nav-link,
+  .button,
+  .interactive-link,
+  [class*="btn-"],
+  [class*="button-"] {
+    min-height: 56px !important;
+    min-width: 56px !important;
+    font-size: clamp(14px, 4vw, 16px) !important;
+    padding: 14px 18px !important;
+    margin: 4px !important;
+    touch-action: manipulation !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Dedicated interactive elements - prevent text selection */
+  button, 
+  [role="button"],
+  .btn,
+  .nav-link,
+  .button,
+  .interactive-link,
+  [class*="btn-"],
+  [class*="button-"] {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Text scaling for better readability - using clamp for responsive sizing */
+  h1 { font-size: clamp(2rem, 8vw, 2.5rem) !important; }
+  h2 { font-size: clamp(1.75rem, 7vw, 2rem) !important; }
+  h3 { font-size: clamp(1.5rem, 6vw, 1.75rem) !important; }
+  h4 { font-size: clamp(1.25rem, 5vw, 1.5rem) !important; }
+  h5 { font-size: clamp(1.125rem, 4vw, 1.25rem) !important; }
+  h6 { font-size: clamp(1rem, 4vw, 1.125rem) !important; }
   
   p, span, div, li {
-    font-size: 1.125rem !important;
+    font-size: clamp(1rem, 4vw, 1.125rem) !important;
     line-height: 1.6 !important;
   }
 
   /* Small text adjustments */
   small, .text-xs, .text-sm {
-    font-size: 1rem !important;
+    font-size: clamp(0.875rem, 3vw, 1rem) !important;
   }
 
-  /* Improve scrolling performance */
+  /* Improve scrolling performance and prevent horizontal overflow */
   html, body {
     width: 100% !important;
     height: auto !important;
-    overflow-x: auto !important;
+    overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scroll-behavior: smooth !important;
+    box-sizing: border-box !important;
   }
 
-  /* Container adjustments */
+  /* Container adjustments - specific overflow-causing containers only */
   .container, 
   .max-w-7xl,
   .max-w-6xl,
   .max-w-5xl,
-  .max-w-4xl {
-    max-width: none !important;
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .w-screen,
+  .min-w-full,
+  .w-full {
+    max-width: 100% !important;
     width: 100% !important;
     padding: 0 20px !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Media elements that commonly cause overflow */
+  img, video, iframe, canvas, svg, 
+  picture, figure, embed, object {
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Specific width-constrained elements */
+  [style*="width:"] {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Table responsiveness */
+  table {
+    max-width: 100% !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    word-wrap: break-word !important;
   }
 }
 
@@ -108,22 +168,24 @@
 /* Small mobile devices - Updated to use standardized breakpoints */
 @media screen and (max-width: 639px) {
   body {
-    zoom: 1.3 !important;
-    font-size: 20px !important;
+    zoom: 1.2 !important;
+    font-size: clamp(18px, 5vw, 20px) !important;
+    overflow-x: hidden !important;
   }
 
   html {
-    font-size: 20px !important;
-    zoom: 1.3 !important;
+    font-size: clamp(18px, 5vw, 20px) !important;
+    zoom: 1.2 !important;
+    overflow-x: hidden !important;
   }
 
   /* Enhanced text scaling for small screens */
-  h1 { font-size: 2.75rem !important; }
-  h2 { font-size: 2.25rem !important; }
-  h3 { font-size: 2rem !important; }
+  h1 { font-size: clamp(2.25rem, 10vw, 2.75rem) !important; }
+  h2 { font-size: clamp(2rem, 9vw, 2.25rem) !important; }
+  h3 { font-size: clamp(1.75rem, 8vw, 2rem) !important; }
   
   p, span, div, li {
-    font-size: 1.25rem !important;
+    font-size: clamp(1.125rem, 5vw, 1.25rem) !important;
     line-height: 1.7 !important;
   }
 
@@ -132,39 +194,85 @@
   [role="button"], 
   input, 
   textarea, 
-  select,
-  a {
-    min-height: 56px !important;
-    min-width: 56px !important;
-    font-size: 18px !important;
-    padding: 16px 20px !important;
+  select {
+    min-height: 64px !important;
+    min-width: 64px !important;
+    font-size: clamp(16px, 5vw, 18px) !important;
+    padding: 18px 22px !important;
+    margin: 6px !important;
+  }
+
+  /* Dedicated interactive classes for small screens */
+  .btn,
+  .nav-link,
+  .button,
+  .interactive-link,
+  [class*="btn-"],
+  [class*="button-"] {
+    min-height: 64px !important;
+    min-width: 64px !important;
+    font-size: clamp(16px, 5vw, 18px) !important;
+    padding: 18px 22px !important;
+    margin: 6px !important;
+  }
+
+  /* Enhanced viewport constraints for small devices - specific containers only */
+  .container, 
+  .max-w-7xl,
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .w-screen,
+  .min-w-full,
+  .w-full {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
 /* Landscape orientation adjustments - Updated to use standardized breakpoints */
 @media screen and (max-width: 767px) and (orientation: landscape) {
   body {
-    zoom: 1.1 !important;
-    font-size: 16px !important;
+    zoom: 1.0 !important;
+    font-size: clamp(14px, 3vw, 16px) !important;
+    overflow-x: hidden !important;
   }
 
   html {
-    zoom: 1.1 !important;
+    zoom: 1.0 !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Optimized text scaling for landscape */
+  h1 { font-size: clamp(1.75rem, 6vw, 2rem) !important; }
+  h2 { font-size: clamp(1.5rem, 5vw, 1.75rem) !important; }
+  h3 { font-size: clamp(1.25rem, 4vw, 1.5rem) !important; }
+
+  p, span, div, li {
+    font-size: clamp(0.875rem, 3vw, 1rem) !important;
+    line-height: 1.5 !important;
   }
 }
 
 /* Ensure animations and transforms work properly with zoom - Updated to use standardized breakpoints */
 @media screen and (max-width: 767px) {
-  * {
-    transform-origin: center center !important;
+  /* Only apply transform-origin to elements that need it */
+  body, html {
+    transform-origin: top left !important;
+    box-sizing: border-box !important;
   }
 
   /* Shader container adjustments */
   .shader-container,
   canvas {
     width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
     min-height: 400px !important;
+    overflow: hidden !important;
   }
 
   /* Ensure proper rendering of complex elements */
@@ -175,6 +283,70 @@
     -webkit-backface-visibility: hidden !important;
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Prevent text overflow in specific text elements */
+  .text-overflow-clip,
+  .whitespace-nowrap {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+}
+
+/* Very small mobile devices (320px and below) */
+@media screen and (max-width: 320px) {
+  body {
+    zoom: 1.15 !important;
+    font-size: clamp(16px, 6vw, 18px) !important;
+    overflow-x: hidden !important;
+  }
+
+  html {
+    font-size: clamp(16px, 6vw, 18px) !important;
+    zoom: 1.15 !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Ultra-compact text scaling */
+  h1 { font-size: clamp(1.75rem, 12vw, 2rem) !important; }
+  h2 { font-size: clamp(1.5rem, 10vw, 1.75rem) !important; }
+  h3 { font-size: clamp(1.25rem, 8vw, 1.5rem) !important; }
+
+  /* Maximum touch target sizes for very small screens */
+  button, 
+  [role="button"], 
+  input, 
+  textarea, 
+  select {
+    min-height: 60px !important;
+    min-width: 60px !important;
+    font-size: clamp(14px, 6vw, 16px) !important;
+    padding: 16px 20px !important;
+    margin: 8px 4px !important;
+  }
+
+  /* Dedicated interactive classes for very small screens */
+  .btn,
+  .nav-link,
+  .button,
+  .interactive-link,
+  [class*="btn-"],
+  [class*="button-"] {
+    min-height: 60px !important;
+    min-width: 60px !important;
+    font-size: clamp(14px, 6vw, 16px) !important;
+    padding: 16px 20px !important;
+    margin: 8px 4px !important;
+  }
+
+  /* Container padding adjustments for very small screens */
+  .container, 
+  [class*="max-w-"],
+  [class*="w-"] {
+    padding: 0 16px !important;
   }
 }
 
@@ -183,7 +355,64 @@
   /* iOS Safari specific fixes - Updated to use standardized breakpoints */
   @media screen and (max-width: 767px) {
     body {
-      -webkit-text-size-adjust: 120% !important;
+      -webkit-text-size-adjust: 110% !important;
+      overflow-x: hidden !important;
     }
+
+    html {
+      overflow-x: hidden !important;
+    }
+
+    /* Prevent iOS zoom on input focus */
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* Additional constraints to prevent overflow for known problematic containers */
+@media screen and (max-width: 767px) {
+  /* Ensure known overflowing containers respect viewport width */
+  .container,
+  .max-w-7xl,
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .w-screen,
+  .min-w-full,
+  .w-full {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Specific element type constraints - only elements that commonly overflow */
+  .main-content,
+  .content-wrapper,
+  .page-container {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Form element responsiveness */
+  form {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* List responsiveness */
+  ul, ol, dl {
+    max-width: 100% !important;
+    padding-left: 20px !important;
+  }
+
+  /* Code block responsiveness */
+  pre, code {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
   }
 }

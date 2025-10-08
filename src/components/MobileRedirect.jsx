@@ -75,11 +75,11 @@ const MobileRedirect = () => {
           <Monitor className="w-16 h-16 text-blue-400 mx-auto mb-4" />
         </div>
         
-        <h1 className="text-3xl font-bold mb-4">Desktop Experience Recommended</h1>
+        <h1 className="text-3xl font-bold mb-4">Cannot view in mobile version</h1>
         
         <p className="text-gray-300 mb-8 leading-relaxed">
-          DA'VINCI's AI showcase is optimized for desktop viewing. 
-          Please switch to desktop mode for the full interactive experience.
+          This application is not compatible with mobile devices. 
+          You must switch to desktop mode to access DA'VINCI's features.
         </p>
 
         <div className="flex justify-center items-center gap-6 mb-8">
@@ -100,13 +100,25 @@ const MobileRedirect = () => {
           </div>
         </div>
 
+        {/* Primary Action - Force Desktop Version */}
         <button
-          onClick={() => setShowInstructions(true)}
+          onClick={forceDesktopMode}
           className="w-full px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold 
                      rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-300
-                     flex items-center justify-center gap-3 mb-4"
+                     flex items-center justify-center gap-3 mb-6 shadow-lg shadow-blue-500/25"
         >
-          <BrowserIcon className="w-5 h-5" />
+          <Monitor className="w-5 h-5" />
+          Force Desktop Version
+        </button>
+
+        {/* Secondary Action - Browser Instructions */}
+        <button
+          onClick={() => setShowInstructions(true)}
+          className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white/80 
+                     rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300
+                     flex items-center justify-center gap-2 mb-4"
+        >
+          <BrowserIcon className="w-4 h-4" />
           Enable Desktop Mode
         </button>
 
@@ -120,18 +132,10 @@ const MobileRedirect = () => {
         </button>
 
         <div className="mt-8 pt-6 border-t border-white/10">
-          <p className="text-white/50 text-xs leading-relaxed mb-4">
+          <p className="text-white/50 text-xs leading-relaxed">
             Experience our AI agent TARA_x1, interactive demos, and full-screen visualizations 
             designed for desktop browsers.
           </p>
-          
-          <button
-            onClick={forceDesktopMode}
-            className="w-full px-4 py-2 text-xs bg-white/5 text-white/60 rounded-lg
-                       hover:bg-white/10 hover:text-white/80 transition-all duration-200"
-          >
-            Force Desktop Mode (if detection fails)
-          </button>
         </div>
       </div>
 

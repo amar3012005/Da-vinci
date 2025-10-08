@@ -280,6 +280,9 @@ const HeroSection = () => {
       >
         <ChevronDown className="w-6 h-6 text-white/40" />
       </motion.div>
+
+      
+        
     </motion.section>
   );
 };
@@ -893,7 +896,7 @@ const SolutionsSection = () => {
               The multilingual support is exceptional."
             </div>
             <div className="text-white/60 text-sm">
-              — Enterprise Client, Mumbai
+              — S I N D H , Himachal Pradesh
             </div>
           </div>
         </motion.div>
@@ -1316,11 +1319,11 @@ const CTASection = () => {
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-white/60 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>hello@davinci-solutions.com</span>
+                  <span>admin@davinciai.in</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-white/40 rounded-full"></div>
-                  <span>+1 (555) 123-4567</span>
+                  <span>+91 6301805656</span>
                 </div>
               </div>
             </motion.div>

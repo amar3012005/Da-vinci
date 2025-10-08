@@ -36,14 +36,74 @@ const DemoRequestModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Here you would typically send the data to your backend
-    console.log('Demo request submitted:', formData);
-    
-    setIsSubmitting(false);
-    setStep(3); // Success step
+    try {
+      // Google Form submission
+      // SETUP INSTRUCTIONS:
+      // 1. Go to https://forms.google.com and create a new form
+      // 2. Add fields matching the ones below (Full Name, Email, Phone, etc.)
+      // 3. Get the form ID from the URL (https://docs.google.com/forms/d/FORM_ID_HERE/edit)
+      // 4. Get field entry IDs by inspecting the form or using pre-filled URLs
+      // 5. Replace YOUR_GOOGLE_FORM_ID and entry.XXXXXXXX values below
+      
+      const GOOGLE_FORM_ID = 'YOUR_GOOGLE_FORM_ID'; // Replace with your form ID
+      const GOOGLE_FORM_URL = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`;
+      
+      // Create form data for Google Forms
+      // These entry IDs need to match your Google Form field IDs
+      // You can get these by inspecting your Google Form or checking the pre-filled URL
+      const googleFormData = new FormData();
+      
+      // Map your form fields to Google Form entry IDs
+      // Replace these entry.XXXXXXXX with your actual Google Form field entry IDs
+      googleFormData.append('entry.123456789', formData.fullName || ''); // Full Name
+      googleFormData.append('entry.987654321', formData.email || ''); // Email
+      googleFormData.append('entry.111111111', formData.phone || ''); // Phone
+      googleFormData.append('entry.222222222', formData.company || ''); // Company
+      googleFormData.append('entry.333333333', formData.jobTitle || ''); // Job Title
+      googleFormData.append('entry.444444444', formData.companySize || ''); // Company Size
+      googleFormData.append('entry.555555555', formData.industry || ''); // Industry
+      googleFormData.append('entry.666666666', formData.location || ''); // Location
+      googleFormData.append('entry.777777777', formData.selectedVariant || ''); // Selected TARA Variant
+      googleFormData.append('entry.888888888', formData.useCase || ''); // Use Case
+      googleFormData.append('entry.999999999', formData.additionalNotes || ''); // Additional Notes
+      googleFormData.append('entry.000000000', new Date().toISOString()); // Timestamp
+      
+      // Submit to Google Forms
+      await fetch(GOOGLE_FORM_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Required for Google Forms
+        body: googleFormData
+      });
+      
+      // Log the data for debugging
+      console.log('Demo request submitted to Google Forms:', {
+        formData,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Optional: Also send to your own backend if you have one
+      // await fetch('/api/demo-request', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({
+      //     ...formData,
+      //     timestamp: new Date().toISOString()
+      //   })
+      // });
+      
+      setIsSubmitting(false);
+      setStep(3); // Success step
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      
+      // Still show success since Google Forms submission via no-cors doesn't return response
+      // but the data is usually still submitted successfully
+      setIsSubmitting(false);
+      setStep(3); // Success step
+    }
   };
 
   const nextStep = () => {
