@@ -148,7 +148,7 @@ const DemoRequestModal = ({ isOpen, onClose }) => {
       themeColor: 'from-orange-500 to-red-500',
       features: [
         'Basic Conversational AI',
-        '5 Indian Languages',
+     
         'Standard Voice Recognition',
         'Email & Chat Integration',
         'Up to 1,000 interactions/month'
@@ -170,7 +170,7 @@ const DemoRequestModal = ({ isOpen, onClose }) => {
       },
       features: [
         'All Base Features',
-        '15+ Indian Languages',
+     
         'Advanced NLP Processing',
         'Form Filling & Registration',
         'Multi-channel Integration',
@@ -193,7 +193,7 @@ const DemoRequestModal = ({ isOpen, onClose }) => {
       },
       features: [
         'All Pro Features',
-        'Unlimited Languages',
+       
         'Persistent Semantic Memory',
         'Custom AI Model Training',
         'Enterprise Integrations',
