@@ -199,10 +199,12 @@ module.exports = {
         '22': '5.5rem',
         '26': '6.5rem',
         '30': '7.5rem',
+        '88': '22rem',
         '128': '32rem',
         '144': '36rem',
       },
       fontSize: {
+        'xxs': '0.625rem',
         '10xl': ['10rem', { lineHeight: '1' }],
         '11xl': ['12rem', { lineHeight: '1' }],
         '12xl': ['14rem', { lineHeight: '1' }],

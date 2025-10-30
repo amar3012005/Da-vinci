@@ -2,447 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import mobile desktop view enhancements */
-@import './styles/mobile-desktop-view.css';
+/* Global CSS variables for safe areas */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
 
-/* Force Desktop View on Mobile with Screen Fitting */
+/* Basic layout constraints */
 html, body {
-  width: 100% !important;
-  height: auto !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
+  width: 100%;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-width: 100vw;
 }
 
 #root {
-  width: 100% !important;
-  height: auto !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
+  width: 100%;
+  height: auto;
 }
 
-/* Disable touch zoom */
-* {
-  touch-action: pan-x pan-y !important;
+/* Mobile-specific utilities */
+.mobile-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
-/* Mobile-first responsive design - Updated to use standardized breakpoints */
-@media screen and (max-width: 1200px) {
-  #root {
-    transform: scale(calc(100vw / 1200));
-    transform-origin: top left;
-    width: 1200px !important;
-    height: auto !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-  }
-  
-  body {
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-  }
+.mobile-section {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
 }
 
-@media screen and (max-width: 767px) {
-  #root {
-    transform: scale(calc(100vw / 1200));
-    transform-origin: top left;
-    width: 1200px !important;
-    height: auto !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-  }
-  
-  /* Mobile-specific adjustments */
-  .container {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-  
-  /* Typography adjustments for mobile */
-  h1, h2, h3 {
-    font-size: clamp(1.5rem, 4vw, 3rem) !important;
-    line-height: 1.2 !important;
-  }
-  
-  /* Spacing adjustments */
-  .py-32 {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
-  }
-  
-  .px-16 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-  
-  /* Grid adjustments */
-  .grid-cols-2 {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-  
-  .grid-cols-3 {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-  
-  .grid-cols-4 {
-    grid-template-columns: 1fr !important;
-    gap: 1rem !important;
-  }
-  
-  /* Flex adjustments */
-  .flex-row {
-    flex-direction: column !important;
-  }
-  
-  .justify-between {
-    justify-content: center !important;
-  }
-  
-  /* Text alignment */
-  .text-right {
-    text-align: center !important;
-  }
-  
-  .text-left {
-    text-align: center !important;
-  }
-  
-  /* Additional mobile adjustments */
-  .space-y-8 > * + * {
-    margin-top: 1rem !important;
-  }
-  
-  .space-y-6 > * + * {
-    margin-top: 0.75rem !important;
-  }
-  
-  .space-y-4 > * + * {
-    margin-top: 0.5rem !important;
-  }
-  
-  /* Flex wrap for mobile */
-  .flex {
-    flex-wrap: wrap !important;
-  }
-  
-  /* Stack elements vertically */
-  .items-start {
-    align-items: center !important;
-  }
-  
-  .items-end {
-    align-items: center !important;
-  }
-  
-  /* Center everything on mobile */
-  .justify-start {
-    justify-content: center !important;
-  }
-  
-  .justify-end {
-    justify-content: center !important;
+/* Safe area insets for notched devices */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Scoped hero video styling */
+.hero-video {
+  object-fit: cover;
+  object-position: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Mobile-specific smooth scroll behavior */
+@media (max-width: 640px) {
+  html {
+    scroll-behavior: auto;
   }
 }
 
-@media screen and (max-width: 639px) {
-  #root {
-    transform: scale(calc(100vw / 1200));
-    transform-origin: top left;
-    width: 1200px !important;
-    height: auto !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-  }
-  
-  /* Extra small mobile adjustments */
-  .container {
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
-  }
-  
-  /* Smaller typography */
-  h1 {
-    font-size: clamp(1.25rem, 5vw, 2rem) !important;
-  }
-  
-  h2 {
-    font-size: clamp(1rem, 4vw, 1.5rem) !important;
-  }
-  
-  /* Tighter spacing */
-  .py-32 {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-  }
-  
-  .mb-20 {
-    margin-bottom: 1rem !important;
-  }
-  
-  .mb-16 {
-    margin-bottom: 0.75rem !important;
-  }
-  
-  .mb-12 {
-    margin-bottom: 0.5rem !important;
-  }
-  
-  .mb-8 {
-    margin-bottom: 0.5rem !important;
-  }
-  
-  /* Button adjustments */
-  .px-8 {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-  
-  .py-4 {
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
-  }
-  
-  /* Logo adjustments */
-  .w-96 {
-    width: 8rem !important;
-  }
-  
-  .h-96 {
-    height: 8rem !important;
-  }
-  
-  /* Video adjustments */
-  video {
-    object-fit: cover !important;
-    width: 100vw !important;
-    height: 100vh !important;
-  }
-  
-  /* Specific component adjustments */
-  .text-8xl {
-    font-size: 2rem !important;
-  }
-  
-  .text-7xl {
-    font-size: 1.75rem !important;
-  }
-  
-  .text-6xl {
-    font-size: 1.5rem !important;
-  }
-  
-  .text-5xl {
-    font-size: 1.25rem !important;
-  }
-  
-  .text-4xl {
-    font-size: 1.125rem !important;
-  }
-  
-  .text-3xl {
-    font-size: 1rem !important;
-  }
-  
-  .text-2xl {
-    font-size: 0.875rem !important;
-  }
-  
-  .text-xl {
-    font-size: 0.75rem !important;
-  }
-  
-  .text-lg {
-    font-size: 0.75rem !important;
-  }
-  
-  /* Gap adjustments */
-  .gap-16 {
-    gap: 1rem !important;
-  }
-  
-  .gap-12 {
-    gap: 0.75rem !important;
-  }
-  
-  .gap-8 {
-    gap: 0.5rem !important;
-  }
-  
-  .gap-6 {
-    gap: 0.5rem !important;
-  }
-  
-  .gap-4 {
-    gap: 0.25rem !important;
-  }
-  
-  /* Width adjustments */
-  .w-full {
-    width: 100% !important;
-  }
-  
-  .max-w-4xl {
-    max-width: 100% !important;
-  }
-  
-  .max-w-3xl {
-    max-width: 100% !important;
-  }
-  
-  .max-w-2xl {
-    max-width: 100% !important;
-  }
-  
-  .max-w-xl {
-    max-width: 100% !important;
-  }
-  
-  /* Height adjustments */
-  .h-screen {
-    height: auto !important;
-    min-height: 100vh !important;
-  }
-  
-  .h-96 {
-    height: auto !important;
-  }
-  
-  .h-64 {
-    height: auto !important;
-  }
-  
-  /* Position adjustments */
-  .fixed {
-    position: relative !important;
-  }
-  
-  .absolute {
-    position: relative !important;
-  }
-  
-  /* Border radius adjustments */
-  .rounded-3xl {
-    border-radius: 0.5rem !important;
-  }
-  
-  .rounded-2xl {
-    border-radius: 0.375rem !important;
-  }
-  
-  .rounded-xl {
-    border-radius: 0.25rem !important;
-  }
-  
-  /* Popup adjustments */
-  .fixed.inset-0 {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-  }
-  
-  /* Modal/popup sizing */
-  .max-w-lg {
-    max-width: 90% !important;
-    margin: 1rem !important;
-  }
-  
-  .max-w-2xl {
-    max-width: 95% !important;
-    margin: 0.5rem !important;
-  }
-  
-  /* Button sizing */
-  .w-16 {
-    width: 3rem !important;
-  }
-  
-  .h-16 {
-    height: 3rem !important;
-  }
-  
-  .w-12 {
-    width: 2.5rem !important;
-  }
-  
-  .h-12 {
-    height: 2.5rem !important;
-  }
-  
-  .w-10 {
-    width: 2rem !important;
-  }
-  
-  .h-10 {
-    height: 2rem !important;
-  }
-  
-  .w-8 {
-    width: 1.5rem !important;
-  }
-  
-  .h-8 {
-    height: 1.5rem !important;
-  }
-  
-  /* Icon sizing */
-  .w-6 {
-    width: 1rem !important;
-  }
-  
-  .h-6 {
-    height: 1rem !important;
-  }
-  
-  .w-5 {
-    width: 0.875rem !important;
-  }
-  
-  .h-5 {
-    height: 0.875rem !important;
-  }
-  
-  .w-4 {
-    width: 0.75rem !important;
-  }
-  
-  .h-4 {
-    height: 0.75rem !important;
-  }
-  
-  .w-3 {
-    width: 0.625rem !important;
-  }
-  
-  .h-3 {
-    height: 0.625rem !important;
-  }
-}
-
-/* Ensure background video scales properly */
-video {
-  object-fit: cover !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 100% !important;
-  min-height: 100% !important;
-}
-
-/* Ensure video maintains aspect ratio on all devices */
-@media screen and (max-width: 1200px) {
-  video {
-    object-fit: cover !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    min-width: 100vw !important;
-    min-height: 100vh !important;
-  }
-}
-
-/* Animation for the pulsing effect */
+/* Custom animations */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -452,7 +77,6 @@ video {
   }
 }
 
-/* Animation for the ping effect */
 @keyframes ping {
   75%, 100% {
     transform: scale(2);
@@ -460,318 +84,10 @@ video {
   }
 }
 
-/* Custom animations for the orbital timeline */
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .animate-ping {
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-/* Transitions */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.duration-300 {
-  transition-duration: 300ms;
-}
-
-.duration-700 {
-  transition-duration: 700ms;
-}
-
-.duration-1000 {
-  transition-duration: 1000ms;
-}
-
-/* Backdrop blur */
-.backdrop-blur-lg {
-  backdrop-filter: blur(16px);
-}
-
-/* Custom gradients */
-.bg-gradient-orbital {
-  background: linear-gradient(to bottom right, #6366f1, #3b82f6, #14b8a6);
-}
-
-.bg-gradient-radial {
-  background: radial-gradient(circle, var(--tw-gradient-stops));
-}
-
-/* Z-index utilities */
-.z-10 {
-  z-index: 10;
-}
-
-.z-50 {
-  z-index: 50;
-}
-
-/* Custom shadows */
-.shadow-orbital {
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-}
-
-/* Custom transforms */
-.scale-125 {
-  transform: scale(1.25);
-}
-
-.scale-150 {
-  transform: scale(1.5);
-}
-
-/* Custom opacity values */
-.opacity-70 {
-  opacity: 0.7;
-}
-
-.opacity-50 {
-  opacity: 0.5;
-}
-
-/* Custom border opacity */
-.border-white\/10 {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.border-white\/20 {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.border-white\/30 {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.border-white\/40 {
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-/* Custom background opacity */
-.bg-black\/90 {
-  background-color: rgba(0, 0, 0, 0.9);
-}
-
-.bg-white\/50 {
-  background-color: rgba(255, 255, 255, 0.5);
-}
-
-.bg-white\/80 {
-  background-color: rgba(255, 255, 255, 0.8);
-}
-
-/* Custom text opacity */
-.text-white\/70 {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.text-white\/80 {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-/* Horizon Hero Section Styles */
-.hero-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  z-index: -1;
-}
-
-.hero-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
-.cosmos-style {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
-  min-height: 100vh;
-}
-
-.hero-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 10;
-  width: 100%;
-  max-width: 1200px;
-  padding: 0 2rem;
-}
-
-.cosmos-content {
-  color: white;
-}
-
-.hero-title {
-  font-size: clamp(4rem, 12vw, 12rem);
-  font-weight: 300;
-  letter-spacing: 0.1em;
-  margin-bottom: 2rem;
-  line-height: 0.9;
-  text-transform: uppercase;
-  font-family: 'Inter', sans-serif;
-}
-
-.title-char {
-  display: inline-block;
-  opacity: 0;
-}
-
-.hero-subtitle {
-  font-size: clamp(1.2rem, 3vw, 2rem);
-  font-weight: 300;
-  line-height: 1.4;
-  opacity: 0.8;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.cosmos-subtitle {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.subtitle-line {
-  margin-bottom: 0.5rem;
-  opacity: 0;
-}
-
-/* Side Menu */
-.side-menu {
-  position: fixed;
-  top: 2rem;
-  left: 2rem;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  opacity: 0;
-}
-
-.menu-icon {
-  width: 30px;
-  height: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-}
-
-.menu-icon span {
-  width: 100%;
-  height: 2px;
-  background: white;
-  transition: all 0.3s ease;
-}
-
-.vertical-text {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-}
-
-/* Scroll Progress */
-.scroll-progress {
-  position: fixed;
-  right: 2rem;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  opacity: 0;
-}
-
-.scroll-text {
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-  transform: rotate(90deg);
-}
-
-.progress-track {
-  width: 2px;
-  height: 200px;
-  background: rgba(255, 255, 255, 0.1);
-  position: relative;
-}
-
-.progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 0%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.3));
-  transition: height 0.1s ease;
-}
-
-.section-counter {
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.6);
-  font-family: 'Courier New', monospace;
-}
-
-/* Scroll Sections */
-.scroll-sections {
-  position: relative;
-  z-index: 5;
-  margin-top: 100vh;
-}
-
-.content-section {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 0 2rem;
-  position: relative;
-}
-
-.content-section .hero-title {
-  font-size: clamp(3rem, 8vw, 8rem);
-  margin-bottom: 1.5rem;
-}
-
-.content-section .hero-subtitle {
-  font-size: clamp(1rem, 2.5vw, 1.8rem);
-}
-
-/* Responsive Design - Updated to use standardized breakpoints */
-@media (max-width: 767px) {
-  .side-menu {
-    top: 1rem;
-    left: 1rem;
-  }
-  
-  .scroll-progress {
-    right: 1rem;
-  }
-  
-  .hero-content {
-    padding: 0 1rem;
-  }
-  
-  .content-section {
-    padding: 0 1rem;
-  }
 }

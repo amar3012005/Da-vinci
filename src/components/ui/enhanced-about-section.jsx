@@ -142,13 +142,13 @@ function EnhancedAboutSection() {
                     <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
                       Current Education
                     </div>
-                    <div className="text-white text-lg font-light">B.Tech , IIT Mandi</div>
+                    <div className="text-white text-lg font-light">B.Tech ,LUH</div>
                   </div>
                   <div>
                     <div className="text-white/40 font-mono text-xs uppercase tracking-wider mb-2">
                       Location
                     </div>
-                    <div className="text-white text-lg font-light">Himachal Pradesh, India</div>
+                    <div className="text-white text-lg font-light">Hannover, Germany</div>
                   </div>
                   
                   {/* Contact Button */}

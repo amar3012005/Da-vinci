@@ -93,7 +93,7 @@ const ImageCarousel = ({ item, timelineData, onRelatedClick }) => {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.8 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="absolute top-20 left-1/2 -translate-x-1/2 w-96"
+      className="absolute top-20 left-1/2 -translate-x-1/2 w-[90vw] max-w-sm sm:max-w-md lg:max-w-lg"
     >
       <div className="bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl overflow-hidden shadow-2xl shadow-black/50">
         {/* Elegant connection line */}
@@ -251,9 +251,32 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
   const [pulseEffect, setPulseEffect] = useState({});
   const [centerOffset, setCenterOffset] = useState({ x: 0, y: 0 });
   const [activeNodeId, setActiveNodeId] = useState(null);
+  const [radiusScale, setRadiusScale] = useState(1);
+  const [particleCount, setParticleCount] = useState(20);
   const containerRef = useRef(null);
   const orbitRef = useRef(null);
   const nodeRefs = useRef({});
+  
+  // Viewport-aware scaling for responsive radii and particles
+  useEffect(() => {
+    const updateScale = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setRadiusScale(0.6);
+        setParticleCount(10);
+      } else if (width < 1024) {
+        setRadiusScale(0.8);
+        setParticleCount(15);
+      } else {
+        setRadiusScale(1.0);
+        setParticleCount(20);
+      }
+    };
+    
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
   
   // Scroll-based animations
   const { scrollYProgress } = useScroll({
@@ -341,8 +364,8 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
   const calculateNodePosition = (index, total, category) => {
     const angle = ((index / total) * 360 + rotationAngle) % 360;
     
-    // Define orbital rings based on category
-    const categoryRadii = {
+    // Define base orbital rings based on category, scaled by viewport
+    const baseCategoryRadii = {
       "Market Size": 180,
       "Regional Growth": 220,
       "Adoption": 260,
@@ -351,7 +374,8 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
       "Returns": 380
     };
     
-    const radius = categoryRadii[category] || 200;
+    const baseRadius = baseCategoryRadii[category] || 200;
+    const radius = baseRadius * radiusScale;
     const radian = (angle * Math.PI) / 180;
 
     const x = radius * Math.cos(radian) + centerOffset.x;
@@ -423,7 +447,7 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
 
   return (
     <motion.div
-      className="w-full h-[800px] flex flex-col items-center justify-center relative overflow-hidden"
+      className="w-full h-[400px] sm:h-[500px] md:h-[600px] lg:h-[700px] xl:h-[800px] flex flex-col items-center justify-center relative overflow-hidden"
       ref={containerRef}
       onClick={handleContainerClick}
       style={{ scale, opacity }}
@@ -436,8 +460,8 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
         {/* Subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-radial from-white/5 via-transparent to-transparent" />
         
-        {/* Animated particles */}
-        {[...Array(20)].map((_, i) => (
+        {/* Animated particles - responsive count */}
+        {[...Array(particleCount)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute w-1 h-1 bg-white/30 rounded-full"
@@ -536,9 +560,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-md shadow-lg shadow-white/20" />
           </motion.div>
 
-          {/* Market Size Ring - 180px radius */}
+          {/* Market Size Ring - 180px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[360px] h-[360px] rounded-full border-2 border-blue-400/60 shadow-lg shadow-blue-400/20"
+            className="absolute rounded-full border-2 border-blue-400/60 shadow-lg shadow-blue-400/20"
+            style={{ 
+              width: `${360 * radiusScale}px`, 
+              height: `${360 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [0, 360],
               opacity: [0.6, 0.8, 0.6]
@@ -550,9 +578,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             }}
           />
           
-          {/* Regional Growth Ring - 220px radius */}
+          {/* Regional Growth Ring - 220px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[440px] h-[440px] rounded-full border-2 border-green-400/60 shadow-lg shadow-green-400/20"
+            className="absolute rounded-full border-2 border-green-400/60 shadow-lg shadow-green-400/20"
+            style={{ 
+              width: `${440 * radiusScale}px`, 
+              height: `${440 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [360, 0],
               opacity: [0.5, 0.7, 0.5]
@@ -564,9 +596,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             }}
           />
           
-          {/* Adoption Ring - 260px radius */}
+          {/* Adoption Ring - 260px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[520px] h-[520px] rounded-full border-2 border-purple-400/60 shadow-lg shadow-purple-400/20"
+            className="absolute rounded-full border-2 border-purple-400/60 shadow-lg shadow-purple-400/20"
+            style={{ 
+              width: `${520 * radiusScale}px`, 
+              height: `${520 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [0, 360],
               opacity: [0.4, 0.6, 0.4]
@@ -578,9 +614,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             }}
           />
           
-          {/* Impact Ring - 300px radius */}
+          {/* Impact Ring - 300px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[600px] h-[600px] rounded-full border-2 border-orange-400/60 shadow-lg shadow-orange-400/20"
+            className="absolute rounded-full border-2 border-orange-400/60 shadow-lg shadow-orange-400/20"
+            style={{ 
+              width: `${600 * radiusScale}px`, 
+              height: `${600 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [360, 0],
               opacity: [0.3, 0.5, 0.3]
@@ -592,9 +632,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             }}
           />
           
-          {/* Investment Ring - 340px radius */}
+          {/* Investment Ring - 340px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[680px] h-[680px] rounded-full border-2 border-yellow-400/60 shadow-lg shadow-yellow-400/20"
+            className="absolute rounded-full border-2 border-yellow-400/60 shadow-lg shadow-yellow-400/20"
+            style={{ 
+              width: `${680 * radiusScale}px`, 
+              height: `${680 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [0, 360],
               opacity: [0.2, 0.4, 0.2]
@@ -606,9 +650,13 @@ const RadialOrbitalTimeline = ({ timelineData }) => {
             }}
           />
           
-          {/* Returns Ring - 380px radius */}
+          {/* Returns Ring - 380px radius * radiusScale */}
           <motion.div 
-            className="absolute w-[760px] h-[760px] rounded-full border-2 border-red-400/60 shadow-lg shadow-red-400/20"
+            className="absolute rounded-full border-2 border-red-400/60 shadow-lg shadow-red-400/20"
+            style={{ 
+              width: `${760 * radiusScale}px`, 
+              height: `${760 * radiusScale}px` 
+            }}
             animate={{ 
               rotate: [360, 0],
               opacity: [0.1, 0.3, 0.1]

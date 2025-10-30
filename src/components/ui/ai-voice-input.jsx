@@ -14,6 +14,22 @@ export function AIVoiceInput({
   const [isClient, setIsClient] = useState(false);
   const [isDemo, setIsDemo] = useState(demoMode);
   const [audioData, setAudioData] = useState(new Array(visualizerBars).fill(0));
+  const [permissionError, setPermissionError] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile device
+  useEffect(() => {
+    setIsClient(true);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Adjust visualizer bars for mobile
+  const effectiveBars = isMobile ? Math.min(24, visualizerBars) : visualizerBars;
 
   useEffect(() => {
     setIsClient(true);
@@ -27,10 +43,10 @@ export function AIVoiceInput({
         console.log('AIVoiceInput received audio data:', rawData.slice(0, 10));
         
         // Map frequency data to visualizer bars
-        const mappedData = new Array(visualizerBars).fill(0);
-        const step = Math.floor(rawData.length / visualizerBars);
+        const mappedData = new Array(effectiveBars).fill(0);
+        const step = Math.floor(rawData.length / effectiveBars);
         
-        for (let i = 0; i < visualizerBars; i++) {
+        for (let i = 0; i < effectiveBars; i++) {
           const start = i * step;
           const end = Math.min(start + step, rawData.length);
           const slice = rawData.slice(start, end);
@@ -43,9 +59,24 @@ export function AIVoiceInput({
       }
     };
 
+    // Check microphone permission
+    const checkMicrophonePermission = async () => {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const result = await navigator.permissions.query({ name: 'microphone' });
+          if (result.state === 'denied') {
+            setPermissionError('Microphone access denied. Please enable it in your browser settings.');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not check microphone permission:', error);
+      }
+    };
+
+    checkMicrophonePermission();
     window.addEventListener('audioData', handleAudioData);
     return () => window.removeEventListener('audioData', handleAudioData);
-  }, [isDemo, visualizerBars]);
+  }, [isDemo, effectiveBars]);
 
   useEffect(() => {
     if (!isDemo) {
@@ -60,23 +91,31 @@ export function AIVoiceInput({
     const fallbackInterval = setInterval(() => {
       if (isDemo && audioData.every(val => val === 0)) {
         // Generate simulated audio data
-        const simulatedData = new Array(visualizerBars).fill(0).map(() => Math.random() * 0.8 + 0.2);
+        const simulatedData = new Array(effectiveBars).fill(0).map(() => Math.random() * 0.8 + 0.2);
         setAudioData(simulatedData);
       }
     }, 100);
 
     return () => clearInterval(fallbackInterval);
-  }, [isDemo, audioData, visualizerBars]);
+  }, [isDemo, audioData, effectiveBars]);
 
   return (
     <div className={`w-full py-4 ${className}`}>
       <div className="relative max-w-xl w-full mx-auto flex items-center flex-col gap-2">
+        
+        {/* Permission Error Message */}
+        {permissionError && (
+          <div className="mb-3 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs sm:text-sm text-center">
+            {permissionError}
+          </div>
+        )}
+
         {/* Voice Visualizer */}
-        <div className="h-4 w-64 flex items-center justify-center gap-0.5 mb-4">
-          {[...Array(visualizerBars)].map((_, i) => (
+        <div className="h-6 sm:h-8 md:h-10 w-full max-w-xs sm:max-w-sm md:max-w-md flex items-center justify-center gap-0.5 sm:gap-1 mb-3 sm:mb-4">
+          {[...Array(effectiveBars)].map((_, i) => (
             <div
               key={i}
-              className={`w-0.5 rounded-full transition-all duration-100 ${
+              className={`w-0.5 sm:w-1 rounded-full transition-all duration-100 ${
                 submitted
                   ? "bg-white/60"
                   : "bg-white/10 h-1"
@@ -94,7 +133,7 @@ export function AIVoiceInput({
         </div>
 
         {/* Status Text */}
-        <p className="h-4 text-xs text-white/70">
+        <p className="h-4 text-xs sm:text-sm text-white/70">
           {submitted ? (isDemo ? "Speaking..." : "Listening...") : "Ready to play"}
         </p>
       </div>

@@ -12,8 +12,8 @@ const TaraVariants = () => {
       id: '01',
       name: 'TARA BASE',
       tagline: 'Essential AI Foundation',
-      price: '₹9,800',
-      original: '₹15,000',
+      price: '€100',
+      original: '€150',
       period: '/month',
       icon: MessageCircle,
       theme: {
@@ -36,8 +36,8 @@ const TaraVariants = () => {
       id: '02',
       name: 'TARA PRO',
       tagline: 'Advanced Intelligence + Form Automation',
-      price: '₹24,900',
-      original: '₹35,000',
+      price: '€249',
+      original: '€350',
       period: '/month',
       icon: FileText,
       theme: {
@@ -65,8 +65,8 @@ const TaraVariants = () => {
       id: '03',
       name: 'TARA ENTERPRISE',
       tagline: 'Unlimited Potential + Persistent Memory',
-      price: '₹74,900',
-      original: '₹99,000',
+      price: '€749',
+      original: '€990',
       period: '/month',
       icon: Brain,
       theme: {

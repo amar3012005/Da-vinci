@@ -124,7 +124,7 @@ export function ShaderAnimation() {
 
     // Initialize renderer
     const renderer = new THREE.WebGLRenderer()
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
     // Store references
@@ -167,9 +167,11 @@ export function ShaderAnimation() {
 
 export default function DemoOne() {
   return (
-    <div className="relative flex h-[650px] w-full flex-col items-center justify-center overflow-hidden rounded-xl">
-      <ShaderAnimation/>
-      <span className="pointer-events-none z-10 text-center text-7xl leading-none font-semibold tracking-tighter whitespace-pre-wrap text-white">
+    <div className="relative flex h-64 sm:h-80 md:h-96 lg:h-[650px] w-full max-w-full flex-col items-center justify-center overflow-hidden rounded-xl">
+      <div className="absolute inset-0">
+        <ShaderAnimation/>
+      </div>
+      <span className="pointer-events-none z-10 text-center text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl leading-none font-semibold tracking-tighter whitespace-pre-wrap text-white px-4">
         Shader Lines
       </span>
     </div>

@@ -743,8 +743,8 @@ const SolutionsSection = () => {
       name: "TARA_x1",
       isWinner: true,
       availability: "24/7",
-      languages: "20+ Indic + Eng",
-      cost: "₹9,800",
+      languages: "Multi-native",
+      cost: "€100",
       scalability: "Instant",
       personalization: "High (memory)",
       errorRate: "Very Low",
@@ -758,7 +758,7 @@ const SolutionsSection = () => {
       isWinner: false,
       availability: "Limited hours",
       languages: "2-3",
-      cost: "₹25,547",
+      cost: "€260",
       scalability: "Manual hiring",
       personalization: "Low",
       errorRate: "High",
@@ -772,7 +772,7 @@ const SolutionsSection = () => {
       isWinner: false,
       availability: "24/7",
       languages: "Mainly English",
-      cost: "₹18,000+",
+      cost: "€185+",
       scalability: "Complex config",
       personalization: "Medium",
       errorRate: "Medium",
@@ -786,7 +786,7 @@ const SolutionsSection = () => {
       isWinner: false,
       availability: "Varies",
       languages: "Few",
-      cost: "₹20,000+",
+      cost: "€205+",
       scalability: "Manual setup",
       personalization: "Medium",
       errorRate: "Medium",
@@ -1411,7 +1411,7 @@ const MainHomepage = () => {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="hero-video absolute inset-0 w-full h-full object-cover"
           style={{ 
             filter: 'brightness(0.85) contrast(1.2) saturate(1.1) blur(0.2px)',
             opacity: 0.90
