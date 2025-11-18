@@ -452,7 +452,7 @@ const ProcessSection = () => {
               <div className="w-px h-8 bg-white/20"></div>
             </div>
             <h2 className="text-6xl md:text-7xl font-light text-white text-center">
-              Meet TARA_x1
+              Meet TARA
             </h2>
             <div className="text-white/40 font-mono text-sm">
               AI Agent
@@ -476,6 +476,77 @@ const ProcessSection = () => {
             </p>
           </div>
         </TextReveal>
+
+        
+
+        {/* Agent Variants Flashcards */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          viewport={{ once: true }}
+        >
+          {/* Customer Service Agent - TARA_X1 */}
+          <motion.div
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-black/30 transition-all duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white">Customer Service Agent</h3>
+                <p className="text-white/60 text-sm">TARA_X1</p>
+              </div>
+            </div>
+            <p className="text-white/70 text-sm mb-6 leading-relaxed">
+              24/7 multilingual customer support with advanced conversational AI, memory retention, and seamless integration.
+            </p>
+            <motion.button
+              className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowVoicePopup(true)}
+            >
+              <Play className="w-4 h-4" />
+              Listen Demo
+            </motion.button>
+          </motion.div>
+
+          {/* Sales Service Agent - TARA_V1 */}
+          <motion.div
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-black/30 transition-all duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-white">Sales Service Agent</h3>
+                <p className="text-white/60 text-sm">TARA_V1</p>
+              </div>
+            </div>
+            <p className="text-white/70 text-sm mb-6 leading-relaxed">
+              Intelligent sales assistant with lead qualification, personalized recommendations, and conversion optimization.
+            </p>
+            <motion.button
+              className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowVoicePopup(true)}
+            >
+              <Play className="w-4 h-4" />
+              Listen Demo
+            </motion.button>
+          </motion.div>
+        </motion.div>
+
+        
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">

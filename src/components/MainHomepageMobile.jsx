@@ -438,13 +438,80 @@ const ProcessSection = () => {
               <div className="w-px h-8 bg-white/20"></div>
             </div>
             <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-white text-center">
-              Meet TARA_x1
+              Meet TARA
             </h2>
             <div className="text-white/40 font-mono text-sm hidden lg:block">
               AI Agent
             </div>
           </div>
         </TextReveal>
+
+        {/* Agent Variants Flashcards */}
+        <motion.div
+          className="grid grid-cols-1 gap-6 mb-12 sm:mb-16"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          viewport={{ once: true }}
+        >
+          {/* Customer Service Agent - TARA_X1 */}
+          <motion.div
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-4 xs:p-6 sm:p-8 hover:bg-black/30 transition-all duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold text-white">Customer Service Agent</h3>
+                <p className="text-white/60 text-xs sm:text-sm">TARA_X1</p>
+              </div>
+            </div>
+            <p className="text-white/70 text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed">
+              24/7 multilingual customer support with advanced conversational AI, memory retention, and seamless integration.
+            </p>
+            <motion.button
+              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowVoicePopup(true)}
+            >
+              <Play className="w-4 h-4" />
+              Listen Demo
+            </motion.button>
+          </motion.div>
+
+          {/* Sales Service Agent - TARA_V1 */}
+          <motion.div
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-4 xs:p-6 sm:p-8 hover:bg-black/30 transition-all duration-300"
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-semibold text-white">Sales Service Agent</h3>
+                <p className="text-white/60 text-xs sm:text-sm">TARA_V1</p>
+              </div>
+            </div>
+            <p className="text-white/70 text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed">
+              Intelligent sales assistant with lead qualification, personalized recommendations, and conversion optimization.
+            </p>
+            <motion.button
+              className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px]"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowVoicePopup(true)}
+            >
+              <Play className="w-4 h-4" />
+              Listen Demo
+            </motion.button>
+          </motion.div>
+        </motion.div>
 
         {/* Subtitle */}
         <TextReveal>
