@@ -15,7 +15,10 @@ import {
   Sparkles,
   TrendingUp,
   DollarSign,
-  Target
+  Target,
+  Mail,
+  Phone,
+  MapPin
 } from 'lucide-react';
 import { ShaderAnimation } from './ui/shader-lines';
 import { AIVoiceInput } from './ui/ai-voice-input';
@@ -156,10 +159,10 @@ const HeroSection = () => {
         title="project" 
         value={
           <div>
-            <div>Location / Georgia / Tbilisi</div>
+            <div>Location / Germany / Hannover</div>
             <div>Project / Mooun</div>
-            <div>Category / Music</div>
-            <div>Date / 2024</div>
+            <div>Category / Agentic</div>
+            <div>Date / 2025</div>
           </div>
         }
         className="top-8 left-8" 
@@ -297,34 +300,53 @@ const ProcessSection = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState('TARA_X1');
   const audioRef = useRef(null);
+  const backgroundAudioRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const animationFrameRef = useRef(null);
+
+  // Agent demo function
+  const playAgentDemo = (agentType) => {
+    setSelectedAgent(agentType);
+    setShowVoicePopup(true);
+  };
 
   // Audio control functions
   const togglePlayPause = async () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        if (backgroundAudioRef.current) backgroundAudioRef.current.pause();
+        setIsPlaying(false);
         setIsSpeaking(false);
         stopAudioAnalysis();
       } else {
-        // Setup audio analysis if not already done
-        if (!audioContextRef.current) {
-          await setupAudioAnalysis();
-        }
-        
         try {
+          // Set audio source based on selected agent
+          const audioSrc = selectedAgent === 'TARA_X1' 
+            ? '/Demo audio/TARA_X1.wav' 
+            : '/Demo audio/TARA_V1.wav';
+          
+          audioRef.current.src = audioSrc;
+          
+          // Setup background audio for mixing
+          if (backgroundAudioRef.current) {
+            backgroundAudioRef.current.src = '/Demo audio/background.wav';
+            backgroundAudioRef.current.volume = 0.3; // Lower volume for background
+            await backgroundAudioRef.current.play();
+          }
+          
           await audioRef.current.play();
+          setIsPlaying(true);
           setIsSpeaking(true);
-          startAudioAnalysis();
+          await setupAudioAnalysis();
         } catch (error) {
-          console.error('Failed to play audio:', error);
+          console.error('Audio playback failed:', error);
         }
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -343,6 +365,7 @@ const ProcessSection = () => {
   const handleAudioEnded = () => {
     setIsPlaying(false);
     setIsSpeaking(false);
+    if (backgroundAudioRef.current) backgroundAudioRef.current.pause();
     stopAudioAnalysis();
   };
 
@@ -509,7 +532,7 @@ const ProcessSection = () => {
               className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowVoicePopup(true)}
+              onClick={() => playAgentDemo('TARA_X1')}
             >
               <Play className="w-4 h-4" />
               Listen Demo
@@ -538,7 +561,7 @@ const ProcessSection = () => {
               className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowVoicePopup(true)}
+              onClick={() => playAgentDemo('TARA_V1')}
             >
               <Play className="w-4 h-4" />
               Listen Demo
@@ -614,17 +637,6 @@ const ProcessSection = () => {
             
               </span>
               
-              {/* Listen to TARA Button */}
-              <motion.button
-                className="absolute bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 
-                           bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg
-                           hover:bg-white/20 hover:border-white/40 transition-all duration-300"
-                onClick={() => setShowVoicePopup(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Listen to TARA
-              </motion.button>
             </div>
           </motion.div>
           
@@ -661,10 +673,10 @@ const ProcessSection = () => {
             <div className="text-center">
               {/* Title */}
               <h3 className="text-2xl font-light text-white mb-2">
-                TARA Voice Demo
+                {selectedAgent} Voice Demo
               </h3>
               <p className="text-white/50 text-sm mb-12">
-                Experience TARA_x1's conversational AI
+                Experience {selectedAgent}'s advanced {selectedAgent === 'TARA_X1' ? 'customer service AI capabilities' : 'sales intelligence and conversion optimization'}
               </p>
 
               {/* Voice Animation */}
@@ -679,13 +691,16 @@ const ProcessSection = () => {
 
               {/* Audio Player */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                {/* Hidden Audio Element */}
+                {/* Hidden Audio Elements */}
                 <audio
                   ref={audioRef}
-                  src="/tara.mp3"
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
                   onEnded={handleAudioEnded}
+                />
+                <audio
+                  ref={backgroundAudioRef}
+                  loop
                 />
                 
                 <div className="flex items-center justify-center gap-4 mb-4">
@@ -693,8 +708,10 @@ const ProcessSection = () => {
                     <MessageCircle className="w-5 h-5 text-white/80" />
                   </div>
                   <div className="text-left">
-                    <h4 className="text-white font-medium text-sm">TARA_x1 Sample</h4>
-                    <p className="text-white/50 text-xs">Multilingual AI Assistant</p>
+                    <h4 className="text-white font-medium text-sm">{selectedAgent} Sample</h4>
+                    <p className="text-white/50 text-xs">
+                      {selectedAgent === 'TARA_X1' ? '24/7 Multilingual Customer Service AI' : 'Intelligent Sales Conversion AI'}
+                    </p>
                   </div>
                 </div>
                 
@@ -1370,13 +1387,31 @@ const CTASection = () => {
               Join hundreds of companies already revolutionizing their operations.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-2xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-2xl mx-auto mb-16">
+              <motion.button
+                className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-lg rounded-xl
+                           hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 
+                           flex items-center justify-center gap-3 group shadow-lg hover:shadow-xl active:scale-95"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                Request Demo
+              </motion.button>
               
-              
-              
+              <motion.button
+                className="px-8 py-4 border-2 border-white/40 text-white font-semibold text-lg rounded-xl
+                           hover:border-white hover:bg-white/10 transition-all duration-300 
+                           flex items-center justify-center gap-3 group active:scale-95"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                Contact Sales
+              </motion.button>
             </div>
 
-            {/* Contact Information */}
+            {/* Enhanced Contact Information */}
             <motion.div 
               className="mt-16 pt-8 border-t border-white/10"
               initial={{ opacity: 0 }}
@@ -1384,19 +1419,92 @@ const CTASection = () => {
               transition={{ duration: 0.8, delay: 0.5 }}
               viewport={{ once: true }}
             >
-              <p className="text-white/40 font-mono text-sm mb-4">
-                Questions? Reach out to our team
-              </p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center text-white/60 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>admin@davinciai.in</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-white/40 rounded-full"></div>
-                  <span>+91 6301805656</span>
-                </div>
+              <h3 className="text-2xl font-light text-white mb-8">
+                Get in Touch
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                {/* Email Contact */}
+                <motion.div
+                  className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-black/30 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="text-white font-medium mb-2">Email Us</h4>
+                  <p className="text-white/60 text-sm mb-3">Get detailed information and pricing</p>
+                  <a href="mailto:admin@davinciai.in" className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-mono">
+                    admin@davinciai.in
+                  </a>
+                </motion.div>
+
+                {/* Phone Contact */}
+                <motion.div
+                  className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-black/30 transition-all duration-300"
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Phone className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="text-white font-medium mb-2">Call Us</h4>
+                  <p className="text-white/60 text-sm mb-3">Speak directly with our AI experts</p>
+                  <a href="tel:+4915781162785" className="text-green-400 hover:text-green-300 transition-colors text-sm font-mono">
+                    + 49 15781162785
+                  </a>
+                </motion.div>
+
               </div>
+
+              {/* Social Links */}
+              <motion.div
+                className="mt-12 flex justify-center gap-6"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+                viewport={{ once: true }}
+              >
+                <motion.a
+                  href="#"
+                  className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
+                             flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 
+                             transition-all duration-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                  </svg>
+                </motion.a>
+                
+                <motion.a
+                  href="#"
+                  className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
+                             flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 
+                             transition-all duration-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </motion.a>
+                
+                <motion.a
+                  href="#"
+                  className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
+                             flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 
+                             transition-all duration-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.749.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001.012.017z"/>
+                  </svg>
+                </motion.a>
+              </motion.div>
             </motion.div>
           </motion.div>
         </TextReveal>

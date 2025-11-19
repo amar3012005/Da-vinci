@@ -283,6 +283,7 @@ const ProcessSection = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState(null);
   const audioRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
@@ -290,6 +291,53 @@ const ProcessSection = () => {
   const animationFrameRef = useRef(null);
 
   // Audio control functions
+  const playAgentDemo = async (agentType) => {
+    // Stop any currently playing audio
+    if (audioRef.current && isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      setIsSpeaking(false);
+      stopAudioAnalysis();
+    }
+
+    // Set the audio source based on agent type
+    const audioSrc = agentType === 'TARA_X1' ? '/Demo audio/TARA_X1.wav' : '/Demo audio/TARA_V1.mp3';
+    
+    if (audioRef.current) {
+      audioRef.current.src = audioSrc;
+      setCurrentAgent(agentType);
+      
+      try {
+        // Setup audio analysis if not already done
+        if (!audioContextRef.current) {
+          await setupAudioAnalysis();
+        }
+        
+        await audioRef.current.play();
+        setIsSpeaking(true);
+        startAudioAnalysis();
+        setIsPlaying(true);
+        setShowVoicePopup(true); // Show the popup when playing
+      } catch (error) {
+        console.error('Failed to play audio:', error);
+        // Fallback to tara.mp3 if specific demo doesn't exist
+        if (agentType === 'TARA_V1') {
+          audioRef.current.src = '/tara.mp3';
+          setCurrentAgent('TARA_X1 (Fallback)');
+          try {
+            await audioRef.current.play();
+            setIsSpeaking(true);
+            startAudioAnalysis();
+            setIsPlaying(true);
+            setShowVoicePopup(true);
+          } catch (fallbackError) {
+            console.error('Fallback audio also failed:', fallbackError);
+          }
+        }
+      }
+    }
+  };
+
   const togglePlayPause = async () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -297,12 +345,12 @@ const ProcessSection = () => {
         setIsSpeaking(false);
         stopAudioAnalysis();
       } else {
-        // Setup audio analysis if not already done
-        if (!audioContextRef.current) {
-          await setupAudioAnalysis();
-        }
-        
         try {
+          // Setup audio analysis if not already done
+          if (!audioContextRef.current) {
+            await setupAudioAnalysis();
+          }
+          
           await audioRef.current.play();
           setIsSpeaking(true);
           startAudioAnalysis();
@@ -476,7 +524,7 @@ const ProcessSection = () => {
               className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowVoicePopup(true)}
+              onClick={() => playAgentDemo('TARA_X1')}
             >
               <Play className="w-4 h-4" />
               Listen Demo
@@ -505,7 +553,7 @@ const ProcessSection = () => {
               className="w-full px-4 py-3 sm:px-6 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 hover:border-white/40 transition-all duration-300 flex items-center justify-center gap-2 min-h-[44px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowVoicePopup(true)}
+              onClick={() => playAgentDemo('TARA_V1')}
             >
               <Play className="w-4 h-4" />
               Listen Demo
@@ -593,7 +641,7 @@ const ProcessSection = () => {
                 className="absolute bottom-4 sm:bottom-6 lg:bottom-8 left-1/2 transform -translate-x-1/2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base
                            bg-white/10 backdrop-blur-sm border border-white/20 text-white font-medium rounded-lg
                            hover:bg-white/20 hover:border-white/40 transition-all duration-300"
-                onClick={() => setShowVoicePopup(true)}
+                onClick={() => playAgentDemo('TARA_X1')}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -634,18 +682,18 @@ const ProcessSection = () => {
             {/* Centered Voice Demo */}
             <div className="text-center">
               {/* Title */}
-              <h3 className="text-xl sm:text-2xl font-light text-white mb-2">
-                TARA Voice Demo
+              <h3 className="text-2xl font-light text-white mb-2">
+                TARA_X1 Voice Demo
               </h3>
               <p className="text-white/50 text-xs sm:text-sm mb-8 sm:mb-12">
-                Experience TARA_x1's conversational AI
+                Experience TARA_X1's advanced customer service AI capabilities
               </p>
 
               {/* Voice Animation */}
               <div className="mb-6 sm:mb-8">
                 <AIVoiceInput 
-                  onStart={() => console.log('TARA voice demo started')}
-                  onStop={(duration) => console.log(`Demo duration: ${duration}s`)}
+                  onStart={() => console.log(`${currentAgent} voice demo started`)}
+                  onStop={(duration) => console.log(`${currentAgent} demo duration: ${duration}s`)}
                   demoMode={isSpeaking}
                   demoInterval={100}
                 />
@@ -656,7 +704,6 @@ const ProcessSection = () => {
                 {/* Hidden Audio Element */}
                 <audio
                   ref={audioRef}
-                  src="/tara.mp3"
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
                   onEnded={handleAudioEnded}
@@ -667,8 +714,8 @@ const ProcessSection = () => {
                     <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white/80" />
                   </div>
                   <div className="text-left">
-                    <h4 className="text-white font-medium text-xs sm:text-sm">TARA_x1 Sample</h4>
-                    <p className="text-white/50 text-xs">Multilingual AI Assistant</p>
+                    <h4 className="text-white font-medium text-xs sm:text-sm">{currentAgent} Sample</h4>
+                    <p className="text-white/50 text-xs">24/7 Multilingual Customer Service AI</p>
                   </div>
                 </div>
                 
