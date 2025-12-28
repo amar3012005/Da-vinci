@@ -1,0 +1,132 @@
+id,name,category,description,price,image
+id,name,category,description,price,image
+1,Aloo Tikki Burger,Burgers - Veg,Classic potato patty burger,45,
+2,Veg Burger,Burgers - Veg,Standard vegetable patty burger,55,
+3,Aloo Achari Burger,Burgers - Veg,Pickle-spiced potato patty burger,65,
+4,BBQ Burger,Burgers - Veg,Barbecue flavored vegetable burger,65,
+5,Makhani Burger,Burgers - Veg,Butter sauce flavored burger,65,
+6,Cheesy Burger,Burgers - Veg,Vegetable patty with cheese,70,
+7,Spicy Cheese Burger,Burgers - Veg,Spicy vegetable patty with cheese,75,
+8,Double Cheese Burger,Burgers - Veg,Double layer of cheese with veg patty,85,
+9,Paneer Burger,Burgers - Veg,Cottage cheese patty burger,85,
+10,Paneer Tikka Burger,Burgers - Veg,Spiced cottage cheese patty burger,95,
+11,Spicy Paneer Burger,Burgers - Veg,Spicy cottage cheese patty burger,115,
+12,Double Egg Burger,Burgers - Non-Veg,Double egg patty burger,65,
+13,Egg Cheese Burger,Burgers - Non-Veg,Egg patty with cheese,70,
+14,Chicken Burger,Burgers - Non-Veg,Classic chicken patty burger,80,
+15,Chicken Cheese Burger,Burgers - Non-Veg,Chicken patty with cheese,90,
+16,Spicy Chicken Burger,Burgers - Non-Veg,Spicy chicken patty burger,95,
+17,Chicken Tikka Burger,Burgers - Non-Veg,Tandoori spiced chicken burger,115,
+18,Chicken Kabab Burger,Burgers - Non-Veg,Minced chicken kebab patty burger,115,
+19,Double Chicken Burger,Burgers - Non-Veg,Double chicken patty burger,115,
+20,Cheese Corn Pizza (Small),Pizza - Veg,Sweet golden corn kernels nestled in a bed of melted mozzarella cheese,155
+21,Cheese Corn Pizza (Medium),Pizza - Veg,Sweet golden corn kernels nestled in a bed of melted mozzarella cheese,265
+22,Cheese Corn Pizza (Large),Pizza - Veg,Sweet golden corn kernels nestled in a bed of melted mozzarella cheese,375
+23,Onion Tomato Capsicum Pizza (Small),Pizza - Veg,A colorful medley of crisp onions rings juicy tomatoes and fresh bell peppers,155
+24,Onion Tomato Capsicum Pizza (Medium),Pizza - Veg,A colorful medley of crisp onions rings juicy tomatoes and fresh bell peppers,265
+25,Onion Tomato Capsicum Pizza (Large),Pizza - Veg,A colorful medley of crisp onions rings juicy tomatoes and fresh bell peppers,375
+26,Cheese n Mushroom Pizza (Small),Pizza - Veg,Earthy sautéed mushrooms smothered in creamy mozzarella and cheddar blend,155
+27,Cheese n Mushroom Pizza (Medium),Pizza - Veg,Earthy sautéed mushrooms smothered in creamy mozzarella and cheddar blend,265
+28,Margretta Pizza (Small),Pizza - Veg,Classic Italian simplicity with premium mozzarella on a bed of herbed tomato sauce,135
+29,Margretta Pizza (Medium),Pizza - Veg,Classic Italian simplicity with premium mozzarella on a bed of herbed tomato sauce,205
+30,Margretta Pizza (Large),Pizza - Veg,Classic Italian simplicity with premium mozzarella on a bed of herbed tomato sauce,305
+31,Paneer Makhani Pizza (Small),Pizza - Veg,Succulent paneer cubes in rich butter masala sauce with colorful capsicum,205
+32,Paneer Makhani Pizza (Medium),Pizza - Veg,Succulent paneer cubes in rich butter masala sauce with colorful capsicum,325
+33,Paneer Makhani Pizza (Large),Pizza - Veg,Succulent paneer cubes in rich butter masala sauce with colorful capsicum,425
+34,Farm Fresh Pizza (Small),Pizza - Veg,Garden-fresh capsicum mushrooms and vine-ripened tomatoes on a cheesy base,205
+35,Farm Fresh Pizza (Medium),Pizza - Veg,Garden-fresh capsicum mushrooms and vine-ripened tomatoes on a cheesy base,325
+36,Farm Fresh Pizza (Large),Pizza - Veg,Garden-fresh capsicum mushrooms and vine-ripened tomatoes on a cheesy base,425
+37,Fresh Tasty Pizza (Small),Pizza - Veg,Marinated paneer chunks with crispy capsicum and caramelized onions,205
+38,Fresh Tasty Pizza (Medium),Pizza - Veg,Marinated paneer chunks with crispy capsicum and caramelized onions,325
+39,Fresh Tasty Pizza (Large),Pizza - Veg,Marinated paneer chunks with crispy capsicum and caramelized onions,425
+40,Mexican Green Wave Pizza (Small),Pizza - Veg,Fiery jalapeños with fresh capsicum tomatoes and onions in Mexican herbs,225
+41,Mexican Green Wave Pizza (Medium),Pizza - Veg,Fiery jalapeños with fresh capsicum tomatoes and onions in Mexican herbs,365
+42,Mexican Green Wave Pizza (Large),Pizza - Veg,Fiery jalapeños with fresh capsicum tomatoes and onions in Mexican herbs,485
+43,Hot n Spicy Pizza (Small),Pizza - Veg,A spice lover's delight with crunchy corn paprika-dusted onions and zesty jalapeños,225
+44,Hot n Spicy Pizza (Medium),Pizza - Veg,A spice lover's delight with crunchy corn paprika-dusted onions and zesty jalapeños,365
+45,Hot n Spicy Pizza (Large),Pizza - Veg,A spice lover's delight with crunchy corn paprika-dusted onions and zesty jalapeños,485
+46,Peppy Paneer Pizza (Small),Pizza - Veg,Marinated cottage cheese with roasted capsicum and smoky paprika seasoning,225
+47,Peppy Paneer Pizza (Medium),Pizza - Veg,Marinated cottage cheese with roasted capsicum and smoky paprika seasoning,365
+48,Peppy Paneer Pizza (Large),Pizza - Veg,Marinated cottage cheese with roasted capsicum and smoky paprika seasoning,485
+49,Pizza Bites Special (Small),Pizza - Veg,A luxurious blend of baby corn paneer black olives and capsicum topped with extra cheese,245
+50,Pizza Bites Special (Medium),Pizza - Veg,A luxurious blend of baby corn paneer black olives and capsicum topped with extra cheese,485
+51,Pizza Bites Special (Large),Pizza - Veg,A luxurious blend of baby corn paneer black olives and capsicum topped with extra cheese,605
+52,BBQ Paneer Pizza (Small),Pizza - Veg,Grilled paneer with sweet corn and onions drizzled in smoky BBQ sauce,245
+53,BBQ Paneer Pizza (Medium),Pizza - Veg,Grilled paneer with sweet corn and onions drizzled in smoky BBQ sauce,485
+54,BBQ Paneer Pizza (Large),Pizza - Veg,Grilled paneer with sweet corn and onions drizzled in smoky BBQ sauce,605
+55,Seven Special Pizza (Small),Pizza - Veg,Seven heaven toppings: sweet corn baby corn spicy jalapeños caramelized onions fresh tomatoes bell peppers and black olives,265
+56,Seven Special Pizza (Medium),Pizza - Veg,Seven heaven toppings: sweet corn baby corn spicy jalapeños caramelized onions fresh tomatoes bell peppers and black olives,505
+57,Seven Special Pizza (Large),Pizza - Veg,Seven heaven toppings: sweet corn baby corn spicy jalapeños caramelized onions fresh tomatoes bell peppers and black olives,625
+58,Veg Supreme Pizza (Small),Pizza - Veg,A royal feast of paneer sautéed mushrooms corn paprika baby corn and tomatoes in spicy herb sauce,265
+59,Veg Supreme Pizza (Medium),Pizza - Veg,A royal feast of paneer sautéed mushrooms corn paprika baby corn and tomatoes in spicy herb sauce,505
+60,Veg Supreme Pizza (Large),Pizza - Veg,A royal feast of paneer sautéed mushrooms corn paprika baby corn and tomatoes in spicy herb sauce,625
+61,Paneer 65 Pizza (Small),Pizza - Veg,South Indian style spiced paneer with capsicum red paprika sweet corn and onions,265
+62,Paneer 65 Pizza (Medium),Pizza - Veg,South Indian style spiced paneer with capsicum red paprika sweet corn and onions,505
+63,Paneer 65 Pizza (Large),Pizza - Veg,South Indian style spiced paneer with capsicum red paprika sweet corn and onions,625
+64,Chicken Crunch Pizza (Small),Pizza - Non-Veg,Tender chunks of chicken with crispy capsicum in signature seasoning,205
+65,Chicken Crunch Pizza (Medium),Pizza - Non-Veg,Tender chunks of chicken with crispy capsicum in signature seasoning,305
+66,Chicken Crunch Pizza (Large),Pizza - Non-Veg,Tender chunks of chicken with crispy capsicum in signature seasoning,405
+67,Chicken Golden Pizza (Small),Pizza - Non-Veg,Succulent chicken pieces paired with sweet golden corn kernels,205
+68,Chicken Golden Pizza (Medium),Pizza - Non-Veg,Succulent chicken pieces paired with sweet golden corn kernels,305
+69,Chicken Golden Pizza (Large),Pizza - Non-Veg,Succulent chicken pieces paired with sweet golden corn kernels,405
+70,Chicken Mexican Pizza (Small),Pizza - Non-Veg,Spicy Mexican-style chicken with roasted paprika onions and hot sauce,225
+71,Chicken Mexican Pizza (Medium),Pizza - Non-Veg,Spicy Mexican-style chicken with roasted paprika onions and hot sauce,365
+72,Chicken Mexican Pizza (Large),Pizza - Non-Veg,Spicy Mexican-style chicken with roasted paprika onions and hot sauce,485
+73,Pepperoni Pizza (Small),Pizza - Non-Veg,Classic Italian-style chicken pepperoni with premium melted mozzarella cheese,225
+74,Pepperoni Pizza (Medium),Pizza - Non-Veg,Classic Italian-style chicken pepperoni with premium melted mozzarella cheese,365
+75,Pepperoni Pizza (Large),Pizza - Non-Veg,Classic Italian-style chicken pepperoni with premium melted mozzarella cheese,485
+76,Hot Fire Pizza (Small),Pizza - Non-Veg,Fiery spiced chicken with hot jalapeños and our signature spicy sauce for heat lovers,225
+77,Hot Fire Pizza (Medium),Pizza - Non-Veg,Fiery spiced chicken with hot jalapeños and our signature spicy sauce for heat lovers,365
+78,Hot Fire Pizza (Large),Pizza - Non-Veg,Fiery spiced chicken with hot jalapeños and our signature spicy sauce for heat lovers,485
+79,BBQ Chicken Pizza (Small),Pizza - Non-Veg,Smoky BBQ-glazed chicken with sweet onions and fresh tomatoes in tangy BBQ sauce,235
+80,BBQ Chicken Pizza (Medium),Pizza - Non-Veg,Smoky BBQ-glazed chicken with sweet onions and fresh tomatoes in tangy BBQ sauce,445
+81,BBQ Chicken Pizza (Large),Pizza - Non-Veg,Smoky BBQ-glazed chicken with sweet onions and fresh tomatoes in tangy BBQ sauce,545
+82,Chicken Dominator Pizza (Small),Pizza - Non-Veg,Double-marinated chicken with crunchy capsicum and sweet golden corn,235
+83,Chicken Dominator Pizza (Medium),Pizza - Non-Veg,Double-marinated chicken with crunchy capsicum and sweet golden corn,445
+84,Chicken Dominator Pizza (Large),Pizza - Non-Veg,Double-marinated chicken with crunchy capsicum and sweet golden corn,545
+85,Chilly Chicken Pizza (Small),Pizza - Non-Veg,Indo-Chinese style spicy chicken with jalapeños and onions in hot chili sauce,235
+86,Chilly Chicken Pizza (Medium),Pizza - Non-Veg,Indo-Chinese style spicy chicken with jalapeños and onions in hot chili sauce,445
+87,Chilly Chicken Pizza (Large),Pizza - Non-Veg,Indo-Chinese style spicy chicken with jalapeños and onions in hot chili sauce,545
+88,Kabab n Chicken Pizza (Small),Pizza - Non-Veg,A royal combination of chicken kabab and juicy chicken chunks with fresh veggies,255
+89,Kabab n Chicken Pizza (Medium),Pizza - Non-Veg,A royal combination of chicken kabab and juicy chicken chunks with fresh veggies,485
+90,Kabab n Chicken Pizza (Large),Pizza - Non-Veg,A royal combination of chicken kabab and juicy chicken chunks with fresh veggies,605
+91,Triple Chicken Pizza (Small),Pizza - Non-Veg,Ultimate chicken lover's delight with tikka kabab and spicy chicken ,255
+92,Triple Chicken Pizza (Medium),Pizza - Non-Veg,Ultimate chicken lover's delight with tikka kabab and spicy chicken ,485
+93,Triple Chicken Pizza (Large),Pizza - Non-Veg,Ultimate chicken lover's delight with tikka kabab and spicy chicken ,605
+94,Zesty Chicken Pizza (Small),Pizza - Non-Veg,Herb-marinated chicken with Mediterranean olives baby corn and zesty sauce,255
+95,Zesty Chicken Pizza (Medium),Pizza - Non-Veg,Herb-marinated chicken with Mediterranean olives baby corn and zesty sauce,485
+96,Zesty Chicken Pizza (Large),Pizza - Non-Veg,Herb-marinated chicken with Mediterranean olives baby corn and zesty sauce,605
+97,The Monster Pizza (Small),Pizza - Non-Veg,The ultimate feast: juicy chicken cottage cheese mushrooms and bell peppers,275
+98,The Monster Pizza (Medium),Pizza - Non-Veg,The ultimate feast: juicy chicken cottage cheese mushrooms and bell peppers,545
+99,The Monster Pizza (Large),Pizza - Non-Veg,The ultimate feast: juicy chicken cottage cheese mushrooms and bell peppers,655
+100,Chicken Tadka Pizza (Small),Pizza - Non-Veg,Indian-style marinated chicken and kabab with corn and onions in rich makhani sauce,275
+101,Chicken Tadka Pizza (Medium),Pizza - Non-Veg,Indian-style marinated chicken and kabab with corn and onions in rich makhani sauce,545
+102,Chicken Tadka Pizza (Large),Pizza - Non-Veg,Indian-style marinated chicken and kabab with corn and onions in rich makhani sauce,655
+103,Chicken Supreme Pizza (Small),Pizza - Non-Veg,Supreme combination of chicken kabab pepperoni spicy chicken with roasted paprika and tomatoes,275
+104,Chicken Supreme Pizza (Medium),Pizza - Non-Veg,Supreme combination of chicken kabab pepperoni spicy chicken with roasted paprika and tomatoes,545
+105,Chicken Supreme Pizza (Large),Pizza - Non-Veg,Supreme combination of chicken kabab pepperoni spicy chicken with roasted paprika and tomatoes,655
+106,Mix Sauce Pasta,Pasta,Mixed sauce flavored pasta,145,
+107,Chicken Mix Sauce Pasta,Pasta,Chicken pasta in mixed sauce,185,
+108,Baked Fries,Side Orders,Oven-baked potato fries,85,
+109,French Fries,Side Orders,Classic crispy potato fries,85,
+110,Cheese Ball,Side Orders,Deep-fried cheese balls,95,
+111,Cheesy Fries,Side Orders,French fries topped with cheese,104,
+112,Peri Peri Fries,Side Orders,Spicy peri peri seasoned fries,104,
+113,Potato Shot,Side Orders,Crispy potato bites,125,
+114,Honey Chilli Potato,Side Orders,Sweet and spicy potato chunks,135,
+115,Chicken Wings,Side Orders,Crispy fried chicken wings,185,
+116,Honey Chilli Chicken,Side Orders,Sweet and spicy chicken pieces,205,
+117,Chicken Strips,Side Orders,Crispy chicken strips,225,
+118,Zingy Parcel,Parcels,Spicy vegetable stuffed parcel,55,
+119,Paneer Parcel,Parcels,Cottage cheese stuffed parcel,65,
+120,Chicken Parcel,Parcels,Spiced chicken stuffed parcel,95,
+121,Veg Biryani,Biryanis,Aromatic rice with mixed vegetables,185,
+122,Chicken Biryani,Biryanis,Aromatic rice with chicken pieces,205,
+123,Veg Taco,Tacos,Mexican style vegetable taco,104,
+124,Chicken Taco,Tacos,Mexican style chicken taco,124,
+125,Cheese Wraps,Wraps,Cheese filled tortilla wrap,105,
+126,Paneer Wraps,Wraps,Cottage cheese filled wrap,145,
+127,Chicken Wraps,Wraps,Chicken filled tortilla wrap,155,
+128,Veg Loaded Wraps,Wraps,Vegetables loaded tortilla wrap,165,
+129,DBL Chicken Wraps,Wraps,Double portion chicken,165,
+

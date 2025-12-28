@@ -1,0 +1,36 @@
+{
+  "short_name": "Foodles",
+  "name": "Foodles - Food Delivery",
+  "description": "Order food from your favorite restaurants",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo.jpeg",
+      "type": "image/gif",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo.jpeg",
+      "type": "image/gif",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "prefer_related_applications": false,
+  "categories": ["food", "delivery", "restaurant"],
+  "screenshots": [
+    {
+      "src": "/screenshot1.jpg",
+      "type": "image/jpeg",
+      "sizes": "1080x1920",
+      "form_factor": "narrow"
+    }
+  ]
+}
