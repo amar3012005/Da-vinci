@@ -45,182 +45,197 @@ const MobileHero = () => {
         );
     }, []);
 
+    // Scroll Lock Effect
+    useEffect(() => {
+        if (isDemoModalOpen || isJoinTeamOpen || showAnnouncements) {
+            document.body.style.overflow = 'hidden';
+            window.lenis?.stop();
+        } else {
+            document.body.style.overflow = 'unset';
+            window.lenis?.start();
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+            window.lenis?.start();
+        };
+    }, [isDemoModalOpen, isJoinTeamOpen, showAnnouncements]);
+
     return (
-        <motion.section
-            className="relative min-h-screen flex flex-col px-4 pt-4 pb-12 overflow-hidden"
-            style={{ opacity, scale }}
-        >
-            {/* Project Info Cards - Header */}
-            <div className="w-full mb-4 z-30">
-                <div className="flex flex-col gap-2">
-                    <ProjectInfoCard
-                        title="PROJECT"
-                        value={
-                            <div className="space-y-0.5">
-                                <div>Location / Germany / Hannover</div>
-                                <div>Project / Mooun</div>
-                                <div>Category / Agentic</div>
-                                <div>Date / 2025</div>
-                            </div>
-                        }
-                    />
-                    <ProjectInfoCard
-                        title="THE MAIN IDEA"
-                    />
+        <section className="relative min-h-screen flex flex-col overflow-hidden">
+            <motion.div
+                className="flex-1 flex flex-col px-4 pt-4 pb-8"
+                style={{ opacity, scale }}
+            >
+                {/* Project Info Cards - Header */}
+                <div className="w-full mb-2 z-30"> {/* Reduced mb-4 to mb-2 */}
+                    <div className="flex flex-col gap-2">
+                        <ProjectInfoCard
+                            title="PROJECT"
+                            value={
+                                <div className="space-y-0.5">
+                                    <div>Location / Germany / Hannover</div>
+                                    <div>Project / Mooun</div>
+                                    <div>Category / Agentic</div>
+                                    <div>Date / 2025</div>
+                                </div>
+                            }
+                        />
+                        <ProjectInfoCard
+                            title="THE MAIN IDEA"
+                        />
 
-                    {/* Announcements Button - Aligned Right */}
-                    <motion.button
-                        onClick={() => setShowAnnouncements(true)}
-                        className="self-end mt-1"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
-                    >
-                        <div className="bg-black/40 backdrop-blur-md border border-white/10 p-3 rounded-lg flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#A63E1B] animate-pulse" />
-                            <div className="text-white font-mono text-[10px]">
-                                ./Announcements
+                        {/* Announcements Button - Aligned Right */}
+                        <motion.button
+                            onClick={() => setShowAnnouncements(true)}
+                            className="self-end mt-1"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6, delay: 0.4 }}
+                        >
+                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-3 rounded-lg flex items-center gap-3">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#A63E1B] animate-pulse" />
+                                <div className="text-white font-mono text-[10px]">
+                                    ./Announcements
+                                </div>
                             </div>
-                        </div>
-                    </motion.button>
+                        </motion.button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Canyon Background Image - Low Opacity */}
-            <div
-                className="absolute inset-0 z-0 pointer-events-none"
-                style={{
-                    backgroundImage: 'url(/canyon-bg.png)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center 40%', // Position so logo is in sky region
-                    opacity: 0.15
-                }}
-            />
+                {/* Canyon Background Image - Low Opacity */}
+                <div
+                    className="absolute inset-0 z-0 pointer-events-none"
+                    style={{
+                        backgroundImage: 'url(/canyon-bg.png)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center 40%',
+                        opacity: 0.15
+                    }}
+                />
 
-            {/* Dark overlay for better text readability */}
-            <div className="absolute inset-0 bg-black/60 z-[1] pointer-events-none" />
+                {/* Dark overlay for better text readability */}
+                <div className="absolute inset-0 bg-black/60 z-[1] pointer-events-none" />
 
-            {/* Subtle gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-b from-pink-500/5 via-transparent to-purple-500/5 pointer-events-none z-[2]" />
+                {/* Subtle gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-pink-500/5 via-transparent to-purple-500/5 pointer-events-none z-[2]" />
 
-            {/* Radial glow behind logo */}
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500/10 rounded-full blur-[100px] pointer-events-none z-[2]" />
+                {/* Radial glow behind logo */}
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500/10 rounded-full blur-[100px] pointer-events-none z-[2]" />
 
-            {/* Main Content Container */}
-            <div className="flex-1 flex flex-col items-center justify-center">
-                {/* DA'VINCI Logo - Using existing logo */}
-                <motion.div
-                    ref={logoRef}
-                    className="relative z-10 mb-4"
-                >
-                    <img
-                        src="/logo.svg"
-                        alt="DA'VINCI Solutions"
-                        className="w-80 h-80 object-contain"
-                    />
-                </motion.div>
+                {/* Main Content Container */}
+                <div className="flex-1 flex flex-col items-center justify-center -mt-8"> {/* Added negative margin top to pull up */}
+                    {/* DA'VINCI Logo */}
+                    <motion.div
+                        ref={logoRef}
+                        className="relative z-10 mb-2" // Reduced mb-4
+                    >
+                        <img
+                            src="/logo.svg"
+                            alt="DA'VINCI Solutions"
+                            className="w-64 h-64 object-contain" // Reduced from w-80 h-80
+                        />
+                    </motion.div>
 
-                {/* Brand Text */}
-                <motion.div
-                    className="text-center mb-6 z-10 -mt-8"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                    <h2 className="text-lg font-bold text-white tracking-wider mb-1">
-                        AGENTIC
-                    </h2>
-                    <p className="text-xs text-white/50 tracking-[0.4em] font-light">
-                        PIPELINE
-                    </p>
-                </motion.div>
+                    {/* Brand Text */}
+                    <motion.div
+                        className="text-center mb-4 z-10 -mt-6" // Reduced mb-6, adjusted mt
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                    >
+                        <h2 className="text-lg font-bold text-white tracking-wider mb-1">
+                            AGENTIC
+                        </h2>
+                        <p className="text-xs text-white/50 tracking-[0.4em] font-light">
+                            PIPELINE
+                        </p>
+                    </motion.div>
 
-                {/* Main Headline - DA'VINCI AI Focus */}
-                <motion.div
-                    className="text-center max-w-sm z-10 mb-6"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.9 }}
-                >
-                    <h1 className="text-xl font-light text-white leading-relaxed mb-3">
-                        <span className="inline-block px-3 py-0.5 bg-pink-500 text-white font-medium transform -skew-x-12">
-                            <span className="inline-block transform skew-x-12">AI-Powered</span>
-                        </span>
-                        {' '}Enterprise Automation
-                    </h1>
-                    <p className="text-xs text-white/60 leading-relaxed mb-4">
-                        A full suite of intelligent tools to streamline operations, unify insights, and unlock new efficiencies across every workflow.
-                    </p>
-                </motion.div>
+                    {/* Main Headline - DA'VINCI AI Focus */}
+                    <motion.div
+                        className="text-center max-w-sm z-10 mb-6"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, delay: 0.9 }}
+                    >
+                        <h1 className="text-xl font-light text-white leading-relaxed mb-3">
+                            <span className="inline-block px-3 py-0.5 bg-pink-500 text-white font-medium transform -skew-x-12">
+                                <span className="inline-block transform skew-x-12">AI-Powered</span>
+                            </span>
+                            {' '}Enterprise Automation
+                        </h1>
+                        <p className="text-xs text-white/60 leading-relaxed mb-4">
+                            A full suite of intelligent tools to streamline operations, unify insights, and unlock new efficiencies across every workflow.
+                        </p>
+                    </motion.div>
 
-                {/* Action Buttons - Side by Side */}
-                {/* Action Buttons - Cyberpunk Brutalist Style */}
-                <motion.div
-                    className="flex gap-4 z-10 w-full max-w-sm px-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 1.4 }}
-                >
-                    {/* Primary Button - Solid Grey */}
-                    <motion.button
-                        onClick={() => setIsDemoModalOpen(true)}
-                        className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
+                    {/* Action Buttons */}
+                    <motion.div
+                        className="flex gap-4 z-10 w-full max-w-sm px-4"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 1.4 }}
+                    >
+                        {/* Primary Button */}
+                        <motion.button
+                            onClick={() => setIsDemoModalOpen(true)}
+                            className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <span className="relative z-10 flex items-center gap-2">
-                            Request Demo <ArrowRight className="w-3 h-3 stroke-[3px]" />
-                        </span>
-                        {/* Corner Accents */}
-                        <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
-                        <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-black opacity-20" />
-                    </motion.button>
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <span className="relative z-10 flex items-center gap-2">
+                                Request Demo <ArrowRight className="w-3 h-3 stroke-[3px]" />
+                            </span>
+                            {/* Corner Accents */}
+                            <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
+                            <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-black opacity-20" />
+                        </motion.button>
 
-                    {/* Secondary Button - Technical Dark */}
-                    <motion.button
-                        onClick={() => setIsJoinTeamOpen(true)}
-                        className="flex-1 py-3 px-3 bg-[#111] border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest 
+                        {/* Secondary Button */}
+                        <motion.button
+                            onClick={() => setIsJoinTeamOpen(true)}
+                            className="flex-1 py-3 px-3 bg-[#111] border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/40 transition-colors relative"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <span className="relative z-10 flex items-center gap-2">
+                                Join Team <Users className="w-3 h-3" />
+                            </span>
+                            {/* Tech corners */}
+                            <div className="absolute top-0 left-0 w-1 h-1 bg-white/50" />
+                            <div className="absolute top-0 right-0 w-1 h-1 bg-white/50" />
+                            <div className="absolute bottom-0 left-0 w-1 h-1 bg-white/50" />
+                            <div className="absolute bottom-0 right-0 w-1 h-1 bg-white/50" />
+                        </motion.button>
+                    </motion.div>
+                    {/* Scroll Indicator */}
+                    <motion.div
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1, y: [0, 8, 0] }}
+                        transition={{
+                            opacity: { delay: 1.5, duration: 0.5 },
+                            y: { delay: 1.5, duration: 2, repeat: Infinity, ease: "easeInOut" }
+                        }}
                     >
-                        <span className="relative z-10 flex items-center gap-2">
-                            Join Team <Users className="w-3 h-3" />
-                        </span>
-                        {/* Tech corners */}
-                        <div className="absolute top-0 left-0 w-1 h-1 bg-white/50" />
-                        <div className="absolute top-0 right-0 w-1 h-1 bg-white/50" />
-                        <div className="absolute bottom-0 left-0 w-1 h-1 bg-white/50" />
-                        <div className="absolute bottom-0 right-0 w-1 h-1 bg-white/50" />
-                    </motion.button>
-                </motion.div>
-            </div>
+                        <ChevronDown className="w-5 h-5 text-white/30" />
+                    </motion.div>
+                </div>
+            </motion.div>
 
-            {/* Join Team Form Overlay */}
+            {/* Join Team Form Overlay - Outside transform context */}
             <JoinTeamForm
                 isOpen={isJoinTeamOpen}
                 onClose={() => setIsJoinTeamOpen(false)}
             />
 
-            {/* Scroll Indicator */}
-            <motion.div
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1, y: [0, 8, 0] }}
-                transition={{
-                    opacity: { delay: 1.5, duration: 0.5 },
-                    y: { delay: 1.5, duration: 2, repeat: Infinity, ease: "easeInOut" }
-                }}
-            >
-                <ChevronDown className="w-5 h-5 text-white/30" />
-            </motion.div>
-
-            {/* Demo Request Modal - Full Screen Overlay */}
+            {/* Demo Request Modal - Full Screen Overlay - Outside transform context */}
             <AnimatePresence>
                 {isDemoModalOpen && (
                     <motion.div
-                        className="fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col items-center justify-center p-6"
+                        className="fixed inset-0 z-[10000] bg-[#0a0a0a] flex flex-col items-center justify-center p-6"
                         initial={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
                         animate={{ opacity: 1, clipPath: 'circle(150% at 50% 50%)' }}
                         exit={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
@@ -234,11 +249,11 @@ const MobileHero = () => {
                             }}
                         />
 
-                        {/* Close Button */}
+                        {/* Close Button - Moved to TOP LEFT to avoid Hamburger */}
                         <motion.button
                             onClick={() => setIsDemoModalOpen(false)}
-                            className="absolute top-8 right-8 w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                            whileHover={{ scale: 1.1, rotate: 90 }}
+                            className="absolute top-6 left-6 w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                            whileHover={{ scale: 1.1, rotate: -90 }}
                             whileTap={{ scale: 0.9 }}
                         >
                             <X size={24} />
@@ -281,28 +296,24 @@ const MobileHero = () => {
                 )}
             </AnimatePresence>
 
-            {/* Announcements Slide-in Panel (Hero Instance) */}
+            {/* Announcements Slide-in Panel - Outside transform context */}
             <AnimatePresence>
                 {showAnnouncements && (
                     <>
-                        {/* Backdrop to close */}
                         <motion.div
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110]"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10010]"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setShowAnnouncements(false)}
                         />
-
-                        {/* Slide-in Panel */}
                         <motion.div
-                            className="fixed top-0 right-0 bottom-0 w-80 bg-[#0a0a0a] border-l border-white/10 z-[120] shadow-2xl p-6 flex flex-col"
+                            className="fixed top-0 right-0 bottom-0 w-80 bg-[#0a0a0a] border-l border-white/10 z-[10020] shadow-2xl p-6 flex flex-col"
                             initial={{ x: "100%" }}
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         >
-                            {/* Header */}
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
                                     <Bell size={18} className="text-[#A63E1B]" />
@@ -315,8 +326,6 @@ const MobileHero = () => {
                                     <X size={20} />
                                 </button>
                             </div>
-
-                            {/* Content */}
                             <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
                                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                                     <AlertCircle size={24} className="text-white/30" />
@@ -326,8 +335,6 @@ const MobileHero = () => {
                                     Check back later for the latest news and releases from Da'Vinci.
                                 </p>
                             </div>
-
-                            {/* Footer */}
                             <div className="mt-auto pt-6 border-t border-white/5">
                                 <div className="text-[10px] font-mono text-white/20 text-center">
                                     SYSTEM: ALL SYSTEMS OPERATIONAL
@@ -337,7 +344,7 @@ const MobileHero = () => {
                     </>
                 )}
             </AnimatePresence>
-        </motion.section>
+        </section>
     );
 };
 

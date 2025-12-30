@@ -21,12 +21,12 @@ const MobileCTA = () => {
 
             <div className="relative z-10 max-w-lg mx-auto flex flex-col items-center">
 
-            
 
-                
 
-                
-            
+
+
+
+
             </div>
 
             {/* Industrial Bottom Scroll Detail */}

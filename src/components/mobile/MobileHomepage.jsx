@@ -30,6 +30,9 @@ const MobileHomepage = () => {
             touchMultiplier: 2,
         });
 
+        // Make lenis accessible globally for modal scroll locking
+        window.lenis = lenis;
+
         function raf(time) {
             lenis.raf(time);
             requestAnimationFrame(raf);
@@ -38,6 +41,7 @@ const MobileHomepage = () => {
 
         return () => {
             lenis.destroy();
+            window.lenis = null;
         };
     }, []);
 

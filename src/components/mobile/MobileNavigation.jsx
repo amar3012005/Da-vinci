@@ -9,6 +9,21 @@ const MobileNavigation = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [showAnnouncements, setShowAnnouncements] = useState(false);
 
+    // Scroll Lock Effect
+    React.useEffect(() => {
+        if (isOpen || showAnnouncements) {
+            document.body.style.overflow = 'hidden';
+            window.lenis?.stop();
+        } else {
+            document.body.style.overflow = 'unset';
+            window.lenis?.start();
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+            window.lenis?.start();
+        };
+    }, [isOpen, showAnnouncements]);
+
     const handleNavClick = (sectionId) => {
         if (sectionId === 'announcements-toggle') {
             setShowAnnouncements(true);

@@ -68,6 +68,11 @@ Leap of Faith: YES
             const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=amarsai2005@gmail.com&su=${subject}&body=${body}`;
             window.open(gmailUrl, '_blank');
         }
+
+        // Redirect to homepage (Close the modal)
+        setTimeout(() => {
+            onClose();
+        }, 500);
     };
 
     const variants = {
@@ -89,7 +94,7 @@ Leap of Faith: YES
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="fixed inset-0 z-[200] bg-[#0a0a0a] overflow-hidden flex flex-col"
+                    className="fixed inset-0 z-[9999] bg-[#0a0a0a] overflow-hidden flex flex-col"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -323,7 +328,7 @@ Leap of Faith: YES
                                         : 'bg-white/10 text-white/20 cursor-not-allowed'
                                     }`}
                             >
-                                {formData.leapOfFaith === false ? "RETURN TO HOMEPAGE" : "SUBMIT APPLICATION"}
+                                {formData.leapOfFaith === false ? "RETURN TO HOMEPAGE" : "SUBMIT APPLICATION (via email)"}
                             </button>
                         )}
                     </div>

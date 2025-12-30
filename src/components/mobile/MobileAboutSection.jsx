@@ -24,12 +24,12 @@ const MobileAboutSection = () => {
                     <div className="text-[10px] font-mono text-white/90 uppercase tracking-widest">./Contact Us - At admin@da-vinci.ai</div>
                 </motion.div>
 
-            
-                    
-       
 
-               
-                
+
+
+
+
+
 
             </div>
         </section>
