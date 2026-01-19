@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Globe, Mic, Shield, Sparkles } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
-import FeatureIcon from './ui/FeatureIcon';
 
 /**
  * CapabilitiesSection - Compact grid of key capabilities

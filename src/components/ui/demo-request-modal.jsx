@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Lock, MessageCircle, Play, Mic, PhoneOff, Cpu, Brain, Crown, ArrowRight, Check, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Lock, MessageCircle, Play, PhoneOff, Cpu, Brain, Crown, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Orb } from './orb';
 import { Message } from './message-ui';
 import { useConversation } from '@elevenlabs/react';
@@ -463,7 +463,7 @@ const DemoPortal = ({ isOpen, onClose }) => {
                         <div className="flex-1 overflow-y-auto space-y-6 scrollbar-hide pr-2">
                           {transcript.length === 0 && (
                             <div className="h-full flex items-center justify-center text-white/5 text-[9px] text-center p-8 uppercase tracking-[0.4em] font-black">
-                              HANDSHAKE_ESTABLISHED // WAITING_FOR_DATA
+                              {'HANDSHAKE_ESTABLISHED // WAITING_FOR_DATA'}
                             </div>
                           )}
                           {transcript.map((msg, i) => (
@@ -476,7 +476,7 @@ const DemoPortal = ({ isOpen, onClose }) => {
 
                         <div className="mt-8 pt-6 border-t border-white/10">
                           <p className="text-[9px] font-mono text-white/20 leading-relaxed uppercase tracking-widest">
-                            V1.0.4 // AGENT: {selectedAgent?.id} // SECURE_HANDSHAKE
+                            {`V1.0.4 // AGENT: ${selectedAgent?.id} // SECURE_HANDSHAKE`}
                           </p>
                         </div>
                       </motion.div>

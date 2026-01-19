@@ -1,37 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Target, Zap } from 'lucide-react';
-
-/**
- * ComparisonSection - Small, Clean technical specification
- * Redesigned for Market Dynamics showcase.
- */
 const ComparisonSection = () => {
     const marketDynamics = [
         {
             title: "Enterprise AI Adoption",
             content: "72% of companies are using AI; half have rolled it out across multiple departments. 75% of C-level executives rank AI in their top 3 priorities for 2025.",
             stat: "72%",
-            label: "ADOPTION RATE",
-            icon: Users
+            label: "ADOPTION RATE"
         },
         {
             title: "Customer Experience Transformation",
             content: "95% of all customer interactions will be AI-facilitated by end of 2025. 68% average reduction in operational costs reported by companies using AI in customer service.",
             stat: "95%",
-            label: "AI-FACILITATED",
-            icon: Target
+            label: "AI-FACILITATED"
         },
         {
             title: "Return on Investment",
             content: "Mature AI deployments see $3.50 value for every $1 invested. 74% of mature AI users report solid ROI (but new adopters lag).",
             stat: "3.5x",
-            label: "VALUE RETURN",
-            icon: Zap
+            label: "VALUE RETURN"
         }
     ];
-
-    const rustOrange = "#A63E1B";
 
     return (
         <section id="comparison-section" className="py-20 px-6 bg-[#0a0a0a] relative overflow-hidden">

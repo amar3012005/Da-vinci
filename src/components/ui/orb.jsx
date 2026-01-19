@@ -63,7 +63,7 @@ function Scene({
     getInputVolume,
     getOutputVolume,
 }) {
-    const { gl } = useThree()
+    useThree()
     const circleRef = useRef(null)
     const initialColorsRef = useRef(colors)
     const targetColor1Ref = useRef(new THREE.Color(colors[0]))

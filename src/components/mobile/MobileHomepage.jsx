@@ -8,7 +8,6 @@ import MobileHero from './MobileHero';
 import MeetTaraSection from './MeetTaraSection';
 import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
-import CapabilitiesSection from './CapabilitiesSection';
 import MobilePricingSection from './MobilePricingSection';
 import MobileAboutSection from './MobileAboutSection';
 import MobileCTA from './MobileCTA';

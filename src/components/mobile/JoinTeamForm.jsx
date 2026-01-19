@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, Check, ArrowLeft } from 'lucide-react';
 
 const JoinTeamForm = ({ isOpen, onClose }) => {
     const [step, setStep] = useState(1);

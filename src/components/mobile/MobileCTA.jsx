@@ -1,6 +1,4 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, ArrowUpRight } from 'lucide-react';
 
 /**
  * MobileCTA - Refined "Clean" Aesthetic
@@ -8,13 +6,6 @@ import { Users, ArrowUpRight } from 'lucide-react';
  */
 const MobileCTA = () => {
 
-    const handleAction = (type) => {
-        if (type === 'demo') {
-            window.location.href = 'mailto:amarsai2005@gmail.com?subject=Demo Request';
-        } else {
-            window.location.href = 'mailto:amarsai2005@gmail.com?subject=Join Team';
-        }
-    };
 
     return (
         <section id="cta-section" className="py-24 px-6 relative overflow-hidden bg-[#0a0a0a]">
