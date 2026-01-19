@@ -1,207 +1,184 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Building, MapPin, Users, Mail, Phone, Calendar, Clock, MessageCircle, ArrowRight, Check, Cpu, Brain, Crown } from 'lucide-react';
-import { RaycastAnimatedBackground } from './raycast-animated-background';
+import { X, Lock, MessageCircle, Play, Mic, PhoneOff, Cpu, Brain, Crown, ArrowRight, Check, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Orb } from './orb';
+import { Message } from './message-ui';
+import { useConversation } from '@elevenlabs/react';
 
-const DemoRequestModal = ({ isOpen, onClose }) => {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    company: '',
-    jobTitle: '',
-    companySize: '',
-    industry: '',
-    location: '',
-    country: '',
-    selectedVariant: '',
-    useCase: '',
-    additionalNotes: '',
-    preferredDemoDate: '',
-    preferredTime: ''
+const DemoPortal = ({ isOpen, onClose }) => {
+  const [step, setStep] = useState('pin'); // 'pin', 'grid', 'call'
+  const [pin, setPin] = useState('');
+  const [pinError, setPinError] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(1); // 0, 1, 2
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  // Call State
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [agentState, setAgentState] = useState(null); // 'listening', 'talking', 'thinking'
+  const [transcript, setTranscript] = useState([]);
+  const [callDuration, setCallDuration] = useState(0);
+  const [userVolume, setUserVolume] = useState(0);
+  const [micStream, setMicStream] = useState(null);
+
+  const callTimerRef = useRef(null);
+  const transcriptEndRef = useRef(null);
+  const animationFrameRef = useRef(null);
+
+  // ElevenLabs SDK
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to ElevenLabs');
+      setIsCallActive(true);
+      setAgentState('listening');
+      setCallDuration(0);
+      callTimerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
+    },
+    onDisconnect: () => {
+      console.log('Disconnected');
+      setIsCallActive(false);
+      setAgentState(null);
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      setMicStream(null);
+      setUserVolume(0);
+    },
+    onMessage: (message) => {
+      if (message.message) {
+        setTranscript(prev => [...prev, {
+          role: message.source === 'ai' ? 'agent' : 'user',
+          text: message.message
+        }]);
+      }
+    },
+    onError: (error) => {
+      console.error('Neural Link Error:', error);
+      setIsCallActive(false);
+      setAgentState(null);
+    }
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState(1);
+  const { isSpeaking, status } = conversation;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  // Volume Analyzer Logic for Responsive Orb
+  useEffect(() => {
+    if (!micStream) return;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      // Google Form submission
-      // SETUP INSTRUCTIONS:
-      // 1. Go to https://forms.google.com and create a new form
-      // 2. Add fields matching the ones below (Full Name, Email, Phone, etc.)
-      // 3. Get the form ID from the URL (https://docs.google.com/forms/d/FORM_ID_HERE/edit)
-      // 4. Get field entry IDs by inspecting the form or using pre-filled URLs
-      // 5. Replace YOUR_GOOGLE_FORM_ID and entry.XXXXXXXX values below
-      
-      const GOOGLE_FORM_ID = 'YOUR_GOOGLE_FORM_ID'; // Replace with your form ID
-      const GOOGLE_FORM_URL = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`;
-      
-      // Create form data for Google Forms
-      // These entry IDs need to match your Google Form field IDs
-      // You can get these by inspecting your Google Form or checking the pre-filled URL
-      const googleFormData = new FormData();
-      
-      // Map your form fields to Google Form entry IDs
-      // Replace these entry.XXXXXXXX with your actual Google Form field entry IDs
-      googleFormData.append('entry.123456789', formData.fullName || ''); // Full Name
-      googleFormData.append('entry.987654321', formData.email || ''); // Email
-      googleFormData.append('entry.111111111', formData.phone || ''); // Phone
-      googleFormData.append('entry.222222222', formData.company || ''); // Company
-      googleFormData.append('entry.333333333', formData.jobTitle || ''); // Job Title
-      googleFormData.append('entry.444444444', formData.companySize || ''); // Company Size
-      googleFormData.append('entry.555555555', formData.industry || ''); // Industry
-      googleFormData.append('entry.666666666', formData.location || ''); // Location
-      googleFormData.append('entry.777777777', formData.selectedVariant || ''); // Selected TARA Variant
-      googleFormData.append('entry.888888888', formData.useCase || ''); // Use Case
-      googleFormData.append('entry.999999999', formData.additionalNotes || ''); // Additional Notes
-      googleFormData.append('entry.000000000', new Date().toISOString()); // Timestamp
-      
-      // Submit to Google Forms
-      await fetch(GOOGLE_FORM_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Required for Google Forms
-        body: googleFormData
-      });
-      
-      // Log the data for debugging
-      console.log('Demo request submitted to Google Forms:', {
-        formData,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Optional: Also send to your own backend if you have one
-      // await fetch('/api/demo-request', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     ...formData,
-      //     timestamp: new Date().toISOString()
-      //   })
-      // });
-      
-      setIsSubmitting(false);
-      setStep(3); // Success step
-      
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      
-      // Still show success since Google Forms submission via no-cors doesn't return response
-      // but the data is usually still submitted successfully
-      setIsSubmitting(false);
-      setStep(3); // Success step
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(micStream);
+    source.connect(analyser);
+    analyser.fftSize = 256;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const updateVolume = () => {
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const average = sum / dataArray.length;
+      // Normalize to 0-1 range for the Orb. Boost sensitivity.
+      setUserVolume(Math.min(1, average / 30));
+      animationFrameRef.current = requestAnimationFrame(updateVolume);
+    };
+
+    updateVolume();
+
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      audioContext.close();
+    };
+  }, [micStream]);
+
+  // Sync agentState with SDK status
+  useEffect(() => {
+    if (status === 'connected') {
+      setAgentState(isSpeaking ? 'talking' : 'listening');
+    } else if (status === 'connecting') {
+      setAgentState('thinking');
+    } else {
+      setAgentState(null);
     }
-  };
+  }, [isSpeaking, status]);
 
-  const nextStep = () => {
-    if (step < 2) setStep(step + 1);
-  };
-
-  const prevStep = () => {
-    if (step > 1) setStep(step - 1);
-  };
-
-  const companySizes = [
-    '1-10 employees',
-    '11-50 employees',
-    '51-200 employees',
-    '201-1000 employees',
-    '1000+ employees'
-  ];
-
-  const industries = [
-    'Technology',
-    'Healthcare',
-    'Finance',
-    'E-commerce',
-    'Education',
-    'Manufacturing',
-    'Real Estate',
-    'Hospitality',
-    'Other'
-  ];
-
-
-
-  const taraVariants = [
+  const TARA_VARIANTS = [
     {
       id: '01',
-      name: 'TARA BASE',
-      tagline: 'Essential AI Foundation',
-      price: '₹9,800',
-      original: '₹15,000',
-      period: '/month',
+      name: 'Lexi',
+      org: 'B&B',
+      tagline: 'Precision Italian Engineering',
+      languages: ['German', 'English'],
       icon: Cpu,
-      themeColor: 'from-orange-500 to-red-500',
-      features: [
-        'Basic Conversational AI',
-     
-        'Standard Voice Recognition',
-        'Email & Chat Integration',
-        'Up to 1,000 interactions/month'
-      ],
-      description: 'Perfect foundation for small businesses entering the AI-powered customer service landscape.'
+      agentId: 'agent_9201kezh527fecmbqqrnxtsj172z',
+      theme: 'from-orange-500 to-red-500',
+      glow: 'rgba(239, 68, 68, 0.4)'
     },
     {
       id: '02',
-      name: 'TARA PRO',
-      tagline: 'Advanced Intelligence',
-      price: '₹24,900',
-      original: '₹35,000',
-      period: '/month',
+      name: 'Tara',
+      org: 'DAVINCI',
+      tagline: 'Technical Heritage & Innovation',
+      languages: ['English', 'German'],
       icon: Brain,
-      themeColor: 'from-blue-500 to-purple-500',
-      specialFeature: {
-        title: 'Form Filling & Registration',
-        description: 'TARA PRO can intelligently fill out forms and handle user registrations, streamlining the customer onboarding process with automated data collection and validation.'
-      },
-      features: [
-        'All Base Features',
-     
-        'Advanced NLP Processing',
-        'Form Filling & Registration',
-        'Multi-channel Integration',
-        'Up to 10,000 interactions/month'
-      ],
-      description: 'Sophisticated AI capabilities with form filling and registration features for growing teams.'
+      agentId: 'agent_9901kezhb55yfr39m2d7kqnttyc0',
+      theme: 'from-blue-500 to-purple-500',
+      glow: 'rgba(59, 130, 246, 0.4)'
     },
     {
       id: '03',
-      name: 'TARA ENTERPRISE',
-      tagline: 'Unlimited Potential',
-      price: '₹74,900',
-      original: '₹99,000',
-      period: '/month',
+      name: 'MIA',
+      org: 'TRANSLATION HUB',
+      tagline: 'Multilingual Bridge',
+      languages: ['English', 'Hindi', 'German'],
       icon: Crown,
-      themeColor: 'from-purple-500 to-pink-500',
-      specialFeature: {
-        title: 'Persistent Semantic Memory',
-        description: 'TARA ENTERPRISE maintains a comprehensive semantic memory of all user conversations, learning preferences, context, and history to provide increasingly personalized responses.'
-      },
-      features: [
-        'All Pro Features',
-       
-        'Persistent Semantic Memory',
-        'Custom AI Model Training',
-        'Enterprise Integrations',
-        'Unlimited interactions'
-      ],
-      description: 'Enterprise-grade solution with persistent semantic memory that learns from every conversation.'
+      agentId: 'agent_9201kezh527fecmbqqrnxtsj172z',
+      theme: 'from-purple-500 to-pink-500',
+      glow: 'rgba(168, 85, 247, 0.4)'
     }
   ];
+
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    if (pin === '000000') {
+      setStep('grid');
+      setPinError(false);
+    } else {
+      setPinError(true);
+      setPin('');
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUDIO LOGIC (Direct Relay or Mock)
+  // ═══════════════════════════════════════════════════════════════
+
+  const startCall = async (agent) => {
+    setTranscript([]);
+    setCallDuration(0);
+    try {
+      // Request mic permission first
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicStream(stream);
+
+      // Start session with public agent ID
+      await conversation.startSession({
+        agentId: agent.agentId,
+      });
+    } catch (err) {
+      console.error("Initiation failed:", err);
+      alert("Neural handshake failed. Please ensure mic access is granted and agent is public.");
+    }
+  };
+
+  const endCall = async () => {
+    await conversation.endSession();
+  };
+
+
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
 
   if (!isOpen) return null;
 
@@ -211,399 +188,320 @@ const DemoRequestModal = ({ isOpen, onClose }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 md:p-8"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ duration: 0.3 }}
-          className="bg-black/20 backdrop-blur-xl border border-white/10 rounded-3xl p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="relative w-full max-w-3xl bg-black border border-white/20 rounded-none overflow-hidden shadow-2xl flex flex-col h-[85vh] md:h-[75vh]"
+          onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h2 className="text-3xl font-light text-white mb-2">
-                Request Enterprise Demo
-              </h2>
-              <p className="text-white/60">
-                Get a personalized demonstration of TARA's capabilities for your business
-              </p>
+          <div className="flex justify-between items-center p-4 md:p-8 border-bottom border-white/5 bg-black/20">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 rounded-none flex items-center justify-center border border-white/10">
+                <Sparkles size={16} className="text-blue-400 md:size-20" />
+              </div>
+              <div>
+                <h3 className="text-[9px] md:text-[10px] font-black text-white uppercase tracking-[0.3em]">TARA Demo Portal</h3>
+                <p className="text-[8px] md:text-[9px] font-mono text-white/30 uppercase tracking-widest">Authorized Personnel Only</p>
+              </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-            >
-              <X size={24} />
-            </button>
+            {/* NO X CLOSING SIGN AS REQUESTED */}
           </div>
 
-          {/* Progress Indicator */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center space-x-4">
-              {[1, 2, 3].map((stepNumber) => (
-                <div key={stepNumber} className="flex items-center">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
-                      step >= stepNumber
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                        : 'bg-white/10 text-white/60'
-                    }`}
-                  >
-                    {stepNumber}
+          <div className="flex-1 overflow-hidden relative">
+            {/* NO BACKGROUND EFFECT */}
+
+            {/* CONTENT STEPS */}
+            <div className="relative z-10 h-full flex flex-col items-center justify-center pb-16 md:pb-24 p-8">
+
+              {/* STEP 1: PIN ENTRY */}
+              {step === 'pin' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full max-w-sm text-center"
+                >
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 md:mb-8 border border-blue-500/20">
+                    <Lock size={28} className="text-blue-400 md:size-32" />
                   </div>
-                  {stepNumber < 3 && (
-                    <div
-                      className={`w-16 h-px transition-all duration-300 ${
-                        step > stepNumber ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-white/20'
-                      }`}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+                  <h2 className="text-[10px] md:text-[12px] font-black text-white uppercase tracking-[0.4em] mb-2">Access Code Required</h2>
+                  <p className="text-white/40 text-[8px] md:text-[9px] uppercase tracking-widest mb-6 md:mb-8">Enter your 6-digit demo authorization code</p>
 
-          <form onSubmit={handleSubmit}>
-            {/* Step 1: Contact & Company Information */}
-            {step === 1 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <h3 className="text-xl font-medium text-white mb-6 flex items-center gap-2">
-                  <Building className="w-5 h-5 text-blue-400" />
-                  Contact & Company Information
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Full Name *
-                    </label>
+                  <form onSubmit={handlePinSubmit} className="flex flex-col items-center space-y-4 md:space-y-6">
                     <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="Your full name"
+                      type="password"
+                      maxLength={6}
+                      value={pin}
+                      onChange={e => setPin(e.target.value)}
+                      placeholder="------"
+                      className={`w-full bg-white/5 border ${pinError ? 'border-red-500/50' : 'border-white/10'} rounded-none p-3 md:p-4 text-center text-2xl md:text-3xl tracking-[0.5em] text-white focus:outline-none focus:border-white/40 transition-all font-black`}
+                      autoFocus
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Job Title *
-                    </label>
-                    <input
-                      type="text"
-                      name="jobTitle"
-                      value={formData.jobTitle}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="CEO, CTO, etc."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Business Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="you@company.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="+91 12345 67890"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Company Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="Your company name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Company Size *
-                    </label>
-                    <select
-                      name="companySize"
-                      value={formData.companySize}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-blue-500 focus:outline-none transition-colors"
+                    {pinError && <p className="text-red-400 text-[9px] uppercase tracking-widest">Invalid authorization code.</p>}
+                    <button
+                      type="submit"
+                      className="px-16 py-3.5 md:py-4 bg-[#e5e5e5] text-black text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] relative overflow-hidden hover:bg-white transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-8 md:mt-12"
                     >
-                      <option value="">Select company size</option>
-                      {companySizes.map((size) => (
-                        <option key={size} value={size} className="bg-black text-white">
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <span className="relative z-10">Unlock Access</span>
+                      <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
+                      <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-black opacity-20" />
+                    </button>
+                  </form>
+                </motion.div>
+              )}
 
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Industry *
-                    </label>
-                    <select
-                      name="industry"
-                      value={formData.industry}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-blue-500 focus:outline-none transition-colors"
+              {/* STEP 2: AGENT GRID */}
+              {step === 'grid' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="w-full h-full flex flex-col items-center justify-center"
+                >
+                  <p className="text-white/40 text-[9px] font-mono uppercase tracking-[0.3em] text-center mb-12 max-w-xl">
+                    Welcome, <span className="text-white font-black">Architect</span>. Select a TARA variant to initiate neural handshake.
+                  </p>
+
+                  <div className="relative w-full max-w-sm flex items-center justify-center">
+                    {/* Navigation Left */}
+                    <button
+                      onClick={() => setCurrentSlide(prev => (prev > 0 ? prev - 1 : TARA_VARIANTS.length - 1))}
+                      className="absolute -left-12 p-3 text-white/20 hover:text-white transition-colors z-20"
                     >
-                      <option value="">Select industry</option>
-                      {industries.map((industry) => (
-                        <option key={industry} value={industry} className="bg-black text-white">
-                          {industry}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <ChevronLeft size={32} strokeWidth={1} />
+                    </button>
 
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
-                      Location (City) *
-                    </label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:border-blue-500 focus:outline-none transition-colors"
-                      placeholder="Mumbai, Delhi, Bangalore, etc."
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-6">
-                  <button
-                    type="button"
-                    onClick={nextStep}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
-                  >
-                    Next Step
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 2: Choose TARA Variant */}
-            {step === 2 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <h3 className="text-xl font-medium text-white mb-6 flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5 text-purple-400" />
-                  Choose Your TARA Variant
-                </h3>
-
-                <p className="text-white/60 mb-8">
-                  Select the TARA variant that best fits your business needs for the demo
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {taraVariants.map((variant, index) => (
-                    <motion.div
-                      key={variant.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      className="group cursor-pointer"
-                      onClick={() => setFormData(prev => ({ ...prev, selectedVariant: variant.id }))}
-                    >
-                      {/* Card Container */}
-                      <div className={`relative h-[500px] rounded-2xl overflow-hidden transition-all duration-300 ${
-                        formData.selectedVariant === variant.id
-                          ? 'ring-2 ring-blue-500/50 shadow-lg shadow-blue-500/25'
-                          : 'hover:scale-105'
-                      }`}>
-                        {/* Raycast Animated Background */}
-                        <RaycastAnimatedBackground 
-                          width={400} 
-                          height={500} 
-                          className="w-full h-full"
-                        />
-                        
-                        {/* Selection Indicator */}
-                        {formData.selectedVariant === variant.id && (
-                          <motion.div 
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="absolute top-4 right-4 w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center z-20 shadow-lg shadow-blue-500/25"
-                          >
-                            <Check size={14} className="text-white" />
-                          </motion.div>
-                        )}
-
-                        {/* Card Content */}
-                        <div className="relative h-full flex flex-col justify-between p-8 text-white z-10">
-                          {/* Header Section */}
-                          <div>
-                            <div className="flex justify-between items-start mb-6">
-                              <div className="text-sm font-medium text-white/80 flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-white/60"></div>
-                                {variant.id}.
-                              </div>
-                              <motion.div
-                                whileHover={{ rotate: 45 }}
-                                transition={{ duration: 0.2 }}
-                                className="w-8 h-8 border border-white/30 rounded-full flex items-center justify-center hover:bg-white/10 hover:text-white transition-all duration-200"
-                              >
-                                <ArrowRight size={16} />
-                              </motion.div>
-                            </div>
-
-                            {/* Pricing */}
-                            <div className="mb-8">
-                              <div className="flex items-baseline gap-2 mb-1">
-                                <span className="text-3xl font-light text-white">
-                                  {variant.price}
+                    <div className="w-full overflow-hidden">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={currentSlide}
+                          initial={{ x: 50, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          exit={{ x: -50, opacity: 0 }}
+                          className="w-full"
+                        >
+                          <div className="group relative h-[320px] md:h-[360px] bg-white/[0.03] border border-white/10 rounded-none p-6 md:p-10 flex flex-col justify-between overflow-hidden">
+                            <div>
+                              <div className="flex items-center justify-between mb-6 md:mb-8 pb-3 md:pb-4 border-b border-white/10">
+                                <span className="text-[10px] md:text-[12px] font-black text-white uppercase tracking-[0.3em]">
+                                  {TARA_VARIANTS[currentSlide].org}
                                 </span>
-                                <span className="text-sm opacity-70">{variant.period}</span>
+                                <span className="text-[8px] md:text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">
+                                  MOD_{TARA_VARIANTS[currentSlide].id}
+                                </span>
                               </div>
-                              {variant.original && (
-                                <div className="text-sm opacity-60 line-through">
-                                  {variant.original}
-                                </div>
-                              )}
+                              <div className="w-10 h-10 md:w-12 md:h-12 bg-white/5 rounded-none border border-white/10 flex items-center justify-center mb-6 md:mb-8">
+                                {React.createElement(TARA_VARIANTS[currentSlide].icon, { size: 20, className: "text-white/80 md:size-24" })}
+                              </div>
+                              <h4 className="text-[16px] md:text-[18px] font-black text-white mb-1 md:mb-2 uppercase tracking-[0.2em]">
+                                {TARA_VARIANTS[currentSlide].name}
+                              </h4>
+                              <p className="text-[9px] md:text-[10px] text-white/40 uppercase tracking-widest leading-relaxed mb-3 md:mb-4">
+                                {TARA_VARIANTS[currentSlide].tagline}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5 md:gap-2 mt-2 md:mt-4">
+                                {TARA_VARIANTS[currentSlide].languages.map((lang, idx) => (
+                                  <span key={idx} className="text-[7px] md:text-[8px] font-mono py-0.5 md:py-1 px-1.5 md:px-2 border border-white/10 text-white/60 uppercase tracking-tighter">
+                                    {lang}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
+
+                            <button
+                              onClick={() => {
+                                setSelectedAgent(TARA_VARIANTS[currentSlide]);
+                                setStep('call');
+                              }}
+                              className="w-full py-4 bg-[#e5e5e5] text-black text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden shadow-[0_0_20px_rgba(255,255,255,0.1)] mt-6 md:mt-8"
+                            >
+                              <span className="relative z-10 flex items-center gap-2">
+                                Request Demo <ArrowRight className="w-3 h-3 md:w-3 md:h-3 stroke-[3px]" />
+                              </span>
+                              <div className="absolute top-0 right-0 w-2 h-2 bg-black opacity-20" />
+                              <div className="absolute bottom-0 left-0 w-2 h-2 bg-black opacity-20" />
+                            </button>
                           </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
 
-                          {/* Middle Section */}
-                          <div className="flex-1 flex flex-col justify-center">
-                            <h2 className="text-2xl font-light mb-2 tracking-wide">
-                              {variant.name}
-                            </h2>
-                            <p className="text-sm opacity-80 mb-6">
-                              {variant.tagline}
-                            </p>
-                            
-                            {/* Key Features */}
-                            <div className="space-y-2">
-                              {variant.features.slice(0, 3).map((feature, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm opacity-80">
-                                  <Check size={12} />
-                                  <span>{feature}</span>
-                                </div>
-                              ))}
-                            </div>
-                            
-                          </div>
+                    {/* Navigation Right */}
+                    <button
+                      onClick={() => setCurrentSlide(prev => (prev < TARA_VARIANTS.length - 1 ? prev + 1 : 0))}
+                      className="absolute -right-12 p-3 text-white/20 hover:text-white transition-colors z-20"
+                    >
+                      <ChevronRight size={32} strokeWidth={1} />
+                    </button>
+                  </div>
 
+                  {/* Pagination Dots */}
+                  <div className="flex gap-2 mt-12">
+                    {TARA_VARIANTS.map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`h-1 transition-all duration-300 ${idx === currentSlide ? 'w-8 bg-white' : 'w-4 bg-white/10'}`}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
+              {/* STEP 3: CONVERSATIONAL CALL */}
+              {step === 'call' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="w-full h-full flex flex-col items-center relative pt-12 md:pt-20"
+                >
+                  {/* TOP SECTION: ORB & IDENTITY */}
+                  <div className="flex-1 flex flex-col items-center justify-center -mt-12 md:-mt-16 w-full">
+                    {/* ORB SECTION */}
+                    <div className="w-32 h-32 md:w-48 md:h-48 relative mb-8 md:mb-10">
+                      <Orb
+                        agentState={agentState}
+                        volumeMode="manual"
+                        manualInput={userVolume}
+                        manualOutput={isSpeaking ? (0.6 + Math.random() * 0.4) : 0}
+                        colors={["#CADCFC", "#A0B9D1"]}
+                      />
+                    </div>
+
+                    <div className="text-center mb-8 md:mb-16">
+                      {!isCallActive ? (
+                        <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+                          <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-white/20" />
+                          <span className="text-[10px] md:text-[12px] font-black text-white/40 uppercase tracking-[0.4em]">
+                            Neural Link Ready
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
+                          <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
+                          <span className="text-[10px] md:text-[12px] font-black text-white uppercase tracking-[0.4em]">
+                            {status === 'connecting' ? 'Establishing Link...' :
+                              isSpeaking ? 'Incoming Transmission' :
+                                status === 'connected' ? 'Awaiting Input' :
+                                  'Handshaking...'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-col items-center">
+                        <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-white/5 border border-white/10 mb-2 md:mb-2.5">
+                          <p className="text-[9px] md:text-[10px] font-black text-white/60 uppercase tracking-[0.4em]">{selectedAgent?.org}</p>
+                        </div>
+                        <h3 className="text-[18px] md:text-[20px] font-black text-white uppercase tracking-[0.3em] mb-1 md:mb-1.5">{selectedAgent?.name}</h3>
+                      </div>
+                      {isCallActive && (
+                        <p className="text-[10px] md:text-[10px] text-white/40 font-mono tracking-[0.2em] uppercase">{Math.floor(callDuration / 60)}:{(callDuration % 60).toString().padStart(2, '0')}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* BOTTOM SECTION: CONTROLS (Positioned at ~3/4 height) */}
+                  <div className="h-[25%] flex items-start justify-center w-full">
+                    <div className="flex items-center gap-4 md:gap-6">
+                      {!isCallActive ? (
+                        <button
+                          onClick={() => startCall(selectedAgent)}
+                          className="py-4 md:py-4 px-14 md:px-16 bg-white text-black text-[10px] md:text-[10px] font-black uppercase tracking-[0.3em] relative overflow-hidden hover:bg-blue-400 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                        >
+                          <span className="relative z-10 flex items-center gap-2 md:gap-2.5">
+                            <Play size={14} fill="black" className="md:size-14" /> Start Call
+                          </span>
+                          <div className="absolute top-0 right-0 w-2 h-2 bg-black opacity-10" />
+                          <div className="absolute bottom-0 left-0 w-2 h-2 bg-black opacity-10" />
+                        </button>
+                      ) : (
+                        <>
+                          {/* TERMINATE */}
+                          <button
+                            onClick={endCall}
+                            className="py-3 md:py-4 px-8 md:px-10 bg-red-500 text-white text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] relative overflow-hidden hover:bg-red-600 transition-all shadow-lg"
+                          >
+                            <span className="relative z-10 flex items-center gap-2">
+                              <PhoneOff size={12} className="md:size-14" /> End Call
+                            </span>
+                            <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
+                            <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-black opacity-20" />
+                          </button>
+
+                          {/* CHAT TOGGLE */}
+                          <button
+                            onClick={() => setShowTranscript(true)}
+                            className="p-3 md:p-4 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all group"
+                          >
+                            <MessageCircle size={18} className="text-white/60 group-hover:text-white md:size-20" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* OVERLAY TRANSCRIPT */}
+                  <AnimatePresence>
+                    {showTranscript && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="absolute inset-0 z-50 bg-black flex flex-col border border-white/20 p-8"
+                      >
+                        <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+                          <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Neural Link Transcript</span>
+                          <button
+                            onClick={() => setShowTranscript(false)}
+                            className="p-2 hover:bg-white/10 transition-colors"
+                          >
+                            <X size={20} className="text-white/60" />
+                          </button>
                         </div>
 
-                        {/* Enhanced Hover Glow Effect */}
-                        <motion.div
-                          className="absolute -inset-2 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10"
-                          style={{ 
-                            background: `radial-gradient(ellipse at center, rgba(59, 130, 246, 0.3) 0%, transparent 70%)`,
-                            filter: 'blur(30px)',
-                          }}
-                        ></motion.div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                        <div className="flex-1 overflow-y-auto space-y-6 scrollbar-hide pr-2">
+                          {transcript.length === 0 && (
+                            <div className="h-full flex items-center justify-center text-white/5 text-[9px] text-center p-8 uppercase tracking-[0.4em] font-black">
+                              HANDSHAKE_ESTABLISHED // WAITING_FOR_DATA
+                            </div>
+                          )}
+                          {transcript.map((msg, i) => (
+                            <Message key={i} from={msg.role} missionName={selectedAgent?.name}>
+                              {msg.text}
+                            </Message>
+                          ))}
+                          <div ref={transcriptEndRef} />
+                        </div>
 
-                
-
-                <div className="flex justify-between pt-6">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="px-8 py-3 border border-white/20 text-white rounded-xl font-medium hover:bg-white/10 transition-all duration-200"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !formData.selectedVariant}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                        Submitting...
-                      </>
-                    ) : (
-                      'Request Demo'
+                        <div className="mt-8 pt-6 border-t border-white/10">
+                          <p className="text-[9px] font-mono text-white/20 leading-relaxed uppercase tracking-widest">
+                            V1.0.4 // AGENT: {selectedAgent?.id} // SECURE_HANDSHAKE
+                          </p>
+                        </div>
+                      </motion.div>
                     )}
-                  </button>
-                </div>
-              </motion.div>
-            )}
+                  </AnimatePresence>
 
-            {/* Step 3: Success */}
-            {step === 3 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-8"
-              >
-                <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-medium text-white mb-4">
-                  Demo Request Submitted!
-                </h3>
-                <p className="text-white/60 mb-8 max-w-md mx-auto">
-                  Thank you for your interest in TARA. Our team will contact you within 24 hours to schedule your personalized demo.
-                </p>
-                <button
-                  onClick={onClose}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
-                >
-                  Close
-                </button>
-              </motion.div>
-            )}
-          </form>
+                  {/* BOTTOM INFO BAR */}
+                  {!showTranscript && (
+                    <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-between items-center opacity-30">
+                      <p className="text-[8px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                        LATENCY: 124MS // SAMPLING: 16KHZ // ENCRYPTED
+                      </p>
+                      <p className="text-[8px] font-mono text-white/40 uppercase tracking-[0.2em]">
+                        V1.04_RELAY
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence >
   );
 };
 
-export default DemoRequestModal;
+export default DemoPortal;

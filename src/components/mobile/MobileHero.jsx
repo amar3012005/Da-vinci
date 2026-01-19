@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ArrowRight, Users, X, Construction, Bell, AlertCircle } from 'lucide-react';
 import JoinTeamForm from './JoinTeamForm';
 
@@ -33,6 +34,7 @@ const MobileHero = () => {
     const { scrollY } = useScroll();
     const opacity = useTransform(scrollY, [0, 400], [1, 0]);
     const scale = useTransform(scrollY, [0, 400], [1, 0.9]);
+    const navigate = useNavigate();
     const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
     const [showAnnouncements, setShowAnnouncements] = useState(false);
     const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
@@ -178,7 +180,7 @@ const MobileHero = () => {
                     >
                         {/* Primary Button */}
                         <motion.button
-                            onClick={() => setIsDemoModalOpen(true)}
+                            onClick={() => navigate('/demo')}
                             className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                             whileHover={{ scale: 1.02 }}
