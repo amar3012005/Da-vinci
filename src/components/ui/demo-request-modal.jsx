@@ -21,6 +21,19 @@ const DemoPortal = ({ isOpen, onClose }) => {
   const [userVolume, setUserVolume] = useState(0);
   const [micStream, setMicStream] = useState(null);
 
+  // Cartesia Refs & State
+  const cartesiaWsRef = useRef(null);
+  const cartesiaAudioCtxRef = useRef(null);
+  const cartesiaWorkletRef = useRef(null);
+  const cartesiaAudioQueue = useRef([]);
+  const [cartesiaStatus, setCartesiaStatus] = useState(null);
+  const [cartesiaSpeakingState, setCartesiaSpeakingState] = useState(false);
+  const [cartesiaIsSpeaking, setCartesiaIsSpeaking] = useState(false);
+  const lastPlaybackTimeRef = useRef(0);
+  const pingIntervalRef = useRef(null);
+
+  const CARTESIA_API_KEY = process.env.REACT_APP_CARTESIA_API_KEY || "sk_car_ChbYsPTQzZjruzRRPLy2zK";
+
   const callTimerRef = useRef(null);
   const transcriptEndRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -52,13 +65,14 @@ const DemoPortal = ({ isOpen, onClose }) => {
       }
     },
     onError: (error) => {
-      console.error('Neural Link Error:', error);
+      console.error('ElevenLabs Link Error:', error);
       setIsCallActive(false);
       setAgentState(null);
     }
   });
 
-  const { isSpeaking, status } = conversation;
+  const isSpeaking = selectedAgent?.provider === 'cartesia' ? cartesiaIsSpeaking : conversation.isSpeaking;
+  const status = selectedAgent?.provider === 'cartesia' ? cartesiaStatus : conversation.status;
 
   // Volume Analyzer Logic for Responsive Orb
   useEffect(() => {
@@ -112,7 +126,8 @@ const DemoPortal = ({ isOpen, onClose }) => {
       icon: Cpu,
       agentId: 'agent_9201kezh527fecmbqqrnxtsj172z',
       theme: 'from-orange-500 to-red-500',
-      glow: 'rgba(239, 68, 68, 0.4)'
+      glow: 'rgba(239, 68, 68, 0.4)',
+      provider: 'elevenlabs'
     },
     {
       id: '02',
@@ -123,7 +138,8 @@ const DemoPortal = ({ isOpen, onClose }) => {
       icon: Brain,
       agentId: 'agent_9901kezhb55yfr39m2d7kqnttyc0',
       theme: 'from-blue-500 to-purple-500',
-      glow: 'rgba(59, 130, 246, 0.4)'
+      glow: 'rgba(59, 130, 246, 0.4)',
+      provider: 'elevenlabs'
     },
     {
       id: '03',
@@ -134,7 +150,8 @@ const DemoPortal = ({ isOpen, onClose }) => {
       icon: Crown,
       agentId: 'agent_9201kezh527fecmbqqrnxtsj172z',
       theme: 'from-purple-500 to-pink-500',
-      glow: 'rgba(168, 85, 247, 0.4)'
+      glow: 'rgba(168, 85, 247, 0.4)',
+      provider: 'cartesia'
     }
   ];
 
@@ -161,18 +178,165 @@ const DemoPortal = ({ isOpen, onClose }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicStream(stream);
 
-      // Start session with public agent ID
-      await conversation.startSession({
-        agentId: agent.agentId,
-      });
+      if (agent.provider === 'cartesia') {
+        startCartesiaCall(agent, stream);
+      } else {
+        await conversation.startSession({
+          agentId: agent.agentId,
+        });
+      }
     } catch (err) {
       console.error("Initiation failed:", err);
       alert("Neural handshake failed. Please ensure mic access is granted and agent is public.");
+      setMicStream(null);
     }
   };
 
+  const startCartesiaCall = async (agent, stream) => {
+    setCartesiaStatus('connecting');
+    setAgentState('thinking');
+
+    // Passing auth via query params as headers aren't supported in browser WebSocket constructor
+    const wsUrl = `wss://api.cartesia.ai/agents/stream/${agent.agentId}?api_key=${CARTESIA_API_KEY}&cartesia-version=2025-04-16`;
+    const ws = new WebSocket(wsUrl);
+    cartesiaWsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('Cartesia WebSocket Connected');
+      ws.send(JSON.stringify({
+        event: "start",
+        config: {
+          input_format: "pcm_44100"
+        }
+      }));
+
+      // Initializing Audio Context for Cartesia - Ensure we match documentation 44.1kHz
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+      cartesiaAudioCtxRef.current = audioCtx;
+      lastPlaybackTimeRef.current = audioCtx.currentTime;
+
+      // Setup Recording for Cartesia
+      const source = audioCtx.createMediaStreamSource(stream);
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      processor.onaudioprocess = (e) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          // Convert Float32 to Int16 PCM
+          const pcmData = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+          }
+          // Safe Base64 conversion
+          const uint8 = new Uint8Array(pcmData.buffer);
+          let binary = '';
+          for (let i = 0; i < uint8.length; i++) {
+            binary += String.fromCharCode(uint8[i]);
+          }
+          const base64 = btoa(binary);
+
+          ws.send(JSON.stringify({
+            event: "media_input",
+            media: { payload: base64 }
+          }));
+        }
+      };
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
+      cartesiaWorkletRef.current = processor;
+
+      // Start Ping keepalive every 20s
+      pingIntervalRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ event: "ping" }));
+        }
+      }, 20000);
+    };
+
+    ws.onmessage = async (e) => {
+      const data = JSON.parse(e.data);
+      if (data.event === 'ack') {
+        console.log('Neural Link Acknowledged');
+        setCartesiaStatus('connected');
+        setIsCallActive(true);
+        setAgentState('listening');
+        setCallDuration(0);
+        callTimerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
+      } else if (data.event === 'media_output') {
+        setCartesiaIsSpeaking(true);
+        const binaryString = atob(data.media.payload);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+          float32[i] = int16[i] / 0x7FFF;
+        }
+
+        // Playback using shared audio context
+        if (cartesiaAudioCtxRef.current) {
+          const buffer = cartesiaAudioCtxRef.current.createBuffer(1, float32.length, 44100);
+          buffer.copyToChannel(float32, 0);
+          const source = cartesiaAudioCtxRef.current.createBufferSource();
+          source.buffer = buffer;
+          source.connect(cartesiaAudioCtxRef.current.destination);
+
+          const startAt = Math.max(cartesiaAudioCtxRef.current.currentTime, lastPlaybackTimeRef.current);
+          source.start(startAt);
+          lastPlaybackTimeRef.current = startAt + buffer.duration;
+
+          source.onended = () => {
+            if (cartesiaAudioCtxRef.current && cartesiaAudioCtxRef.current.currentTime >= lastPlaybackTimeRef.current - 0.05) {
+              setCartesiaIsSpeaking(false);
+            }
+          };
+        }
+      } else if (data.event === 'clear') {
+        // Stop current audio playback if agent interrupts
+        setCartesiaIsSpeaking(false);
+        lastPlaybackTimeRef.current = cartesiaAudioCtxRef.current?.currentTime || 0;
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('Cartesia WebSocket Closed');
+      endCartesiaCall();
+    };
+
+    ws.onerror = (err) => {
+      console.error('Cartesia Error:', err);
+      endCartesiaCall();
+    };
+  };
+
   const endCall = async () => {
-    await conversation.endSession();
+    if (selectedAgent?.provider === 'cartesia') {
+      endCartesiaCall();
+    } else {
+      await conversation.endSession();
+    }
+  };
+
+  const endCartesiaCall = () => {
+    if (cartesiaWsRef.current) {
+      cartesiaWsRef.current.close();
+      cartesiaWsRef.current = null;
+    }
+    if (cartesiaAudioCtxRef.current) {
+      cartesiaAudioCtxRef.current.close();
+      cartesiaAudioCtxRef.current = null;
+    }
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+    setCartesiaStatus(null);
+    setCartesiaIsSpeaking(false);
+    setIsCallActive(false);
+    setAgentState(null);
+    setMicStream(null);
+    if (callTimerRef.current) clearInterval(callTimerRef.current);
   };
 
 
