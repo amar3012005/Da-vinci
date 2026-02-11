@@ -3,7 +3,7 @@ import { motion, useScroll, useTransform, useInView, useSpring } from 'framer-mo
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { 
+import {
   ChevronDown,
   Plus,
   Play,
@@ -34,7 +34,7 @@ const NavigationMenu = () => {
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ 
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
@@ -87,7 +87,7 @@ const NavigationMenu = () => {
 
 // Project Info Card Component (matching reference design)
 const ProjectInfoCard = ({ title, value, className = "" }) => (
-  <motion.div 
+  <motion.div
     className={`absolute ${className} z-30`}
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -134,20 +134,20 @@ const HeroSection = () => {
   useEffect(() => {
     // Logo and content entrance animations
     const tl = gsap.timeline();
-    
-    tl.fromTo(logoRef.current, 
+
+    tl.fromTo(logoRef.current,
       { scale: 0.7, opacity: 0, y: 50 },
       { scale: 1, opacity: 1, y: 0, duration: 2, ease: "power3.out" }
     )
-    .fromTo(contentRef.current,
-      { opacity: 0, y: 80 },
-      { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" },
-      "-=1.2"
-    );
+      .fromTo(contentRef.current,
+        { opacity: 0, y: 80 },
+        { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" },
+        "-=1.2"
+      );
   }, []);
 
   return (
-    <motion.section 
+    <motion.section
       className="relative h-screen flex items-center overflow-hidden"
       style={{ y: yParallax }}
     >
@@ -155,8 +155,8 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/50 z-10"></div>
 
       {/* Project Info Cards */}
-      <ProjectInfoCard 
-        title="project" 
+      <ProjectInfoCard
+        title="project"
         value={
           <div>
             <div>Location / Germany / Hannover</div>
@@ -165,33 +165,33 @@ const HeroSection = () => {
             <div>Date / 2025</div>
           </div>
         }
-        className="top-8 left-8" 
+        className="top-8 left-8"
       />
-      
-      <ProjectInfoCard 
-        title="The main idea" 
+
+      <ProjectInfoCard
+        title="The main idea"
         value=""
-        className="top-8 right-8" 
+        className="top-8 right-8"
       />
 
       {/* Left side - Large Logo */}
       <div className="absolute left-8 top-1/2 transform -translate-y-1/2 z-20">
-        <motion.div 
+        <motion.div
           ref={logoRef}
           className="w-96 h-96 md:w-[500px] md:h-[500px]"
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 2, ease: "easeOut" }}
         >
-          <img 
-            src="/logo.svg" 
+          <img
+            src="/logo.svg"
             alt="DA'VINCI Solutions"
             className="w-full h-full object-contain filter brightness-110"
           />
         </motion.div>
-        
+
         {/* DA'VINCI SOLUTIONS Text Under Logo */}
-        <motion.div 
+        <motion.div
           className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -237,7 +237,7 @@ const HeroSection = () => {
 
           {/* Plus Icon */}
           <TextReveal delay={0.8}>
-            <motion.div 
+            <motion.div
               className="flex items-center gap-4 my-12"
               whileHover={{ x: 10 }}
               transition={{ duration: 0.3 }}
@@ -284,8 +284,8 @@ const HeroSection = () => {
         <ChevronDown className="w-6 h-6 text-white/40" />
       </motion.div>
 
-      
-        
+
+
     </motion.section>
   );
 };
@@ -326,19 +326,19 @@ const ProcessSection = () => {
       } else {
         try {
           // Set audio source based on selected agent
-          const audioSrc = selectedAgent === 'TARA_X1' 
-            ? '/Demo audio/TARA_X1.wav' 
+          const audioSrc = selectedAgent === 'TARA_X1'
+            ? '/Demo audio/TARA_X1.wav'
             : '/Demo audio/TARA_V1.wav';
-          
+
           audioRef.current.src = audioSrc;
-          
+
           // Setup background audio for mixing
           if (backgroundAudioRef.current) {
             backgroundAudioRef.current.src = '/Demo audio/background.wav';
             backgroundAudioRef.current.volume = 0.3; // Lower volume for background
             await backgroundAudioRef.current.play();
           }
-          
+
           await audioRef.current.play();
           setIsPlaying(true);
           setIsSpeaking(true);
@@ -382,28 +382,28 @@ const ProcessSection = () => {
     try {
       // Create audio context
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      
+
       // Resume audio context if suspended
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
       }
-      
+
       // Create analyser
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       analyserRef.current.smoothingTimeConstant = 0.8;
-      
+
       // Create data array
       const bufferLength = analyserRef.current.frequencyBinCount;
       dataArrayRef.current = new Uint8Array(bufferLength);
-      
+
       // Connect audio element to analyser
       const source = audioContextRef.current.createMediaElementSource(audioRef.current);
       source.connect(analyserRef.current);
       analyserRef.current.connect(audioContextRef.current.destination);
-      
+
       console.log('Audio analysis setup successful');
-      
+
     } catch (error) {
       console.error('Web Audio API setup failed:', error);
     }
@@ -414,19 +414,19 @@ const ProcessSection = () => {
     if (!analyserRef.current || !dataArrayRef.current) return;
 
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-    
+
     // Check if we're getting data
     const hasData = dataArrayRef.current.some(value => value > 0);
     if (hasData) {
       console.log('Audio data received:', dataArrayRef.current.slice(0, 10));
     }
-    
+
     // Trigger visualizer update
-    const event = new CustomEvent('audioData', { 
-      detail: { data: Array.from(dataArrayRef.current) } 
+    const event = new CustomEvent('audioData', {
+      detail: { data: Array.from(dataArrayRef.current) }
     });
     window.dispatchEvent(event);
-    
+
     if (isPlaying) {
       animationFrameRef.current = requestAnimationFrame(analyzeAudio);
     }
@@ -457,16 +457,16 @@ const ProcessSection = () => {
     { id: "06", title: "Effortless Business Integrations", status: "pending", width: "w-1/4" },
     { id: "07", title: "Adaptive User Experience", status: "pending", width: "w-1/5" },
     { id: "08", title: "Instant Analytics & Insights", status: "pending", width: "w-1/6" }
-];
+  ];
 
 
   return (
-    <motion.section 
+    <motion.section
       className="py-32 relative overflow-hidden"
       style={{ y: yTransform }}
     >
       <div className="container mx-auto px-16 relative z-10">
-        
+
         {/* Header */}
         <TextReveal>
           <div className="flex justify-between items-center mb-20">
@@ -487,20 +487,20 @@ const ProcessSection = () => {
         <TextReveal>
           <div className="text-center mb-16">
             <h3 className="text-2xl md:text-3xl font-light text-white/90 mb-4">
-              India's Flagship 
+              India's Flagship
               <span className="px-2 py-1 bg-pink-500 text-white rounded">
                 Conversational AI Agentic
               </span>
-              
-               Pipeline
+
+              Pipeline
             </h3>
             <p className="text-white/70 text-lg max-w-3xl mx-auto leading-relaxed">
-            Delivering 24/7 multilingual, real-time, and human-like customer service—at a fraction of traditional costs.
+              Delivering 24/7 multilingual, real-time, and human-like customer service—at a fraction of traditional costs.
             </p>
           </div>
         </TextReveal>
 
-        
+
 
         {/* Agent Variants Flashcards */}
         <motion.div
@@ -569,11 +569,11 @@ const ProcessSection = () => {
           </motion.div>
         </motion.div>
 
-        
+
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          
+
           {/* Left - Timeline */}
           <div className="space-y-6">
             {phases.map((phase, index) => (
@@ -590,33 +590,31 @@ const ProcessSection = () => {
                   <div className="text-white/40 font-mono text-sm w-12">
                     Phase {phase.id}
                   </div>
-                  
+
                   {/* Phase title */}
                   <div className="text-white text-lg font-light min-w-[200px]">
                     {phase.title}
                   </div>
-                  
+
                   {/* Progress bar */}
                   <div className="flex-1 h-8 bg-gradient-to-r from-red-600 to-purple-600 relative overflow-hidden">
                     <motion.div
-                      className={`h-full bg-gradient-to-r ${
-                        phase.status === 'completed' ? 'from-red-500 to-red-600' :
-                        phase.status === 'active' ? 'from-red-500 to-orange-500' :
-                        'from-gray-600 to-gray-700'
-                      } ${phase.width}`}
+                      className={`h-full bg-gradient-to-r ${phase.status === 'completed' ? 'from-red-500 to-red-600' :
+                          phase.status === 'active' ? 'from-red-500 to-orange-500' :
+                            'from-gray-600 to-gray-700'
+                        } ${phase.width}`}
                       initial={{ scaleX: 0 }}
                       whileInView={{ scaleX: 1 }}
                       transition={{ duration: 1.5, delay: index * 0.2 }}
                       viewport={{ once: true }}
                       style={{ transformOrigin: "left" }}
                     />
-                    
+
                     {/* Status indicator */}
-                    <div className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 rounded-full ${
-                      phase.status === 'completed' ? 'bg-white' :
-                      phase.status === 'active' ? 'bg-white animate-pulse' :
-                      'bg-white/40'
-                    }`} />
+                    <div className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 rounded-full ${phase.status === 'completed' ? 'bg-white' :
+                        phase.status === 'active' ? 'bg-white animate-pulse' :
+                          'bg-white/40'
+                      }`} />
                   </div>
                 </div>
               </motion.div>
@@ -624,7 +622,7 @@ const ProcessSection = () => {
           </div>
 
           {/* Right - Shader Animation */}
-          <motion.div 
+          <motion.div
             className="flex justify-center items-center"
             initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -634,12 +632,12 @@ const ProcessSection = () => {
             <div className="relative flex h-[650px] w-full flex-col items-center justify-center overflow-hidden rounded-xl">
               <ShaderAnimation />
               <span className="pointer-events-none z-10 text-center text-7xl leading-none font-semibold tracking-tighter whitespace-pre-wrap text-white drop-shadow-lg">
-            
+
               </span>
-              
+
             </div>
           </motion.div>
-          
+
         </div>
       </div>
 
@@ -681,7 +679,7 @@ const ProcessSection = () => {
 
               {/* Voice Animation */}
               <div className="mb-8">
-                <AIVoiceInput 
+                <AIVoiceInput
                   onStart={() => console.log('TARA voice demo started')}
                   onStop={(duration) => console.log(`Demo duration: ${duration}s`)}
                   demoMode={isSpeaking}
@@ -702,7 +700,7 @@ const ProcessSection = () => {
                   ref={backgroundAudioRef}
                   loop
                 />
-                
+
                 <div className="flex items-center justify-center gap-4 mb-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/10 rounded-xl flex items-center justify-center">
                     <MessageCircle className="w-5 h-5 text-white/80" />
@@ -714,10 +712,10 @@ const ProcessSection = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* Audio Controls */}
                 <div className="flex items-center gap-3">
-                  <motion.button 
+                  <motion.button
                     className="w-8 h-8 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
                                flex items-center justify-center text-white hover:bg-white/20 transition-all duration-200"
                     onClick={togglePlayPause}
@@ -731,7 +729,7 @@ const ProcessSection = () => {
                     )}
                   </motion.button>
                   <div className="flex-1 h-1 bg-white/10 rounded-full">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-white/60 to-white/40 rounded-full transition-all duration-300"
                       style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                     ></div>
@@ -752,7 +750,7 @@ const ProcessSection = () => {
 // Centered Button Section
 const CenteredButtonSection = ({ onRequestDemo }) => {
   return (
-    <motion.section 
+    <motion.section
       className="py-16 px-8 relative overflow-hidden"
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -761,14 +759,14 @@ const CenteredButtonSection = ({ onRequestDemo }) => {
     >
       <div className="max-w-4xl mx-auto text-center relative z-10">
 
-        
-        
+
+
         {/* Main Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          
+
           {/* Join Waitlist Button */}
           <motion.button
-            onClick={() => onRequestDemo(true)}
+            onClick={() => window.location.href = 'https://enterprise.davinciai.eu'}
             className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-lg rounded-xl
                        hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 
                        flex items-center justify-center gap-3 group shadow-lg hover:shadow-xl active:scale-95"
@@ -776,12 +774,12 @@ const CenteredButtonSection = ({ onRequestDemo }) => {
             whileTap={{ scale: 0.95 }}
           >
             <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            Join Waitlist & Request a Demo
+            Enterprise
           </motion.button>
-          
+
           {/* Request Demo Button */}
           <motion.button
-            onClick={() => onRequestDemo(true)}
+            onClick={() => window.location.href = 'https://prometheus.davinciai.eu/'}
             className="px-8 py-4 border-2 border-white/40 text-white font-semibold text-lg rounded-xl
                        hover:border-white hover:bg-white/10 transition-all duration-300 
                        flex items-center justify-center gap-3 group active:scale-95"
@@ -789,12 +787,12 @@ const CenteredButtonSection = ({ onRequestDemo }) => {
             whileTap={{ scale: 0.95 }}
           >
             <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            Try Demo Version
+            Prometheus
           </motion.button>
         </div>
 
         {/* Subtitle */}
-        <motion.p 
+        <motion.p
           className="mt-6 text-white/60 text-sm max-w-2xl mx-auto"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -814,7 +812,7 @@ const CallToActionSection = () => {
   const yTransform = useTransform(scrollY, [2000, 2800], [50, -50]);
 
   return (
-    <motion.section 
+    <motion.section
       className="py-32 relative overflow-hidden"
       style={{ y: yTransform }}
     >
@@ -899,7 +897,7 @@ const SolutionsSection = () => {
   return (
     <motion.section className="py-32 relative overflow-hidden bg-white/2">
       <div className="container mx-auto px-16 relative z-10">
-        
+
         <TextReveal>
           <div className="text-center mb-20">
             <h2 className="text-6xl md:text-7xl font-light text-white mb-8">
@@ -909,7 +907,7 @@ const SolutionsSection = () => {
             </h2>
             <div className="w-24 h-px bg-white/30 mx-auto mb-6"></div>
             <p className="text-white/60 text-lg max-w-3xl mx-auto leading-relaxed">
-              See how TARA_x1 delivers superior performance across every key metric 
+              See how TARA_x1 delivers superior performance across every key metric
               compared to traditional call centers and existing AI solutions.
             </p>
           </div>
@@ -917,7 +915,7 @@ const SolutionsSection = () => {
 
         {/* Comparison Table */}
         <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
-          
+
           {/* Header Row */}
           <div className="grid grid-cols-5 gap-4 p-6 border-b border-white/10">
             <div className="text-white/40 font-mono text-sm uppercase tracking-wider">
@@ -925,11 +923,10 @@ const SolutionsSection = () => {
             </div>
             {competitors.map((competitor, index) => (
               <div key={competitor.name} className="text-center">
-                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  competitor.isWinner 
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white' 
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${competitor.isWinner
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
                     : 'bg-white/10 text-white/80'
-                }`}>
+                  }`}>
                   {competitor.name}
                   {competitor.isWinner && (
                     <Star className="w-4 h-4 text-yellow-400" />
@@ -954,11 +951,10 @@ const SolutionsSection = () => {
               </div>
               {competitors.map((competitor, competitorIndex) => (
                 <div key={competitor.name} className="text-center">
-                  <span className={`text-sm ${
-                    competitor.isWinner 
-                      ? 'text-white font-medium' 
+                  <span className={`text-sm ${competitor.isWinner
+                      ? 'text-white font-medium'
                       : 'text-white/60'
-                  }`}>
+                    }`}>
                     {competitor[feature.key]}
                   </span>
                   {competitor.isWinner && (
@@ -980,7 +976,7 @@ const SolutionsSection = () => {
         >
           <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-4xl mx-auto">
             <div className="text-white/80 text-lg italic mb-4">
-              "TARA_x1 reduced our customer service costs by 80% while improving response times. 
+              "TARA_x1 reduced our customer service costs by 80% while improving response times.
               The multilingual support is exceptional."
             </div>
             <div className="text-white/60 text-sm">
@@ -997,9 +993,9 @@ const SolutionsSection = () => {
           transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
         >
-          
-          
-          
+
+
+
         </motion.div>
       </div>
     </motion.section>
@@ -1080,22 +1076,22 @@ const StatsSection = () => {
   return (
     <motion.section className="py-32 relative overflow-hidden">
       <div className="container mx-auto px-16 relative z-10">
-        
+
         <TextReveal>
           <div className="text-center mb-20">
             <h2 className="text-6xl md:text-7xl font-light text-white mb-8">
-        
+
               <br />
               <span className="font-semibold">" It's Now or Never "</span>
             </h2>
             <p className="text-xl text-white/60 max-w-4xl mx-auto leading-relaxed">
-              
+
             </p>
           </div>
         </TextReveal>
 
         <div className="relative w-full">
-    
+
         </div>
 
         {/* Elegant Market Insights */}
@@ -1119,25 +1115,25 @@ const StatsSection = () => {
               className="flex flex-col md:flex-row items-center gap-12"
               initial={{ opacity: 0, x: -120, y: 50 }}
               whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
+              transition={{
+                duration: 1.2,
                 ease: [0.22, 1, 0.36, 1],
                 delay: 0.2
               }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              <motion.div 
+              <motion.div
                 className="flex-1"
                 initial={{ opacity: 0, x: -100 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
+                transition={{
+                  duration: 1,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.4
                 }}
                 viewport={{ once: true }}
               >
-                <motion.h4 
+                <motion.h4
                   className="text-2xl font-light text-white mb-4"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1146,34 +1142,34 @@ const StatsSection = () => {
                 >
                   Enterprise AI Adoption
                 </motion.h4>
-                <motion.p 
+                <motion.p
                   className="text-white/70 text-lg leading-relaxed"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.8 }}
                   viewport={{ once: true }}
                 >
-                  72% of companies are using AI; half have rolled it out across multiple departments. 
+                  72% of companies are using AI; half have rolled it out across multiple departments.
                   75% of C-level executives rank AI in their top 3 priorities for 2025.
                 </motion.p>
               </motion.div>
-              <motion.div 
+              <motion.div
                 className="flex-1 text-right"
                 initial={{ opacity: 0, x: 120, scale: 0.8 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
+                transition={{
+                  duration: 1.2,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.5
                 }}
                 viewport={{ once: true }}
               >
-                <motion.div 
+                <motion.div
                   className="text-6xl font-light text-white/20"
                   initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                   whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
+                  transition={{
+                    duration: 1.2,
                     ease: "backOut",
                     delay: 0.7
                   }}
@@ -1181,7 +1177,7 @@ const StatsSection = () => {
                 >
                   72%
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="text-sm text-white/50 uppercase tracking-wider"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1198,25 +1194,25 @@ const StatsSection = () => {
               className="flex flex-col md:flex-row-reverse items-center gap-12"
               initial={{ opacity: 0, x: 120, y: 50 }}
               whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
+              transition={{
+                duration: 1.2,
                 ease: [0.22, 1, 0.36, 1],
                 delay: 0.2
               }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              <motion.div 
+              <motion.div
                 className="flex-1"
                 initial={{ opacity: 0, x: 100 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
+                transition={{
+                  duration: 1,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.4
                 }}
                 viewport={{ once: true }}
               >
-                <motion.h4 
+                <motion.h4
                   className="text-2xl font-light text-white mb-4"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1225,34 +1221,34 @@ const StatsSection = () => {
                 >
                   Customer Experience Transformation
                 </motion.h4>
-                <motion.p 
+                <motion.p
                   className="text-white/70 text-lg leading-relaxed"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.8 }}
                   viewport={{ once: true }}
                 >
-                  95% of all customer interactions will be AI-facilitated by end of 2025. 
+                  95% of all customer interactions will be AI-facilitated by end of 2025.
                   68% average reduction in operational costs reported by companies using AI in customer service.
                 </motion.p>
               </motion.div>
-              <motion.div 
+              <motion.div
                 className="flex-1 text-left"
                 initial={{ opacity: 0, x: -120, scale: 0.8 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
+                transition={{
+                  duration: 1.2,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.5
                 }}
                 viewport={{ once: true }}
               >
-                <motion.div 
+                <motion.div
                   className="text-6xl font-light text-white/20"
                   initial={{ opacity: 0, scale: 0.5, rotate: 10 }}
                   whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
+                  transition={{
+                    duration: 1.2,
                     ease: "backOut",
                     delay: 0.7
                   }}
@@ -1260,7 +1256,7 @@ const StatsSection = () => {
                 >
                   95%
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="text-sm text-white/50 uppercase tracking-wider"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1277,25 +1273,25 @@ const StatsSection = () => {
               className="flex flex-col md:flex-row items-center gap-12"
               initial={{ opacity: 0, x: -120, y: 50 }}
               whileInView={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ 
-                duration: 1.2, 
+              transition={{
+                duration: 1.2,
                 ease: [0.22, 1, 0.36, 1],
                 delay: 0.2
               }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              <motion.div 
+              <motion.div
                 className="flex-1"
                 initial={{ opacity: 0, x: -100 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 1, 
+                transition={{
+                  duration: 1,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.4
                 }}
                 viewport={{ once: true }}
               >
-                <motion.h4 
+                <motion.h4
                   className="text-2xl font-light text-white mb-4"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1304,34 +1300,34 @@ const StatsSection = () => {
                 >
                   Return on Investment
                 </motion.h4>
-                <motion.p 
+                <motion.p
                   className="text-white/70 text-lg leading-relaxed"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.8 }}
                   viewport={{ once: true }}
                 >
-                  Mature AI deployments see $3.50 value for every $1 invested. 
+                  Mature AI deployments see $3.50 value for every $1 invested.
                   74% of mature AI users report solid ROI (but new adopters lag).
                 </motion.p>
               </motion.div>
-              <motion.div 
+              <motion.div
                 className="flex-1 text-right"
                 initial={{ opacity: 0, x: 120, scale: 0.8 }}
                 whileInView={{ opacity: 1, x: 0, scale: 1 }}
-                transition={{ 
-                  duration: 1.2, 
+                transition={{
+                  duration: 1.2,
                   ease: [0.22, 1, 0.36, 1],
                   delay: 0.5
                 }}
                 viewport={{ once: true }}
               >
-                <motion.div 
+                <motion.div
                   className="text-6xl font-light text-white/20"
                   initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                   whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  transition={{ 
-                    duration: 1.2, 
+                  transition={{
+                    duration: 1.2,
                     ease: "backOut",
                     delay: 0.7
                   }}
@@ -1339,7 +1335,7 @@ const StatsSection = () => {
                 >
                   3.5x
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="text-sm text-white/50 uppercase tracking-wider"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -1363,12 +1359,12 @@ const CTASection = () => {
   const yTransform = useTransform(scrollY, [2800, 3400], [0, -100]);
 
   return (
-    <motion.section 
+    <motion.section
       className="py-32 relative overflow-hidden"
       style={{ y: yTransform }}
     >
       <div className="container mx-auto px-16 text-center relative z-10">
-        
+
         <TextReveal>
           <motion.div
             initial={{ opacity: 0 }}
@@ -1381,14 +1377,15 @@ const CTASection = () => {
               <br />
               <span className="font-semibold">AI journey?</span>
             </h2>
-            
+
             <p className="text-xl text-white/60 max-w-3xl mx-auto mb-16">
               Transform your enterprise with DA'VINCI's cutting-edge AI solutions.
               Join hundreds of companies already revolutionizing their operations.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center max-w-2xl mx-auto mb-16">
               <motion.button
+                onClick={() => window.location.href = 'https://prometheus.davinciai.eu/'}
                 className="px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold text-lg rounded-xl
                            hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 
                            flex items-center justify-center gap-3 group shadow-lg hover:shadow-xl active:scale-95"
@@ -1396,9 +1393,9 @@ const CTASection = () => {
                 whileTap={{ scale: 0.95 }}
               >
                 <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                Request Demo
+                Prometheus
               </motion.button>
-              
+
               <motion.button
                 className="px-8 py-4 border-2 border-white/40 text-white font-semibold text-lg rounded-xl
                            hover:border-white hover:bg-white/10 transition-all duration-300 
@@ -1412,7 +1409,7 @@ const CTASection = () => {
             </div>
 
             {/* Enhanced Contact Information */}
-            <motion.div 
+            <motion.div
               className="mt-16 pt-8 border-t border-white/10"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -1422,7 +1419,7 @@ const CTASection = () => {
               <h3 className="text-2xl font-light text-white mb-8">
                 Get in Touch
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {/* Email Contact */}
                 <motion.div
@@ -1475,10 +1472,10 @@ const CTASection = () => {
                   whileTap={{ scale: 0.9 }}
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
                   </svg>
                 </motion.a>
-                
+
                 <motion.a
                   href="#"
                   className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
@@ -1488,10 +1485,10 @@ const CTASection = () => {
                   whileTap={{ scale: 0.9 }}
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                   </svg>
                 </motion.a>
-                
+
                 <motion.a
                   href="#"
                   className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full 
@@ -1501,7 +1498,7 @@ const CTASection = () => {
                   whileTap={{ scale: 0.9 }}
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.749.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001.012.017z"/>
+                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.749.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001.012.017z" />
                   </svg>
                 </motion.a>
               </motion.div>
@@ -1527,12 +1524,12 @@ const CTASection = () => {
         >
           <MessageCircle className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
         </motion.div>
-        <motion.div 
+        <motion.div
           className="absolute -top-2 -right-2 w-4 h-4 bg-green-400 rounded-full"
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         />
-        
+
         {/* Tooltip */}
         <motion.div
           className="absolute bottom-20 right-0 bg-black/80 backdrop-blur-sm text-white text-sm 
@@ -1566,7 +1563,7 @@ const MainHomepage = () => {
       wheelMultiplier: 1,
       touchInertiaMultiplier: 35,
     });
-    
+
     function raf(time) {
       lenis.raf(time);
       requestAnimationFrame(raf);
@@ -1581,7 +1578,7 @@ const MainHomepage = () => {
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden relative w-full" style={{ zoom: '0.85' }}>
       {/* Enhanced Video Background */}
-      <motion.div 
+      <motion.div
         className="fixed inset-0 z-0 pointer-events-none"
         style={{ y: backgroundY, scale: backgroundScale }}
       >
@@ -1591,30 +1588,30 @@ const MainHomepage = () => {
           muted
           playsInline
           className="hero-video absolute inset-0 w-full h-full object-cover"
-          style={{ 
+          style={{
             filter: 'brightness(0.85) contrast(1.2) saturate(1.1) blur(0.2px)',
             opacity: 0.90
           }}
         >
           <source src="/intro.mp4" type="video/mp4" />
         </video>
-        
+
         {/* Sophisticated gradient overlay - reduced opacity for better video visibility */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-black/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/40" />
-        
+
         {/* Subtle texture overlay - reduced for better video visibility */}
-        <div className="absolute inset-0 bg-black/10" 
-             style={{
-               backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px)`,
-               backgroundSize: '50px 50px'
-             }} 
+        <div className="absolute inset-0 bg-black/10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}
         />
       </motion.div>
-      
+
       {/* Navigation Menu */}
       <NavigationMenu />
-      
+
       {/* Content */}
       <div className="relative z-10">
         <HeroSection />
@@ -1635,9 +1632,9 @@ const MainHomepage = () => {
       </div>
 
       {/* Demo Request Modal */}
-      <DemoRequestModal 
-        isOpen={isDemoModalOpen} 
-        onClose={() => setIsDemoModalOpen(false)} 
+      <DemoRequestModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
       />
     </div>
   );

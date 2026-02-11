@@ -180,14 +180,14 @@ const MobileHero = () => {
                     >
                         {/* Primary Button */}
                         <motion.button
-                            onClick={() => navigate('/demo')}
+                            onClick={() => window.location.href = 'https://prometheus.davinciai.eu/'}
                             className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
                             <span className="relative z-10 flex items-center gap-2">
-                                Request Demo <ArrowRight className="w-3 h-3 stroke-[3px]" />
+                                Prometheus <ArrowRight className="w-3 h-3 stroke-[3px]" />
                             </span>
                             {/* Corner Accents */}
                             <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
@@ -196,14 +196,14 @@ const MobileHero = () => {
 
                         {/* Secondary Button */}
                         <motion.button
-                            onClick={() => setIsJoinTeamOpen(true)}
+                            onClick={() => window.location.href = 'https://enterprise.davinciai.eu'}
                             className="flex-1 py-3 px-3 bg-[#111] border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/40 transition-colors relative"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
                             <span className="relative z-10 flex items-center gap-2">
-                                Join Team <Users className="w-3 h-3" />
+                                Enterprise
                             </span>
                             {/* Tech corners */}
                             <div className="absolute top-0 left-0 w-1 h-1 bg-white/50" />

@@ -25,9 +25,7 @@ const DemoPortal = ({ isOpen, onClose }) => {
   const cartesiaWsRef = useRef(null);
   const cartesiaAudioCtxRef = useRef(null);
   const cartesiaWorkletRef = useRef(null);
-  const cartesiaAudioQueue = useRef([]);
   const [cartesiaStatus, setCartesiaStatus] = useState(null);
-  const [cartesiaSpeakingState, setCartesiaSpeakingState] = useState(false);
   const [cartesiaIsSpeaking, setCartesiaIsSpeaking] = useState(false);
   const lastPlaybackTimeRef = useRef(0);
   const pingIntervalRef = useRef(null);

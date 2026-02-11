@@ -6,7 +6,7 @@ import { RaycastAnimatedBackground } from './raycast-animated-background';
 const TaraVariants = () => {
   const { scrollY } = useScroll();
   const yTransform = useTransform(scrollY, [0, 1000], [0, -100]);
-  
+
   const taraModels = [
     {
       id: '01',
@@ -93,7 +93,7 @@ const TaraVariants = () => {
   ];
 
   return (
-    <motion.section 
+    <motion.section
       className="py-32 relative overflow-hidden"
       style={{ y: yTransform }}
     >
@@ -107,11 +107,11 @@ const TaraVariants = () => {
           className="text-center mb-20"
         >
           <h2 className="text-6xl md:text-7xl font-light text-white mb-8">
-        
+
           </h2>
           <div className="w-24 h-px bg-white/30 mx-auto mb-6"></div>
           <p className="text-xl text-white/60 max-w-4xl mx-auto leading-relaxed">
-           
+
           </p>
         </motion.div>
 
@@ -127,137 +127,137 @@ const TaraVariants = () => {
                 viewport={{ once: true }}
                 className="group cursor-pointer"
               >
-              {/* Card Container */}
-              <div className="relative h-[500px] rounded-2xl overflow-hidden">
-                {/* Raycast Animated Background */}
-                <RaycastAnimatedBackground 
-                  width={400} 
-                  height={500} 
-                  className="w-full h-full"
-                />
+                {/* Card Container */}
+                <div className="relative h-[500px] rounded-2xl overflow-hidden">
+                  {/* Raycast Animated Background */}
+                  <RaycastAnimatedBackground
+                    width={400}
+                    height={500}
+                    className="w-full h-full"
+                  />
 
-                {/* Card Content */}
-                <div className="relative h-full flex flex-col justify-between p-8 text-white z-10">
-                  {/* Header Section */}
-                  <div>
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="text-sm font-medium text-white/80 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-white/60"></div>
-                        {model.id}.
-                      </div>
-                      <motion.div
-                        whileHover={{ rotate: 45 }}
-                        transition={{ duration: 0.2 }}
-                        className="w-8 h-8 border border-white/30 rounded-full flex items-center justify-center hover:bg-white/10 hover:text-white transition-all duration-200"
-                      >
-                        <ArrowRight size={16} />
-                      </motion.div>
-                    </div>
-
-                    {/* Pricing */}
-                    <div className="mb-8">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-3xl font-light text-white">
-                          {model.price}
-                        </span>
-                        <span className="text-sm opacity-70">{model.period}</span>
-                      </div>
-                      {model.original && (
-                        <div className="text-sm opacity-60 line-through">
-                          {model.original}
+                  {/* Card Content */}
+                  <div className="relative h-full flex flex-col justify-between p-8 text-white z-10">
+                    {/* Header Section */}
+                    <div>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="text-sm font-medium text-white/80 flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-white/60"></div>
+                          {model.id}.
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        <motion.div
+                          whileHover={{ rotate: 45 }}
+                          transition={{ duration: 0.2 }}
+                          className="w-8 h-8 border border-white/30 rounded-full flex items-center justify-center hover:bg-white/10 hover:text-white transition-all duration-200"
+                        >
+                          <ArrowRight size={16} />
+                        </motion.div>
+                      </div>
 
-                  {/* Middle Section */}
-                  <div className="flex-1 flex flex-col justify-center">
-                    <h2 className="text-2xl font-light mb-2 tracking-wide">
-                      {model.name}
-                    </h2>
-                    <p className="text-sm opacity-80 mb-6">
-                      {model.tagline}
-                    </p>
-                    
-                    {/* Key Features */}
-                    <div className="space-y-2">
-                      {model.features.slice(0, 3).map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm opacity-80">
-                          <div className="w-3 h-3 rounded-full bg-white/60 flex items-center justify-center">
-                            <Check size={8} className="text-white" />
+                      {/* Pricing */}
+                      <div className="mb-8">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="text-3xl font-light text-white">
+                            {model.price}
+                          </span>
+                          <span className="text-sm opacity-70">{model.period}</span>
+                        </div>
+                        {model.original && (
+                          <div className="text-sm opacity-60 line-through">
+                            {model.original}
                           </div>
-                          <span>{feature}</span>
-                        </div>
-                      ))}
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle Section */}
+                    <div className="flex-1 flex flex-col justify-center">
+                      <h2 className="text-2xl font-light mb-2 tracking-wide">
+                        {model.name}
+                      </h2>
+                      <p className="text-sm opacity-80 mb-6">
+                        {model.tagline}
+                      </p>
+
+                      {/* Key Features */}
+                      <div className="space-y-2">
+                        {model.features.slice(0, 3).map((feature, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm opacity-80">
+                            <div className="w-3 h-3 rounded-full bg-white/60 flex items-center justify-center">
+                              <Check size={8} className="text-white" />
+                            </div>
+                            <span>{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Footer Section */}
+                    <div>
+
                     </div>
                   </div>
 
-                  {/* Footer Section */}
-                  <div>
-                    
-                  </div>
+                  {/* Enhanced Hover Glow Effect */}
+                  <motion.div
+                    className="absolute -inset-2 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10"
+                    style={{
+                      background: `radial-gradient(ellipse at center, ${model.theme.glow} 0%, transparent 70%)`,
+                      filter: 'blur(30px)',
+                    }}
+                  ></motion.div>
+
+                  {/* Additional Animated Border Effect */}
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-300"
+                    style={{
+                      background: `linear-gradient(45deg, transparent 30%, ${model.theme.glow.replace('0.4', '0.2')} 50%, transparent 70%)`,
+                      backgroundSize: '200% 200%',
+                    }}
+                    animate={{
+                      backgroundPosition: ['0% 0%', '100% 100%', '0% 0%']
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'linear'
+                    }}
+                  ></motion.div>
+
+                  {/* Pulsing Ring Effect */}
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100"
+                    style={{
+                      border: `1px solid ${model.theme.glow.replace('0.4', '0.6')}`,
+                    }}
+                    animate={{
+                      scale: [1, 1.02, 1],
+                      opacity: [0.5, 1, 0.5]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut'
+                    }}
+                  ></motion.div>
                 </div>
 
-                {/* Enhanced Hover Glow Effect */}
+                {/* Card Description */}
                 <motion.div
-                  className="absolute -inset-2 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10"
-                  style={{ 
-                    background: `radial-gradient(ellipse at center, ${model.theme.glow} 0%, transparent 70%)`,
-                    filter: 'blur(30px)',
-                  }}
-                ></motion.div>
-                
-                {/* Additional Animated Border Effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-300"
-                  style={{
-                    background: `linear-gradient(45deg, transparent 30%, ${model.theme.glow.replace('0.4', '0.2')} 50%, transparent 70%)`,
-                    backgroundSize: '200% 200%',
-                  }}
-                  animate={{
-                    backgroundPosition: ['0% 0%', '100% 100%', '0% 0%']
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'linear'
-                  }}
-                ></motion.div>
-                
-                {/* Pulsing Ring Effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100"
-                  style={{
-                    border: `1px solid ${model.theme.glow.replace('0.4', '0.6')}`,
-                  }}
-                  animate={{
-                    scale: [1, 1.02, 1],
-                    opacity: [0.5, 1, 0.5]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeInOut'
-                  }}
-                ></motion.div>
-              </div>
-
-              {/* Card Description */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ delay: index * 0.2 + 0.5 }}
-                viewport={{ once: true }}
-                className="mt-6 px-2"
-              >
-                <p className="text-white/60 text-sm leading-relaxed">
-                  {model.description}
-                </p>
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  transition={{ delay: index * 0.2 + 0.5 }}
+                  viewport={{ once: true }}
+                  className="mt-6 px-2"
+                >
+                  <p className="text-white/60 text-sm leading-relaxed">
+                    {model.description}
+                  </p>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
         {/* Bottom CTA Section */}
         <motion.div
@@ -278,11 +278,12 @@ const TaraVariants = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = 'https://enterprise.davinciai.eu'}
                 className="px-8 py-3 border border-white/20 rounded-xl text-white font-medium hover:bg-white/10 transition-all duration-200"
               >
-                Join Waitlist
+                Enterprise
               </motion.button>
-              
+
             </div>
           </div>
         </motion.div>
