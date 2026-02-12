@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
-import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ArrowRight, Users, X, Construction, Bell, AlertCircle } from 'lucide-react';
+import { ChevronDown, ArrowRight, X, Construction, Bell, AlertCircle } from 'lucide-react';
 import JoinTeamForm from './JoinTeamForm';
 
 /**
@@ -34,7 +33,6 @@ const MobileHero = () => {
     const { scrollY } = useScroll();
     const opacity = useTransform(scrollY, [0, 400], [1, 0]);
     const scale = useTransform(scrollY, [0, 400], [1, 0.9]);
-    const navigate = useNavigate();
     const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
     const [showAnnouncements, setShowAnnouncements] = useState(false);
     const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
