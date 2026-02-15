@@ -13,7 +13,6 @@ const PortalLayout = ({ targetUrl }) => {
     const iframeRef = useRef(null);
     const location = useLocation();
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
 
     // Initial URL construction
     // If we are at /enterprise/dashboard, we want to load https://enterprise.davinciai.eu/dashboard
@@ -82,7 +81,6 @@ const PortalLayout = ({ targetUrl }) => {
                     border: 'none',
                     backgroundColor: '#000'
                 }}
-                onLoad={() => setIsLoading(false)}
                 allow="microphone; camera; geolocation; payment; autoplay; clipboard-read; clipboard-write; fullscreen"
             />
         </div>
