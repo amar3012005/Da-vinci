@@ -7,6 +7,9 @@ import Terms from './components/Terms';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 
+// Portal Component for Iframe Persistence
+import PortalLayout from './components/PortalLayout';
+
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
     <Navbar />
@@ -16,8 +19,7 @@ const Layout = ({ children }) => (
   </div>
 );
 
-// Portal Component for Iframe Persistence
-import PortalLayout from './components/PortalLayout';
+
 
 function App() {
   return (
