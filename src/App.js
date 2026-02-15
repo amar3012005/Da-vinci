@@ -16,6 +16,9 @@ const Layout = ({ children }) => (
   </div>
 );
 
+// Portal Component for Iframe Persistence
+import PortalLayout from './components/PortalLayout';
+
 function App() {
   return (
     <Router>
@@ -25,6 +28,20 @@ function App() {
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
+
+        {/* 
+            PORTAL ROUTES 
+            These load the other apps (enterprise, prometheus) inside the iframe wrapper
+            while keeping the TARA widget persistent on top.
+        */}
+        <Route
+          path="/enterprise/*"
+          element={<PortalLayout targetUrl="https://enterprise.davinciai.eu" />}
+        />
+        <Route
+          path="/prometheus/*"
+          element={<PortalLayout targetUrl="https://prometheus.davinciai.eu" />}
+        />
 
         {/* Catch all route - redirect to home if needed, or just let users know */}
         <Route path="*" element={<DavinciHomepage />} />
