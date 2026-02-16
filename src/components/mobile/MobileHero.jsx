@@ -36,18 +36,36 @@ const MobileHero = () => {
     const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
     const [showAnnouncements, setShowAnnouncements] = useState(false);
     const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
+    const [isPrometheusTransitioning, setIsPrometheusTransitioning] = useState(false);
+    const [isEnterpriseTransitioning, setIsEnterpriseTransitioning] = useState(false);
 
     useEffect(() => {
         // Logo entrance animation
-        gsap.fromTo(logoRef.current,
-            { opacity: 0, scale: 0.8, y: 30 },
-            { opacity: 1, scale: 1, y: 0, duration: 1.5, ease: "power3.out" }
-        );
+        if (logoRef.current) {
+            gsap.fromTo(logoRef.current,
+                { opacity: 0, scale: 0.8, y: 30 },
+                { opacity: 1, scale: 1, y: 0, duration: 1.5, ease: "power3.out" }
+            );
+        }
     }, []);
+
+    const handlePrometheusClick = () => {
+        setIsPrometheusTransitioning(true);
+        setTimeout(() => {
+            window.location.href = 'https://prometheus.davinciai.eu/';
+        }, 5200); // Increased to 5s + buffer
+    };
+
+    const handleEnterpriseClick = () => {
+        setIsEnterpriseTransitioning(true);
+        setTimeout(() => {
+            window.location.href = 'https://enterprise.davinciai.eu';
+        }, 5200); // 5s + buffer
+    };
 
     // Scroll Lock Effect
     useEffect(() => {
-        if (isDemoModalOpen || isJoinTeamOpen || showAnnouncements) {
+        if (isDemoModalOpen || isJoinTeamOpen || showAnnouncements || isPrometheusTransitioning || isEnterpriseTransitioning) {
             document.body.style.overflow = 'hidden';
             window.lenis?.stop();
         } else {
@@ -58,13 +76,17 @@ const MobileHero = () => {
             document.body.style.overflow = 'unset';
             window.lenis?.start();
         };
-    }, [isDemoModalOpen, isJoinTeamOpen, showAnnouncements]);
+    }, [isDemoModalOpen, isJoinTeamOpen, showAnnouncements, isPrometheusTransitioning, isEnterpriseTransitioning]);
 
     return (
         <section className="relative min-h-screen flex flex-col overflow-hidden">
             <motion.div
                 className="flex-1 flex flex-col px-4 pt-4 pb-8"
-                style={{ opacity, scale }}
+                style={{
+                    opacity,
+                    scale
+                }}
+                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             >
                 {/* Project Info Cards - Header */}
                 <div className="w-full mb-2 z-30"> {/* Reduced mb-4 to mb-2 */}
@@ -178,7 +200,7 @@ const MobileHero = () => {
                     >
                         {/* Primary Button */}
                         <motion.button
-                            onClick={() => window.location.href = 'https://prometheus.davinciai.eu/'}
+                            onClick={handlePrometheusClick}
                             className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                             whileHover={{ scale: 1.02 }}
@@ -194,7 +216,7 @@ const MobileHero = () => {
 
                         {/* Secondary Button */}
                         <motion.button
-                            onClick={() => window.location.href = 'https://enterprise.davinciai.eu'}
+                            onClick={handleEnterpriseClick}
                             className="flex-1 py-3 px-3 bg-[#111] border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest 
                        flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/40 transition-colors relative"
                             whileHover={{ scale: 1.02 }}
@@ -224,6 +246,104 @@ const MobileHero = () => {
                     </motion.div>
                 </div>
             </motion.div>
+
+            {/* Prometheus Transition Overlay (Swipes from Left) */}
+            <AnimatePresence>
+                {isPrometheusTransitioning && (
+                    <motion.div
+                        className="fixed inset-0 z-[20000] bg-black flex flex-col items-center justify-center p-6 overflow-hidden"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                        {/* Background Grain/Noise */}
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+                        />
+
+                        <motion.div
+                            className="flex flex-col items-center justify-center relative z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 1.0, duration: 1.2, ease: "easeOut" }}
+                        >
+                            <img
+                                src="/davinci x prometheus.svg"
+                                alt="Da'Vinci x Prometheus"
+                                className="h-20 md:h-28 w-auto object-contain brightness-0 invert opacity-95"
+                            />
+
+                            <p className="text-white/30 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.6em] mt-8">
+                                {"// Initializing_Node"}
+                            </p>
+                        </motion.div>
+
+                        <motion.div
+                            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-white/10 overflow-hidden"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.8 }}
+                        >
+                            <motion.div
+                                className="w-full h-full bg-[#A63E1B]"
+                                initial={{ x: "-100%" }}
+                                animate={{ x: "100%" }}
+                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Enterprise Transition Overlay (Swipes from Right) */}
+            <AnimatePresence>
+                {isEnterpriseTransitioning && (
+                    <motion.div
+                        className="fixed inset-0 z-[20000] bg-black flex flex-col items-center justify-center p-6 overflow-hidden"
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '-100%' }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                        {/* Background Grain/Noise */}
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+                        />
+
+                        <motion.div
+                            className="flex flex-col items-center justify-center relative z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 1.0, duration: 1.2, ease: "easeOut" }}
+                        >
+                            <img
+                                src="/davinci x enterprise.svg"
+                                alt="Da'Vinci x Enterprise"
+                                className="h-20 md:h-28 w-auto object-contain brightness-0 invert opacity-95"
+                            />
+
+                            <p className="text-white/30 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.6em] mt-8">
+                                {"// Connecting_Enterprise"}
+                            </p>
+                        </motion.div>
+
+                        <motion.div
+                            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-white/10 overflow-hidden"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.8 }}
+                        >
+                            <motion.div
+                                className="w-full h-full bg-[#A63E1B]"
+                                initial={{ x: "-100%" }}
+                                animate={{ x: "100%" }}
+                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Join Team Form Overlay - Outside transform context */}
             <JoinTeamForm

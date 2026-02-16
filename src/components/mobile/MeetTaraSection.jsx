@@ -1,149 +1,198 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
-import TaraCardStack from './ui/TaraCardStack';
-import { TaraBentoStats } from './ui/TaraBentoStats';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+// import { ArrowRight, Mail, User, Building, Cpu, Globe } from 'lucide-react'; // Unused labels
 
 /**
- * MeetTaraSection - "Meet TARA" section with header, animation, and CTAs
+ * MeetTaraSection - Redesigned in "Next.js core graphic style" (Black & White)
+ * Inspired by the Enterprise Login template.
+ * 
+ * This section provides a high-contrast, professional introduction to TARA,
+ * replacing the previous neon/gradient aesthetic with a monochromatic, 
+ * utilitarian layout.
  */
 const MeetTaraSection = () => {
+    const [isLeftHovered, setIsLeftHovered] = useState(false);
+    const leftPanelRef = useRef(null);
+    const sectionRef = useRef(null);
+
+    const variants = ["./Visual Co-Pilot", "./Telephony", "./Webcalls", "./Chat-Assistant"];
+    const [variantIndex, setVariantIndex] = useState(0);
+
+    // Auto-snap behavior
+    useEffect(() => {
+        const section = sectionRef.current;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    // Trigger snap when 30% of the section is visible
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                        if (window.lenis) {
+                            window.lenis.scrollTo(section, {
+                                lerp: 0.05, // Extra subtle/slow snap
+                                duration: 1.5,
+                                lock: true, // Prevents user interrupt during the subtle snap
+                            });
+                        }
+                    }
+                });
+            },
+            {
+                threshold: [0.3], // Higher threshold for more "intentional" feel
+                rootMargin: '0px'
+            }
+        );
+
+        if (section) {
+            observer.observe(section);
+        }
+
+        const interval = setInterval(() => {
+            setVariantIndex((prev) => (prev + 1) % variants.length);
+        }, 3000);
+
+        return () => {
+            if (section) {
+                observer.unobserve(section);
+            }
+            clearInterval(interval);
+        };
+    }, [variants.length]);
+
+    const handleMouseMove = (e) => {
+        if (leftPanelRef.current) {
+            // Mouse move interaction can be added here
+        }
+    };
+
     return (
-        <section id="meet-tara-section" className="py-16 px-4 relative overflow-hidden">
-            {/* Dotted Background Pattern */}
-            <div
-                className="absolute inset-0 opacity-20 pointer-events-none"
-                style={{
-                    backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)`,
-                    backgroundSize: '20px 20px',
-                }}
+        <section
+            id="meet-tara-section"
+            ref={sectionRef}
+            className="min-h-screen relative overflow-hidden bg-black flex items-stretch"
+        >
+            {/* Background Grain/Texture (Subtle Next.js Graphic Style) */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
             />
 
-            {/* Gradient Overlay - flows left to right */}
-            <motion.div
-                className="absolute inset-0 pointer-events-none"
-                initial={{ opacity: 0, x: -100 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                style={{
-                    background: 'linear-gradient(90deg, rgba(236,72,153,0.05) 0%, rgba(139,92,246,0.08) 50%, transparent 100%)',
-                }}
-            />
+            <div className="relative z-10 w-full flex flex-col lg:flex-row overflow-hidden">
 
-            <div className="relative z-10">
-                {/* Section Header - moved down with more padding */}
-                <motion.div
-                    className="mb-8 pt-4"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
+                {/* Left Panel: High-Impact Visual */}
+                <div
+                    ref={leftPanelRef}
+                    onMouseEnter={() => setIsLeftHovered(true)}
+                    onMouseLeave={() => setIsLeftHovered(false)}
+                    onMouseMove={handleMouseMove}
+                    className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-black border-b lg:border-b-0 lg:border-r border-white/10"
                 >
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <div className="text-white/40 font-mono text-[10px] mb-1">02</div>
-                            <div className="w-px h-6 bg-white/20" />
-                        </div>
-                        <h2 className="text-2xl font-light text-white text-center flex-1">
-                            ~/ Meet TARA
-                        </h2>
-                        <div className="text-white/40 font-mono text-[10px]">
-                            AI Agent
-                        </div>
+                    <div className="absolute inset-0">
+                        <img
+                            src="/Images/login_page.jpeg"
+                            alt="Architected Intelligence"
+                            className={`w-full h-full object-cover transition-all duration-1000 grayscale opacity-60 ${isLeftHovered ? "scale-110" : "scale-105"}`}
+                        />
                     </div>
-                </motion.div>
 
-                {/* Context Problem Statement */}
-                <motion.div
-                    className="text-center mb-8"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.08 }}
-                >
-                    <h3 className="text-lg font-light text-white leading-relaxed mb-3">
-                        We solve the{' '}
-                        <span className="inline-block px-3 py-0.5 bg-pink-500 text-white font-medium transform -skew-x-12">
-                            <span className="inline-block transform skew-x-12">context problem</span>
-                        </span>
-                        {' '}faced by most voice agents.
-                    </h3>
-                    <p className="text-xs text-white/50 leading-relaxed mb-4">
-                        Powered by our revolutionary{' '}
-                        <span className="inline-block px-2 py-0.5 bg-pink-500/80 text-white text-[10px] font-medium transform -skew-x-12">
-                            <span className="inline-block transform skew-x-12">M M A R</span>
-                        </span>
-                        {' '}architecture — delivering intelligent, contextual conversations in real-time.
-                    </p>
+                    {/* Overlay Gradient Matching Login Template */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90 pointer-events-none" />
 
-                    {/* Tag Pills */}
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {['< 500ms Latency', 'Context-Aware', 'Self-Learning'].map((tag) => (
-                            <span
-                                key={tag}
-                                className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] text-white/70"
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-12 text-center">
+                        <motion.div
+                            className={`mb-8 transition-all duration-1000 ${isLeftHovered ? "opacity-100" : "opacity-40"}`}
+                        >
+                            <img
+                                src="/Images/davinci-logo.svg"
+                                alt="DA'VINCI"
+                                width={80}
+                                height={80}
+                                className="filter brightness-0 invert"
+                            />
+                        </motion.div>
+
+                        <div className="space-y-4">
+                            <motion.p
+                                className="text-white/30 font-mono text-[10px] uppercase tracking-[1em]"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
                             >
-                                {tag}
+                                PRESENTS
+                            </motion.p>
+                            <motion.div
+                                className="flex justify-center"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 }}
+                            >
+                                <img
+                                    src="/TARA_X1.svg"
+                                    alt="TARA_X1"
+                                    className="w-80 md:w-[500px] h-auto filter brightness-0 invert opacity-90"
+                                />
+                            </motion.div>
+                        </div>
+
+                        <div className="mt-20 space-y-4">
+                            <h3 className="text-white font-mono text-[10px] uppercase tracking-[0.5em] opacity-40">
+                                {"// ARCHITECTED FOR SCALE"}
+                            </h3>
+                            <div className="flex gap-8 justify-center items-center">
+                                <div className="text-center">
+                                    <div className="text-white text-xl font-light">99.9%</div>
+                                    <div className="text-white/20 font-mono text-[8px] uppercase tracking-widest mt-1">Uptime</div>
+                                </div>
+                                <div className="w-px h-8 bg-white/10" />
+                                <div className="text-center">
+                                    <div className="text-white text-xl font-light">&lt;50ms</div>
+                                    <div className="text-white/20 font-mono text-[8px] uppercase tracking-widest mt-1">Latency</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Top Left Label */}
+                    <div className="absolute top-8 left-8 z-20">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                            <span className="text-white/40 font-mono text-[10px] uppercase tracking-widest italic">Live / Enterprise</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Panel: Centered Variant Slideshow */}
+                <div className="relative w-full lg:w-1/2 p-8 flex flex-col items-center justify-center bg-[#0d0d0d]">
+                    <div className="w-full text-center">
+                        <div className="mb-4">
+                            <span className="text-white/20 font-mono text-[10px] uppercase tracking-[0.5em]">
+                                CORE CAPABILITIES
                             </span>
-                        ))}
-                    </div>
-                </motion.div>
-
-                {/* Animated Card Stack - TARA Agents Showcase */}
-                <motion.div
-                    className="mb-8"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                    <TaraCardStack />
-                </motion.div>
-
-                {/* Animated Gradient Bento Stats */}
-                <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, delay: 0.3 }}
-                >
-                    <TaraBentoStats />
-                </motion.div>
-
-                {/* Founder Card */}
-                <motion.div
-                    className="relative bg-white/[0.03] border border-white/10 p-6 mt-8 mx-2"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4 }}
-                >
-                    {/* Corner Brackets */}
-                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/30" />
-                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/30" />
-
-                    <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 border border-white/20 flex items-center justify-center shrink-0">
-                            <Plus size={16} className="text-white/40" />
                         </div>
-                        <div className="space-y-3">
-                            <div>
-                                <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">FOUNDER</div>
-                                <div className="text-white font-mono text-sm">AMAR SAI</div>
-                                <div className="text-white/50 font-mono text-[10px]">B.Tech, LUH // Hannover, Germany</div>
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[10px] font-mono text-white/60">
-                                    <span className="text-white/30">EMAIL /</span> amarsai2005@gmail.com
-                                </div>
-                                <div className="text-[10px] font-mono text-white/60">
-                                    <span className="text-white/30">PHONE /</span> +49 157 811 62785  /  +91 630 180 5656
-                                </div>
-                            </div>
+
+                        <div className="h-24 md:h-32 flex items-center justify-center overflow-hidden">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={variants[variantIndex]}
+                                    initial={{ y: 40, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: -40, opacity: 0 }}
+                                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                    className="text-4xl md:text-6xl lg:text-7xl font-thin text-white tracking-tighter"
+                                >
+                                    {variants[variantIndex]}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+
+                        <div className="mt-12 flex justify-center gap-2">
+                            {variants.map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`w-1 h-1 rounded-full transition-all duration-300 ${i === variantIndex ? "bg-white w-4" : "bg-white/10"}`}
+                                />
+                            ))}
                         </div>
                     </div>
-                </motion.div>
+                </div>
             </div>
         </section>
     );
