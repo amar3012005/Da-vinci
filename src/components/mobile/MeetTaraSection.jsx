@@ -87,7 +87,7 @@ const MeetTaraSection = () => {
                 >
                     <div className="absolute inset-0">
                         <img
-                            src="/Images/login_page.jpeg"
+                            src="/images/login_page.jpeg"
                             alt="Architected Intelligence"
                             className={`w-full h-full object-cover transition-all duration-1000 grayscale opacity-60 ${isLeftHovered ? "scale-110" : "scale-105"}`}
                         />
@@ -101,7 +101,7 @@ const MeetTaraSection = () => {
                             className={`mb-8 transition-all duration-1000 ${isLeftHovered ? "opacity-100" : "opacity-40"}`}
                         >
                             <img
-                                src="/Images/davinci-logo.svg"
+                                src="/images/davinci-logo.svg"
                                 alt="DA'VINCI"
                                 width={80}
                                 height={80}

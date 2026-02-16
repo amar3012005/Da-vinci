@@ -82,7 +82,7 @@ const ContextProblemSection = () => {
                             className={`mb-8 transition-all duration-1000 ${isRightHovered ? "opacity-100" : "opacity-40"}`}
                         >
                             <img
-                                src="/Images/davinci-logo.svg"
+                                src="/images/davinci-logo.svg"
                                 alt="DA'VINCI"
                                 width={80}
                                 height={80}

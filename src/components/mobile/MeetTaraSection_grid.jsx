@@ -65,7 +65,7 @@ const MeetTaraSection = () => {
                 {/* Image & Overlay */}
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="/Images/login_page.jpeg"
+                        src="/images/login_page.jpeg"
                         alt="Architected Intelligence"
                         className={`w-full h-full object-cover transition-all duration-1000 grayscale opacity-40 ${isLeftHovered ? "scale-110" : "scale-105"}`}
                     />
@@ -86,7 +86,7 @@ const MeetTaraSection = () => {
                     </div>
 
                     <motion.div className={`mb-8 transition-all duration-1000 ${isLeftHovered ? "opacity-100" : "opacity-40"}`}>
-                        <img src="/Images/davinci-logo.svg" alt="DA'VINCI" width={120} height={120} className="filter brightness-0 invert" />
+                        <img src="/images/davinci-logo.svg" alt="DA'VINCI" width={120} height={120} className="filter brightness-0 invert" />
                     </motion.div>
 
                     <div className="space-y-4">
