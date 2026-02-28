@@ -96,6 +96,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 const getWsBaseUrl = () => {
     const h = window.location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8004/';
+    if (h.endsWith('davinciai.in')) return 'https://demo.davinciai.eu:8010/';
     return 'https://demo.davinciai.eu:8443/';
 };
 
