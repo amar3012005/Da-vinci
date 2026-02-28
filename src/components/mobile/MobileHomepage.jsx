@@ -9,6 +9,7 @@ import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
 import MobilePricingSection from './MobilePricingSection';
 import MobileAboutSection from './MobileAboutSection';
+import TaraVoiceWidget from './TaraVoiceWidget';
 
 /**
  * MobileHomepage - Main container orchestrating all mobile sections
@@ -44,6 +45,9 @@ const MobileHomepage = () => {
 
             {/* Contact Us Section */}
             <MobileAboutSection />
+
+            {/* TARA Voice Widget - Persistent Overlay */}
+            <TaraVoiceWidget />
         </motion.div>
     );
 };
