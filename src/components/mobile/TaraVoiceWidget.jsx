@@ -4,295 +4,114 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB COMPONENT (Inline - matching enterprise ElevenLabs orb)
+// ORB SHADER (ElevenLabs blue orb from enterprise)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
     return function () {
-        a |= 0;
-        a = (a + 0x9e3779b9) | 0;
-        let t = a ^ (a >>> 16);
-        t = Math.imul(t, 0x21f0aaad);
-        t = t ^ (t >>> 15);
-        t = Math.imul(t, 0x735a2d97);
+        a |= 0; a = (a + 0x9e3779b9) | 0;
+        let t = a ^ (a >>> 16); t = Math.imul(t, 0x21f0aaad);
+        t = t ^ (t >>> 15); t = Math.imul(t, 0x735a2d97);
         return ((t = t ^ (t >>> 15)) >>> 0) / 4294967296;
     };
 }
+function clamp01(n) { return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0; }
 
-function clamp01(n) {
-    if (!Number.isFinite(n)) return 0;
-    return Math.min(1, Math.max(0, n));
-}
+const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
-const vertexShader = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-`;
-
-const fragmentShader = /* glsl */ `
-uniform float uTime;
-uniform float uAnimation;
-uniform float uInverted;
-uniform float uOffsets[7];
-uniform vec3 uColor1;
-uniform vec3 uColor2;
-uniform float uInputVolume;
-uniform float uOutputVolume;
-uniform float uOpacity;
-varying vec2 vUv;
-
+const fragmentShader = `
+uniform float uTime, uAnimation, uInverted, uInputVolume, uOutputVolume, uOpacity;
+uniform float uOffsets[7]; uniform vec3 uColor1, uColor2; varying vec2 vUv;
 const float PI = 3.14159265358979323846;
-
-bool drawOval(vec2 polarUv, vec2 polarCenter, float a, float b, bool reverseGradient, float softness, out vec4 color) {
-    vec2 p = polarUv - polarCenter;
-    float oval = (p.x * p.x) / (a * a) + (p.y * p.y) / (b * b);
-    float edge = smoothstep(1.0, 1.0 - softness, oval);
-    if (edge > 0.0) {
-        float gradient = reverseGradient ? (1.0 - (p.x / a + 1.0) / 2.0) : ((p.x / a + 1.0) / 2.0);
-        gradient = mix(0.5, gradient, 0.1);
-        color = vec4(vec3(gradient), 0.85 * edge);
-        return true;
-    }
-    return false;
-}
-
-vec3 colorRamp(float grayscale, vec3 color1, vec3 color2, vec3 color3, vec3 color4) {
-    if (grayscale < 0.33) {
-        return mix(color1, color2, grayscale * 3.0);
-    } else if (grayscale < 0.66) {
-        return mix(color2, color3, (grayscale - 0.33) * 3.0);
-    } else {
-        return mix(color3, color4, (grayscale - 0.66) * 3.0);
-    }
-}
-
-vec2 hash2(vec2 p) {
-    return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453);
-}
-
-float noise2D(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    float n = mix(mix(dot(hash2(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)), dot(hash2(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x), mix(dot(hash2(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)), dot(hash2(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x), u.y);
-    return 0.5 + 0.5 * n;
-}
-
-float sharpRing(vec3 decomposed, float time) {
-    float ringStart = 1.0;
-    float ringWidth = 0.3;
-    float noiseScale = 5.0;
-    float noise = mix(noise2D(vec2(decomposed.x, time) * noiseScale), noise2D(vec2(decomposed.y, time) * noiseScale), decomposed.z);
-    noise = (noise - 0.5) * 2.5;
-    return ringStart + noise * ringWidth * 1.5;
-}
-
-float smoothRing(vec3 decomposed, float time) {
-    float ringStart = 0.9;
-    float ringWidth = 0.2;
-    float noiseScale = 6.0;
-    float noise = mix(noise2D(vec2(decomposed.x, time) * noiseScale), noise2D(vec2(decomposed.y, time) * noiseScale), decomposed.z);
-    noise = (noise - 0.5) * 5.0;
-    return ringStart + noise * ringWidth;
-}
-
-float flow(vec3 decomposed, float time) {
-    float n1 = noise2D(vec2(time, decomposed.x / 2.0));
-    float n2 = noise2D(vec2(time, decomposed.y / 2.0));
-    return mix(n1, n2, decomposed.z);
-}
-
-void main() {
-    vec2 uv = vUv * 2.0 - 1.0;
-    float radius = length(uv);
-    float theta = atan(uv.y, uv.x);
-    if (theta < 0.0) theta += 2.0 * PI;
-
-    vec3 decomposed = vec3(theta / (2.0 * PI), mod(theta / (2.0 * PI) + 0.5, 1.0) + 1.0, abs(theta / PI - 1.0));
-    float noise = flow(decomposed, radius * 0.03 - uAnimation * 0.2) - 0.5;
-    theta += noise * mix(0.08, 0.25, uOutputVolume);
-
-    vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
-    float originalCenters[7] = float[7](0.0, 0.5 * PI, 1.0 * PI, 1.5 * PI, 2.0 * PI, 2.5 * PI, 3.0 * PI);
-    float centers[7];
-    for (int i = 0; i < 7; i++) {
-        centers[i] = originalCenters[i] + 0.5 * sin(uTime / 20.0 + uOffsets[i]);
-    }
-
-    float a, b;
-    vec4 ovalColor;
-    for (int i = 0; i < 7; i++) {
-        float noise = noise2D(vec2(mod(centers[i] + uTime * 0.05, 1.0), 0.5));
-        a = 0.5 + noise * 0.3;
-        b = noise * mix(3.5, 2.5, uInputVolume);
-        bool reverseGradient = (i % 2 == 1);
-        float distTheta = min(abs(theta - centers[i]), min(abs(theta + 2.0 * PI - centers[i]), abs(theta - 2.0 * PI - centers[i])));
-        float distRadius = radius;
-        if (drawOval(vec2(distTheta, distRadius), vec2(0.0, 0.0), a, b, reverseGradient, 0.6, ovalColor)) {
-            color.rgb = mix(color.rgb, ovalColor.rgb, ovalColor.a);
-            color.a = max(color.a, ovalColor.a);
-        }
-    }
-    
-    float ringRadius1 = sharpRing(decomposed, uTime * 0.1);
-    float ringRadius2 = smoothRing(decomposed, uTime * 0.1);
-    float inputRadius1 = radius + uInputVolume * 0.2;
-    float inputRadius2 = radius + uInputVolume * 0.15;
-    float opacity1 = mix(0.2, 0.6, uInputVolume);
-    float opacity2 = mix(0.15, 0.45, uInputVolume);
-    float ringAlpha1 = (inputRadius2 >= ringRadius1) ? opacity1 : 0.0;
-    float ringAlpha2 = smoothstep(ringRadius2 - 0.05, ringRadius2 + 0.05, inputRadius1) * opacity2;
-    float totalRingAlpha = max(ringAlpha1, ringAlpha2);
-    vec3 ringColor = vec3(1.0);
-    color.rgb = 1.0 - (1.0 - color.rgb) * (1.0 - ringColor * totalRingAlpha);
-
-    vec3 color1 = vec3(0.0, 0.0, 0.0);
-    vec3 color2 = uColor1;
-    vec3 color3 = uColor2;
-    vec3 color4 = vec3(1.0, 1.0, 1.0);
-
-    float luminance = mix(color.r, 1.0 - color.r, uInverted);
-    color.rgb = colorRamp(luminance, color1, color2, color3, color4);
-    color.a *= uOpacity;
-    gl_FragColor = color;
-}
+bool drawOval(vec2 pUv, vec2 pC, float a, float b, bool rev, float soft, out vec4 c){vec2 p=pUv-pC;float o=(p.x*p.x)/(a*a)+(p.y*p.y)/(b*b);float e=smoothstep(1.0,1.0-soft,o);if(e>0.0){float g=rev?(1.0-(p.x/a+1.0)/2.0):((p.x/a+1.0)/2.0);g=mix(0.5,g,0.1);c=vec4(vec3(g),0.85*e);return true;}return false;}
+vec3 colorRamp(float g,vec3 c1,vec3 c2,vec3 c3,vec3 c4){if(g<0.33)return mix(c1,c2,g*3.0);else if(g<0.66)return mix(c2,c3,(g-0.33)*3.0);else return mix(c3,c4,(g-0.66)*3.0);}
+vec2 hash2(vec2 p){return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);}
+float noise2D(vec2 p){vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);float n=mix(mix(dot(hash2(i+vec2(0.0,0.0)),f-vec2(0.0,0.0)),dot(hash2(i+vec2(1.0,0.0)),f-vec2(1.0,0.0)),u.x),mix(dot(hash2(i+vec2(0.0,1.0)),f-vec2(0.0,1.0)),dot(hash2(i+vec2(1.0,1.0)),f-vec2(1.0,1.0)),u.x),u.y);return 0.5+0.5*n;}
+float sharpRing(vec3 d,float t){float ns=5.0;float n=mix(noise2D(vec2(d.x,t)*ns),noise2D(vec2(d.y,t)*ns),d.z);return 1.0+(n-0.5)*2.5*0.3*1.5;}
+float smoothRing(vec3 d,float t){float ns=6.0;float n=mix(noise2D(vec2(d.x,t)*ns),noise2D(vec2(d.y,t)*ns),d.z);return 0.9+(n-0.5)*5.0*0.2;}
+float flow(vec3 d,float t){return mix(noise2D(vec2(t,d.x/2.0)),noise2D(vec2(t,d.y/2.0)),d.z);}
+void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(th<0.0)th+=2.0*PI;vec3 dec=vec3(th/(2.0*PI),mod(th/(2.0*PI)+0.5,1.0)+1.0,abs(th/PI-1.0));float n=flow(dec,r*0.03-uAnimation*0.2)-0.5;th+=n*mix(0.08,0.25,uOutputVolume);vec4 color=vec4(1.0);float oc[7]=float[7](0.0,0.5*PI,PI,1.5*PI,2.0*PI,2.5*PI,3.0*PI);float ct[7];for(int i=0;i<7;i++)ct[i]=oc[i]+0.5*sin(uTime/20.0+uOffsets[i]);float a,b;vec4 ov;for(int i=0;i<7;i++){float nn=noise2D(vec2(mod(ct[i]+uTime*0.05,1.0),0.5));a=0.5+nn*0.3;b=nn*mix(3.5,2.5,uInputVolume);bool rv=(i%2==1);float dt=min(abs(th-ct[i]),min(abs(th+2.0*PI-ct[i]),abs(th-2.0*PI-ct[i])));if(drawOval(vec2(dt,r),vec2(0.0,0.0),a,b,rv,0.6,ov)){color.rgb=mix(color.rgb,ov.rgb,ov.a);color.a=max(color.a,ov.a);}}float rr1=sharpRing(dec,uTime*0.1);float rr2=smoothRing(dec,uTime*0.1);float ir1=r+uInputVolume*0.2;float ir2=r+uInputVolume*0.15;float o1=mix(0.2,0.6,uInputVolume);float o2=mix(0.15,0.45,uInputVolume);float ra1=(ir2>=rr1)?o1:0.0;float ra2=smoothstep(rr2-0.05,rr2+0.05,ir1)*o2;color.rgb=1.0-(1.0-color.rgb)*(1.0-vec3(1.0)*max(ra1,ra2));vec3 c1=vec3(0.0);vec3 c4=vec3(1.0);float l=mix(color.r,1.0-color.r,uInverted);color.rgb=colorRamp(l,c1,uColor1,uColor2,c4);color.a*=uOpacity;gl_FragColor=color;}
 `;
 
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
-    const circleRef = useRef(null);
+    const ref = useRef(null);
     const colors = ["#CADCFC", "#A0B9D1"];
-    const initialColorsRef = useRef(colors);
-    const targetColor1Ref = useRef(new THREE.Color(colors[0]));
-    const targetColor2Ref = useRef(new THREE.Color(colors[1]));
-    const animSpeedRef = useRef(0.1);
-    const agentRef = useRef(agentState);
-    const curInRef = useRef(0);
-    const curOutRef = useRef(0);
+    const initRef = useRef(colors);
+    const tc1 = useRef(new THREE.Color(colors[0]));
+    const tc2 = useRef(new THREE.Color(colors[1]));
+    const spd = useRef(0.1);
+    const agRef = useRef(agentState);
+    const cIn = useRef(0), cOut = useRef(0);
 
-    useEffect(() => { agentRef.current = agentState; }, [agentState]);
+    useEffect(() => { agRef.current = agentState; }, [agentState]);
 
-    const random = useMemo(() => splitmix32(Math.floor(Math.random() * 2 ** 32)), []);
-    const offsets = useMemo(() => new Float32Array(Array.from({ length: 7 }, () => random() * Math.PI * 2)), [random]);
+    const rng = useMemo(() => splitmix32(Math.floor(Math.random() * 2 ** 32)), []);
+    const off = useMemo(() => new Float32Array(Array.from({ length: 7 }, () => rng() * Math.PI * 2)), [rng]);
 
-    useEffect(() => {
-        if (!circleRef.current) return;
-        circleRef.current.material.uniforms.uInverted.value = 1;
-    }, []);
+    useEffect(() => { if (ref.current) ref.current.material.uniforms.uInverted.value = 1; }, []);
 
-    useFrame((_, delta) => {
-        const mat = circleRef.current?.material;
-        if (!mat) return;
-        const u = mat.uniforms;
-        u.uTime.value += delta * 0.5;
-        if (u.uOpacity.value < 1) u.uOpacity.value = Math.min(1, u.uOpacity.value + delta * 2);
-
-        let targetIn = clamp01(userVolume || 0);
-        let targetOut = agentIsSpeaking ? clamp01(0.6 + Math.random() * 0.4) : 0;
-
+    useFrame((_, dt) => {
+        const m = ref.current?.material; if (!m) return;
+        const u = m.uniforms;
+        u.uTime.value += dt * 0.5;
+        if (u.uOpacity.value < 1) u.uOpacity.value = Math.min(1, u.uOpacity.value + dt * 2);
         const t = u.uTime.value * 2;
-        if (agentRef.current === null) {
-            targetIn = 0; targetOut = 0.3;
-        } else if (agentRef.current === 'listening') {
-            targetIn = clamp01(userVolume > 0.1 ? userVolume : 0.55 + Math.sin(t * 3.2) * 0.35);
-            targetOut = 0.45;
-        } else if (agentRef.current === 'talking') {
-            targetIn = clamp01(0.65 + Math.sin(t * 4.8) * 0.22);
-            targetOut = clamp01(0.75 + Math.sin(t * 3.6) * 0.22);
-        } else if (agentRef.current === 'thinking') {
-            const base = 0.38 + 0.07 * Math.sin(t * 0.7);
-            const wander = 0.05 * Math.sin(t * 2.1) * Math.sin(t * 0.37 + 1.2);
-            targetIn = clamp01(base + wander);
-            targetOut = clamp01(0.48 + 0.12 * Math.sin(t * 1.05 + 0.6));
-        }
-
-        curInRef.current += (targetIn - curInRef.current) * 0.2;
-        curOutRef.current += (targetOut - curOutRef.current) * 0.2;
-        const targetSpeed = 0.1 + (1 - Math.pow(curOutRef.current - 1, 2)) * 0.9;
-        animSpeedRef.current += (targetSpeed - animSpeedRef.current) * 0.12;
-
-        u.uAnimation.value += delta * animSpeedRef.current;
-        u.uInputVolume.value = curInRef.current;
-        u.uOutputVolume.value = curOutRef.current;
-        u.uColor1.value.lerp(targetColor1Ref.current, 0.08);
-        u.uColor2.value.lerp(targetColor2Ref.current, 0.08);
+        let tI = 0, tO = 0.3;
+        if (agRef.current === 'listening') { tI = clamp01(userVolume > 0.1 ? userVolume : 0.55 + Math.sin(t * 3.2) * 0.35); tO = 0.45; }
+        else if (agRef.current === 'talking') { tI = clamp01(0.65 + Math.sin(t * 4.8) * 0.22); tO = clamp01(0.75 + Math.sin(t * 3.6) * 0.22); }
+        else if (agRef.current === 'thinking') { tI = clamp01(0.38 + 0.07 * Math.sin(t * 0.7) + 0.05 * Math.sin(t * 2.1) * Math.sin(t * 0.37 + 1.2)); tO = clamp01(0.48 + 0.12 * Math.sin(t * 1.05 + 0.6)); }
+        cIn.current += (tI - cIn.current) * 0.2; cOut.current += (tO - cOut.current) * 0.2;
+        spd.current += (0.1 + (1 - Math.pow(cOut.current - 1, 2)) * 0.9 - spd.current) * 0.12;
+        u.uAnimation.value += dt * spd.current;
+        u.uInputVolume.value = cIn.current; u.uOutputVolume.value = cOut.current;
+        u.uColor1.value.lerp(tc1.current, 0.08); u.uColor2.value.lerp(tc2.current, 0.08);
     });
 
     const uniforms = useMemo(() => ({
-        uColor1: new THREE.Uniform(new THREE.Color(initialColorsRef.current[0])),
-        uColor2: new THREE.Uniform(new THREE.Color(initialColorsRef.current[1])),
-        uOffsets: { value: offsets },
-        uTime: new THREE.Uniform(0),
-        uAnimation: new THREE.Uniform(0.1),
-        uInverted: new THREE.Uniform(1),
-        uInputVolume: new THREE.Uniform(0),
-        uOutputVolume: new THREE.Uniform(0),
-        uOpacity: new THREE.Uniform(0),
-    }), [offsets]);
+        uColor1: new THREE.Uniform(new THREE.Color(initRef.current[0])),
+        uColor2: new THREE.Uniform(new THREE.Color(initRef.current[1])),
+        uOffsets: { value: off }, uTime: new THREE.Uniform(0), uAnimation: new THREE.Uniform(0.1),
+        uInverted: new THREE.Uniform(1), uInputVolume: new THREE.Uniform(0),
+        uOutputVolume: new THREE.Uniform(0), uOpacity: new THREE.Uniform(0),
+    }), [off]);
 
-    return (
-        <mesh ref={circleRef}>
-            <circleGeometry args={[3.5, 64]} />
-            <shaderMaterial
-                uniforms={uniforms}
-                fragmentShader={fragmentShader}
-                vertexShader={vertexShader}
-                transparent={true}
-            />
-        </mesh>
-    );
+    return (<mesh ref={ref}><circleGeometry args={[3.5, 64]} /><shaderMaterial uniforms={uniforms} fragmentShader={fragmentShader} vertexShader={vertexShader} transparent /></mesh>);
 }
 
 function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
     return (
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <Canvas
-                resize={{ debounce: 100 }}
-                gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}
-            >
-                <Suspense fallback={null}>
-                    <OrbScene
-                        agentState={agentState}
-                        userVolume={userVolume}
-                        agentIsSpeaking={agentIsSpeaking}
-                    />
-                </Suspense>
+        <div style={{ width: '100%', height: '100%' }}>
+            <Canvas resize={{ debounce: 100 }} gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}>
+                <Suspense fallback={null}><OrbScene agentState={agentState} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} /></Suspense>
             </Canvas>
         </div>
     );
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET
+// TARA VOICE WIDGET — Horizontal Slide Bar
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:8004/';
-    }
+    const h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8004/';
     return 'https://demo.davinciai.eu:8440/';
 };
 
-const STATE_LABELS = {
-    null: 'TAP TO TALK',
-    listening: 'LISTENING',
-    talking: 'TARA SPEAKING',
-    thinking: 'THINKING...',
-};
+const CALL_LIMIT = 300; // 5 minutes strict
+
+const STATE_LABELS = { idle: 'Click orb to start', listening: 'Listening...', talking: 'TARA speaking', thinking: 'Connecting...' };
 
 const TaraVoiceWidget = () => {
-    const [isExpanded, setIsExpanded] = useState(false);
     const [isCallActive, setIsCallActive] = useState(false);
-    const [agentState, setAgentState] = useState(null);
+    const [agentState, setAgentState] = useState('idle');
     const [callDuration, setCallDuration] = useState(0);
     const [userVolume, setUserVolume] = useState(0);
     const [agentIsSpeaking, setAgentIsSpeaking] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
+    const [isMuted, setIsMuted] = useState(false);
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -307,41 +126,30 @@ const TaraVoiceWidget = () => {
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
 
-    // Sync agent state from connection/speaking
+    // Sync agent state
     useEffect(() => {
-        if (connectionStatus === 'connected') {
-            setAgentState(agentIsSpeaking ? 'talking' : 'listening');
-        } else if (connectionStatus === 'connecting') {
-            setAgentState('thinking');
-        } else {
-            setAgentState(null);
+        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
+        else if (connectionStatus === 'connecting') setAgentState('thinking');
+        else if (!isCallActive) setAgentState('idle');
+    }, [agentIsSpeaking, connectionStatus, isCallActive]);
+
+    // 5 min hard limit
+    useEffect(() => {
+        if (isCallActive) {
+            if (callDuration >= CALL_LIMIT) { endCall(); return; }
         }
-    }, [agentIsSpeaking, connectionStatus]);
+    }, [callDuration, isCallActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Volume analyzer
     useEffect(() => {
         if (!micStream) return;
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(micStream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        const updateVolume = () => {
-            analyser.getByteFrequencyData(dataArray);
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-            const average = sum / dataArray.length;
-            setUserVolume(Math.min(1, average / 30));
-            animationFrameRef.current = requestAnimationFrame(updateVolume);
-        };
-        updateVolume();
-
-        return () => {
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            audioContext.close();
-        };
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const an = ac.createAnalyser(); const src = ac.createMediaStreamSource(micStream);
+        src.connect(an); an.fftSize = 256;
+        const arr = new Uint8Array(an.frequencyBinCount);
+        const up = () => { an.getByteFrequencyData(arr); let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; setUserVolume(Math.min(1, s / arr.length / 30)); animationFrameRef.current = requestAnimationFrame(up); };
+        up();
+        return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
     }, [micStream]);
 
     const checkPlaybackComplete = useCallback(() => {
@@ -349,435 +157,252 @@ const TaraVoiceWidget = () => {
         if (audioCtxRef.current.currentTime >= lastPlaybackTimeRef.current - 0.1) {
             setAgentIsSpeaking(false);
             if (audioStreamCompleteRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-                const duration = playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0;
-                wsRef.current.send(JSON.stringify({
-                    type: 'playback_done',
-                    duration_ms: duration,
-                    timestamp: Date.now() / 1000
-                }));
-                playbackStartTimeRef.current = null;
-                audioStreamCompleteRef.current = false;
+                wsRef.current.send(JSON.stringify({ type: 'playback_done', duration_ms: playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0, timestamp: Date.now() / 1000 }));
+                playbackStartTimeRef.current = null; audioStreamCompleteRef.current = false;
             }
         }
     }, []);
 
     const playAudioChunk = useCallback((data, forceInt16 = false) => {
-        let float32;
-        const format = audioConfigRef.current.format;
-        const sampleRate = audioConfigRef.current.sampleRate;
-
+        let f32; const fmt = audioConfigRef.current.format; const sr = audioConfigRef.current.sampleRate;
         if (data instanceof ArrayBuffer) {
-            if (format === 'pcm_s16le' || forceInt16) {
-                const int16 = new Int16Array(data);
-                float32 = new Float32Array(int16.length);
-                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768.0;
-            } else {
-                float32 = new Float32Array(data);
-            }
+            if (fmt === 'pcm_s16le' || forceInt16) { const i16 = new Int16Array(data); f32 = new Float32Array(i16.length); for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768.0; }
+            else f32 = new Float32Array(data);
         } else {
-            const binaryString = atob(data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            if (format === 'pcm_s16le' || forceInt16) {
-                const int16 = new Int16Array(bytes.buffer);
-                float32 = new Float32Array(int16.length);
-                for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768.0;
-            } else {
-                float32 = new Float32Array(bytes.buffer);
-            }
+            const bs = atob(data); const by = new Uint8Array(bs.length); for (let i = 0; i < bs.length; i++) by[i] = bs.charCodeAt(i);
+            if (fmt === 'pcm_s16le' || forceInt16) { const i16 = new Int16Array(by.buffer); f32 = new Float32Array(i16.length); for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768.0; }
+            else f32 = new Float32Array(by.buffer);
         }
-
         if (audioCtxRef.current) {
-            const buffer = audioCtxRef.current.createBuffer(1, float32.length, sampleRate);
-            buffer.copyToChannel(float32, 0);
-            const source = audioCtxRef.current.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioCtxRef.current.destination);
-            const now = audioCtxRef.current.currentTime;
-            let startAt = lastPlaybackTimeRef.current;
-            if (startAt < now) startAt = now;
-            source.start(startAt);
-            lastPlaybackTimeRef.current = startAt + buffer.duration;
-            source.onended = () => checkPlaybackComplete();
+            const buf = audioCtxRef.current.createBuffer(1, f32.length, sr); buf.copyToChannel(f32, 0);
+            const s = audioCtxRef.current.createBufferSource(); s.buffer = buf; s.connect(audioCtxRef.current.destination);
+            const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
+            s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
     }, [checkPlaybackComplete]);
 
-    const startCall = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
-            setMicStream(stream);
-            startVoiceCall(stream);
-        } catch (err) {
-            console.error("Mic access failed:", err);
-            alert("Please enable microphone access");
-        }
-    };
-
-    const startVoiceCall = (stream) => {
-        setConnectionStatus('connecting');
-        setAgentState('thinking');
-        setCallDuration(0);
-
-        const baseUrl = getWsBaseUrl();
-        const normalizedWs = String(baseUrl).replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
-        const wsUrlBase = normalizedWs.endsWith('/') ? `${normalizedWs}ws` : `${normalizedWs}/ws`;
-        const userId = 'widget-user-' + Date.now();
-        const wsUrl = `${wsUrlBase}?user_id=${encodeURIComponent(userId)}`;
-
-        const ws = new WebSocket(wsUrl);
-        ws.binaryType = "arraybuffer";
-        wsRef.current = ws;
-
-        ws.onopen = () => {
-            wsConnectedRef.current = true;
-            const sessionId = crypto.randomUUID();
-            sessionIdRef.current = sessionId;
-
-            ws.send(JSON.stringify({
-                type: 'session_config',
-                config: {
-                    mode: 'voice',
-                    tenant_id: 'davinci-widget',
-                    user_id: userId,
-                    stt_mode: 'audio',
-                    tts_mode: 'audio',
-                    language: 'en',
-                    voice: 'anushka',
-                    voice_name: 'anushka',
-                    tts_voice: 'anushka'
-                }
-            }));
-            ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
-
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
-            audioCtxRef.current = audioCtx;
-            lastPlaybackTimeRef.current = audioCtx.currentTime;
-
-            const micAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-            const source = micAudioCtx.createMediaStreamSource(stream);
-            const processor = micAudioCtx.createScriptProcessor(2048, 1, 1);
-            processor.onaudioprocess = (e) => {
-                if (ws.readyState === WebSocket.OPEN && wsConnectedRef.current) {
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    const pcmData = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        pcmData[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                    }
-                    ws.send(pcmData.buffer);
-                }
-            };
-            source.connect(processor);
-            processor.connect(micAudioCtx.destination);
-            audioWorkletRef.current = processor;
-        };
-
-        ws.onmessage = async (e) => {
-            if (e.data instanceof ArrayBuffer) {
-                binaryQueueRef.current.push(e.data);
-                return;
-            }
-
-            const data = JSON.parse(e.data);
-
-            if (data.type === 'session_ready' || (data.type === 'state_update' && data.state === 'listening')) {
-                wsConnectedRef.current = true;
-                if (data.audio_format || data.format) audioConfigRef.current.format = data.audio_format || data.format;
-                if (data.sample_rate) audioConfigRef.current.sampleRate = data.sample_rate;
-
-                if (connectionStatus !== 'connected') {
-                    setConnectionStatus('connected');
-                    setIsCallActive(true);
-                    setAgentState('listening');
-                    if (!callTimerRef.current) {
-                        callTimerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
-                    }
-                }
-            } else if (data.type === 'audio_chunk') {
-                if (data.sample_rate) audioConfigRef.current.sampleRate = data.sample_rate;
-                if (data.format || data.audio_format) audioConfigRef.current.format = data.format || data.audio_format;
-
-                if (!playbackStartTimeRef.current) playbackStartTimeRef.current = Date.now();
-                setAgentIsSpeaking(true);
-                audioStreamCompleteRef.current = false;
-
-                if (data.binary_sent && binaryQueueRef.current.length > 0) {
-                    const binChunk = binaryQueueRef.current.shift();
-                    if (binChunk) playAudioChunk(binChunk, audioConfigRef.current.format === 'pcm_s16le');
-                } else {
-                    const audioB64 = data.data || data.audio;
-                    if (audioB64) playAudioChunk(audioB64);
-                }
-
-                if (data.is_final) {
-                    audioStreamCompleteRef.current = true;
-                    checkPlaybackComplete();
-                }
-            } else if (data.type === 'audio_complete' || data.is_final) {
-                audioStreamCompleteRef.current = true;
-                checkPlaybackComplete();
-            } else if (data.type === 'interrupt' || data.type === 'clear') {
-                setAgentIsSpeaking(false);
-                lastPlaybackTimeRef.current = audioCtxRef.current?.currentTime || 0;
-                playbackStartTimeRef.current = null;
-            } else if (data.type === 'ping') {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() / 1000 }));
-                }
-            }
-        };
-
-        ws.onclose = () => { endCall(); };
-        ws.onerror = () => { endCall(); };
-    };
-
     const endCall = useCallback(() => {
         if (wsRef.current) {
-            if (wsRef.current.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
-            }
-            wsRef.current.close();
-            wsRef.current = null;
+            if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
+            wsRef.current.close(); wsRef.current = null;
         }
         binaryQueueRef.current = [];
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-        if (callTimerRef.current) clearInterval(callTimerRef.current);
-        callTimerRef.current = null;
-        if (micStream) micStream.getTracks().forEach(track => track.stop());
-
-        setIsCallActive(false);
-        setConnectionStatus(null);
-        setAgentIsSpeaking(false);
-        wsConnectedRef.current = false;
-        setAgentState(null);
-        setMicStream(null);
-        setCallDuration(0);
+        if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
+        wsConnectedRef.current = false; setAgentState('idle'); setMicStream(null); setCallDuration(0);
     }, [micStream]);
 
-    const toggleWidget = () => {
-        if (isExpanded && isCallActive) {
-            endCall();
-        }
-        setIsExpanded(!isExpanded);
+    const startCall = async () => {
+        if (isCallActive) { endCall(); return; }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+            setMicStream(stream); startVoiceCall(stream);
+        } catch (err) { console.error("Mic failed:", err); alert("Please enable microphone access"); }
     };
 
-    const handleCallToggle = () => {
-        if (isCallActive) {
-            endCall();
-        } else {
-            startCall();
-        }
+    const startVoiceCall = (stream) => {
+        setConnectionStatus('connecting'); setCallDuration(0);
+        const base = getWsBaseUrl();
+        const nws = String(base).replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
+        const wsBase = nws.endsWith('/') ? `${nws}ws` : `${nws}/ws`;
+        const uid = 'widget-' + Date.now();
+        const ws = new WebSocket(`${wsBase}?user_id=${encodeURIComponent(uid)}`);
+        ws.binaryType = "arraybuffer"; wsRef.current = ws;
+
+        ws.onopen = () => {
+            wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
+            ws.send(JSON.stringify({ type: 'session_config', config: { mode: 'voice', tenant_id: 'davinci-widget', user_id: uid, stt_mode: 'audio', tts_mode: 'audio', language: 'en', voice: 'anushka', voice_name: 'anushka', tts_voice: 'anushka' } }));
+            ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
+            const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+            audioCtxRef.current = ac; lastPlaybackTimeRef.current = ac.currentTime;
+            const mic = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            const src = mic.createMediaStreamSource(stream);
+            const proc = mic.createScriptProcessor(2048, 1, 1);
+            proc.onaudioprocess = (e) => {
+                if (ws.readyState === WebSocket.OPEN && wsConnectedRef.current && !isMuted) {
+                    const inp = e.inputBuffer.getChannelData(0); const pcm = new Int16Array(inp.length);
+                    for (let i = 0; i < inp.length; i++) pcm[i] = Math.max(-1, Math.min(1, inp[i])) * 0x7FFF;
+                    ws.send(pcm.buffer);
+                }
+            };
+            src.connect(proc); proc.connect(mic.destination); audioWorkletRef.current = proc;
+        };
+
+        ws.onmessage = (e) => {
+            if (e.data instanceof ArrayBuffer) { binaryQueueRef.current.push(e.data); return; }
+            const d = JSON.parse(e.data);
+            if (d.type === 'session_ready' || (d.type === 'state_update' && d.state === 'listening')) {
+                wsConnectedRef.current = true;
+                if (d.audio_format || d.format) audioConfigRef.current.format = d.audio_format || d.format;
+                if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
+                if (connectionStatus !== 'connected') {
+                    setConnectionStatus('connected'); setIsCallActive(true);
+                    if (!callTimerRef.current) callTimerRef.current = setInterval(() => setCallDuration(x => x + 1), 1000);
+                }
+            } else if (d.type === 'audio_chunk') {
+                if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
+                if (d.format || d.audio_format) audioConfigRef.current.format = d.format || d.audio_format;
+                if (!playbackStartTimeRef.current) playbackStartTimeRef.current = Date.now();
+                setAgentIsSpeaking(true); audioStreamCompleteRef.current = false;
+                if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
+                else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
+                if (d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
+            } else if (d.type === 'audio_complete' || d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
+            else if (d.type === 'interrupt' || d.type === 'clear') { setAgentIsSpeaking(false); lastPlaybackTimeRef.current = audioCtxRef.current?.currentTime || 0; playbackStartTimeRef.current = null; }
+            else if (d.type === 'ping' && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() / 1000 }));
+        };
+        ws.onclose = () => endCall();
+        ws.onerror = () => endCall();
     };
 
-    const formatTime = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    };
+    const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+    const remaining = CALL_LIMIT - callDuration;
+    const isWarning = remaining <= 30 && isCallActive;
 
     return (
-        <>
-            {/* Collapsed Orb Button */}
-            <AnimatePresence>
-                {!isExpanded && (
-                    <motion.button
-                        onClick={toggleWidget}
-                        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full overflow-hidden"
-                        style={{
-                            background: 'rgba(10, 10, 10, 0.85)',
-                            backdropFilter: 'blur(20px)',
-                            WebkitBackdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.15)',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.1)',
-                            cursor: 'pointer',
-                            padding: 0,
-                        }}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <OrbRenderer agentState={null} userVolume={0} agentIsSpeaking={false} />
-                    </motion.button>
-                )}
-            </AnimatePresence>
+        <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0px' }}>
 
-            {/* Expanded Widget Panel */}
+            {/* Sliding Glass Bar — appears when call is active */}
             <AnimatePresence>
-                {isExpanded && (
+                {isCallActive && (
                     <motion.div
-                        className="fixed bottom-6 right-6 z-[9999]"
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: 220, opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                         style={{
-                            width: '280px',
-                            borderRadius: '24px',
-                            background: 'rgba(8, 8, 12, 0.75)',
-                            backdropFilter: 'blur(40px)',
-                            WebkitBackdropFilter: 'blur(40px)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: '0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.08)',
+                            height: '56px',
+                            borderRadius: '28px 0 0 28px',
+                            background: 'rgba(18, 18, 22, 0.72)',
+                            backdropFilter: 'blur(30px)',
+                            WebkitBackdropFilter: 'blur(30px)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRight: 'none',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
+                            display: 'flex', alignItems: 'center',
+                            paddingLeft: '16px', paddingRight: '8px',
                             overflow: 'hidden',
                         }}
-                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        {/* Header */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '14px 18px 10px',
-                            borderBottom: '1px solid rgba(255,255,255,0.06)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{
-                                    width: '6px', height: '6px', borderRadius: '50%',
-                                    background: isCallActive ? '#22c55e' : 'rgba(255,255,255,0.25)',
-                                    boxShadow: isCallActive ? '0 0 8px rgba(34,197,94,0.6)' : 'none',
-                                    transition: 'all 0.3s ease',
-                                }} />
-                                <span style={{
-                                    fontFamily: 'monospace', fontSize: '9px', fontWeight: 700,
-                                    color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase',
-                                    letterSpacing: '0.15em',
-                                }}>DAVINCI</span>
-                            </div>
-                            <button
-                                onClick={toggleWidget}
-                                style={{
-                                    background: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '8px',
-                                    width: '26px', height: '26px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
-                                    fontSize: '12px', fontWeight: 'bold',
-                                    transition: 'all 0.2s ease',
-                                }}
-                                onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.8)'}
-                                onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.4)'}
-                            >×</button>
-                        </div>
-
-                        {/* Orb Container */}
-                        <div style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center',
-                            justifyContent: 'center', padding: '20px 24px 12px',
-                        }}>
+                        {/* Left: Text info */}
+                        <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2, duration: 0.3 }}
+                            style={{ flex: 1, minWidth: 0 }}
+                        >
                             <div style={{
-                                width: '140px', height: '140px',
-                                borderRadius: '50%',
-                                position: 'relative',
-                                background: 'rgba(255,255,255,0.02)',
+                                fontSize: '11px', fontWeight: 700, color: '#fff',
+                                letterSpacing: '0.02em', lineHeight: 1.2,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                             }}>
-                                <OrbRenderer
-                                    agentState={agentState}
-                                    userVolume={userVolume}
-                                    agentIsSpeaking={agentIsSpeaking}
-                                />
-                                {/* Subtle ring glow */}
-                                {isCallActive && (
-                                    <div style={{
-                                        position: 'absolute', inset: '-4px',
-                                        borderRadius: '50%',
-                                        border: agentState === 'talking'
-                                            ? '1px solid rgba(202,220,252,0.3)'
-                                            : '1px solid rgba(255,255,255,0.08)',
-                                        transition: 'all 0.5s ease',
-                                        pointerEvents: 'none',
-                                    }} />
-                                )}
+                                TARA — Voice Agent
                             </div>
-
-                            {/* Agent Name */}
-                            <h3 style={{
-                                marginTop: '16px', marginBottom: '4px',
-                                fontSize: '16px', fontWeight: 700,
-                                color: '#fff', letterSpacing: '0.12em',
-                                textTransform: 'uppercase',
-                            }}>TARA</h3>
-
-                            {/* State Label */}
-                            <motion.p
-                                key={agentState}
-                                style={{
-                                    fontSize: '9px', fontFamily: 'monospace',
-                                    color: agentState === 'talking'
-                                        ? 'rgba(202,220,252,0.8)'
-                                        : agentState === 'listening'
-                                            ? 'rgba(34,197,94,0.7)'
-                                            : 'rgba(255,255,255,0.35)',
-                                    letterSpacing: '0.2em', textTransform: 'uppercase',
-                                    margin: 0, fontWeight: 600,
-                                    transition: 'color 0.3s ease',
-                                }}
-                                initial={{ opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                {STATE_LABELS[agentState] || STATE_LABELS[null]}
-                            </motion.p>
-
-                            {/* Timer */}
-                            <p style={{
-                                marginTop: '8px', marginBottom: 0,
-                                fontSize: '11px', fontFamily: 'monospace',
-                                color: 'rgba(255,255,255,0.3)',
-                                letterSpacing: '0.08em',
+                            <div style={{
+                                fontSize: '9px', fontFamily: 'monospace',
+                                color: isWarning ? '#ef4444' : agentState === 'talking' ? 'rgba(202,220,252,0.8)' : agentState === 'listening' ? 'rgba(34,197,94,0.7)' : 'rgba(255,255,255,0.4)',
+                                marginTop: '2px', letterSpacing: '0.05em',
+                                transition: 'color 0.3s ease',
                             }}>
-                                {formatTime(callDuration)}
-                            </p>
-                        </div>
+                                {isWarning ? `Ending in ${remaining}s` : STATE_LABELS[agentState] || 'Connected'}
+                            </div>
+                        </motion.div>
 
-                        {/* Call Button */}
-                        <div style={{ padding: '12px 24px 20px', display: 'flex', justifyContent: 'center' }}>
-                            <motion.button
-                                onClick={handleCallToggle}
-                                style={{
-                                    width: '100%', padding: '12px',
-                                    borderRadius: '12px',
-                                    fontSize: '10px', fontWeight: 700,
-                                    textTransform: 'uppercase', letterSpacing: '0.15em',
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                    transition: 'all 0.2s ease',
-                                    background: isCallActive
-                                        ? 'rgba(239, 68, 68, 0.15)'
-                                        : 'rgba(255,255,255,0.08)',
-                                    color: isCallActive ? '#ef4444' : 'rgba(255,255,255,0.85)',
-                                    borderWidth: '1px',
-                                    borderStyle: 'solid',
-                                    borderColor: isCallActive
-                                        ? 'rgba(239,68,68,0.3)'
-                                        : 'rgba(255,255,255,0.12)',
-                                }}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                {isCallActive ? (
-                                    <>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
-                                            <line x1="23" y1="1" x2="1" y2="23" />
-                                        </svg>
-                                        End Call
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                            <polygon points="5 3 19 12 5 21 5 3" />
-                                        </svg>
-                                        Start Call
-                                    </>
-                                )}
-                            </motion.button>
-                        </div>
+                        {/* Timer */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            style={{
+                                fontSize: '10px', fontFamily: 'monospace',
+                                color: isWarning ? '#ef4444' : 'rgba(255,255,255,0.35)',
+                                fontWeight: 600, marginRight: '8px',
+                                letterSpacing: '0.04em',
+                                transition: 'color 0.3s ease',
+                            }}
+                        >
+                            {fmt(callDuration)}
+                        </motion.div>
+
+                        {/* Mute/Speaker Button */}
+                        <motion.button
+                            onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.35 }}
+                            style={{
+                                width: '32px', height: '32px', borderRadius: '8px',
+                                background: isMuted ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.06)',
+                                border: isMuted ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer', flexShrink: 0,
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            {isMuted ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" /><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+                                </svg>
+                            ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+                                </svg>
+                            )}
+                        </motion.button>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </>
+
+            {/* Orb Button — always visible, click to start/end call */}
+            <motion.button
+                onClick={startCall}
+                style={{
+                    width: '56px', height: '56px',
+                    borderRadius: '50%',
+                    background: 'rgba(10, 10, 14, 0.85)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: isCallActive ? '1.5px solid rgba(202,220,252,0.25)' : '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: isCallActive
+                        ? '0 0 20px rgba(202,220,252,0.15), 0 8px 32px rgba(0,0,0,0.4)'
+                        : '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+                    cursor: 'pointer', padding: 0, overflow: 'hidden',
+                    position: 'relative', flexShrink: 0, zIndex: 2,
+                    transition: 'border 0.3s ease, box-shadow 0.3s ease',
+                }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.94 }}
+            >
+                <OrbRenderer
+                    agentState={isCallActive ? agentState : null}
+                    userVolume={userVolume}
+                    agentIsSpeaking={agentIsSpeaking}
+                />
+
+                {/* End call X overlay */}
+                <AnimatePresence>
+                    {isCallActive && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(0,0,0,0.25)',
+                                borderRadius: '50%', pointerEvents: 'none',
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.7)" strokeWidth="2.5" strokeLinecap="round">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.button>
+        </div>
     );
 };
 
