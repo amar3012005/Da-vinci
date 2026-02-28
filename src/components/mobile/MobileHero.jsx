@@ -50,6 +50,16 @@ const MobileHero = () => {
                 { opacity: 1, scale: 1, y: 0, duration: 1.5, ease: "power3.out" }
             );
         }
+
+        // Reset transition states when navigating back (handles bfcache)
+        const handlePageShow = (event) => {
+            if (event.persisted) {
+                setIsPrometheusTransitioning(false);
+                setIsEnterpriseTransitioning(false);
+            }
+        };
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
     }, []);
 
     const handlePrometheusClick = () => {
