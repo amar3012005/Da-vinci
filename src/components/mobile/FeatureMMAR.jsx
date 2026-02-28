@@ -72,21 +72,21 @@ const FeatureMMAR = () => {
                     </motion.div>
 
                     {/* Agent Grid */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
                         {agents.map((agent, index) => (
                             <motion.div
                                 key={agent.name}
-                                className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05] text-center"
+                                className="p-2 sm:p-3 bg-white/[0.02] rounded-xl border border-white/[0.05] text-center"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: 0.3 + index * 0.08 }}
                             >
-                                <div className={`w-8 h-8 mx-auto mb-2 rounded-lg bg-gradient-to-br ${agent.color} flex items-center justify-center`}>
-                                    <agent.icon className="w-4 h-4 text-white" />
+                                <div className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1.5 sm:mb-2 rounded-lg bg-gradient-to-br ${agent.color} flex items-center justify-center`}>
+                                    <agent.icon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                 </div>
-                                <p className="text-xs text-white font-medium">{agent.name}</p>
-                                <p className="text-[10px] text-white/40 leading-tight mt-1">{agent.description}</p>
+                                <p className="text-[11px] sm:text-xs text-white font-medium">{agent.name}</p>
+                                <p className="text-[9px] sm:text-[10px] text-white/40 leading-tight mt-1">{agent.description}</p>
                             </motion.div>
                         ))}
                     </div>
@@ -117,7 +117,7 @@ const FeatureMMAR = () => {
                 </GlassCard>
 
                 {/* Key Benefits */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {[
                         { label: 'Parallel', value: 'Processing' },
                         { label: 'Dynamic', value: 'Routing' },
@@ -125,11 +125,11 @@ const FeatureMMAR = () => {
                     ].map((item, index) => (
                         <GlassCard
                             key={item.label}
-                            className="p-3 text-center"
+                            className="p-2 sm:p-3 flex flex-col items-center justify-center text-center"
                             delay={0.3 + index * 0.1}
                         >
-                            <p className="text-[10px] text-white/40 uppercase tracking-wider">{item.label}</p>
-                            <p className="text-xs text-white font-medium">{item.value}</p>
+                            <p className="text-[8px] sm:text-[10px] text-white/40 uppercase tracking-wider">{item.label}</p>
+                            <p className="text-[10px] sm:text-xs text-white font-medium mt-0.5">{item.value}</p>
                         </GlassCard>
                     ))}
                 </div>

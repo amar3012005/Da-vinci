@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Lenis from 'lenis';
 
 // Import all mobile components
 import MobileNavigation from './MobileNavigation';
@@ -10,39 +9,13 @@ import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
 import MobilePricingSection from './MobilePricingSection';
 import MobileAboutSection from './MobileAboutSection';
-import MobileCTA from './MobileCTA';
 
 /**
  * MobileHomepage - Main container orchestrating all mobile sections
  * Premium redesigned mobile experience for TARA
  */
 const MobileHomepage = () => {
-    // Smooth scroll setup
-    useEffect(() => {
-        const lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            direction: 'vertical',
-            gestureDirection: 'vertical',
-            smooth: true,
-            smoothTouch: false,
-            touchMultiplier: 2,
-        });
-
-        // Make lenis accessible globally for modal scroll locking
-        window.lenis = lenis;
-
-        function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
-        requestAnimationFrame(raf);
-
-        return () => {
-            lenis.destroy();
-            window.lenis = null;
-        };
-    }, []);
+    // Removed Lenis smooth scroll for better native mobile feel
 
     return (
         <motion.div
@@ -69,11 +42,8 @@ const MobileHomepage = () => {
             {/* Pricing Plans */}
             <MobilePricingSection />
 
-            {/* About Us Section */}
+            {/* Contact Us Section */}
             <MobileAboutSection />
-
-            {/* Contact the Founder (Modified CTA) */}
-            <MobileCTA />
         </motion.div>
     );
 };

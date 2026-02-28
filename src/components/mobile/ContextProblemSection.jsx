@@ -12,39 +12,6 @@ const ContextProblemSection = () => {
     const sectionRef = useRef(null);
     const [isRightHovered, setIsRightHovered] = useState(false);
 
-    // Auto-snap behavior (mirrored from MeetTaraSection)
-    useEffect(() => {
-        const section = sectionRef.current;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
-                        if (window.lenis) {
-                            window.lenis.scrollTo(section, {
-                                lerp: 0.05,
-                                duration: 1.5,
-                                lock: true,
-                            });
-                        }
-                    }
-                });
-            },
-            {
-                threshold: [0.3],
-                rootMargin: '0px'
-            }
-        );
-
-        if (section) {
-            observer.observe(section);
-        }
-
-        return () => {
-            if (section) {
-                observer.unobserve(section);
-            }
-        };
-    }, []);
 
     return (
         <section
@@ -123,15 +90,15 @@ const ContextProblemSection = () => {
                 </div>
 
                 {/* Left Panel: Generative HiveMind Visualization */}
-                <div className="relative w-full lg:w-1/2 flex flex-col items-center justify-center bg-black overflow-hidden">
+                <div className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen flex flex-col items-center justify-center bg-black overflow-hidden">
                     {/* Generative HiveMind Canvas */}
                     <div className="absolute inset-0 pointer-events-none">
                         <HiveMindCanvas />
                     </div>
 
                     {/* Subtle Branding Centered Below Cluster */}
-                    <div className="relative z-20 mt-[40vh] md:mt-[45vh]">
-                        <span className="text-white/20 font-mono text-[9px] uppercase tracking-[0.5em]">
+                    <div className="relative z-20 mt-[35vh] md:mt-[45vh]">
+                        <span className="text-white/20 font-mono text-[9px] uppercase tracking-[0.5em] tracking-widest">
                             ./HIVEMIND
                         </span>
                     </div>
@@ -165,10 +132,11 @@ const HiveMindCanvas = () => {
         ctx.scale(dpr, dpr);
 
         const particles = [];
-        const particleCount = 280; // High density for the cluster look
+        const isMobile = width < 768;
+        const particleCount = isMobile ? 90 : 240; // Reduced density for mobile
         const centerX = width / 2;
         const centerY = height / 2;
-        const clusterRadius = Math.min(width, height) * 0.32;
+        const clusterRadius = Math.min(width, height) * (isMobile ? 0.38 : 0.32);
 
         for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -210,12 +178,12 @@ const HiveMindCanvas = () => {
                     const dx = p1.x - p2.x;
                     const dy = p1.y - p2.y;
                     const distSq = dx * dx + dy * dy;
-                    const maxDist = 70;
+                    const maxDist = isMobile ? 55 : 80;
 
                     if (distSq < maxDist * maxDist) {
                         const dist = Math.sqrt(distSq);
                         // Significantly brighter lines as requested
-                        const alpha = (1 - dist / maxDist) * 0.35;
+                        const alpha = (1 - dist / maxDist) * (isMobile ? 0.25 : 0.35);
                         ctx.beginPath();
                         ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
                         ctx.lineWidth = 0.6;

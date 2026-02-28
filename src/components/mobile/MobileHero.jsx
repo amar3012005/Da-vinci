@@ -39,7 +39,10 @@ const MobileHero = () => {
     const [isPrometheusTransitioning, setIsPrometheusTransitioning] = useState(false);
     const [isEnterpriseTransitioning, setIsEnterpriseTransitioning] = useState(false);
 
+    const [isIndia, setIsIndia] = useState(false);
+
     useEffect(() => {
+        setIsIndia(window.location.hostname.includes('davinciai.in'));
         // Logo entrance animation
         if (logoRef.current) {
             gsap.fromTo(logoRef.current,
@@ -52,14 +55,14 @@ const MobileHero = () => {
     const handlePrometheusClick = () => {
         setIsPrometheusTransitioning(true);
         setTimeout(() => {
-            window.location.href = 'https://prometheus.davinciai.eu/';
+            window.location.href = isIndia ? 'https://prometheus.davinciai.in/' : 'https://prometheus.davinciai.eu/';
         }, 5200); // Increased to 5s + buffer
     };
 
     const handleEnterpriseClick = () => {
         setIsEnterpriseTransitioning(true);
         setTimeout(() => {
-            window.location.href = 'https://enterprise.davinciai.eu';
+            window.location.href = isIndia ? 'https://enterprise.davinciai.in' : 'https://enterprise.davinciai.eu';
         }, 5200); // 5s + buffer
     };
 
@@ -95,10 +98,10 @@ const MobileHero = () => {
                             title="PROJECT"
                             value={
                                 <div className="space-y-0.5">
-                                    <div>Location / Germany / Hannover</div>
-                                    <div>Project / Mooun</div>
+                                    <div>Location / {isIndia ? 'India / Hyderabad' : 'Germany / Hannover'}</div>
+                                    <div>Project / {isIndia ? 'Snowflake' : 'Mooun'}</div>
                                     <div>Category / Agentic</div>
-                                    <div>Date / 2025</div>
+                                    <div>Date / 2026</div>
                                 </div>
                             }
                         />

@@ -18,42 +18,13 @@ const MeetTaraSection = () => {
     const variants = ["./Visual Co-Pilot", "./Telephony", "./Webcalls", "./Chat-Assistant"];
     const [variantIndex, setVariantIndex] = useState(0);
 
-    // Auto-snap behavior
+    // Variants variant slideshow interval
     useEffect(() => {
-        const section = sectionRef.current;
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    // Trigger snap when 30% of the section is visible
-                    if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
-                        if (window.lenis) {
-                            window.lenis.scrollTo(section, {
-                                lerp: 0.05, // Extra subtle/slow snap
-                                duration: 1.5,
-                                lock: true, // Prevents user interrupt during the subtle snap
-                            });
-                        }
-                    }
-                });
-            },
-            {
-                threshold: [0.3], // Higher threshold for more "intentional" feel
-                rootMargin: '0px'
-            }
-        );
-
-        if (section) {
-            observer.observe(section);
-        }
-
         const interval = setInterval(() => {
             setVariantIndex((prev) => (prev + 1) % variants.length);
         }, 3000);
 
         return () => {
-            if (section) {
-                observer.unobserve(section);
-            }
             clearInterval(interval);
         };
     }, [variants.length]);
@@ -83,7 +54,7 @@ const MeetTaraSection = () => {
                     onMouseEnter={() => setIsLeftHovered(true)}
                     onMouseLeave={() => setIsLeftHovered(false)}
                     onMouseMove={handleMouseMove}
-                    className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-black border-b lg:border-b-0 lg:border-r border-white/10"
+                    className="relative w-full lg:w-1/2 min-h-[60vh] lg:min-h-screen overflow-hidden bg-black border-b lg:border-b-0 lg:border-r border-white/10 flex flex-col justify-center"
                 >
                     <div className="absolute inset-0">
                         <img
@@ -109,7 +80,7 @@ const MeetTaraSection = () => {
                             />
                         </motion.div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-4 relative z-0">
                             <motion.p
                                 className="text-white/30 font-mono text-[10px] uppercase tracking-[1em]"
                                 initial={{ opacity: 0, y: 10 }}
@@ -119,7 +90,7 @@ const MeetTaraSection = () => {
                                 PRESENTS
                             </motion.p>
                             <motion.div
-                                className="flex justify-center"
+                                className="flex justify-center mt-2"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.4 }}
@@ -127,7 +98,7 @@ const MeetTaraSection = () => {
                                 <img
                                     src="/TARA_X1.svg"
                                     alt="TARA_X1"
-                                    className="w-80 md:w-[500px] h-auto filter brightness-0 invert opacity-90"
+                                    className="w-[280px] md:w-[500px] h-auto filter brightness-0 invert opacity-90 drop-shadow-2xl"
                                 />
                             </motion.div>
                         </div>
@@ -160,7 +131,7 @@ const MeetTaraSection = () => {
                 </div>
 
                 {/* Right Panel: Centered Variant Slideshow */}
-                <div className="relative w-full lg:w-1/2 p-8 flex flex-col items-center justify-center bg-[#0d0d0d]">
+                <div className="relative w-full lg:w-1/2 p-8 lg:p-16 flex flex-col items-center justify-center bg-transparent lg:bg-[#0d0d0d] min-h-[40vh] lg:min-h-screen">
                     <div className="w-full text-center">
                         <div className="mb-4">
                             <span className="text-white/20 font-mono text-[10px] uppercase tracking-[0.5em]">
@@ -172,22 +143,22 @@ const MeetTaraSection = () => {
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={variants[variantIndex]}
-                                    initial={{ y: 40, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: -40, opacity: 0 }}
+                                    initial={{ y: 20, opacity: 0, scale: 0.95 }}
+                                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                                    exit={{ y: -20, opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                                    className="text-4xl md:text-6xl lg:text-7xl font-thin text-white tracking-tighter"
+                                    className="text-4xl md:text-5xl lg:text-7xl font-bold lg:font-thin text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-white/40 tracking-tighter drop-shadow-lg"
                                 >
                                     {variants[variantIndex]}
                                 </motion.div>
                             </AnimatePresence>
                         </div>
 
-                        <div className="mt-12 flex justify-center gap-2">
+                        <div className="mt-8 md:mt-12 flex justify-center gap-3">
                             {variants.map((_, i) => (
-                                <div
+                                <motion.div
                                     key={i}
-                                    className={`w-1 h-1 rounded-full transition-all duration-300 ${i === variantIndex ? "bg-white w-4" : "bg-white/10"}`}
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${i === variantIndex ? "bg-white w-8 shadow-[0_0_10px_rgba(255,255,255,0.8)]" : "bg-white/20 w-1.5"}`}
                                 />
                             ))}
                         </div>

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
  */
 const MobileAboutSection = () => {
     return (
-        <section id="about-section" className="py-20 px-6 relative overflow-hidden bg-[#0a0a0a]">
+        <section id="cta-section" className="py-20 px-6 pb-32 relative overflow-hidden bg-[#0a0a0a] min-h-[40vh] flex flex-col justify-center">
             <div className="relative z-10 max-w-lg mx-auto">
 
                 {/* About Us Header Bar */}

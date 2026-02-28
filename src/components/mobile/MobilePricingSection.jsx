@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, FileText, Brain } from 'lucide-react';
 import { RaycastAnimatedBackground } from '../ui/raycast-animated-background';
@@ -7,45 +7,49 @@ import { RaycastAnimatedBackground } from '../ui/raycast-animated-background';
  * MobilePricingSection - Carousel with side arrows and constant glowing gradient
  */
 
-const taraModels = [
+const getTaraModels = (isIndia) => [
     {
         id: '01',
         name: 'TARA_BASE',
         tagline: 'Essential AI Foundation',
-        price: '€xxx',
-        original: '€xxx',
+        price: isIndia ? '₹xxx' : '€xxx',
+        original: isIndia ? '₹xxx' : '€xxx',
         period: '/month',
         icon: MessageCircle,
         features: [
-            'Conversational AI (DE/EN)',
-            'GDPR Compliant Hosting',
+            isIndia ? 'Conversational AI (HI/TE/EN)' : 'Conversational AI (DE/EN)',
+            isIndia ? 'DPDP Compliant Hosting' : 'GDPR Compliant Hosting',
             'Standard Voice Recognition'
         ],
-        description: 'Perfect foundation for local businesses ensuring strict data privacy and seamless German/English interactions.',
+        description: isIndia
+            ? 'Perfect foundation for local businesses ensuring strict data privacy and seamless Hindi/Telugu/English interactions.'
+            : 'Perfect foundation for local businesses ensuring strict data privacy and seamless German/English interactions.',
         glowColor: 'rgba(239, 68, 68, 0.5)' // Red glow
     },
     {
         id: '02',
         name: 'TARA PRO',
         tagline: 'Advanced Intelligence + Form Automation',
-        price: '€xxx',
-        original: '€xxx',
+        price: isIndia ? '₹xxx' : '€xxx',
+        original: isIndia ? '₹xxx' : '€xxx',
         period: '/month',
         icon: FileText,
         features: [
             'All Base Features',
-            'Multi-EU Languages (FR/ES/IT)',
+            isIndia ? 'Multi-Indic Languages (HI/TE/TA)' : 'Multi-EU Languages (FR/ES/IT)',
             'Advanced NLP & Automation'
         ],
-        description: 'Sophisticated AI capabilities with intelligent form automation - handling registrations and complex data collection compliant with EU standards.',
+        description: isIndia
+            ? 'Sophisticated AI capabilities with intelligent form automation - handling registrations and complex data collection compliant with Indian standards.'
+            : 'Sophisticated AI capabilities with intelligent form automation - handling registrations and complex data collection compliant with EU standards.',
         glowColor: 'rgba(59, 130, 246, 0.5)' // Blue glow
     },
     {
         id: '03',
         name: 'TARA ENTERPRISE',
         tagline: 'Unlimited Potential + Persistent Memory',
-        price: '€xxx',
-        original: '€XXXX',
+        price: isIndia ? '₹xxx' : '€xxx',
+        original: isIndia ? '₹XXXX' : '€XXXX',
         period: '/month',
         icon: Brain,
         features: [
@@ -160,14 +164,21 @@ const PricingCard = ({ model }) => {
 };
 
 const MobilePricingSection = () => {
+    const [isIndia, setIsIndia] = useState(false);
+
+    useEffect(() => {
+        setIsIndia(window.location.hostname.includes('davinciai.in'));
+    }, []);
+
     const [currentIndex, setCurrentIndex] = useState(0);
+    const models = getTaraModels(isIndia);
 
     const handlePrev = () => {
-        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : taraModels.length - 1));
+        setCurrentIndex((prev) => (prev > 0 ? prev - 1 : models.length - 1));
     };
 
     const handleNext = () => {
-        setCurrentIndex((prev) => (prev < taraModels.length - 1 ? prev + 1 : 0));
+        setCurrentIndex((prev) => (prev < models.length - 1 ? prev + 1 : 0));
     };
 
     return (
@@ -236,7 +247,7 @@ const MobilePricingSection = () => {
                                 transition={{ duration: 0.4, ease: "circOut" }}
                                 className="absolute"
                             >
-                                <PricingCard model={taraModels[currentIndex]} />
+                                <PricingCard model={models[currentIndex]} />
                             </motion.div>
                         </AnimatePresence>
                     </div>
@@ -253,7 +264,7 @@ const MobilePricingSection = () => {
 
                 {/* Dots Indicator */}
                 <div className="flex items-center justify-center gap-2 mt-2">
-                    {taraModels.map((_, idx) => (
+                    {models.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}

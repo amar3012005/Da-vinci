@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+
 const ComparisonSection = () => {
+    const [isIndia, setIsIndia] = useState(false);
+
+    useEffect(() => {
+        setIsIndia(window.location.hostname.includes('davinciai.in'));
+    }, []);
+
     const marketDynamics = [
         {
             title: "Enterprise AI Adoption",
@@ -16,7 +23,9 @@ const ComparisonSection = () => {
         },
         {
             title: "Return on Investment",
-            content: "Mature AI deployments see $3.50 value for every $1 invested. 74% of mature AI users report solid ROI (but new adopters lag).",
+            content: isIndia
+                ? "Mature AI deployments see ₹350 value for every ₹100 invested. 74% of mature AI users report solid ROI (but new adopters lag)."
+                : "Mature AI deployments see €3.50 value for every €1 invested. 74% of mature AI users report solid ROI (but new adopters lag).",
             stat: "3.5x",
             label: "VALUE RETURN"
         }
