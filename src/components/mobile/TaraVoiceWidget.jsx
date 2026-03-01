@@ -103,6 +103,7 @@ const getWsBaseUrl = () => {
 const CALL_LIMIT = 300; // 5 minutes strict
 
 const STATE_LABELS = { idle: 'Click orb to start', listening: 'Listening...', talking: 'TARA speaking', thinking: 'Connecting...' };
+const WIDGET_ACCESS_KEY = '696969';
 
 const TaraVoiceWidget = () => {
     const [isCallActive, setIsCallActive] = useState(false);
@@ -113,6 +114,10 @@ const TaraVoiceWidget = () => {
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
+    const [showAccessPrompt, setShowAccessPrompt] = useState(false);
+    const [accessKeyInput, setAccessKeyInput] = useState('');
+    const [accessError, setAccessError] = useState('');
+    const [isAccessGranted, setIsAccessGranted] = useState(false);
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -203,6 +208,31 @@ const TaraVoiceWidget = () => {
         } catch (err) { console.error("Mic failed:", err); alert("Please enable microphone access"); }
     };
 
+    const handleOrbClick = () => {
+        if (isCallActive) {
+            startCall();
+            return;
+        }
+        if (!isAccessGranted) {
+            setShowAccessPrompt(true);
+            setAccessError('');
+            return;
+        }
+        startCall();
+    };
+
+    const submitAccessKey = () => {
+        if (accessKeyInput.trim() !== WIDGET_ACCESS_KEY) {
+            setAccessError('Invalid access key');
+            return;
+        }
+        setIsAccessGranted(true);
+        setShowAccessPrompt(false);
+        setAccessError('');
+        setAccessKeyInput('');
+        startCall();
+    };
+
     const startVoiceCall = (stream) => {
         setConnectionStatus('connecting'); setCallDuration(0);
         const base = getWsBaseUrl();
@@ -264,6 +294,109 @@ const TaraVoiceWidget = () => {
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0px' }}>
+            <AnimatePresence>
+                {showAccessPrompt && !isCallActive && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAccessPrompt(false)}
+                            style={{
+                                position: 'fixed',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.65)',
+                                zIndex: 9998
+                            }}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                            transition={{ duration: 0.2 }}
+                            style={{
+                                position: 'fixed',
+                                left: '16px',
+                                right: '16px',
+                                bottom: '96px',
+                                borderRadius: '14px',
+                                background: 'rgba(14,14,18,0.96)',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                boxShadow: '0 18px 40px rgba(0,0,0,0.5)',
+                                padding: '14px',
+                                zIndex: 9999
+                            }}
+                        >
+                            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                                Enter Access Key
+                            </div>
+                            <input
+                                type="password"
+                                value={accessKeyInput}
+                                onChange={(e) => {
+                                    setAccessKeyInput(e.target.value);
+                                    if (accessError) setAccessError('');
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') submitAccessKey();
+                                }}
+                                placeholder="Access key"
+                                autoFocus
+                                style={{
+                                    width: '100%',
+                                    height: '40px',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    color: '#fff',
+                                    outline: 'none',
+                                    padding: '0 12px',
+                                    fontSize: '13px'
+                                }}
+                            />
+                            {accessError && (
+                                <div style={{ color: '#f87171', fontSize: '11px', marginTop: '6px' }}>
+                                    {accessError}
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                                <button
+                                    onClick={() => setShowAccessPrompt(false)}
+                                    style={{
+                                        height: '34px',
+                                        padding: '0 12px',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(255,255,255,0.18)',
+                                        background: 'transparent',
+                                        color: 'rgba(255,255,255,0.8)',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitAccessKey}
+                                    style={{
+                                        height: '34px',
+                                        padding: '0 12px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: '#CADCFC',
+                                        color: '#0b1220',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Start
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* Sliding Glass Bar — appears when call is active */}
             <AnimatePresence>
@@ -358,7 +491,7 @@ const TaraVoiceWidget = () => {
 
             {/* Orb Button — always visible, click to start/end call */}
             <motion.button
-                onClick={startCall}
+                onClick={handleOrbClick}
                 style={{
                     width: '56px', height: '56px',
                     borderRadius: '50%',
