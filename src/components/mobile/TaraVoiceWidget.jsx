@@ -114,10 +114,11 @@ const TaraVoiceWidget = () => {
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
     const [isMuted, setIsMuted] = useState(false);
-    const [showAccessPrompt, setShowAccessPrompt] = useState(false);
+    const [showCallSetup, setShowCallSetup] = useState(false);
     const [accessKeyInput, setAccessKeyInput] = useState('');
     const [accessError, setAccessError] = useState('');
     const [isAccessGranted, setIsAccessGranted] = useState(false);
+    const [selectedCallMode, setSelectedCallMode] = useState('speaker');
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -128,6 +129,7 @@ const TaraVoiceWidget = () => {
     const playbackStartTimeRef = useRef(null);
     const audioStreamCompleteRef = useRef(false);
     const audioConfigRef = useRef({ format: 'pcm_f32le', sampleRate: 44100 });
+    const outputGainRef = useRef(null);
     const callTimerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
@@ -182,10 +184,16 @@ const TaraVoiceWidget = () => {
         if (audioCtxRef.current) {
             const buf = audioCtxRef.current.createBuffer(1, f32.length, sr); buf.copyToChannel(f32, 0);
             const s = audioCtxRef.current.createBufferSource(); s.buffer = buf; s.connect(audioCtxRef.current.destination);
+            const outGain = outputGainRef.current || audioCtxRef.current.createGain();
+            outGain.gain.value = selectedCallMode === 'telephony' ? 0.35 : 1.0;
+            outputGainRef.current = outGain;
+            s.disconnect();
+            s.connect(outGain);
+            outGain.connect(audioCtxRef.current.destination);
             const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
             s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
-    }, [checkPlaybackComplete]);
+    }, [checkPlaybackComplete, selectedCallMode]);
 
     const endCall = useCallback(() => {
         if (wsRef.current) {
@@ -194,6 +202,7 @@ const TaraVoiceWidget = () => {
         }
         binaryQueueRef.current = [];
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
+        outputGainRef.current = null;
         if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
         setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
@@ -214,7 +223,7 @@ const TaraVoiceWidget = () => {
             return;
         }
         if (!isAccessGranted) {
-            setShowAccessPrompt(true);
+            setShowCallSetup(true);
             setAccessError('');
             return;
         }
@@ -227,7 +236,7 @@ const TaraVoiceWidget = () => {
             return;
         }
         setIsAccessGranted(true);
-        setShowAccessPrompt(false);
+        setShowCallSetup(false);
         setAccessError('');
         setAccessKeyInput('');
         startCall();
@@ -295,18 +304,18 @@ const TaraVoiceWidget = () => {
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0px' }}>
             <AnimatePresence>
-                {showAccessPrompt && !isCallActive && (
+                {showCallSetup && !isCallActive && (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setShowAccessPrompt(false)}
+                            onClick={() => setShowCallSetup(false)}
                             style={{
                                 position: 'fixed',
                                 inset: 0,
-                                background: 'rgba(0,0,0,0.65)',
-                                zIndex: 9998
+                                background: '#000',
+                                zIndex: 20000
                             }}
                         />
                         <motion.div
@@ -316,81 +325,138 @@ const TaraVoiceWidget = () => {
                             transition={{ duration: 0.2 }}
                             style={{
                                 position: 'fixed',
-                                left: '16px',
-                                right: '16px',
-                                bottom: '96px',
-                                borderRadius: '14px',
-                                background: 'rgba(14,14,18,0.96)',
-                                border: '1px solid rgba(255,255,255,0.15)',
-                                boxShadow: '0 18px 40px rgba(0,0,0,0.5)',
-                                padding: '14px',
-                                zIndex: 9999
+                                inset: 0,
+                                background: '#000',
+                                zIndex: 20001,
+                                padding: '20px 16px calc(24px + env(safe-area-inset-bottom))',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center'
                             }}
                         >
-                            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
-                                Enter Access Key
-                            </div>
-                            <input
-                                type="password"
-                                value={accessKeyInput}
-                                onChange={(e) => {
-                                    setAccessKeyInput(e.target.value);
-                                    if (accessError) setAccessError('');
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') submitAccessKey();
-                                }}
-                                placeholder="Access key"
-                                autoFocus
+                            <button
+                                onClick={() => setShowCallSetup(false)}
                                 style={{
-                                    width: '100%',
-                                    height: '40px',
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    width: '38px',
+                                    height: '38px',
                                     borderRadius: '10px',
                                     border: '1px solid rgba(255,255,255,0.2)',
-                                    background: 'rgba(255,255,255,0.06)',
+                                    background: 'transparent',
                                     color: '#fff',
-                                    outline: 'none',
-                                    padding: '0 12px',
-                                    fontSize: '13px'
+                                    fontSize: '20px',
+                                    cursor: 'pointer'
                                 }}
-                            />
+                            >
+                                ×
+                            </button>
+
+                            <div style={{ width: '100%', maxWidth: '420px' }}>
+                                <div style={{ color: '#fff', fontSize: '20px', fontWeight: 700, letterSpacing: '0.03em', marginBottom: '14px' }}>
+                                    Select Call Mode
+                                </div>
+
+                                <button
+                                    onClick={() => setSelectedCallMode('telephony')}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '60px',
+                                        padding: '10px 14px',
+                                        borderRadius: '12px',
+                                        border: selectedCallMode === 'telephony' ? '1px solid #CADCFC' : '1px solid rgba(255,255,255,0.18)',
+                                        background: selectedCallMode === 'telephony' ? 'rgba(202,220,252,0.1)' : 'rgba(255,255,255,0.03)',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        marginBottom: '10px'
+                                    }}
+                                >
+                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>1. Telephomy Mode</div>
+                                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
+                                        Keep your mobile near your ear
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setSelectedCallMode('speaker')}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: '60px',
+                                        padding: '10px 14px',
+                                        borderRadius: '12px',
+                                        border: selectedCallMode === 'speaker' ? '1px solid #CADCFC' : '1px solid rgba(255,255,255,0.18)',
+                                        background: selectedCallMode === 'speaker' ? 'rgba(202,220,252,0.1)' : 'rgba(255,255,255,0.03)',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        marginBottom: '14px'
+                                    }}
+                                >
+                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>2. Speaker Mode</div>
+                                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
+                                        Voice comes out loud
+                                    </div>
+                                </button>
+
+                                <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                                    Enter Access Key
+                                </div>
+                            </div>
+
+                            <div style={{ width: '100%', maxWidth: '420px' }}>
+                                <input
+                                    type="password"
+                                    value={accessKeyInput}
+                                    onChange={(e) => {
+                                        setAccessKeyInput(e.target.value);
+                                        if (accessError) setAccessError('');
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') submitAccessKey();
+                                    }}
+                                    placeholder="Access key"
+                                    autoFocus
+                                    style={{
+                                        width: '100%',
+                                        height: '44px',
+                                        borderRadius: '10px',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: '#fff',
+                                        outline: 'none',
+                                        padding: '0 12px',
+                                        fontSize: '13px'
+                                    }}
+                                />
+                            </div>
+
                             {accessError && (
-                                <div style={{ color: '#f87171', fontSize: '11px', marginTop: '6px' }}>
+                                <div style={{ width: '100%', maxWidth: '420px', color: '#f87171', fontSize: '11px', marginTop: '6px' }}>
                                     {accessError}
                                 </div>
                             )}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
-                                <button
-                                    onClick={() => setShowAccessPrompt(false)}
-                                    style={{
-                                        height: '34px',
-                                        padding: '0 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid rgba(255,255,255,0.18)',
-                                        background: 'transparent',
-                                        color: 'rgba(255,255,255,0.8)',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
+
+                            <div style={{ width: '100%', maxWidth: '420px', marginTop: '12px' }}>
                                 <button
                                     onClick={submitAccessKey}
                                     style={{
-                                        height: '34px',
-                                        padding: '0 12px',
-                                        borderRadius: '8px',
+                                        width: '100%',
+                                        height: '44px',
+                                        borderRadius: '10px',
                                         border: 'none',
-                                        background: '#CADCFC',
-                                        color: '#0b1220',
-                                        fontSize: '12px',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
+                                        background: '#e5e7eb',
+                                        color: '#000',
+                                        fontSize: '13px',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.03em',
+                                        cursor: 'pointer',
+                                        textTransform: 'uppercase'
                                     }}
                                 >
-                                    Start
+                                    Start Call
                                 </button>
                             </div>
                         </motion.div>
@@ -491,7 +557,7 @@ const TaraVoiceWidget = () => {
 
             {/* Talk to Tara prompt — appears when idle */}
             <AnimatePresence>
-                {!isCallActive && !showAccessPrompt && (
+                {!isCallActive && !showCallSetup && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, x: 10 }}
                         animate={{ opacity: 1, scale: 1, x: 0 }}
