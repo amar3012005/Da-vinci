@@ -407,8 +407,8 @@ const TaraVoiceWidget = () => {
                         exit={{ width: 0, opacity: 0 }}
                         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                         style={{
-                            height: '56px',
-                            borderRadius: '28px 0 0 28px',
+                            height: '48px',
+                            borderRadius: '24px 0 0 24px',
                             background: 'rgba(18, 18, 22, 0.72)',
                             backdropFilter: 'blur(30px)',
                             WebkitBackdropFilter: 'blur(30px)',
@@ -489,11 +489,43 @@ const TaraVoiceWidget = () => {
                 )}
             </AnimatePresence>
 
+            {/* Talk to Tara prompt — appears when idle */}
+            <AnimatePresence>
+                {!isCallActive && !showAccessPrompt && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                        transition={{ delay: 0.5, duration: 0.3 }}
+                        style={{
+                            marginRight: '12px',
+                            background: 'rgba(18, 18, 22, 0.72)',
+                            backdropFilter: 'blur(30px)',
+                            WebkitBackdropFilter: 'blur(30px)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            padding: '8px 14px',
+                            borderRadius: '16px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <div style={{
+                            fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.9)',
+                            letterSpacing: '0.02em', whiteSpace: 'nowrap',
+                            display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                            Talk to TARA
+                            <span style={{ fontSize: '12px' }}>✨</span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Orb Button — always visible, click to start/end call */}
             <motion.button
                 onClick={handleOrbClick}
                 style={{
-                    width: '56px', height: '56px',
+                    width: '48px', height: '48px',
                     borderRadius: '50%',
                     background: 'rgba(10, 10, 14, 0.85)',
                     backdropFilter: 'blur(20px)',
