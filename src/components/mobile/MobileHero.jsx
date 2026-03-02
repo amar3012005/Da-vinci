@@ -65,14 +65,14 @@ const MobileHero = () => {
     const handlePrometheusClick = () => {
         setIsPrometheusTransitioning(true);
         setTimeout(() => {
-            window.location.href = isIndia ? 'https://prometheus.davinciai.in/' : 'https://prometheus.davinciai.eu/';
+            window.location.href = isIndia ? 'https://prometheus.davinciai.eu/' : 'https://prometheus.davinciai.eu/';
         }, 5200); // Increased to 5s + buffer
     };
 
     const handleEnterpriseClick = () => {
         setIsEnterpriseTransitioning(true);
         setTimeout(() => {
-            window.location.href = isIndia ? 'https://enterprise.davinciai.in' : 'https://enterprise.davinciai.eu';
+            window.location.href = isIndia ? 'https://enterprise.davinciai.eu' : 'https://enterprise.davinciai.eu';
         }, 5200); // 5s + buffer
     };
 
