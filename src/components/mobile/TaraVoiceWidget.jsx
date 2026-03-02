@@ -103,7 +103,7 @@ const getWsBaseUrl = () => {
 const CALL_LIMIT = 300; // 5 minutes strict
 
 const STATE_LABELS = { idle: 'Click orb to start', listening: 'Listening...', talking: 'TARA speaking', thinking: 'Connecting...' };
-const WIDGET_ACCESS_KEY = '696969';
+const WIDGET_ACCESS_KEY = '000000';
 
 const TaraVoiceWidget = () => {
     const [isCallActive, setIsCallActive] = useState(false);
@@ -130,6 +130,8 @@ const TaraVoiceWidget = () => {
     const audioStreamCompleteRef = useRef(false);
     const audioConfigRef = useRef({ format: 'pcm_f32le', sampleRate: 44100 });
     const outputGainRef = useRef(null);
+    const telephonyHighpassRef = useRef(null);
+    const telephonyLowpassRef = useRef(null);
     const callTimerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
@@ -171,6 +173,32 @@ const TaraVoiceWidget = () => {
         }
     }, []);
 
+    const ensureOutputChain = useCallback(() => {
+        if (!audioCtxRef.current) return null;
+        const ctx = audioCtxRef.current;
+
+        if (!outputGainRef.current) {
+            outputGainRef.current = ctx.createGain();
+        }
+        if (!telephonyHighpassRef.current) {
+            telephonyHighpassRef.current = ctx.createBiquadFilter();
+            telephonyHighpassRef.current.type = 'highpass';
+            telephonyHighpassRef.current.frequency.value = 250;
+            telephonyHighpassRef.current.Q.value = 0.7;
+        }
+        if (!telephonyLowpassRef.current) {
+            telephonyLowpassRef.current = ctx.createBiquadFilter();
+            telephonyLowpassRef.current.type = 'lowpass';
+            telephonyLowpassRef.current.frequency.value = 3400;
+            telephonyLowpassRef.current.Q.value = 0.9;
+        }
+        return {
+            gain: outputGainRef.current,
+            highpass: telephonyHighpassRef.current,
+            lowpass: telephonyLowpassRef.current
+        };
+    }, []);
+
     const playAudioChunk = useCallback((data, forceInt16 = false) => {
         let f32; const fmt = audioConfigRef.current.format; const sr = audioConfigRef.current.sampleRate;
         if (data instanceof ArrayBuffer) {
@@ -183,17 +211,32 @@ const TaraVoiceWidget = () => {
         }
         if (audioCtxRef.current) {
             const buf = audioCtxRef.current.createBuffer(1, f32.length, sr); buf.copyToChannel(f32, 0);
-            const s = audioCtxRef.current.createBufferSource(); s.buffer = buf; s.connect(audioCtxRef.current.destination);
-            const outGain = outputGainRef.current || audioCtxRef.current.createGain();
-            outGain.gain.value = selectedCallMode === 'telephony' ? 0.35 : 1.0;
-            outputGainRef.current = outGain;
-            s.disconnect();
-            s.connect(outGain);
-            outGain.connect(audioCtxRef.current.destination);
+            const s = audioCtxRef.current.createBufferSource(); s.buffer = buf;
+            const chain = ensureOutputChain();
+            if (!chain) return;
+
+            chain.gain.gain.value = selectedCallMode === 'telephony' ? 0.2 : 1.0;
+
+            // Rebuild output route for current mode
+            try { chain.gain.disconnect(); } catch (_) { }
+            try { chain.highpass.disconnect(); } catch (_) { }
+            try { chain.lowpass.disconnect(); } catch (_) { }
+            try { s.disconnect(); } catch (_) { }
+
+            if (selectedCallMode === 'telephony') {
+                s.connect(chain.highpass);
+                chain.highpass.connect(chain.lowpass);
+                chain.lowpass.connect(chain.gain);
+                chain.gain.connect(audioCtxRef.current.destination);
+            } else {
+                s.connect(chain.gain);
+                chain.gain.connect(audioCtxRef.current.destination);
+            }
+
             const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
             s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
-    }, [checkPlaybackComplete, selectedCallMode]);
+    }, [checkPlaybackComplete, ensureOutputChain, selectedCallMode]);
 
     const endCall = useCallback(() => {
         if (wsRef.current) {
@@ -203,6 +246,8 @@ const TaraVoiceWidget = () => {
         binaryQueueRef.current = [];
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
         outputGainRef.current = null;
+        telephonyHighpassRef.current = null;
+        telephonyLowpassRef.current = null;
         if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
         setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
