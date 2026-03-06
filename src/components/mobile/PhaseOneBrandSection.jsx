@@ -33,11 +33,11 @@ const PhaseOneBrandSection = () => {
             <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
                 <div className="relative w-full h-full">
                     {/* BRAND - Top Left (sticks out from top-left of card to the screen edge) */}
-                    <h1 className="absolute text-[35vw] sm:text-[22vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none top-[16%] sm:top-[12%] left-[-8%] sm:left-[-4%] mix-blend-normal opacity-95">
+                    <h1 className="absolute text-[26vw] sm:text-[15vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none top-[6%] sm:top-[4%] left-[-4%] sm:left-[-2%] mix-blend-normal opacity-95">
                         BRAND
                     </h1>
                     {/* VOICE - Bottom Right (sticks out from bottom-right of card to the screen edge) */}
-                    <h1 className="absolute text-[35vw] sm:text-[22vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none bottom-[16%] sm:bottom-[12%] right-[-8%] sm:right-[-4%] mix-blend-normal opacity-95 text-right">
+                    <h1 className="absolute text-[26vw] sm:text-[15vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none bottom-[6%] sm:bottom-[4%] right-[-4%] sm:right-[-2%] mix-blend-normal opacity-95 text-right">
                         VOICE
                     </h1>
                 </div>
