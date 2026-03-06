@@ -96,8 +96,8 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 const getWsBaseUrl = () => {
     const h = window.location.hostname;
     if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8004/';
-    if (h.endsWith('davinciai.in')) return 'https://demo.davinciai.eu:8010/';
-    return 'https://demo.davinciai.eu:8011/';
+    if (h.endsWith('davinciai.in')) return 'wss://demo.davinciai.eu:8010/ws';
+    return 'wss://demo.davinciai.eu:8030/ws';
 };
 
 const CALL_LIMIT = 300; // 5 minutes strict
@@ -291,30 +291,31 @@ const TaraVoiceWidget = () => {
         setConnectionStatus('connecting'); setCallDuration(0);
         const base = getWsBaseUrl();
         const nws = String(base).replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
-        const wsBase = nws.endsWith('/') ? `${nws}ws` : `${nws}/ws`;
-        const uid = 'widget-' + Date.now();
-        const ws = new WebSocket(`${wsBase}?user_id=${encodeURIComponent(uid)}`);
+        const wsBase = nws.endsWith('/') ? `${nws}ws` : (nws.endsWith('ws') ? nws : `${nws}/ws`);
+        const uid = 'user_' + Date.now();
+
+        const h = window.location.hostname;
+        const isIndia = h.endsWith('davinciai.in');
+        const tenantId = isIndia ? 'TASK' : 'davinci';
+
+        const ws = new WebSocket(`${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&user_id=${encodeURIComponent(uid)}`);
         ws.binaryType = "arraybuffer"; wsRef.current = ws;
 
         ws.onopen = () => {
             wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
 
-            // Dynamic config based on domain
-            const h = window.location.hostname;
-            const isIndia = h.endsWith('davinciai.in');
-
             const sessionConfig = {
                 type: 'session_config',
                 config: {
                     mode: 'voice',
-                    tenant_id: isIndia ? 'TASK' : 'davinci',
+                    tenant_id: tenantId,
                     agent_name: 'Tara',
                     agent_id: 'tara',
                     session_type: 'webcall',
                     user_id: uid,
                     stt_mode: 'audio',
                     tts_mode: 'audio',
-                    language: isIndia ? 'te' : 'de'
+                    language: isIndia ? 'te' : 'en'
                 }
             };
 
