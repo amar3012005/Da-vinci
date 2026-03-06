@@ -315,7 +315,7 @@ const TaraVoiceWidget = () => {
                     user_id: uid,
                     stt_mode: 'audio',
                     tts_mode: 'audio',
-                    language: isIndia ? 'te' : 'en'
+                    language: isIndia ? 'te' : 'de'
                 }
             };
 
