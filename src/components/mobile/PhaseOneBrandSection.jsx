@@ -3,233 +3,147 @@ import { motion } from 'framer-motion';
 
 /**
  * PhaseOneBrandSection
- * Transformed into technical grid system design - night mode greyscale theme
- * Inspired by logo design grid construction aesthetics
+ * Redesigned with solid bold background text overlay
+ * Exact matching of Card.jpeg aesthetic with crisp scalable TΛRΛ SVG
  */
 const PhaseOneBrandSection = () => {
-    const moments = [
-        {
-            title: 'On your website',
-            label: 'Visual Co-Pilot',
-            copy: 'TARA engages visitors before they bounce and guides them to the exact next step.',
-            angle: '68.2°',
-            ratio: '4x'
-        },
-        {
-            title: 'On the phone',
-            label: 'Telephony',
-            copy: 'TARA qualifies inbound calls in your brand voice and routes high-intent leads fast.',
-            angle: '25.7°',
-            ratio: '3x'
-        },
-        {
-            title: 'Face to face',
-            label: 'Webcalls',
-            copy: 'TARA joins live conversations, answers in real time, and keeps every detail in context.',
-            angle: '111.8°',
-            ratio: '2x'
-        }
-    ];
-
     return (
-        <section id="phase-one-brand-section" className="relative py-24 px-6 bg-[#050505] overflow-hidden">
-            {/* Technical grid background */}
-            <div className="absolute inset-0 pointer-events-none">
-                {/* Fine grid lines */}
-                <div className="absolute inset-0 opacity-[0.08]"
-                    style={{
-                        backgroundImage: `
-                            linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px)
-                        `,
-                        backgroundSize: '24px 24px'
-                    }}
-                />
-                
-                {/* Diagonal construction lines */}
-                <svg className="absolute inset-0 w-full h-full opacity-[0.12]" viewBox="0 0 400 800" preserveAspectRatio="none">
-                    <defs>
-                        <pattern id="diagonalLines" patternUnits="userSpaceOnUse" width="400" height="800">
-                            <line x1="0" y1="0" x2="400" y2="800" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
-                            <line x1="400" y1="0" x2="0" y2="800" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
-                            <line x1="200" y1="0" x2="400" y2="400" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                            <line x1="0" y1="0" x2="200" y2="800" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#diagonalLines)" />
-                </svg>
+        <section id="phase-one-brand-section" className="relative py-28 sm:py-40 px-4 sm:px-6 overflow-hidden bg-[#050505]">
+            {/* Background Base */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a]" />
 
-                {/* Horizontal measurement lines */}
-                <div className="absolute top-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                <div className="absolute top-1/3 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                <div className="absolute top-2/3 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+            {/* Subtle diagonal streaks */}
+            <div className="absolute inset-0 opacity-[0.08]"
+                style={{
+                    backgroundImage: `repeating-linear-gradient(
+                        60deg,
+                        rgba(255,255,255,0.03) 0px,
+                        rgba(255,255,255,0.03) 1px,
+                        transparent 1px,
+                        transparent 8px
+                    )`
+                }}
+            />
+
+            {/* Dynamic Orbs */}
+            <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-white/[0.02] rounded-full blur-[100px]" />
+            <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#a8c7fa]/[0.02] rounded-full blur-[100px]" />
+
+            {/* Background solid text -> BRAND VOICE */}
+            <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none z-0">
+                <h1 className="text-[32vw] sm:text-[22vw] font-black text-[#15161A] tracking-tighter leading-none whitespace-nowrap select-none">
+                    BRAND VOICE
+                </h1>
             </div>
 
-            {/* Hatched measurement blocks - corners */}
-            <div className="absolute top-8 left-8 w-12 h-3 opacity-40 pointer-events-none"
-                style={{
-                    backgroundImage: 'repeating-linear-gradient(-45deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 2px, transparent 2px, transparent 4px)',
-                    backgroundSize: '8px 8px'
-                }}
-            />
-            <div className="absolute top-8 right-8 w-8 h-8 opacity-40 pointer-events-none"
-                style={{
-                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 2px, transparent 2px, transparent 4px)',
-                    backgroundSize: '8px 8px'
-                }}
-            />
-            <div className="absolute bottom-8 left-8 w-10 h-4 opacity-40 pointer-events-none"
-                style={{
-                    backgroundImage: 'repeating-linear-gradient(-45deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 2px, transparent 2px, transparent 4px)',
-                    backgroundSize: '8px 8px'
-                }}
-            />
-            <div className="absolute bottom-8 right-8 w-6 h-6 opacity-40 pointer-events-none"
-                style={{
-                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 2px, transparent 2px, transparent 4px)',
-                    backgroundSize: '8px 8px'
-                }}
-            />
-
-            {/* Measurement annotations */}
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 text-[8px] font-mono text-white/30 tracking-widest">4x</div>
-            <div className="absolute top-20 left-4 text-[8px] font-mono text-white/30 tracking-widest">3x</div>
-            <div className="absolute top-32 left-2 text-[7px] font-mono text-white/25 tracking-widest">x</div>
-            <div className="absolute bottom-32 right-4 text-[8px] font-mono text-white/30 tracking-widest">x</div>
-
-            {/* Arc indicators */}
-            <svg className="absolute top-40 right-12 w-16 h-16 opacity-30 pointer-events-none" viewBox="0 0 64 64">
-                <path d="M 32 32 L 48 16 A 22 22 0 0 1 56 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
-                <text x="42" y="28" fontSize="6" fill="rgba(255,255,255,0.4)" fontFamily="monospace">68.2°</text>
-            </svg>
-            <svg className="absolute bottom-48 right-8 w-20 h-20 opacity-30 pointer-events-none" viewBox="0 0 80 80">
-                <path d="M 40 40 L 60 60 A 28 28 0 0 1 68 52" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
-                <text x="52" y="58" fontSize="6" fill="rgba(255,255,255,0.4)" fontFamily="monospace">25.7°</text>
-            </svg>
-
-            {/* Center content */}
-            <div className="relative z-10 max-w-md mx-auto">
-                {/* Header with technical framing */}
+            {/* Centered TARA Card */}
+            <div className="relative z-10 flex items-center justify-center min-h-[500px] sm:min-h-[600px] mt-10">
                 <motion.div
-                    className="mb-12"
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
+                    className="w-full max-w-[380px] sm:max-w-[420px]"
+                    initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                    whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 >
-                    {/* Top frame line */}
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/20" />
-                        <p className="text-[8px] text-white/30 uppercase tracking-[0.5em] font-mono">Phase 1 / Brand Reframe</p>
-                        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/20" />
-                    </div>
+                    {/* Card Container */}
+                    <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] group hover:border-white/15 transition-colors duration-500">
 
-                    {/* Main heading with grid overlay effect */}
-                    <div className="relative">
-                        <h2 className="text-3xl font-extralight text-white/90 leading-tight text-center">
-                            Most websites wait.
-                            <br />
-                            <span className="font-medium text-white">TARA doesn&apos;t.</span>
-                        </h2>
-                        {/* Subtle grid overlay on heading */}
-                        <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
-                            style={{
-                                backgroundImage: 'linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)',
-                                backgroundSize: '16px 16px'
-                            }}
-                        />
-                    </div>
+                        {/* 1. Image / Logo Area */}
+                        <div className="relative h-64 sm:h-72 overflow-hidden bg-gradient-to-b from-[#161618] to-[#0a0a0a]">
+                            {/* Inner Carbon Pattern */}
+                            <div className="absolute inset-0 opacity-40 mix-blend-overlay"
+                                style={{
+                                    backgroundImage: `repeating-linear-gradient(
+                                        45deg,
+                                        rgba(255,255,255,0.04) 0px,
+                                        rgba(255,255,255,0.04) 1px,
+                                        transparent 1px,
+                                        transparent 5px
+                                    )`
+                                }}
+                            />
 
-                    <p className="mt-5 text-[11px] text-white/50 leading-relaxed text-center font-light tracking-wide">
-                        TARA is your brand&apos;s first employee across web, calls, and video.
-                        <br />
-                        <span className="text-white/60">She starts the first conversation before your best lead leaves.</span>
-                    </p>
-                </motion.div>
+                            {/* Center Glow */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-48 h-48 bg-white/[0.03] rounded-full blur-2xl" />
+                            </div>
 
-                {/* The Enemy - Technical box */}
-                <motion.div
-                    className="relative mb-10 p-6 border border-white/15 bg-white/[0.01]"
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.05 }}
-                >
-                    {/* Corner brackets */}
-                    <div className="absolute top-0 left-0 w-3 h-3 border-l border-t border-white/30" />
-                    <div className="absolute top-0 right-0 w-3 h-3 border-r border-t border-white/30" />
-                    <div className="absolute bottom-0 left-0 w-3 h-3 border-l border-b border-white/30" />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 border-r border-b border-white/30" />
+                            {/* Corner Accents */}
+                            <div className="absolute top-5 left-5 w-4 h-4 border-l-[1.5px] border-t-[1.5px] border-white/20" />
+                            <div className="absolute top-5 right-5 w-4 h-4 border-r-[1.5px] border-t-[1.5px] border-white/20" />
+                            <div className="absolute bottom-5 left-5 w-4 h-4 border-l-[1.5px] border-b-[1.5px] border-white/20" />
+                            <div className="absolute bottom-5 right-5 w-4 h-4 border-r-[1.5px] border-b-[1.5px] border-white/20" />
 
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-px bg-white/30" />
-                        <p className="text-[9px] uppercase tracking-[0.4em] text-white/35 font-mono">The enemy</p>
-                        <div className="w-8 h-px bg-white/30" />
-                    </div>
-                    <p className="text-[11px] text-white/70 leading-relaxed font-light">
-                        The passive website. The bot that waits to be asked. The lead that leaves unseen.
-                    </p>
-                </motion.div>
+                            {/* Tagline */}
+                            <div className="absolute top-6 left-6">
+                                <p className="text-[11px] sm:text-[12px] text-white/50 font-light tracking-wide">
+                                    Your digital presence, amplified.
+                                </p>
+                            </div>
 
-                {/* Three moments with technical card design */}
-                <div className="space-y-5">
-                    {moments.map((item, idx) => (
-                        <motion.div
-                            key={item.label}
-                            className="relative group"
-                            initial={{ opacity: 0, x: -20 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: idx * 0.1 }}
-                        >
-                            {/* Card container with technical styling */}
-                            <div className="relative p-5 border border-white/12 bg-gradient-to-r from-white/[0.02] to-transparent overflow-hidden">
-                                {/* Left accent bar with hatched pattern */}
-                                <div className="absolute left-0 top-0 bottom-0 w-1 opacity-50"
-                                    style={{
-                                        backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.8) 0px, rgba(255,255,255,0.8) 1px, transparent 1px, transparent 3px)',
-                                        backgroundSize: '4px 8px'
-                                    }}
-                                />
+                            {/* Perfect Scalable TΛRΛ SVG Logo */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <svg viewBox="0 0 160 80" className="w-[180px] sm:w-[200px] h-auto drop-shadow-2xl" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <g stroke="rgba(255,255,255,0.85)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="miter">
+                                        {/* T (Thick detached floating bar & thin stem) */}
+                                        <line x1="12" y1="16" x2="42" y2="16" stroke="white" strokeWidth="3" />
+                                        <line x1="27" y1="28" x2="27" y2="70" />
 
-                                {/* Measurement markers */}
-                                <div className="absolute top-2 right-3 text-[7px] font-mono text-white/25">{item.ratio}</div>
-                                
-                                {/* Content */}
-                                <div className="pl-3">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="h-px w-6 bg-white/20" />
-                                        <p className="text-[8px] uppercase tracking-[0.4em] text-white/40 font-mono">{item.title}</p>
-                                    </div>
-                                    <h3 className="text-white text-base font-medium mb-2 tracking-wide">{item.label}</h3>
-                                    <p className="text-white/55 text-[11px] leading-relaxed font-light">{item.copy}</p>
-                                </div>
+                                        {/* A (Lambda style Λ) */}
+                                        <line x1="68" y1="16" x2="48" y2="70" />
+                                        <line x1="68" y1="16" x2="88" y2="70" />
 
-                                {/* Subtle diagonal line accent */}
-                                <svg className="absolute bottom-0 right-0 w-24 h-12 opacity-[0.08] pointer-events-none" viewBox="0 0 96 48">
-                                    <line x1="0" y1="48" x2="96" y2="0" stroke="rgba(255,255,255,0.5)" strokeWidth="0.5" />
+                                        {/* R */}
+                                        <line x1="105" y1="16" x2="105" y2="70" />
+                                        <path d="M 105 16 H 122 C 128 16 128 36 122 36 H 105" />
+                                        <line x1="112" y1="36" x2="128" y2="70" />
+
+                                        {/* A (Lambda style Λ) */}
+                                        <line x1="148" y1="16" x2="128" y2="70" />
+                                        <line x1="148" y1="16" x2="168" y2="70" />
+                                    </g>
                                 </svg>
                             </div>
+                        </div>
 
-                            {/* Angle annotation */}
-                            <div className="absolute -right-2 top-1/2 -translate-y-1/2 text-[7px] font-mono text-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {item.angle}
+                        {/* 2. Content Area */}
+                        <div className="relative p-6 sm:p-8 pt-8">
+                            <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight mb-3">
+                                Meet TARA.
+                            </h2>
+
+                            <p className="text-[13px] sm:text-[14px] text-white/50 leading-relaxed mb-8 font-light max-w-sm">
+                                Your brand's first employee. She engages, qualifies, and converts—
+                                in your voice, across web, calls, and video.
+                            </p>
+
+                            {/* Oval CTA Button */}
+                            <button className="group relative flex items-center justify-between w-full sm:w-auto px-6 py-3.5 rounded-full border border-white/20 bg-[#121212] hover:bg-white/[0.04] hover:border-white/30 transition-all duration-300">
+                                <span className="text-[11px] text-white/80 uppercase tracking-[0.2em] font-medium pl-1">
+                                    Start Conversation
+                                </span>
+                                <svg width="14" height="14" className="w-4 h-4 text-white/50 group-hover:text-white/90 group-hover:translate-x-1 transition-all ml-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+
+                            {/* Bottom Divider / Footer Specs */}
+                            <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <span className="text-[10px] text-white/50 font-mono tracking-widest font-semibold uppercase">DaVinci</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <span className="text-[9px] sm:text-[10px] text-white/40 font-mono tracking-widest">WEB</span>
+                                    <span className="text-[9px] sm:text-[10px] text-white/20">+</span>
+                                    <span className="text-[9px] sm:text-[10px] text-white/40 font-mono tracking-widest">VOICE</span>
+                                    <span className="text-[9px] sm:text-[10px] text-white/20">+</span>
+                                    <span className="text-[9px] sm:text-[10px] text-white/40 font-mono tracking-widest">VIDEO</span>
+                                </div>
                             </div>
-                        </motion.div>
-                    ))}
-                </div>
+                        </div>
 
-                {/* Bottom technical divider */}
-                <motion.div
-                    className="mt-12 flex items-center justify-center gap-4"
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3 }}
-                >
-                    <div className="h-px w-16 bg-gradient-to-r from-transparent to-white/15" />
-                    <div className="w-1.5 h-1.5 rotate-45 border border-white/30" />
-                    <div className="h-px w-16 bg-gradient-to-l from-transparent to-white/15" />
+                    </div>
                 </motion.div>
             </div>
         </section>
@@ -237,4 +151,3 @@ const PhaseOneBrandSection = () => {
 };
 
 export default PhaseOneBrandSection;
-
