@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 // Import all mobile components
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
+import PhaseOneBrandSection from './PhaseOneBrandSection';
 import MeetTaraSection from './MeetTaraSection';
 import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
@@ -30,6 +31,9 @@ const MobileHomepage = () => {
 
             {/* Hero Section */}
             <MobileHero />
+
+            {/* Phase 1 Brand Transformation Section */}
+            <PhaseOneBrandSection />
 
             {/* Meet TARA - Introduction */}
             <MeetTaraSection />

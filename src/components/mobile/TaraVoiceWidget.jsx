@@ -298,7 +298,27 @@ const TaraVoiceWidget = () => {
 
         ws.onopen = () => {
             wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
-            ws.send(JSON.stringify({ type: 'session_config', config: { mode: 'voice', tenant_id: 'davinci-widget', user_id: uid, stt_mode: 'audio', tts_mode: 'audio', language: 'en', voice: 'anushka', voice_name: 'anushka', tts_voice: 'anushka' } }));
+
+            // Dynamic config based on domain
+            const h = window.location.hostname;
+            const isIndia = h.endsWith('davinciai.in');
+
+            const sessionConfig = {
+                type: 'session_config',
+                config: {
+                    mode: 'voice',
+                    tenant_id: isIndia ? 'TASK' : 'davinci',
+                    agent_name: 'Tara',
+                    agent_id: 'tara',
+                    session_type: 'webcall',
+                    user_id: uid,
+                    stt_mode: 'audio',
+                    tts_mode: 'audio',
+                    language: isIndia ? 'te' : 'de'
+                }
+            };
+
+            ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
             const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
             audioCtxRef.current = ac; lastPlaybackTimeRef.current = ac.currentTime;
