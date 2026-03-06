@@ -30,14 +30,14 @@ const PhaseOneBrandSection = () => {
             <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#a8c7fa]/[0.02] rounded-full blur-[100px]" />
 
             {/* Background solid text -> BRAND & VOICE mapped diagonally */}
-            <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden flex items-center justify-center">
-                <div className="relative w-full max-w-7xl h-full flex items-center justify-center">
-                    {/* BRAND - Top Left (sticks out from top-left of card) */}
-                    <h1 className="absolute text-[32vw] md:text-[18vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none top-[15%] md:top-[12%] left-[-4%] md:left-[4%] mix-blend-normal opacity-95">
+            <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
+                <div className="relative w-full h-full">
+                    {/* BRAND - Top Left (sticks out from top-left of card to the screen edge) */}
+                    <h1 className="absolute text-[35vw] sm:text-[22vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none top-[16%] sm:top-[12%] left-[-8%] sm:left-[-4%] mix-blend-normal opacity-95">
                         BRAND
                     </h1>
-                    {/* VOICE - Bottom Right (sticks out from bottom-right of card) */}
-                    <h1 className="absolute text-[32vw] md:text-[18vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none bottom-[15%] md:bottom-[12%] right-[-4%] md:right-[4%] mix-blend-normal opacity-95">
+                    {/* VOICE - Bottom Right (sticks out from bottom-right of card to the screen edge) */}
+                    <h1 className="absolute text-[35vw] sm:text-[22vw] font-bold text-[#EBE5DF] tracking-tighter leading-none select-none bottom-[16%] sm:bottom-[12%] right-[-8%] sm:right-[-4%] mix-blend-normal opacity-95 text-right">
                         VOICE
                     </h1>
                 </div>
