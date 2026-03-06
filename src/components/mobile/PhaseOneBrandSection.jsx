@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import TaraGridLogo from '../TaraGridLogo';
 
 /**
  * PhaseOneBrandSection
@@ -111,20 +110,9 @@ const PhaseOneBrandSection = () => {
 
             {/* Center content */}
             <div className="relative z-10 max-w-md mx-auto">
-                {/* TARA Grid Logo - Central Element */}
-                <motion.div
-                    className="mb-10 -mx-6"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                >
-                    <TaraGridLogo />
-                </motion.div>
-
                 {/* Header with technical framing */}
                 <motion.div
-                    className="mb-10"
+                    className="mb-12"
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
