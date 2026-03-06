@@ -30,9 +30,8 @@ const PhaseOneBrandSection = () => {
             <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#a8c7fa]/[0.02] rounded-full blur-[100px]" />
 
             {/* Background solid text -> BRAND VOICE */}
-            {/* Positioned behind the card (z-0) but completely opaque and massive to match reference */}
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none z-0">
-                <h1 className="text-[40vw] sm:text-[28vw] font-bold text-[#EBE5DF] tracking-tighter leading-none whitespace-nowrap select-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1]">
+                <h1 className="text-[20vw] sm:text-[14vw] font-bold text-[#EBE5DF] tracking-tighter leading-none whitespace-nowrap select-none text-center">
                     BRAND VOICE
                 </h1>
             </div>
