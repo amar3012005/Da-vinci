@@ -94,18 +94,29 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    const h = window.location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8004/';
-    if (h.endsWith('davinciai.in')) return 'wss://demo.davinciai.eu:8010/ws';
+    // Standardizing on the BundB 8030 port cluster
     return 'wss://demo.davinciai.eu:8030/ws';
 };
 
 const CALL_LIMIT = 300; // 5 minutes strict
 
 const STATE_LABELS = { idle: 'Click orb to start', listening: 'Listening...', talking: 'TARA speaking', thinking: 'Connecting...' };
-const WIDGET_ACCESS_KEY = '000000';
 
-const TaraVoiceWidget = () => {
+const TaraVoiceWidget = ({ config: propConfig }) => {
+    // Determine configuration: Props > Global Window Object > Defaults
+    const config = useMemo(() => {
+        const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
+        return {
+            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
+            agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
+            agentName: propConfig?.agentName || globalConfig?.agentName || 'BundB Assistant',
+            language: propConfig?.language || globalConfig?.language || 'de',
+            accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
+            region: propConfig?.region || globalConfig?.region || 'EU',
+            ...propConfig
+        };
+    }, [propConfig]);
+
     const [isCallActive, setIsCallActive] = useState(false);
     const [agentState, setAgentState] = useState('idle');
     const [callDuration, setCallDuration] = useState(0);
@@ -276,7 +287,7 @@ const TaraVoiceWidget = () => {
     };
 
     const submitAccessKey = () => {
-        if (accessKeyInput.trim() !== WIDGET_ACCESS_KEY) {
+        if (accessKeyInput.trim() !== config.accessKey) {
             setAccessError('Invalid access key');
             return;
         }
@@ -291,20 +302,15 @@ const TaraVoiceWidget = () => {
         setConnectionStatus('connecting'); setCallDuration(0);
         const base = getWsBaseUrl();
         const nws = String(base).replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
-        const wsBase = nws.endsWith('/') ? `${nws}ws` : (nws.endsWith('ws') ? nws : `${nws}/ws`);
         const uid = 'user_' + Date.now();
 
-        const h = window.location.hostname;
-        const isIndia = h.endsWith('davinciai.in');
-        const tenantId = isIndia ? 'TASK' : 'davinci';
-        const agentId = isIndia ? 'tara' : 'davinci';
-        const agentName = isIndia ? 'Tara' : 'DaVinci AI';
-        const lang = isIndia ? 'te' : 'de';
+        const tenantId = config.tenantId;
+        const agentId = config.agentId;
+        const agentName = config.agentName;
+        const lang = config.language;
 
-        // Option 1: Handshake URL with brand slug params (.eu gets full dynamic params)
-        const wsUrl = isIndia
-            ? `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&user_id=${encodeURIComponent(uid)}`
-            : `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&agent_id=${encodeURIComponent(agentId)}&session_type=webcall&user_id=${encodeURIComponent(uid)}&agent_name=${encodeURIComponent(agentName)}`;
+        // Optimized Handshake for BundB Cluster
+        const wsUrl = `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&agent_id=${encodeURIComponent(agentId)}&session_type=webcall&user_id=${encodeURIComponent(uid)}&agent_name=${encodeURIComponent(agentName)}`;
 
         const ws = new WebSocket(wsUrl);
         ws.binaryType = "arraybuffer"; wsRef.current = ws;
@@ -312,38 +318,23 @@ const TaraVoiceWidget = () => {
         ws.onopen = () => {
             wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
 
-            // session_config JSON message — .in uses legacy nested config, .eu uses flat orchestrator schema
-            const sessionConfig = isIndia
-                ? {
-                    type: 'session_config',
-                    config: {
-                        mode: 'voice',
-                        tenant_id: tenantId,
-                        agent_name: agentName,
-                        agent_id: agentId,
-                        session_type: 'webcall',
-                        user_id: uid,
-                        stt_mode: 'audio',
-                        tts_mode: 'audio',
-                        language: lang
-                    }
+            // session_config JSON message — Flat Orchestrator Schema
+            const sessionConfig = {
+                type: 'session_config',
+                tenant_id: tenantId,
+                agent_id: agentId,
+                agent_name: agentName,
+                user_id: uid,
+                session_type: 'webcall',
+                language: lang,
+                interaction_mode: 'interactive',
+                stt_mode: 'streaming',
+                tts_mode: 'streaming',
+                metadata: {
+                    source: 'bundb_website',
+                    region: 'EU'
                 }
-                : {
-                    type: 'session_config',
-                    tenant_id: tenantId,
-                    agent_id: agentId,
-                    agent_name: agentName,
-                    user_id: uid,
-                    session_type: 'webcall',
-                    language: lang,
-                    interaction_mode: 'interactive',
-                    stt_mode: 'streaming',
-                    tts_mode: 'streaming',
-                    metadata: {
-                        source: 'landing_page_widget',
-                        region: 'EU'
-                    }
-                };
+            };
 
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
@@ -448,7 +439,7 @@ const TaraVoiceWidget = () => {
 
                             <div style={{ width: '100%', maxWidth: '420px' }}>
                                 <div style={{ color: '#fff', fontSize: '20px', fontWeight: 700, letterSpacing: '0.03em', marginBottom: '14px' }}>
-                                    Select Call Mode
+                                    Connect with {config.agentName}
                                 </div>
 
                                 <button
@@ -466,9 +457,9 @@ const TaraVoiceWidget = () => {
                                         marginBottom: '10px'
                                     }}
                                 >
-                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>1. Telephomy Mode</div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>1. Telephony Mode</div>
                                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
-                                        Keep your mobile near your ear
+                                        Best for privacy & mobile
                                     </div>
                                 </button>
 
