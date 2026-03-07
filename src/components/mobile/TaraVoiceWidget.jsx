@@ -297,27 +297,51 @@ const TaraVoiceWidget = () => {
         const h = window.location.hostname;
         const isIndia = h.endsWith('davinciai.in');
         const tenantId = isIndia ? 'TASK' : 'davinci';
+        const agentId = isIndia ? 'tara' : 'davinci';
+        const agentName = isIndia ? 'Tara' : 'DaVinci AI';
+        const lang = isIndia ? 'te' : 'de';
 
-        const ws = new WebSocket(`${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&user_id=${encodeURIComponent(uid)}`);
+        // Option 1: Handshake URL with brand slug params (.eu gets full dynamic params)
+        const wsUrl = isIndia
+            ? `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&user_id=${encodeURIComponent(uid)}`
+            : `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&agent_id=${encodeURIComponent(agentId)}&session_type=webcall&user_id=${encodeURIComponent(uid)}&agent_name=${encodeURIComponent(agentName)}`;
+
+        const ws = new WebSocket(wsUrl);
         ws.binaryType = "arraybuffer"; wsRef.current = ws;
 
         ws.onopen = () => {
             wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
 
-            const sessionConfig = {
-                type: 'session_config',
-                config: {
-                    mode: 'voice',
-                    tenant_id: tenantId,
-                    agent_name: 'Tara',
-                    agent_id: 'tara',
-                    session_type: 'webcall',
-                    user_id: uid,
-                    stt_mode: 'audio',
-                    tts_mode: 'audio',
-                    language: isIndia ? 'te' : 'de'
+            // Option 2: session_config JSON message (redundancy for session updates)
+            const sessionConfig = isIndia
+                ? {
+                    type: 'session_config',
+                    config: {
+                        mode: 'voice',
+                        tenant_id: tenantId,
+                        agent_name: agentName,
+                        agent_id: agentId,
+                        session_type: 'webcall',
+                        user_id: uid,
+                        stt_mode: 'audio',
+                        tts_mode: 'audio',
+                        language: lang
+                    }
                 }
-            };
+                : {
+                    type: 'session_config',
+                    tenant_id: tenantId,
+                    agent_id: agentId,
+                    agent_name: agentName,
+                    user_id: uid,
+                    session_type: 'webcall',
+                    interaction_mode: 'interactive',
+                    language: lang,
+                    config: {
+                        stt_mode: 'audio',
+                        tts_mode: 'audio'
+                    }
+                };
 
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
