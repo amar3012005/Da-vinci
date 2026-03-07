@@ -312,7 +312,7 @@ const TaraVoiceWidget = () => {
         ws.onopen = () => {
             wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
 
-            // Option 2: session_config JSON message (redundancy for session updates)
+            // session_config JSON message — .in uses legacy nested config, .eu uses flat orchestrator schema
             const sessionConfig = isIndia
                 ? {
                     type: 'session_config',
@@ -335,11 +335,13 @@ const TaraVoiceWidget = () => {
                     agent_name: agentName,
                     user_id: uid,
                     session_type: 'webcall',
-                    interaction_mode: 'interactive',
                     language: lang,
-                    config: {
-                        stt_mode: 'audio',
-                        tts_mode: 'audio'
+                    interaction_mode: 'interactive',
+                    stt_mode: 'streaming',
+                    tts_mode: 'streaming',
+                    metadata: {
+                        source: 'landing_page_widget',
+                        region: 'EU'
                     }
                 };
 
