@@ -123,12 +123,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const [agentIsSpeaking, setAgentIsSpeaking] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
-    const [isMuted, setIsMuted] = useState(false);
-    const [showCallSetup, setShowCallSetup] = useState(false);
-    const [accessKeyInput, setAccessKeyInput] = useState('');
-    const [accessError, setAccessError] = useState('');
-    const [isAccessGranted, setIsAccessGranted] = useState(false);
-    const [selectedCallMode, setSelectedCallMode] = useState('speaker');
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -144,7 +138,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const telephonyLowpassRef = useRef(null);
     const callTimerRef = useRef(null);
     const animationFrameRef = useRef(null);
-    const sessionIdRef = useRef(null);
 
     useEffect(() => {
         if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
@@ -152,9 +145,23 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         else if (!isCallActive) setAgentState('idle');
     }, [agentIsSpeaking, connectionStatus, isCallActive]);
 
+    const endCall = useCallback(() => {
+        if (wsRef.current) {
+            if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
+            wsRef.current.close(); wsRef.current = null;
+        }
+        binaryQueueRef.current = [];
+        if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
+        outputGainRef.current = null; telephonyHighpassRef.current = null; telephonyLowpassRef.current = null;
+        if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
+        wsConnectedRef.current = false; setAgentState('idle'); setMicStream(null); setCallDuration(0);
+    }, [micStream]);
+
     useEffect(() => {
         if (isCallActive && callDuration >= CALL_LIMIT) endCall();
-    }, [callDuration, isCallActive]);
+    }, [callDuration, isCallActive, endCall]);
 
     useEffect(() => {
         if (!micStream) return;
@@ -209,28 +216,13 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             const buf = audioCtxRef.current.createBuffer(1, f32.length, sr); buf.copyToChannel(f32, 0);
             const s = audioCtxRef.current.createBufferSource(); s.buffer = buf;
             const chain = ensureOutputChain(); if (!chain) return;
-            chain.gain.gain.value = selectedCallMode === 'telephony' ? 0.2 : 1.0;
+            chain.gain.gain.value = 1.0;
             try { chain.gain.disconnect(); chain.highpass.disconnect(); chain.lowpass.disconnect(); s.disconnect(); } catch (_) { }
-            if (selectedCallMode === 'telephony') { s.connect(chain.highpass); chain.highpass.connect(chain.lowpass); chain.lowpass.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
-            else { s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
+            s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination);
             const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
             s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
-    }, [checkPlaybackComplete, ensureOutputChain, selectedCallMode]);
-
-    const endCall = useCallback(() => {
-        if (wsRef.current) {
-            if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
-            wsRef.current.close(); wsRef.current = null;
-        }
-        binaryQueueRef.current = [];
-        if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-        outputGainRef.current = null; telephonyHighpassRef.current = null; telephonyLowpassRef.current = null;
-        if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
-        if (micStream) micStream.getTracks().forEach(t => t.stop());
-        setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
-        wsConnectedRef.current = false; setAgentState('idle'); setMicStream(null); setCallDuration(0);
-    }, [micStream]);
+    }, [checkPlaybackComplete, ensureOutputChain]);
 
     const startCall = async () => {
         try {
@@ -244,10 +236,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         startCall();
     };
 
-    const submitAccessKey = () => {
-        if (accessKeyInput.trim() !== config.accessKey) { setAccessError('Invalid access key'); return; }
-        setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
-    };
+
 
     const startVoiceCall = (stream) => {
         setConnectionStatus('connecting'); setCallDuration(0);
@@ -271,7 +260,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             const src = mic.createMediaStreamSource(stream);
             const proc = mic.createScriptProcessor(2048, 1, 1);
             proc.onaudioprocess = (e) => {
-                if (ws.readyState === WebSocket.OPEN && wsConnectedRef.current && !isMuted) {
+                if (ws.readyState === WebSocket.OPEN && wsConnectedRef.current) {
                     const inp = e.inputBuffer.getChannelData(0); const pcm = new Int16Array(inp.length);
                     for (let i = 0; i < inp.length; i++) pcm[i] = Math.max(-1, Math.min(1, inp[i])) * 0x7FFF;
                     ws.send(pcm.buffer);

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -30,30 +29,27 @@ const Navbar = () => {
           {/* Center Links */}
           <div className="hidden md:flex items-center gap-8">
             {['Platform', 'Solutions', 'Developers', 'Pricing', 'Company'].map((item) => (
-              <a 
-                key={item} 
-                href="#" 
-                className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+              <button
+                key={item}
+                className="text-sm font-medium text-white/70 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
               >
                 {item}
-              </a>
+              </button>
             ))}
           </div>
 
           {/* Right Buttons */}
           <div className="flex items-center gap-4">
-            <a 
-              href="#" 
-              className="hidden sm:block text-sm font-medium text-white/70 hover:text-white transition-colors"
+            <button
+              className="hidden sm:block text-sm font-medium text-white/70 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
             >
               Contact sales
-            </a>
-            <a 
-              href="#" 
-              className="text-sm font-medium text-white hover:text-white/80 transition-colors px-4 py-2 rounded-full border border-white/20 hover:border-white/40"
+            </button>
+            <button
+              className="text-sm font-medium text-white hover:text-white/80 transition-colors px-4 py-2 rounded-full border border-white/20 hover:border-white/40 bg-transparent cursor-pointer"
             >
               Sign in
-            </a>
+            </button>
             <button className="px-5 py-2.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-white/90 transition-colors">
               Get Started
             </button>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Layers, Globe, Search, Database, Cpu, MessageSquare, Box } from 'lucide-react';
+import { Layers, Globe, Search, Database, Cpu, MessageSquare } from 'lucide-react';
 import GlassCard from '../../mobile/ui/GlassCard';
 import FeatureIcon from '../../mobile/ui/FeatureIcon';
 

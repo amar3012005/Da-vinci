@@ -287,9 +287,9 @@ const Developers = () => {
               <span className="text-lg font-bold tracking-tight text-white">HIVEMIND</span>
             </div>
             <div className="flex gap-8 text-sm text-white/40">
-              <a href="#" className="hover:text-white transition-colors">Documentation</a>
-              <a href="#" className="hover:text-white transition-colors">API Reference</a>
-              <a href="#" className="hover:text-white transition-colors">Trust Center</a>
+              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Documentation</button>
+              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">API Reference</button>
+              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Trust Center</button>
             </div>
             <div className="text-sm text-white/50 text-center md:text-right">
               Davinci AI Startup | Built in Europe, for the World.

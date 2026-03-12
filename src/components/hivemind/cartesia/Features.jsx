@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ArrowRight, Globe2 } from 'lucide-react';
 
 const Features = () => {
@@ -250,9 +249,9 @@ const Features = () => {
                 <p className="text-white/50 text-sm leading-relaxed mb-8 flex-1">
                   Simplify code reviews, clarify architecture decisions, and enhance developer experiences with contextual memory.
                 </p>
-                <a href="#" className="flex items-center text-sm text-white/70 hover:text-white transition-colors group-hover:translate-x-1 duration-300">
+                <button className="flex items-center text-sm text-white/70 hover:text-white transition-colors group-hover:translate-x-1 duration-300 bg-transparent border-none cursor-pointer">
                   Learn more <ArrowRight className="w-4 h-4 ml-1" />
-                </a>
+                </button>
               </div>
 
               {/* Column 2 */}
