@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (ElevenLabs blue orb from enterprise)
+// ORB SHADER (Davinci Blue Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -36,6 +36,7 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
+    // Davinci Blue Branding: #CADCFC and #A0B9D1
     const colors = ["#CADCFC", "#A0B9D1"];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
@@ -90,26 +91,24 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET — Horizontal Slide Bar
+// TARA VOICE WIDGET — Davinci Blue Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    // Standardizing on the BundB 8030 port cluster
     return 'wss://demo.davinciai.eu:8030/ws';
 };
 
-const CALL_LIMIT = 300; // 5 minutes strict
+const CALL_LIMIT = 300;
 
-const STATE_LABELS = { idle: 'Click orb to start', listening: 'Listening...', talking: 'TARA speaking', thinking: 'Connecting...' };
+const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'DA VINCI Speaking', thinking: 'Connecting...' };
 
 const TaraVoiceWidget = ({ config: propConfig }) => {
-    // Determine configuration: Props > Global Window Object > Defaults
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
-            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
-            agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
-            agentName: propConfig?.agentName || globalConfig?.agentName || 'BundB Assistant',
+            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'davinci',
+            agentId: propConfig?.agentId || globalConfig?.agentId || 'davinci',
+            agentName: propConfig?.agentName || globalConfig?.agentName || 'DAVINCIAI',
             language: propConfig?.language || globalConfig?.language || 'de',
             accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
             region: propConfig?.region || globalConfig?.region || 'EU',
@@ -147,21 +146,16 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
 
-    // Sync agent state
     useEffect(() => {
         if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
         else if (connectionStatus === 'connecting') setAgentState('thinking');
         else if (!isCallActive) setAgentState('idle');
     }, [agentIsSpeaking, connectionStatus, isCallActive]);
 
-    // 5 min hard limit
     useEffect(() => {
-        if (isCallActive) {
-            if (callDuration >= CALL_LIMIT) { endCall(); return; }
-        }
-    }, [callDuration, isCallActive]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
+    }, [callDuration, isCallActive]);
 
-    // Volume analyzer
     useEffect(() => {
         if (!micStream) return;
         const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -187,27 +181,18 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const ensureOutputChain = useCallback(() => {
         if (!audioCtxRef.current) return null;
         const ctx = audioCtxRef.current;
-
-        if (!outputGainRef.current) {
-            outputGainRef.current = ctx.createGain();
-        }
+        if (!outputGainRef.current) outputGainRef.current = ctx.createGain();
         if (!telephonyHighpassRef.current) {
             telephonyHighpassRef.current = ctx.createBiquadFilter();
             telephonyHighpassRef.current.type = 'highpass';
             telephonyHighpassRef.current.frequency.value = 250;
-            telephonyHighpassRef.current.Q.value = 0.7;
         }
         if (!telephonyLowpassRef.current) {
             telephonyLowpassRef.current = ctx.createBiquadFilter();
             telephonyLowpassRef.current.type = 'lowpass';
             telephonyLowpassRef.current.frequency.value = 3400;
-            telephonyLowpassRef.current.Q.value = 0.9;
         }
-        return {
-            gain: outputGainRef.current,
-            highpass: telephonyHighpassRef.current,
-            lowpass: telephonyLowpassRef.current
-        };
+        return { gain: outputGainRef.current, highpass: telephonyHighpassRef.current, lowpass: telephonyLowpassRef.current };
     }, []);
 
     const playAudioChunk = useCallback((data, forceInt16 = false) => {
@@ -223,27 +208,11 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         if (audioCtxRef.current) {
             const buf = audioCtxRef.current.createBuffer(1, f32.length, sr); buf.copyToChannel(f32, 0);
             const s = audioCtxRef.current.createBufferSource(); s.buffer = buf;
-            const chain = ensureOutputChain();
-            if (!chain) return;
-
+            const chain = ensureOutputChain(); if (!chain) return;
             chain.gain.gain.value = selectedCallMode === 'telephony' ? 0.2 : 1.0;
-
-            // Rebuild output route for current mode
-            try { chain.gain.disconnect(); } catch (_) { }
-            try { chain.highpass.disconnect(); } catch (_) { }
-            try { chain.lowpass.disconnect(); } catch (_) { }
-            try { s.disconnect(); } catch (_) { }
-
-            if (selectedCallMode === 'telephony') {
-                s.connect(chain.highpass);
-                chain.highpass.connect(chain.lowpass);
-                chain.lowpass.connect(chain.gain);
-                chain.gain.connect(audioCtxRef.current.destination);
-            } else {
-                s.connect(chain.gain);
-                chain.gain.connect(audioCtxRef.current.destination);
-            }
-
+            try { chain.gain.disconnect(); chain.highpass.disconnect(); chain.lowpass.disconnect(); s.disconnect(); } catch (_) { }
+            if (selectedCallMode === 'telephony') { s.connect(chain.highpass); chain.highpass.connect(chain.lowpass); chain.lowpass.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
+            else { s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
             const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
             s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
@@ -256,9 +225,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         }
         binaryQueueRef.current = [];
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-        outputGainRef.current = null;
-        telephonyHighpassRef.current = null;
-        telephonyLowpassRef.current = null;
+        outputGainRef.current = null; telephonyHighpassRef.current = null; telephonyLowpassRef.current = null;
         if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
         setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
@@ -266,7 +233,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     }, [micStream]);
 
     const startCall = async () => {
-        if (isCallActive) { endCall(); return; }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
             setMicStream(stream); startVoiceCall(stream);
@@ -274,28 +240,13 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     };
 
     const handleOrbClick = () => {
-        if (isCallActive) {
-            startCall();
-            return;
-        }
-        if (!isAccessGranted) {
-            setShowCallSetup(true);
-            setAccessError('');
-            return;
-        }
+        if (isCallActive) { endCall(); return; }
         startCall();
     };
 
     const submitAccessKey = () => {
-        if (accessKeyInput.trim() !== config.accessKey) {
-            setAccessError('Invalid access key');
-            return;
-        }
-        setIsAccessGranted(true);
-        setShowCallSetup(false);
-        setAccessError('');
-        setAccessKeyInput('');
-        startCall();
+        if (accessKeyInput.trim() !== config.accessKey) { setAccessError('Invalid access key'); return; }
+        setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
     };
 
     const startVoiceCall = (stream) => {
@@ -303,39 +254,15 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         const base = getWsBaseUrl();
         const nws = String(base).replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
         const uid = 'user_' + Date.now();
-
-        const tenantId = config.tenantId;
-        const agentId = config.agentId;
-        const agentName = config.agentName;
-        const lang = config.language;
-
-        // Optimized Handshake for BundB Cluster
-        const wsUrl = `${wsBase}?tenant_id=${encodeURIComponent(tenantId)}&agent_id=${encodeURIComponent(agentId)}&session_type=webcall&user_id=${encodeURIComponent(uid)}&agent_name=${encodeURIComponent(agentName)}`;
-
-        const ws = new WebSocket(wsUrl);
-        ws.binaryType = "arraybuffer"; wsRef.current = ws;
-
+        const wsUrl = `${nws}?tenant_id=${encodeURIComponent(config.tenantId)}&agent_id=${encodeURIComponent(config.agentId)}&session_type=webcall&user_id=${encodeURIComponent(uid)}&agent_name=${encodeURIComponent(config.agentName)}`;
+        const ws = new WebSocket(wsUrl); ws.binaryType = "arraybuffer"; wsRef.current = ws;
         ws.onopen = () => {
-            wsConnectedRef.current = true; sessionIdRef.current = crypto.randomUUID();
-
-            // session_config JSON message — Flat Orchestrator Schema
+            wsConnectedRef.current = true;
             const sessionConfig = {
-                type: 'session_config',
-                tenant_id: tenantId,
-                agent_id: agentId,
-                agent_name: agentName,
-                user_id: uid,
-                session_type: 'webcall',
-                language: lang,
-                interaction_mode: 'interactive',
-                stt_mode: 'streaming',
-                tts_mode: 'streaming',
-                metadata: {
-                    source: 'bundb_website',
-                    region: 'EU'
-                }
+                type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
+                user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_blue', region: 'EU' }
             };
-
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
             const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
@@ -352,7 +279,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             };
             src.connect(proc); proc.connect(mic.destination); audioWorkletRef.current = proc;
         };
-
         ws.onmessage = (e) => {
             if (e.data instanceof ArrayBuffer) { binaryQueueRef.current.push(e.data); return; }
             const d = JSON.parse(e.data);
@@ -366,8 +292,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                 }
             } else if (d.type === 'audio_chunk') {
                 if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
-                if (d.format || d.audio_format) audioConfigRef.current.format = d.format || d.audio_format;
-                if (!playbackStartTimeRef.current) playbackStartTimeRef.current = Date.now();
                 setAgentIsSpeaking(true); audioStreamCompleteRef.current = false;
                 if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
                 else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
@@ -376,8 +300,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             else if (d.type === 'interrupt' || d.type === 'clear') { setAgentIsSpeaking(false); lastPlaybackTimeRef.current = audioCtxRef.current?.currentTime || 0; playbackStartTimeRef.current = null; }
             else if (d.type === 'ping' && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() / 1000 }));
         };
-        ws.onclose = () => endCall();
-        ws.onerror = () => endCall();
+        ws.onclose = () => endCall(); ws.onerror = () => endCall();
     };
 
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
@@ -385,339 +308,84 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const isWarning = remaining <= 30 && isCallActive;
 
     return (
-        <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0px' }}>
+        <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>
             <AnimatePresence>
-                {showCallSetup && !isCallActive && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowCallSetup(false)}
-                            style={{
-                                position: 'fixed',
-                                inset: 0,
-                                background: '#000',
-                                zIndex: 20000
-                            }}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, y: 14, scale: 0.96 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                            transition={{ duration: 0.2 }}
-                            style={{
-                                position: 'fixed',
-                                inset: 0,
-                                background: '#000',
-                                zIndex: 20001,
-                                padding: '20px 16px calc(24px + env(safe-area-inset-bottom))',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <button
-                                onClick={() => setShowCallSetup(false)}
-                                style={{
-                                    position: 'absolute',
-                                    top: '16px',
-                                    right: '16px',
-                                    width: '38px',
-                                    height: '38px',
-                                    borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    background: 'transparent',
-                                    color: '#fff',
-                                    fontSize: '20px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                ×
-                            </button>
-
-                            <div style={{ width: '100%', maxWidth: '420px' }}>
-                                <div style={{ color: '#fff', fontSize: '20px', fontWeight: 700, letterSpacing: '0.03em', marginBottom: '14px' }}>
-                                    Connect with {config.agentName}
-                                </div>
-
-                                <button
-                                    onClick={() => setSelectedCallMode('telephony')}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '60px',
-                                        padding: '10px 14px',
-                                        borderRadius: '12px',
-                                        border: selectedCallMode === 'telephony' ? '1px solid #CADCFC' : '1px solid rgba(255,255,255,0.18)',
-                                        background: selectedCallMode === 'telephony' ? 'rgba(202,220,252,0.1)' : 'rgba(255,255,255,0.03)',
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        marginBottom: '10px'
-                                    }}
-                                >
-                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>1. Telephony Mode</div>
-                                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
-                                        Best for privacy & mobile
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={() => setSelectedCallMode('speaker')}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '60px',
-                                        padding: '10px 14px',
-                                        borderRadius: '12px',
-                                        border: selectedCallMode === 'speaker' ? '1px solid #CADCFC' : '1px solid rgba(255,255,255,0.18)',
-                                        background: selectedCallMode === 'speaker' ? 'rgba(202,220,252,0.1)' : 'rgba(255,255,255,0.03)',
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        marginBottom: '14px'
-                                    }}
-                                >
-                                    <div style={{ fontSize: '14px', fontWeight: 700 }}>2. Speaker Mode</div>
-                                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '3px' }}>
-                                        Voice comes out loud
-                                    </div>
-                                </button>
-
-                                <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
-                                    Enter Access Key
-                                </div>
-                            </div>
-
-                            <div style={{ width: '100%', maxWidth: '420px' }}>
-                                <input
-                                    type="password"
-                                    value={accessKeyInput}
-                                    onChange={(e) => {
-                                        setAccessKeyInput(e.target.value);
-                                        if (accessError) setAccessError('');
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') submitAccessKey();
-                                    }}
-                                    placeholder="Access key"
-                                    autoFocus
-                                    style={{
-                                        width: '100%',
-                                        height: '44px',
-                                        borderRadius: '10px',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        color: '#fff',
-                                        outline: 'none',
-                                        padding: '0 12px',
-                                        fontSize: '13px'
-                                    }}
-                                />
-                            </div>
-
-                            {accessError && (
-                                <div style={{ width: '100%', maxWidth: '420px', color: '#f87171', fontSize: '11px', marginTop: '6px' }}>
-                                    {accessError}
-                                </div>
-                            )}
-
-                            <div style={{ width: '100%', maxWidth: '420px', marginTop: '12px' }}>
-                                <button
-                                    onClick={submitAccessKey}
-                                    style={{
-                                        width: '100%',
-                                        height: '44px',
-                                        borderRadius: '10px',
-                                        border: 'none',
-                                        background: '#e5e7eb',
-                                        color: '#000',
-                                        fontSize: '13px',
-                                        fontWeight: 800,
-                                        letterSpacing: '0.03em',
-                                        cursor: 'pointer',
-                                        textTransform: 'uppercase'
-                                    }}
-                                >
-                                    Start Call
-                                </button>
-                            </div>
-                        </motion.div>
-                    </>
+                {!isCallActive && (
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        whileHover={{ scale: 1.05 }}
+                        onClick={handleOrbClick}
+                        style={{
+                            background: 'rgba(10, 10, 10, 0.85)',
+                            backdropFilter: 'blur(30px)',
+                            border: '1px solid rgba(202, 220, 252, 0.4)',
+                            borderRadius: '24px',
+                            padding: '10px 20px',
+                            marginRight: '12px',
+                            color: '#FFFFFF',
+                            fontWeight: 700,
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            boxShadow: '0 15px 40px rgba(0,0,0,0.6)',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Talk to TARA <span style={{ color: '#CADCFC', fontSize: '16px' }}>✨</span>
+                    </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Sliding Glass Bar — appears when call is active */}
             <AnimatePresence>
                 {isCallActive && (
-                    <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 220, opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                        style={{
-                            height: '48px',
-                            borderRadius: '24px 0 0 24px',
-                            background: 'rgba(18, 18, 22, 0.72)',
-                            backdropFilter: 'blur(30px)',
-                            WebkitBackdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRight: 'none',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)',
-                            display: 'flex', alignItems: 'center',
-                            paddingLeft: '16px', paddingRight: '8px',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {/* Left: Text info */}
-                        <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2, duration: 0.3 }}
-                            style={{ flex: 1, minWidth: 0 }}
-                        >
-                            <div style={{
-                                fontSize: '11px', fontWeight: 700, color: '#fff',
-                                letterSpacing: '0.02em', lineHeight: 1.2,
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                            }}>
-                                TARA — Voice Agent
-                            </div>
-                            <div style={{
-                                fontSize: '9px', fontFamily: 'monospace',
-                                color: isWarning ? '#ef4444' : agentState === 'talking' ? 'rgba(202,220,252,0.8)' : agentState === 'listening' ? 'rgba(34,197,94,0.7)' : 'rgba(255,255,255,0.4)',
-                                marginTop: '2px', letterSpacing: '0.05em',
-                                transition: 'color 0.3s ease',
-                            }}>
-                                {isWarning ? `Ending in ${remaining}s` : STATE_LABELS[agentState] || 'Connected'}
-                            </div>
-                        </motion.div>
-
-                        {/* Timer */}
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                            style={{
-                                fontSize: '10px', fontFamily: 'monospace',
-                                color: isWarning ? '#ef4444' : 'rgba(255,255,255,0.35)',
-                                fontWeight: 600, marginRight: '8px',
-                                letterSpacing: '0.04em',
-                                transition: 'color 0.3s ease',
-                            }}
-                        >
-                            {fmt(callDuration)}
-                        </motion.div>
-
-                        {/* Mute/Speaker Button */}
-                        <motion.button
-                            onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.35 }}
-                            style={{
-                                width: '32px', height: '32px', borderRadius: '8px',
-                                background: isMuted ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.06)',
-                                border: isMuted ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', flexShrink: 0,
-                                transition: 'all 0.2s ease',
-                            }}
-                        >
-                            {isMuted ? (
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="1" y1="1" x2="23" y2="23" /><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" /><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2c0 .76-.13 1.49-.35 2.17" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-                                </svg>
-                            ) : (
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-                                </svg>
-                            )}
-                        </motion.button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Talk to Tara prompt — appears when idle */}
-            <AnimatePresence>
-                {!isCallActive && !showCallSetup && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                        transition={{ delay: 0.5, duration: 0.3 }}
-                        style={{
-                            marginRight: '12px',
-                            background: 'rgba(18, 18, 22, 0.72)',
-                            backdropFilter: 'blur(30px)',
-                            WebkitBackdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            padding: '8px 14px',
-                            borderRadius: '16px',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                            pointerEvents: 'none',
-                        }}
-                    >
-                        <div style={{
-                            fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.9)',
-                            letterSpacing: '0.02em', whiteSpace: 'nowrap',
-                            display: 'flex', alignItems: 'center', gap: '6px'
-                        }}>
-                            Talk to TARA
-                            <span style={{ fontSize: '12px' }}>✨</span>
+                    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(202, 220, 252, 0.3)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>DA VINCI AI</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#ef4444' : '#CADCFC', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Orb Button — always visible, click to start/end call */}
-            <motion.button
-                onClick={handleOrbClick}
-                style={{
-                    width: '48px', height: '48px',
-                    borderRadius: '50%',
-                    background: 'rgba(10, 10, 14, 0.85)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    border: isCallActive ? '1.5px solid rgba(202,220,252,0.25)' : '1px solid rgba(255,255,255,0.12)',
-                    boxShadow: isCallActive
-                        ? '0 0 20px rgba(202,220,252,0.15), 0 8px 32px rgba(0,0,0,0.4)'
-                        : '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
-                    cursor: 'pointer', padding: 0, overflow: 'hidden',
-                    position: 'relative', flexShrink: 0, zIndex: 2,
-                    transition: 'border 0.3s ease, box-shadow 0.3s ease',
-                }}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
-            >
-                <OrbRenderer
-                    agentState={isCallActive ? agentState : null}
-                    userVolume={userVolume}
-                    agentIsSpeaking={agentIsSpeaking}
-                />
-
-                {/* End call X overlay */}
-                <AnimatePresence>
-                    {isCallActive && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            style={{
-                                position: 'absolute', inset: 0,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(0,0,0,0.25)',
-                                borderRadius: '50%', pointerEvents: 'none',
-                            }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(239,68,68,0.7)" strokeWidth="2.5" strokeLinecap="round">
-                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+            <motion.button onClick={handleOrbClick}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #CADCFC' : '1px solid rgba(202, 220, 252, 0.2)', boxShadow: isCallActive ? '0 0 30px rgba(202, 220, 252, 0.4)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
+                {isCallActive && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CADCFC" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </div>
+                )}
             </motion.button>
-        </div>
+            {
+                isCallActive && (
+                    <a
+                        href="https://davinciai.eu"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            position: 'absolute',
+                            top: '-18px',
+                            right: '4px',
+                            fontSize: '8px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.12em',
+                            whiteSpace: 'nowrap',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        built by davinciai.eu
+                    </a>
+                )
+            }
+        </div >
     );
 };
 

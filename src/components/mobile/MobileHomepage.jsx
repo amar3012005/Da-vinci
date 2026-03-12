@@ -6,6 +6,7 @@ import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
 import PhaseOneBrandSection from './PhaseOneBrandSection';
 import MeetTaraSection from './MeetTaraSection';
+import MeetHivemindSection from './MeetHivemindSection';
 import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
 import MobilePricingSection from './MobilePricingSection';
@@ -37,6 +38,9 @@ const MobileHomepage = () => {
 
             {/* Meet TARA - Introduction */}
             <MeetTaraSection />
+
+            {/* Meet HIVEMIND - Dedicated Section */}
+            <MeetHivemindSection />
 
             {/* Context Problem + MMAR Solution */}
             <ContextProblemSection />

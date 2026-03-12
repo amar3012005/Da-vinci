@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Layers, Globe, Search, Database, Cpu, MessageSquare } from 'lucide-react';
+import { Layers, Globe, Search, Database, Cpu, MessageSquare, ExternalLink } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import FeatureIcon from './ui/FeatureIcon';
 
@@ -12,7 +12,7 @@ const FeatureMMAR = () => {
     const agents = [
         { icon: Globe, name: 'Translation', color: 'from-blue-400 to-cyan-400', description: 'Auto-detect 15+ languages' },
         { icon: Search, name: 'Retriever', color: 'from-green-400 to-emerald-400', description: 'Semantic knowledge search' },
-        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence' },
+        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence', link: '/hivemind' },
         { icon: Cpu, name: 'LLM Core', color: 'from-orange-400 to-red-400', description: 'Natural language generation' }
     ];
 
@@ -76,14 +76,20 @@ const FeatureMMAR = () => {
                         {agents.map((agent, index) => (
                             <motion.div
                                 key={agent.name}
-                                className="p-2 sm:p-3 bg-white/[0.02] rounded-xl border border-white/[0.05] text-center"
+                                className={`p-2 sm:p-3 bg-white/[0.02] rounded-xl border border-white/[0.05] text-center ${agent.link ? 'cursor-pointer hover:bg-white/[0.05] hover:border-purple-500/30 transition-all' : ''}`}
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: 0.3 + index * 0.08 }}
+                                whileHover={agent.link ? { scale: 1.05 } : {}}
+                                whileTap={agent.link ? { scale: 0.95 } : {}}
+                                onClick={() => agent.link && (window.location.href = agent.link)}
                             >
-                                <div className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1.5 sm:mb-2 rounded-lg bg-gradient-to-br ${agent.color} flex items-center justify-center`}>
+                                <div className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1.5 sm:mb-2 rounded-lg bg-gradient-to-br ${agent.color} flex items-center justify-center relative`}>
                                     <agent.icon className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                    {agent.link && (
+                                        <ExternalLink className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 text-purple-400" />
+                                    )}
                                 </div>
                                 <p className="text-[11px] sm:text-xs text-white font-medium">{agent.name}</p>
                                 <p className="text-[9px] sm:text-[10px] text-white/40 leading-tight mt-1">{agent.description}</p>

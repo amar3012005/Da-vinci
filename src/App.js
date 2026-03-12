@@ -10,6 +10,9 @@ import DemoPage from './components/DemoPage';
 // Portal Component for Iframe Persistence
 import PortalLayout from './components/PortalLayout';
 
+// Hivemind Redirect
+import HivemindRedirect from './components/hivemind/HivemindRedirect';
+
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
     <Navbar />
@@ -30,9 +33,10 @@ function App() {
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
+        <Route path="/hivemind" element={<HivemindRedirect />} />
 
-        {/* 
-            PORTAL ROUTES 
+        {/*
+            PORTAL ROUTES
             These load the other apps (enterprise, prometheus) inside the iframe wrapper
             while keeping the TARA widget persistent on top.
         */}

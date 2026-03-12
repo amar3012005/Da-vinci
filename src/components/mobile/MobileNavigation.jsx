@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Bell, AlertCircle } from 'lucide-react';
+import { Menu, X, Bell, AlertCircle, ExternalLink } from 'lucide-react';
 
 /**
  * MobileNavigation - Floating hamburger menu with full-screen overlay
@@ -125,6 +125,21 @@ const MobileNavigation = () => {
                                     {item.label}
                                 </motion.button>
                             ))}
+
+                            {/* Hivemind Button */}
+                            <motion.a
+                                href="https://hivemind.davinciai.eu"
+                                className="group flex items-center gap-3 text-[#A63E1B] hover:text-[#ff6b35] text-3xl font-light tracking-wide transition-colors duration-300"
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.4, delay: 0.1 + navItems.length * 0.08 }}
+                                whileHover={{ scale: 1.05, x: 10 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <span>HIVEMIND</span>
+                                <ExternalLink className="w-6 h-6 opacity-50 group-hover:opacity-100 transition-opacity" />
+                            </motion.a>
 
                             {/* Brand at bottom */}
                             <motion.div

@@ -26,12 +26,27 @@ const ContextProblemSection = () => {
 
             <div className="relative z-10 w-full flex flex-col lg:flex-row-reverse overflow-hidden">
 
-                {/* Right Panel: High-Impact Visual (Mirrored from MeetTara's Left) */}
+                {/* Left Panel: Generative HiveMind Visualization (Now on the left) */}
+                <div className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen flex flex-col items-center justify-center bg-black overflow-hidden border-r border-white/10">
+                    {/* Generative HiveMind Canvas */}
+                    <div className="absolute inset-0 pointer-events-none">
+                        <HiveMindCanvas />
+                    </div>
+
+                    {/* Subtle Branding Centered Below Cluster */}
+                    <div className="relative z-20 mt-[35vh] md:mt-[45vh]">
+                        <span className="text-white/20 font-mono text-[9px] uppercase tracking-[0.5em] tracking-widest">
+                            ./HIVEMIND
+                        </span>
+                    </div>
+                </div>
+
+                {/* Right Panel: High-Impact Visual (Now on the right) */}
                 <div
                     ref={rightPanelRef}
                     onMouseEnter={() => setIsRightHovered(true)}
                     onMouseLeave={() => setIsRightHovered(false)}
-                    className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-black border-l border-white/10"
+                    className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-black"
                 >
                     <div className="absolute inset-0">
                         <img
@@ -86,21 +101,6 @@ const ContextProblemSection = () => {
                             <span className="text-white/40 font-mono text-[10px] uppercase tracking-widest italic">Node: MMAR_CENTRAL</span>
                             <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
                         </div>
-                    </div>
-                </div>
-
-                {/* Left Panel: Generative HiveMind Visualization */}
-                <div className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen flex flex-col items-center justify-center bg-black overflow-hidden">
-                    {/* Generative HiveMind Canvas */}
-                    <div className="absolute inset-0 pointer-events-none">
-                        <HiveMindCanvas />
-                    </div>
-
-                    {/* Subtle Branding Centered Below Cluster */}
-                    <div className="relative z-20 mt-[35vh] md:mt-[45vh]">
-                        <span className="text-white/20 font-mono text-[9px] uppercase tracking-[0.5em] tracking-widest">
-                            ./HIVEMIND
-                        </span>
                     </div>
                 </div>
             </div>

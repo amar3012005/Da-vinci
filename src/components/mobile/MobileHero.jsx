@@ -137,25 +137,26 @@ const MobileHero = () => {
                     </div>
                 </div>
 
-                {/* Canyon Background Image - Low Opacity */}
+                {/* Main Homepage Background - Monochromatic Grayscale */}
                 <div
-                    className="absolute inset-0 z-0 pointer-events-none"
+                    className="absolute inset-x-0 inset-y-0 z-0 pointer-events-none"
                     style={{
-                        backgroundImage: 'url(/canyon-bg.png)',
+                        backgroundImage: 'url(/main_background.jpeg)',
                         backgroundSize: 'cover',
-                        backgroundPosition: 'center 40%',
-                        opacity: 0.15
+                        backgroundPosition: 'center',
+                        filter: 'grayscale(100%) contrast(1.2) brightness(0.8)',
+                        opacity: 0.25
                     }}
                 />
 
                 {/* Dark overlay for better text readability */}
                 <div className="absolute inset-0 bg-black/60 z-[1] pointer-events-none" />
 
-                {/* Subtle gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-b from-pink-500/5 via-transparent to-purple-500/5 pointer-events-none z-[2]" />
+                {/* Subtle monochromatic gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20 pointer-events-none z-[2]" />
 
-                {/* Radial glow behind logo */}
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500/10 rounded-full blur-[100px] pointer-events-none z-[2]" />
+                {/* Radial glow behind logo (monochromatic) */}
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/5 rounded-full blur-[100px] pointer-events-none z-[2]" />
 
                 {/* Main Content Container */}
                 <div className="flex-1 flex flex-col items-center justify-center -mt-8"> {/* Added negative margin top to pull up */}
@@ -194,7 +195,7 @@ const MobileHero = () => {
                         transition={{ duration: 0.8, delay: 0.9 }}
                     >
                         <h1 className="text-xl font-light text-white leading-relaxed mb-3">
-                            <span className="inline-block px-3 py-0.5 bg-pink-500 text-white font-medium transform -skew-x-12">
+                            <span className="inline-block px-3 py-0.5 bg-white text-black font-black transform -skew-x-12">
                                 <span className="inline-block transform skew-x-12">AI-Powered</span>
                             </span>
                             {' '}Enterprise Automation
