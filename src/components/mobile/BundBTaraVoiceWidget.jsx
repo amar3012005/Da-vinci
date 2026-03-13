@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (Orange & Black Theme)
+// ORB SHADER (Rust Orange & Black Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -36,8 +36,8 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
-    // Orange & Black Branding: #FF6600 and #FFA500
-    const colors = ["#FF6600", "#FFA500"];
+    // Rust Orange Branding: #A63E1B and #EBE5DF
+    const colors = ["#A63E1B", "#EBE5DF"];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
     const tc2 = useRef(new THREE.Color(colors[1]));
@@ -91,7 +91,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET — Orange & Black Edition
+// TARA VOICE WIDGET — Rust Orange Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
@@ -306,7 +306,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             const sessionConfig = {
                 type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
                 user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
-                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_orange', region: 'EU' }
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_rust', region: 'EU' }
             };
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
@@ -395,7 +395,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                         style={{
                             background: 'rgba(10, 10, 10, 0.85)',
                             backdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(255, 102, 0, 0.5)',
+                            border: '1px solid rgba(166, 62, 27, 0.5)',
                             borderRadius: '24px',
                             padding: '10px 20px',
                             marginRight: '12px',
@@ -410,17 +410,17 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        Talk to TARA <span style={{ color: '#FF6600', fontSize: '16px' }}>✨</span>
+                        Talk to TARA <span style={{ color: '#A63E1B', fontSize: '16px' }}>✨</span>
                     </motion.div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
                 {isCallActive && (
                     <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 102, 0, 0.35)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
+                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(166, 62, 27, 0.35)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>B&B</div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#ef4444' : '#FF6600', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : '#A63E1B', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
                         <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
@@ -428,12 +428,12 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             </AnimatePresence>
 
             <motion.button onClick={handleOrbClick}
-                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #FF6600' : '1px solid rgba(255, 102, 0, 0.25)', boxShadow: isCallActive ? '0 0 30px rgba(255, 102, 0, 0.5)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #A63E1B' : '1px solid rgba(166, 62, 27, 0.25)', boxShadow: isCallActive ? '0 0 30px rgba(166, 62, 27, 0.5)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
                 {isCallActive && (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6600" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A63E1B" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 )}
             </motion.button>
@@ -474,14 +474,14 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             width: '320px',
                             background: 'rgba(10, 10, 10, 0.95)',
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255, 102, 0, 0.5)',
+                            border: '1px solid rgba(166, 62, 27, 0.5)',
                             borderRadius: '16px',
                             padding: '20px',
                             zIndex: 10000,
                             boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
                         }}
                     >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#FF6600', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#A63E1B', marginBottom: '8px' }}>
                             Get In Touch With Us
                         </div>
                         
@@ -496,7 +496,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                 width: '100%',
                                 padding: '10px 12px',
                                 background: 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${accessError ? '#ef4444' : 'rgba(255, 102, 0, 0.35)'}`,
+                                border: `1px solid ${accessError ? '#EF4444' : 'rgba(166, 62, 27, 0.35)'}`,
                                 borderRadius: '8px',
                                 color: '#FFFFFF',
                                 fontSize: '13px',
@@ -505,7 +505,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             }}
                         />
                         {accessError && (
-                            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>{accessError}</div>
+                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{accessError}</div>
                         )}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                             <button
@@ -514,9 +514,9 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                     flex: 1,
                                     padding: '8px 12px',
                                     background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(255, 102, 0, 0.3)',
+                                    border: '1px solid rgba(166, 62, 27, 0.3)',
                                     borderRadius: '6px',
-                                    color: '#FFA500',
+                                    color: '#EBE5DF',
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     cursor: 'pointer'
@@ -529,7 +529,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: '#FF6600',
+                                    background: '#A63E1B',
                                     border: 'none',
                                     borderRadius: '6px',
                                     color: '#050505',
