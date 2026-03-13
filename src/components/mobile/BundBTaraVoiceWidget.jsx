@@ -123,12 +123,9 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const [agentIsSpeaking, setAgentIsSpeaking] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
-    const [isMuted, setIsMuted] = useState(false);
-    const [showCallSetup, setShowCallSetup] = useState(false);
-    const [accessKeyInput, setAccessKeyInput] = useState('');
+    const [isMuted] = useState(false);
     const [accessError, setAccessError] = useState('');
-    const [isAccessGranted, setIsAccessGranted] = useState(false);
-    const [selectedCallMode, setSelectedCallMode] = useState('speaker');
+    const [selectedCallMode] = useState('speaker');
     const [showEmailDialog, setShowEmailDialog] = useState(false);
     const [emailInput, setEmailInput] = useState('');
 
@@ -150,27 +147,6 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const callTimerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
-
-    useEffect(() => {
-        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
-        else if (connectionStatus === 'connecting') setAgentState('thinking');
-        else if (!isCallActive) setAgentState('idle');
-    }, [agentIsSpeaking, connectionStatus, isCallActive]);
-
-    useEffect(() => {
-        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
-    }, [callDuration, isCallActive]);
-
-    useEffect(() => {
-        if (!micStream) return;
-        const ac = new (window.AudioContext || window.webkitAudioContext)();
-        const an = ac.createAnalyser(); const src = ac.createMediaStreamSource(micStream);
-        src.connect(an); an.fftSize = 256;
-        const arr = new Uint8Array(an.frequencyBinCount);
-        const up = () => { an.getByteFrequencyData(arr); let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; setUserVolume(Math.min(1, s / arr.length / 30)); animationFrameRef.current = requestAnimationFrame(up); };
-        up();
-        return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
-    }, [micStream]);
 
     const checkPlaybackComplete = useCallback(() => {
         if (!audioCtxRef.current) return;
@@ -269,10 +245,28 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         startCall();
     };
 
-    const submitAccessKey = () => {
-        if (accessKeyInput.trim() !== config.accessKey) { setAccessError('Invalid access key'); return; }
-        setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
-    };
+    useEffect(() => {
+        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
+        else if (connectionStatus === 'connecting') setAgentState('thinking');
+        else if (!isCallActive) setAgentState('idle');
+    }, [agentIsSpeaking, connectionStatus, isCallActive]);
+
+    useEffect(() => {
+        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
+    }, [callDuration, isCallActive, endCall]);
+
+    useEffect(() => {
+        if (!micStream) return;
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const an = ac.createAnalyser(); const src = ac.createMediaStreamSource(micStream);
+        src.connect(an); an.fftSize = 256;
+        const arr = new Uint8Array(an.frequencyBinCount);
+        const up = () => { an.getByteFrequencyData(arr); let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; setUserVolume(Math.min(1, s / arr.length / 30)); animationFrameRef.current = requestAnimationFrame(up); };
+        up();
+        return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
+    }, [micStream]);
+
+
 
     const sendEmailToServer = async (email) => {
         try {
