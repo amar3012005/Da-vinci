@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (Customized Orange/White for BundB)
+// ORB SHADER (Orange & Black Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -36,8 +36,8 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
-    // Orange Branding: #A63E1B and a lighter complementary off-white #EBE5DF
-    const colors = ["#A63E1B", "#EBE5DF"];
+    // Orange & Black Branding: #FF6600 and #FFA500
+    const colors = ["#FF6600", "#FFA500"];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
     const tc2 = useRef(new THREE.Color(colors[1]));
@@ -91,7 +91,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// BUNDB TARA VOICE WIDGET — Orange/White Edition
+// TARA VOICE WIDGET — Orange & Black Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
@@ -129,6 +129,8 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const [accessError, setAccessError] = useState('');
     const [isAccessGranted, setIsAccessGranted] = useState(false);
     const [selectedCallMode, setSelectedCallMode] = useState('speaker');
+    const [showEmailDialog, setShowEmailDialog] = useState(false);
+    const [emailInput, setEmailInput] = useState('');
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -139,6 +141,9 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const playbackStartTimeRef = useRef(null);
     const audioStreamCompleteRef = useRef(false);
     const audioConfigRef = useRef({ format: 'pcm_f32le', sampleRate: 44100 });
+    const currentPlaybackTurnIdRef = useRef(null);
+    const minAcceptedPlaybackTurnIdRef = useRef(0);
+    const activeSourcesRef = useRef(new Set());
     const outputGainRef = useRef(null);
     const telephonyHighpassRef = useRef(null);
     const telephonyLowpassRef = useRef(null);
@@ -195,6 +200,22 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         return { gain: outputGainRef.current, highpass: telephonyHighpassRef.current, lowpass: telephonyLowpassRef.current };
     }, []);
 
+    const stopPlayback = useCallback(() => {
+        if (Number.isFinite(currentPlaybackTurnIdRef.current)) {
+            minAcceptedPlaybackTurnIdRef.current = Math.max(minAcceptedPlaybackTurnIdRef.current, currentPlaybackTurnIdRef.current + 1);
+        }
+        for (const source of activeSourcesRef.current) {
+            try { source.onended = null; source.stop(); } catch (_) { }
+        }
+        activeSourcesRef.current.clear();
+        binaryQueueRef.current = [];
+        currentPlaybackTurnIdRef.current = null;
+        audioStreamCompleteRef.current = false;
+        playbackStartTimeRef.current = null;
+        if (audioCtxRef.current) lastPlaybackTimeRef.current = audioCtxRef.current.currentTime;
+        setAgentIsSpeaking(false);
+    }, []);
+
     const playAudioChunk = useCallback((data, forceInt16 = false) => {
         let f32; const fmt = audioConfigRef.current.format; const sr = audioConfigRef.current.sampleRate;
         if (data instanceof ArrayBuffer) {
@@ -214,7 +235,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             if (selectedCallMode === 'telephony') { s.connect(chain.highpass); chain.highpass.connect(chain.lowpass); chain.lowpass.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
             else { s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
             const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
-            s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
+            if (!playbackStartTimeRef.current) playbackStartTimeRef.current = Date.now();
+            activeSourcesRef.current.add(s);
+            s.onended = () => { activeSourcesRef.current.delete(s); checkPlaybackComplete(); };
+            s.start(at); lastPlaybackTimeRef.current = at + buf.duration;
         }
     }, [checkPlaybackComplete, ensureOutputChain, selectedCallMode]);
 
@@ -223,14 +247,15 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
             wsRef.current.close(); wsRef.current = null;
         }
-        binaryQueueRef.current = [];
+        stopPlayback();
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
         outputGainRef.current = null; telephonyHighpassRef.current = null; telephonyLowpassRef.current = null;
         if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
         setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
         wsConnectedRef.current = false; setAgentState('idle'); setMicStream(null); setCallDuration(0);
-    }, [micStream]);
+        setShowEmailDialog(true);
+    }, [micStream, stopPlayback]);
 
     const startCall = async () => {
         try {
@@ -249,6 +274,25 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
     };
 
+    const sendEmailToServer = async (email) => {
+        try {
+            const response = await fetch('/api/session/end', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: sessionIdRef.current,
+                    email: email,
+                    tenant_id: config.tenantId,
+                    agent_id: config.agentId,
+                    timestamp: Date.now() / 1000
+                })
+            });
+            if (!response.ok) console.warn('Failed to send email to server');
+        } catch (err) {
+            console.warn('Error sending email:', err);
+        }
+    };
+
     const startVoiceCall = (stream) => {
         setConnectionStatus('connecting'); setCallDuration(0);
         const base = getWsBaseUrl();
@@ -258,10 +302,11 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         const ws = new WebSocket(wsUrl); ws.binaryType = "arraybuffer"; wsRef.current = ws;
         ws.onopen = () => {
             wsConnectedRef.current = true;
+            sessionIdRef.current = 'session_' + Date.now();
             const sessionConfig = {
                 type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
                 user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
-                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'bundb_widget', region: 'EU' }
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_orange', region: 'EU' }
             };
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
@@ -290,14 +335,28 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     setConnectionStatus('connected'); setIsCallActive(true);
                     if (!callTimerRef.current) callTimerRef.current = setInterval(() => setCallDuration(x => x + 1), 1000);
                 }
+            }
+
+            if (d.type === 'state_update' && (d.state === 'thinking' || d.state === 'interrupt' || d.state === 'listening')) {
+                stopPlayback();
             } else if (d.type === 'audio_chunk') {
+                const turnId = Number(d.playback_turn_id);
+                if (Number.isFinite(turnId)) {
+                    if (turnId < minAcceptedPlaybackTurnIdRef.current) {
+                        if (d.binary_sent && binaryQueueRef.current.length > 0) binaryQueueRef.current.shift();
+                        return;
+                    }
+                    currentPlaybackTurnIdRef.current = turnId;
+                }
                 if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
                 setAgentIsSpeaking(true); audioStreamCompleteRef.current = false;
                 if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
                 else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
                 if (d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
             } else if (d.type === 'audio_complete' || d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
-            else if (d.type === 'interrupt' || d.type === 'clear') { setAgentIsSpeaking(false); lastPlaybackTimeRef.current = audioCtxRef.current?.currentTime || 0; playbackStartTimeRef.current = null; }
+            else if (d.type === 'interrupt' || d.type === 'clear' || d.type === 'playback_stop') {
+                stopPlayback();
+            }
             else if (d.type === 'ping' && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() / 1000 }));
         };
         ws.onclose = () => endCall(); ws.onerror = () => endCall();
@@ -306,6 +365,22 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const remaining = CALL_LIMIT - callDuration;
     const isWarning = remaining <= 30 && isCallActive;
+
+    const handleEmailSubmit = () => {
+        if (!emailInput.trim()) {
+            setShowEmailDialog(false);
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailInput)) {
+            setAccessError('Please enter a valid email address');
+            return;
+        }
+        sendEmailToServer(emailInput);
+        setEmailInput('');
+        setAccessError('');
+        setShowEmailDialog(false);
+    };
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>
@@ -320,7 +395,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                         style={{
                             background: 'rgba(10, 10, 10, 0.85)',
                             backdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 102, 0, 0.5)',
                             borderRadius: '24px',
                             padding: '10px 20px',
                             marginRight: '12px',
@@ -335,17 +410,17 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        Talk to TARA <span style={{ color: '#FACC15', fontSize: '16px' }}>✨</span>
+                        Talk to TARA <span style={{ color: '#FF6600', fontSize: '16px' }}>✨</span>
                     </motion.div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
                 {isCallActive && (
                     <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(166, 62, 27, 0.3)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
+                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 102, 0, 0.35)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>B&B</div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#ef4444' : '#A63E1B', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#ef4444' : '#FF6600', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
                         <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
@@ -353,12 +428,12 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             </AnimatePresence>
 
             <motion.button onClick={handleOrbClick}
-                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #A63E1B' : '1px solid rgba(166, 62, 27, 0.2)', boxShadow: isCallActive ? '0 0 30px rgba(166, 62, 27, 0.4)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #FF6600' : '1px solid rgba(255, 102, 0, 0.25)', boxShadow: isCallActive ? '0 0 30px rgba(255, 102, 0, 0.5)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
                 {isCallActive && (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A63E1B" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6600" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 )}
             </motion.button>
@@ -385,7 +460,91 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     </a>
                 )
             }
-        </div >
+
+            <AnimatePresence>
+                {showEmailDialog && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '100px',
+                            right: '20px',
+                            width: '320px',
+                            background: 'rgba(10, 10, 10, 0.95)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 102, 0, 0.5)',
+                            borderRadius: '16px',
+                            padding: '20px',
+                            zIndex: 10000,
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                        }}
+                    >
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#FF6600', marginBottom: '8px' }}>
+                            Get In Touch With Us
+                        </div>
+                        
+                        <input
+                            type="email"
+                            placeholder="Enter your email"
+                            value={emailInput}
+                            onChange={(e) => { setEmailInput(e.target.value); setAccessError(''); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSubmit(); }}
+                            autoFocus
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${accessError ? '#ef4444' : 'rgba(255, 102, 0, 0.35)'}`,
+                                borderRadius: '8px',
+                                color: '#FFFFFF',
+                                fontSize: '13px',
+                                boxSizing: 'border-box',
+                                outline: 'none'
+                            }}
+                        />
+                        {accessError && (
+                            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>{accessError}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                            <button
+                                onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(255, 102, 0, 0.3)',
+                                    borderRadius: '6px',
+                                    color: '#FFA500',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Skip
+                            </button>
+                            <button
+                                onClick={handleEmailSubmit}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    background: '#FF6600',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    color: '#050505',
+                                    fontSize: '12px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 
