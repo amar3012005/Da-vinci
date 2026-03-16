@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (Rust Orange & Black Theme)
+// ORB SHADER (Indic Edition - Rust Orange & Black Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -91,27 +91,39 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET — Rust Orange Edition
+// TARA VOICE WIDGET INDIC — Rust Orange Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    return 'wss://demo.davinciai.eu:8030/ws';
+    return 'wss://demo.davinciai.eu:8010/ws';
 };
 
 const CALL_LIMIT = 300;
 
 const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'TARA Speaking', thinking: 'Connecting...' };
 
-const BundBTaraVoiceWidget = ({ config: propConfig }) => {
+const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
+    // Only render on davinciai.in
+    const [isIndicDomain, setIsIndicDomain] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const hostname = window.location.hostname;
+            if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
+                setIsIndicDomain(true);
+            }
+        }
+    }, []);
+
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
             tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
             agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
             agentName: propConfig?.agentName || globalConfig?.agentName || 'BUNDB AGENT',
-            language: propConfig?.language || globalConfig?.language || 'de',
+            language: propConfig?.language || globalConfig?.language || 'hi', // Default to Hindi for Indic version
             accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
-            region: propConfig?.region || globalConfig?.region || 'EU',
+            region: propConfig?.region || globalConfig?.region || 'IN', // Region India
             ...propConfig
         };
     }, [propConfig]);
@@ -149,21 +161,14 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const sessionIdRef = useRef(null);
 
     const checkPlaybackComplete = useCallback(() => {
-        if (!audioCtxRef.current) {
-            console.log('[TARA] ⚠️ Audio context not available');
-            return;
-        }
+        if (!audioCtxRef.current) return;
         const currentTime = audioCtxRef.current.currentTime;
         const threshold = lastPlaybackTimeRef.current - 0.1;
 
-        console.log(`[TARA] 🔍 Checking playback complete: currentTime=${currentTime.toFixed(3)}, lastPlaybackTime=${lastPlaybackTimeRef.current.toFixed(3)}, threshold=${threshold.toFixed(3)}`);
-
         if (currentTime >= threshold) {
-            console.log('[TARA] ✅ Playback time threshold reached');
             setAgentIsSpeaking(false);
             if (audioStreamCompleteRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
                 const duration = playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0;
-                console.log(`[TARA] 📤 Sending playback_done: duration=${duration}ms, turn=${currentPlaybackTurnIdRef.current}`);
                 wsRef.current.send(JSON.stringify({
                     type: 'playback_done',
                     duration_ms: duration,
@@ -173,11 +178,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                 playbackStartTimeRef.current = null;
                 audioStreamCompleteRef.current = false;
                 currentPlaybackTurnIdRef.current = null;
-            } else {
-                console.log(`[TARA] ⚠️ Cannot send playback_done: audioStreamComplete=${audioStreamCompleteRef.current}, wsState=${wsRef.current?.readyState}`);
             }
-        } else {
-            console.log(`[TARA] ⏳ Waiting for playback complete: need ${threshold.toFixed(3)}, have ${currentTime.toFixed(3)}`);
         }
     }, []);
 
@@ -234,12 +235,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             else { s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
             const now = audioCtxRef.current.currentTime;
             let at = lastPlaybackTimeRef.current;
-            // Initial buffer offset (50ms) for first chunk — prevents glitchy start
             if (!playbackStartTimeRef.current) {
                 playbackStartTimeRef.current = Date.now();
                 at = now + 0.05;
             }
-            // Drift correction: jump to current time if falling behind
             if (at < now) at = now;
             activeSourcesRef.current.add(s);
             s.onended = () => { activeSourcesRef.current.delete(s); checkPlaybackComplete(); };
@@ -295,11 +294,9 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
     }, [micStream]);
 
-
-
     const sendEmailToServer = async (email) => {
         try {
-            const response = await fetch('/api/session/end', {
+            await fetch('/api/session/end', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -310,10 +307,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     timestamp: Date.now() / 1000
                 })
             });
-            if (!response.ok) console.warn('Failed to send email to server');
-        } catch (err) {
-            console.warn('Error sending email:', err);
-        }
+        } catch (err) { console.warn('Error sending email:', err); }
     };
 
     const startVoiceCall = (stream) => {
@@ -329,7 +323,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             const sessionConfig = {
                 type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
                 user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
-                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_rust', region: 'EU' }
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_indic', region: 'IN' }
             };
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
@@ -359,27 +353,18 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     if (!callTimerRef.current) callTimerRef.current = setInterval(() => setCallDuration(x => x + 1), 1000);
                 }
             }
-
             if (d.type === 'state_update' && (d.state === 'thinking' || d.state === 'interrupt' || d.state === 'listening')) {
                 stopPlayback();
             } else if (d.type === 'audio_chunk') {
                 const turnId = Number(d.playback_turn_id);
                 if (Number.isFinite(turnId)) {
                     if (turnId < minAcceptedPlaybackTurnIdRef.current) {
-                        console.log(`[TARA] 🚫 Rejected stale audio chunk: turn ${turnId} < min ${minAcceptedPlaybackTurnIdRef.current}`);
                         if (d.binary_sent && binaryQueueRef.current.length > 0) binaryQueueRef.current.shift();
-                        // Check is_final even for stale chunks (in case this is the final signal)
-                        if (d.is_final) {
-                            console.log(`[TARA] 🏁 Final chunk received (stale turn ${turnId})`);
-                            audioStreamCompleteRef.current = true;
-                            checkPlaybackComplete();
-                        }
                         return;
                     }
                     currentPlaybackTurnIdRef.current = turnId;
                 }
                 if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
-                // Only set speaking state if there's actual audio data
                 const hasAudioData = d.binary_sent || d.data || d.audio;
                 if (hasAudioData) {
                     setAgentIsSpeaking(true);
@@ -387,11 +372,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                 }
                 if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
                 else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
-                if (d.is_final) {
-                    console.log(`[TARA] 🏁 Final chunk received (turn ${turnId})`);
-                    audioStreamCompleteRef.current = true;
-                    checkPlaybackComplete();
-                }
+                if (d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
             } else if (d.type === 'audio_complete' || d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
             else if (d.type === 'interrupt' || d.type === 'clear' || d.type === 'playback_stop') {
                 stopPlayback();
@@ -406,20 +387,13 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     const isWarning = remaining <= 30 && isCallActive;
 
     const handleEmailSubmit = () => {
-        if (!emailInput.trim()) {
-            setShowEmailDialog(false);
-            return;
-        }
+        if (!emailInput.trim()) { setShowEmailDialog(false); return; }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(emailInput)) {
-            setAccessError('Please enter a valid email address');
-            return;
-        }
-        sendEmailToServer(emailInput);
-        setEmailInput('');
-        setAccessError('');
-        setShowEmailDialog(false);
+        if (!emailRegex.test(emailInput)) { setAccessError('Please enter a valid email address'); return; }
+        sendEmailToServer(emailInput); setEmailInput(''); setAccessError(''); setShowEmailDialog(false);
     };
+
+    if (!isIndicDomain) return null;
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>
@@ -449,7 +423,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        Talk to TARA <span style={{ color: '#A63E1B', fontSize: '16px' }}>✨</span>
+                        Talk to TARA (IN) <span style={{ color: '#A63E1B', fontSize: '16px' }}>🇮🇳</span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -458,7 +432,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
                         style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(166, 62, 27, 0.35)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>B&B</div>
+                            <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>DAVINCI AI</div>
                             <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : '#A63E1B', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
                         <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
@@ -476,29 +450,6 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                     </div>
                 )}
             </motion.button>
-            {
-                isCallActive && (
-                    <a
-                        href="https://davinciai.eu"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            position: 'absolute',
-                            top: '-18px',
-                            right: '4px',
-                            fontSize: '8px',
-                            fontWeight: 700,
-                            color: '#FFFFFF',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.12em',
-                            whiteSpace: 'nowrap',
-                            textDecoration: 'none'
-                        }}
-                    >
-                        built by davinciai.eu
-                    </a>
-                )
-            }
 
             <AnimatePresence>
                 {showEmailDialog && (
@@ -520,10 +471,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
                         }}
                     >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#A63E1B', marginBottom: '8px' }}>
-                            Get In Touch With Us
-                        </div>
-                        
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#A63E1B', marginBottom: '8px' }}> Get In Touch With Us </div>
                         <input
                             type="email"
                             placeholder="Enter your email"
@@ -543,42 +491,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                 outline: 'none'
                             }}
                         />
-                        {accessError && (
-                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{accessError}</div>
-                        )}
+                        {accessError && ( <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{accessError}</div> )}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                            <button
-                                onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(166, 62, 27, 0.3)',
-                                    borderRadius: '6px',
-                                    color: '#EBE5DF',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Skip
-                            </button>
-                            <button
-                                onClick={handleEmailSubmit}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    background: '#A63E1B',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    color: '#050505',
-                                    fontSize: '12px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Send
-                            </button>
+                            <button onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }} style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(166, 62, 27, 0.3)', borderRadius: '6px', color: '#EBE5DF', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}> Skip </button>
+                            <button onClick={handleEmailSubmit} style={{ flex: 1, padding: '8px 12px', background: '#A63E1B', border: 'none', borderRadius: '6px', color: '#050505', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}> Send </button>
                         </div>
                     </motion.div>
                 )}
@@ -587,4 +503,4 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     );
 };
 
-export default BundBTaraVoiceWidget;
+export default TaraVoiceWidgetIndic;

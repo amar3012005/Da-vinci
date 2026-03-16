@@ -95,7 +95,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    return 'wss://demo.davinciai.eu:8030/ws';
+    return 'wss://demo.davinciai.eu:8010/ws';
 };
 
 const CALL_LIMIT = 300;
@@ -103,6 +103,17 @@ const CALL_LIMIT = 300;
 const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'TARA Speaking', thinking: 'Connecting...' };
 
 const BundBTaraVoiceWidget = ({ config: propConfig }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const hostname = window.location.hostname;
+            if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
+                setIsVisible(false);
+            }
+        }
+    }, []);
+
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
@@ -420,6 +431,8 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
         setAccessError('');
         setShowEmailDialog(false);
     };
+
+    if (!isVisible) return null;
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>

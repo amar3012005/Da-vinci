@@ -12,6 +12,7 @@ import ComparisonSection from './ComparisonSection';
 import MobilePricingSection from './MobilePricingSection';
 import MobileAboutSection from './MobileAboutSection';
 import TaraVoiceWidget from './TaraVoiceWidget';
+import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
 
 /**
  * MobileHomepage - Main container orchestrating all mobile sections
@@ -56,6 +57,7 @@ const MobileHomepage = () => {
 
             {/* TARA Voice Widget - Persistent Overlay */}
             <TaraVoiceWidget />
+            <TaraVoiceWidgetIndic />
         </motion.div>
     );
 };
