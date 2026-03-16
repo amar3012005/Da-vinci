@@ -19,7 +19,17 @@ import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
  * Premium redesigned mobile experience for TARA
  */
 const MobileHomepage = () => {
-    // Removed Lenis smooth scroll for better native mobile feel
+    // Detect domain for regional widget selection
+    const [isIndicDomain, setIsIndicDomain] = React.useState(false);
+
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const hostname = window.location.hostname;
+            if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
+                setIsIndicDomain(true);
+            }
+        }
+    }, []);
 
     return (
         <motion.div
@@ -56,8 +66,7 @@ const MobileHomepage = () => {
             <MobileAboutSection />
 
             {/* TARA Voice Widget - Persistent Overlay */}
-            <TaraVoiceWidget />
-            <TaraVoiceWidgetIndic />
+            {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />}
         </motion.div>
     );
 };

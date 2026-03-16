@@ -103,18 +103,6 @@ const CALL_LIMIT = 300;
 const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'TARA Speaking', thinking: 'Connecting...' };
 
 const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
-    // Only render on davinciai.in
-    const [isIndicDomain, setIsIndicDomain] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const hostname = window.location.hostname;
-            if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
-                setIsIndicDomain(true);
-            }
-        }
-    }, []);
-
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
@@ -392,8 +380,6 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
         if (!emailRegex.test(emailInput)) { setAccessError('Please enter a valid email address'); return; }
         sendEmailToServer(emailInput); setEmailInput(''); setAccessError(''); setShowEmailDialog(false);
     };
-
-    if (!isIndicDomain) return null;
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>
