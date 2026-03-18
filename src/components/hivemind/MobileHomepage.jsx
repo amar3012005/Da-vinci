@@ -8,7 +8,6 @@ import PhaseOneBrandSection from './PhaseOneBrandSection';
 import MeetTaraSection from './MeetTaraSection';
 import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
-import MobilePricingSection from './MobilePricingSection';
 import MobileAboutSection from './MobileAboutSection';
 import TaraVoiceWidget from './TaraVoiceWidget';
 
@@ -43,9 +42,6 @@ const MobileHomepage = () => {
 
             {/* Comparison: Traditional vs TARA */}
             <ComparisonSection />
-
-            {/* Pricing Plans */}
-            <MobilePricingSection />
 
             {/* Contact Us Section */}
             <MobileAboutSection />

@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 // Import Cartesia Replica Sections
 import Navbar from './Navbar';
 import Hero from './Hero';
-import Marquee from './Marquee';
 import Features from './Features';
 import Languages from './Languages';
 import Developers from './Developers';
@@ -26,7 +25,6 @@ const CartesiaReplica = () => {
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#bdf213]/30">
       <Navbar />
       <Hero />
-      <Marquee />
       <Features />
       
       {/* Interactive Graph Preview using MMAR pattern */}
