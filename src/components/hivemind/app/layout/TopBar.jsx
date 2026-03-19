@@ -50,11 +50,11 @@ export default function TopBar() {
           <div className="flex items-center gap-2 pl-4 border-l border-white/[0.06]">
             <div className="w-7 h-7 rounded-full bg-[#bdf213]/10 flex items-center justify-center">
               <span className="text-[#bdf213] text-xs font-bold font-mono">
-                {(user.name || user.email || 'U')[0].toUpperCase()}
+                {(user.display_name || user.email || 'U')[0].toUpperCase()}
               </span>
             </div>
             <span className="text-white/60 text-sm font-['Space_Grotesk'] max-w-[120px] truncate">
-              {user.name || user.email || 'User'}
+              {user.display_name || user.email || 'User'}
             </span>
           </div>
         )}

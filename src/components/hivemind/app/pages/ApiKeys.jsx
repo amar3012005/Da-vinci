@@ -135,7 +135,7 @@ function KeyRow({ apiKey, onRevoke }) {
             <p className={`text-sm font-semibold font-['Space_Grotesk'] truncate ${
               isRevoked ? 'text-white/30' : 'text-white'
             }`}>
-              {apiKey.label}
+              {apiKey.name || apiKey.label}
             </p>
             <p className={`text-xs font-mono mt-0.5 ${
               isRevoked ? 'text-white/15' : 'text-white/40'
@@ -176,7 +176,7 @@ function KeyRow({ apiKey, onRevoke }) {
         {confirmingRevoke && (
           <div className="mt-3">
             <RevokeConfirmation
-              keyLabel={apiKey.label}
+              keyLabel={apiKey.name || apiKey.label}
               onConfirm={handleRevoke}
               onCancel={() => setConfirmingRevoke(false)}
               revoking={revoking}
@@ -209,7 +209,8 @@ export default function ApiKeysPage() {
     setCreateError(null);
     try {
       const result = await apiClient.createApiKey(label.trim());
-      setNewlyCreatedKey(result.key);
+      // result: { success, api_key (raw string), key: { id, name, ... }, descriptors }
+      setNewlyCreatedKey(result.api_key);
       setLabel('');
       refetch();
     } catch (err) {

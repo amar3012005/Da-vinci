@@ -4,14 +4,20 @@ import { API_DEFAULTS } from './theme';
 /**
  * HIVEMIND API Client
  *
- * Talks to both control-plane (auth, keys, descriptors) and core (memories, search, MCP).
- * The core API base URL is resolved from bootstrap, never hardcoded.
+ * Control plane (api.hivemind.davinciai.eu:8040):
+ *   GET  /auth/login?return_to=<url>    → ZITADEL OIDC redirect
+ *   GET  /auth/callback                 → sets hm_cp_session cookie, redirects to return_to
+ *   POST /auth/logout                   → clears session
+ *   GET  /v1/bootstrap                  → { user, organization, onboarding, connectivity, client_support }
+ *   POST /v1/orgs                       → { success, organization }
+ *   GET  /v1/api-keys                   → { keys: [...] }
+ *   POST /v1/api-keys                   → { success, api_key, key, descriptors }
+ *   POST /v1/api-keys/:id/revoke        → { success, key_id, revoked_at }
+ *   GET  /v1/clients/descriptors        → { core_api_base_url, descriptors }
+ *   GET  /v1/clients/descriptors/:client → single descriptor
  *
- * Auth flow (per backend-control-plane-record.md):
- *   1. Frontend → GET /auth/login?redirect_uri=<frontend_url>
- *   2. Control plane → ZITADEL OIDC
- *   3. ZITADEL → GET /auth/callback → sets hm_cp_session cookie → redirects to redirect_uri
- *   4. Frontend → GET /v1/bootstrap (with cookie) → returns user, org, core_api_base_url
+ * Core (hivemind.davinciai.eu:8050):
+ *   All memory, search, MCP, context, profile, evaluation, connector endpoints
  */
 
 class HiveMindApiClient {
@@ -33,13 +39,11 @@ class HiveMindApiClient {
     this._coreBaseUrl = null;
   }
 
-  /** Set the API key for core requests (from bootstrap or key creation) */
   setApiKey(key) {
     this._apiKey = key;
     this.core.defaults.headers['X-API-Key'] = key;
   }
 
-  /** Update core base URL from bootstrap response */
   setCoreBaseUrl(url) {
     if (url && url !== this._coreBaseUrl) {
       this._coreBaseUrl = url;
@@ -50,21 +54,32 @@ class HiveMindApiClient {
   // ─── Control Plane: Auth ─────────────────────────────────────
 
   /**
-   * Build the login URL with redirect_uri so the control plane
-   * knows where to send the user after ZITADEL completes auth.
+   * Build the login URL. The control plane uses `return_to` (not redirect_uri)
+   * to know where to send the user after ZITADEL completes auth.
    */
-  getLoginUrl(redirectUri) {
+  getLoginUrl(returnTo) {
     const base = `${this.controlPlane.defaults.baseURL}/auth/login`;
-    if (redirectUri) {
-      return `${base}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    if (returnTo) {
+      return `${base}?return_to=${encodeURIComponent(returnTo)}`;
     }
     return base;
   }
 
+  /**
+   * Bootstrap response shape from control plane:
+   * {
+   *   user: { id, email, display_name, zitadel_user_id },
+   *   organization: { id, name, slug } | null,
+   *   onboarding: { needs_org_setup, has_api_key },
+   *   connectivity: { core_api_base_url, core_health },
+   *   client_support: ['claude', 'antigravity', 'vscode', 'remote-mcp']
+   * }
+   */
   async bootstrap() {
     const { data } = await this.controlPlane.get('/v1/bootstrap');
-    if (data.core_api_base_url) {
-      this.setCoreBaseUrl(data.core_api_base_url);
+    // Set core API base from bootstrap connectivity
+    if (data.connectivity?.core_api_base_url) {
+      this.setCoreBaseUrl(data.connectivity.core_api_base_url);
     }
     return data;
   }
@@ -82,16 +97,29 @@ class HiveMindApiClient {
 
   // ─── Control Plane: API Keys ─────────────────────────────────
 
+  /**
+   * Returns { keys: [{ id, name, key_prefix, scopes, expires_at, last_used_at, created_at }] }
+   */
   async listApiKeys() {
     const { data } = await this.controlPlane.get('/v1/api-keys');
     return data;
   }
 
-  async createApiKey(label) {
-    const { data } = await this.controlPlane.post('/v1/api-keys', { label });
+  /**
+   * Create key. Body: { name, description?, scopes?, expires_at?, rate_limit_per_minute? }
+   * Returns { success, api_key (raw), key: { id, name, key_prefix, scopes, created_at }, descriptors }
+   */
+  async createApiKey(name, options = {}) {
+    const { data } = await this.controlPlane.post('/v1/api-keys', {
+      name,
+      ...options,
+    });
     return data;
   }
 
+  /**
+   * Returns { success, key_id, revoked_at }
+   */
   async revokeApiKey(id) {
     const { data } = await this.controlPlane.post(`/v1/api-keys/${id}/revoke`);
     return data;
@@ -99,6 +127,9 @@ class HiveMindApiClient {
 
   // ─── Control Plane: Client Descriptors ───────────────────────
 
+  /**
+   * Returns { core_api_base_url, descriptors: { claude, antigravity, vscode, remote_mcp } }
+   */
   async getDescriptors() {
     const { data } = await this.controlPlane.get('/v1/clients/descriptors');
     return data;
@@ -202,6 +233,5 @@ class HiveMindApiClient {
   }
 }
 
-// Singleton
 const apiClient = new HiveMindApiClient();
 export default apiClient;

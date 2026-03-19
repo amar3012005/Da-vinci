@@ -5,22 +5,31 @@ import apiClient from '../shared/api-client';
 const AuthContext = createContext(undefined);
 
 /**
- * AuthProvider
+ * AuthProvider — wired to the control-plane-server.js contract
  *
- * Handles the full OIDC auth lifecycle per the control-plane record:
- *   1. GET /auth/login?redirect_uri=...  → ZITADEL
- *   2. ZITADEL → GET /auth/callback      → sets hm_cp_session cookie
- *   3. GET /v1/bootstrap                  → returns user, org, core_api_base_url
+ * Bootstrap response shape:
+ *   user:         { id, email, display_name, zitadel_user_id }
+ *   organization: { id, name, slug } | null
+ *   onboarding:   { needs_org_setup, has_api_key }
+ *   connectivity: { core_api_base_url, core_health }
+ *   client_support: string[]
  *
- * The login page is NEVER blocked by bootstrap. If the control plane is
- * unreachable, the login page renders immediately with a "Sign In" button.
+ * Auth flow:
+ *   1. GET /auth/login?return_to=<frontend_url>  → ZITADEL
+ *   2. ZITADEL → GET /auth/callback → hm_cp_session cookie → redirect to return_to
+ *   3. Frontend calls GET /v1/bootstrap (cookie sent automatically)
+ *   4. If no org → POST /v1/orgs
+ *   5. POST /v1/api-keys → mint key
+ *   6. GET /v1/clients/descriptors → MCP configs
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
+  const [onboarding, setOnboarding] = useState(null);
+  const [connectivity, setConnectivity] = useState(null);
+  const [clientSupport, setClientSupport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const bootstrapAttempted = useRef(false);
   const location = useLocation();
 
@@ -29,19 +38,18 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const data = await apiClient.bootstrap();
-      setUser(data.user || null);
-      setOrg(data.org || null);
-      setNeedsOnboarding(data.user && !data.org);
 
-      if (data.api_key) {
-        apiClient.setApiKey(data.api_key);
-      }
+      // Map to the actual control plane response shape
+      setUser(data.user || null);
+      setOrg(data.organization || null);
+      setOnboarding(data.onboarding || null);
+      setConnectivity(data.connectivity || null);
+      setClientSupport(data.client_support || []);
     } catch (err) {
-      // 401 = not authenticated (expected for login page)
-      // Network errors = control plane unreachable
-      // Either way: user is not authenticated
       setUser(null);
       setOrg(null);
+      setOnboarding(null);
+      setConnectivity(null);
       if (err.response?.status !== 401) {
         setError(err.message);
       }
@@ -55,8 +63,8 @@ export function AuthProvider({ children }) {
     runBootstrap();
   }, [runBootstrap]);
 
-  // Re-run bootstrap when returning from OIDC callback
-  // The control plane redirects back with ?auth=callback after successful login
+  // Re-bootstrap when returning from ZITADEL callback
+  // The control plane redirects back with ?auth=callback
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('auth') === 'callback' && bootstrapAttempted.current) {
@@ -65,36 +73,41 @@ export function AuthProvider({ children }) {
   }, [location.search, runBootstrap]);
 
   const login = useCallback(() => {
-    // Build the redirect URI the control plane should return the user to after OIDC
-    const redirectUri = `${window.location.origin}/hivemind/app/overview?auth=callback`;
-    const loginUrl = apiClient.getLoginUrl(redirectUri);
-    window.location.href = loginUrl;
+    // return_to tells the control plane where to redirect after ZITADEL auth
+    const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback`;
+    window.location.href = apiClient.getLoginUrl(returnTo);
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await apiClient.logout();
     } catch {
-      // Ignore logout failures — clear local state regardless
+      // Clear local state regardless
     }
     setUser(null);
     setOrg(null);
+    setOnboarding(null);
     window.location.href = '/hivemind';
   }, []);
 
   const createOrg = useCallback(async (name) => {
     const data = await apiClient.createOrg(name);
-    setOrg(data.org || data);
-    setNeedsOnboarding(false);
+    // Response: { success, organization: { id, name, slug } }
+    setOrg(data.organization || null);
+    setOnboarding(prev => prev ? { ...prev, needs_org_setup: false } : null);
     return data;
   }, []);
 
   const value = {
     user,
     org,
+    onboarding,
+    connectivity,
+    clientSupport,
     loading,
     error,
-    needsOnboarding,
+    needsOnboarding: onboarding?.needs_org_setup === true,
+    hasApiKey: onboarding?.has_api_key === true,
     login,
     logout,
     createOrg,

@@ -47,7 +47,7 @@ export default function OnboardingFlow() {
             Create your workspace
           </h2>
           <p className="text-white/50 text-sm mb-6">
-            Welcome, {user?.name || user?.email || 'there'}. Set up your organization to start using HIVEMIND.
+            Welcome, {user?.display_name || user?.email || 'there'}. Set up your organization to start using HIVEMIND.
           </p>
 
           <form onSubmit={handleCreate}>
