@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Hexagon, ArrowRight, Zap, Brain, Shield, Loader2, Mail } from 'lucide-react';
+import { Hexagon, Zap, Brain, Shield, Loader2, Mail } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 /** Inline Google "G" icon — no external dependency */
