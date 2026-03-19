@@ -10,10 +10,8 @@ import DemoPage from './components/DemoPage';
 // Portal Component for Iframe Persistence
 import PortalLayout from './components/PortalLayout';
 
-// Hivemind Redirect
+// Hivemind
 import HivemindRedirect from './components/hivemind/HivemindRedirect';
-
-// Hivemind Dashboard App
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
 
 const Layout = ({ children }) => (
@@ -25,8 +23,6 @@ const Layout = ({ children }) => (
   </div>
 );
 
-
-
 function App() {
   return (
     <Router>
@@ -36,21 +32,23 @@ function App() {
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
-        <Route path="/hivemind" element={<HivemindRedirect />} />
-        <Route
-          path="/hivemind/*"
-          element={
-            <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
-              <HiveMindApp />
-            </React.Suspense>
-          }
-        />
 
-        {/*
-            PORTAL ROUTES
-            These load the other apps (enterprise, prometheus) inside the iframe wrapper
-            while keeping the TARA widget persistent on top.
-        */}
+        {/* HIVEMIND — consolidated parent route */}
+        <Route path="/hivemind">
+          {/* Exact /hivemind → marketing landing */}
+          <Route index element={<HivemindRedirect />} />
+          {/* /hivemind/login, /hivemind/app/* → dashboard app */}
+          <Route
+            path="*"
+            element={
+              <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
+                <HiveMindApp />
+              </React.Suspense>
+            }
+          />
+        </Route>
+
+        {/* PORTAL ROUTES */}
         <Route
           path="/enterprise/*"
           element={<PortalLayout targetUrl="https://enterprise.davinciai.eu" />}
@@ -60,7 +58,7 @@ function App() {
           element={<PortalLayout targetUrl="https://prometheus.davinciai.eu" />}
         />
 
-        {/* Catch all route - redirect to home if needed, or just let users know */}
+        {/* Catch all */}
         <Route path="*" element={<DavinciHomepage />} />
       </Routes>
     </Router>

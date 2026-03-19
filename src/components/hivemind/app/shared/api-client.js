@@ -3,8 +3,15 @@ import { API_DEFAULTS } from './theme';
 
 /**
  * HIVEMIND API Client
+ *
  * Talks to both control-plane (auth, keys, descriptors) and core (memories, search, MCP).
  * The core API base URL is resolved from bootstrap, never hardcoded.
+ *
+ * Auth flow (per backend-control-plane-record.md):
+ *   1. Frontend → GET /auth/login?redirect_uri=<frontend_url>
+ *   2. Control plane → ZITADEL OIDC
+ *   3. ZITADEL → GET /auth/callback → sets hm_cp_session cookie → redirects to redirect_uri
+ *   4. Frontend → GET /v1/bootstrap (with cookie) → returns user, org, core_api_base_url
  */
 
 class HiveMindApiClient {
@@ -12,11 +19,13 @@ class HiveMindApiClient {
     this.controlPlane = axios.create({
       baseURL: API_DEFAULTS.controlPlaneBase,
       withCredentials: true,
+      timeout: 10000,
       headers: { 'Content-Type': 'application/json' },
     });
 
     this.core = axios.create({
       baseURL: API_DEFAULTS.coreApiBase,
+      timeout: 15000,
       headers: { 'Content-Type': 'application/json' },
     });
 
@@ -40,8 +49,16 @@ class HiveMindApiClient {
 
   // ─── Control Plane: Auth ─────────────────────────────────────
 
-  getLoginUrl() {
-    return `${this.controlPlane.defaults.baseURL}/auth/login`;
+  /**
+   * Build the login URL with redirect_uri so the control plane
+   * knows where to send the user after ZITADEL completes auth.
+   */
+  getLoginUrl(redirectUri) {
+    const base = `${this.controlPlane.defaults.baseURL}/auth/login`;
+    if (redirectUri) {
+      return `${base}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    }
+    return base;
   }
 
   async bootstrap() {

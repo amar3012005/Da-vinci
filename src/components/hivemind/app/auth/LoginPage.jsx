@@ -1,21 +1,22 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Hexagon, ArrowRight, Zap, Brain, Shield } from 'lucide-react';
+import { Hexagon, ArrowRight, Zap, Brain, Shield, Loader2 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 export default function LoginPage() {
-  const { isAuthenticated, login, loading } = useAuth();
+  const { isAuthenticated, login, loading, error } = useAuth();
   const navigate = useNavigate();
 
+  // If already authenticated, go to dashboard
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
       navigate('/hivemind/app/overview', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
-  if (loading) return null;
-
+  // Don't redirect away during loading — always show the login UI
+  // so the user is never stuck on a blank page
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center">
       {/* Background grid */}
@@ -62,13 +63,30 @@ export default function LoginPage() {
             Sign in to access your memory workspace, manage API keys, and configure MCP connections.
           </p>
 
+          {/* Error banner (control plane unreachable) */}
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono">
+              Control plane unavailable. Sign-in may not work until the service is online.
+            </div>
+          )}
+
           {/* Sign In Button */}
           <button
             onClick={login}
-            className="w-full flex items-center justify-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] text-[#0a0a0a] font-semibold py-3 px-6 rounded-xl transition-all duration-200 text-sm font-['Space_Grotesk'] group"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] disabled:opacity-60 text-[#0a0a0a] font-semibold py-3 px-6 rounded-xl transition-all duration-200 text-sm font-['Space_Grotesk'] group cursor-pointer border-none"
           >
-            Sign In
-            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Checking session...
+              </>
+            ) : (
+              <>
+                Sign In
+                <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
           </button>
 
           {/* Divider */}
