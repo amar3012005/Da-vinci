@@ -182,7 +182,7 @@ export default function Overview() {
   const healthy = useHealthStatus(30000);
 
   // Profile / stats
-  const { data: profile, loading: profileLoading, refetch: refetchProfile } = useApiQuery(
+  const { data: profile, refetch: refetchProfile } = useApiQuery(
     () => apiClient.getProfile(),
     []
   );
@@ -194,7 +194,7 @@ export default function Overview() {
   );
 
   // Connector status
-  const { data: connectors, loading: connectorsLoading } = useApiQuery(
+  const { data: connectors } = useApiQuery(
     () => apiClient.getConnectorStatus().catch(() => null),
     []
   );

@@ -12,10 +12,6 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
