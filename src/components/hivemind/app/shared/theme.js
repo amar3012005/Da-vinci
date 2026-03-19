@@ -61,6 +61,6 @@ export const shadows = {
 
 // API endpoints resolved from bootstrap
 export const API_DEFAULTS = {
-  controlPlaneBase: process.env.REACT_APP_CONTROL_PLANE_URL || 'https://hivemind.davinciai.eu',
-  coreApiBase: process.env.REACT_APP_CORE_API_URL || 'https://api.hivemind.davinciai.eu',
+  controlPlaneBase: process.env.REACT_APP_CONTROL_PLANE_URL || 'https://hivemind.davincisolutions.de',
+  coreApiBase: process.env.REACT_APP_CORE_API_URL || 'https://api.hivemind.davincisolutions.de',
 };

@@ -128,7 +128,7 @@ const MobileNavigation = () => {
 
                             {/* Hivemind Button */}
                             <motion.a
-                                href="https://hivemind.davinciai.eu"
+                                href="https://hivemind.davincisolutions.de"
                                 className="group flex items-center gap-3 text-[#A63E1B] hover:text-[#ff6b35] text-3xl font-light tracking-wide transition-colors duration-300"
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}

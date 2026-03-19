@@ -12,7 +12,7 @@ const FeatureMMAR = () => {
     const agents = [
         { icon: Globe, name: 'Translation', color: 'from-blue-400 to-cyan-400', description: 'Auto-detect 15+ languages' },
         { icon: Search, name: 'Retriever', color: 'from-green-400 to-emerald-400', description: 'Semantic knowledge search' },
-        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence', link: 'https://hivemind.davinciai.eu' },
+        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence', link: 'https://hivemind.davincisolutions.de' },
         { icon: Cpu, name: 'LLM Core', color: 'from-orange-400 to-red-400', description: 'Natural language generation' }
     ];
 

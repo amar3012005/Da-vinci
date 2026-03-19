@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 /**
  * HivemindButton
  * 
- * A button that navigates to hivemind.davinciai.eu
+ * A button that navigates to hivemind.davincisolutions.de
  * Can be placed anywhere in your application.
  * 
  * Usage:
@@ -24,7 +24,7 @@ const HivemindButton = ({
 
   const handleClick = () => {
     // Navigate to hivemind subdomain
-    window.location.href = 'https://hivemind.davinciai.eu';
+    window.location.href = 'https://hivemind.davincisolutions.de';
   };
 
   const baseStyles = 'px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105';
