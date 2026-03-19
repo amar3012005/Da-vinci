@@ -16,7 +16,7 @@ export default function ApiKeySetup() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
   const [rawKey, setRawKey] = useState(null);
-  const [descriptors, setDescriptors] = useState(null);
+
 
   const handleCreate = async () => {
     setCreating(true);
@@ -25,7 +25,7 @@ export default function ApiKeySetup() {
       const result = await apiClient.createApiKey('Primary API Key');
       // result: { success, api_key, key, descriptors }
       setRawKey(result.api_key);
-      setDescriptors(result.descriptors || null);
+
       setStep('show');
     } catch (err) {
       setError(err.response?.data?.error || err.message);
