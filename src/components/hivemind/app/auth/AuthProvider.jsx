@@ -72,10 +72,14 @@ export function AuthProvider({ children }) {
     }
   }, [location.search, runBootstrap]);
 
-  const login = useCallback(() => {
-    // return_to tells the control plane where to redirect after ZITADEL auth
+  /**
+   * Start the login flow.
+   * @param {object} [options]
+   * @param {string} [options.idpHint] - Pre-select IdP in Zitadel (e.g. 'google')
+   */
+  const login = useCallback((options = {}) => {
     const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback`;
-    window.location.href = apiClient.getLoginUrl(returnTo);
+    window.location.href = apiClient.getLoginUrl(returnTo, { idpHint: options.idpHint });
   }, []);
 
   const logout = useCallback(async () => {

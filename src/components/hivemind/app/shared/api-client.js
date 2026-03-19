@@ -54,15 +54,19 @@ class HiveMindApiClient {
   // ─── Control Plane: Auth ─────────────────────────────────────
 
   /**
-   * Build the login URL. The control plane uses `return_to` (not redirect_uri)
-   * to know where to send the user after ZITADEL completes auth.
+   * Build the login URL.
+   * - return_to: frontend route to return to after auth
+   * - idpHint: pre-select IdP in Zitadel (e.g. 'google')
+   *
+   * The control plane owns redirect_uri (for Zitadel).
+   * The frontend owns return_to (for the browser flow after login).
    */
-  getLoginUrl(returnTo) {
-    const base = `${this.controlPlane.defaults.baseURL}/auth/login`;
-    if (returnTo) {
-      return `${base}?return_to=${encodeURIComponent(returnTo)}`;
-    }
-    return base;
+  getLoginUrl(returnTo, { idpHint } = {}) {
+    const params = new URLSearchParams();
+    if (returnTo) params.set('return_to', returnTo);
+    if (idpHint) params.set('idp_hint', idpHint);
+    const qs = params.toString();
+    return `${this.controlPlane.defaults.baseURL}/auth/login${qs ? `?${qs}` : ''}`;
   }
 
   /**
