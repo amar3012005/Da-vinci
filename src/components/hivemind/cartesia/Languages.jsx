@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
 const Languages = () => {
+  const navigate = useNavigate();
   const [activeRegion, setActiveRegion] = useState('Western Europe');
 
   const regions = ['Americas', 'Western Europe', 'Eastern Europe', 'Asia Pacific', 'India', 'Middle East'];
@@ -79,7 +81,10 @@ const Languages = () => {
           <p className="text-lg text-white/50 max-w-2xl mx-auto mb-8">
             Reach international markets with HIVEMIND. It understands 40+ languages covering 95% of the world, all with native context awareness.
           </p>
-          <button className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors">
+          <button
+            onClick={() => navigate('/hivemind/login')}
+            className="px-6 py-3 rounded-full bg-[#bdf213] text-[#0a0a0a] font-semibold hover:bg-[#d4ff3a] transition-colors cursor-pointer border-none"
+          >
             Explore 40+ Languages
           </button>
         </div>

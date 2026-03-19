@@ -13,6 +13,9 @@ import PortalLayout from './components/PortalLayout';
 // Hivemind Redirect
 import HivemindRedirect from './components/hivemind/HivemindRedirect';
 
+// Hivemind Dashboard App
+const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
+
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
     <Navbar />
@@ -34,6 +37,14 @@ function App() {
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/hivemind" element={<HivemindRedirect />} />
+        <Route
+          path="/hivemind/*"
+          element={
+            <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
+              <HiveMindApp />
+            </React.Suspense>
+          }
+        />
 
         {/*
             PORTAL ROUTES

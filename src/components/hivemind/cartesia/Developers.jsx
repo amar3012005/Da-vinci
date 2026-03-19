@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Cpu, Layers, Code2, Shield } from 'lucide-react';
 
 const Developers = () => {
+  const navigate = useNavigate();
   return (
-    <div className="bg-[#111] text-white">
+    <div id="developers" className="bg-[#111] text-white">
       {/* Container with side borders */}
       <div className="max-w-[1200px] mx-auto border-x border-[#222]">
         
@@ -26,7 +28,7 @@ const Developers = () => {
                 <p className="text-lg text-white/50 font-light leading-relaxed max-w-md">
                   HIVEMIND is built for rapid prototyping and seamless integration. Developers trust it for secure, compliant, production-ready performance.
                 </p>
-                <button className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors">
+                <button onClick={() => navigate('/hivemind/login')} className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors">
                   Build with HIVEMIND
                 </button>
 
@@ -183,7 +185,7 @@ const Developers = () => {
         </section>
 
         {/* Pricing Section */}
-        <section className="relative border-t border-[#222]">
+        <section id="pricing" className="relative border-t border-[#222]">
           {/* Vertical striped separator */}
           <div 
             className="h-20 w-full border-b border-[#222]" 
@@ -218,7 +220,7 @@ const Developers = () => {
                     <span className="text-[#bdf213]">✓</span> Standard Support
                   </li>
                 </ul>
-                <button className="w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors font-medium">
+                <button onClick={() => navigate('/hivemind/login')} className="w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors font-medium">
                   Get Started
                 </button>
               </div>
@@ -244,7 +246,7 @@ const Developers = () => {
                     <span className="text-[#bdf213]">✓</span> Priority Support
                   </li>
                 </ul>
-                <button className="w-full py-3 rounded-full bg-[#4f00ff] hover:bg-[#5b14ff] transition-colors font-medium text-white">
+                <button onClick={() => navigate('/hivemind/login')} className="w-full py-3 rounded-full bg-[#4f00ff] hover:bg-[#5b14ff] transition-colors font-medium text-white">
                   Subscribe Now
                 </button>
               </div>
@@ -267,7 +269,7 @@ const Developers = () => {
                     <span className="text-[#bdf213]">✓</span> SLA & Team Scoping
                   </li>
                 </ul>
-                <button className="w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors font-medium">
+                <button onClick={() => window.location.href = 'mailto:enterprise@davinciai.eu'} className="w-full py-3 rounded-full border border-white/20 hover:bg-white/5 transition-colors font-medium">
                   Contact Sales
                 </button>
               </div>
@@ -287,9 +289,9 @@ const Developers = () => {
               <span className="text-lg font-bold tracking-tight text-white">HIVEMIND</span>
             </div>
             <div className="flex gap-8 text-sm text-white/40">
-              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Documentation</button>
-              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">API Reference</button>
-              <button className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Trust Center</button>
+              <button onClick={() => navigate('/hivemind/app/connectors')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Documentation</button>
+              <button onClick={() => navigate('/hivemind/app/connectors')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">API Reference</button>
+              <button onClick={() => navigate('/hivemind/app/settings')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer">Trust Center</button>
             </div>
             <div className="text-sm text-white/50 text-center md:text-right">
               Davinci AI Startup | Built in Europe, for the World.

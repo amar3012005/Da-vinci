@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Globe2 } from 'lucide-react';
 
 const Features = () => {
+  const navigate = useNavigate();
   return (
-    <div className="bg-[#111] text-white">
+    <div id="features" className="bg-[#111] text-white">
       {/* Container with side borders */}
       <div className="max-w-[1200px] mx-auto border-x border-[#222]">
         
@@ -23,7 +25,7 @@ const Features = () => {
                   Context-savvy accuracy<br />
                   <span className="text-white/40">for the real-world</span>
                 </h2>
-                <button className="px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-white/90 transition-colors">
+                <button onClick={() => navigate('/hivemind/login')} className="px-6 py-3 bg-white text-black font-medium rounded-full hover:bg-white/90 transition-colors cursor-pointer border-none">
                   Try for free
                 </button>
               </div>
@@ -113,7 +115,7 @@ const Features = () => {
                 <p className="text-lg font-light text-white/60 leading-relaxed max-w-md">
                   At #1, HIVEMIND sets the standard for ultra-low latency memory retrieval. It's contextual AI that's fast, fluid—and virtually human.
                 </p>
-                <button className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors">
+                <button onClick={() => navigate('/hivemind/login')} className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors cursor-pointer border-none">
                   Try for free
                 </button>
               </div>
@@ -206,7 +208,7 @@ const Features = () => {
         </section>
 
         {/* Section 3: Powering agents across industries */}
-        <section className="relative border-t border-[#222]">
+        <section id="solutions" className="relative border-t border-[#222]">
           {/* Vertical striped separator */}
           <div 
             className="h-20 w-full border-b border-[#222]" 
@@ -219,7 +221,7 @@ const Features = () => {
                 Powering agents across<br />
                 industries and personas
               </h2>
-              <button className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors">
+              <button onClick={() => navigate('/hivemind/login')} className="px-6 py-3 rounded-full bg-white text-black font-medium hover:bg-white/90 transition-colors cursor-pointer border-none">
                 Build with HIVEMIND
               </button>
             </div>
