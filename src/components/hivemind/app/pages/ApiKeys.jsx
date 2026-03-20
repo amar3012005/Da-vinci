@@ -14,7 +14,7 @@ function KeyCreatedBanner({ rawKey, onDismiss }) {
       exit={{ opacity: 0, height: 0 }}
       className="mb-6 overflow-hidden"
     >
-      <div className="bg-[#0a0a0a] border border-[#bdf213]/30 rounded-xl p-5">
+      <div className="bg-[#09090b] border border-[#bdf213]/30 rounded-xl p-5">
         <div className="flex items-start gap-3 mb-3">
           <AlertTriangle size={18} className="text-[#bdf213] mt-0.5 shrink-0" />
           <div>
@@ -28,7 +28,7 @@ function KeyCreatedBanner({ rawKey, onDismiss }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#111]/80 border border-white/[0.06] rounded-lg p-3">
+        <div className="flex items-center gap-2 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
           <code className="flex-1 text-[#bdf213] text-sm font-mono break-all select-all">
             {rawKey}
           </code>
@@ -120,7 +120,7 @@ function KeyRow({ apiKey, onRevoke }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="bg-[#111]/80 border border-white/[0.06] rounded-xl p-4"
+      className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
@@ -229,7 +229,7 @@ export default function ApiKeysPage() {
   const keyList = Array.isArray(keys) ? keys : keys?.keys || [];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-6 md:p-10">
+    <div className="min-h-screen bg-[#09090b] p-6 md:p-10">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <motion.div
@@ -257,7 +257,7 @@ export default function ApiKeysPage() {
           transition={{ delay: 0.05 }}
           className="mb-6"
         >
-          <div className="flex items-start gap-3 bg-[#111]/80 border border-white/[0.06] rounded-xl p-4">
+          <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
             <Shield size={16} className="text-white/30 mt-0.5 shrink-0" />
             <p className="text-white/40 text-xs font-['Space_Grotesk'] leading-relaxed">
               API keys authenticate requests to the HIVEMIND Core API. Each key is scoped to your
@@ -274,7 +274,7 @@ export default function ApiKeysPage() {
           transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <div className="bg-[#111]/80 border border-white/[0.06] rounded-xl p-5">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <h2 className="text-white text-sm font-semibold font-['Space_Grotesk'] mb-4">
               Create a new key
             </h2>
@@ -289,7 +289,7 @@ export default function ApiKeysPage() {
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder='e.g. "Production Key", "Dev Key"'
                   maxLength={64}
-                  className="w-full bg-[#0a0a0a] border border-white/[0.08] rounded-xl py-2.5 px-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+                  className="w-full bg-[#09090b] border border-white/[0.08] rounded-xl py-2.5 px-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
                 />
               </div>
               <button
@@ -346,7 +346,7 @@ export default function ApiKeysPage() {
           {loading && !keys ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-[#111]/80 border border-white/[0.06] rounded-xl p-4 animate-pulse">
+                <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 animate-pulse">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-white/[0.04]" />
                     <div className="flex-1">
@@ -359,7 +359,7 @@ export default function ApiKeysPage() {
               ))}
             </div>
           ) : keyList.length === 0 ? (
-            <div className="bg-[#111]/80 border border-white/[0.06] rounded-xl p-10 text-center">
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-10 text-center">
               <Key size={24} className="text-white/10 mx-auto mb-3" />
               <p className="text-white/30 text-sm font-['Space_Grotesk']">
                 No API keys yet. Create one above to get started.

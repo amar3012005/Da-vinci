@@ -68,7 +68,7 @@ function HealthCard({ healthy, onRefresh }) {
 
   return (
     <motion.div variants={fadeUp} className="col-span-full">
-      <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
             <Activity size={20} className="text-[#bdf213]" />
@@ -96,16 +96,14 @@ function HealthCard({ healthy, onRefresh }) {
 function StatCard({ icon: Icon, label, value, accent = false }) {
   return (
     <motion.div variants={fadeUp}>
-      <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5 h-full hover:border-white/[0.1] transition-colors">
-        <div className="flex items-center gap-3 mb-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent ? 'bg-[#bdf213]/10 border border-[#bdf213]/20' : 'bg-white/[0.04] border border-white/[0.06]'}`}>
-            <Icon size={16} className={accent ? 'text-[#bdf213]' : 'text-white/40'} />
-          </div>
-          <span className="text-white/40 text-xs font-mono uppercase tracking-wider">{label}</span>
+      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 h-full hover:border-white/[0.1] transition-colors">
+        <div className="flex items-center gap-2 mb-2.5">
+          <Icon size={14} className={accent ? 'text-[#bdf213]' : 'text-white/30'} strokeWidth={1.75} />
+          <span className="text-white/35 text-[11px] font-['Space_Grotesk'] uppercase tracking-wider">{label}</span>
         </div>
-        <p className="text-white text-2xl font-mono font-semibold tabular-nums">
+        <p className="text-white text-xl font-mono font-semibold tabular-nums">
           {value !== null && value !== undefined ? value.toLocaleString() : (
-            <span className="inline-block w-12 h-6 bg-white/[0.04] rounded animate-pulse" />
+            <span className="inline-block w-10 h-5 bg-white/[0.04] rounded animate-pulse" />
           )}
         </p>
       </div>
@@ -280,7 +278,7 @@ export default function Overview() {
       >
         {/* Recent Memories */}
         <motion.div variants={fadeUp} className="lg:col-span-2">
-          <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5 h-full">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock size={16} className="text-white/30" />
@@ -325,7 +323,7 @@ export default function Overview() {
         {/* Right column: Search + Quick Actions */}
         <motion.div variants={fadeUp} className="flex flex-col gap-4">
           {/* Quick Search */}
-          <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <Search size={16} className="text-white/30" />
               <h2 className="text-white text-sm font-semibold uppercase tracking-wider">Quick Search</h2>
@@ -337,7 +335,7 @@ export default function Overview() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search memories..."
-                className="w-full bg-[#0a0a0a] border border-white/[0.08] rounded-xl py-2.5 pl-9 pr-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+                className="w-full bg-[#09090b] border border-white/[0.08] rounded-xl py-2.5 pl-9 pr-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
               />
               {searchLoading && debouncedQuery.trim().length >= 2 && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -366,7 +364,7 @@ export default function Overview() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
             <h2 className="text-white text-sm font-semibold uppercase tracking-wider mb-3">Quick Actions</h2>
             <div className="space-y-2">
               <button

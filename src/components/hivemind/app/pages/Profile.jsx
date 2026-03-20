@@ -16,7 +16,7 @@ const fadeUp = {
 
 function StatCard({ icon: Icon, label, value, accent }) {
   return (
-    <motion.div variants={fadeUp} className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6">
+    <motion.div variants={fadeUp} className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center"
@@ -136,7 +136,7 @@ export default function Profile() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
       >
         {/* Top Tags */}
-        <motion.div variants={fadeUp} className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6">
+        <motion.div variants={fadeUp} className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <Tag size={16} className="text-[#bdf213]" />
             <SectionHeading>Top Tags</SectionHeading>
@@ -153,7 +153,7 @@ export default function Profile() {
         </motion.div>
 
         {/* Top Source Platforms */}
-        <motion.div variants={fadeUp} className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6">
+        <motion.div variants={fadeUp} className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <User size={16} className="text-white/50" />
             <SectionHeading>Source Platforms</SectionHeading>
@@ -180,7 +180,7 @@ export default function Profile() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 mb-8"
+        className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6 mb-8"
       >
         <div className="flex items-center gap-2 mb-4">
           <Clock size={16} className="text-white/50" />
@@ -208,7 +208,7 @@ export default function Profile() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 mb-8"
+        className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6 mb-8"
       >
         <div className="flex items-center gap-2 mb-6">
           <Link size={16} className="text-white/50" />
@@ -240,7 +240,7 @@ export default function Profile() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6"
+        className="bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6"
       >
         <div className="flex items-center gap-2 mb-4">
           <Brain size={16} className="text-[#bdf213]" />
@@ -257,7 +257,7 @@ export default function Profile() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Enter a query..."
-            className="flex-1 bg-[#0a0a0a] border border-white/[0.08] rounded-xl py-3 px-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+            className="flex-1 bg-[#09090b] border border-white/[0.08] rounded-xl py-3 px-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
           />
           <button
             onClick={handleGenerateContext}
@@ -287,7 +287,7 @@ export default function Profile() {
                 <label className="block text-white/50 text-xs font-mono uppercase tracking-wider mb-2">
                   System Prompt
                 </label>
-                <pre className="bg-[#0a0a0a] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
+                <pre className="bg-[#09090b] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
                   {contextResult.context.system_prompt}
                 </pre>
               </div>
@@ -299,7 +299,7 @@ export default function Profile() {
                 <label className="block text-white/50 text-xs font-mono uppercase tracking-wider mb-2">
                   Injection Text
                 </label>
-                <pre className="bg-[#0a0a0a] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
+                <pre className="bg-[#09090b] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
                   {contextResult.context.injection_text}
                 </pre>
               </div>
@@ -331,7 +331,7 @@ export default function Profile() {
                 <label className="block text-white/50 text-xs font-mono uppercase tracking-wider mb-2">
                   Profile Data
                 </label>
-                <pre className="bg-[#0a0a0a] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
+                <pre className="bg-[#09090b] border border-white/[0.06] rounded-xl p-4 text-white/70 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
                   {JSON.stringify(contextResult.profile, null, 2)}
                 </pre>
               </div>

@@ -13,6 +13,7 @@ const Connectors = React.lazy(() => import('./pages/Connectors'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const Evaluation = React.lazy(() => import('./pages/Evaluation'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const Billing = React.lazy(() => import('./pages/Billing'));
 
 function PageSuspense({ children }) {
   return (
@@ -55,6 +56,7 @@ export default function HiveMindApp() {
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
           <Route path="evaluation" element={<PageSuspense><Evaluation /></PageSuspense>} />
           <Route path="settings" element={<PageSuspense><Settings /></PageSuspense>} />
+          <Route path="billing" element={<PageSuspense><Billing /></PageSuspense>} />
         </Route>
 
         {/* Fallback */}

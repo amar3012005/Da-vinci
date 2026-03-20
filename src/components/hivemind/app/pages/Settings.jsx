@@ -51,7 +51,7 @@ function ReadOnlyField({ label, value, field, copiedField, onCopy }) {
       <label className="block text-white/40 text-[11px] font-mono uppercase tracking-wider mb-1.5">
         {label}
       </label>
-      <div className="flex items-center bg-[#0a0a0a] border border-white/[0.06] rounded-xl px-3 py-2.5">
+      <div className="flex items-center bg-[#09090b] border border-white/[0.06] rounded-xl px-3 py-2.5">
         <span className="text-white/60 text-sm font-mono truncate flex-1 select-all">
           {value || '—'}
         </span>
@@ -73,7 +73,7 @@ function SectionCard({ children, className = '' }) {
   return (
     <motion.div
       variants={fadeUp}
-      className={`bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 ${className}`}
+      className={`bg-white/[0.02] backdrop-blur-xl border border-white/[0.06] rounded-xl p-6 ${className}`}
     >
       {children}
     </motion.div>
@@ -266,7 +266,7 @@ export default function Settings() {
 
           <div className="space-y-4">
             {/* Sign Out All Sessions */}
-            <div className="flex items-center justify-between bg-[#0a0a0a] border border-red-500/10 rounded-xl px-4 py-3">
+            <div className="flex items-center justify-between bg-[#09090b] border border-red-500/10 rounded-xl px-4 py-3">
               <div>
                 <p className="text-white text-sm font-['Space_Grotesk'] font-medium">
                   Sign Out of All Sessions
@@ -284,7 +284,7 @@ export default function Settings() {
             </div>
 
             {/* Revoke All API Keys */}
-            <div className="flex items-center justify-between bg-[#0a0a0a] border border-red-500/10 rounded-xl px-4 py-3">
+            <div className="flex items-center justify-between bg-[#09090b] border border-red-500/10 rounded-xl px-4 py-3">
               <div>
                 <p className="text-white text-sm font-['Space_Grotesk'] font-medium">
                   Revoke All API Keys

@@ -1,7 +1,8 @@
-import React from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useHealthStatus } from '../shared/hooks';
+import { Search, Bell, BookOpen, ExternalLink } from 'lucide-react';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -11,53 +12,86 @@ const pageTitles = {
   '/hivemind/app/profile': 'Profile',
   '/hivemind/app/evaluation': 'Evaluation',
   '/hivemind/app/settings': 'Settings',
+  '/hivemind/app/billing': 'Billing',
+};
+
+const pageDescriptions = {
+  '/hivemind/app/overview': 'Your memory engine at a glance',
+  '/hivemind/app/memories': 'Browse and manage stored knowledge',
+  '/hivemind/app/keys': 'Manage API authentication keys',
+  '/hivemind/app/connectors': 'Connect data sources and AI clients',
+  '/hivemind/app/profile': 'Your memory footprint and context',
+  '/hivemind/app/evaluation': 'Test retrieval quality',
+  '/hivemind/app/settings': 'Workspace configuration',
+  '/hivemind/app/billing': 'Manage your plan and usage',
 };
 
 export default function TopBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const healthy = useHealthStatus();
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const title = pageTitles[location.pathname] || 'HIVEMIND';
+  const description = pageDescriptions[location.pathname] || '';
 
   return (
-    <header className="h-16 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-6 sticky top-0 z-30">
-      <div className="flex items-center gap-4">
-        <h1 className="text-white text-lg font-semibold font-['Space_Grotesk'] tracking-tight">
-          {title}
-        </h1>
+    <header className="h-14 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-6 sticky top-0 z-30">
+      {/* Left: Title + Description */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div>
+          <h1 className="text-white text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
+            {title}
+          </h1>
+          {description && (
+            <p className="text-white/25 text-[11px] font-['Space_Grotesk'] mt-0.5">
+              {description}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Core Health Indicator */}
-        <div className="flex items-center gap-2">
+      {/* Right: Actions */}
+      <div className="flex items-center gap-2">
+        {/* Global Search */}
+        <button
+          onClick={() => navigate('/hivemind/app/memories')}
+          className="flex items-center gap-2 h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] text-white/30 hover:text-white/50 transition-all text-xs font-['Space_Grotesk']"
+        >
+          <Search size={13} />
+          <span className="hidden md:inline">Search memories...</span>
+          <kbd className="hidden md:inline text-[10px] font-mono text-white/15 bg-white/[0.04] rounded px-1 py-0.5 ml-4">
+            /
+          </kbd>
+        </button>
+
+        {/* Docs */}
+        <a
+          href="https://docs.hivemind.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/[0.04] text-white/25 hover:text-white/50 transition-colors"
+          title="Documentation"
+        >
+          <BookOpen size={15} />
+        </a>
+
+        {/* Health */}
+        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-white/[0.03] border border-white/[0.04]">
           <div
-            className={`w-2 h-2 rounded-full ${
+            className={`w-1.5 h-1.5 rounded-full ${
               healthy === null
                 ? 'bg-white/20'
                 : healthy
-                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(34,197,94,0.5)]'
-                : 'bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
+                ? 'bg-emerald-400'
+                : 'bg-red-400'
             }`}
           />
-          <span className="text-xs text-white/40 font-mono">
-            {healthy === null ? 'checking' : healthy ? 'core online' : 'core offline'}
+          <span className="text-[10px] text-white/30 font-mono whitespace-nowrap">
+            {healthy === null ? '...' : healthy ? 'Online' : 'Offline'}
           </span>
         </div>
-
-        {/* User Avatar */}
-        {user && (
-          <div className="flex items-center gap-2 pl-4 border-l border-white/[0.06]">
-            <div className="w-7 h-7 rounded-full bg-[#bdf213]/10 flex items-center justify-center">
-              <span className="text-[#bdf213] text-xs font-bold font-mono">
-                {(user.display_name || user.email || 'U')[0].toUpperCase()}
-              </span>
-            </div>
-            <span className="text-white/60 text-sm font-['Space_Grotesk'] max-w-[120px] truncate">
-              {user.display_name || user.email || 'User'}
-            </span>
-          </div>
-        )}
       </div>
     </header>
   );

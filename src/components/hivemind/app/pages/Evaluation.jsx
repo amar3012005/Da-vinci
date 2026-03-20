@@ -189,7 +189,7 @@ export default function Evaluation() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 mb-8"
+        className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function Evaluation() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 mb-8"
+        className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8"
       >
         <div className="flex items-center gap-2 mb-6">
           <TrendingUp size={16} className="text-white/50" />
@@ -345,7 +345,7 @@ export default function Evaluation() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6"
+          className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6"
         >
           <div className="flex items-center gap-2 mb-6">
             <BarChart3 size={16} className="text-white/50" />

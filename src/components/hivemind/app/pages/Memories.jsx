@@ -121,7 +121,7 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer ${
         isSelected
           ? 'bg-[#bdf213]/[0.06] border-[#bdf213]/20 shadow-[0_0_20px_rgba(189,242,19,0.08)]'
-          : 'bg-[#111]/80 border-white/[0.06] hover:border-white/[0.12] hover:bg-[#161616]/80'
+          : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-[#161616]/80'
       }`}
     >
       {/* Top row */}
@@ -261,7 +261,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
             <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
               Content
             </label>
-            <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-xl p-4 text-white/70 text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
+            <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-4 text-white/70 text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
               {memory.content || 'No content'}
             </div>
           </div>
@@ -309,7 +309,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
             <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
               Metadata
             </label>
-            <div className="bg-[#0a0a0a] border border-white/[0.06] rounded-xl p-3 space-y-1.5 text-[11px] font-mono">
+            <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 space-y-1.5 text-[11px] font-mono">
               {memory.id && (
                 <div className="flex justify-between">
                   <span className="text-white/25">ID</span>
@@ -554,7 +554,7 @@ export default function Memories() {
   // ─── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] font-['Space_Grotesk']">
+    <div className="min-h-screen bg-[#09090b] font-['Space_Grotesk']">
       {/* Ambient glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#bdf213]/[0.012] blur-[120px] pointer-events-none" />
 
@@ -602,7 +602,7 @@ export default function Memories() {
               setHasMore(true);
             }}
             placeholder="Search memories semantically..."
-            className="w-full bg-[#111]/80 border border-white/[0.06] rounded-xl py-3.5 pl-11 pr-10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 focus:ring-1 focus:ring-[#bdf213]/20 transition-all"
+            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl py-3.5 pl-11 pr-10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 focus:ring-1 focus:ring-[#bdf213]/20 transition-all"
           />
         </div>
 
