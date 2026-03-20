@@ -608,7 +608,6 @@ export default function Connectors() {
   // Fetch live OAuth connector statuses from control plane
   const {
     data: oauthConnectors,
-    loading: oauthLoading,
     refetch: refetchOAuth,
   } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
 
