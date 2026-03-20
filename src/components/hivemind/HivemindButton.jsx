@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davinciai.eu';
 
 /**
  * HivemindButton
  * 
- * A button that navigates to hivemind.davincisolutions.de
+ * A button that navigates to hivemind.davinciai.eu
  * Can be placed anywhere in your application.
  * 
  * Usage:

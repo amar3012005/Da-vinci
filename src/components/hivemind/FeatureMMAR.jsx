@@ -4,7 +4,7 @@ import { Layers, Globe, Search, Database, Cpu, MessageSquare, ExternalLink } fro
 import GlassCard from './ui/GlassCard';
 import FeatureIcon from './ui/FeatureIcon';
 
-const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davinciai.eu';
 
 /**
  * FeatureMMAR - Showcase of M M A R architecture

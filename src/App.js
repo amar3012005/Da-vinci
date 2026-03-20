@@ -14,7 +14,7 @@ import PortalLayout from './components/PortalLayout';
 import HivemindRedirect from './components/hivemind/HivemindRedirect';
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
 
-const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davincisolutions.de';
+const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
