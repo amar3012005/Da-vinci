@@ -16,7 +16,7 @@ import { API_DEFAULTS } from './theme';
  *   GET  /v1/clients/descriptors        → { core_api_base_url, descriptors }
  *   GET  /v1/clients/descriptors/:client → single descriptor
  *
- * Core (hivemind.davinciai.eu:8050):
+ * Core (core.hivemind.davinciai.eu:8050):
  *   All memory, search, MCP, context, profile, evaluation, connector endpoints
  */
 
