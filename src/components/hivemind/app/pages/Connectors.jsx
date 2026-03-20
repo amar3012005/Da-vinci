@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cable,
@@ -101,9 +102,10 @@ const CONNECTORS = [
     description: 'Import emails and conversations as memories',
     icon: Mail,
     category: 'workspace',
-    status: 'coming_soon',
+    status: 'available',
     color: '#ef4444',
     priority: 1,
+    oauthProvider: 'gmail',
   },
   {
     id: 'google-calendar',
@@ -322,7 +324,7 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // ─── Connector Card (Supermemory-style) ──────────────────────────────────────
 
-function ConnectorCard({ connector, config, onConnect }) {
+function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, connecting }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = connector.icon;
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
@@ -364,8 +366,13 @@ function ConnectorCard({ connector, config, onConnect }) {
                 {connector.name}
               </h3>
               <p className="text-white/35 text-[12px] font-['Space_Grotesk'] mt-0.5 leading-snug">
-                {connector.description}
+                {connector.accountRef ? connector.accountRef : connector.description}
               </p>
+              {connector.lastSyncAt && (
+                <p className="text-white/20 text-[10px] font-mono mt-0.5">
+                  Last sync: {new Date(connector.lastSyncAt).toLocaleString()}
+                </p>
+              )}
             </div>
           </div>
           <ConnectorStatusBadge status={connector.status} />
@@ -389,29 +396,58 @@ function ConnectorCard({ connector, config, onConnect }) {
           {connector.status === 'available' && (
             <button
               onClick={onConnect}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#bdf213] text-[#09090b] hover:bg-[#d4ff3a] transition-all"
+              disabled={connecting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#bdf213] text-[#09090b] hover:bg-[#d4ff3a] disabled:opacity-50 transition-all"
             >
-              <Plus size={12} />
-              Connect
+              {connecting ? (
+                <RefreshCw size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
+              {connecting ? 'Connecting...' : 'Connect'}
             </button>
+          )}
+
+          {isActive && connector.oauthProvider && (
+            <>
+              <button
+                onClick={onResync}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-all"
+              >
+                <RefreshCw size={12} />
+                Sync Now
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                Disconnect
+              </button>
+            </>
           )}
 
           {isComingSoon && (
             <span className="text-white/20 text-[11px] font-['Space_Grotesk'] flex items-center gap-1.5">
               <Clock size={12} />
-              Notify me when available
+              Coming soon
             </span>
           )}
 
           {connector.status === 'needs_reauth' && (
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all">
+            <button
+              onClick={onConnect}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+            >
               <RefreshCw size={12} />
               Reconnect
             </button>
           )}
 
           {connector.status === 'error' && (
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all">
+            <button
+              onClick={onResync}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all"
+            >
               <RefreshCw size={12} />
               Retry
             </button>
@@ -541,6 +577,32 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
 
 export default function Connectors() {
   const [activeCategory, setActiveCategory] = useState(null);
+  const [connectingProvider, setConnectingProvider] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [toastMessage, setToastMessage] = useState(null);
+
+  // Check for OAuth callback params
+  useEffect(() => {
+    const success = searchParams.get('connector_success');
+    const error = searchParams.get('connector_error');
+    if (success) {
+      setToastMessage({ type: 'success', text: `${success} connected successfully!` });
+      searchParams.delete('connector_success');
+      setSearchParams(searchParams, { replace: true });
+    } else if (error) {
+      setToastMessage({ type: 'error', text: `Connection failed: ${error}` });
+      searchParams.delete('connector_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toastMessage) {
+      const t = setTimeout(() => setToastMessage(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [toastMessage]);
 
   const {
     data: descriptors,
@@ -557,16 +619,105 @@ export default function Connectors() {
     refetch: refetchJobs,
   } = useApiQuery(() => apiClient.listConnectorJobs(), []);
 
+  // Fetch live OAuth connector statuses from control plane
+  const {
+    data: oauthConnectors,
+    loading: oauthLoading,
+    refetch: refetchOAuth,
+  } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
+
+  // Poll for status after connect
+  useEffect(() => {
+    if (searchParams.get('connector_success')) return;
+    const interval = setInterval(() => {
+      refetchOAuth();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [refetchOAuth]);
+
+  const handleOAuthConnect = useCallback(async (provider) => {
+    setConnectingProvider(provider);
+    try {
+      const { auth_url } = await apiClient.startConnectorOAuth(
+        provider,
+        window.location.pathname,
+      );
+      window.location.href = auth_url;
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+      setConnectingProvider(null);
+    }
+  }, []);
+
+  const handleDisconnect = useCallback(async (provider) => {
+    try {
+      await apiClient.disconnectConnector(provider);
+      setToastMessage({ type: 'success', text: `${provider} disconnected` });
+      refetchOAuth();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    }
+  }, [refetchOAuth]);
+
+  const handleResync = useCallback(async (provider) => {
+    try {
+      await apiClient.resyncConnector(provider);
+      setToastMessage({ type: 'success', text: `${provider} sync started` });
+      refetchOAuth();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    }
+  }, [refetchOAuth]);
+
   const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
   const endpoints = connectorStatus?.endpoints || [];
   const jobList = Array.isArray(jobs) ? jobs : jobs?.jobs || [];
+  const oauthList = oauthConnectors?.connectors || [];
+
+  // Merge static CONNECTORS with live OAuth status
+  const mergedConnectors = CONNECTORS.map((c) => {
+    if (c.oauthProvider) {
+      const live = oauthList.find((o) => o.provider === c.oauthProvider);
+      if (live && live.status !== 'disconnected') {
+        return {
+          ...c,
+          status: live.status === 'connected' ? 'connected' : live.status === 'syncing' ? 'syncing' : live.status === 'error' ? 'error' : live.status === 'reauth_required' ? 'needs_reauth' : live.status === 'degraded' ? 'error' : c.status,
+          accountRef: live.account_ref,
+          lastSyncAt: live.last_sync_at,
+          lastError: live.last_error,
+        };
+      }
+    }
+    return c;
+  });
 
   const filteredConnectors = activeCategory
-    ? CONNECTORS.filter((c) => c.category === activeCategory)
-    : CONNECTORS;
+    ? mergedConnectors.filter((c) => c.category === activeCategory)
+    : mergedConnectors;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl border text-sm font-['Space_Grotesk'] shadow-lg ${
+              toastMessage.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {toastMessage.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+              {toastMessage.text}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Quick Install Banner */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -631,7 +782,22 @@ export default function Connectors() {
             key={connector.id}
             connector={connector}
             config={descriptors?.[connector.configKey]}
-            onConnect={() => {}}
+            onConnect={() => {
+              if (connector.oauthProvider) {
+                handleOAuthConnect(connector.oauthProvider);
+              }
+            }}
+            onDisconnect={() => {
+              if (connector.oauthProvider) {
+                handleDisconnect(connector.oauthProvider);
+              }
+            }}
+            onResync={() => {
+              if (connector.oauthProvider) {
+                handleResync(connector.oauthProvider);
+              }
+            }}
+            connecting={connectingProvider === connector.oauthProvider}
           />
         ))}
       </div>

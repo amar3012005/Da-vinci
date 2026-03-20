@@ -244,7 +244,7 @@ class HiveMindApiClient {
     return data;
   }
 
-  // ─── Core: Connectors ────────────────────────────────────────
+  // ─── Core: Connectors (MCP) ─────────────────────────────────
 
   async getConnectorStatus() {
     const { data } = await this.core.get('/api/connectors/mcp/status');
@@ -253,6 +253,35 @@ class HiveMindApiClient {
 
   async listConnectorJobs() {
     const { data } = await this.core.get('/api/connectors/mcp/jobs');
+    return data;
+  }
+
+  // ─── Control Plane: OAuth Connectors ──────────────────────
+
+  async listOAuthConnectors() {
+    const { data } = await this.controlPlane.get('/v1/connectors');
+    return data;
+  }
+
+  async startConnectorOAuth(provider, returnTo) {
+    const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/start`, {
+      return_to: returnTo,
+    });
+    return data;
+  }
+
+  async getConnectorProviderStatus(provider) {
+    const { data } = await this.controlPlane.get(`/v1/connectors/${provider}/status`);
+    return data;
+  }
+
+  async disconnectConnector(provider) {
+    const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/disconnect`);
+    return data;
+  }
+
+  async resyncConnector(provider, { incremental = true } = {}) {
+    const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/resync`, { incremental });
     return data;
   }
 
