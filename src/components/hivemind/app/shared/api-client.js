@@ -185,6 +185,17 @@ class HiveMindApiClient {
    */
   async getDescriptors() {
     const { data } = await this.controlPlane.get('/v1/clients/descriptors');
+    if (Array.isArray(data?.descriptors)) {
+      return {
+        ...data,
+        descriptors: data.descriptors.reduce((acc, descriptor) => {
+          if (descriptor?.client) {
+            acc[descriptor.client] = descriptor.config || {};
+          }
+          return acc;
+        }, {}),
+      };
+    }
     return data;
   }
 

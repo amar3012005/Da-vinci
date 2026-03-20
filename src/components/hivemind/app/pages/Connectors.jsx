@@ -93,7 +93,7 @@ const CONNECTORS = [
     category: 'mcp_clients',
     status: 'available',
     color: '#22c55e',
-    configKey: 'remote',
+    configKey: 'remote-mcp',
   },
   // Workspace (coming soon)
   {
@@ -545,24 +545,24 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
         </thead>
         <tbody>
           {endpoints.map((ep, i) => (
-            <tr key={ep.url || i} className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors">
+            <tr key={ep.url || ep.name || i} className="border-b border-white/[0.03] hover:bg-white/[0.015] transition-colors">
               <td className="px-4 py-2.5">
                 <span className="text-white/60 font-mono text-[11px] truncate block max-w-[280px]">
-                  {ep.url}
+                  {ep.url || ep.name}
                 </span>
               </td>
               <td className="px-4 py-2.5">
-                <ConnectorStatusBadge status={ep.status === 'healthy' ? 'connected' : ep.status || 'available'} />
+                <ConnectorStatusBadge status={ep.healthy ? 'connected' : 'error'} />
               </td>
               <td className="px-4 py-2.5 text-white/40 font-mono text-[11px]">
-                {ep.toolCount ?? ep.tool_count ?? '-'}
+                {ep.tool_count ?? ep.toolCount ?? '-'}
               </td>
               <td className="px-4 py-2.5 text-white/40 font-mono text-[11px]">
-                {ep.resourceCount ?? ep.resource_count ?? '-'}
+                {ep.resource_count ?? ep.resourceCount ?? '-'}
               </td>
               <td className="px-4 py-2.5 text-white/25 font-mono text-[10px]">
-                {ep.lastChecked || ep.last_checked
-                  ? new Date(ep.lastChecked || ep.last_checked).toLocaleString()
+                {ep.updated_at || ep.last_job_at
+                  ? new Date(ep.updated_at || ep.last_job_at).toLocaleString()
                   : '-'}
               </td>
             </tr>
@@ -580,21 +580,6 @@ export default function Connectors() {
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
-
-  // Check for OAuth callback params
-  useEffect(() => {
-    const success = searchParams.get('connector_success');
-    const error = searchParams.get('connector_error');
-    if (success) {
-      setToastMessage({ type: 'success', text: `${success} connected successfully!` });
-      searchParams.delete('connector_success');
-      setSearchParams(searchParams, { replace: true });
-    } else if (error) {
-      setToastMessage({ type: 'error', text: `Connection failed: ${error}` });
-      searchParams.delete('connector_error');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -626,6 +611,24 @@ export default function Connectors() {
     refetch: refetchOAuth,
   } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
 
+  // Check for OAuth callback params
+  useEffect(() => {
+    const success = searchParams.get('connector_success');
+    const error = searchParams.get('connector_error');
+    if (success) {
+      setToastMessage({ type: 'success', text: `${success} connected successfully!` });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('connector_success');
+      setSearchParams(nextParams, { replace: true });
+      refetchOAuth();
+    } else if (error) {
+      setToastMessage({ type: 'error', text: `Connection failed: ${error}` });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('connector_error');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [refetchOAuth, searchParams, setSearchParams]);
+
   // Poll for status after connect
   useEffect(() => {
     if (searchParams.get('connector_success')) return;
@@ -633,7 +636,7 @@ export default function Connectors() {
       refetchOAuth();
     }, 10000);
     return () => clearInterval(interval);
-  }, [refetchOAuth]);
+  }, [refetchOAuth, searchParams]);
 
   const handleOAuthConnect = useCallback(async (provider) => {
     setConnectingProvider(provider);
@@ -670,7 +673,7 @@ export default function Connectors() {
   }, [refetchOAuth]);
 
   const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
-  const endpoints = connectorStatus?.endpoints || [];
+  const endpoints = connectorStatus?.statuses || [];
   const jobList = Array.isArray(jobs) ? jobs : jobs?.jobs || [];
   const oauthList = oauthConnectors?.connectors || [];
 
@@ -746,7 +749,7 @@ export default function Connectors() {
       </motion.div>
 
       {/* Stats */}
-      <StatsRow connectors={CONNECTORS} endpoints={endpoints} />
+      <StatsRow connectors={mergedConnectors} endpoints={endpoints} />
 
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
