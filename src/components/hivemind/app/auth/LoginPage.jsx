@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, Mail } from 'lucide-react';
+import { Hexagon, Zap, Brain, Shield, Loader2, Mail, WifiOff } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
-/** Inline Google "G" icon — no external dependency */
 function GoogleIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -17,14 +16,15 @@ function GoogleIcon({ size = 18 }) {
 }
 
 export default function LoginPage() {
-  const { isAuthenticated, login, loading, error } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login } = useAuth();
   const navigate = useNavigate();
 
+  // Already signed in → go to dashboard
   useEffect(() => {
-    if (!loading && isAuthenticated) {
+    if (isAuthenticated) {
       navigate('/hivemind/app/overview', { replace: true });
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center">
@@ -39,8 +39,6 @@ export default function LoginPage() {
           backgroundSize: '60px 60px',
         }}
       />
-
-      {/* Radial glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-[#bdf213]/[0.02] blur-[120px]" />
 
       <motion.div
@@ -49,7 +47,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        {/* Card */}
         <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
@@ -72,16 +69,23 @@ export default function LoginPage() {
             Access your memory workspace, manage API keys, and configure MCP connections.
           </p>
 
-          {/* Error banner */}
-          {error && (
-            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono leading-relaxed">
-              Control plane unavailable. Sign-in may not work until the service is online.
+          {/* State: control_plane_unreachable — the ONLY state that shows a warning */}
+          {isUnreachable && (
+            <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+              <WifiOff size={14} className="text-red-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-red-400 text-xs font-semibold font-['Space_Grotesk']">
+                  Control plane unavailable
+                </p>
+                <p className="text-red-400/60 text-[11px] mt-0.5 font-['Space_Grotesk']">
+                  Unable to reach the authentication service. Please try again in a moment.
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Auth Actions — both go through Zitadel, not the frontend */}
+          {/* Auth buttons — always visible, even during loading */}
           <div className="space-y-3">
-            {/* Continue with Google */}
             <button
               onClick={() => login({ idpHint: 'google' })}
               disabled={loading}
@@ -95,7 +99,6 @@ export default function LoginPage() {
               Continue with Google
             </button>
 
-            {/* Continue with Email */}
             <button
               onClick={() => login()}
               disabled={loading}
@@ -110,7 +113,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Fine print */}
           <p className="text-white/20 text-[11px] text-center mt-6 leading-relaxed font-['Space_Grotesk']">
             Authentication is handled securely by our identity provider.<br />
             HIVEMIND does not store your password.
@@ -123,7 +125,6 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-white/[0.06]" />
           </div>
 
-          {/* Back to marketing */}
           <a
             href="/hivemind"
             className="block w-full text-center text-white/40 hover:text-white/60 text-sm py-2.5 rounded-xl border border-white/[0.06] hover:border-white/10 transition-all font-['Space_Grotesk']"

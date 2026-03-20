@@ -5,56 +5,53 @@ import apiClient from '../shared/api-client';
 const AuthContext = createContext(undefined);
 
 /**
- * AuthProvider — wired to the control-plane-server.js contract
+ * Four auth states — not one generic "unavailable":
  *
- * Bootstrap response shape:
- *   user:         { id, email, display_name, zitadel_user_id }
- *   organization: { id, name, slug } | null
- *   onboarding:   { needs_org_setup, has_api_key }
- *   connectivity: { core_api_base_url, core_health }
- *   client_support: string[]
- *
- * Auth flow:
- *   1. GET /auth/login?return_to=<frontend_url>  → ZITADEL
- *   2. ZITADEL → GET /auth/callback → hm_cp_session cookie → redirect to return_to
- *   3. Frontend calls GET /v1/bootstrap (cookie sent automatically)
- *   4. If no org → POST /v1/orgs
- *   5. POST /v1/api-keys → mint key
- *   6. GET /v1/clients/descriptors → MCP configs
+ *   loading                   → checking session / bootstrap in flight
+ *   signed_out                → 401 from bootstrap — control plane is reachable, user not authenticated
+ *   signed_in                 → 200 from bootstrap — render dashboard from bootstrap payload
+ *   control_plane_unreachable → network failure or timeout — the only state that says "unavailable"
  */
 export function AuthProvider({ children }) {
+  const [authState, setAuthState] = useState('loading');
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
   const [onboarding, setOnboarding] = useState(null);
   const [connectivity, setConnectivity] = useState(null);
   const [clientSupport, setClientSupport] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const bootstrapAttempted = useRef(false);
   const location = useLocation();
 
   const runBootstrap = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setAuthState('loading');
+
     try {
       const data = await apiClient.bootstrap();
 
-      // Map to the actual control plane response shape
+      // 200 — signed in
       setUser(data.user || null);
       setOrg(data.organization || null);
       setOnboarding(data.onboarding || null);
       setConnectivity(data.connectivity || null);
       setClientSupport(data.client_support || []);
+      setAuthState('signed_in');
     } catch (err) {
-      setUser(null);
-      setOrg(null);
-      setOnboarding(null);
-      setConnectivity(null);
-      if (err.response?.status !== 401) {
-        setError(err.message);
+      if (err.response?.status === 401) {
+        // 401 — control plane is reachable, user is not authenticated
+        setUser(null);
+        setOrg(null);
+        setOnboarding(null);
+        setConnectivity(null);
+        setAuthState('signed_out');
+      } else {
+        // Network failure, timeout, 503, or any other error
+        setUser(null);
+        setOrg(null);
+        setOnboarding(null);
+        setConnectivity(null);
+        setAuthState('control_plane_unreachable');
       }
     } finally {
-      setLoading(false);
       bootstrapAttempted.current = true;
     }
   }, []);
@@ -64,7 +61,6 @@ export function AuthProvider({ children }) {
   }, [runBootstrap]);
 
   // Re-bootstrap when returning from ZITADEL callback
-  // The control plane redirects back with ?auth=callback
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('auth') === 'callback' && bootstrapAttempted.current) {
@@ -72,11 +68,6 @@ export function AuthProvider({ children }) {
     }
   }, [location.search, runBootstrap]);
 
-  /**
-   * Start the login flow.
-   * @param {object} [options]
-   * @param {string} [options.idpHint] - Pre-select IdP in Zitadel (e.g. 'google')
-   */
   const login = useCallback((options = {}) => {
     const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback`;
     window.location.href = apiClient.getLoginUrl(returnTo, { idpHint: options.idpHint });
@@ -91,32 +82,41 @@ export function AuthProvider({ children }) {
     setUser(null);
     setOrg(null);
     setOnboarding(null);
+    setAuthState('signed_out');
     window.location.href = '/hivemind';
   }, []);
 
   const createOrg = useCallback(async (name) => {
     const data = await apiClient.createOrg(name);
-    // Response: { success, organization: { id, name, slug } }
     setOrg(data.organization || null);
     setOnboarding(prev => prev ? { ...prev, needs_org_setup: false } : null);
     return data;
   }, []);
 
   const value = {
+    // Four states
+    authState,
+    loading: authState === 'loading',
+    isAuthenticated: authState === 'signed_in',
+    isSignedOut: authState === 'signed_out',
+    isUnreachable: authState === 'control_plane_unreachable',
+
+    // Bootstrap payload
     user,
     org,
     onboarding,
     connectivity,
     clientSupport,
-    loading,
-    error,
+
+    // Derived flags
     needsOnboarding: onboarding?.needs_org_setup === true,
     hasApiKey: onboarding?.has_api_key === true,
+
+    // Actions
     login,
     logout,
     createOrg,
     refresh: runBootstrap,
-    isAuthenticated: !!user,
   };
 
   return (

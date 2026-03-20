@@ -17,8 +17,8 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
+  // signed_out or control_plane_unreachable → send to login
   if (!isAuthenticated) {
-    // Preserve the intended destination so login can redirect back
     return <Navigate to="/hivemind/login" state={{ from: location }} replace />;
   }
 
