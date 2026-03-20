@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (Rust Orange & Black Theme)
+// ORB SHADER (Blue DaVinci Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -16,6 +16,21 @@ function splitmix32(a) {
     };
 }
 function clamp01(n) { return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0; }
+
+const BLUE_THEME = {
+    primary: '#2F80FF',
+    secondary: '#63D3FF',
+    accent: '#C4F1FF',
+    deep: '#07111F',
+    panel: 'rgba(6, 14, 28, 0.88)',
+    panelAlt: 'rgba(8, 18, 38, 0.95)',
+    border: 'rgba(99, 211, 255, 0.38)',
+    borderStrong: 'rgba(47, 128, 255, 0.62)',
+    glow: 'rgba(47, 128, 255, 0.42)',
+    glowSoft: 'rgba(99, 211, 255, 0.22)',
+    text: '#F4FAFF',
+    textMuted: 'rgba(244, 250, 255, 0.58)',
+};
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
@@ -36,8 +51,8 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
-    // Rust Orange Branding: #A63E1B and #EBE5DF
-    const colors = ["#A63E1B", "#EBE5DF"];
+    // Blue branding palette for davinciai.in
+    const colors = [BLUE_THEME.primary, BLUE_THEME.secondary];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
     const tc2 = useRef(new THREE.Color(colors[1]));
@@ -91,7 +106,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET — Rust Orange Edition
+// TARA VOICE WIDGET — Blue DaVinci Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
@@ -100,13 +115,13 @@ const getWsBaseUrl = () => {
 
 const CALL_LIMIT = 300;
 
-const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'TARA Speaking', thinking: 'Connecting...' };
+const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'DaVinci AI Speaking', thinking: 'Connecting...' };
 
-const BundBTaraVoiceWidget = ({ config: propConfig }) => {
+const TaraVoiceWidget = ({ config: propConfig }) => {
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
-            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
+            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'davinci',
             agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
             agentName: propConfig?.agentName || globalConfig?.agentName || 'BUNDB AGENT',
             language: propConfig?.language || globalConfig?.language || 'de',
@@ -329,7 +344,7 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
             const sessionConfig = {
                 type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
                 user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
-                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_rust', region: 'EU' }
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_blue', region: 'EU' }
             };
             ws.send(JSON.stringify(sessionConfig));
             ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
@@ -432,47 +447,47 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                         whileHover={{ scale: 1.05 }}
                         onClick={handleOrbClick}
                         style={{
-                            background: 'rgba(10, 10, 10, 0.85)',
+                            background: `linear-gradient(180deg, ${BLUE_THEME.panelAlt}, rgba(4, 10, 22, 0.92))`,
                             backdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(166, 62, 27, 0.5)',
+                            border: `1px solid ${BLUE_THEME.borderStrong}`,
                             borderRadius: '24px',
                             padding: '10px 20px',
                             marginRight: '12px',
-                            color: '#FFFFFF',
+                            color: BLUE_THEME.text,
                             fontWeight: 700,
                             fontSize: '14px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
-                            boxShadow: '0 15px 40px rgba(0,0,0,0.6)',
+                            boxShadow: `0 15px 40px ${BLUE_THEME.glow}`,
                             whiteSpace: 'nowrap'
                         }}
                     >
-                        Talk to TARA <span style={{ color: '#A63E1B', fontSize: '16px' }}>✨</span>
+                        Talk to DaVinci AI <span style={{ color: BLUE_THEME.secondary, fontSize: '16px' }}>✨</span>
                     </motion.div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
                 {isCallActive && (
                     <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(166, 62, 27, 0.35)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
+                        style={{ height: '52px', background: 'linear-gradient(180deg, rgba(8, 18, 38, 0.92), rgba(4, 10, 20, 0.95))', backdropFilter: 'blur(20px)', border: `1px solid ${BLUE_THEME.border}`, borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none', boxShadow: `0 12px 30px ${BLUE_THEME.glowSoft}` }}>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>B&B</div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : '#A63E1B', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
+                            <div style={{ fontSize: '12px', fontWeight: 900, color: BLUE_THEME.text, letterSpacing: '0.08em' }}>DAVINCI AI</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : BLUE_THEME.secondary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
-                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: BLUE_THEME.textMuted, marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             <motion.button onClick={handleOrbClick}
-                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #A63E1B' : '1px solid rgba(166, 62, 27, 0.25)', boxShadow: isCallActive ? '0 0 30px rgba(166, 62, 27, 0.5)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, rgba(99, 211, 255, 0.12), rgba(4, 10, 20, 0.98) 70%)', border: isCallActive ? `2px solid ${BLUE_THEME.secondary}` : `1px solid rgba(99, 211, 255, 0.22)`, boxShadow: isCallActive ? `0 0 30px ${BLUE_THEME.glow}` : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
                 {isCallActive && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A63E1B" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4, 10, 20, 0.38)' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BLUE_THEME.secondary} strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 )}
             </motion.button>
@@ -488,14 +503,14 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             right: '4px',
                             fontSize: '8px',
                             fontWeight: 700,
-                            color: '#FFFFFF',
+                            color: BLUE_THEME.text,
                             textTransform: 'uppercase',
                             letterSpacing: '0.12em',
                             whiteSpace: 'nowrap',
                             textDecoration: 'none'
                         }}
                     >
-                        built by davinciai.eu
+                        built for davinciai.eu
                     </a>
                 )
             }
@@ -511,16 +526,16 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             bottom: '100px',
                             right: '20px',
                             width: '320px',
-                            background: 'rgba(10, 10, 10, 0.95)',
+                            background: BLUE_THEME.panel,
                             backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(166, 62, 27, 0.5)',
+                            border: `1px solid ${BLUE_THEME.borderStrong}`,
                             borderRadius: '16px',
                             padding: '20px',
                             zIndex: 10000,
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                            boxShadow: `0 20px 60px ${BLUE_THEME.glow}`
                         }}
                     >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#A63E1B', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: BLUE_THEME.secondary, marginBottom: '8px' }}>
                             Get In Touch With Us
                         </div>
                         
@@ -534,10 +549,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                             style={{
                                 width: '100%',
                                 padding: '10px 12px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${accessError ? '#EF4444' : 'rgba(166, 62, 27, 0.35)'}`,
+                                background: 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${accessError ? '#EF4444' : BLUE_THEME.border}`,
                                 borderRadius: '8px',
-                                color: '#FFFFFF',
+                                color: BLUE_THEME.text,
                                 fontSize: '13px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
@@ -552,10 +567,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(166, 62, 27, 0.3)',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: `1px solid ${BLUE_THEME.border}`,
                                     borderRadius: '6px',
-                                    color: '#EBE5DF',
+                                    color: BLUE_THEME.text,
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     cursor: 'pointer'
@@ -568,10 +583,10 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: '#A63E1B',
+                                    background: `linear-gradient(180deg, ${BLUE_THEME.primary}, #1E5AE6)`,
                                     border: 'none',
                                     borderRadius: '6px',
-                                    color: '#050505',
+                                    color: '#03111F',
                                     fontSize: '12px',
                                     fontWeight: 700,
                                     cursor: 'pointer'
@@ -587,4 +602,4 @@ const BundBTaraVoiceWidget = ({ config: propConfig }) => {
     );
 };
 
-export default BundBTaraVoiceWidget;
+export default TaraVoiceWidget;
