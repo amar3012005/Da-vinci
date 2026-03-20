@@ -21,6 +21,7 @@ import {
   Layers,
   BookOpen,
   CheckCircle2,
+  AlertCircle,
   Clock,
   Zap,
   Plus,
