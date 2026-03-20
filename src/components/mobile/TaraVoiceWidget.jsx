@@ -22,6 +22,16 @@ const ORB_THEME = {
     secondary: '#A9B1BF',
 };
 
+const ORB_BUTTON_THEME = {
+    background: 'radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.34), rgba(173, 182, 196, 0.22) 38%, rgba(18, 24, 34, 0.96) 72%)',
+    borderIdle: 'rgba(216, 222, 232, 0.28)',
+    borderActive: 'rgba(232, 236, 242, 0.68)',
+    shadowIdle: '0 10px 40px rgba(0, 0, 0, 0.5)',
+    shadowActive: '0 0 24px rgba(214, 220, 230, 0.28), 0 10px 40px rgba(0, 0, 0, 0.45)',
+    overlay: 'rgba(10, 14, 20, 0.34)',
+    icon: '#E8ECF2',
+};
+
 const BLUE_THEME = {
     primary: '#2F80FF',
     secondary: '#63D3FF',
@@ -487,12 +497,12 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             </AnimatePresence>
 
             <motion.button onClick={handleOrbClick}
-                style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%, rgba(99, 211, 255, 0.12), rgba(4, 10, 20, 0.98) 70%)', border: isCallActive ? `2px solid ${BLUE_THEME.secondary}` : `1px solid rgba(99, 211, 255, 0.22)`, boxShadow: isCallActive ? `0 0 30px ${BLUE_THEME.glow}` : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: ORB_BUTTON_THEME.background, border: isCallActive ? `2px solid ${ORB_BUTTON_THEME.borderActive}` : `1px solid ${ORB_BUTTON_THEME.borderIdle}`, boxShadow: isCallActive ? ORB_BUTTON_THEME.shadowActive : ORB_BUTTON_THEME.shadowIdle, cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
                 {isCallActive && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(4, 10, 20, 0.38)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BLUE_THEME.secondary} strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: ORB_BUTTON_THEME.overlay }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ORB_BUTTON_THEME.icon} strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 )}
             </motion.button>
