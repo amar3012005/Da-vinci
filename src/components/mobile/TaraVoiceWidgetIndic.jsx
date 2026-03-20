@@ -17,6 +17,11 @@ function splitmix32(a) {
 }
 function clamp01(n) { return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0; }
 
+const ORB_THEME = {
+    primary: '#D8DEE8',
+    secondary: '#A9B1BF',
+};
+
 const BLUE_THEME = {
     primary: '#2F80FF',
     secondary: '#63D3FF',
@@ -47,8 +52,8 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
-    // Blue branding palette for davinciai.in
-    const colors = [BLUE_THEME.primary, BLUE_THEME.secondary];
+    // Metallic silver palette for the orb only
+    const colors = [ORB_THEME.primary, ORB_THEME.secondary];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
     const tc2 = useRef(new THREE.Color(colors[1]));
