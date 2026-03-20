@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 // import { Cpu, Globe } from 'lucide-react'; // Removing unused icons
 
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+
 /**
  * ContextProblemSection - Redesigned to mirror MeetTaraSection
  * Featuring a generative HiveMind visualization on the left and 
@@ -87,7 +89,7 @@ const MeetHivemindSection = () => {
                                 transition={{ delay: 0.4 }}
                                 className="pt-4"
                             >
-                                <button className="px-6 py-3 rounded-full border border-white/20 text-white hover:bg-white hover:text-black transition-colors text-sm font-medium tracking-wide w-auto cursor-pointer shadow-lg shadow-white/5" onClick={() => window.location.href = 'https://hivemind.davincisolutions.de'}>
+                                <button className="px-6 py-3 rounded-full border border-white/20 text-white hover:bg-white hover:text-black transition-colors text-sm font-medium tracking-wide w-auto cursor-pointer shadow-lg shadow-white/5" onClick={() => window.location.href = HIVEMIND_SITE_URL}>
                                     Connect to HIVEMIND
                                 </button>
                             </motion.div>

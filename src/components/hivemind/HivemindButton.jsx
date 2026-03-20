@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+
 /**
  * HivemindButton
  * 
@@ -24,7 +26,7 @@ const HivemindButton = ({
 
   const handleClick = () => {
     // Navigate to hivemind subdomain
-    window.location.href = 'https://hivemind.davincisolutions.de';
+    window.location.href = HIVEMIND_SITE_URL;
   };
 
   const baseStyles = 'px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105';

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Bell, AlertCircle, ExternalLink } from 'lucide-react';
 
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+
 /**
  * MobileNavigation - Floating hamburger menu with full-screen overlay
  */
@@ -128,7 +130,7 @@ const MobileNavigation = () => {
 
                             {/* Hivemind Button */}
                             <motion.a
-                                href="https://hivemind.davincisolutions.de"
+                                href={HIVEMIND_SITE_URL}
                                 className="group flex items-center gap-3 text-[#A63E1B] hover:text-[#ff6b35] text-3xl font-light tracking-wide transition-colors duration-300"
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}

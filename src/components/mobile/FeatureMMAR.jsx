@@ -4,6 +4,8 @@ import { Layers, Globe, Search, Database, Cpu, MessageSquare, ExternalLink } fro
 import GlassCard from './ui/GlassCard';
 import FeatureIcon from './ui/FeatureIcon';
 
+const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davincisolutions.de';
+
 /**
  * FeatureMMAR - Showcase of M M A R architecture
  * Visual representation of modular multi-agentic system
@@ -12,7 +14,7 @@ const FeatureMMAR = () => {
     const agents = [
         { icon: Globe, name: 'Translation', color: 'from-blue-400 to-cyan-400', description: 'Auto-detect 15+ languages' },
         { icon: Search, name: 'Retriever', color: 'from-green-400 to-emerald-400', description: 'Semantic knowledge search' },
-        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence', link: 'https://hivemind.davincisolutions.de' },
+        { icon: Database, name: 'Hive Mind', color: 'from-purple-400 to-pink-400', description: 'Collective intelligence', link: HIVEMIND_SITE_URL },
         { icon: Cpu, name: 'LLM Core', color: 'from-orange-400 to-red-400', description: 'Natural language generation' }
     ];
 

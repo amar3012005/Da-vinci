@@ -14,6 +14,8 @@ import PortalLayout from './components/PortalLayout';
 import HivemindRedirect from './components/hivemind/HivemindRedirect';
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
 
+const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davincisolutions.de';
+
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
     <Navbar />
@@ -24,10 +26,13 @@ const Layout = ({ children }) => (
 );
 
 function App() {
+  const isHivemindHost =
+    typeof window !== 'undefined' && window.location.hostname === HIVEMIND_SITE_HOST;
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<DavinciHomepage />} />
+        <Route path="/" element={isHivemindHost ? <HivemindRedirect /> : <DavinciHomepage />} />
         <Route path="/about" element={<Layout><AboutPage /></Layout>} />
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
