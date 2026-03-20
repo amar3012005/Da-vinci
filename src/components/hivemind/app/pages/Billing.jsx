@@ -4,7 +4,6 @@ import {
   CreditCard,
   Check,
   Zap,
-  Building2,
   Sparkles,
   ArrowRight,
   Brain,

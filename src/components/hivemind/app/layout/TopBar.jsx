@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthProvider';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, Bell, BookOpen, ExternalLink } from 'lucide-react';
+import { Search, BookOpen } from 'lucide-react';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -29,9 +28,7 @@ const pageDescriptions = {
 export default function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const healthy = useHealthStatus();
-  const [searchFocused, setSearchFocused] = useState(false);
 
   const title = pageTitles[location.pathname] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';

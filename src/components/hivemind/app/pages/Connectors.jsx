@@ -7,7 +7,6 @@ import {
   Terminal,
   Code2,
   Globe,
-  Wifi,
   WifiOff,
   RefreshCw,
   ChevronDown,
@@ -20,14 +19,10 @@ import {
   HardDrive,
   Layers,
   BookOpen,
-  Search,
   CheckCircle2,
-  AlertCircle,
   Clock,
-  ArrowRight,
   Zap,
   Plus,
-  ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -549,7 +544,6 @@ export default function Connectors() {
 
   const {
     data: descriptors,
-    loading: descLoading,
   } = useApiQuery(() => apiClient.getDescriptors(), []);
 
   const {
@@ -560,7 +554,6 @@ export default function Connectors() {
 
   const {
     data: jobs,
-    loading: jobsLoading,
     refetch: refetchJobs,
   } = useApiQuery(() => apiClient.listConnectorJobs(), []);
 
