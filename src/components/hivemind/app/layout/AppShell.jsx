@@ -5,6 +5,7 @@ import TopBar from './TopBar';
 import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
 import ApiKeySetup from '../pages/ApiKeySetup';
+import apiClient from '../shared/api-client';
 
 /**
  * AppShell — bootstrap-driven rendering:
@@ -20,6 +21,10 @@ export default function AppShell() {
   }
 
   if (hasApiKey === false) {
+    return <ApiKeySetup />;
+  }
+
+  if (hasApiKey === true && !apiClient.hasApiKey()) {
     return <ApiKeySetup />;
   }
 

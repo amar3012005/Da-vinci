@@ -211,6 +211,7 @@ export default function ApiKeysPage() {
       const result = await apiClient.createApiKey(label.trim());
       // result: { success, api_key (raw string), key: { id, name, ... }, descriptors }
       setNewlyCreatedKey(result.api_key);
+      apiClient.setApiKey(result.api_key);
       setLabel('');
       refetch();
     } catch (err) {

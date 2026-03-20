@@ -10,12 +10,14 @@ import { useCopyToClipboard } from '../shared/hooks';
  * After the key is created, refreshes bootstrap and the user enters the dashboard.
  */
 export default function ApiKeySetup() {
-  const { user, refresh } = useAuth();
+  const { user, refresh, hasApiKey } = useAuth();
   const { copied, copy } = useCopyToClipboard();
   const [step, setStep] = useState('create'); // 'create' | 'show'
   const [creating, setCreating] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [error, setError] = useState(null);
   const [rawKey, setRawKey] = useState(null);
+  const [existingKey, setExistingKey] = useState('');
 
 
   const handleCreate = async () => {
@@ -25,12 +27,30 @@ export default function ApiKeySetup() {
       const result = await apiClient.createApiKey('Primary API Key');
       // result: { success, api_key, key, descriptors }
       setRawKey(result.api_key);
+      apiClient.setApiKey(result.api_key);
 
       setStep('show');
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleUseExisting = async () => {
+    if (!existingKey.trim()) return;
+
+    setActivating(true);
+    setError(null);
+    try {
+      apiClient.setApiKey(existingKey.trim());
+      await apiClient.getProfile();
+      refresh();
+    } catch (err) {
+      apiClient.clearApiKey();
+      setError(err.response?.data?.error || 'That API key was rejected by the core API.');
+    } finally {
+      setActivating(false);
     }
   };
 
@@ -59,17 +79,49 @@ export default function ApiKeySetup() {
           {step === 'create' && (
             <>
               <h2 className="text-white text-2xl font-bold font-['Space_Grotesk'] mb-2">
-                Create your API key
+                {hasApiKey ? 'Connect your core API key' : 'Create your API key'}
               </h2>
               <p className="text-white/50 text-sm mb-6 leading-relaxed">
-                Hi {user?.display_name || user?.email || 'there'} — you need an API key to connect clients
-                and access the HIVEMIND memory engine.
+                Hi {user?.display_name || user?.email || 'there'} — {hasApiKey
+                  ? 'paste an existing HIVEMIND Core API key or create a replacement key for this browser.'
+                  : 'you need an API key to connect clients and access the HIVEMIND memory engine.'}
               </p>
 
               {error && (
                 <div className="mb-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
                   <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
                   <p className="text-red-400 text-xs font-mono">{error}</p>
+                </div>
+              )}
+
+              {hasApiKey && (
+                <div className="mb-5">
+                  <label className="block text-white/40 text-xs font-mono mb-2 uppercase tracking-wider">
+                    Existing Core API Key
+                  </label>
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="password"
+                      value={existingKey}
+                      onChange={(e) => setExistingKey(e.target.value)}
+                      placeholder="hm_..."
+                      className="w-full bg-[#0a0a0a] border border-white/[0.08] rounded-xl py-3 px-4 text-white text-sm font-mono placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+                    />
+                    <button
+                      onClick={handleUseExisting}
+                      disabled={activating || !existingKey.trim()}
+                      className="w-full flex items-center justify-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-white font-semibold py-3 px-6 rounded-xl transition-all text-sm font-['Space_Grotesk'] border border-white/[0.08]"
+                    >
+                      {activating ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Key size={16} />
+                          Use Existing Key
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -83,7 +135,7 @@ export default function ApiKeySetup() {
                 ) : (
                   <>
                     <Key size={16} />
-                    Generate API Key
+                    {hasApiKey ? 'Create Replacement Key' : 'Generate API Key'}
                   </>
                 )}
               </button>

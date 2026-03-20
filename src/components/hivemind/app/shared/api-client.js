@@ -37,11 +37,60 @@ class HiveMindApiClient {
 
     this._apiKey = null;
     this._coreBaseUrl = null;
+    this._apiKeyStorageKey = 'hivemind_core_api_key';
+
+    this.loadStoredApiKey();
   }
 
-  setApiKey(key) {
+  loadStoredApiKey() {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = window.localStorage.getItem(this._apiKeyStorageKey);
+      if (stored) {
+        this.setApiKey(stored, { persist: false });
+        return stored;
+      }
+    } catch {
+      // Ignore storage access failures
+    }
+    return null;
+  }
+
+  setApiKey(key, { persist = true } = {}) {
+    if (!key) {
+      this.clearApiKey();
+      return;
+    }
+
     this._apiKey = key;
     this.core.defaults.headers['X-API-Key'] = key;
+    this.core.defaults.headers['Authorization'] = `Bearer ${key}`;
+
+    if (persist && typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(this._apiKeyStorageKey, key);
+      } catch {
+        // Ignore storage access failures
+      }
+    }
+  }
+
+  clearApiKey() {
+    this._apiKey = null;
+    delete this.core.defaults.headers['X-API-Key'];
+    delete this.core.defaults.headers['Authorization'];
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(this._apiKeyStorageKey);
+      } catch {
+        // Ignore storage access failures
+      }
+    }
+  }
+
+  hasApiKey() {
+    return Boolean(this._apiKey);
   }
 
   setCoreBaseUrl(url) {
