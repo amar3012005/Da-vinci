@@ -13,6 +13,7 @@ import {
   Monitor,
   AlertTriangle,
   Loader2,
+  GitFork,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
@@ -96,6 +97,45 @@ function ImportanceBar({ score }) {
   );
 }
 
+// ─── Source Provenance Badge ──────────────────────────────────────────────────
+
+const SOURCE_BADGE_STYLES = {
+  vector:  { label: 'Vector',  color: 'text-purple-400/70', bg: 'bg-purple-500/10' },
+  keyword: { label: 'Keyword', color: 'text-blue-400/70',   bg: 'bg-blue-500/10' },
+  graph:   { label: 'Graph',   color: 'text-amber-400/70',  bg: 'bg-amber-500/10' },
+};
+
+function SourceBadge({ source }) {
+  if (!source || !SOURCE_BADGE_STYLES[source]) return null;
+  const s = SOURCE_BADGE_STYLES[source];
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded ${s.bg} ${s.color} uppercase tracking-wider`}>
+      {s.label}
+    </span>
+  );
+}
+
+function RelationshipIndicator({ memory }) {
+  if (!memory.is_latest && memory.supersedes_id) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/25 uppercase tracking-wider">
+        <GitFork size={8} />
+        superseded
+      </span>
+    );
+  }
+  if (memory.graph_expanded) {
+    const relType = memory.expansion_metadata?.relationship_type || 'related';
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/70 uppercase tracking-wider">
+        <GitFork size={8} />
+        {relType}
+      </span>
+    );
+  }
+  return null;
+}
+
 // ─── Memory Card ──────────────────────────────────────────────────────────────
 
 const cardVariants = {
@@ -137,13 +177,20 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
         />
       </div>
 
-      {/* Type + Source */}
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      {/* Type + Source + Provenance */}
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {memory.memory_type && <TypeBadge type={memory.memory_type} />}
+        {memory.source && <SourceBadge source={memory.source} />}
+        <RelationshipIndicator memory={memory} />
         {memory.source_platform && (
           <span className="inline-flex items-center gap-1 text-[11px] text-white/30 font-mono">
             <Monitor size={10} />
             {memory.source_platform}
+          </span>
+        )}
+        {memory.document_date && (
+          <span className="text-[10px] font-mono text-white/20">
+            {new Date(memory.document_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         )}
       </div>
@@ -234,6 +281,8 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
           {/* Meta row */}
           <div className="flex items-center gap-2 flex-wrap">
             {memory.memory_type && <TypeBadge type={memory.memory_type} />}
+            {memory.source && <SourceBadge source={memory.source} />}
+            <RelationshipIndicator memory={memory} />
             {memory.source_platform && (
               <span className="inline-flex items-center gap-1 text-xs text-white/30 font-mono">
                 <Monitor size={11} />
@@ -244,6 +293,16 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
               <Clock size={10} />
               {relativeTime(memory.created_at)}
             </span>
+            {memory.is_latest === false && (
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 uppercase">
+                superseded
+              </span>
+            )}
+            {memory.document_date && (
+              <span className="text-[10px] font-mono text-white/20 flex items-center gap-1">
+                doc: {new Date(memory.document_date).toLocaleDateString()}
+              </span>
+            )}
           </div>
 
           {/* Importance */}
@@ -605,6 +664,22 @@ export default function Memories() {
             className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl py-3.5 pl-11 pr-10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 focus:ring-1 focus:ring-[#bdf213]/20 transition-all"
           />
         </div>
+
+        {/* Search mode indicator */}
+        {isSearching && !searchLoading && searchData && (
+          <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-white/20">
+            <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+            {searchData?.metadata?.fallbackApplied
+              ? 'Keyword search (vector unavailable)'
+              : 'Semantic search (vector + keyword)'}
+            {searchData?.metadata?.durationMs != null && (
+              <span className="ml-1">· {searchData.metadata.durationMs}ms</span>
+            )}
+            {searchData?.search_method && (
+              <span className="ml-1">· {searchData.search_method}</span>
+            )}
+          </div>
+        )}
 
         {/* ── Filter Bar ── */}
         <div className="mb-6">

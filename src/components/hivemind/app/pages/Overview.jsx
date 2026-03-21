@@ -148,12 +148,34 @@ function RecentMemoryRow({ memory, index }) {
   );
 }
 
+// ─── Source provenance badge ─────────────────────────────────
+
+const SOURCE_STYLES = {
+  vector:  { label: 'Vector',  color: 'text-purple-400/70', bg: 'bg-purple-500/10' },
+  keyword: { label: 'Keyword', color: 'text-blue-400/70',   bg: 'bg-blue-500/10' },
+  graph:   { label: 'Graph',   color: 'text-amber-400/70',  bg: 'bg-amber-500/10' },
+  hybrid:  { label: 'Hybrid',  color: 'text-emerald-400/70', bg: 'bg-emerald-500/10' },
+};
+
+function SourceBadge({ source }) {
+  const s = SOURCE_STYLES[source] || SOURCE_STYLES.hybrid;
+  return (
+    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${s.bg} ${s.color} uppercase tracking-wider flex-shrink-0`}>
+      {s.label}
+    </span>
+  );
+}
+
 function SearchResult({ result }) {
-  const title = result.title || result.content?.slice(0, 60) || 'Untitled';
-  const snippet = result.content
-    ? result.content.length > 100 ? result.content.slice(0, 100) + '...' : result.content
+  const title = result.title || result.payload?.title || result.content?.slice(0, 60) || 'Untitled';
+  const snippet = result.content || result.payload?.content;
+  const trimmedSnippet = snippet
+    ? snippet.length > 100 ? snippet.slice(0, 100) + '...' : snippet
     : null;
   const score = result.score != null ? (result.score * 100).toFixed(0) : null;
+  const source = result.source || (result.breakdown
+    ? Object.entries(result.breakdown).sort((a, b) => b[1] - a[1])[0]?.[0]
+    : null);
 
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors">
@@ -161,13 +183,14 @@ function SearchResult({ result }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-white text-sm font-['Space_Grotesk'] truncate">{title}</span>
+          {source && <SourceBadge source={source} />}
           {score && (
             <span className="text-[10px] font-mono text-[#bdf213]/70 bg-[#bdf213]/10 px-1.5 py-0.5 rounded flex-shrink-0">
               {score}%
             </span>
           )}
         </div>
-        {snippet && <p className="text-white/30 text-xs mt-0.5 line-clamp-2">{snippet}</p>}
+        {trimmedSnippet && <p className="text-white/30 text-xs mt-0.5 line-clamp-2">{trimmedSnippet}</p>}
       </div>
     </div>
   );
@@ -227,6 +250,12 @@ export default function Overview() {
   const results = useMemo(() => {
     if (!searchResults) return [];
     return Array.isArray(searchResults) ? searchResults : (searchResults.results || searchResults.data || []);
+  }, [searchResults]);
+
+  // Extract search metadata for fallback mode indicator
+  const searchMeta = useMemo(() => {
+    if (!searchResults || Array.isArray(searchResults)) return null;
+    return searchResults.metadata || null;
   }, [searchResults]);
 
   return (
@@ -343,6 +372,19 @@ export default function Overview() {
                 </div>
               )}
             </div>
+
+            {/* Search mode indicator */}
+            {searchMeta && debouncedQuery.trim().length >= 2 && !searchLoading && (
+              <div className="flex items-center gap-1.5 mt-2 text-[10px] font-mono text-white/20">
+                <span className={`w-1 h-1 rounded-full ${searchMeta.fallbackApplied ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                {searchMeta.fallbackApplied
+                  ? 'Keyword only (vector unavailable)'
+                  : `Vector + keyword`}
+                {searchMeta.durationMs != null && (
+                  <span className="ml-auto">{searchMeta.durationMs}ms</span>
+                )}
+              </div>
+            )}
 
             {/* Search results */}
             {debouncedQuery.trim().length >= 2 && (
