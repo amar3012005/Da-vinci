@@ -123,14 +123,17 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const [agentIsSpeaking, setAgentIsSpeaking] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
     const [micStream, setMicStream] = useState(null);
-    const [isMuted, setIsMuted] = useState(false);
-    const [showCallSetup, setShowCallSetup] = useState(false);
-    const [accessKeyInput, setAccessKeyInput] = useState('');
+    const [isMuted] = useState(false);
     const [accessError, setAccessError] = useState('');
-    const [isAccessGranted, setIsAccessGranted] = useState(false);
-    const [selectedCallMode, setSelectedCallMode] = useState('speaker');
+    const [selectedCallMode] = useState('speaker');
     const [showEmailDialog, setShowEmailDialog] = useState(false);
     const [emailInput, setEmailInput] = useState('');
+
+    useEffect(() => {
+        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
+        else if (connectionStatus === 'connecting') setAgentState('thinking');
+        else if (!isCallActive) setAgentState('idle');
+    }, [agentIsSpeaking, connectionStatus, isCallActive]);
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -150,16 +153,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const callTimerRef = useRef(null);
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
-
-    useEffect(() => {
-        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
-        else if (connectionStatus === 'connecting') setAgentState('thinking');
-        else if (!isCallActive) setAgentState('idle');
-    }, [agentIsSpeaking, connectionStatus, isCallActive]);
-
-    useEffect(() => {
-        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
-    }, [callDuration, isCallActive]);
 
     useEffect(() => {
         if (!micStream) return;
@@ -284,11 +277,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         startCall();
     };
 
-    const submitAccessKey = () => {
-        if (accessKeyInput.trim() !== config.accessKey) { setAccessError('Invalid access key'); return; }
-        setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
-    };
-
     const sendEmailToServer = async (email) => {
         try {
             const response = await fetch('/api/session/end', {
@@ -386,6 +374,10 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         };
         ws.onclose = () => endCall(); ws.onerror = () => endCall();
     };
+
+    useEffect(() => {
+        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
+    }, [callDuration, isCallActive, endCall]);
 
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const remaining = CALL_LIMIT - callDuration;
