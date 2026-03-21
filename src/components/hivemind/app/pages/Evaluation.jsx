@@ -69,23 +69,43 @@ function formatDate(ts) {
 }
 
 function derivePassFail(run) {
+  const report = run?.report || run;
+  if (!report) return null;
+  if (report.latency_benchmark?.pass != null && report.relevance_benchmark?.pass != null) {
+    return report.latency_benchmark.pass && report.relevance_benchmark.pass;
+  }
   if (run.status === 'passed' || run.passed === true) return true;
   if (run.status === 'failed' || run.passed === false) return false;
-  const p = run.precision ?? run.scores?.precision;
-  const r = run.recall ?? run.scores?.recall;
-  const f = run.f1 ?? run.scores?.f1;
+  const p = report.precision ?? report.scores?.precision ?? report.summary?.precisionAt5?.mean;
+  const r = report.recall ?? report.scores?.recall ?? report.summary?.recallAt10?.mean;
+  const f = report.f1 ?? report.scores?.f1 ?? report.summary?.f1At10?.mean;
   if (p != null && r != null && f != null) {
-    return p >= 0.5 && r >= 0.5 && f >= 0.5;
+    const precisionTarget = report.targets?.precisionAt5 ?? 0.5;
+    const recallTarget = report.targets?.recallAt10 ?? 0.5;
+    const f1Target = report.targets?.f1Score ?? 0.5;
+    return p >= precisionTarget && r >= recallTarget && f >= f1Target;
   }
   return null;
 }
 
 function extractScores(run) {
+  const report = run?.report || run;
+  const summary = report?.summary || {};
   return {
-    precision: run.precision ?? run.scores?.precision ?? null,
-    recall: run.recall ?? run.scores?.recall ?? null,
-    f1: run.f1 ?? run.scores?.f1 ?? null,
+    precision: report?.precision ?? report?.scores?.precision ?? summary.precisionAt5?.mean ?? null,
+    recall: report?.recall ?? report?.scores?.recall ?? summary.recallAt10?.mean ?? null,
+    f1: report?.f1 ?? report?.scores?.f1 ?? summary.f1At10?.mean ?? null,
   };
+}
+
+function getRunId(run) {
+  const report = run?.report || run;
+  return report?.evaluationId || report?.evaluation_id || report?.id || report?.run_id || null;
+}
+
+function getRunTimestamp(run) {
+  const report = run?.report || run;
+  return report?.timestamp || report?.created_at || null;
 }
 
 export default function Evaluation() {
@@ -116,13 +136,14 @@ export default function Evaluation() {
 
   const historyList = useMemo(() => {
     if (!history) return [];
-    return Array.isArray(history) ? history : history.runs || history.results || [];
+    if (Array.isArray(history)) return history;
+    return history.history || history.runs || history.results || [];
   }, [history]);
 
   const comparisonRuns = useMemo(() => {
     if (!compareA || !compareB) return null;
-    const a = historyList.find((r) => (r.id || r.run_id) === compareA);
-    const b = historyList.find((r) => (r.id || r.run_id) === compareB);
+    const a = historyList.find((r) => getRunId(r) === compareA);
+    const b = historyList.find((r) => getRunId(r) === compareB);
     if (!a || !b) return null;
     return [a, b];
   }, [compareA, compareB, historyList]);
@@ -135,8 +156,9 @@ export default function Evaluation() {
     );
   }
 
-  const latestScores = latest ? extractScores(latest) : {};
-  const latestPassed = latest ? derivePassFail(latest) : null;
+  const latestReport = latest?.report || latest;
+  const latestScores = latestReport ? extractScores(latestReport) : {};
+  const latestPassed = latestReport ? derivePassFail(latestReport) : null;
 
   return (
     <div className="min-h-full">
@@ -197,26 +219,26 @@ export default function Evaluation() {
             <h3 className="text-white text-lg font-bold font-['Space_Grotesk']">Latest Results</h3>
           </div>
           <div className="flex items-center gap-3">
-            {latest?.cross_client_recall != null && (
+            {latestReport?.cross_client_recall != null && (
               <span className="text-white/40 text-xs font-mono">
-                Cross-client: {latest.cross_client_recall ? 'Yes' : 'No'}
+                Cross-client: {latestReport.cross_client_recall ? 'Yes' : 'No'}
               </span>
             )}
             <StatusBadge passed={latestPassed} />
           </div>
         </div>
 
-        {latest ? (
+        {latestReport ? (
           <>
             <div className="grid grid-cols-3 gap-8 mb-6">
               <ScoreDisplay label="Precision" value={latestScores.precision} />
               <ScoreDisplay label="Recall" value={latestScores.recall} />
               <ScoreDisplay label="F1" value={latestScores.f1} />
             </div>
-            {(latest.timestamp || latest.created_at) && (
+            {(getRunTimestamp(latestReport)) && (
               <div className="flex items-center gap-1.5 text-white/30 text-xs font-mono">
                 <Clock size={12} />
-                {formatDate(latest.timestamp || latest.created_at)}
+                {formatDate(getRunTimestamp(latestReport))}
               </div>
             )}
           </>
@@ -255,7 +277,7 @@ export default function Evaluation() {
               </thead>
               <tbody>
                 {historyList.map((run) => {
-                  const id = run.id || run.run_id;
+                  const id = getRunId(run);
                   const scores = extractScores(run);
                   const passed = derivePassFail(run);
                   const isSelectedA = compareA === id;
@@ -273,7 +295,7 @@ export default function Evaluation() {
                       </td>
                       <td className="py-3 pr-4">
                         <span className="text-white/50 text-xs font-mono">
-                          {formatDate(run.timestamp || run.created_at)}
+                          {formatDate(getRunTimestamp(run))}
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-right">
@@ -356,7 +378,7 @@ export default function Evaluation() {
             {comparisonRuns.map((run, idx) => {
               const scores = extractScores(run);
               const passed = derivePassFail(run);
-              const id = run.id || run.run_id;
+              const id = getRunId(run);
               const label = idx === 0 ? 'A' : 'B';
               const accent = idx === 0 ? '#bdf213' : '#3b82f6';
 
@@ -389,7 +411,7 @@ export default function Evaluation() {
 
                   <div className="flex items-center gap-1.5 text-white/30 text-xs font-mono">
                     <Clock size={12} />
-                    {formatDate(run.timestamp || run.created_at)}
+                    {formatDate(getRunTimestamp(run))}
                   </div>
                 </div>
               );
