@@ -1,0 +1,5 @@
+# Da'vinci Solutions Security Contact
+Contact: mailto:admin@da-vinci.ai
+Expires: 2027-03-22T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://www.davinciai.eu/.well-known/security.txt

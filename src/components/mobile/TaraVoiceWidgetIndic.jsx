@@ -32,15 +32,16 @@ const ORB_BUTTON_THEME = {
     icon: '#E8ECF2',
 };
 
-const BLUE_THEME = {
-    primary: '#2F80FF',
-    secondary: '#63D3FF',
-    panel: 'rgba(6, 14, 28, 0.88)',
-    border: 'rgba(99, 211, 255, 0.38)',
-    borderStrong: 'rgba(47, 128, 255, 0.62)',
-    glow: 'rgba(47, 128, 255, 0.42)',
-    text: '#F4FAFF',
-    textMuted: 'rgba(244, 250, 255, 0.58)',
+const WIDGET_THEME = {
+    panel: 'rgba(0, 0, 0, 0.88)',
+    panelSoft: 'rgba(8, 8, 8, 0.92)',
+    border: 'rgba(255, 255, 255, 0.18)',
+    borderStrong: 'rgba(255, 255, 255, 0.82)',
+    text: '#FFFFFF',
+    textMuted: 'rgba(255, 255, 255, 0.62)',
+    accent: '#FFFFFF',
+    shadow: '0 16px 36px rgba(0, 0, 0, 0.28)',
+    inset: 'none',
 };
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
@@ -418,36 +419,42 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
                         whileHover={{ scale: 1.05 }}
                         onClick={handleOrbClick}
                         style={{
-                            background: 'rgba(10, 10, 10, 0.85)',
-                            backdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(166, 62, 27, 0.5)',
-                            borderRadius: '24px',
-                            padding: '10px 20px',
+                            background: WIDGET_THEME.panel,
+                            border: `1px solid ${WIDGET_THEME.borderStrong}`,
+                            borderRadius: '18px',
+                            clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%)',
+                            padding: '12px 24px 12px 18px',
                             marginRight: '12px',
-                            color: BLUE_THEME.text,
-                            fontWeight: 700,
-                            fontSize: '14px',
+                            color: WIDGET_THEME.text,
+                            fontWeight: 800,
+                            fontSize: '13px',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
-                            boxShadow: `0 15px 40px ${BLUE_THEME.glow}`,
-                            whiteSpace: 'nowrap'
+                            boxShadow: WIDGET_THEME.shadow,
+                            whiteSpace: 'nowrap',
+                            position: 'relative',
+                            overflow: 'hidden'
                         }}
                     >
-                        Talk to DaVinci AI (IN) <span style={{ color: BLUE_THEME.secondary, fontSize: '16px' }}>🇮🇳</span>
+                        <div style={{ width: '9px', height: '9px', background: WIDGET_THEME.accent, clipPath: 'polygon(0 50%, 50% 0, 100% 50%, 50% 100%)', opacity: 0.92 }} />
+                        <span style={{ position: 'relative', zIndex: 1 }}>Talk to TARA</span>
                     </motion.div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
                 {isCallActive && (
-                    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                        style={{ height: '52px', background: 'linear-gradient(180deg, rgba(8, 18, 38, 0.92), rgba(4, 10, 20, 0.95))', backdropFilter: 'blur(20px)', border: `1px solid ${BLUE_THEME.border}`, borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none', boxShadow: `0 12px 30px rgba(99, 211, 255, 0.22)` }}>
+                    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 248, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                        style={{ height: '56px', background: WIDGET_THEME.panelSoft, border: `1px solid ${WIDGET_THEME.border}`, borderRadius: '18px 0 0 18px', clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '22px', overflow: 'hidden', borderRight: 'none', boxShadow: WIDGET_THEME.shadow, position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '12px', width: '1px', background: 'rgba(255,255,255,0.08)' }} />
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 900, color: BLUE_THEME.text, letterSpacing: '0.08em' }}>DAVINCI AI</div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : BLUE_THEME.secondary, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
+                            <div style={{ fontSize: '12px', fontWeight: 900, color: WIDGET_THEME.text, letterSpacing: '0.12em' }}>TARA</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : WIDGET_THEME.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
-                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: BLUE_THEME.textMuted, marginRight: '12px' }}>{fmt(callDuration)}</div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: WIDGET_THEME.textMuted, marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -474,16 +481,15 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
                             bottom: '100px',
                             right: '20px',
                             width: '320px',
-                            background: BLUE_THEME.panel,
-                            backdropFilter: 'blur(20px)',
-                            border: `1px solid ${BLUE_THEME.borderStrong}`,
-                            borderRadius: '16px',
+                            background: WIDGET_THEME.panelSoft,
+                            border: `1px solid ${WIDGET_THEME.borderStrong}`,
+                            borderRadius: '18px',
                             padding: '20px',
                             zIndex: 10000,
-                            boxShadow: `0 20px 60px ${BLUE_THEME.glow}`
+                            boxShadow: WIDGET_THEME.shadow
                         }}
                     >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: BLUE_THEME.secondary, marginBottom: '8px' }}> Get In Touch With Us </div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: WIDGET_THEME.text, marginBottom: '8px' }}> Get In Touch With Us </div>
                         <input
                             type="email"
                             placeholder="Enter your email"
@@ -495,9 +501,9 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
                                 width: '100%',
                                 padding: '10px 12px',
                                 background: 'rgba(255,255,255,0.04)',
-                                border: `1px solid ${accessError ? '#EF4444' : BLUE_THEME.border}`,
-                                borderRadius: '8px',
-                                color: BLUE_THEME.text,
+                                border: `1px solid ${accessError ? '#EF4444' : WIDGET_THEME.border}`,
+                                borderRadius: '12px',
+                                color: WIDGET_THEME.text,
                                 fontSize: '13px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
@@ -505,8 +511,8 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
                         />
                         {accessError && ( <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{accessError}</div> )}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                            <button onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }} style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${BLUE_THEME.border}`, borderRadius: '6px', color: BLUE_THEME.text, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}> Skip </button>
-                            <button onClick={handleEmailSubmit} style={{ flex: 1, padding: '8px 12px', background: `linear-gradient(180deg, ${BLUE_THEME.primary}, #1E5AE6)`, border: 'none', borderRadius: '6px', color: '#03111F', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}> Send </button>
+                            <button onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }} style={{ flex: 1, padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${WIDGET_THEME.border}`, borderRadius: '12px', color: WIDGET_THEME.text, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}> Skip </button>
+                            <button onClick={handleEmailSubmit} style={{ flex: 1, padding: '8px 12px', background: 'linear-gradient(180deg, rgba(244, 247, 252, 0.96), rgba(206, 214, 226, 0.9))', border: `1px solid ${WIDGET_THEME.borderStrong}`, borderRadius: '12px', color: '#11151C', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}> Send </button>
                         </div>
                     </motion.div>
                 )}

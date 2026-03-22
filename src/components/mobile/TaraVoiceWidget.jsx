@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // ═══════════════════════════════════════════════════════════
-// ORB SHADER (Davinci Blue Theme)
+// ORB SHADER (Blue DaVinci Theme)
 // ═══════════════════════════════════════════════════════════
 
 function splitmix32(a) {
@@ -16,6 +16,48 @@ function splitmix32(a) {
     };
 }
 function clamp01(n) { return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0; }
+
+const ORB_THEME = {
+    primary: '#D8DEE8',
+    secondary: '#A9B1BF',
+};
+
+const ORB_BUTTON_THEME = {
+    background: 'radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.34), rgba(173, 182, 196, 0.22) 38%, rgba(18, 24, 34, 0.96) 72%)',
+    borderIdle: 'rgba(216, 222, 232, 0.28)',
+    borderActive: 'rgba(232, 236, 242, 0.68)',
+    shadowIdle: '0 10px 40px rgba(0, 0, 0, 0.5)',
+    shadowActive: '0 0 24px rgba(214, 220, 230, 0.28), 0 10px 40px rgba(0, 0, 0, 0.45)',
+    overlay: 'rgba(10, 14, 20, 0.34)',
+    icon: '#E8ECF2',
+};
+
+const WIDGET_THEME = {
+    panel: 'rgba(0, 0, 0, 0.88)',
+    panelSoft: 'rgba(8, 8, 8, 0.92)',
+    border: 'rgba(255, 255, 255, 0.18)',
+    borderStrong: 'rgba(255, 255, 255, 0.82)',
+    text: '#FFFFFF',
+    textMuted: 'rgba(255, 255, 255, 0.62)',
+    accent: '#FFFFFF',
+    shadow: '0 16px 36px rgba(0, 0, 0, 0.28)',
+    inset: 'none',
+};
+
+const BLUE_THEME = {
+    primary: '#2F80FF',
+    secondary: '#63D3FF',
+    accent: '#C4F1FF',
+    deep: '#07111F',
+    panel: 'rgba(6, 14, 28, 0.88)',
+    panelAlt: 'rgba(8, 18, 38, 0.95)',
+    border: 'rgba(99, 211, 255, 0.38)',
+    borderStrong: 'rgba(47, 128, 255, 0.62)',
+    glow: 'rgba(47, 128, 255, 0.42)',
+    glowSoft: 'rgba(99, 211, 255, 0.22)',
+    text: '#F4FAFF',
+    textMuted: 'rgba(244, 250, 255, 0.58)',
+};
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 
@@ -36,8 +78,8 @@ void main(){vec2 uv=vUv*2.0-1.0;float r=length(uv);float th=atan(uv.y,uv.x);if(t
 function OrbScene({ agentState, userVolume, agentIsSpeaking }) {
     useThree();
     const ref = useRef(null);
-    // Davinci Blue Branding: #CADCFC and #A0B9D1
-    const colors = ["#CADCFC", "#A0B9D1"];
+    // Metallic silver palette for the orb only
+    const colors = [ORB_THEME.primary, ORB_THEME.secondary];
     const initRef = useRef(colors);
     const tc1 = useRef(new THREE.Color(colors[0]));
     const tc2 = useRef(new THREE.Color(colors[1]));
@@ -91,7 +133,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TARA VOICE WIDGET — Davinci Blue Edition
+// TARA VOICE WIDGET — Blue DaVinci Edition
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
@@ -100,15 +142,15 @@ const getWsBaseUrl = () => {
 
 const CALL_LIMIT = 300;
 
-const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'DA VINCI Speaking', thinking: 'Connecting...' };
+const STATE_LABELS = { idle: 'Click to Start', listening: 'Listening...', talking: 'DaVinci AI Speaking', thinking: 'Connecting...' };
 
 const TaraVoiceWidget = ({ config: propConfig }) => {
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
             tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'davinci',
-            agentId: propConfig?.agentId || globalConfig?.agentId || 'davinci',
-            agentName: propConfig?.agentName || globalConfig?.agentName || 'DAVINCIAI',
+            agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
+            agentName: propConfig?.agentName || globalConfig?.agentName || 'BUNDB AGENT',
             language: propConfig?.language || globalConfig?.language || 'de',
             accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
             region: propConfig?.region || globalConfig?.region || 'EU',
@@ -129,12 +171,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const [showEmailDialog, setShowEmailDialog] = useState(false);
     const [emailInput, setEmailInput] = useState('');
 
-    useEffect(() => {
-        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
-        else if (connectionStatus === 'connecting') setAgentState('thinking');
-        else if (!isCallActive) setAgentState('idle');
-    }, [agentIsSpeaking, connectionStatus, isCallActive]);
-
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
     const wsConnectedRef = useRef(false);
@@ -143,7 +179,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const lastPlaybackTimeRef = useRef(0);
     const playbackStartTimeRef = useRef(null);
     const audioStreamCompleteRef = useRef(false);
-    const audioConfigRef = useRef({ format: 'pcm_s16le', sampleRate: 16000 });
+    const audioConfigRef = useRef({ format: 'pcm_f32le', sampleRate: 44100 });
     const currentPlaybackTurnIdRef = useRef(null);
     const minAcceptedPlaybackTurnIdRef = useRef(0);
     const activeSourcesRef = useRef(new Set());
@@ -154,23 +190,22 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const animationFrameRef = useRef(null);
     const sessionIdRef = useRef(null);
 
-    useEffect(() => {
-        if (!micStream) return;
-        const ac = new (window.AudioContext || window.webkitAudioContext)();
-        const an = ac.createAnalyser(); const src = ac.createMediaStreamSource(micStream);
-        src.connect(an); an.fftSize = 256;
-        const arr = new Uint8Array(an.frequencyBinCount);
-        const up = () => { an.getByteFrequencyData(arr); let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; setUserVolume(Math.min(1, s / arr.length / 30)); animationFrameRef.current = requestAnimationFrame(up); };
-        up();
-        return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
-    }, [micStream]);
-
     const checkPlaybackComplete = useCallback(() => {
-        if (!audioCtxRef.current) return;
-        if (audioCtxRef.current.currentTime >= lastPlaybackTimeRef.current - 0.1) {
+        if (!audioCtxRef.current) {
+            console.log('[TARA] ⚠️ Audio context not available');
+            return;
+        }
+        const currentTime = audioCtxRef.current.currentTime;
+        const threshold = lastPlaybackTimeRef.current - 0.1;
+
+        console.log(`[TARA] 🔍 Checking playback complete: currentTime=${currentTime.toFixed(3)}, lastPlaybackTime=${lastPlaybackTimeRef.current.toFixed(3)}, threshold=${threshold.toFixed(3)}`);
+
+        if (currentTime >= threshold) {
+            console.log('[TARA] ✅ Playback time threshold reached');
             setAgentIsSpeaking(false);
             if (audioStreamCompleteRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
                 const duration = playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0;
+                console.log(`[TARA] 📤 Sending playback_done: duration=${duration}ms, turn=${currentPlaybackTurnIdRef.current}`);
                 wsRef.current.send(JSON.stringify({
                     type: 'playback_done',
                     duration_ms: duration,
@@ -180,7 +215,11 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                 playbackStartTimeRef.current = null;
                 audioStreamCompleteRef.current = false;
                 currentPlaybackTurnIdRef.current = null;
+            } else {
+                console.log(`[TARA] ⚠️ Cannot send playback_done: audioStreamComplete=${audioStreamCompleteRef.current}, wsState=${wsRef.current?.readyState}`);
             }
+        } else {
+            console.log(`[TARA] ⏳ Waiting for playback complete: need ${threshold.toFixed(3)}, have ${currentTime.toFixed(3)}`);
         }
     }, []);
 
@@ -277,6 +316,29 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         startCall();
     };
 
+    useEffect(() => {
+        if (connectionStatus === 'connected') setAgentState(agentIsSpeaking ? 'talking' : 'listening');
+        else if (connectionStatus === 'connecting') setAgentState('thinking');
+        else if (!isCallActive) setAgentState('idle');
+    }, [agentIsSpeaking, connectionStatus, isCallActive]);
+
+    useEffect(() => {
+        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
+    }, [callDuration, isCallActive, endCall]);
+
+    useEffect(() => {
+        if (!micStream) return;
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const an = ac.createAnalyser(); const src = ac.createMediaStreamSource(micStream);
+        src.connect(an); an.fftSize = 256;
+        const arr = new Uint8Array(an.frequencyBinCount);
+        const up = () => { an.getByteFrequencyData(arr); let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i]; setUserVolume(Math.min(1, s / arr.length / 30)); animationFrameRef.current = requestAnimationFrame(up); };
+        up();
+        return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); ac.close(); };
+    }, [micStream]);
+
+
+
     const sendEmailToServer = async (email) => {
         try {
             const response = await fetch('/api/session/end', {
@@ -307,22 +369,13 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             wsConnectedRef.current = true;
             sessionIdRef.current = 'session_' + Date.now();
             const sessionConfig = {
-                type: 'session_config',
-                config: {
-                    mode: 'voice', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
-                    user_id: uid, stt_mode: 'audio', tts_mode: 'audio', language: config.language
-                }
+                type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
+                user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_blue', region: 'EU' }
             };
             ws.send(JSON.stringify(sessionConfig));
-            ws.send(JSON.stringify({
-                type: 'start_session',
-                flow_config: {
-                    policy_mode: 'sales', conversation_policy: 'sales',
-                    policy_flags: { enable_strategic_policy: true, enable_stage_aware_retrieval: true, enable_micro_reasoning: true }
-                },
-                timestamp: Date.now() / 1000
-            }));
-            const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
+            const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
             audioCtxRef.current = ac; lastPlaybackTimeRef.current = ac.currentTime;
             const mic = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             const src = mic.createMediaStreamSource(stream);
@@ -357,15 +410,30 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                     if (turnId < minAcceptedPlaybackTurnIdRef.current) {
                         console.log(`[TARA] 🚫 Rejected stale audio chunk: turn ${turnId} < min ${minAcceptedPlaybackTurnIdRef.current}`);
                         if (d.binary_sent && binaryQueueRef.current.length > 0) binaryQueueRef.current.shift();
+                        // Check is_final even for stale chunks (in case this is the final signal)
+                        if (d.is_final) {
+                            console.log(`[TARA] 🏁 Final chunk received (stale turn ${turnId})`);
+                            audioStreamCompleteRef.current = true;
+                            checkPlaybackComplete();
+                        }
                         return;
                     }
                     currentPlaybackTurnIdRef.current = turnId;
                 }
                 if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
-                setAgentIsSpeaking(true); audioStreamCompleteRef.current = false;
+                // Only set speaking state if there's actual audio data
+                const hasAudioData = d.binary_sent || d.data || d.audio;
+                if (hasAudioData) {
+                    setAgentIsSpeaking(true);
+                    audioStreamCompleteRef.current = false;
+                }
                 if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
                 else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
-                if (d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
+                if (d.is_final) {
+                    console.log(`[TARA] 🏁 Final chunk received (turn ${turnId})`);
+                    audioStreamCompleteRef.current = true;
+                    checkPlaybackComplete();
+                }
             } else if (d.type === 'audio_complete' || d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
             else if (d.type === 'interrupt' || d.type === 'clear' || d.type === 'playback_stop') {
                 stopPlayback();
@@ -374,10 +442,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         };
         ws.onclose = () => endCall(); ws.onerror = () => endCall();
     };
-
-    useEffect(() => {
-        if (isCallActive && callDuration >= CALL_LIMIT) endCall();
-    }, [callDuration, isCallActive, endCall]);
 
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const remaining = CALL_LIMIT - callDuration;
@@ -410,47 +474,53 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                         whileHover={{ scale: 1.05 }}
                         onClick={handleOrbClick}
                         style={{
-                            background: 'rgba(10, 10, 10, 0.85)',
-                            backdropFilter: 'blur(30px)',
-                            border: '1px solid rgba(202, 220, 252, 0.4)',
-                            borderRadius: '24px',
-                            padding: '10px 20px',
+                            background: WIDGET_THEME.panel,
+                            border: `1px solid ${WIDGET_THEME.borderStrong}`,
+                            borderRadius: '18px',
+                            clipPath: 'polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%)',
+                            padding: '12px 24px 12px 18px',
                             marginRight: '12px',
-                            color: '#FFFFFF',
-                            fontWeight: 700,
-                            fontSize: '14px',
+                            color: WIDGET_THEME.text,
+                            fontWeight: 800,
+                            fontSize: '13px',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
-                            boxShadow: '0 15px 40px rgba(0,0,0,0.6)',
-                            whiteSpace: 'nowrap'
+                            boxShadow: WIDGET_THEME.shadow,
+                            whiteSpace: 'nowrap',
+                            position: 'relative',
+                            overflow: 'hidden'
                         }}
                     >
-                        Talk to TARA <span style={{ color: '#CADCFC', fontSize: '16px' }}>✨</span>
+                        <div style={{ width: '9px', height: '9px', background: WIDGET_THEME.accent, clipPath: 'polygon(0 50%, 50% 0, 100% 50%, 50% 100%)', opacity: 0.92 }} />
+                        <span style={{ position: 'relative', zIndex: 1 }}>Talk to TARA</span>
                     </motion.div>
                 )}
             </AnimatePresence>
             <AnimatePresence>
                 {isCallActive && (
-                    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 240, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                        style={{ height: '52px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(202, 220, 252, 0.3)', borderRadius: '26px 0 0 26px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '12px', overflow: 'hidden', borderRight: 'none' }}>
+                    <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 248, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                        style={{ height: '56px', background: WIDGET_THEME.panelSoft, border: `1px solid ${WIDGET_THEME.border}`, borderRadius: '18px 0 0 18px', clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '22px', overflow: 'hidden', borderRight: 'none', boxShadow: WIDGET_THEME.shadow, position: 'relative' }}>
+                        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '12px', width: '1px', background: 'rgba(255,255,255,0.08)' }} />
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '12px', fontWeight: 900, color: '#EBE5DF', letterSpacing: '0.02em' }}>DA VINCI AI</div>
-                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#ef4444' : '#CADCFC', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
+                            <div style={{ fontSize: '12px', fontWeight: 900, color: WIDGET_THEME.text, letterSpacing: '0.12em' }}>TARA</div>
+                            <div style={{ fontSize: '9px', fontWeight: 600, color: isWarning ? '#EF4444' : WIDGET_THEME.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{isWarning ? `ENDING IN ${remaining}S` : STATE_LABELS[agentState]}</div>
                         </div>
-                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: 'rgba(235,229,223,0.3)', marginRight: '12px' }}>{fmt(callDuration)}</div>
+                        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: WIDGET_THEME.textMuted, marginRight: '12px' }}>{fmt(callDuration)}</div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             <motion.button onClick={handleOrbClick}
-                style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#050505', border: isCallActive ? '2px solid #CADCFC' : '1px solid rgba(202, 220, 252, 0.2)', boxShadow: isCallActive ? '0 0 30px rgba(202, 220, 252, 0.4)' : '0 10px 40px rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
+                style={{ width: '56px', height: '56px', borderRadius: '50%', background: ORB_BUTTON_THEME.background, border: isCallActive ? `2px solid ${ORB_BUTTON_THEME.borderActive}` : `1px solid ${ORB_BUTTON_THEME.borderIdle}`, boxShadow: isCallActive ? ORB_BUTTON_THEME.shadowActive : ORB_BUTTON_THEME.shadowIdle, cursor: 'pointer', padding: 0, overflow: 'hidden', position: 'relative', zIndex: 10 }}
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <OrbRenderer agentState={isCallActive ? agentState : null} userVolume={userVolume} agentIsSpeaking={agentIsSpeaking} />
                 {isCallActive && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CADCFC" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: ORB_BUTTON_THEME.overlay }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={ORB_BUTTON_THEME.icon} strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </div>
                 )}
             </motion.button>
@@ -466,14 +536,14 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                             right: '4px',
                             fontSize: '8px',
                             fontWeight: 700,
-                            color: '#FFFFFF',
+                            color: BLUE_THEME.text,
                             textTransform: 'uppercase',
                             letterSpacing: '0.12em',
                             whiteSpace: 'nowrap',
                             textDecoration: 'none'
                         }}
                     >
-                        built by davinciai.eu
+                        built for davinciai.eu
                     </a>
                 )
             }
@@ -489,21 +559,18 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                             bottom: '100px',
                             right: '20px',
                             width: '320px',
-                            background: 'rgba(10, 10, 10, 0.95)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(202, 220, 252, 0.4)',
-                            borderRadius: '16px',
+                            background: WIDGET_THEME.panelSoft,
+                            border: `1px solid ${WIDGET_THEME.borderStrong}`,
+                            borderRadius: '18px',
                             padding: '20px',
                             zIndex: 10000,
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
+                            boxShadow: WIDGET_THEME.shadow
                         }}
                     >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#CADCFC', marginBottom: '8px' }}>
-                            Session Ended
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: WIDGET_THEME.text, marginBottom: '8px' }}>
+                            Get In Touch With Us
                         </div>
-                        <div style={{ fontSize: '12px', color: '#A0B9D1', marginBottom: '16px' }}>
-                            Would you like to receive a summary of this session?
-                        </div>
+                        
                         <input
                             type="email"
                             placeholder="Enter your email"
@@ -514,17 +581,17 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                             style={{
                                 width: '100%',
                                 padding: '10px 12px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${accessError ? '#ef4444' : 'rgba(202, 220, 252, 0.3)'}`,
-                                borderRadius: '8px',
-                                color: '#FFFFFF',
+                                background: 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${accessError ? '#EF4444' : WIDGET_THEME.border}`,
+                                borderRadius: '12px',
+                                color: WIDGET_THEME.text,
                                 fontSize: '13px',
                                 boxSizing: 'border-box',
                                 outline: 'none'
                             }}
                         />
                         {accessError && (
-                            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>{accessError}</div>
+                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{accessError}</div>
                         )}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                             <button
@@ -532,10 +599,10 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(202, 220, 252, 0.2)',
-                                    borderRadius: '6px',
-                                    color: '#A0B9D1',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: `1px solid ${WIDGET_THEME.border}`,
+                                    borderRadius: '12px',
+                                    color: WIDGET_THEME.text,
                                     fontSize: '12px',
                                     fontWeight: 600,
                                     cursor: 'pointer'
@@ -548,10 +615,10 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                                 style={{
                                     flex: 1,
                                     padding: '8px 12px',
-                                    background: '#CADCFC',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    color: '#050505',
+                                    background: 'linear-gradient(180deg, rgba(244, 247, 252, 0.96), rgba(206, 214, 226, 0.9))',
+                                    border: `1px solid ${WIDGET_THEME.borderStrong}`,
+                                    borderRadius: '12px',
+                                    color: '#11151C',
                                     fontSize: '12px',
                                     fontWeight: 700,
                                     cursor: 'pointer'

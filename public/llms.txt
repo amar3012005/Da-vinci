@@ -1,0 +1,22 @@
+# Da'vinci Solutions
+
+> AI-powered enterprise automation for small and medium enterprises.
+
+Da'vinci Solutions builds sovereign, GDPR-compliant AI systems that help businesses automate operations through conversational intelligence and persistent memory.
+
+## Products
+
+- [TARA](https://www.davinciai.eu/): Conversational AI voice agent for customer interactions, scheduling, and business automation. Supports multilingual conversations with natural language understanding.
+- [HIVEMIND](https://hivemind.davinciai.eu/): Enterprise memory engine with graph-based knowledge storage, semantic recall, and cross-agent memory sharing. GDPR and DPDP compliant.
+
+## Key Pages
+
+- [Homepage](https://www.davinciai.eu/): Product overview and platform capabilities
+- [About](https://www.davinciai.eu/about): Company information
+- [Demo](https://www.davinciai.eu/demo): Product demonstration
+- [Terms](https://www.davinciai.eu/terms): Terms of service
+
+## Contact
+
+- Email: enterprise@davinciai.eu
+- Website: https://www.davinciai.eu

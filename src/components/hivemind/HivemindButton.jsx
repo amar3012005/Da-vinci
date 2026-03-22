@@ -21,7 +21,7 @@ const HivemindButton = ({
   variant = 'default',
   className = '',
   ...props 
-}) => {
+}) => { 
   const navigate = useNavigate();
 
   const handleClick = () => {

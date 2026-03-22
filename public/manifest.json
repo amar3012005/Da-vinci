@@ -1,7 +1,7 @@
 {
-  "short_name": "Foodles",
-  "name": "Foodles - Food Delivery",
-  "description": "Order food from your favorite restaurants",
+  "short_name": "Da'vinci AI",
+  "name": "Da'vinci Solutions — AI Enterprise Systems",
+  "description": "AI-powered enterprise automation. TARA conversational AI and HIVEMIND sovereign memory engine for business operations.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,12 +10,12 @@
     },
     {
       "src": "logo.jpeg",
-      "type": "image/gif",
+      "type": "image/jpeg",
       "sizes": "192x192"
     },
     {
       "src": "logo.jpeg",
-      "type": "image/gif",
+      "type": "image/jpeg",
       "sizes": "512x512"
     }
   ],
@@ -24,13 +24,5 @@
   "theme_color": "#000000",
   "background_color": "#000000",
   "prefer_related_applications": false,
-  "categories": ["food", "delivery", "restaurant"],
-  "screenshots": [
-    {
-      "src": "/screenshot1.jpg",
-      "type": "image/jpeg",
-      "sizes": "1080x1920",
-      "form_factor": "narrow"
-    }
-  ]
+  "categories": ["business", "productivity", "utilities"]
 }

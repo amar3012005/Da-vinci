@@ -1,3 +1,11 @@
-# https://www.robotstxt.org/robotstxt.html
+# Da'vinci Solutions — davinciai.eu
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+# Sitemap
+Sitemap: https://www.davinciai.eu/sitemap.xml
