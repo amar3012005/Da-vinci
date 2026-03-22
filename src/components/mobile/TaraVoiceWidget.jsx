@@ -95,7 +95,9 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    return 'wss://localhost:4014/ws';
+    const loc = window.location;
+    const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//localhost:4014/ws`;
 };
 
 const CALL_LIMIT = 300;
