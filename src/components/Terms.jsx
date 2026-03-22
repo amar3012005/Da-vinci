@@ -1,23 +1,9 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const Terms = () => {
-  const navigate = useNavigate();
-
   useEffect(() => {
-    console.log('Terms component mounted');
-    document.title = 'Terms & Conditions';
-
-    // Verify component mounted correctly
-    const timer = setTimeout(() => {
-      if (!document.querySelector('.terms-content')) {
-        console.log('Terms component failed to mount properly');
-        navigate('/', { replace: true });
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    document.title = "Terms & Conditions — Da'vinci Solutions";
+  }, []);
 
   return (
     <div className="terms-content">
@@ -39,45 +25,43 @@ const Terms = () => {
           <section className="border border-white/10 bg-black/90 p-6">
             <h2 className="text-xl font-mono text-green-400 mb-4">Terms of Service</h2>
             <div className="space-y-4 text-white/70">
-              <p>By using Foodles, you agree to the following terms:</p>
+              <p>By using Da'vinci Solutions products and services, you agree to the following terms:</p>
               <ul className="list-disc pl-4 space-y-2">
-                <li>Orders can only be placed during restaurant operating hours</li>
-                <li>Minimum order value may apply for delivery service</li>
-                <li>Delivery times are approximate and may vary based on restaurant workload and location</li>
-                <li>Order Confirmation Payment must be completed before order processing begins</li>
-                <li>Cancellations are subject to restaurant approval and order status</li>
-                <li>Restaurant status (open/closed) is subject to change without notice</li>
+                <li>Services are provided on a subscription basis with tiered pricing plans</li>
+                <li>API usage is subject to rate limits and fair-use policies per your subscription tier</li>
+                <li>You retain ownership of all data you provide to our systems</li>
+                <li>Service availability targets are defined in your service-level agreement (SLA)</li>
+                <li>Account credentials must not be shared or transferred without authorization</li>
+                <li>We reserve the right to suspend accounts that violate these terms or engage in abusive usage</li>
               </ul>
             </div>
           </section>
 
           <section className="border border-white/10 bg-black/90 p-6">
-            <h2 className="text-xl font-mono text-green-400 mb-4">Delivery Policy</h2>
+            <h2 className="text-xl font-mono text-green-400 mb-4">Data & Privacy</h2>
             <div className="space-y-4 text-white/70">
-              <p>Our delivery service operates under these guidelines:</p>
+              <p>Da'vinci Solutions is committed to data sovereignty and privacy:</p>
               <ul className="list-disc pl-4 space-y-2">
-
-
-        
-                <li>Accurate delivery address must be provided</li>
-
-                <li>Cash on delivery and online payment options available</li>
-                <li>If you face any issue in order item specifications or delivery time , you can directly
-                  contact the vendor.(vendor contact details are sent via order confirmation email.)
-                </li>
+                <li>EU customer data is processed and stored exclusively within the European Union (Hannover, Germany)</li>
+                <li>India customer data is processed in compliance with the Digital Personal Data Protection Act (DPDP)</li>
+                <li>All data is encrypted at rest and in transit using industry-standard protocols</li>
+                <li>We do not sell, share, or use your data for training AI models without explicit consent</li>
+                <li>You may request data export or deletion at any time in accordance with GDPR Article 17</li>
+                <li>Our memory engine (HIVEMIND) stores knowledge graphs with full audit trails for compliance</li>
               </ul>
             </div>
           </section>
 
           <section className="border border-white/10 bg-black/90 p-6">
-            <h2 className="text-xl font-mono text-green-400 mb-4">Privacy & Data</h2>
+            <h2 className="text-xl font-mono text-green-400 mb-4">Acceptable Use</h2>
             <div className="space-y-4 text-white/70">
-              <p>We protect your information:</p>
+              <p>When using our AI services (TARA, HIVEMIND), you agree not to:</p>
               <ul className="list-disc pl-4 space-y-2">
-                <li>Contact details are used only for order fulfillment</li>
-                <li>Payment information is processed securely via Razorpay</li>
-                <li>Email id & Phone number are used only for order delivery purpose.</li>
-                <li>No personal data is shared with third parties</li>
+                <li>Use the services for illegal activities or to cause harm</li>
+                <li>Attempt to reverse-engineer, extract, or replicate our AI models</li>
+                <li>Exceed API rate limits or circumvent usage restrictions</li>
+                <li>Store or transmit malicious content through our systems</li>
+                <li>Misrepresent AI-generated outputs as human-created when disclosure is required</li>
               </ul>
             </div>
           </section>
@@ -87,10 +71,9 @@ const Terms = () => {
             <div className="space-y-4 text-white/70">
               <p>For support and inquiries:</p>
               <ul className="list-none space-y-2">
-                <li>Email: suppfoodles@gmail.com</li>
-    
-       
-                <li>Location: KAMAND, HIMACHAL PRADESH</li>
+                <li>Enterprise: enterprise@davinciai.eu</li>
+                <li>General: admin@da-vinci.ai</li>
+                <li>Website: www.davinciai.eu</li>
               </ul>
             </div>
           </section>

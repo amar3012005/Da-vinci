@@ -133,9 +133,9 @@ const TaraVoiceWidgetIndic = ({ config: propConfig }) => {
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
-            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
-            agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
-            agentName: propConfig?.agentName || globalConfig?.agentName || 'BUNDB AGENT',
+            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'davinci',
+            agentId: propConfig?.agentId || globalConfig?.agentId || 'davinci',
+            agentName: propConfig?.agentName || globalConfig?.agentName || 'DAVINCIAI',
             language: propConfig?.language || globalConfig?.language || 'hi', // Default to Hindi for Indic version
             accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
             region: propConfig?.region || globalConfig?.region || 'IN', // Region India

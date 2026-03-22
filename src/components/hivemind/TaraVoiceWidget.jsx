@@ -95,7 +95,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 // ═══════════════════════════════════════════════════════════
 
 const getWsBaseUrl = () => {
-    return 'wss://localhost:4014/ws';
+    return 'wss://demo.davinciai.eu:8030/ws';
 };
 
 const CALL_LIMIT = 300;
@@ -129,8 +129,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const [accessError, setAccessError] = useState('');
     const [isAccessGranted, setIsAccessGranted] = useState(false);
     const [selectedCallMode, setSelectedCallMode] = useState('speaker');
-    const [showEmailDialog, setShowEmailDialog] = useState(false);
-    const [emailInput, setEmailInput] = useState('');
 
     const wsRef = useRef(null);
     const audioCtxRef = useRef(null);
@@ -140,10 +138,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const lastPlaybackTimeRef = useRef(0);
     const playbackStartTimeRef = useRef(null);
     const audioStreamCompleteRef = useRef(false);
-    const audioConfigRef = useRef({ format: 'pcm_s16le', sampleRate: 16000 });
-    const currentPlaybackTurnIdRef = useRef(null);
-    const minAcceptedPlaybackTurnIdRef = useRef(0);
-    const activeSourcesRef = useRef(new Set());
+    const audioConfigRef = useRef({ format: 'pcm_f32le', sampleRate: 44100 });
     const outputGainRef = useRef(null);
     const telephonyHighpassRef = useRef(null);
     const telephonyLowpassRef = useRef(null);
@@ -177,16 +172,8 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         if (audioCtxRef.current.currentTime >= lastPlaybackTimeRef.current - 0.1) {
             setAgentIsSpeaking(false);
             if (audioStreamCompleteRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-                const duration = playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0;
-                wsRef.current.send(JSON.stringify({
-                    type: 'playback_done',
-                    duration_ms: duration,
-                    playback_turn_id: currentPlaybackTurnIdRef.current,
-                    timestamp: Date.now() / 1000
-                }));
-                playbackStartTimeRef.current = null;
-                audioStreamCompleteRef.current = false;
-                currentPlaybackTurnIdRef.current = null;
+                wsRef.current.send(JSON.stringify({ type: 'playback_done', duration_ms: playbackStartTimeRef.current ? Date.now() - playbackStartTimeRef.current : 0, timestamp: Date.now() / 1000 }));
+                playbackStartTimeRef.current = null; audioStreamCompleteRef.current = false;
             }
         }
     }, []);
@@ -208,22 +195,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         return { gain: outputGainRef.current, highpass: telephonyHighpassRef.current, lowpass: telephonyLowpassRef.current };
     }, []);
 
-    const stopPlayback = useCallback(() => {
-        if (Number.isFinite(currentPlaybackTurnIdRef.current)) {
-            minAcceptedPlaybackTurnIdRef.current = Math.max(minAcceptedPlaybackTurnIdRef.current, currentPlaybackTurnIdRef.current + 1);
-        }
-        for (const source of activeSourcesRef.current) {
-            try { source.onended = null; source.stop(); } catch (_) { }
-        }
-        activeSourcesRef.current.clear();
-        binaryQueueRef.current = [];
-        currentPlaybackTurnIdRef.current = null;
-        audioStreamCompleteRef.current = false;
-        playbackStartTimeRef.current = null;
-        if (audioCtxRef.current) lastPlaybackTimeRef.current = audioCtxRef.current.currentTime;
-        setAgentIsSpeaking(false);
-    }, []);
-
     const playAudioChunk = useCallback((data, forceInt16 = false) => {
         let f32; const fmt = audioConfigRef.current.format; const sr = audioConfigRef.current.sampleRate;
         if (data instanceof ArrayBuffer) {
@@ -242,18 +213,8 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             try { chain.gain.disconnect(); chain.highpass.disconnect(); chain.lowpass.disconnect(); s.disconnect(); } catch (_) { }
             if (selectedCallMode === 'telephony') { s.connect(chain.highpass); chain.highpass.connect(chain.lowpass); chain.lowpass.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
             else { s.connect(chain.gain); chain.gain.connect(audioCtxRef.current.destination); }
-            const now = audioCtxRef.current.currentTime;
-            let at = lastPlaybackTimeRef.current;
-            // Initial buffer offset (50ms) for first chunk — prevents glitchy start
-            if (!playbackStartTimeRef.current) {
-                playbackStartTimeRef.current = Date.now();
-                at = now + 0.05;
-            }
-            // Drift correction: jump to current time if falling behind
-            if (at < now) at = now;
-            activeSourcesRef.current.add(s);
-            s.onended = () => { activeSourcesRef.current.delete(s); checkPlaybackComplete(); };
-            s.start(at); lastPlaybackTimeRef.current = at + buf.duration;
+            const now = audioCtxRef.current.currentTime; let at = lastPlaybackTimeRef.current; if (at < now) at = now;
+            s.start(at); lastPlaybackTimeRef.current = at + buf.duration; s.onended = () => checkPlaybackComplete();
         }
     }, [checkPlaybackComplete, ensureOutputChain, selectedCallMode]);
 
@@ -262,19 +223,18 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
             if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'interrupt', timestamp: Date.now() / 1000 }));
             wsRef.current.close(); wsRef.current = null;
         }
-        stopPlayback();
+        binaryQueueRef.current = [];
         if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
         outputGainRef.current = null; telephonyHighpassRef.current = null; telephonyLowpassRef.current = null;
         if (callTimerRef.current) clearInterval(callTimerRef.current); callTimerRef.current = null;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
         setIsCallActive(false); setConnectionStatus(null); setAgentIsSpeaking(false);
         wsConnectedRef.current = false; setAgentState('idle'); setMicStream(null); setCallDuration(0);
-        setShowEmailDialog(true);
-    }, [micStream, stopPlayback]);
+    }, [micStream]);
 
     const startCall = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
             setMicStream(stream); startVoiceCall(stream);
         } catch (err) { console.error("Mic failed:", err); alert("Please enable microphone access"); }
     };
@@ -289,25 +249,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         setIsAccessGranted(true); setShowCallSetup(false); setAccessError(''); setAccessKeyInput(''); startCall();
     };
 
-    const sendEmailToServer = async (email) => {
-        try {
-            const response = await fetch('/api/session/end', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: sessionIdRef.current,
-                    email: email,
-                    tenant_id: config.tenantId,
-                    agent_id: config.agentId,
-                    timestamp: Date.now() / 1000
-                })
-            });
-            if (!response.ok) console.warn('Failed to send email to server');
-        } catch (err) {
-            console.warn('Error sending email:', err);
-        }
-    };
-
     const startVoiceCall = (stream) => {
         setConnectionStatus('connecting'); setCallDuration(0);
         const base = getWsBaseUrl();
@@ -317,24 +258,14 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
         const ws = new WebSocket(wsUrl); ws.binaryType = "arraybuffer"; wsRef.current = ws;
         ws.onopen = () => {
             wsConnectedRef.current = true;
-            sessionIdRef.current = 'session_' + Date.now();
             const sessionConfig = {
-                type: 'session_config',
-                config: {
-                    mode: 'voice', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
-                    user_id: uid, stt_mode: 'audio', tts_mode: 'audio', language: config.language
-                }
+                type: 'session_config', tenant_id: config.tenantId, agent_id: config.agentId, agent_name: config.agentName,
+                user_id: uid, session_type: 'webcall', language: config.language, interaction_mode: 'interactive',
+                stt_mode: 'streaming', tts_mode: 'streaming', metadata: { source: 'davinci_widget_blue', region: 'EU' }
             };
             ws.send(JSON.stringify(sessionConfig));
-            ws.send(JSON.stringify({
-                type: 'start_session',
-                flow_config: {
-                    policy_mode: 'sales', conversation_policy: 'sales',
-                    policy_flags: { enable_strategic_policy: true, enable_stage_aware_retrieval: true, enable_micro_reasoning: true }
-                },
-                timestamp: Date.now() / 1000
-            }));
-            const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            ws.send(JSON.stringify({ type: 'start_session', timestamp: Date.now() / 1000 }));
+            const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
             audioCtxRef.current = ac; lastPlaybackTimeRef.current = ac.currentTime;
             const mic = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
             const src = mic.createMediaStreamSource(stream);
@@ -359,29 +290,14 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                     setConnectionStatus('connected'); setIsCallActive(true);
                     if (!callTimerRef.current) callTimerRef.current = setInterval(() => setCallDuration(x => x + 1), 1000);
                 }
-            }
-
-            if (d.type === 'state_update' && (d.state === 'thinking' || d.state === 'interrupt' || d.state === 'listening')) {
-                stopPlayback();
             } else if (d.type === 'audio_chunk') {
-                const turnId = Number(d.playback_turn_id);
-                if (Number.isFinite(turnId)) {
-                    if (turnId < minAcceptedPlaybackTurnIdRef.current) {
-                        console.log(`[TARA] 🚫 Rejected stale audio chunk: turn ${turnId} < min ${minAcceptedPlaybackTurnIdRef.current}`);
-                        if (d.binary_sent && binaryQueueRef.current.length > 0) binaryQueueRef.current.shift();
-                        return;
-                    }
-                    currentPlaybackTurnIdRef.current = turnId;
-                }
                 if (d.sample_rate) audioConfigRef.current.sampleRate = d.sample_rate;
                 setAgentIsSpeaking(true); audioStreamCompleteRef.current = false;
                 if (d.binary_sent && binaryQueueRef.current.length > 0) { const c = binaryQueueRef.current.shift(); if (c) playAudioChunk(c, audioConfigRef.current.format === 'pcm_s16le'); }
                 else { const a = d.data || d.audio; if (a) playAudioChunk(a); }
                 if (d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
             } else if (d.type === 'audio_complete' || d.is_final) { audioStreamCompleteRef.current = true; checkPlaybackComplete(); }
-            else if (d.type === 'interrupt' || d.type === 'clear' || d.type === 'playback_stop') {
-                stopPlayback();
-            }
+            else if (d.type === 'interrupt' || d.type === 'clear') { setAgentIsSpeaking(false); lastPlaybackTimeRef.current = audioCtxRef.current?.currentTime || 0; playbackStartTimeRef.current = null; }
             else if (d.type === 'ping' && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() / 1000 }));
         };
         ws.onclose = () => endCall(); ws.onerror = () => endCall();
@@ -390,22 +306,6 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
     const remaining = CALL_LIMIT - callDuration;
     const isWarning = remaining <= 30 && isCallActive;
-
-    const handleEmailSubmit = () => {
-        if (!emailInput.trim()) {
-            setShowEmailDialog(false);
-            return;
-        }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(emailInput)) {
-            setAccessError('Please enter a valid email address');
-            return;
-        }
-        sendEmailToServer(emailInput);
-        setEmailInput('');
-        setAccessError('');
-        setShowEmailDialog(false);
-    };
 
     return (
         <div style={{ position: 'fixed', bottom: '24px', right: '20px', zIndex: 9999, display: 'flex', alignItems: 'center' }}>
@@ -485,93 +385,7 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
                     </a>
                 )
             }
-
-            <AnimatePresence>
-                {showEmailDialog && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        style={{
-                            position: 'fixed',
-                            bottom: '100px',
-                            right: '20px',
-                            width: '320px',
-                            background: 'rgba(10, 10, 10, 0.95)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(202, 220, 252, 0.4)',
-                            borderRadius: '16px',
-                            padding: '20px',
-                            zIndex: 10000,
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
-                        }}
-                    >
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#CADCFC', marginBottom: '8px' }}>
-                            Session Ended
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#A0B9D1', marginBottom: '16px' }}>
-                            Would you like to receive a summary of this session?
-                        </div>
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            value={emailInput}
-                            onChange={(e) => { setEmailInput(e.target.value); setAccessError(''); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleEmailSubmit(); }}
-                            autoFocus
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: `1px solid ${accessError ? '#ef4444' : 'rgba(202, 220, 252, 0.3)'}`,
-                                borderRadius: '8px',
-                                color: '#FFFFFF',
-                                fontSize: '13px',
-                                boxSizing: 'border-box',
-                                outline: 'none'
-                            }}
-                        />
-                        {accessError && (
-                            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>{accessError}</div>
-                        )}
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                            <button
-                                onClick={() => { setShowEmailDialog(false); setEmailInput(''); setAccessError(''); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(202, 220, 252, 0.2)',
-                                    borderRadius: '6px',
-                                    color: '#A0B9D1',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Skip
-                            </button>
-                            <button
-                                onClick={handleEmailSubmit}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 12px',
-                                    background: '#CADCFC',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    color: '#050505',
-                                    fontSize: '12px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Send
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

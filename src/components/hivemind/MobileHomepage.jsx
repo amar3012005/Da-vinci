@@ -9,7 +9,7 @@ import MeetTaraSection from './MeetTaraSection';
 import ContextProblemSection from './ContextProblemSection';
 import ComparisonSection from './ComparisonSection';
 import MobileAboutSection from './MobileAboutSection';
-import TaraVoiceWidget from './TaraVoiceWidget';
+import TaraVoiceWidget from '../mobile/TaraVoiceWidget';
 
 /**
  * MobileHomepage - Main container orchestrating all mobile sections
