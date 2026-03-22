@@ -1587,13 +1587,14 @@ const MainHomepage = () => {
           loop
           muted
           playsInline
+          preload="none"
           className="hero-video absolute inset-0 w-full h-full object-cover"
           style={{
             filter: 'brightness(0.85) contrast(1.2) saturate(1.1) blur(0.2px)',
             opacity: 0.90
           }}
         >
-          <source src="/intro.mp4" type="video/mp4" />
+          <source src="/davinci-video.mp4" type="video/mp4" />
         </video>
 
         {/* Sophisticated gradient overlay - reduced opacity for better video visibility */}
