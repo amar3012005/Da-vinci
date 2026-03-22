@@ -97,7 +97,7 @@ function OrbRenderer({ agentState, userVolume, agentIsSpeaking }) {
 const getWsBaseUrl = () => {
     const loc = window.location;
     const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${proto}//localhost:4014/ws`;
+    return `${proto}//demo.davinciai.eu:8030/ws`;
 };
 
 const CALL_LIMIT = 300;
