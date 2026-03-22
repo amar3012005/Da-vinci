@@ -159,7 +159,7 @@ const MobileHero = () => {
                 <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/5 rounded-full blur-[100px] pointer-events-none z-[2]" />
 
                 {/* Main Content Container */}
-                <div className="flex-1 flex flex-col items-center justify-center -mt-8"> {/* Added negative margin top to pull up */}
+                <div className="flex-1 flex flex-col items-center justify-center -mt-8 pb-28"> {/* pb-28 clears the fixed TARA widget at bottom */}
                     {/* DA'VINCI Logo */}
                     <motion.div
                         ref={logoRef}
