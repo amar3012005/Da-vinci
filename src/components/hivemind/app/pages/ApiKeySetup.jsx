@@ -59,44 +59,44 @@ export default function ApiKeySetup() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#bdf213]/[0.015] blur-[100px]" />
+    <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#117dff]/[0.03] blur-[100px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 w-full max-w-lg mx-4"
       >
-        <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8">
+        <div className="bg-white backdrop-blur-xl border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-              <Hexagon size={22} className="text-[#bdf213]" />
+            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <Hexagon size={22} className="text-[#117dff]" />
             </div>
-            <span className="text-white text-lg font-bold font-['Space_Grotesk']">HIVEMIND</span>
+            <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">HIVEMIND</span>
           </div>
 
           {step === 'create' && (
             <>
-              <h2 className="text-white text-2xl font-bold font-['Space_Grotesk'] mb-2">
+              <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
                 {hasApiKey ? 'Connect your core API key' : 'Create your API key'}
               </h2>
-              <p className="text-white/50 text-sm mb-6 leading-relaxed">
+              <p className="text-[#525252] text-sm mb-6 leading-relaxed">
                 Hi {user?.display_name || user?.email || 'there'} — {hasApiKey
                   ? 'paste an existing HIVEMIND Core API key or create a replacement key for this browser.'
                   : 'you need an API key to connect clients and access the HIVEMIND memory engine.'}
               </p>
 
               {error && (
-                <div className="mb-4 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                  <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-red-400 text-xs font-mono">{error}</p>
+                <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                  <AlertTriangle size={14} className="text-[#dc2626] mt-0.5 shrink-0" />
+                  <p className="text-[#dc2626] text-xs font-mono">{error}</p>
                 </div>
               )}
 
               {hasApiKey && (
                 <div className="mb-5">
-                  <label className="block text-white/40 text-xs font-mono mb-2 uppercase tracking-wider">
+                  <label className="block text-[#a3a3a3] text-xs font-mono mb-2 uppercase tracking-wider">
                     Existing Core API Key
                   </label>
                   <div className="flex flex-col gap-3">
@@ -105,15 +105,15 @@ export default function ApiKeySetup() {
                       value={existingKey}
                       onChange={(e) => setExistingKey(e.target.value)}
                       placeholder="hm_..."
-                      className="w-full bg-[#0a0a0a] border border-white/[0.08] rounded-xl py-3 px-4 text-white text-sm font-mono placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+                      className="w-full bg-transparent border border-[#e3e0db] rounded-[6px] py-3 px-4 text-[#0a0a0a] text-sm font-mono placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]/40 transition-colors"
                     />
                     <button
                       onClick={handleUseExisting}
                       disabled={activating || !existingKey.trim()}
-                      className="w-full flex items-center justify-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] disabled:opacity-40 text-white font-semibold py-3 px-6 rounded-xl transition-all text-sm font-['Space_Grotesk'] border border-white/[0.08]"
+                      className="w-full flex items-center justify-center gap-2 bg-[#f3f1ec] hover:bg-[#e3e0db] disabled:opacity-40 text-[#0a0a0a] font-semibold py-3 px-6 rounded-[4px] transition-all text-sm font-['Space_Grotesk'] border border-[#e3e0db] uppercase tracking-[0.075em]"
                     >
                       {activating ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <>
                           <Key size={16} />
@@ -128,10 +128,10 @@ export default function ApiKeySetup() {
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="w-full flex items-center justify-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] disabled:opacity-40 text-[#0a0a0a] font-semibold py-3 px-6 rounded-xl transition-all text-sm font-['Space_Grotesk'] group cursor-pointer border-none"
+                className="w-full flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-40 text-white font-semibold py-3 px-6 rounded-[4px] transition-all text-sm font-['Space_Grotesk'] group cursor-pointer border-none uppercase tracking-[0.075em]"
               >
                 {creating ? (
-                  <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
                     <Key size={16} />
@@ -144,31 +144,31 @@ export default function ApiKeySetup() {
 
           {step === 'show' && rawKey && (
             <>
-              <h2 className="text-white text-2xl font-bold font-['Space_Grotesk'] mb-2">
+              <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
                 Your API key
               </h2>
 
               {/* Warning */}
               <div className="flex items-start gap-2 mb-4">
-                <AlertTriangle size={14} className="text-[#bdf213] mt-0.5 shrink-0" />
-                <p className="text-[#bdf213]/80 text-xs font-['Space_Grotesk'] leading-relaxed">
+                <AlertTriangle size={14} className="text-[#d97706] mt-0.5 shrink-0" />
+                <p className="text-[#d97706] text-xs font-['Space_Grotesk'] leading-relaxed">
                   Copy this key now. It will not be shown again.
                 </p>
               </div>
 
               {/* Key display */}
-              <div className="flex items-center gap-2 bg-[#0a0a0a] border border-[#bdf213]/30 rounded-xl p-4 mb-6">
-                <code className="flex-1 text-[#bdf213] text-sm font-mono break-all select-all">
+              <div className="flex items-center gap-2 bg-[#f3f1ec] border border-[#117dff]/30 rounded-[6px] p-4 mb-6">
+                <code className="flex-1 text-[#117dff] text-sm font-mono break-all select-all">
                   {rawKey}
                 </code>
                 <button
                   onClick={() => copy(rawKey)}
-                  className="shrink-0 p-2 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer bg-transparent border-none"
+                  className="shrink-0 p-2 rounded-lg hover:bg-[#e3e0db] transition-colors cursor-pointer bg-transparent border-none"
                 >
                   {copied ? (
-                    <Check size={16} className="text-[#bdf213]" />
+                    <Check size={16} className="text-[#16a34a]" />
                   ) : (
-                    <Copy size={16} className="text-white/40" />
+                    <Copy size={16} className="text-[#a3a3a3]" />
                   )}
                 </button>
               </div>
@@ -176,7 +176,7 @@ export default function ApiKeySetup() {
               {/* Continue */}
               <button
                 onClick={handleContinue}
-                className="w-full flex items-center justify-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] text-[#0a0a0a] font-semibold py-3 px-6 rounded-xl transition-all text-sm font-['Space_Grotesk'] group cursor-pointer border-none"
+                className="w-full flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] text-white font-semibold py-3 px-6 rounded-[4px] transition-all text-sm font-['Space_Grotesk'] group cursor-pointer border-none uppercase tracking-[0.075em]"
               >
                 Continue to Dashboard
                 <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
@@ -187,16 +187,16 @@ export default function ApiKeySetup() {
 
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-2 mt-6">
-          <div className="w-2 h-2 rounded-full bg-[#bdf213]" />
-          <div className="w-8 h-0.5 bg-[#bdf213]/30" />
-          <div className={`w-2 h-2 rounded-full ${step === 'show' ? 'bg-[#bdf213]' : 'bg-white/10'}`} />
-          <div className="w-8 h-0.5 bg-white/10" />
-          <div className="w-2 h-2 rounded-full bg-white/10" />
+          <div className="w-2 h-2 rounded-full bg-[#117dff]" />
+          <div className="w-8 h-0.5 bg-[#117dff]/30" />
+          <div className={`w-2 h-2 rounded-full ${step === 'show' ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`} />
+          <div className="w-8 h-0.5 bg-[#e3e0db]" />
+          <div className="w-2 h-2 rounded-full bg-[#e3e0db]" />
         </div>
         <div className="flex items-center justify-center gap-8 mt-2">
-          <span className="text-[10px] text-[#bdf213]/60 font-mono">Org</span>
-          <span className={`text-[10px] font-mono ${step === 'show' ? 'text-[#bdf213]/60' : 'text-white/20'}`}>Key</span>
-          <span className="text-[10px] text-white/20 font-mono">Dashboard</span>
+          <span className="text-[10px] text-[#117dff]/60 font-mono">Org</span>
+          <span className={`text-[10px] font-mono ${step === 'show' ? 'text-[#117dff]/60' : 'text-[#a3a3a3]'}`}>Key</span>
+          <span className="text-[10px] text-[#a3a3a3] font-mono">Dashboard</span>
         </div>
       </motion.div>
     </div>

@@ -1,62 +1,62 @@
 /**
  * HIVEMIND Design Tokens
- * Supermemory-inspired dark console aesthetic
- * Accent: lime (#bdf213) from HIVEMIND brand
+ * Supermemory-inspired warm light console aesthetic
+ * Accent: blue (#117dff) — clean, professional
  */
 
 export const colors = {
-  // Base - deeper blacks like Supermemory console
+  // Base - warm cream/off-white like Supermemory
   bg: {
-    primary: '#09090b',
-    secondary: '#0f0f11',
-    tertiary: '#141416',
-    elevated: '#18181b',
-    surface: '#1c1c1f',
-    hover: '#222225',
-    active: '#27272a',
+    primary: '#faf9f4',
+    secondary: '#f3f1ec',
+    tertiary: '#eae7e1',
+    elevated: '#ffffff',
+    surface: '#f3f1ec',
+    hover: '#eae7e1',
+    active: '#e3e0db',
   },
   // Accent
   accent: {
-    primary: '#bdf213',
-    primaryHover: '#d4ff3a',
-    primaryMuted: 'rgba(189, 242, 19, 0.12)',
-    primaryGlow: 'rgba(189, 242, 19, 0.25)',
+    primary: '#117dff',
+    primaryHover: '#0066e0',
+    primaryMuted: 'rgba(17, 125, 255, 0.08)',
+    primaryGlow: 'rgba(17, 125, 255, 0.15)',
   },
   // Text
   text: {
-    primary: '#fafafa',
-    secondary: '#a1a1aa',
-    tertiary: '#71717a',
-    muted: '#52525b',
-    inverse: '#09090b',
+    primary: '#0a0a0a',
+    secondary: '#525252',
+    tertiary: '#737373',
+    muted: '#a3a3a3',
+    inverse: '#ffffff',
   },
-  // Borders - subtler like Supermemory
+  // Borders - warm gray like Supermemory
   border: {
-    subtle: 'rgba(255, 255, 255, 0.06)',
-    default: 'rgba(255, 255, 255, 0.08)',
-    strong: 'rgba(255, 255, 255, 0.12)',
-    accent: 'rgba(189, 242, 19, 0.2)',
+    subtle: '#eae7e1',
+    default: '#e3e0db',
+    strong: '#d4d0ca',
+    accent: 'rgba(17, 125, 255, 0.25)',
   },
   // Status
   status: {
-    success: '#22c55e',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    info: '#3b82f6',
+    success: '#16a34a',
+    warning: '#d97706',
+    error: '#dc2626',
+    info: '#2563eb',
   },
 };
 
 export const fonts = {
   display: "'Space Grotesk', sans-serif",
-  body: "'Space Grotesk', sans-serif",
+  body: "Inter, ui-sans-serif, system-ui, sans-serif",
   mono: "'JetBrains Mono', 'Fira Code', monospace",
 };
 
 export const shadows = {
-  card: '0 1px 2px rgba(0, 0, 0, 0.5)',
-  elevated: '0 4px 12px rgba(0, 0, 0, 0.6)',
-  glow: '0 0 20px rgba(189, 242, 19, 0.1)',
-  glowStrong: '0 0 40px rgba(189, 242, 19, 0.2)',
+  card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)',
+  elevated: '0 4px 12px rgba(0, 0, 0, 0.06)',
+  glow: '0 0 20px rgba(17, 125, 255, 0.08)',
+  glowStrong: '0 0 40px rgba(17, 125, 255, 0.15)',
 };
 
 // API endpoints resolved from bootstrap

@@ -14,40 +14,40 @@ function KeyCreatedBanner({ rawKey, onDismiss }) {
       exit={{ opacity: 0, height: 0 }}
       className="mb-6 overflow-hidden"
     >
-      <div className="bg-[#09090b] border border-[#bdf213]/30 rounded-xl p-5">
+      <div className="bg-[#faf9f4] border border-[#117dff]/30 rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex items-start gap-3 mb-3">
-          <AlertTriangle size={18} className="text-[#bdf213] mt-0.5 shrink-0" />
+          <AlertTriangle size={18} className="text-[#117dff] mt-0.5 shrink-0" />
           <div>
-            <p className="text-[#bdf213] text-sm font-semibold font-['Space_Grotesk']">
+            <p className="text-[#117dff] text-sm font-semibold font-['Space_Grotesk']">
               Save your API key now
             </p>
-            <p className="text-white/50 text-xs mt-1 font-['Space_Grotesk']">
+            <p className="text-[#525252] text-xs mt-1 font-['Space_Grotesk']">
               This is the only time you will see this key. Copy it and store it securely.
               It cannot be retrieved again.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-          <code className="flex-1 text-[#bdf213] text-sm font-mono break-all select-all">
+        <div className="flex items-center gap-2 bg-white border border-[#e3e0db] rounded-lg p-3">
+          <code className="flex-1 text-[#117dff] text-sm font-mono break-all select-all">
             {rawKey}
           </code>
           <button
             onClick={() => copy(rawKey)}
-            className="shrink-0 p-2 rounded-lg hover:bg-white/[0.06] transition-colors"
+            className="shrink-0 p-2 rounded-lg hover:bg-[#f3f1ec] transition-colors"
             title="Copy to clipboard"
           >
             {copied ? (
-              <Check size={16} className="text-[#bdf213]" />
+              <Check size={16} className="text-[#117dff]" />
             ) : (
-              <Copy size={16} className="text-white/40 hover:text-white/70" />
+              <Copy size={16} className="text-[#525252] hover:text-[#525252]" />
             )}
           </button>
         </div>
 
         <button
           onClick={onDismiss}
-          className="mt-3 text-white/30 hover:text-white/50 text-xs font-mono transition-colors"
+          className="mt-3 text-[#a3a3a3] hover:text-[#525252] text-xs font-mono transition-colors"
         >
           I've saved the key — dismiss
         </button>
@@ -64,8 +64,8 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-3"
     >
-      <AlertTriangle size={16} className="text-red-400 shrink-0" />
-      <p className="text-red-300 text-xs font-['Space_Grotesk'] flex-1">
+      <AlertTriangle size={16} className="text-[#dc2626] shrink-0" />
+      <p className="text-[#dc2626] text-xs font-['Space_Grotesk'] flex-1">
         Revoke <span className="font-semibold">"{keyLabel}"</span>? This cannot be undone.
         Any service using this key will lose access immediately.
       </p>
@@ -73,17 +73,17 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
         <button
           onClick={onCancel}
           disabled={revoking}
-          className="px-3 py-1.5 text-xs text-white/50 hover:text-white/80 font-['Space_Grotesk'] transition-colors"
+          className="px-3 py-1.5 text-xs text-[#525252] hover:text-[#0a0a0a] font-['Space_Grotesk'] transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={onConfirm}
           disabled={revoking}
-          className="px-3 py-1.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-lg font-['Space_Grotesk'] transition-colors disabled:opacity-40"
+          className="px-3 py-1.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-[#dc2626] font-semibold rounded-lg font-['Space_Grotesk'] transition-colors disabled:opacity-40"
         >
           {revoking ? (
-            <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-3 h-3 border-2 border-[#dc2626] border-t-transparent rounded-full animate-spin" />
           ) : (
             'Revoke'
           )}
@@ -120,25 +120,25 @@ function KeyRow({ apiKey, onRevoke }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4"
+      className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
             isRevoked
-              ? 'bg-white/[0.04] border border-white/[0.06]'
-              : 'bg-[#bdf213]/10 border border-[#bdf213]/20'
+              ? 'bg-[#f3f1ec] border border-[#e3e0db]'
+              : 'bg-[#117dff]/10 border border-[#117dff]/20'
           }`}>
-            <Key size={14} className={isRevoked ? 'text-white/20' : 'text-[#bdf213]'} />
+            <Key size={14} className={isRevoked ? 'text-[#d4d0ca]' : 'text-[#117dff]'} />
           </div>
           <div className="min-w-0">
             <p className={`text-sm font-semibold font-['Space_Grotesk'] truncate ${
-              isRevoked ? 'text-white/30' : 'text-white'
+              isRevoked ? 'text-[#a3a3a3]' : 'text-[#0a0a0a]'
             }`}>
               {apiKey.name || apiKey.label}
             </p>
             <p className={`text-xs font-mono mt-0.5 ${
-              isRevoked ? 'text-white/15' : 'text-white/40'
+              isRevoked ? 'text-[#e3e0db]' : 'text-[#525252]'
             }`}>
               {apiKey.key_prefix || apiKey.keyPrefix || 'hm_...'}
             </p>
@@ -146,16 +146,16 @@ function KeyRow({ apiKey, onRevoke }) {
         </div>
 
         <div className="flex items-center gap-4 shrink-0">
-          <span className="text-xs font-mono text-white/30 hidden sm:block">
+          <span className="text-xs font-mono text-[#a3a3a3] hidden sm:block">
             {createdDate}
           </span>
 
           {isRevoked ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-red-500/10 text-red-400/60 border border-red-500/10">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-red-500/10 text-[#dc2626]/60 border border-red-500/10">
               Revoked
             </span>
           ) : (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-emerald-500/10 text-[#16a34a] border border-emerald-500/20">
               Active
             </span>
           )}
@@ -163,7 +163,7 @@ function KeyRow({ apiKey, onRevoke }) {
           {!isRevoked && (
             <button
               onClick={() => setConfirmingRevoke(true)}
-              className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-[#dc2626] hover:bg-red-50 transition-colors"
               title="Revoke key"
             >
               <Trash2 size={14} />
@@ -229,7 +229,7 @@ export default function ApiKeysPage() {
   const keyList = Array.isArray(keys) ? keys : keys?.keys || [];
 
   return (
-    <div className="min-h-screen bg-[#09090b] p-6 md:p-10">
+    <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <motion.div
@@ -238,14 +238,14 @@ export default function ApiKeysPage() {
           className="mb-8"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-              <Key size={20} className="text-[#bdf213]" />
+            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <Key size={20} className="text-[#117dff]" />
             </div>
-            <h1 className="text-white text-2xl font-bold font-['Space_Grotesk']">
+            <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">
               API Keys
             </h1>
           </div>
-          <p className="text-white/40 text-sm font-['Space_Grotesk'] ml-[52px]">
+          <p className="text-[#525252] text-sm font-['Space_Grotesk'] ml-[52px]">
             Manage authentication keys for the HIVEMIND Core API.
           </p>
         </motion.div>
@@ -257,9 +257,9 @@ export default function ApiKeysPage() {
           transition={{ delay: 0.05 }}
           className="mb-6"
         >
-          <div className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
-            <Shield size={16} className="text-white/30 mt-0.5 shrink-0" />
-            <p className="text-white/40 text-xs font-['Space_Grotesk'] leading-relaxed">
+          <div className="flex items-start gap-3 bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <Shield size={16} className="text-[#a3a3a3] mt-0.5 shrink-0" />
+            <p className="text-[#525252] text-xs font-['Space_Grotesk'] leading-relaxed">
               API keys authenticate requests to the HIVEMIND Core API. Each key is scoped to your
               organization. Keep keys secret — treat them like passwords. Revoke any key you suspect
               has been compromised.
@@ -274,13 +274,13 @@ export default function ApiKeysPage() {
           transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
-            <h2 className="text-white text-sm font-semibold font-['Space_Grotesk'] mb-4">
+          <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <h2 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
               Create a new key
             </h2>
             <form onSubmit={handleCreate} className="flex items-end gap-3">
               <div className="flex-1">
-                <label className="block text-white/40 text-xs font-mono mb-2 uppercase tracking-wider">
+                <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">
                   Label
                 </label>
                 <input
@@ -289,16 +289,16 @@ export default function ApiKeysPage() {
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder='e.g. "Production Key", "Dev Key"'
                   maxLength={64}
-                  className="w-full bg-[#09090b] border border-white/[0.08] rounded-xl py-2.5 px-4 text-white text-sm font-['Space_Grotesk'] placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 transition-colors"
+                  className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-2.5 px-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 transition-colors"
                 />
               </div>
               <button
                 type="submit"
                 disabled={!label.trim() || creating}
-                className="flex items-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] disabled:opacity-40 disabled:cursor-not-allowed text-[#0a0a0a] font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] shrink-0"
+                className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] shrink-0"
               >
                 {creating ? (
-                  <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
                     <Plus size={16} />
@@ -309,7 +309,7 @@ export default function ApiKeysPage() {
             </form>
 
             {createError && (
-              <p className="text-red-400 text-xs mt-3 font-mono">{createError}</p>
+              <p className="text-[#dc2626] text-xs mt-3 font-mono">{createError}</p>
             )}
           </div>
         </motion.div>
@@ -330,14 +330,14 @@ export default function ApiKeysPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <h2 className="text-white/60 text-xs font-mono mb-3 uppercase tracking-wider">
+          <h2 className="text-[#525252] text-xs font-mono mb-3 uppercase tracking-wider">
             Existing Keys ({loading ? '...' : keyList.length})
           </h2>
 
           {fetchError && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
-              <AlertTriangle size={16} className="text-red-400 shrink-0" />
-              <p className="text-red-300 text-xs font-['Space_Grotesk']">
+              <AlertTriangle size={16} className="text-[#dc2626] shrink-0" />
+              <p className="text-[#dc2626] text-xs font-['Space_Grotesk']">
                 Failed to load keys: {fetchError}
               </p>
             </div>
@@ -346,22 +346,22 @@ export default function ApiKeysPage() {
           {loading && !keys ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 animate-pulse">
+                <div key={i} className="bg-white border border-[#e3e0db] rounded-xl p-4 animate-pulse shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white/[0.04]" />
+                    <div className="w-8 h-8 rounded-lg bg-[#f3f1ec]" />
                     <div className="flex-1">
-                      <div className="h-4 w-32 bg-white/[0.04] rounded" />
-                      <div className="h-3 w-20 bg-white/[0.03] rounded mt-1.5" />
+                      <div className="h-4 w-32 bg-[#f3f1ec] rounded" />
+                      <div className="h-3 w-20 bg-[#f3f1ec] rounded mt-1.5" />
                     </div>
-                    <div className="h-5 w-14 bg-white/[0.04] rounded-md" />
+                    <div className="h-5 w-14 bg-[#f3f1ec] rounded-md" />
                   </div>
                 </div>
               ))}
             </div>
           ) : keyList.length === 0 ? (
-            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-10 text-center">
-              <Key size={24} className="text-white/10 mx-auto mb-3" />
-              <p className="text-white/30 text-sm font-['Space_Grotesk']">
+            <div className="bg-white border border-[#e3e0db] rounded-xl p-10 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <Key size={24} className="text-[#e3e0db] mx-auto mb-3" />
+              <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
                 No API keys yet. Create one above to get started.
               </p>
             </div>

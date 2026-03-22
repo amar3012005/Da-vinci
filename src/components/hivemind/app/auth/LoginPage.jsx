@@ -27,19 +27,19 @@ export default function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center">
+    <div className="min-h-screen bg-[#faf9f4] relative overflow-hidden flex items-center justify-center">
       {/* Background grid */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.04]"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(189, 242, 19, 0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(189, 242, 19, 0.3) 1px, transparent 1px)
+            linear-gradient(rgba(17, 125, 255, 0.3) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(17, 125, 255, 0.3) 1px, transparent 1px)
           `,
           backgroundSize: '60px 60px',
         }}
       />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-[#bdf213]/[0.02] blur-[120px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-[#117dff]/[0.03] blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -47,37 +47,37 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        <div className="bg-[#111]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8">
+        <div className="bg-white backdrop-blur-xl border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-              <Hexagon size={22} className="text-[#bdf213]" />
+            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <Hexagon size={22} className="text-[#117dff]" />
             </div>
             <div>
-              <h1 className="text-white text-xl font-bold font-['Space_Grotesk'] tracking-tight">
+              <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">
                 HIVEMIND
               </h1>
-              <p className="text-white/30 text-xs font-mono">Memory Engine</p>
+              <p className="text-[#a3a3a3] text-xs font-mono">Memory Engine</p>
             </div>
           </div>
 
           {/* Headline */}
-          <h2 className="text-white text-2xl font-bold font-['Space_Grotesk'] mb-2">
+          <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
             Sign in to HIVEMIND
           </h2>
-          <p className="text-white/50 text-sm mb-8 leading-relaxed">
+          <p className="text-[#525252] text-sm mb-8 leading-relaxed">
             Access your memory workspace, manage API keys, and configure MCP connections.
           </p>
 
           {/* State: control_plane_unreachable — the ONLY state that shows a warning */}
           {isUnreachable && (
-            <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-              <WifiOff size={14} className="text-red-400 mt-0.5 shrink-0" />
+            <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
+              <WifiOff size={14} className="text-[#dc2626] mt-0.5 shrink-0" />
               <div>
-                <p className="text-red-400 text-xs font-semibold font-['Space_Grotesk']">
+                <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">
                   Control plane unavailable
                 </p>
-                <p className="text-red-400/60 text-[11px] mt-0.5 font-['Space_Grotesk']">
+                <p className="text-[#dc2626]/60 text-[11px] mt-0.5 font-['Space_Grotesk']">
                   Unable to reach the authentication service. Please try again in a moment.
                 </p>
               </div>
@@ -89,10 +89,10 @@ export default function LoginPage() {
             <button
               onClick={() => login({ idpHint: 'google' })}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-white/95 disabled:opacity-60 text-[#1f1f1f] font-medium py-3 px-6 rounded-xl transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border-none"
+              className="w-full flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-60 text-white font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.075em]"
             >
               {loading ? (
-                <Loader2 size={16} className="animate-spin text-[#1f1f1f]/50" />
+                <Loader2 size={16} className="animate-spin text-white/50" />
               ) : (
                 <GoogleIcon size={18} />
               )}
@@ -102,32 +102,32 @@ export default function LoginPage() {
             <button
               onClick={() => login()}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-transparent hover:bg-white/[0.04] disabled:opacity-60 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border border-white/[0.1] hover:border-white/[0.15]"
+              className="w-full flex items-center justify-center gap-3 bg-transparent hover:bg-[#f3f1ec] disabled:opacity-60 text-[#0a0a0a] font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#d4d0ca] uppercase tracking-[0.075em]"
             >
               {loading ? (
-                <Loader2 size={16} className="animate-spin text-white/30" />
+                <Loader2 size={16} className="animate-spin text-[#a3a3a3]" />
               ) : (
-                <Mail size={16} className="text-white/50" />
+                <Mail size={16} className="text-[#525252]" />
               )}
               Continue with Email
             </button>
           </div>
 
-          <p className="text-white/20 text-[11px] text-center mt-6 leading-relaxed font-['Space_Grotesk']">
+          <p className="text-[#d4d0ca] text-[11px] text-center mt-6 leading-relaxed font-['Space_Grotesk']">
             Authentication is handled securely by our identity provider.<br />
             HIVEMIND does not store your password.
           </p>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-white/[0.06]" />
-            <span className="text-white/15 text-xs font-mono">or</span>
-            <div className="flex-1 h-px bg-white/[0.06]" />
+            <div className="flex-1 h-px bg-[#e3e0db]" />
+            <span className="text-[#d4d0ca] text-xs font-mono">or</span>
+            <div className="flex-1 h-px bg-[#e3e0db]" />
           </div>
 
           <a
             href="/hivemind"
-            className="block w-full text-center text-white/40 hover:text-white/60 text-sm py-2.5 rounded-xl border border-white/[0.06] hover:border-white/10 transition-all font-['Space_Grotesk']"
+            className="block w-full text-center text-[#a3a3a3] hover:text-[#525252] text-sm py-2.5 rounded-[4px] border border-[#e3e0db] hover:border-[#d4d0ca] transition-all font-['Space_Grotesk']"
           >
             Learn more about HIVEMIND
           </a>
@@ -142,7 +142,7 @@ export default function LoginPage() {
           ].map((feat) => (
             <div
               key={feat.label}
-              className="flex items-center gap-1.5 text-white/25 text-xs font-['Space_Grotesk']"
+              className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-['Space_Grotesk']"
             >
               <feat.icon size={12} />
               <span>{feat.label}</span>

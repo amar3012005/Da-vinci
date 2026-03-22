@@ -30,7 +30,7 @@ function ScoreDisplay({ label, value }) {
 
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span className="text-white/40 text-xs font-mono uppercase tracking-wider">{label}</span>
+      <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">{label}</span>
       <span className="text-4xl font-bold font-mono leading-none" style={{ color }}>
         {display}
       </span>
@@ -151,7 +151,7 @@ export default function Evaluation() {
   if (latestLoading && historyLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-[#bdf213] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -165,18 +165,18 @@ export default function Evaluation() {
       {/* Page header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-white text-2xl font-bold font-['Space_Grotesk'] mb-1">Retrieval Evaluation</h1>
-          <p className="text-white/40 text-sm font-['Space_Grotesk']">
+          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Retrieval Evaluation</h1>
+          <p className="text-[#525252] text-sm font-['Space_Grotesk']">
             Measure and track memory retrieval quality
           </p>
         </div>
         <button
           onClick={handleRun}
           disabled={running}
-          className="flex items-center gap-2 bg-[#bdf213] hover:bg-[#d4ff3a] disabled:opacity-40 disabled:cursor-not-allowed text-[#0a0a0a] font-semibold py-3 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] group self-start"
+          className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] group self-start"
         >
           {running ? (
-            <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
               <Play size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -190,7 +190,7 @@ export default function Evaluation() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-red-400 text-xs font-mono mb-4"
+          className="text-[#dc2626] text-xs font-mono mb-4"
         >
           {runError}
         </motion.p>
@@ -200,7 +200,7 @@ export default function Evaluation() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-red-400 text-xs font-mono mb-4"
+          className="text-[#dc2626] text-xs font-mono mb-4"
         >
           {latestError}
         </motion.p>
@@ -211,16 +211,16 @@ export default function Evaluation() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8"
+        className="bg-white border border-[#e3e0db] rounded-xl p-6 mb-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <FlaskConical size={16} className="text-[#bdf213]" />
-            <h3 className="text-white text-lg font-bold font-['Space_Grotesk']">Latest Results</h3>
+            <FlaskConical size={16} className="text-[#117dff]" />
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Latest Results</h3>
           </div>
           <div className="flex items-center gap-3">
             {latestReport?.cross_client_recall != null && (
-              <span className="text-white/40 text-xs font-mono">
+              <span className="text-[#525252] text-xs font-mono">
                 Cross-client: {latestReport.cross_client_recall ? 'Yes' : 'No'}
               </span>
             )}
@@ -236,14 +236,14 @@ export default function Evaluation() {
               <ScoreDisplay label="F1" value={latestScores.f1} />
             </div>
             {(getRunTimestamp(latestReport)) && (
-              <div className="flex items-center gap-1.5 text-white/30 text-xs font-mono">
+              <div className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-mono">
                 <Clock size={12} />
                 {formatDate(getRunTimestamp(latestReport))}
               </div>
             )}
           </>
         ) : (
-          <p className="text-white/30 text-sm font-mono text-center py-8">
+          <p className="text-[#a3a3a3] text-sm font-mono text-center py-8">
             No evaluation results yet. Run an evaluation to get started.
           </p>
         )}
@@ -254,25 +254,25 @@ export default function Evaluation() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 mb-8"
+        className="bg-white border border-[#e3e0db] rounded-xl p-6 mb-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
       >
         <div className="flex items-center gap-2 mb-6">
-          <TrendingUp size={16} className="text-white/50" />
-          <h3 className="text-white text-lg font-bold font-['Space_Grotesk']">History</h3>
+          <TrendingUp size={16} className="text-[#525252]" />
+          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">History</h3>
         </div>
 
         {historyList.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4">Run ID</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4">Date</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Precision</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Recall</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">F1</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-center">Status</th>
-                  <th className="text-white/40 text-xs font-mono uppercase tracking-wider pb-3 text-center">Compare</th>
+                <tr className="border-b border-[#e3e0db]">
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">Run ID</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">Date</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Precision</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Recall</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">F1</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-center">Status</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 text-center">Compare</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,15 +286,15 @@ export default function Evaluation() {
                   return (
                     <tr
                       key={id}
-                      className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors"
+                      className="border-b border-[#eae7e1] hover:bg-[#faf9f4] transition-colors"
                     >
                       <td className="py-3 pr-4">
-                        <span className="text-white/70 text-xs font-mono">
+                        <span className="text-[#525252] text-xs font-mono">
                           {typeof id === 'string' ? id.slice(0, 8) : id}
                         </span>
                       </td>
                       <td className="py-3 pr-4">
-                        <span className="text-white/50 text-xs font-mono">
+                        <span className="text-[#525252] text-xs font-mono">
                           {formatDate(getRunTimestamp(run))}
                         </span>
                       </td>
@@ -331,8 +331,8 @@ export default function Evaluation() {
                             onClick={() => setCompareA(isSelectedA ? null : id)}
                             className={`px-2 py-1 rounded text-[10px] font-mono transition-colors ${
                               isSelectedA
-                                ? 'bg-[#bdf213]/20 text-[#bdf213] border border-[#bdf213]/30'
-                                : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:text-white/60'
+                                ? 'bg-[#117dff]/20 text-[#117dff] border border-[#117dff]/30'
+                                : 'bg-[#f3f1ec] text-[#525252] border border-[#e3e0db] hover:text-[#525252]'
                             }`}
                           >
                             A
@@ -342,7 +342,7 @@ export default function Evaluation() {
                             className={`px-2 py-1 rounded text-[10px] font-mono transition-colors ${
                               isSelectedB
                                 ? 'bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/30'
-                                : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:text-white/60'
+                                : 'bg-[#f3f1ec] text-[#525252] border border-[#e3e0db] hover:text-[#525252]'
                             }`}
                           >
                             B
@@ -356,7 +356,7 @@ export default function Evaluation() {
             </table>
           </div>
         ) : (
-          <p className="text-white/30 text-sm font-mono text-center py-6">
+          <p className="text-[#a3a3a3] text-sm font-mono text-center py-6">
             No evaluation history available
           </p>
         )}
@@ -367,11 +367,11 @@ export default function Evaluation() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6"
+          className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
         >
           <div className="flex items-center gap-2 mb-6">
-            <BarChart3 size={16} className="text-white/50" />
-            <h3 className="text-white text-lg font-bold font-['Space_Grotesk']">Comparison</h3>
+            <BarChart3 size={16} className="text-[#525252]" />
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Comparison</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -380,7 +380,7 @@ export default function Evaluation() {
               const passed = derivePassFail(run);
               const id = getRunId(run);
               const label = idx === 0 ? 'A' : 'B';
-              const accent = idx === 0 ? '#bdf213' : '#3b82f6';
+              const accent = idx === 0 ? '#117dff' : '#3b82f6';
 
               return (
                 <div
@@ -396,7 +396,7 @@ export default function Evaluation() {
                       >
                         {label}
                       </span>
-                      <span className="text-white/50 text-xs font-mono">
+                      <span className="text-[#525252] text-xs font-mono">
                         {typeof id === 'string' ? id.slice(0, 8) : id}
                       </span>
                     </div>
@@ -409,7 +409,7 @@ export default function Evaluation() {
                     <ScoreDisplay label="F1" value={scores.f1} />
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-white/30 text-xs font-mono">
+                  <div className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-mono">
                     <Clock size={12} />
                     {formatDate(getRunTimestamp(run))}
                   </div>
@@ -432,19 +432,19 @@ export default function Evaluation() {
             if (!hasDelta) return null;
 
             return (
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                <p className="text-white/40 text-xs font-mono uppercase tracking-wider mb-3">
+              <div className="mt-4 pt-4 border-t border-[#e3e0db]">
+                <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">
                   Delta (B - A)
                 </p>
                 <div className="grid grid-cols-3 gap-8 text-center">
                   {['precision', 'recall', 'f1'].map((key) => {
                     const d = deltas[key];
-                    if (d == null) return <div key={key} className="text-white/20 font-mono">--</div>;
+                    if (d == null) return <div key={key} className="text-[#d4d0ca] font-mono">--</div>;
                     const sign = d >= 0 ? '+' : '';
                     const color = d > 0 ? '#22c55e' : d < 0 ? '#ef4444' : '#666';
                     return (
                       <div key={key}>
-                        <span className="text-white/40 text-xs font-mono uppercase block mb-1">{key}</span>
+                        <span className="text-[#525252] text-xs font-mono uppercase block mb-1">{key}</span>
                         <span className="text-lg font-mono font-bold" style={{ color }}>
                           {sign}{d.toFixed(3)}
                         </span>

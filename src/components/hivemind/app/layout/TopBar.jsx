@@ -34,15 +34,15 @@ export default function TopBar() {
   const description = pageDescriptions[location.pathname] || '';
 
   return (
-    <header className="h-14 bg-[#09090b]/90 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-6 sticky top-0 z-30">
+    <header className="h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-6 sticky top-0 z-30">
       {/* Left: Title + Description */}
       <div className="flex items-center gap-3 min-w-0">
         <div>
-          <h1 className="text-white text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
+          <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {title}
           </h1>
           {description && (
-            <p className="text-white/25 text-[11px] font-['Space_Grotesk'] mt-0.5">
+            <p className="text-[#a3a3a3] text-[11px] mt-0.5">
               {description}
             </p>
           )}
@@ -54,11 +54,11 @@ export default function TopBar() {
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
-          className="flex items-center gap-2 h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] text-white/30 hover:text-white/50 transition-all text-xs font-['Space_Grotesk']"
+          className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
         >
           <Search size={13} />
           <span className="hidden md:inline">Search memories...</span>
-          <kbd className="hidden md:inline text-[10px] font-mono text-white/15 bg-white/[0.04] rounded px-1 py-0.5 ml-4">
+          <kbd className="hidden md:inline text-[10px] font-mono text-[#a3a3a3] bg-[#eae7e1] rounded px-1 py-0.5 ml-4">
             /
           </kbd>
         </button>
@@ -68,24 +68,24 @@ export default function TopBar() {
           href="https://docs.hivemind.dev"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/[0.04] text-white/25 hover:text-white/50 transition-colors"
+          className="flex items-center justify-center w-8 h-8 rounded-[6px] hover:bg-[#f3f1ec] text-[#a3a3a3] hover:text-[#525252] transition-colors"
           title="Documentation"
         >
           <BookOpen size={15} />
         </a>
 
         {/* Health */}
-        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-white/[0.03] border border-white/[0.04]">
+        <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
               healthy === null
-                ? 'bg-white/20'
+                ? 'bg-[#a3a3a3]'
                 : healthy
-                ? 'bg-emerald-400'
-                : 'bg-red-400'
+                ? 'bg-[#16a34a]'
+                : 'bg-[#dc2626]'
             }`}
           />
-          <span className="text-[10px] text-white/30 font-mono whitespace-nowrap">
+          <span className="text-[10px] text-[#a3a3a3] font-mono whitespace-nowrap">
             {healthy === null ? '...' : healthy ? 'Online' : 'Offline'}
           </span>
         </div>

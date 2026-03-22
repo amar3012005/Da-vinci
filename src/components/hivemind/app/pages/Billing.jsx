@@ -117,34 +117,34 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
   const isNearLimit = pct > 80;
 
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+    <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Icon size={14} className="text-white/30" />
-          <span className="text-white/50 text-[11px] font-['Space_Grotesk'] uppercase tracking-wider">
+          <Icon size={14} className="text-[#a3a3a3]" />
+          <span className="text-[#525252] text-[11px] font-['Space_Grotesk'] uppercase tracking-wider">
             {label}
           </span>
         </div>
-        <span className="text-white text-sm font-mono font-semibold">
+        <span className="text-[#0a0a0a] text-sm font-mono font-semibold">
           {used?.toLocaleString() || 0}
-          <span className="text-white/25">
+          <span className="text-[#d4d0ca]">
             {isUnlimited ? ' / Unlimited' : ` / ${limit?.toLocaleString()}`}
           </span>
         </span>
       </div>
-      <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="w-full h-1.5 rounded-full bg-[#e3e0db] overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: isUnlimited ? '0%' : `${pct}%` }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className={`h-full rounded-full ${
-            isNearLimit ? 'bg-amber-400' : 'bg-[#bdf213]'
+            isNearLimit ? 'bg-amber-400' : 'bg-[#117dff]'
           }`}
         />
       </div>
       {isNearLimit && (
         <p className="text-amber-400/70 text-[10px] font-['Space_Grotesk'] mt-1.5">
-          {pct >= 100 ? 'Limit reached — upgrade to continue' : 'Approaching limit'}
+          {pct >= 100 ? 'Limit reached \u2014 upgrade to continue' : 'Approaching limit'}
         </p>
       )}
     </div>
@@ -163,14 +163,14 @@ function PlanCard({ plan, currentPlan, onSelect }) {
       animate={{ opacity: 1, y: 0 }}
       className={`relative rounded-xl border p-5 flex flex-col transition-all ${
         plan.accent
-          ? 'bg-[#bdf213]/[0.04] border-[#bdf213]/20 shadow-[0_0_30px_rgba(189,242,19,0.06)]'
-          : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]'
+          ? 'bg-[#117dff]/[0.04] border-[#117dff]/20 shadow-[0_0_30px_rgba(17,125,255,0.06)]'
+          : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
       }`}
     >
       {/* Popular badge */}
       {plan.popular && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-semibold font-['Space_Grotesk'] bg-[#bdf213] text-[#09090b] uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white uppercase tracking-wider">
             <Sparkles size={10} />
             Most Popular
           </span>
@@ -179,21 +179,21 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 
       {/* Plan Name */}
       <div className="mb-4">
-        <h3 className="text-white text-base font-semibold font-['Space_Grotesk'] mb-1">
+        <h3 className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk'] mb-1">
           {plan.name}
         </h3>
-        <p className="text-white/35 text-[12px] font-['Space_Grotesk']">
+        <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk']">
           {plan.description}
         </p>
       </div>
 
       {/* Price */}
       <div className="flex items-baseline gap-1 mb-5">
-        <span className="text-white text-3xl font-bold font-mono">
+        <span className="text-[#0a0a0a] text-3xl font-bold font-mono">
           {plan.price}
         </span>
         {plan.period && (
-          <span className="text-white/30 text-sm font-['Space_Grotesk']">
+          <span className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
             {plan.period}
           </span>
         )}
@@ -203,8 +203,8 @@ function PlanCard({ plan, currentPlan, onSelect }) {
       <div className="space-y-2.5 mb-6 flex-1">
         {plan.features.map((feature, i) => (
           <div key={i} className="flex items-center gap-2.5">
-            <Check size={14} className={plan.accent ? 'text-[#bdf213]' : 'text-white/30'} />
-            <span className="text-white/60 text-[12px] font-['Space_Grotesk']">
+            <Check size={14} className={plan.accent ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+            <span className="text-[#525252] text-[12px] font-['Space_Grotesk']">
               {feature.label}
             </span>
           </div>
@@ -213,11 +213,11 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 
       {/* CTA */}
       {isCurrent ? (
-        <div className="text-center py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/40 text-[12px] font-semibold font-['Space_Grotesk']">
+        <div className="text-center py-2.5 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold font-['Space_Grotesk']">
           Current Plan
         </div>
       ) : isEnterprise ? (
-        <button className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.1] text-white text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-white/[0.1] transition-all">
+        <button className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
           Contact Sales
           <ArrowRight size={13} />
         </button>
@@ -226,8 +226,8 @@ function PlanCard({ plan, currentPlan, onSelect }) {
           onClick={() => onSelect(plan.id)}
           className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
             plan.accent
-              ? 'bg-[#bdf213] text-[#09090b] hover:bg-[#d4ff3a]'
-              : 'bg-white/[0.06] border border-white/[0.1] text-white hover:bg-white/[0.1]'
+              ? 'bg-[#117dff] text-white hover:bg-[#0066e0]'
+              : 'bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] hover:bg-[#eae7e1]'
           }`}
         >
           {plan.accent ? 'Upgrade to Pro' : `Switch to ${plan.name}`}
@@ -259,27 +259,27 @@ export default function Billing() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6"
+        className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
       >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-              <CreditCard size={18} className="text-[#bdf213]" />
+            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <CreditCard size={18} className="text-[#117dff]" />
             </div>
             <div>
-              <h2 className="text-white text-base font-semibold font-['Space_Grotesk']">
+              <h2 className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk']">
                 Current Plan
               </h2>
-              <p className="text-white/35 text-[12px] font-['Space_Grotesk']">
+              <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk']">
                 {org?.name || 'Your workspace'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-white text-lg font-bold font-['Space_Grotesk']">
+            <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
               {currentPlanDef?.name}
             </span>
-            <span className="text-[10px] font-mono bg-white/[0.06] text-white/50 px-2 py-0.5 rounded uppercase">
+            <span className="text-[10px] font-mono bg-[#f3f1ec] text-[#525252] px-2 py-0.5 rounded uppercase">
               {currentPlan}
             </span>
           </div>
@@ -309,13 +309,13 @@ export default function Billing() {
       </motion.div>
 
       {/* Billing Cycle Toggle */}
-      <div className="flex items-center justify-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-lg p-1 w-fit mx-auto">
+      <div className="flex items-center justify-center gap-1 bg-white border border-[#e3e0db] rounded-lg p-1 w-fit mx-auto">
         <button
           onClick={() => setBillingCycle('monthly')}
           className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all ${
             billingCycle === 'monthly'
-              ? 'bg-white/[0.08] text-white'
-              : 'text-white/40 hover:text-white/60'
+              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
+              : 'text-[#525252] hover:text-[#525252]'
           }`}
         >
           Monthly
@@ -324,12 +324,12 @@ export default function Billing() {
           onClick={() => setBillingCycle('annual')}
           className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all flex items-center gap-1.5 ${
             billingCycle === 'annual'
-              ? 'bg-white/[0.08] text-white'
-              : 'text-white/40 hover:text-white/60'
+              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
+              : 'text-[#525252] hover:text-[#525252]'
           }`}
         >
           Annual
-          <span className="text-[9px] font-mono bg-[#bdf213]/10 text-[#bdf213] px-1.5 py-0.5 rounded">
+          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
             -20%
           </span>
         </button>
@@ -353,15 +353,15 @@ export default function Billing() {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6">
-        <h3 className="text-white text-sm font-semibold font-['Space_Grotesk'] mb-4">
+      <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
           Frequently Asked Questions
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
               q: 'What counts as a memory?',
-              a: 'Each piece of information stored — a note, conversation snippet, code block, or document chunk — counts as one memory.',
+              a: 'Each piece of information stored \u2014 a note, conversation snippet, code block, or document chunk \u2014 counts as one memory.',
             },
             {
               q: 'Can I switch plans anytime?',
@@ -377,10 +377,10 @@ export default function Billing() {
             },
           ].map((faq, i) => (
             <div key={i}>
-              <p className="text-white/70 text-[13px] font-semibold font-['Space_Grotesk'] mb-1">
+              <p className="text-[#525252] text-[13px] font-semibold font-['Space_Grotesk'] mb-1">
                 {faq.q}
               </p>
-              <p className="text-white/30 text-[12px] font-['Space_Grotesk'] leading-relaxed">
+              <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk'] leading-relaxed">
                 {faq.a}
               </p>
             </div>

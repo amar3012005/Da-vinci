@@ -72,7 +72,7 @@ function TypeBadge({ type }) {
 
 function TagPill({ label }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] text-white/50 text-[10px] font-mono">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] text-[10px] font-mono">
       <Tag size={9} />
       {label}
     </span>
@@ -83,16 +83,16 @@ function ImportanceBar({ score }) {
   const pct = Math.min(Math.max((score ?? 0) * 100, 0), 100);
   return (
     <div className="flex items-center gap-1.5">
-      <div className="w-14 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="w-14 h-1.5 rounded-full bg-[#f3f1ec] overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{
             width: `${pct}%`,
-            backgroundColor: pct > 70 ? '#bdf213' : pct > 40 ? '#f59e0b' : '#666',
+            backgroundColor: pct > 70 ? '#117dff' : pct > 40 ? '#f59e0b' : '#666',
           }}
         />
       </div>
-      <span className="text-[10px] font-mono text-white/30">{score != null ? score.toFixed(2) : '--'}</span>
+      <span className="text-[10px] font-mono text-[#a3a3a3]">{score != null ? score.toFixed(2) : '--'}</span>
     </div>
   );
 }
@@ -118,7 +118,7 @@ function SourceBadge({ source }) {
 function RelationshipIndicator({ memory }) {
   if (!memory.is_latest && memory.supersedes_id) {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/25 uppercase tracking-wider">
+      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#d4d0ca] uppercase tracking-wider">
         <GitFork size={8} />
         superseded
       </span>
@@ -158,21 +158,21 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       animate="visible"
       exit="exit"
       onClick={() => onSelect(memory)}
-      className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer ${
+      className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         isSelected
-          ? 'bg-[#bdf213]/[0.06] border-[#bdf213]/20 shadow-[0_0_20px_rgba(189,242,19,0.08)]'
-          : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-[#161616]/80'
+          ? 'bg-[#117dff]/[0.06] border-[#117dff]/20 shadow-[0_0_20px_rgba(17,125,255,0.08)]'
+          : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
       }`}
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-white text-sm font-bold font-['Space_Grotesk'] leading-tight line-clamp-1 flex-1">
+        <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] leading-tight line-clamp-1 flex-1">
           {memory.title || memory.content?.slice(0, 60) || 'Untitled Memory'}
         </h3>
         <ChevronRight
           size={14}
           className={`mt-0.5 shrink-0 transition-transform ${
-            isSelected ? 'text-[#bdf213] rotate-90' : 'text-white/20 group-hover:text-white/40 group-hover:translate-x-0.5'
+            isSelected ? 'text-[#117dff] rotate-90' : 'text-[#d4d0ca] group-hover:text-[#525252] group-hover:translate-x-0.5'
           }`}
         />
       </div>
@@ -183,20 +183,20 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
         {memory.source && <SourceBadge source={memory.source} />}
         <RelationshipIndicator memory={memory} />
         {memory.source_platform && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-white/30 font-mono">
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#a3a3a3] font-mono">
             <Monitor size={10} />
             {memory.source_platform}
           </span>
         )}
         {memory.document_date && (
-          <span className="text-[10px] font-mono text-white/20">
+          <span className="text-[10px] font-mono text-[#d4d0ca]">
             {new Date(memory.document_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         )}
       </div>
 
       {/* Content preview */}
-      <p className="text-white/40 text-xs leading-relaxed mb-3 line-clamp-3 font-['Space_Grotesk']">
+      <p className="text-[#525252] text-xs leading-relaxed mb-3 line-clamp-3 font-['Space_Grotesk']">
         {truncate(memory.content)}
       </p>
 
@@ -207,12 +207,12 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
             <TagPill key={tag} label={tag} />
           ))}
           {(memory.tags || []).length > 3 && (
-            <span className="text-[10px] text-white/20 font-mono">+{memory.tags.length - 3}</span>
+            <span className="text-[10px] text-[#d4d0ca] font-mono">+{memory.tags.length - 3}</span>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <ImportanceBar score={memory.importance} />
-          <span className="text-[10px] font-mono text-white/25 flex items-center gap-1">
+          <span className="text-[10px] font-mono text-[#d4d0ca] flex items-center gap-1">
             <Clock size={9} />
             {relativeTime(memory.created_at)}
           </span>
@@ -254,18 +254,18 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
       className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
 
-      <div className="h-full bg-[#0e0e0e] border-l border-white/[0.06] flex flex-col overflow-hidden shadow-2xl">
+      <div className="h-full bg-[#faf9f4] border-l border-[#e3e0db] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e0db]">
           <div className="flex items-center gap-2">
-            <Brain size={16} className="text-[#bdf213]" />
-            <span className="text-white text-sm font-bold font-['Space_Grotesk']">Memory Detail</span>
+            <Brain size={16} className="text-[#117dff]" />
+            <span className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Memory Detail</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#f3f1ec] text-[#525252] hover:text-[#525252] transition-colors"
           >
             <X size={16} />
           </button>
@@ -274,7 +274,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Title */}
-          <h2 className="text-white text-lg font-bold font-['Space_Grotesk'] leading-snug">
+          <h2 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] leading-snug">
             {memory.title || 'Untitled Memory'}
           </h2>
 
@@ -284,22 +284,22 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
             {memory.source && <SourceBadge source={memory.source} />}
             <RelationshipIndicator memory={memory} />
             {memory.source_platform && (
-              <span className="inline-flex items-center gap-1 text-xs text-white/30 font-mono">
+              <span className="inline-flex items-center gap-1 text-xs text-[#a3a3a3] font-mono">
                 <Monitor size={11} />
                 {memory.source_platform}
               </span>
             )}
-            <span className="text-xs font-mono text-white/25 flex items-center gap-1">
+            <span className="text-xs font-mono text-[#d4d0ca] flex items-center gap-1">
               <Clock size={10} />
               {relativeTime(memory.created_at)}
             </span>
             {memory.is_latest === false && (
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 uppercase">
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#d4d0ca] uppercase">
                 superseded
               </span>
             )}
             {memory.document_date && (
-              <span className="text-[10px] font-mono text-white/20 flex items-center gap-1">
+              <span className="text-[10px] font-mono text-[#d4d0ca] flex items-center gap-1">
                 doc: {new Date(memory.document_date).toLocaleDateString()}
               </span>
             )}
@@ -308,7 +308,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
           {/* Importance */}
           {memory.importance != null && (
             <div>
-              <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1">
+              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1">
                 Importance
               </label>
               <ImportanceBar score={memory.importance} />
@@ -317,10 +317,10 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
 
           {/* Full content */}
           <div>
-            <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+            <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
               Content
             </label>
-            <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-4 text-white/70 text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
+            <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
               {memory.content || 'No content'}
             </div>
           </div>
@@ -328,7 +328,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
           {/* Tags */}
           {memory.tags?.length > 0 && (
             <div>
-              <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
                 Tags
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -342,19 +342,19 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
           {/* Relationships */}
           {memory.relationships?.length > 0 && (
             <div>
-              <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
                 Relationships
               </label>
               <div className="space-y-1.5">
                 {memory.relationships.map((rel, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 text-xs bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2"
+                    className="flex items-center gap-2 text-xs bg-white border border-[#e3e0db] rounded-lg px-3 py-2"
                   >
-                    <Layers size={11} className="text-[#bdf213]/60 shrink-0" />
-                    <span className="text-white/50 font-mono">{rel.type || rel.relation_type || 'related'}</span>
-                    <span className="text-white/25">-&gt;</span>
-                    <span className="text-white/60 font-['Space_Grotesk'] truncate">
+                    <Layers size={11} className="text-[#117dff]/60 shrink-0" />
+                    <span className="text-[#525252] font-mono">{rel.type || rel.relation_type || 'related'}</span>
+                    <span className="text-[#d4d0ca]">-&gt;</span>
+                    <span className="text-[#525252] font-['Space_Grotesk'] truncate">
                       {rel.target_title || rel.target_id || rel.related_memory_id}
                     </span>
                   </div>
@@ -365,38 +365,38 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
 
           {/* Metadata */}
           <div>
-            <label className="block text-white/30 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+            <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
               Metadata
             </label>
-            <div className="bg-[#09090b] border border-white/[0.06] rounded-xl p-3 space-y-1.5 text-[11px] font-mono">
+            <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3 space-y-1.5 text-[11px] font-mono">
               {memory.id && (
                 <div className="flex justify-between">
-                  <span className="text-white/25">ID</span>
-                  <span className="text-white/50 truncate ml-4 max-w-[240px]">{memory.id}</span>
+                  <span className="text-[#d4d0ca]">ID</span>
+                  <span className="text-[#525252] truncate ml-4 max-w-[240px]">{memory.id}</span>
                 </div>
               )}
               {memory.project && (
                 <div className="flex justify-between">
-                  <span className="text-white/25">Project</span>
-                  <span className="text-white/50">{memory.project}</span>
+                  <span className="text-[#d4d0ca]">Project</span>
+                  <span className="text-[#525252]">{memory.project}</span>
                 </div>
               )}
               {memory.version != null && (
                 <div className="flex justify-between">
-                  <span className="text-white/25">Version</span>
-                  <span className="text-white/50">{memory.version}</span>
+                  <span className="text-[#d4d0ca]">Version</span>
+                  <span className="text-[#525252]">{memory.version}</span>
                 </div>
               )}
               {memory.created_at && (
                 <div className="flex justify-between">
-                  <span className="text-white/25">Created</span>
-                  <span className="text-white/50">{new Date(memory.created_at).toLocaleString()}</span>
+                  <span className="text-[#d4d0ca]">Created</span>
+                  <span className="text-[#525252]">{new Date(memory.created_at).toLocaleString()}</span>
                 </div>
               )}
               {memory.updated_at && (
                 <div className="flex justify-between">
-                  <span className="text-white/25">Updated</span>
-                  <span className="text-white/50">{new Date(memory.updated_at).toLocaleString()}</span>
+                  <span className="text-[#d4d0ca]">Updated</span>
+                  <span className="text-[#525252]">{new Date(memory.updated_at).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -404,14 +404,14 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
         </div>
 
         {/* Footer: Delete */}
-        <div className="px-6 py-4 border-t border-white/[0.06]">
+        <div className="px-6 py-4 border-t border-[#e3e0db]">
           <button
             onClick={handleDelete}
             disabled={deleting}
             className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] transition-all ${
               confirmDelete
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.06]'
+                ? 'bg-red-500/20 text-[#dc2626] border border-red-500/30 hover:bg-red-500/30'
+                : 'bg-[#f3f1ec] text-[#525252] border border-[#e3e0db] hover:text-[#dc2626] hover:border-red-500/20 hover:bg-red-50'
             }`}
           >
             {deleting ? (
@@ -431,7 +431,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
           {confirmDelete && !deleting && (
             <button
               onClick={() => setConfirmDelete(false)}
-              className="w-full mt-2 text-center text-xs text-white/30 hover:text-white/50 transition-colors font-['Space_Grotesk']"
+              className="w-full mt-2 text-center text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-['Space_Grotesk']"
             >
               Cancel
             </button>
@@ -451,13 +451,13 @@ function EmptyState({ hasFilters }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-24 px-4"
     >
-      <div className="w-20 h-20 rounded-2xl bg-[#bdf213]/[0.06] border border-[#bdf213]/10 flex items-center justify-center mb-6">
-        <Brain size={36} className="text-[#bdf213]/40" />
+      <div className="w-20 h-20 rounded-2xl bg-[#117dff]/[0.06] border border-[#117dff]/10 flex items-center justify-center mb-6">
+        <Brain size={36} className="text-[#117dff]/40" />
       </div>
-      <h3 className="text-white text-lg font-bold font-['Space_Grotesk'] mb-2">
+      <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-2">
         {hasFilters ? 'No memories match' : 'No memories yet'}
       </h3>
-      <p className="text-white/30 text-sm font-['Space_Grotesk'] text-center max-w-sm leading-relaxed">
+      <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] text-center max-w-sm leading-relaxed">
         {hasFilters
           ? 'Try adjusting your search or filters to find what you are looking for.'
           : 'Memories will appear here as your AI agents interact and learn. Connect a data source or create your first memory to get started.'}
@@ -613,26 +613,26 @@ export default function Memories() {
   // ─── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#09090b] font-['Space_Grotesk']">
+    <div className="min-h-screen bg-[#faf9f4] font-['Space_Grotesk']">
       {/* Ambient glow */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#bdf213]/[0.012] blur-[120px] pointer-events-none" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#117dff]/[0.012] blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-              <Brain size={22} className="text-[#bdf213]" />
+            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+              <Brain size={22} className="text-[#117dff]" />
             </div>
             <div>
-              <h1 className="text-white text-xl font-bold">Memories</h1>
-              <p className="text-white/30 text-xs">Browse and manage stored knowledge</p>
+              <h1 className="text-[#0a0a0a] text-xl font-bold">Memories</h1>
+              <p className="text-[#a3a3a3] text-xs">Browse and manage stored knowledge</p>
             </div>
           </div>
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-mono"
+              className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-mono"
             >
               <X size={12} />
               Clear filters
@@ -642,11 +642,11 @@ export default function Memories() {
 
         {/* ── Search Bar ── */}
         <div className="relative mb-4">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d4d0ca] hover:text-[#525252] transition-colors"
             >
               <X size={14} />
             </button>
@@ -661,14 +661,14 @@ export default function Memories() {
               setHasMore(true);
             }}
             placeholder="Search memories semantically..."
-            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl py-3.5 pl-11 pr-10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-[#bdf213]/30 focus:ring-1 focus:ring-[#bdf213]/20 transition-all"
+            className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
           />
         </div>
 
         {/* Search mode indicator */}
         {isSearching && !searchLoading && searchData && (
-          <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-white/20">
-            <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+          <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-[#d4d0ca]">
+            <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-[#16a34a]'}`} />
             {searchData?.metadata?.fallbackApplied
               ? 'Keyword search (vector unavailable)'
               : 'Semantic search (vector + keyword)'}
@@ -686,13 +686,13 @@ export default function Memories() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-1.5 text-xs font-mono mb-3 transition-colors ${
-              showFilters ? 'text-[#bdf213]' : 'text-white/30 hover:text-white/50'
+              showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
             }`}
           >
             <Filter size={12} />
             Filters
             {(activeType || activeTag) && (
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#bdf213]" />
+              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
             )}
           </button>
 
@@ -707,7 +707,7 @@ export default function Memories() {
               >
                 {/* Type filters */}
                 <div className="mb-3">
-                  <label className="block text-white/20 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                  <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
                     Type
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -723,7 +723,7 @@ export default function Memories() {
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                           activeType === t.key
                             ? 'border-current'
-                            : 'border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/[0.12]'
+                            : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
                         }`}
                         style={activeType === t.key ? { color: t.color, backgroundColor: `${t.color}15`, borderColor: `${t.color}40` } : {}}
                       >
@@ -736,7 +736,7 @@ export default function Memories() {
                 {/* Tag filters */}
                 {availableTags.length > 0 && (
                   <div>
-                    <label className="block text-white/20 text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                    <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
                       Tags
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -751,8 +751,8 @@ export default function Memories() {
                           }}
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border ${
                             activeTag === tag
-                              ? 'border-[#bdf213]/40 bg-[#bdf213]/10 text-[#bdf213]'
-                              : 'border-white/[0.06] text-white/30 hover:text-white/50 hover:border-white/[0.12]'
+                              ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
+                              : 'border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#d4d0ca]'
                           }`}
                         >
                           {tag}
@@ -768,7 +768,7 @@ export default function Memories() {
 
         {/* ── Error ── */}
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 flex items-center gap-2 text-red-400 text-sm">
+          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 flex items-center gap-2 text-[#dc2626] text-sm">
             <AlertTriangle size={14} />
             <span className="font-mono text-xs">{error}</span>
           </div>
@@ -778,15 +778,15 @@ export default function Memories() {
         <div className="relative">
           {loading && resolvedList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24">
-              <Loader2 size={28} className="text-[#bdf213]/50 animate-spin mb-4" />
-              <span className="text-white/20 text-sm">Loading memories...</span>
+              <Loader2 size={28} className="text-[#117dff]/50 animate-spin mb-4" />
+              <span className="text-[#d4d0ca] text-sm">Loading memories...</span>
             </div>
           ) : resolvedList.length === 0 ? (
             <EmptyState hasFilters={!!hasFilters} />
           ) : (
             <>
               {/* Count */}
-              <p className="text-white/20 text-[11px] font-mono mb-3">
+              <p className="text-[#d4d0ca] text-[11px] font-mono mb-3">
                 {isSearching ? 'Search results' : `${resolvedList.length} memories`}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
@@ -811,7 +811,7 @@ export default function Memories() {
                 <div className="flex justify-center mt-8">
                   <button
                     onClick={handleLoadMore}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 text-sm font-semibold hover:text-white/60 hover:border-white/[0.12] transition-all"
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-sm font-semibold hover:text-[#525252] hover:border-[#d4d0ca] transition-all"
                   >
                     Load more
                   </button>
