@@ -685,13 +685,29 @@ export default function Connectors() {
   const mergedConnectors = CONNECTORS.map((c) => {
     if (c.oauthProvider) {
       const live = oauthList.find((o) => o.provider === c.oauthProvider);
-      if (live && live.status !== 'disconnected') {
+      if (live) {
+        const derivedStatus = live.status === 'connected'
+          ? 'connected'
+          : live.status === 'syncing'
+            ? 'syncing'
+            : live.status === 'error'
+              ? 'error'
+              : live.status === 'reauth_required'
+                ? 'needs_reauth'
+                : live.status === 'degraded'
+                  ? 'error'
+                  : live.status === 'not_configured'
+                    ? 'coming_soon'
+                    : c.status;
         return {
           ...c,
-          status: live.status === 'connected' ? 'connected' : live.status === 'syncing' ? 'syncing' : live.status === 'error' ? 'error' : live.status === 'reauth_required' ? 'needs_reauth' : live.status === 'degraded' ? 'error' : c.status,
+          status: derivedStatus,
           accountRef: live.account_ref,
           lastSyncAt: live.last_sync_at,
           lastError: live.last_error,
+          description: live.configured === false && live.disabled_reason
+            ? `${c.description} (${live.disabled_reason})`
+            : c.description,
         };
       }
     }
