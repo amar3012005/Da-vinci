@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -30,6 +31,7 @@ const navSections = [
     items: [
       { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
       { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
+      { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
       { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
     ],
   },

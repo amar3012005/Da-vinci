@@ -296,6 +296,34 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Web Intelligence ─────────────────────────────────
+
+  async submitWebSearch(params) {
+    const { data } = await this.core.post('/api/web/search/jobs', params);
+    return data;
+  }
+
+  async submitWebCrawl(params) {
+    const { data } = await this.core.post('/api/web/crawl/jobs', params);
+    return data;
+  }
+
+  async getWebJob(jobId) {
+    const { data } = await this.core.get(`/api/web/jobs/${jobId}`);
+    return data;
+  }
+
+  async listWebJobs(params = {}) {
+    const qs = new URLSearchParams(params).toString();
+    const { data } = await this.core.get(`/api/web/jobs${qs ? '?' + qs : ''}`);
+    return data;
+  }
+
+  async getWebUsage() {
+    const { data } = await this.core.get('/api/web/usage');
+    return data;
+  }
+
   // ─── Core: Evaluation ────────────────────────────────────────
 
   async runEvaluation(params) {

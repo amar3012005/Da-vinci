@@ -12,6 +12,7 @@ const pageTitles = {
   '/hivemind/app/evaluation': 'Evaluation',
   '/hivemind/app/settings': 'Settings',
   '/hivemind/app/billing': 'Billing',
+  '/hivemind/app/web': 'Web Intelligence',
 };
 
 const pageDescriptions = {
@@ -23,6 +24,7 @@ const pageDescriptions = {
   '/hivemind/app/evaluation': 'Test retrieval quality',
   '/hivemind/app/settings': 'Workspace configuration',
   '/hivemind/app/billing': 'Manage your plan and usage',
+  '/hivemind/app/web': 'Search and crawl the web as async jobs',
 };
 
 export default function TopBar() {
