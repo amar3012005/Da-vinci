@@ -124,9 +124,10 @@ const CONNECTORS = [
     description: 'Index documents, sheets, and presentations',
     icon: HardDrive,
     category: 'workspace',
-    status: 'coming_soon',
+    status: 'available',
     color: '#f59e0b',
     priority: 1,
+    oauthProvider: 'gdrive',
   },
   {
     id: 'slack',
@@ -134,9 +135,10 @@ const CONNECTORS = [
     description: 'Capture conversations and shared knowledge',
     icon: MessageSquare,
     category: 'workspace',
-    status: 'coming_soon',
+    status: 'available',
     color: '#e11d48',
     priority: 2,
+    oauthProvider: 'slack',
   },
   // Knowledge
   {
@@ -145,9 +147,10 @@ const CONNECTORS = [
     description: 'Sync pages, databases, and wikis',
     icon: BookOpen,
     category: 'knowledge',
-    status: 'coming_soon',
+    status: 'available',
     color: '#f5f5f5',
     priority: 5,
+    oauthProvider: 'notion',
   },
   {
     id: 'confluence',
@@ -166,9 +169,10 @@ const CONNECTORS = [
     description: 'Index repos, issues, PRs, and discussions',
     icon: Github,
     category: 'code',
-    status: 'coming_soon',
+    status: 'available',
     color: '#f5f5f5',
     priority: 3,
+    oauthProvider: 'github',
   },
   {
     id: 'linear',

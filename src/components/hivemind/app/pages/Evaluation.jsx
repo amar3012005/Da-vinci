@@ -8,6 +8,10 @@ import {
   XCircle,
   Clock,
   Play,
+  Zap,
+  Target,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -24,16 +28,57 @@ function scoreColor(score) {
   return '#ef4444';
 }
 
-function ScoreDisplay({ label, value }) {
-  const display = value != null ? value.toFixed(3) : '--';
-  const color = value != null ? scoreColor(value) : '#666';
+function latencyColor(ms) {
+  if (ms <= 100) return '#22c55e';
+  if (ms <= 300) return '#f59e0b';
+  return '#ef4444';
+}
+
+function ScoreDisplay({ label, value, suffix = '' }) {
+  const display = value != null
+    ? (suffix === 'ms' ? Math.round(value) : value.toFixed(3))
+    : '--';
+  const color = value != null
+    ? (suffix === 'ms' ? latencyColor(value) : scoreColor(value))
+    : '#a3a3a3';
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">{label}</span>
-      <span className="text-4xl font-bold font-mono leading-none" style={{ color }}>
-        {display}
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">{label}</span>
+      <span className="text-2xl font-bold font-mono leading-none" style={{ color }}>
+        {display}{suffix && value != null ? suffix : ''}
       </span>
+    </div>
+  );
+}
+
+function BenchmarkCard({ title, icon: Icon, passed, children }) {
+  return (
+    <div className={`rounded-xl border p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
+      passed === true
+        ? 'bg-[#f0fdf4] border-[#bbf7d0]'
+        : passed === false
+        ? 'bg-[#fef2f2] border-[#fecaca]'
+        : 'bg-white border-[#e3e0db]'
+    }`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Icon size={15} className={passed === true ? 'text-[#16a34a]' : passed === false ? 'text-[#dc2626]' : 'text-[#a3a3a3]'} />
+          <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">{title}</h4>
+        </div>
+        {passed != null && (
+          passed ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#22c55e]/10 text-[#16a34a] border border-[#bbf7d0]">
+              <CheckCircle size={10} /> PASS
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#ef4444]/10 text-[#dc2626] border border-[#fecaca]">
+              <XCircle size={10} /> FAIL
+            </span>
+          )
+        )}
+      </div>
+      {children}
     </div>
   );
 }
@@ -95,6 +140,20 @@ function extractScores(run) {
     precision: report?.precision ?? report?.scores?.precision ?? summary.precisionAt5?.mean ?? null,
     recall: report?.recall ?? report?.scores?.recall ?? summary.recallAt10?.mean ?? null,
     f1: report?.f1 ?? report?.scores?.f1 ?? summary.f1At10?.mean ?? null,
+    ndcg: summary.ndcgAt10?.mean ?? null,
+    mrr: summary.mrr?.mean ?? null,
+    qualityScore: summary.qualityScore ?? null,
+    latencyP50: summary.latencyP50 ?? null,
+    latencyP95: summary.latencyP95 ?? null,
+    latencyP99: summary.latencyP99 ?? null,
+  };
+}
+
+function extractBenchmarks(run) {
+  const report = run?.report || run;
+  return {
+    latency: report?.latency_benchmark || null,
+    relevance: report?.relevance_benchmark || null,
   };
 }
 
@@ -159,6 +218,7 @@ export default function Evaluation() {
   const latestReport = latest?.report || latest;
   const latestScores = latestReport ? extractScores(latestReport) : {};
   const latestPassed = latestReport ? derivePassFail(latestReport) : null;
+  const benchmarks = latestReport ? extractBenchmarks(latestReport) : {};
 
   return (
     <div className="min-h-full">
@@ -186,68 +246,113 @@ export default function Evaluation() {
         </button>
       </motion.div>
 
+      {/* Error states */}
       {runError && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-[#dc2626] text-xs font-mono mb-4"
-        >
-          {runError}
-        </motion.p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 bg-[#fef2f2] border border-[#fecaca] rounded-xl px-4 py-3 mb-4">
+          <AlertTriangle size={14} className="text-[#dc2626] shrink-0" />
+          <span className="text-[#dc2626] text-xs font-mono">{runError}</span>
+        </motion.div>
       )}
 
-      {latestError && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-[#dc2626] text-xs font-mono mb-4"
-        >
-          {latestError}
-        </motion.p>
-      )}
-
-      {/* Latest Results */}
-      <motion.div
-        variants={fadeUp}
-        initial="hidden"
-        animate="visible"
-        className="bg-white border border-[#e3e0db] rounded-xl p-6 mb-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <FlaskConical size={16} className="text-[#117dff]" />
-            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Latest Results</h3>
+      {latestError && !latestReport && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-4 py-3 mb-4">
+          <Info size={14} className="text-[#d97706] shrink-0" />
+          <div>
+            <span className="text-[#92400e] text-xs font-['Space_Grotesk'] block">No evaluation data available</span>
+            <span className="text-[#a3a3a3] text-[10px] font-mono block mt-0.5">
+              {latestError.includes('404') || latestError.includes('not found')
+                ? 'Run your first evaluation to generate baseline metrics.'
+                : latestError}
+            </span>
           </div>
-          <div className="flex items-center gap-3">
-            {latestReport?.cross_client_recall != null && (
-              <span className="text-[#525252] text-xs font-mono">
-                Cross-client: {latestReport.cross_client_recall ? 'Yes' : 'No'}
-              </span>
+        </motion.div>
+      )}
+
+      {/* Benchmark Cards — Latency vs Relevance */}
+      {latestReport && (
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <BenchmarkCard title="Latency" icon={Zap} passed={benchmarks.latency?.pass ?? null}>
+            {benchmarks.latency ? (
+              <div className="grid grid-cols-3 gap-4">
+                <ScoreDisplay label="P50" value={benchmarks.latency.p50_ms} suffix="ms" />
+                <ScoreDisplay label="P95" value={benchmarks.latency.p95_ms} suffix="ms" />
+                <ScoreDisplay label="P99" value={benchmarks.latency.p99_ms} suffix="ms" />
+              </div>
+            ) : latestScores.latencyP99 != null ? (
+              <div className="grid grid-cols-3 gap-4">
+                <ScoreDisplay label="P50" value={latestScores.latencyP50} suffix="ms" />
+                <ScoreDisplay label="P95" value={latestScores.latencyP95} suffix="ms" />
+                <ScoreDisplay label="P99" value={latestScores.latencyP99} suffix="ms" />
+              </div>
+            ) : (
+              <p className="text-[#a3a3a3] text-xs font-mono text-center py-4">No latency data</p>
             )}
-            <StatusBadge passed={latestPassed} />
-          </div>
-        </div>
+            {benchmarks.latency?.target_p99_ms && (
+              <p className="text-[#a3a3a3] text-[10px] font-mono mt-3 text-center">
+                Target: p99 &lt; {benchmarks.latency.target_p99_ms}ms
+              </p>
+            )}
+          </BenchmarkCard>
 
-        {latestReport ? (
-          <>
-            <div className="grid grid-cols-3 gap-8 mb-6">
-              <ScoreDisplay label="Precision" value={latestScores.precision} />
-              <ScoreDisplay label="Recall" value={latestScores.recall} />
-              <ScoreDisplay label="F1" value={latestScores.f1} />
-            </div>
-            {(getRunTimestamp(latestReport)) && (
-              <div className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-mono">
-                <Clock size={12} />
-                {formatDate(getRunTimestamp(latestReport))}
+          <BenchmarkCard title="Relevance" icon={Target} passed={benchmarks.relevance?.pass ?? null}>
+            {benchmarks.relevance ? (
+              <div className="grid grid-cols-2 gap-4">
+                <ScoreDisplay label="P@5" value={benchmarks.relevance.precision_at_5} />
+                <ScoreDisplay label="R@10" value={benchmarks.relevance.recall_at_10} />
+                <ScoreDisplay label="NDCG@10" value={benchmarks.relevance.ndcg_at_10} />
+                <ScoreDisplay label="MRR" value={benchmarks.relevance.mrr} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4">
+                <ScoreDisplay label="Precision" value={latestScores.precision} />
+                <ScoreDisplay label="Recall" value={latestScores.recall} />
+                <ScoreDisplay label="F1" value={latestScores.f1} />
               </div>
             )}
-          </>
-        ) : (
-          <p className="text-[#a3a3a3] text-sm font-mono text-center py-8">
-            No evaluation results yet. Run an evaluation to get started.
+            {benchmarks.relevance?.targets && (
+              <p className="text-[#a3a3a3] text-[10px] font-mono mt-3 text-center">
+                Target: P@5 &ge; {benchmarks.relevance.targets.precision_at_5}, R@10 &ge; {benchmarks.relevance.targets.recall_at_10}
+              </p>
+            )}
+          </BenchmarkCard>
+        </motion.div>
+      )}
+
+      {/* Overall Quality Score */}
+      {latestReport && (
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-5 mb-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FlaskConical size={16} className="text-[#117dff]" />
+              <div>
+                <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">Overall Quality</h4>
+                {getRunTimestamp(latestReport) && (
+                  <span className="text-[#a3a3a3] text-[10px] font-mono">{formatDate(getRunTimestamp(latestReport))}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {latestScores.qualityScore != null && (
+                <span className="text-2xl font-bold font-mono" style={{ color: scoreColor(latestScores.qualityScore / 100) }}>
+                  {Math.round(latestScores.qualityScore)}<span className="text-sm text-[#a3a3a3]">/100</span>
+                </span>
+              )}
+              <StatusBadge passed={latestPassed} />
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Empty state */}
+      {!latestReport && !latestLoading && !latestError && (
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-10 text-center mb-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <FlaskConical size={28} className="text-[#d4d0ca] mx-auto mb-3" />
+          <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">No evaluation results yet</p>
+          <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
+            Click "Run Evaluation" to measure retrieval quality against your tenant dataset.
           </p>
-        )}
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* History */}
       <motion.div
