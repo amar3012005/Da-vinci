@@ -13,6 +13,7 @@ const pageTitles = {
   '/hivemind/app/settings': 'Settings',
   '/hivemind/app/billing': 'Billing',
   '/hivemind/app/web': 'Web Intelligence',
+  '/hivemind/app/web-admin': 'Web Admin',
 };
 
 const pageDescriptions = {
@@ -25,6 +26,7 @@ const pageDescriptions = {
   '/hivemind/app/settings': 'Workspace configuration',
   '/hivemind/app/billing': 'Manage your plan and usage',
   '/hivemind/app/web': 'Search and crawl the web as async jobs',
+  '/hivemind/app/web-admin': 'Operational metrics, success rates, and runtime health',
 };
 
 export default function TopBar() {

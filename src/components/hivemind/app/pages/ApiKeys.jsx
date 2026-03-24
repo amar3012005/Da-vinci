@@ -1,10 +1,234 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Key, Plus, Copy, Check, Trash2, Shield, AlertTriangle } from 'lucide-react';
+import {
+  Key, Plus, Copy, Check, Trash2, Shield, AlertTriangle,
+  Globe, Brain, Wrench, ShieldCheck, Zap, CheckCircle2, XCircle,
+  ChevronDown, ChevronUp,
+} from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
 
-function KeyCreatedBanner({ rawKey, onDismiss }) {
+// ── Scope definitions ───────────────────────────────────────────────
+const ALL_SCOPES = [
+  { id: 'memory:read',  label: 'Memory Read',  icon: Brain,       group: 'core',  description: 'Read memories and search' },
+  { id: 'memory:write', label: 'Memory Write', icon: Brain,       group: 'core',  description: 'Create, update, delete memories' },
+  { id: 'mcp',          label: 'MCP Access',   icon: Wrench,      group: 'core',  description: 'Model Context Protocol tools' },
+  { id: 'web_search',   label: 'Web Search',   icon: Globe,       group: 'web',   description: 'Search the web via async jobs' },
+  { id: 'web_crawl',    label: 'Web Crawl',    icon: Globe,       group: 'web',   description: 'Crawl and extract web pages' },
+  { id: 'web_admin',    label: 'Web Admin',    icon: ShieldCheck, group: 'admin', description: 'View admin metrics and telemetry' },
+];
+
+const SCOPE_PRESETS = [
+  {
+    id: 'standard',
+    label: 'Standard',
+    description: 'Memory read/write + MCP tools',
+    scopes: ['memory:read', 'memory:write', 'mcp'],
+    color: '#117dff',
+    icon: Brain,
+  },
+  {
+    id: 'web',
+    label: 'Web Intelligence',
+    description: 'Standard + web search & crawl',
+    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl'],
+    color: '#16a34a',
+    icon: Globe,
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    description: 'Full access including admin metrics',
+    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'],
+    color: '#d97706',
+    icon: ShieldCheck,
+  },
+];
+
+// ── Scope badge display ─────────────────────────────────────────────
+function ScopeBadge({ scope, size = 'sm' }) {
+  const def = ALL_SCOPES.find(s => s.id === scope);
+  const colorMap = { core: '#117dff', web: '#16a34a', admin: '#d97706' };
+  const color = colorMap[def?.group] || '#a3a3a3';
+  const label = def?.label || scope;
+  const px = size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs';
+
+  return (
+    <span
+      className={`inline-flex items-center ${px} rounded-md font-semibold font-mono uppercase tracking-wider border`}
+      style={{ color, backgroundColor: `${color}10`, borderColor: `${color}20` }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ── Scope selector with presets ─────────────────────────────────────
+function ScopeSelector({ selected, onChange }) {
+  const [showCustom, setShowCustom] = useState(false);
+  const activePreset = SCOPE_PRESETS.find(p =>
+    p.scopes.length === selected.length && p.scopes.every(s => selected.includes(s))
+  );
+
+  const handlePreset = (preset) => {
+    onChange([...preset.scopes]);
+    setShowCustom(false);
+  };
+
+  const toggleScope = (scopeId) => {
+    onChange(
+      selected.includes(scopeId)
+        ? selected.filter(s => s !== scopeId)
+        : [...selected, scopeId]
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider">
+        Permissions
+      </label>
+
+      {/* Preset pills */}
+      <div className="flex flex-wrap gap-2">
+        {SCOPE_PRESETS.map(preset => {
+          const Icon = preset.icon;
+          const isActive = activePreset?.id === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => handlePreset(preset)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-['Space_Grotesk'] font-medium transition-all border ${
+                isActive
+                  ? 'bg-[#117dff]/10 border-[#117dff]/30 text-[#117dff]'
+                  : 'bg-white border-[#e3e0db] text-[#525252] hover:border-[#117dff]/20 hover:text-[#0a0a0a]'
+              }`}
+            >
+              <Icon size={14} />
+              {preset.label}
+              {isActive && <Check size={12} />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active preset description */}
+      {activePreset && (
+        <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
+          {activePreset.description}
+        </p>
+      )}
+
+      {/* Custom toggle */}
+      <button
+        type="button"
+        onClick={() => setShowCustom(!showCustom)}
+        className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] font-['Space_Grotesk'] transition-colors"
+      >
+        {showCustom ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        Custom scopes
+      </button>
+
+      {/* Granular scope checkboxes */}
+      <AnimatePresence>
+        {showCustom && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {ALL_SCOPES.map(scope => {
+                const Icon = scope.icon;
+                const checked = selected.includes(scope.id);
+                return (
+                  <label
+                    key={scope.id}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${
+                      checked
+                        ? 'bg-[#117dff]/5 border-[#117dff]/20'
+                        : 'bg-white border-[#e3e0db] hover:border-[#117dff]/10'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleScope(scope.id)}
+                      className="sr-only"
+                    />
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                      checked ? 'bg-[#117dff] border-[#117dff]' : 'border-[#e3e0db]'
+                    }`}>
+                      {checked && <Check size={10} className="text-white" />}
+                    </div>
+                    <Icon size={13} className={checked ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold font-['Space_Grotesk'] ${checked ? 'text-[#0a0a0a]' : 'text-[#525252]'}`}>
+                        {scope.label}
+                      </p>
+                      <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk'] truncate">{scope.description}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selected badges */}
+      <div className="flex flex-wrap gap-1">
+        {selected.map(s => <ScopeBadge key={s} scope={s} />)}
+      </div>
+    </div>
+  );
+}
+
+// ── Test Access button ──────────────────────────────────────────────
+function TestAccessButton({ rawKey }) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState(null); // 'success' | 'error'
+
+  const handleTest = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      // Temporarily use this key to hit health endpoint
+      const prev = apiClient.getApiKey?.() || null;
+      apiClient.setApiKey(rawKey);
+      await apiClient.getHealth();
+      setResult('success');
+      if (prev) apiClient.setApiKey(prev);
+    } catch {
+      setResult('error');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleTest}
+      disabled={testing}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] font-medium transition-all border border-[#e3e0db] hover:border-[#117dff]/20 bg-white text-[#525252] hover:text-[#0a0a0a] disabled:opacity-50"
+    >
+      {testing ? (
+        <div className="w-3 h-3 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+      ) : result === 'success' ? (
+        <><CheckCircle2 size={13} className="text-[#16a34a]" /> Connected</>
+      ) : result === 'error' ? (
+        <><XCircle size={13} className="text-[#dc2626]" /> Failed</>
+      ) : (
+        <><Zap size={13} /> Test Access</>
+      )}
+    </button>
+  );
+}
+
+// ── Key Created Banner ──────────────────────────────────────────────
+function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
   const { copied, copy } = useCopyToClipboard();
 
   return (
@@ -23,7 +247,6 @@ function KeyCreatedBanner({ rawKey, onDismiss }) {
             </p>
             <p className="text-[#525252] text-xs mt-1 font-['Space_Grotesk']">
               This is the only time you will see this key. Copy it and store it securely.
-              It cannot be retrieved again.
             </p>
           </div>
         </div>
@@ -40,22 +263,34 @@ function KeyCreatedBanner({ rawKey, onDismiss }) {
             {copied ? (
               <Check size={16} className="text-[#117dff]" />
             ) : (
-              <Copy size={16} className="text-[#525252] hover:text-[#525252]" />
+              <Copy size={16} className="text-[#525252]" />
             )}
           </button>
         </div>
 
-        <button
-          onClick={onDismiss}
-          className="mt-3 text-[#a3a3a3] hover:text-[#525252] text-xs font-mono transition-colors"
-        >
-          I've saved the key — dismiss
-        </button>
+        {/* Scopes applied */}
+        {scopes?.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1">
+            <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">SCOPES:</span>
+            {scopes.map(s => <ScopeBadge key={s} scope={s} />)}
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 mt-3">
+          <TestAccessButton rawKey={rawKey} />
+          <button
+            onClick={onDismiss}
+            className="text-[#a3a3a3] hover:text-[#525252] text-xs font-mono transition-colors"
+          >
+            I've saved the key — dismiss
+          </button>
+        </div>
       </div>
     </motion.div>
   );
 }
 
+// ── Revoke Confirmation ─────────────────────────────────────────────
 function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
   return (
     <motion.div
@@ -67,7 +302,6 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
       <AlertTriangle size={16} className="text-[#dc2626] shrink-0" />
       <p className="text-[#dc2626] text-xs font-['Space_Grotesk'] flex-1">
         Revoke <span className="font-semibold">"{keyLabel}"</span>? This cannot be undone.
-        Any service using this key will lose access immediately.
       </p>
       <div className="flex items-center gap-2 shrink-0">
         <button
@@ -93,6 +327,7 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
   );
 }
 
+// ── Key Row ─────────────────────────────────────────────────────────
 function KeyRow({ apiKey, onRevoke }) {
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -109,10 +344,10 @@ function KeyRow({ apiKey, onRevoke }) {
   };
 
   const createdDate = new Date(apiKey.created_at || apiKey.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: 'numeric', month: 'short', day: 'numeric',
   });
+
+  const scopes = apiKey.scopes || [];
 
   return (
     <motion.div
@@ -172,6 +407,13 @@ function KeyRow({ apiKey, onRevoke }) {
         </div>
       </div>
 
+      {/* Scope badges */}
+      {scopes.length > 0 && !isRevoked && (
+        <div className="flex flex-wrap gap-1 mt-2.5 ml-11">
+          {scopes.map(s => <ScopeBadge key={s} scope={s} />)}
+        </div>
+      )}
+
       <AnimatePresence>
         {confirmingRevoke && (
           <div className="mt-3">
@@ -188,11 +430,14 @@ function KeyRow({ apiKey, onRevoke }) {
   );
 }
 
+// ── Main Page ───────────────────────────────────────────────────────
 export default function ApiKeysPage() {
   const [label, setLabel] = useState('');
+  const [selectedScopes, setSelectedScopes] = useState(['memory:read', 'memory:write', 'mcp']);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState(null);
+  const [newlyCreatedScopes, setNewlyCreatedScopes] = useState([]);
 
   const {
     data: keys,
@@ -203,16 +448,17 @@ export default function ApiKeysPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!label.trim()) return;
+    if (!label.trim() || selectedScopes.length === 0) return;
 
     setCreating(true);
     setCreateError(null);
     try {
-      const result = await apiClient.createApiKey(label.trim());
-      // result: { success, api_key (raw string), key: { id, name, ... }, descriptors }
+      const result = await apiClient.createApiKey(label.trim(), { scopes: selectedScopes });
       setNewlyCreatedKey(result.api_key);
+      setNewlyCreatedScopes([...selectedScopes]);
       apiClient.setApiKey(result.api_key);
       setLabel('');
+      setSelectedScopes(['memory:read', 'memory:write', 'mcp']);
       refetch();
     } catch (err) {
       setCreateError(err.response?.data?.error || err.message);
@@ -246,7 +492,7 @@ export default function ApiKeysPage() {
             </h1>
           </div>
           <p className="text-[#525252] text-sm font-['Space_Grotesk'] ml-[52px]">
-            Manage authentication keys for the HIVEMIND Core API.
+            Create and manage authentication keys with granular permissions.
           </p>
         </motion.div>
 
@@ -261,7 +507,7 @@ export default function ApiKeysPage() {
             <Shield size={16} className="text-[#a3a3a3] mt-0.5 shrink-0" />
             <p className="text-[#525252] text-xs font-['Space_Grotesk'] leading-relaxed">
               API keys authenticate requests to the HIVEMIND Core API. Each key is scoped to your
-              organization. Keep keys secret — treat them like passwords. Revoke any key you suspect
+              organization with specific permissions. Keep keys secret — revoke any key you suspect
               has been compromised.
             </p>
           </div>
@@ -278,8 +524,9 @@ export default function ApiKeysPage() {
             <h2 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
               Create a new key
             </h2>
-            <form onSubmit={handleCreate} className="flex items-end gap-3">
-              <div className="flex-1">
+            <form onSubmit={handleCreate} className="space-y-4">
+              {/* Label */}
+              <div>
                 <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">
                   Label
                 </label>
@@ -292,10 +539,15 @@ export default function ApiKeysPage() {
                   className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-2.5 px-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 transition-colors"
                 />
               </div>
+
+              {/* Scope Selector */}
+              <ScopeSelector selected={selectedScopes} onChange={setSelectedScopes} />
+
+              {/* Submit */}
               <button
                 type="submit"
-                disabled={!label.trim() || creating}
-                className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] shrink-0"
+                disabled={!label.trim() || selectedScopes.length === 0 || creating}
+                className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk']"
               >
                 {creating ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -319,7 +571,8 @@ export default function ApiKeysPage() {
           {newlyCreatedKey && (
             <KeyCreatedBanner
               rawKey={newlyCreatedKey}
-              onDismiss={() => setNewlyCreatedKey(null)}
+              scopes={newlyCreatedScopes}
+              onDismiss={() => { setNewlyCreatedKey(null); setNewlyCreatedScopes([]); }}
             />
           )}
         </AnimatePresence>

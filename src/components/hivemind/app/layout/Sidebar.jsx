@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -16,45 +16,64 @@ import {
   ChevronRight,
   Sparkles,
   Globe,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import apiClient from '../shared/api-client';
 
-const navSections = [
-  {
-    label: null,
-    items: [
-      { to: '/hivemind/app/overview', icon: LayoutDashboard, label: 'Overview' },
-    ],
-  },
-  {
-    label: 'Data',
-    items: [
-      { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
-      { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
-      { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
-      { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
-    ],
-  },
-  {
-    label: 'Developer',
-    items: [
-      { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
-      { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
-    ],
-  },
-  {
-    label: 'Account',
-    items: [
-      { to: '/hivemind/app/billing', icon: CreditCard, label: 'Billing' },
-      { to: '/hivemind/app/settings', icon: Settings, label: 'Settings' },
-    ],
-  },
-];
+/** Build nav sections, conditionally including admin items. */
+function buildNavSections({ showWebAdmin }) {
+  const devItems = [
+    { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
+    { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
+  ];
+  if (showWebAdmin) {
+    devItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
+  }
+  return [
+    {
+      label: null,
+      items: [
+        { to: '/hivemind/app/overview', icon: LayoutDashboard, label: 'Overview' },
+      ],
+    },
+    {
+      label: 'Data',
+      items: [
+        { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
+        { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
+        { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
+        { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
+      ],
+    },
+    {
+      label: 'Developer',
+      items: devItems,
+    },
+    {
+      label: 'Account',
+      items: [
+        { to: '/hivemind/app/billing', icon: CreditCard, label: 'Billing' },
+        { to: '/hivemind/app/settings', icon: Settings, label: 'Settings' },
+      ],
+    },
+  ];
+}
 
 export default function Sidebar() {
   const { logout, org, user } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [showWebAdmin, setShowWebAdmin] = useState(false);
+
+  // Probe admin access once on mount
+  useEffect(() => {
+    apiClient.getWebAdminMetrics()
+      .then(() => setShowWebAdmin(true))
+      .catch(() => setShowWebAdmin(false));
+  }, []);
+
+  const navSections = buildNavSections({ showWebAdmin });
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 

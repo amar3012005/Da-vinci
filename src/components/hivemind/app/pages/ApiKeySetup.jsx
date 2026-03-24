@@ -1,13 +1,77 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Hexagon, Key, Copy, Check, ArrowRight, AlertTriangle } from 'lucide-react';
+import {
+  Hexagon, Key, Copy, Check, ArrowRight, AlertTriangle,
+  Brain, Globe, ShieldCheck, Zap, CheckCircle2, XCircle,
+} from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import { useCopyToClipboard } from '../shared/hooks';
 
+const SCOPE_PRESETS = [
+  {
+    id: 'standard',
+    label: 'Standard',
+    description: 'Memory read/write + MCP tools',
+    scopes: ['memory:read', 'memory:write', 'mcp'],
+    icon: Brain,
+  },
+  {
+    id: 'web',
+    label: 'Web Intelligence',
+    description: 'Standard + web search & crawl',
+    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl'],
+    icon: Globe,
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    description: 'Full access including admin metrics',
+    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'],
+    icon: ShieldCheck,
+  },
+];
+
+function TestAccessButton({ rawKey }) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      apiClient.setApiKey(rawKey);
+      await apiClient.getHealth();
+      setResult('success');
+    } catch {
+      setResult('error');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleTest}
+      disabled={testing}
+      className="flex items-center justify-center gap-2 w-full bg-[#f3f1ec] hover:bg-[#e3e0db] text-[#0a0a0a] font-semibold py-3 px-6 rounded-[4px] transition-all text-sm font-['Space_Grotesk'] border border-[#e3e0db] uppercase tracking-[0.075em] disabled:opacity-50"
+    >
+      {testing ? (
+        <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
+      ) : result === 'success' ? (
+        <><CheckCircle2 size={16} className="text-[#16a34a]" /> Connected Successfully</>
+      ) : result === 'error' ? (
+        <><XCircle size={16} className="text-[#dc2626]" /> Connection Failed</>
+      ) : (
+        <><Zap size={16} /> Test Access</>
+      )}
+    </button>
+  );
+}
+
 /**
  * First-time API key setup — shown when bootstrap.onboarding.has_api_key is false.
- * After the key is created, refreshes bootstrap and the user enters the dashboard.
+ * Now with scope preset selection.
  */
 export default function ApiKeySetup() {
   const { user, refresh, hasApiKey } = useAuth();
@@ -18,17 +82,19 @@ export default function ApiKeySetup() {
   const [error, setError] = useState(null);
   const [rawKey, setRawKey] = useState(null);
   const [existingKey, setExistingKey] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('standard');
 
+  const activePreset = SCOPE_PRESETS.find(p => p.id === selectedPreset);
 
   const handleCreate = async () => {
     setCreating(true);
     setError(null);
     try {
-      const result = await apiClient.createApiKey('Primary API Key');
-      // result: { success, api_key, key, descriptors }
+      const result = await apiClient.createApiKey('Primary API Key', {
+        scopes: activePreset.scopes,
+      });
       setRawKey(result.api_key);
       apiClient.setApiKey(result.api_key);
-
       setStep('show');
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -39,7 +105,6 @@ export default function ApiKeySetup() {
 
   const handleUseExisting = async () => {
     if (!existingKey.trim()) return;
-
     setActivating(true);
     setError(null);
     try {
@@ -55,7 +120,7 @@ export default function ApiKeySetup() {
   };
 
   const handleContinue = () => {
-    refresh(); // Re-bootstrap — has_api_key will now be true
+    refresh();
   };
 
   return (
@@ -84,7 +149,7 @@ export default function ApiKeySetup() {
               <p className="text-[#525252] text-sm mb-6 leading-relaxed">
                 Hi {user?.display_name || user?.email || 'there'} — {hasApiKey
                   ? 'paste an existing HIVEMIND Core API key or create a replacement key for this browser.'
-                  : 'you need an API key to connect clients and access the HIVEMIND memory engine.'}
+                  : 'choose the capabilities for your API key.'}
               </p>
 
               {error && (
@@ -125,6 +190,46 @@ export default function ApiKeySetup() {
                 </div>
               )}
 
+              {/* Scope presets */}
+              <div className="mb-5">
+                <label className="block text-[#a3a3a3] text-xs font-mono mb-3 uppercase tracking-wider">
+                  Key Type
+                </label>
+                <div className="space-y-2">
+                  {SCOPE_PRESETS.map(preset => {
+                    const Icon = preset.icon;
+                    const isActive = selectedPreset === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setSelectedPreset(preset.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all border ${
+                          isActive
+                            ? 'bg-[#117dff]/5 border-[#117dff]/30'
+                            : 'bg-white border-[#e3e0db] hover:border-[#117dff]/15'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                          isActive ? 'border-[#117dff]' : 'border-[#e3e0db]'
+                        }`}>
+                          {isActive && <div className="w-2 h-2 rounded-full bg-[#117dff]" />}
+                        </div>
+                        <Icon size={16} className={isActive ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold font-['Space_Grotesk'] ${isActive ? 'text-[#0a0a0a]' : 'text-[#525252]'}`}>
+                            {preset.label}
+                          </p>
+                          <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">
+                            {preset.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button
                 onClick={handleCreate}
                 disabled={creating}
@@ -157,7 +262,7 @@ export default function ApiKeySetup() {
               </div>
 
               {/* Key display */}
-              <div className="flex items-center gap-2 bg-[#f3f1ec] border border-[#117dff]/30 rounded-[6px] p-4 mb-6">
+              <div className="flex items-center gap-2 bg-[#f3f1ec] border border-[#117dff]/30 rounded-[6px] p-4 mb-4">
                 <code className="flex-1 text-[#117dff] text-sm font-mono break-all select-all">
                   {rawKey}
                 </code>
@@ -171,6 +276,24 @@ export default function ApiKeySetup() {
                     <Copy size={16} className="text-[#a3a3a3]" />
                   )}
                 </button>
+              </div>
+
+              {/* Scopes applied */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                <span className="text-[10px] text-[#a3a3a3] font-mono uppercase">Scopes:</span>
+                {activePreset.scopes.map(s => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+
+              {/* Test Access */}
+              <div className="mb-4">
+                <TestAccessButton rawKey={rawKey} />
               </div>
 
               {/* Continue */}

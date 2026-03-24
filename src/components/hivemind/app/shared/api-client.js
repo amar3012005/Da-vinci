@@ -324,6 +324,48 @@ class HiveMindApiClient {
     return data;
   }
 
+  async retryWebJob(jobId) {
+    const { data } = await this.core.post(`/api/web/jobs/${jobId}/retry`);
+    return data;
+  }
+
+  async saveWebResultToMemory(jobId, { resultIndex, title, tags } = {}) {
+    const { data } = await this.core.post(`/api/web/jobs/${jobId}/save-to-memory`, {
+      resultIndex,
+      title,
+      tags,
+    });
+    return data;
+  }
+
+  async getWebAdminMetrics() {
+    const { data } = await this.core.get('/api/web/admin/metrics');
+    return data;
+  }
+
+  async getWebMonthlyUsage() {
+    const { data } = await this.core.get('/api/web/usage/monthly');
+    return data;
+  }
+
+  async getWebUsageExport({ from, to } = {}) {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const { data } = await this.core.get('/api/web/usage/export', { params });
+    return data;
+  }
+
+  async getWebLimits() {
+    const { data } = await this.core.get('/api/web/limits');
+    return data;
+  }
+
+  async checkDomainPolicy(url) {
+    const { data } = await this.core.post('/api/web/policy/check-domain', { url });
+    return data;
+  }
+
   // ─── Core: Evaluation ────────────────────────────────────────
 
   async runEvaluation(params) {
