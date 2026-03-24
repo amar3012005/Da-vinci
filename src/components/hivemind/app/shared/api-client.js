@@ -405,6 +405,113 @@ class HiveMindApiClient {
     const { data } = await this.core.get('/api/stats');
     return data;
   }
+
+  // ─── Core: SOTA Engine — Cognitive Frame ────────────────────
+
+  async getCognitiveFrame(query, options = {}) {
+    const { data } = await this.core.post('/api/cognitive-frame', {
+      query,
+      max_tokens: options.maxTokens || 4000,
+      context_budget: options.contextBudget || 2000,
+      project: options.project,
+    });
+    return data;
+  }
+
+  async checkCoherence(content, memoryType = 'fact') {
+    const { data } = await this.core.post('/api/coherence-check', { content, memory_type: memoryType });
+    return data;
+  }
+
+  // ─── Core: SOTA Engine — Context Autopilot ──────────────────
+
+  async monitorContext(sessionId, tokenCount) {
+    const { data } = await this.core.post('/api/context/monitor', { session_id: sessionId, token_count: tokenCount });
+    return data;
+  }
+
+  async archiveContext(sessionId, turns) {
+    const { data } = await this.core.post('/api/context/archive', { session_id: sessionId, turns });
+    return data;
+  }
+
+  async compactContext(sessionId, options = {}) {
+    const { data } = await this.core.post('/api/context/compact', {
+      session_id: sessionId,
+      project: options.project,
+      recent_messages: options.recentMessages,
+    });
+    return data;
+  }
+
+  // ─── Core: SOTA Engine — Bi-Temporal ────────────────────────
+
+  async temporalAsOf({ transactionTime, validTime } = {}) {
+    const { data } = await this.core.post('/api/temporal/as-of', {
+      transaction_time: transactionTime,
+      valid_time: validTime,
+    });
+    return data;
+  }
+
+  async temporalDiff(timeA, timeB) {
+    const { data } = await this.core.post('/api/temporal/diff', { time_a: timeA, time_b: timeB });
+    return data;
+  }
+
+  async temporalTimeline(memoryId) {
+    const { data } = await this.core.post('/api/temporal/timeline', { memory_id: memoryId });
+    return data;
+  }
+
+  // ─── Core: SOTA Engine — Swarm (Stigmergic CoT) ────────────
+
+  async swarmRecordThought(agentId, content, options = {}) {
+    const { data } = await this.core.post('/api/swarm/thought', {
+      agent_id: agentId,
+      content,
+      task_id: options.taskId,
+      parent_thought_id: options.parentThoughtId,
+      reasoning_type: options.reasoningType || 'step',
+    });
+    return data;
+  }
+
+  async swarmDepositTrace(agentId, { action, result, success, taskId } = {}) {
+    const { data } = await this.core.post('/api/swarm/trace', {
+      agent_id: agentId,
+      action,
+      result,
+      success,
+      task_id: taskId,
+    });
+    return data;
+  }
+
+  async swarmFollowTraces(options = {}) {
+    const { data } = await this.core.post('/api/swarm/follow', {
+      task_id: options.taskId,
+      action: options.action,
+      limit: options.limit || 20,
+    });
+    return data;
+  }
+
+  async swarmPrune(maxAgeDays) {
+    const { data } = await this.core.post('/api/swarm/prune', { max_age_days: maxAgeDays });
+    return data;
+  }
+
+  // ─── Core: SOTA Engine — Byzantine Consensus ────────────────
+
+  async evaluateConsensus(content, memoryType = 'fact', externalVotes = []) {
+    const { data } = await this.core.post('/api/consensus/evaluate', {
+      content,
+      memory_type: memoryType,
+      external_votes: externalVotes,
+    });
+    return data;
+  }
 }
 
 const apiClient = new HiveMindApiClient();
