@@ -140,7 +140,9 @@ function extractScores(run) {
   const report = run?.report || run;
   const summary = report?.summary || {};
   return {
-    precision: report?.precision ?? report?.scores?.precision ?? summary.precisionAt5?.mean ?? null,
+    precision: summary.semanticPrecisionAt5?.mean ?? report?.precision ?? report?.scores?.precision ?? summary.precisionAt5?.mean ?? null,
+    uuidPrecision: summary.precisionAt5?.mean ?? null,
+    semanticPrecision: summary.semanticPrecisionAt5?.mean ?? null,
     recall: report?.recall ?? report?.scores?.recall ?? summary.recallAt10?.mean ?? null,
     f1: report?.f1 ?? report?.scores?.f1 ?? summary.f1At10?.mean ?? null,
     ndcg: summary.ndcgAt10?.mean ?? null,
@@ -368,7 +370,7 @@ export default function Evaluation() {
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-4 mb-3">
-                <ScoreDisplay label="P@5" value={latestScores.precision} />
+                <ScoreDisplay label="Sem. P@5" value={latestScores.precision} />
                 <ScoreDisplay label="R@10" value={latestScores.recall} />
                 <ScoreDisplay label="F1" value={latestScores.f1} />
               </div>
