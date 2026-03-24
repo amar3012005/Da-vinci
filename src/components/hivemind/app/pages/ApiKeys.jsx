@@ -432,8 +432,8 @@ function KeyRow({ apiKey, onRevoke }) {
 
 // ── Main Page ───────────────────────────────────────────────────────
 export default function ApiKeysPage() {
+  const DEFAULT_SCOPES = ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'];
   const [label, setLabel] = useState('');
-  const [selectedScopes, setSelectedScopes] = useState(['memory:read', 'memory:write', 'mcp']);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState(null);
@@ -448,17 +448,16 @@ export default function ApiKeysPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!label.trim() || selectedScopes.length === 0) return;
+    if (!label.trim()) return;
 
     setCreating(true);
     setCreateError(null);
     try {
-      const result = await apiClient.createApiKey(label.trim(), { scopes: selectedScopes });
+      const result = await apiClient.createApiKey(label.trim(), { scopes: DEFAULT_SCOPES });
       setNewlyCreatedKey(result.api_key);
-      setNewlyCreatedScopes([...selectedScopes]);
+      setNewlyCreatedScopes([...DEFAULT_SCOPES]);
       apiClient.setApiKey(result.api_key);
       setLabel('');
-      setSelectedScopes(['memory:read', 'memory:write', 'mcp']);
       refetch();
     } catch (err) {
       setCreateError(err.response?.data?.error || err.message);
@@ -540,13 +539,16 @@ export default function ApiKeysPage() {
                 />
               </div>
 
-              {/* Scope Selector */}
-              <ScopeSelector selected={selectedScopes} onChange={setSelectedScopes} />
+              {/* All keys get full access by default */}
+              <div className="flex flex-wrap gap-1">
+                <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">SCOPES:</span>
+                {DEFAULT_SCOPES.map(s => <ScopeBadge key={s} scope={s} />)}
+              </div>
 
               {/* Submit */}
               <button
                 type="submit"
-                disabled={!label.trim() || selectedScopes.length === 0 || creating}
+                disabled={!label.trim() || creating}
                 className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk']"
               >
                 {creating ? (

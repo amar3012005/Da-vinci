@@ -82,7 +82,7 @@ export default function ApiKeySetup() {
   const [error, setError] = useState(null);
   const [rawKey, setRawKey] = useState(null);
   const [existingKey, setExistingKey] = useState('');
-  const [selectedPreset, setSelectedPreset] = useState('standard');
+  const [selectedPreset, setSelectedPreset] = useState('admin');
 
   const activePreset = SCOPE_PRESETS.find(p => p.id === selectedPreset);
 
