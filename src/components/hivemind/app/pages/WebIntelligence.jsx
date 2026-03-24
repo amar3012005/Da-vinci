@@ -616,9 +616,8 @@ export default function WebIntelligence() {
       setSearchQuery('');
       refetchJobs();
       refetchUsage();
-      if (result?.job_id || result?.id) {
-        startPolling(result.job_id || result.id);
-      }
+      const searchJobId = result?.job_id || result?.id;
+      if (searchJobId) startPolling(searchJobId);
     } catch (err) {
       const msg = err.response?.data?.error || err.message;
       if (isFeatureNotEnabledError(err)) {
@@ -649,9 +648,8 @@ export default function WebIntelligence() {
       setDomainPolicy(null);
       refetchJobs();
       refetchUsage();
-      if (result?.job_id || result?.id) {
-        startPolling(result.job_id || result.id);
-      }
+      const crawlJobId = result?.job_id || result?.id;
+      if (crawlJobId) startPolling(crawlJobId);
     } catch (err) {
       const msg = err.response?.data?.error || err.message;
       if (isFeatureNotEnabledError(err)) {
@@ -849,7 +847,7 @@ export default function WebIntelligence() {
                 <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                   <Loader2 size={14} className="animate-spin text-blue-500" />
                   <span className="text-blue-700 text-xs">
-                    Job <span className="font-mono">{pollingJobId.slice(0, 8)}</span> is running... Polling for updates.
+                    Job <span className="font-mono">{pollingJobId?.slice(0, 8)}</span> is running... Polling for updates.
                   </span>
                 </div>
               </motion.div>

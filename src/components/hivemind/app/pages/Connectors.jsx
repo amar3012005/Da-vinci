@@ -649,7 +649,11 @@ export default function Connectors() {
         provider,
         window.location.pathname,
       );
-      window.location.href = auth_url;
+      if (auth_url) {
+        window.location.href = auth_url;
+      } else {
+        throw new Error('No auth URL returned');
+      }
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
       setConnectingProvider(null);

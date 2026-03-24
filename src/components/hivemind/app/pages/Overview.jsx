@@ -236,7 +236,7 @@ export default function Overview() {
   const relationshipCount = profile?.relationship_count ?? null;
   const activeConnectors = useMemo(() => {
     if (!connectors) return null;
-    if (Array.isArray(connectors)) return connectors.filter(c => c.status === 'connected' || c.healthy).length;
+    if (Array.isArray(connectors)) return connectors.filter(c => c && (c.status === 'connected' || c.healthy)).length;
     if (typeof connectors === 'object' && connectors.count != null) return connectors.count;
     return 0;
   }, [connectors]);
