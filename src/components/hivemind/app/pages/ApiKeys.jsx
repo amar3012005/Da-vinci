@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Key, Plus, Copy, Check, Trash2, Shield, AlertTriangle,
   Globe, Brain, Wrench, ShieldCheck, Zap, CheckCircle2, XCircle,
-  ChevronDown, ChevronUp,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -16,33 +15,6 @@ const ALL_SCOPES = [
   { id: 'web_search',   label: 'Web Search',   icon: Globe,       group: 'web',   description: 'Search the web via async jobs' },
   { id: 'web_crawl',    label: 'Web Crawl',    icon: Globe,       group: 'web',   description: 'Crawl and extract web pages' },
   { id: 'web_admin',    label: 'Web Admin',    icon: ShieldCheck, group: 'admin', description: 'View admin metrics and telemetry' },
-];
-
-const SCOPE_PRESETS = [
-  {
-    id: 'standard',
-    label: 'Standard',
-    description: 'Memory read/write + MCP tools',
-    scopes: ['memory:read', 'memory:write', 'mcp'],
-    color: '#117dff',
-    icon: Brain,
-  },
-  {
-    id: 'web',
-    label: 'Web Intelligence',
-    description: 'Standard + web search & crawl',
-    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl'],
-    color: '#16a34a',
-    icon: Globe,
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    description: 'Full access including admin metrics',
-    scopes: ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'],
-    color: '#d97706',
-    icon: ShieldCheck,
-  },
 ];
 
 // ── Scope badge display ─────────────────────────────────────────────
@@ -60,129 +32,6 @@ function ScopeBadge({ scope, size = 'sm' }) {
     >
       {label}
     </span>
-  );
-}
-
-// ── Scope selector with presets ─────────────────────────────────────
-function ScopeSelector({ selected, onChange }) {
-  const [showCustom, setShowCustom] = useState(false);
-  const activePreset = SCOPE_PRESETS.find(p =>
-    p.scopes.length === selected.length && p.scopes.every(s => selected.includes(s))
-  );
-
-  const handlePreset = (preset) => {
-    onChange([...preset.scopes]);
-    setShowCustom(false);
-  };
-
-  const toggleScope = (scopeId) => {
-    onChange(
-      selected.includes(scopeId)
-        ? selected.filter(s => s !== scopeId)
-        : [...selected, scopeId]
-    );
-  };
-
-  return (
-    <div className="space-y-3">
-      <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider">
-        Permissions
-      </label>
-
-      {/* Preset pills */}
-      <div className="flex flex-wrap gap-2">
-        {SCOPE_PRESETS.map(preset => {
-          const Icon = preset.icon;
-          const isActive = activePreset?.id === preset.id;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => handlePreset(preset)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-['Space_Grotesk'] font-medium transition-all border ${
-                isActive
-                  ? 'bg-[#117dff]/10 border-[#117dff]/30 text-[#117dff]'
-                  : 'bg-white border-[#e3e0db] text-[#525252] hover:border-[#117dff]/20 hover:text-[#0a0a0a]'
-              }`}
-            >
-              <Icon size={14} />
-              {preset.label}
-              {isActive && <Check size={12} />}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Active preset description */}
-      {activePreset && (
-        <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-          {activePreset.description}
-        </p>
-      )}
-
-      {/* Custom toggle */}
-      <button
-        type="button"
-        onClick={() => setShowCustom(!showCustom)}
-        className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] font-['Space_Grotesk'] transition-colors"
-      >
-        {showCustom ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        Custom scopes
-      </button>
-
-      {/* Granular scope checkboxes */}
-      <AnimatePresence>
-        {showCustom && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              {ALL_SCOPES.map(scope => {
-                const Icon = scope.icon;
-                const checked = selected.includes(scope.id);
-                return (
-                  <label
-                    key={scope.id}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all ${
-                      checked
-                        ? 'bg-[#117dff]/5 border-[#117dff]/20'
-                        : 'bg-white border-[#e3e0db] hover:border-[#117dff]/10'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleScope(scope.id)}
-                      className="sr-only"
-                    />
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                      checked ? 'bg-[#117dff] border-[#117dff]' : 'border-[#e3e0db]'
-                    }`}>
-                      {checked && <Check size={10} className="text-white" />}
-                    </div>
-                    <Icon size={13} className={checked ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
-                    <div className="min-w-0">
-                      <p className={`text-xs font-semibold font-['Space_Grotesk'] ${checked ? 'text-[#0a0a0a]' : 'text-[#525252]'}`}>
-                        {scope.label}
-                      </p>
-                      <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk'] truncate">{scope.description}</p>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Selected badges */}
-      <div className="flex flex-wrap gap-1">
-        {selected.map(s => <ScopeBadge key={s} scope={s} />)}
-      </div>
-    </div>
   );
 }
 

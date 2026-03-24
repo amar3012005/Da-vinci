@@ -22,10 +22,8 @@ import {
   Zap,
   CircuitBoard,
   CheckCircle2,
-  Info,
   Loader2,
   BookmarkPlus,
-  Hash,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
