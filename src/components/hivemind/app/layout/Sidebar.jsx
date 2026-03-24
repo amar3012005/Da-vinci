@@ -17,6 +17,7 @@ import {
   Sparkles,
   Globe,
   ShieldCheck,
+  Server,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -25,6 +26,7 @@ import apiClient from '../shared/api-client';
 function buildNavSections({ showWebAdmin }) {
   const devItems = [
     { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
+    { to: '/hivemind/app/mcp', icon: Server, label: 'MCP Server' },
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
   ];
   if (showWebAdmin) {

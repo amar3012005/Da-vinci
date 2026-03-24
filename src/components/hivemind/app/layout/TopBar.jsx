@@ -14,6 +14,7 @@ const pageTitles = {
   '/hivemind/app/billing': 'Billing',
   '/hivemind/app/web': 'Web Intelligence',
   '/hivemind/app/web-admin': 'Web Admin',
+  '/hivemind/app/mcp': 'MCP Server',
 };
 
 const pageDescriptions = {
@@ -27,6 +28,7 @@ const pageDescriptions = {
   '/hivemind/app/billing': 'Manage your plan and usage',
   '/hivemind/app/web': 'Search and crawl the web as async jobs',
   '/hivemind/app/web-admin': 'Operational metrics, success rates, and runtime health',
+  '/hivemind/app/mcp': '13 MCP tools for memory, search, and web intelligence — with setup guides',
 };
 
 export default function TopBar() {

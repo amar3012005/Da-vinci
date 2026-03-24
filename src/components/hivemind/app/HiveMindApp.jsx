@@ -16,6 +16,7 @@ const Settings = React.lazy(() => import('./pages/Settings'));
 const Billing = React.lazy(() => import('./pages/Billing'));
 const WebIntelligence = React.lazy(() => import('./pages/WebIntelligence'));
 const WebAdmin = React.lazy(() => import('./pages/WebAdmin'));
+const McpServer = React.lazy(() => import('./pages/McpServer'));
 
 function PageSuspense({ children }) {
   return (
@@ -61,6 +62,7 @@ export default function HiveMindApp() {
           <Route path="billing" element={<PageSuspense><Billing /></PageSuspense>} />
           <Route path="web" element={<PageSuspense><WebIntelligence /></PageSuspense>} />
           <Route path="web-admin" element={<PageSuspense><WebAdmin /></PageSuspense>} />
+          <Route path="mcp" element={<PageSuspense><McpServer /></PageSuspense>} />
         </Route>
 
         {/* Fallback */}
