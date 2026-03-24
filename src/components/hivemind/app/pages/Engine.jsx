@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Cpu, Brain, Clock, Shield, GitBranch, Zap,
-  Play, RefreshCw, ChevronRight, AlertTriangle,
+  Play, RefreshCw, AlertTriangle,
   CheckCircle2, XCircle, Loader2, Search,
-  Calendar, Network
+  Network
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
