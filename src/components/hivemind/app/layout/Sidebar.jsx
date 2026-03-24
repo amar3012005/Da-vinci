@@ -20,6 +20,7 @@ import {
   Server,
   Network,
   Cpu,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -47,6 +48,7 @@ function buildNavSections({ showWebAdmin }) {
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
         { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
         { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
+        { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
         { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
         { to: '/hivemind/app/profile', icon: User, label: 'Profile' },

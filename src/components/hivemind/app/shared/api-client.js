@@ -296,6 +296,19 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Knowledge Base ────────────────────────────────────
+
+  async uploadDocument(file, options = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options.tags) formData.append('tags', options.tags);
+    if (options.containerTag) formData.append('containerTag', options.containerTag);
+    const { data } = await this.core.post('/api/knowledge/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  }
+
   // ─── Core: Gmail Connector (direct) ─────────────────────────
 
   async gmailConnect() {
