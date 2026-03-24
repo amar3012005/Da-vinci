@@ -12,6 +12,9 @@ import {
   Target,
   AlertTriangle,
   Info,
+  ChevronDown,
+  ChevronRight,
+  Search,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -167,6 +170,67 @@ function getRunTimestamp(run) {
   return report?.timestamp || report?.created_at || null;
 }
 
+function PerQueryBreakdown({ results }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!results || results.length === 0) return null;
+
+  const hits = results.filter(q => {
+    const resultIds = new Set(q.resultIds || []);
+    return (q.relevantIds || []).some(id => resultIds.has(id));
+  }).length;
+
+  return (
+    <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-5 mb-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <Search size={15} className="text-[#525252]" />
+          <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
+            Per-Query Results
+          </h4>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">
+            {hits}/{results.length} hit
+          </span>
+        </div>
+        {expanded ? <ChevronDown size={14} className="text-[#a3a3a3]" /> : <ChevronRight size={14} className="text-[#a3a3a3]" />}
+      </button>
+
+      {expanded && (
+        <div className="mt-4 space-y-2">
+          {results.map((q, idx) => {
+            const resultIds = new Set(q.resultIds || []);
+            const matched = (q.relevantIds || []).filter(id => resultIds.has(id)).length;
+            const isHit = matched > 0;
+            const m = q.metrics || {};
+
+            return (
+              <div
+                key={idx}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-mono ${
+                  isHit ? 'bg-[#f0fdf4] border border-[#bbf7d0]' : 'bg-[#fef2f2] border border-[#fecaca]'
+                }`}
+              >
+                <span className={`shrink-0 ${isHit ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}>
+                  {isHit ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                </span>
+                <span className="flex-1 text-[#0a0a0a] truncate">{q.query}</span>
+                <span className="shrink-0 text-[#525252]">
+                  P@5={m.precisionAt5?.toFixed(2) || '0'} R@10={m.recallAt10?.toFixed(2) || '0'} MRR={m.mrr?.toFixed(2) || '0'}
+                </span>
+                <span className={`shrink-0 font-semibold ${isHit ? 'text-[#16a34a]' : 'text-[#dc2626]'}`}>
+                  {matched}/{(q.relevantIds || []).length}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function Evaluation() {
   const { data: latest, loading: latestLoading, error: latestError, refetch: refetchLatest } =
     useApiQuery(() => apiClient.getEvalResults());
@@ -184,7 +248,7 @@ export default function Evaluation() {
     setRunning(true);
     setRunError(null);
     try {
-      await apiClient.runEvaluation({});
+      await apiClient.runEvaluation({ dataset: 'tenant', methods: ['hybrid'] });
       await Promise.all([refetchLatest(), refetchHistory()]);
     } catch (err) {
       setRunError(err.response?.data?.error || err.message);
@@ -303,15 +367,26 @@ export default function Evaluation() {
                 <ScoreDisplay label="MRR" value={benchmarks.relevance.mrr} />
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
-                <ScoreDisplay label="Precision" value={latestScores.precision} />
-                <ScoreDisplay label="Recall" value={latestScores.recall} />
+              <div className="grid grid-cols-3 gap-4 mb-3">
+                <ScoreDisplay label="P@5" value={latestScores.precision} />
+                <ScoreDisplay label="R@10" value={latestScores.recall} />
                 <ScoreDisplay label="F1" value={latestScores.f1} />
+              </div>
+            )}
+            {(latestScores.ndcg != null || latestScores.mrr != null) && !benchmarks.relevance && (
+              <div className="grid grid-cols-2 gap-4 mt-2 pt-2 border-t border-[#e3e0db]">
+                <ScoreDisplay label="NDCG@10" value={latestScores.ndcg} />
+                <ScoreDisplay label="MRR" value={latestScores.mrr} />
               </div>
             )}
             {benchmarks.relevance?.targets && (
               <p className="text-[#a3a3a3] text-[10px] font-mono mt-3 text-center">
                 Target: P@5 &ge; {benchmarks.relevance.targets.precision_at_5}, R@10 &ge; {benchmarks.relevance.targets.recall_at_10}
+              </p>
+            )}
+            {!benchmarks.relevance && (
+              <p className="text-[#a3a3a3] text-[10px] font-mono mt-3 text-center">
+                Target: P@5 &ge; 0.80, R@10 &ge; 0.70, NDCG@10 &ge; 0.75, MRR &ge; 0.60
               </p>
             )}
           </BenchmarkCard>
@@ -341,6 +416,11 @@ export default function Evaluation() {
             </div>
           </div>
         </motion.div>
+      )}
+
+      {/* Per-Query Results */}
+      {latestReport?.rawResults?.length > 0 && (
+        <PerQueryBreakdown results={latestReport.rawResults} />
       )}
 
       {/* Empty state */}
@@ -376,6 +456,8 @@ export default function Evaluation() {
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Precision</th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Recall</th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">F1</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">NDCG</th>
+                  <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">MRR</th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-center">Status</th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 text-center">Compare</th>
                 </tr>
@@ -425,6 +507,22 @@ export default function Evaluation() {
                           style={{ color: scores.f1 != null ? scoreColor(scores.f1) : '#666' }}
                         >
                           {scores.f1 != null ? scores.f1.toFixed(3) : '--'}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <span
+                          className="text-sm font-mono font-semibold"
+                          style={{ color: scores.ndcg != null ? scoreColor(scores.ndcg) : '#666' }}
+                        >
+                          {scores.ndcg != null ? scores.ndcg.toFixed(3) : '--'}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-right">
+                        <span
+                          className="text-sm font-mono font-semibold"
+                          style={{ color: scores.mrr != null ? scoreColor(scores.mrr) : '#666' }}
+                        >
+                          {scores.mrr != null ? scores.mrr.toFixed(3) : '--'}
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-center">
