@@ -184,7 +184,7 @@ export default function Evaluation() {
     setRunning(true);
     setRunError(null);
     try {
-      await apiClient.runEvaluation({ dataset: 'tenant' });
+      await apiClient.runEvaluation({});
       await Promise.all([refetchLatest(), refetchHistory()]);
     } catch (err) {
       setRunError(err.response?.data?.error || err.message);
