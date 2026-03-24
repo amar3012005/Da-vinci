@@ -29,6 +29,7 @@
     "papaparse": "^5.5.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-force-graph-2d": "^1.29.1",
     "react-gtag": "^0.0.0",
     "react-intersection-observer": "^9.5.3",
     "react-router-dom": "^7.1.5",

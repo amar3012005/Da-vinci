@@ -18,6 +18,7 @@ import {
   Globe,
   ShieldCheck,
   Server,
+  Network,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -43,6 +44,7 @@ function buildNavSections({ showWebAdmin }) {
       label: 'Data',
       items: [
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
+        { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
         { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
         { to: '/hivemind/app/profile', icon: User, label: 'Profile' },

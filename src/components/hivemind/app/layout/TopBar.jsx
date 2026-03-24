@@ -15,6 +15,7 @@ const pageTitles = {
   '/hivemind/app/web': 'Web Intelligence',
   '/hivemind/app/web-admin': 'Web Admin',
   '/hivemind/app/mcp': 'MCP Server',
+  '/hivemind/app/graph': 'Memory Graph',
 };
 
 const pageDescriptions = {
@@ -29,6 +30,7 @@ const pageDescriptions = {
   '/hivemind/app/web': 'Search and crawl the web as async jobs',
   '/hivemind/app/web-admin': 'Operational metrics, success rates, and runtime health',
   '/hivemind/app/mcp': '13 MCP tools for memory, search, and web intelligence — with setup guides',
+  '/hivemind/app/graph': 'Explore connections between memories — semantic clusters, temporal decay, and relationship traversal',
 };
 
 export default function TopBar() {

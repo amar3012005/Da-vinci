@@ -366,6 +366,17 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Memory Graph ─────────────────────────────────────
+
+  async getGraph({ project, limit = 200 } = {}) {
+    const params = new URLSearchParams();
+    if (project) params.set('project', project);
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    const { data } = await this.core.get(`/api/graph${qs ? `?${qs}` : ''}`);
+    return data;
+  }
+
   // ─── Core: Evaluation ────────────────────────────────────────
 
   async runEvaluation(params) {
