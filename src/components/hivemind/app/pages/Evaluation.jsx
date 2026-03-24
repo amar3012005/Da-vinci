@@ -248,7 +248,7 @@ export default function Evaluation() {
     setRunning(true);
     setRunError(null);
     try {
-      await apiClient.runEvaluation({ dataset: 'tenant', methods: ['hybrid'] });
+      await apiClient.runEvaluation({ methods: ['hybrid'] });
       await Promise.all([refetchLatest(), refetchHistory()]);
     } catch (err) {
       setRunError(err.response?.data?.error || err.message);
