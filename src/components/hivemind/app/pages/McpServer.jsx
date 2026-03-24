@@ -399,7 +399,7 @@ export default function McpServer() {
   "mcpServers": {
     "hivemind": {
       "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-bridge", "hosted",
+      "args": ["-y", "@amar_528/mcp-bridge", "hosted",
                "--url", "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/YOUR_USER_ID/rpc"],
       "env": { "HIVEMIND_API_KEY": "YOUR_API_KEY" }
     }
@@ -413,7 +413,7 @@ export default function McpServer() {
   "mcpServers": {
     "hivemind": {
       "command": "npx",
-      "args": ["-y", "@anthropic-ai/mcp-bridge", "hosted",
+      "args": ["-y", "@amar_528/mcp-bridge", "hosted",
                "--url", "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/YOUR_USER_ID/rpc"],
       "env": { "HIVEMIND_API_KEY": "YOUR_API_KEY" }
     }
