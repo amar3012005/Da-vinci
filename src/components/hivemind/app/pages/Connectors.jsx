@@ -580,9 +580,170 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
+// ─── Gmail Sync Settings Modal ──────────────────────────────────────────────
+
+function GmailSyncSettings({ email, onSync, onClose }) {
+  const [dateRange, setDateRange] = useState('30d');
+  const [folders, setFolders] = useState(['INBOX', 'SENT']);
+  const [excludeCategories, setExcludeCategories] = useState(['promotions', 'social']);
+  const [maxEmails, setMaxEmails] = useState(500);
+  const [syncing, setSyncing] = useState(false);
+
+  const toggleFolder = (f) => setFolders(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
+  const toggleExclude = (c) => setExcludeCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+
+  const handleStart = async () => {
+    setSyncing(true);
+    try {
+      await onSync({ date_range: dateRange, folders, exclude_categories: excludeCategories, max_emails: maxEmails });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const dateOptions = [
+    { value: '7d', label: 'Last 7 days' },
+    { value: '30d', label: 'Last 30 days' },
+    { value: '90d', label: 'Last 90 days' },
+    { value: '365d', label: 'Last year' },
+    { value: 'all', label: 'All time' },
+  ];
+
+  const folderOptions = ['INBOX', 'SENT', 'STARRED', 'IMPORTANT', 'DRAFT'];
+  const categoryOptions = ['promotions', 'social', 'updates', 'forums'];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <Mail size={18} className="text-[#ef4444]" />
+          </div>
+          <div>
+            <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">Configure Gmail Sync</h3>
+            {email && <p className="text-[#a3a3a3] text-xs font-mono">{email}</p>}
+          </div>
+        </div>
+
+        {/* Date Range */}
+        <div className="mb-4">
+          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Date Range</label>
+          <div className="flex flex-wrap gap-2">
+            {dateOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setDateRange(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                  dateRange === opt.value
+                    ? 'bg-[#117dff] text-white'
+                    : 'bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Folders */}
+        <div className="mb-4">
+          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Folders to Sync</label>
+          <div className="flex flex-wrap gap-2">
+            {folderOptions.map(f => (
+              <button
+                key={f}
+                onClick={() => toggleFolder(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                  folders.includes(f)
+                    ? 'bg-[#22c55e]/10 text-[#16a34a] border border-[#bbf7d0]'
+                    : 'bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]'
+                }`}
+              >
+                {f.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Exclude Categories */}
+        <div className="mb-4">
+          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Exclude Categories</label>
+          <div className="flex flex-wrap gap-2">
+            {categoryOptions.map(c => (
+              <button
+                key={c}
+                onClick={() => toggleExclude(c)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                  excludeCategories.includes(c)
+                    ? 'bg-[#ef4444]/10 text-[#dc2626] border border-[#fecaca]'
+                    : 'bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Max Emails */}
+        <div className="mb-6">
+          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">
+            Max Emails: <span className="text-[#117dff]">{maxEmails}</span>
+          </label>
+          <input
+            type="range"
+            min={50}
+            max={2000}
+            step={50}
+            value={maxEmails}
+            onChange={e => setMaxEmails(Number(e.target.value))}
+            className="w-full accent-[#117dff]"
+          />
+          <div className="flex justify-between text-[10px] text-[#a3a3a3] font-mono mt-1">
+            <span>50</span><span>500</span><span>1000</span><span>2000</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleStart}
+            disabled={syncing || folders.length === 0}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+          >
+            {syncing ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Zap size={14} />
+                Start Sync
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
 export default function Connectors() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
+  const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -619,7 +780,21 @@ export default function Connectors() {
   useEffect(() => {
     const success = searchParams.get('connector_success');
     const error = searchParams.get('connector_error');
-    if (success) {
+    const connected = searchParams.get('connected');
+    const needsConfig = searchParams.get('needs_config');
+    const email = searchParams.get('email');
+
+    if (connected === 'gmail' && needsConfig === 'true') {
+      // Gmail connected — open settings modal before syncing
+      setGmailEmail(email || null);
+      setGmailSettingsOpen(true);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('connected');
+      nextParams.delete('needs_config');
+      nextParams.delete('email');
+      setSearchParams(nextParams, { replace: true });
+      refetchOAuth();
+    } else if (success) {
       setToastMessage({ type: 'success', text: `${success} connected successfully!` });
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('connector_success');
@@ -645,6 +820,17 @@ export default function Connectors() {
   const handleOAuthConnect = useCallback(async (provider) => {
     setConnectingProvider(provider);
     try {
+      // Use direct Gmail API for Gmail, control plane for others
+      if (provider === 'gmail') {
+        const data = await apiClient.gmailConnect();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('No auth URL returned');
+        }
+        return;
+      }
+
       const { auth_url } = await apiClient.startConnectorOAuth(
         provider,
         window.location.pathname,
@@ -662,7 +848,11 @@ export default function Connectors() {
 
   const handleDisconnect = useCallback(async (provider) => {
     try {
-      await apiClient.disconnectConnector(provider);
+      if (provider === 'gmail') {
+        await apiClient.gmailDisconnect();
+      } else {
+        await apiClient.disconnectConnector(provider);
+      }
       setToastMessage({ type: 'success', text: `${provider} disconnected` });
       refetchOAuth();
     } catch (err) {
@@ -672,8 +862,23 @@ export default function Connectors() {
 
   const handleResync = useCallback(async (provider) => {
     try {
+      if (provider === 'gmail') {
+        setGmailSettingsOpen(true);
+        return;
+      }
       await apiClient.resyncConnector(provider);
       setToastMessage({ type: 'success', text: `${provider} sync started` });
+      refetchOAuth();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    }
+  }, [refetchOAuth]);
+
+  const handleGmailSync = useCallback(async (settings) => {
+    try {
+      await apiClient.gmailSync(settings);
+      setToastMessage({ type: 'success', text: 'Gmail sync started! Check status for progress.' });
+      setGmailSettingsOpen(false);
       refetchOAuth();
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
@@ -909,6 +1114,17 @@ export default function Connectors() {
           </div>
         </div>
       )}
+
+      {/* Gmail Sync Settings Modal */}
+      <AnimatePresence>
+        {gmailSettingsOpen && (
+          <GmailSyncSettings
+            email={gmailEmail}
+            onSync={handleGmailSync}
+            onClose={() => setGmailSettingsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

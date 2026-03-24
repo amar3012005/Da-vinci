@@ -296,6 +296,28 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Gmail Connector (direct) ─────────────────────────
+
+  async gmailConnect() {
+    const { data } = await this.core.get('/api/connectors/gmail/connect');
+    return data;
+  }
+
+  async gmailStatus() {
+    const { data } = await this.core.get('/api/connectors/gmail/status');
+    return data;
+  }
+
+  async gmailSync(settings = {}) {
+    const { data } = await this.core.post('/api/connectors/gmail/sync', settings);
+    return data;
+  }
+
+  async gmailDisconnect() {
+    const { data } = await this.core.post('/api/connectors/gmail/disconnect');
+    return data;
+  }
+
   // ─── Core: Web Intelligence ─────────────────────────────────
 
   async submitWebSearch(params) {
