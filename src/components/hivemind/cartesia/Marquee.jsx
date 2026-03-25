@@ -3,7 +3,14 @@ import { motion } from 'framer-motion';
 
 const Marquee = () => {
   const logos = [
-    'CRESTA', 'Quora', 'LiveKit', 'The Weather Company', 'Fixie', 'Callsite', 'read.ai', 'copy.ai'
+    'Trusted by innovative teams across Europe',
+    'Memory Engine for AI Agents',
+    'EU Sovereign Cloud',
+    'Sub-50ms Recall',
+    'MCP Protocol Native',
+    'GDPR Compliant',
+    'Built in Europe',
+    'Context-Aware Intelligence'
   ];
 
   return (
@@ -21,7 +28,7 @@ const Marquee = () => {
 
         <div className="py-12">
           <div className="text-center text-[11px] font-mono text-[#a3a3a3] tracking-[0.2em] uppercase mb-8">
-            Trusted by
+            The Memory Layer for AI
           </div>
 
           <div className="flex">

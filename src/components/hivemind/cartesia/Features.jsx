@@ -59,14 +59,14 @@ const Features = () => {
 
               {/* Large text with highlights */}
               <div className="text-3xl md:text-4xl lg:text-5xl font-light leading-tight font-['Space_Grotesk']">
-                <span className="text-[#117dff]">Should I review again what I analyzed</span>{' '}
-                <span className="text-[#d4d0ca]">yesterday?</span>
+                <span className="text-[#117dff]">"What was the deployment fix</span>{' '}
+                <span className="text-[#d4d0ca]">from last Tuesday?"</span>
               </div>
 
               {/* Bottom annotation */}
               <div className="flex justify-end mt-4">
                 <div className="flex items-center gap-4">
-                  <span className="text-xs uppercase tracking-widest text-[#a3a3a3] font-mono">Distinguishes Context</span>
+                  <span className="text-xs uppercase tracking-widest text-[#a3a3a3] font-mono">3 Relevant Memories Found</span>
                   <div className="w-16 h-px bg-[#d4d0ca]"></div>
                 </div>
               </div>
@@ -74,7 +74,7 @@ const Features = () => {
               {/* Feature description */}
               <div className="mt-16 grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-xl font-semibold mb-3 font-['Space_Grotesk']">Heteronyms</h3>
+                  <h3 className="text-xl font-semibold mb-3 font-['Space_Grotesk']">Context-Aware Recall</h3>
                   <p className="text-[#525252] text-sm leading-relaxed">
                     Retrieves contextually relevant memories based on your current task, not just keyword matches.
                   </p>

@@ -1,53 +1,21 @@
-"use client";
-
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { motion } from "framer-motion";
-
-interface NeuralMindProps {
-    width?: number;
-    height?: number;
-}
-
-interface Neuron {
-    x: number;
-    y: number;
-    id: number;
-    connections: number[];
-    importance: number;
-    activationLevel: number;
-    lastFired: number;
-    type: 'core' | 'intermediate' | 'peripheral';
-    depth: number;
-}
-
-interface Dendrite {
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-    thickness: number;
-    opacity: number;
-    active: boolean;
-    signalProgress: number;
-    parent: number;
-    child: number;
-}
 
 export default function NeuralMind({
     width = 1200,
     height = 650
-}: NeuralMindProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const neuronsRef = useRef<Neuron[]>([]);
-    const dendritesRef = useRef<Dendrite[]>([]);
+}) {
+    const canvasRef = useRef(null);
+    const neuronsRef = useRef([]);
+    const dendritesRef = useRef([]);
     const mouseRef = useRef({ x: 0, y: 0, active: false });
-    const animationRef = useRef<number | undefined>(undefined);
+    const animationRef = useRef(undefined);
     const frameCountRef = useRef(0);
     const [isConscious, setIsConscious] = useState(false);
     const [neuralActivity, setNeuralActivity] = useState(0);
 
     // Always dark mode - white on black
-    const colors = {
+    const colors = useMemo(() => ({
         background: '#000000',
         neuronCore: 'rgba(255, 255, 255, 0.95)',
         neuronIntermediate: 'rgba(255, 255, 255, 0.75)',
@@ -57,29 +25,29 @@ export default function NeuralMind({
         dendriteTertiary: 'rgba(255, 255, 255, 0.1)',
         signal: 'rgba(255, 255, 255, 1)',
         glow: 'rgba(255, 255, 255, 0.1)'
-    };
+    }), []);
 
     const generateNeuralNetwork = useCallback(() => {
-        const neurons: Neuron[] = [];
-        const dendrites: Dendrite[] = [];
+        const neurons = [];
+        const dendrites = [];
         const centerX = width / 2;
         const centerY = height / 2;
 
-        const generateBrainPoint = (): { x: number; y: number; depth: number } => {
+        const generateBrainPoint = () => {
             const angle = Math.random() * Math.PI * 2;
             const radiusX = Math.min(width, height) * 0.42;
             const radiusY = Math.min(width, height) * 0.38;
-            
+
             const noise = Math.random() * 0.3 + 0.7;
             const r = Math.sqrt(Math.random()) * noise;
-            
+
             const x = centerX + r * radiusX * Math.cos(angle);
             const y = centerY + r * radiusY * Math.sin(angle);
-            
+
             const distanceFromCenter = Math.sqrt(
                 Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
             ) / Math.min(radiusX, radiusY);
-            
+
             return { x, y, depth: 1 - distanceFromCenter };
         };
 
@@ -139,7 +107,7 @@ export default function NeuralMind({
                 .map((other, idx) => ({
                     idx,
                     dist: Math.sqrt(
-                        Math.pow(other.x - neuron.x, 2) + 
+                        Math.pow(other.x - neuron.x, 2) +
                         Math.pow(other.y - neuron.y, 2)
                     )
                 }))
@@ -159,7 +127,7 @@ export default function NeuralMind({
                     const targetNeuron = neurons[target.idx];
                     const combinedImportance = (neuron.importance + targetNeuron.importance) / 2;
                     const distance = target.dist;
-                    
+
                     dendrites.push({
                         startX: neuron.x,
                         startY: neuron.y,
@@ -206,7 +174,7 @@ export default function NeuralMind({
             if (!ctx) return;
             frameCountRef.current++;
             const time = Date.now() * 0.001;
-            
+
             ctx.fillStyle = colors.background;
             ctx.fillRect(0, 0, width, height);
 
@@ -222,7 +190,7 @@ export default function NeuralMind({
                 if (dendrite.active) {
                     dendrite.signalProgress += 0.025;
                     activeSignals++;
-                    
+
                     if (dendrite.signalProgress >= 1) {
                         dendrite.active = false;
                         const childNeuron = neurons[dendrite.child];
@@ -234,9 +202,9 @@ export default function NeuralMind({
                 ctx.beginPath();
                 ctx.moveTo(dendrite.startX, dendrite.startY);
                 ctx.lineTo(dendrite.endX, dendrite.endY);
-                
+
                 const baseOpacity = dendrite.opacity * (0.8 + Math.sin(time * 2 + idx) * 0.2);
-                
+
                 if (dendrite.thickness > 1.2) {
                     ctx.strokeStyle = colors.dendritePrimary;
                     ctx.lineWidth = dendrite.thickness;
@@ -250,20 +218,20 @@ export default function NeuralMind({
                     ctx.lineWidth = Math.max(0.3, dendrite.thickness);
                     ctx.globalAlpha = baseOpacity * 0.5;
                 }
-                
+
                 ctx.stroke();
 
                 // Signal pulse
                 if (dendrite.active) {
                     const signalX = dendrite.startX + (dendrite.endX - dendrite.startX) * dendrite.signalProgress;
                     const signalY = dendrite.startY + (dendrite.endY - dendrite.startY) * dendrite.signalProgress;
-                    
+
                     ctx.beginPath();
                     ctx.fillStyle = colors.signal;
                     ctx.globalAlpha = 0.8;
                     ctx.arc(signalX, signalY, 2.5, 0, Math.PI * 2);
                     ctx.fill();
-                    
+
                     // Glow around signal
                     const gradient = ctx.createRadialGradient(signalX, signalY, 0, signalX, signalY, 8);
                     gradient.addColorStop(0, 'rgba(255,255,255,0.4)');
@@ -289,7 +257,7 @@ export default function NeuralMind({
 
                 const pulse = Math.sin(time * 4 + neuron.lastFired * 8) * 0.25 + 0.75;
                 const size = neuron.importance * 3.5 * (1 + neuron.activationLevel * 0.4);
-                
+
                 if (neuron.activationLevel > 0.2) {
                     const gradient = ctx.createRadialGradient(
                         neuron.x, neuron.y, 0,
@@ -315,7 +283,7 @@ export default function NeuralMind({
                     ctx.fillStyle = colors.neuronPeripheral;
                     ctx.globalAlpha = 0.35 + neuron.activationLevel * 0.35;
                 }
-                
+
                 ctx.arc(neuron.x, neuron.y, size, 0, Math.PI * 2);
                 ctx.fill();
 
@@ -332,14 +300,14 @@ export default function NeuralMind({
             if (mouseRef.current.active) {
                 const mx = mouseRef.current.x;
                 const my = mouseRef.current.y;
-                
+
                 ctx.beginPath();
                 ctx.strokeStyle = colors.dendritePrimary;
                 ctx.lineWidth = 1;
                 ctx.globalAlpha = 0.25;
                 ctx.arc(mx, my, 25 + Math.sin(time * 5) * 3, 0, Math.PI * 2);
                 ctx.stroke();
-                
+
                 ctx.beginPath();
                 ctx.globalAlpha = 0.12;
                 ctx.arc(mx, my, 50 + Math.sin(time * 4) * 8, 0, Math.PI * 2);
@@ -363,7 +331,7 @@ export default function NeuralMind({
         };
     }, [width, height, colors]);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (e) => {
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         mouseRef.current = {
@@ -378,9 +346,9 @@ export default function NeuralMind({
     };
 
     return (
-        <div style={{ 
-            position: 'relative', 
-            width, 
+        <div style={{
+            position: 'relative',
+            width,
             height,
             backgroundColor: colors.background,
             borderRadius: '20px',
@@ -394,7 +362,7 @@ export default function NeuralMind({
                 onMouseLeave={handleMouseLeave}
                 style={{ width, height }}
             />
-            
+
             {/* Status overlay */}
             <motion.div
                 initial={{ opacity: 0 }}
@@ -486,9 +454,9 @@ export default function NeuralMind({
     );
 }
 
-function LegendItem({ label, size }: { label: string; size: 'large' | 'medium' | 'small' }) {
+function LegendItem({ label, size }) {
     const sizes = { large: 7, medium: 4.5, small: 2.5 };
-    
+
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{
@@ -509,7 +477,7 @@ function LegendItem({ label, size }: { label: string; size: 'large' | 'medium' |
     );
 }
 
-function StatBadge({ label, value }: { label: string; value: string }) {
+function StatBadge({ label, value }) {
     return (
         <div style={{
             backgroundColor: 'rgba(0,0,0,0.7)',

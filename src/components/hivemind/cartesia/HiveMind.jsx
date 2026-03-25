@@ -1,16 +1,4 @@
-"use client";
-
 import { useEffect, useRef } from 'react';
-
-interface HiveMindProps {
-    width?: number;
-    height?: number;
-    nodeCount?: number;
-    connectionDistance?: number;
-    nodeColor?: string;
-    lineColor?: string;
-    backgroundColor?: string;
-}
 
 export default function HiveMind({
     width = 400,
@@ -20,11 +8,11 @@ export default function HiveMind({
     nodeColor = "rgba(100, 100, 100, 0.8)",
     lineColor = "rgba(150, 150, 150, 0.15)",
     backgroundColor = "transparent"
-}: HiveMindProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const particlesRef = useRef<any[]>([]);
+}) {
+    const canvasRef = useRef(null);
+    const particlesRef = useRef([]);
     const mouseRef = useRef({ x: -1000, y: -1000 });
-    const animationFrameRef = useRef<number | undefined>(undefined);
+    const animationFrameRef = useRef(undefined);
 
     // Brain shape boundary (simplified polygon normalized 0-1)
     // Points approx tracing a side-view brain shape
@@ -36,7 +24,7 @@ export default function HiveMind({
     ];
 
     // Check if point is inside brain polygon (Ray casting algorithm)
-    const isInsideBrain = (x: number, y: number, w: number, h: number) => {
+    const isInsideBrain = (x, y, w, h) => {
         // Center the shape in the canvas
         // The polygon is 0-1, so we scale it by width/height but add padding/centering offset
         // Effective width/height of brain
@@ -64,6 +52,7 @@ export default function HiveMind({
         return inside;
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -222,9 +211,9 @@ export default function HiveMind({
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor]);
+    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor, backgroundColor]);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (e) => {
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         mouseRef.current = {

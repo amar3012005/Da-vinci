@@ -2,11 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Layers, Globe, Search, Database, Cpu, MessageSquare } from 'lucide-react';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
-};
-
 /**
  * HivemindGraphPreview - Interactive Graph Preview
  * Visual representation of the Triple-Operator Framework

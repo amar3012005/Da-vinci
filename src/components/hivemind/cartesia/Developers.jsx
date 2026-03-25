@@ -43,7 +43,7 @@ const Developers = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold mb-1 font-['Space_Grotesk']">API</h3>
-                      <p className="text-[#525252] text-sm">Integrate HIVEMIND directly into your product with simple, well-documented endpoints.</p>
+                      <p className="text-[#525252] text-sm">REST API and MCP Protocol — integrate HIVEMIND directly into your product with simple, well-documented endpoints.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 pb-6 border-b border-[#e3e0db]">
@@ -52,7 +52,7 @@ const Developers = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold mb-1 font-['Space_Grotesk']">SDK</h3>
-                      <p className="text-[#525252] text-sm">Speed up development with pre-built SDKs in your favorite languages.</p>
+                      <p className="text-[#525252] text-sm">JavaScript SDK available now, Python SDK coming soon. Plus Knowledge Base Upload and Gmail Connector built-in.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4 pb-6 border-b border-[#e3e0db]">
@@ -71,7 +71,7 @@ const Developers = () => {
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold mb-1 font-['Space_Grotesk']">Enterprise Grade</h3>
                       <div className="flex flex-wrap gap-4 mt-2">
-                        {['SOC 2 Type II', 'HIPAA', 'PCI Level 1', 'Reliable uptime'].map((cert) => (
+                        {['GDPR Compliant', 'EU Data Residency', 'ISO 27001 Ready', 'Reliable uptime'].map((cert) => (
                           <div key={cert} className="flex items-center gap-2 text-sm text-[#525252]">
                             <div className="w-5 h-5 rounded bg-[#117dff]/[0.08] flex items-center justify-center">
                               <Shield className="w-3 h-3 text-[#117dff]" />
@@ -194,13 +194,13 @@ const Developers = () => {
                 </p>
                 <ul className="space-y-4 text-sm text-[#525252] mb-8">
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> 100 Memories
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> 1M tokens/month
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> 1 Platform Integration
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> 1 Connector
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> Standard Support
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> Community Support
                   </li>
                 </ul>
                 <button onClick={() => navigate('/hivemind/login')} className="w-full py-3 rounded-lg border border-[#e3e0db] hover:bg-[#f3f1ec] hover:border-[#d4d0ca] transition-colors font-medium text-[#0a0a0a] bg-white cursor-pointer text-sm">
@@ -220,10 +220,10 @@ const Developers = () => {
                 </p>
                 <ul className="space-y-4 text-sm text-[#525252] mb-8">
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> Unlimited Memories
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> 80M tokens/month
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> Full Meta-MCP
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> All Connectors + Team Workspace
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-[#16a34a] font-bold">&#10003;</span> Priority Support
@@ -243,13 +243,13 @@ const Developers = () => {
                 </p>
                 <ul className="space-y-4 text-sm text-[#525252] mb-8">
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> On-Premise Support
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> HYOK + Dedicated HSM
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> Managed HSMs
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> DPA + Custom SLA
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-[#16a34a] font-bold">&#10003;</span> SLA & Team Scoping
+                    <span className="text-[#16a34a] font-bold">&#10003;</span> On-Premise & Team Scoping
                   </li>
                 </ul>
                 <button onClick={() => window.location.href = 'mailto:enterprise@davinciai.eu'} className="w-full py-3 rounded-lg border border-[#e3e0db] hover:bg-[#f3f1ec] hover:border-[#d4d0ca] transition-colors font-medium text-[#0a0a0a] bg-white cursor-pointer text-sm">

@@ -5,51 +5,34 @@ import { ArrowRight } from 'lucide-react';
 
 const Languages = () => {
   const navigate = useNavigate();
-  const [activeRegion, setActiveRegion] = useState('Western Europe');
+  const [activeCategory, setActiveCategory] = useState('Hosting');
 
-  const regions = ['Americas', 'Western Europe', 'Eastern Europe', 'Asia Pacific', 'India', 'Middle East'];
+  const categories = ['Hosting', 'Compliance', 'Security'];
 
-  const languages = {
-    'Western Europe': [
-      { name: 'Dutch', flag: '🇳🇱' },
-      { name: 'English (British)', flag: '🇬🇧' },
-      { name: 'French', flag: '🇫🇷' },
-      { name: 'German', flag: '🇩🇪' },
-      { name: 'Italian', flag: '🇮🇹' },
-      { name: 'Portuguese (European)', flag: '🇵🇹' },
-      { name: 'Spanish (European)', flag: '🇪🇸' },
-      { name: 'Swedish', flag: '🇸🇪' },
-      { name: 'Greek', flag: '🇬🇷' },
+  const items = {
+    'Hosting': [
+      { name: 'Hetzner Cloud (Frankfurt, Falkenstein, Nuremberg)', icon: '🇩🇪' },
+      { name: 'Scaleway (Paris, Amsterdam, Warsaw)', icon: '🇫🇷' },
+      { name: 'OVHcloud (Roubaix, Gravelines)', icon: '🇫🇷' },
+      { name: 'Zero US-owned infrastructure', icon: '🛡' },
+      { name: 'All data encrypted at rest (AES-256)', icon: '🔒' },
+      { name: 'No transatlantic data transfer', icon: '🇪🇺' },
     ],
-    'Americas': [
-      { name: 'English (American)', flag: '🇺🇸' },
-      { name: 'Spanish (Latin American)', flag: '🇲🇽' },
-      { name: 'Portuguese (Brazilian)', flag: '🇧🇷' },
-      { name: 'French (Canadian)', flag: '🇨🇦' },
+    'Compliance': [
+      { name: 'GDPR Article 28 compliant', icon: '🇪🇺' },
+      { name: 'EU Data Residency guaranteed', icon: '🏛' },
+      { name: 'Data Processing Agreement (DPA) available', icon: '📋' },
+      { name: 'Right to erasure (Article 17)', icon: '🗑' },
+      { name: 'Data portability (Article 20)', icon: '📦' },
+      { name: 'ISO 27001 Ready', icon: '🛡' },
     ],
-    'Eastern Europe': [
-      { name: 'Polish', flag: '🇵🇱' },
-      { name: 'Russian', flag: '🇷🇺' },
-      { name: 'Ukrainian', flag: '🇺🇦' },
-      { name: 'Czech', flag: '🇨🇿' },
-    ],
-    'Asia Pacific': [
-      { name: 'Japanese', flag: '🇯🇵' },
-      { name: 'Korean', flag: '🇰🇷' },
-      { name: 'Mandarin', flag: '🇨🇳' },
-      { name: 'Cantonese', flag: '🇭🇰' },
-    ],
-    'India': [
-      { name: 'Hindi', flag: '🇮🇳' },
-      { name: 'Tamil', flag: '🇮🇳' },
-      { name: 'Telugu', flag: '🇮🇳' },
-      { name: 'Marathi', flag: '🇮🇳' },
-    ],
-    'Middle East': [
-      { name: 'Arabic', flag: '🇸🇦' },
-      { name: 'Hebrew', flag: '🇮🇱' },
-      { name: 'Turkish', flag: '🇹🇷' },
-      { name: 'Persian', flag: '🇮🇷' },
+    'Security': [
+      { name: 'Hold Your Own Key (HYOK) encryption', icon: '🔑' },
+      { name: 'Dedicated Hardware Security Modules', icon: '🔒' },
+      { name: 'TLS 1.3 in transit', icon: '🛡' },
+      { name: 'Tenant-isolated memory stores', icon: '🏗' },
+      { name: 'Audit logging & access controls', icon: '📝' },
+      { name: 'SOC 2 Type II (in progress)', icon: '🔍' },
     ],
   };
 
@@ -75,17 +58,17 @@ const Languages = () => {
       <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 pt-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 font-['Space_Grotesk']">
-            Fluent and native,<br />
-            worldwide
+            EU Sovereign<br />
+            Infrastructure
           </h2>
           <p className="text-lg text-[#525252] max-w-2xl mx-auto mb-8">
-            Reach international markets with HIVEMIND. It understands 40+ languages covering 95% of the world, all with native context awareness.
+            Your data never leaves the European Union. HIVEMIND runs exclusively on EU-owned infrastructure — Hetzner, OVHcloud, and Scaleway — with full GDPR compliance and zero US data transfer.
           </p>
           <button
             onClick={() => navigate('/hivemind/login')}
             className="px-6 py-3 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-sm uppercase tracking-[0.075em]"
           >
-            Explore 40+ Languages
+            Explore Our Infrastructure
           </button>
         </div>
 
@@ -100,88 +83,76 @@ const Languages = () => {
               <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(60deg)' }}></div>
               <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(-60deg)' }}></div>
 
-              {/* Speech bubbles on globe */}
+              {/* Datacenter markers on globe */}
               <motion.div
-                className="absolute top-1/4 left-1/4 bg-white border border-[#e3e0db] rounded-xl px-4 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                className="absolute top-1/4 left-1/4 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-1 rounded-full bg-[#117dff]" style={{ height: `${8 + Math.random() * 8}px` }}></div>
-                  ))}
-                </div>
+                <div className="w-2 h-2 rounded-full bg-[#117dff]"></div>
+                <span className="text-xs font-medium text-[#0a0a0a]">Frankfurt</span>
               </motion.div>
 
               <motion.div
-                className="absolute top-1/3 right-1/3 bg-white border border-[#e3e0db] rounded-xl px-4 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                className="absolute top-1/3 right-1/3 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               >
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-1 rounded-full bg-[#0066e0]" style={{ height: `${8 + Math.random() * 8}px` }}></div>
-                  ))}
-                </div>
+                <div className="w-2 h-2 rounded-full bg-[#0066e0]"></div>
+                <span className="text-xs font-medium text-[#0a0a0a]">Paris</span>
               </motion.div>
 
               <motion.div
-                className="absolute bottom-1/3 left-1/3 bg-white border border-[#e3e0db] rounded-xl px-4 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                className="absolute bottom-1/3 left-1/3 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               >
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-1 rounded-full bg-[#d4d0ca]" style={{ height: `${8 + Math.random() * 8}px` }}></div>
-                  ))}
-                </div>
+                <div className="w-2 h-2 rounded-full bg-[#16a34a]"></div>
+                <span className="text-xs font-medium text-[#0a0a0a]">Amsterdam</span>
               </motion.div>
 
               <motion.div
-                className="absolute top-1/2 right-1/4 bg-white border border-[#e3e0db] rounded-xl px-4 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+                className="absolute top-1/2 right-1/4 bg-white border border-[#117dff]/20 rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_0_10px_rgba(17,125,255,0.08)]"
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
               >
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-1 rounded-full bg-[#117dff]/60" style={{ height: `${8 + Math.random() * 8}px` }}></div>
-                  ))}
-                </div>
+                <svg className="w-3 h-3 text-[#117dff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span className="text-xs font-medium text-[#117dff]">GDPR</span>
               </motion.div>
             </div>
           </div>
         </div>
 
-        {/* Region tabs */}
+        {/* Category tabs */}
         <div className="flex flex-wrap justify-center gap-2 mb-12 border-b border-[#e3e0db] pb-6">
-          {regions.map((region) => (
+          {categories.map((category) => (
             <button
-              key={region}
-              onClick={() => setActiveRegion(region)}
+              key={category}
+              onClick={() => setActiveCategory(category)}
               className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
-                activeRegion === region
+                activeCategory === category
                   ? 'text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20'
                   : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] border border-transparent'
               }`}
             >
-              {region}
+              {category}
             </button>
           ))}
         </div>
 
-        {/* Language grid */}
+        {/* Infrastructure grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {languages[activeRegion]?.map((lang, idx) => (
+          {items[activeCategory]?.map((item, idx) => (
             <motion.div
-              key={lang.name}
+              key={item.name}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05, duration: 0.3 }}
               className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors cursor-pointer group rounded-lg"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{lang.flag}</span>
-                <span className="text-sm font-medium text-[#0a0a0a]">{lang.name}</span>
+                <span className="text-2xl">{item.icon}</span>
+                <span className="text-sm font-medium text-[#0a0a0a]">{item.name}</span>
               </div>
               <ArrowRight className="w-4 h-4 text-[#d4d0ca] group-hover:text-[#117dff] transition-colors" />
             </motion.div>

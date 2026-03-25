@@ -91,7 +91,7 @@ const Hero = () => {
                   </button>
                 </div>
                 <div className="hidden sm:flex items-center gap-2">
-                  {['Concierge', 'Support', 'Gaming'].map((tab) => (
+                  {['Memories', 'Knowledge Base', 'Web Intel'].map((tab) => (
                     <button
                       key={tab}
                       className="px-4 py-2 rounded-lg border border-[#e3e0db] text-sm font-medium text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors cursor-pointer bg-white"
@@ -109,7 +109,8 @@ const Hero = () => {
               <div className="p-8">
                 <div className="bg-[#faf9f4] rounded-xl p-6 border border-[#e3e0db]">
                   <p className="text-base leading-relaxed text-[#0a0a0a]">
-                    <span className="text-[#117dff] font-mono text-sm">&lt;context value="project" /&gt;</span> Oh wow, Project Apollo has been delayed? <span className="text-[#117dff] font-mono text-sm">[insight]</span> Don't worry—we'll get you back on track. Let me pull the relevant PRs and Slack threads.
+                    <span className="text-[#117dff] font-mono text-sm">&gt; recall</span> "What did the team decide about the auth migration?"<br/>
+                    <span className="text-[#117dff] font-mono text-sm">[3 memories found]</span> On March 12, Sarah proposed moving to OAuth2 in <span className="font-medium">#engineering</span>. Jake approved the RFC on March 14. The migration deadline is April 1st.
                   </p>
                 </div>
               </div>
@@ -118,8 +119,8 @@ const Hero = () => {
               <div className="flex items-center justify-between px-6 py-4 border-t border-[#e3e0db] bg-[#f3f1ec]/50">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white">
-                    <span className="text-lg">🇺🇸</span>
-                    <span className="text-sm text-[#525252]">English</span>
+                    <span className="text-lg">🇪🇺</span>
+                    <span className="text-sm text-[#525252]">EU Sovereign</span>
                     <ChevronDown className="w-3 h-3 text-[#a3a3a3]" />
                   </div>
                 </div>
