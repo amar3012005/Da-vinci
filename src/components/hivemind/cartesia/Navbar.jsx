@@ -22,7 +22,6 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [navigate]);
@@ -42,21 +41,21 @@ const Navbar = () => {
       <nav
         className={`fixed top-0 inset-x-0 z-[100] transition-all duration-300 ${
           scrolled
-            ? 'bg-[#111]/90 backdrop-blur-md border-b border-white/5'
+            ? 'bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db]'
             : 'bg-transparent'
         }`}
       >
-        <div className="max-w-[1200px] mx-auto border-x border-[#222] xl:border-[#222]">
-          <div className="px-6 h-20 flex items-center justify-between">
+        <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db]">
+          <div className="px-6 h-16 flex items-center justify-between">
             {/* Logo */}
             <button
               onClick={() => handleNavClick('/hivemind')}
               className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#bdf213]/10 border border-[#bdf213]/20 flex items-center justify-center">
-                <Hexagon size={16} className="text-[#bdf213]" />
+              <div className="w-8 h-8 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
+                <Hexagon size={16} className="text-[#117dff]" />
               </div>
-              <span className="text-xl font-semibold tracking-tight text-white">HIVEMIND</span>
+              <span className="text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">HIVEMIND</span>
             </button>
 
             {/* Center Links — Desktop */}
@@ -65,7 +64,7 @@ const Navbar = () => {
                 <button
                   key={item.label}
                   onClick={() => handleNavClick(item.href)}
-                  className="text-sm font-medium text-white/70 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+                  className="text-sm font-medium text-[#525252] hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer"
                 >
                   {item.label}
                 </button>
@@ -76,13 +75,13 @@ const Navbar = () => {
             <div className="hidden md:flex items-center gap-3">
               <button
                 onClick={() => navigate('/hivemind/login')}
-                className="text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2 rounded-full border border-white/20 hover:border-white/40 bg-transparent cursor-pointer"
+                className="text-sm font-medium text-[#525252] hover:text-[#0a0a0a] transition-colors px-4 py-2 rounded-lg border border-[#e3e0db] hover:border-[#d4d0ca] bg-white cursor-pointer"
               >
                 Sign in
               </button>
               <button
                 onClick={() => navigate('/hivemind/login')}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-[#bdf213] text-[#0a0a0a] text-sm font-semibold rounded-full hover:bg-[#d4ff3a] transition-colors group"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#117dff] text-white text-sm font-semibold rounded-[4px] hover:bg-[#0066e0] transition-colors group uppercase tracking-[0.075em] cursor-pointer border-none"
               >
                 Get Started
                 <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -92,7 +91,7 @@ const Navbar = () => {
             {/* Mobile Hamburger */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 text-white/70 hover:text-white bg-transparent border-none cursor-pointer"
+              className="md:hidden p-2 text-[#525252] hover:text-[#0a0a0a] bg-transparent border-none cursor-pointer"
               aria-label="Toggle menu"
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
@@ -109,7 +108,7 @@ const Navbar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[99] bg-[#0a0a0a]/95 backdrop-blur-xl md:hidden"
+            className="fixed inset-0 z-[99] bg-[#faf9f4]/95 backdrop-blur-xl md:hidden"
           >
             <div className="pt-24 px-8 flex flex-col gap-2">
               {navLinks.map((item, i) => (
@@ -119,7 +118,7 @@ const Navbar = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => handleNavClick(item.href)}
-                  className="text-left text-2xl font-medium text-white/80 hover:text-white py-3 border-b border-white/[0.06] bg-transparent border-x-0 border-t-0 cursor-pointer"
+                  className="text-left text-2xl font-medium text-[#0a0a0a] hover:text-[#117dff] py-3 border-b border-[#e3e0db] bg-transparent border-x-0 border-t-0 cursor-pointer"
                 >
                   {item.label}
                 </motion.button>
@@ -128,13 +127,13 @@ const Navbar = () => {
               <div className="flex flex-col gap-3 mt-8">
                 <button
                   onClick={() => { setMobileOpen(false); navigate('/hivemind/login'); }}
-                  className="w-full py-3.5 rounded-full border border-white/20 text-white font-medium text-base bg-transparent cursor-pointer"
+                  className="w-full py-3.5 rounded-lg border border-[#e3e0db] text-[#0a0a0a] font-medium text-base bg-white cursor-pointer"
                 >
                   Sign in
                 </button>
                 <button
                   onClick={() => { setMobileOpen(false); navigate('/hivemind/login'); }}
-                  className="w-full py-3.5 rounded-full bg-[#bdf213] text-[#0a0a0a] font-semibold text-base cursor-pointer border-none flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-[4px] bg-[#117dff] text-white font-semibold text-sm uppercase tracking-[0.075em] cursor-pointer border-none flex items-center justify-center gap-2"
                 >
                   Get Started
                   <ArrowRight size={16} />
