@@ -35,6 +35,27 @@ export function AuthProvider({ children }) {
       setConnectivity(data.connectivity || null);
       setClientSupport(data.client_support || []);
       setAuthState('signed_in');
+
+      // Auto-provision API key if user doesn't have one stored locally
+      if (!apiClient.hasApiKey() && data.organization) {
+        try {
+          // Ask control plane to generate a session-based key
+          const keyResult = await apiClient.controlPlane.post('/v1/api-keys', {
+            name: 'auto-session',
+            scopes: ['memory', 'search', 'web_search', 'web_crawl', 'mcp', 'admin'],
+          });
+          const rawKey = keyResult.data?.api_key;
+          if (rawKey) {
+            apiClient.setApiKey(rawKey);
+          }
+        } catch {
+          // Non-fatal — user can still browse, just core API calls won't work
+        }
+      }
+      // Also set core base URL from connectivity if available
+      if (data.connectivity?.core_api_url) {
+        apiClient.setCoreBaseUrl(data.connectivity.core_api_url);
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         // 401 — control plane is reachable, user is not authenticated
