@@ -22,7 +22,7 @@ const Hero = () => {
             className="mb-6"
           >
             <span className="text-[#117dff] text-sm font-semibold tracking-wide uppercase">
-              Meet HIVEMIND for Teams
+              The Sovereign Memory Engine
             </span>
           </motion.div>
 
@@ -33,9 +33,8 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] mb-8 max-w-4xl text-[#0a0a0a] font-['Space_Grotesk']"
           >
-            Your Enterprise<br />
-            <span className="text-[#a3a3a3]">Memory, Sovereignly</span><br />
-            <span className="text-[#a3a3a3]">Reimagined.</span>
+            Give your AI<br />
+            <span className="text-[#117dff]">a perfect memory.</span>
           </motion.h1>
 
           {/* Subtext */}
@@ -45,7 +44,7 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="text-lg md:text-xl text-[#525252] mb-10 max-w-xl leading-relaxed"
           >
-            HIVEMIND is the universal memory layer for your AI stack. Preserve context, automate intelligence, and sever the "siloed memory" problem.
+            Europe's sovereign memory engine and API. We handle the vector graphs, context, and compliance — your agents just remember.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -59,17 +58,17 @@ const Hero = () => {
               onClick={() => navigate('/hivemind/login')}
               className="flex items-center gap-2 px-7 py-3 bg-[#117dff] text-white font-semibold rounded-[4px] hover:bg-[#0066e0] transition-colors group cursor-pointer border-none text-sm uppercase tracking-[0.075em]"
             >
-              Start Free
+              Start Building Free
               <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
             </button>
             <button
               onClick={() => {
-                const el = document.querySelector('#pricing');
+                const el = document.querySelector('#features');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
               className="px-6 py-3 bg-white text-[#0a0a0a] font-medium rounded-lg border border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f3f1ec] transition-colors cursor-pointer text-sm"
             >
-              View Pricing
+              See the Dashboard
             </button>
           </motion.div>
 
