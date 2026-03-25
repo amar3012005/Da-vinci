@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
+import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -949,6 +950,9 @@ export default function Connectors() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* API Key prompt — shown only if user has no key yet */}
+      <ApiKeyPrompt feature="connecting external clients" />
 
       {/* Quick Install Banner */}
       <motion.div

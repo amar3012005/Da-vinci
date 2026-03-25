@@ -4,28 +4,17 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
-import ApiKeySetup from '../pages/ApiKeySetup';
-import apiClient from '../shared/api-client';
 
 /**
- * AppShell — Supermemory-style light layout:
+ * AppShell — layout:
  *   1. needs_org_setup -> show org creation
- *   2. has_api_key === false -> show first API key setup
- *   3. otherwise -> full dashboard with collapsible sidebar
+ *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
 export default function AppShell() {
-  const { needsOnboarding, hasApiKey } = useAuth();
+  const { needsOnboarding } = useAuth();
 
   if (needsOnboarding) {
     return <OnboardingFlow />;
-  }
-
-  if (hasApiKey === false) {
-    return <ApiKeySetup />;
-  }
-
-  if (hasApiKey === true && !apiClient.hasApiKey()) {
-    return <ApiKeySetup />;
   }
 
   return (

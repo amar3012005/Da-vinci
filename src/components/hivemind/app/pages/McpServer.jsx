@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import {
   Server, Copy, Check, ChevronDown, ChevronRight,
   Brain, Search, Globe, Trash2, RefreshCw, BookOpen,
@@ -353,6 +354,8 @@ export default function McpServer() {
   return (
     <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
       <div className="max-w-4xl mx-auto">
+        <ApiKeyPrompt feature="MCP server connections" />
+
         {/* Header */}
         <motion.div {...fadeUp} className="mb-8">
           <div className="flex items-center gap-3 mb-2">
