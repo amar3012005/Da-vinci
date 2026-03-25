@@ -110,12 +110,18 @@ class HiveMindApiClient {
    * The control plane owns redirect_uri (for Zitadel).
    * The frontend owns return_to (for the browser flow after login).
    */
-  getLoginUrl(returnTo, { idpHint } = {}) {
+  getLoginUrl(returnTo) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
-    if (idpHint) params.set('idp_hint', idpHint);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/login${qs ? `?${qs}` : ''}`;
+  }
+
+  getGoogleLoginUrl(returnTo) {
+    const params = new URLSearchParams();
+    if (returnTo) params.set('return_to', returnTo);
+    const qs = params.toString();
+    return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
   /**

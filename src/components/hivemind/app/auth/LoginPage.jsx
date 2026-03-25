@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, Mail, WifiOff } from 'lucide-react';
+import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 function GoogleIcon({ size = 18 }) {
@@ -87,7 +87,7 @@ export default function LoginPage() {
           {/* Auth buttons — always visible, even during loading */}
           <div className="space-y-3">
             <button
-              onClick={() => login({ idpHint: 'google' })}
+              onClick={() => login({ provider: 'google' })}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-60 text-white font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.075em]"
             >
@@ -107,14 +107,21 @@ export default function LoginPage() {
               {loading ? (
                 <Loader2 size={16} className="animate-spin text-[#a3a3a3]" />
               ) : (
-                <Mail size={16} className="text-[#525252]" />
+                <Shield size={16} className="text-[#525252]" />
               )}
-              Continue with Email
+              Enterprise SSO (EU Sovereign)
             </button>
           </div>
 
-          <p className="text-[#d4d0ca] text-[11px] text-center mt-6 leading-relaxed font-['Space_Grotesk']">
-            Authentication is handled securely by our identity provider.<br />
+          <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0]">
+            <Shield size={12} className="text-[#16a34a]" />
+            <p className="text-[#16a34a] text-[10px] font-['Space_Grotesk']">
+              EU-hosted (Frankfurt) &middot; GDPR compliant &middot; No US data transfer
+            </p>
+          </div>
+
+          <p className="text-[#d4d0ca] text-[11px] text-center mt-4 leading-relaxed font-['Space_Grotesk']">
+            Google Sign-In for quick access. Enterprise SSO via ZITADEL for SAML/OIDC.<br />
             HIVEMIND does not store your password.
           </p>
 
@@ -138,7 +145,7 @@ export default function LoginPage() {
           {[
             { icon: Brain, label: 'Persistent Memory' },
             { icon: Zap, label: 'Sub-50ms Recall' },
-            { icon: Shield, label: 'Enterprise Grade' },
+            { icon: Shield, label: 'EU Sovereign' },
           ].map((feat) => (
             <div
               key={feat.label}

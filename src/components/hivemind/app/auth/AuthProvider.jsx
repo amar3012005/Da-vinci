@@ -70,7 +70,13 @@ export function AuthProvider({ children }) {
 
   const login = useCallback((options = {}) => {
     const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback`;
-    window.location.href = apiClient.getLoginUrl(returnTo, { idpHint: options.idpHint });
+    if (options.provider === 'google') {
+      // Direct Google OAuth — bypasses Zitadel
+      window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+    } else {
+      // Zitadel Enterprise SSO
+      window.location.href = apiClient.getLoginUrl(returnTo);
+    }
   }, []);
 
   const logout = useCallback(async () => {
