@@ -35,15 +35,6 @@ export function AuthProvider({ children }) {
       setConnectivity(data.connectivity || null);
       setClientSupport(data.client_support || []);
       setAuthState('signed_in');
-
-      // Auto-set API key from bootstrap session key (created server-side)
-      if (!apiClient.hasApiKey() && data.session_api_key) {
-        apiClient.setApiKey(data.session_api_key);
-      }
-      // Also set core base URL from connectivity if available
-      if (data.connectivity?.core_api_url) {
-        apiClient.setCoreBaseUrl(data.connectivity.core_api_url);
-      }
     } catch (err) {
       if (err.response?.status === 401) {
         // 401 — control plane is reachable, user is not authenticated

@@ -1,0 +1,41 @@
+id,name,category,description,price,image
+1,Masala Chai,Beverages,Traditional Indian spiced tea,25,/images/masala-chai.jpg
+2,Black Coffee,Beverages,Strong black coffee,30,/images/black-coffee.jpg
+3,Cold Coffee,Beverages,Chilled coffee with milk,60,/images/cold-coffee.jpg
+4,Green Tea,Beverages,Fresh green tea,35,/images/green-tea.jpg
+5,Lemon Tea,Beverages,Tea with fresh lemon,40,/images/lemon-tea.jpg
+6,Butter Toast,Breakfast,Crispy buttered toast,35,/images/butter-toast.jpg
+7,Jam Toast,Breakfast,Toast with mixed fruit jam,45,/images/jam-toast.jpg
+8,Cheese Toast,Breakfast,Toast topped with cheese,55,/images/cheese-toast.jpg
+9,Bread Omelet,Breakfast,Fluffy omelet with bread,65,/images/bread-omelet.jpg
+10,Poha,Breakfast,Traditional flattened rice preparation,50,/images/poha.jpg
+11,Upma,Breakfast,Semolina based South Indian dish,55,/images/upma.jpg
+12,Aloo Paratha,North Indian,Potato stuffed flatbread,70,/images/aloo-paratha.jpg
+13,Paneer Paratha,North Indian,Cottage cheese stuffed flatbread,85,/images/paneer-paratha.jpg
+14,Mixed Paratha,North Indian,Mixed vegetable stuffed flatbread,75,/images/mixed-paratha.jpg
+15,Rajma Chawal,North Indian,Kidney beans curry with rice,120,/images/rajma-chawal.jpg
+16,Chole Bhature,North Indian,Spiced chickpeas with fried bread,130,/images/chole-bhature.jpg
+17,Dal Chawal,North Indian,Lentil curry with steamed rice,100,/images/dal-chawal.jpg
+18,Veg Thali,North Indian,Complete vegetarian meal plate,180,/images/veg-thali.jpg
+19,Non-Veg Thali,North Indian,Complete non-vegetarian meal plate,220,/images/non-veg-thali.jpg
+20,Chicken Curry,North Indian,Traditional chicken curry,180,/images/chicken-curry.jpg
+21,Chicken Fried Rice,Chinese,Stir-fried rice with chicken,160,/images/chicken-fried-rice.jpg
+22,Veg Fried Rice,Chinese,Stir-fried rice with vegetables,140,/images/veg-fried-rice.jpg
+23,Chicken Noodles,Chinese,Stir-fried noodles with chicken,160,/images/chicken-noodles.jpg
+24,Veg Noodles,Chinese,Stir-fried noodles with vegetables,140,/images/veg-noodles.jpg
+25,Chili Chicken,Chinese,Spicy chicken in Chinese style,200,/images/chili-chicken.jpg
+26,Chicken Manchurian,Chinese,Chicken balls in Manchurian sauce,210,/images/chicken-manchurian.jpg
+27,Veg Manchurian,Chinese,Vegetable balls in Manchurian sauce,160,/images/veg-manchurian.jpg
+28,Spring Rolls,Chinese,Crispy vegetable spring rolls,120,/images/spring-rolls.jpg
+29,Honey Chili Potato,Chinese,Sweet and spicy potato preparation,140,/images/honey-chili-potato.jpg
+30,Chicken Sandwich,Fast Food,Grilled chicken sandwich,85,/images/chicken-sandwich.jpg
+31,Veg Sandwich,Fast Food,Mixed vegetable sandwich,65,/images/veg-sandwich.jpg
+32,Club Sandwich,Fast Food,Multi-layered club sandwich,110,/images/club-sandwich.jpg
+33,Chicken Burger,Fast Food,Chicken patty burger,95,/images/chicken-burger.jpg
+34,Veg Burger,Fast Food,Vegetable patty burger,75,/images/veg-burger.jpg
+35,French Fries,Fast Food,Crispy potato fries,65,/images/french-fries.jpg
+36,Chicken Pizza,Fast Food,Small chicken pizza,180,/images/chicken-pizza.jpg
+37,Veg Pizza,Fast Food,Small vegetable pizza,150,/images/veg-pizza.jpg
+38,Maggi,Fast Food,Instant noodles,40,/images/maggi.jpg
+39,Pasta,Fast Food,Italian style pasta,120,/images/pasta.jpg
+40,Garlic Bread,Fast Food,Toasted bread with garlic,80,/images/garlic-bread.jpg

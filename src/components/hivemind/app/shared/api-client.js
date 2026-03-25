@@ -4,7 +4,7 @@ import { API_DEFAULTS } from './theme';
 /**
  * HIVEMIND API Client
  *
- * Control plane (api.hivemind.davinciai.eu:8040):
+ * All calls go through the control plane (api.hivemind.davinciai.eu:8040):
  *   GET  /auth/login?return_to=<url>    → ZITADEL OIDC redirect
  *   GET  /auth/callback                 → sets hm_cp_session cookie, redirects to return_to
  *   POST /auth/logout                   → clears session
@@ -16,8 +16,9 @@ import { API_DEFAULTS } from './theme';
  *   GET  /v1/clients/descriptors        → { core_api_base_url, descriptors }
  *   GET  /v1/clients/descriptors/:client → single descriptor
  *
- * Core (core.hivemind.davinciai.eu:8050):
- *   All memory, search, MCP, context, profile, evaluation, connector endpoints
+ * Core API proxy (routed via control plane):
+ *   /v1/proxy/* → strips prefix, forwards to core /api/*
+ *   Session cookie (withCredentials) authenticates all proxied calls.
  */
 
 class HiveMindApiClient {
@@ -213,63 +214,63 @@ class HiveMindApiClient {
   // ─── Core: Health ────────────────────────────────────────────
 
   async health() {
-    const { data } = await this.core.get('/health');
+    const { data } = await this.controlPlane.get('/v1/proxy/health');
     return data;
   }
 
   // ─── Core: Memories ──────────────────────────────────────────
 
   async listMemories(params = {}) {
-    const { data } = await this.core.get('/api/memories', { params });
+    const { data } = await this.controlPlane.get('/v1/proxy/memories', { params });
     return data;
   }
 
   async getMemory(id) {
-    const { data } = await this.core.get(`/api/memories/${id}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/memories/${id}`);
     return data;
   }
 
   async createMemory(memory) {
-    const { data } = await this.core.post('/api/memories', memory);
+    const { data } = await this.controlPlane.post('/v1/proxy/memories', memory);
     return data;
   }
 
   async deleteMemory(id) {
-    const { data } = await this.core.delete(`/api/memories/${id}`);
+    const { data } = await this.controlPlane.delete(`/v1/proxy/memories/${id}`);
     return data;
   }
 
   async searchMemories(query, params = {}) {
-    const { data } = await this.core.post('/api/memories/search', { query, ...params });
+    const { data } = await this.controlPlane.post('/v1/proxy/memories/search', { query, ...params });
     return data;
   }
 
   async quickSearch(query) {
-    const { data } = await this.core.post('/api/search/quick', { query });
+    const { data } = await this.controlPlane.post('/v1/proxy/search/quick', { query });
     return data;
   }
 
   // ─── Core: Context & Profile ─────────────────────────────────
 
   async getContext(query) {
-    const { data } = await this.core.post('/api/context', { query });
+    const { data } = await this.controlPlane.post('/v1/proxy/context', { query });
     return data;
   }
 
   async getProfile() {
-    const { data } = await this.core.get('/api/profile');
+    const { data } = await this.controlPlane.get('/v1/proxy/profile');
     return data;
   }
 
   // ─── Core: Connectors (MCP) ─────────────────────────────────
 
   async getConnectorStatus() {
-    const { data } = await this.core.get('/api/connectors/mcp/status');
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/mcp/status');
     return data;
   }
 
   async listConnectorJobs() {
-    const { data } = await this.core.get('/api/connectors/mcp/jobs');
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/mcp/jobs');
     return data;
   }
 
@@ -309,7 +310,7 @@ class HiveMindApiClient {
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
-    const { data } = await this.core.post('/api/knowledge/upload', formData, {
+    const { data } = await this.controlPlane.post('/v1/proxy/knowledge/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -318,60 +319,60 @@ class HiveMindApiClient {
   // ─── Core: Gmail Connector (direct) ─────────────────────────
 
   async gmailConnect() {
-    const { data } = await this.core.get('/api/connectors/gmail/connect');
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/connect');
     return data;
   }
 
   async gmailStatus() {
-    const { data } = await this.core.get('/api/connectors/gmail/status');
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/status');
     return data;
   }
 
   async gmailSync(settings = {}) {
-    const { data } = await this.core.post('/api/connectors/gmail/sync', settings);
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/sync', settings);
     return data;
   }
 
   async gmailDisconnect() {
-    const { data } = await this.core.post('/api/connectors/gmail/disconnect');
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/disconnect');
     return data;
   }
 
   // ─── Core: Web Intelligence ─────────────────────────────────
 
   async submitWebSearch(params) {
-    const { data } = await this.core.post('/api/web/search/jobs', params);
+    const { data } = await this.controlPlane.post('/v1/proxy/web/search/jobs', params);
     return data;
   }
 
   async submitWebCrawl(params) {
-    const { data } = await this.core.post('/api/web/crawl/jobs', params);
+    const { data } = await this.controlPlane.post('/v1/proxy/web/crawl/jobs', params);
     return data;
   }
 
   async getWebJob(jobId) {
-    const { data } = await this.core.get(`/api/web/jobs/${jobId}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/web/jobs/${jobId}`);
     return data;
   }
 
   async listWebJobs(params = {}) {
     const qs = new URLSearchParams(params).toString();
-    const { data } = await this.core.get(`/api/web/jobs${qs ? '?' + qs : ''}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/web/jobs${qs ? '?' + qs : ''}`);
     return data;
   }
 
   async getWebUsage() {
-    const { data } = await this.core.get('/api/web/usage');
+    const { data } = await this.controlPlane.get('/v1/proxy/web/usage');
     return data;
   }
 
   async retryWebJob(jobId) {
-    const { data } = await this.core.post(`/api/web/jobs/${jobId}/retry`);
+    const { data } = await this.controlPlane.post(`/v1/proxy/web/jobs/${jobId}/retry`);
     return data;
   }
 
   async saveWebResultToMemory(jobId, { resultIndex, title, tags } = {}) {
-    const { data } = await this.core.post(`/api/web/jobs/${jobId}/save-to-memory`, {
+    const { data } = await this.controlPlane.post(`/v1/proxy/web/jobs/${jobId}/save-to-memory`, {
       resultIndex,
       title,
       tags,
@@ -380,12 +381,12 @@ class HiveMindApiClient {
   }
 
   async getWebAdminMetrics() {
-    const { data } = await this.core.get('/api/web/admin/metrics');
+    const { data } = await this.controlPlane.get('/v1/proxy/web/admin/metrics');
     return data;
   }
 
   async getWebMonthlyUsage() {
-    const { data } = await this.core.get('/api/web/usage/monthly');
+    const { data } = await this.controlPlane.get('/v1/proxy/web/usage/monthly');
     return data;
   }
 
@@ -393,17 +394,17 @@ class HiveMindApiClient {
     const params = {};
     if (from) params.from = from;
     if (to) params.to = to;
-    const { data } = await this.core.get('/api/web/usage/export', { params });
+    const { data } = await this.controlPlane.get('/v1/proxy/web/usage/export', { params });
     return data;
   }
 
   async getWebLimits() {
-    const { data } = await this.core.get('/api/web/limits');
+    const { data } = await this.controlPlane.get('/v1/proxy/web/limits');
     return data;
   }
 
   async checkDomainPolicy(url) {
-    const { data } = await this.core.post('/api/web/policy/check-domain', { url });
+    const { data } = await this.controlPlane.post('/v1/proxy/web/policy/check-domain', { url });
     return data;
   }
 
@@ -414,43 +415,43 @@ class HiveMindApiClient {
     if (project) params.set('project', project);
     if (limit) params.set('limit', String(limit));
     const qs = params.toString();
-    const { data } = await this.core.get(`/api/graph${qs ? `?${qs}` : ''}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
     return data;
   }
 
   // ─── Core: Evaluation ────────────────────────────────────────
 
   async runEvaluation(params) {
-    const { data } = await this.core.post('/api/evaluate/retrieval', params);
+    const { data } = await this.controlPlane.post('/v1/proxy/evaluate/retrieval', params);
     return data;
   }
 
   async getEvalResults() {
-    const { data } = await this.core.get('/api/evaluate/results');
+    const { data } = await this.controlPlane.get('/v1/proxy/evaluate/results');
     return data;
   }
 
   async getEvalHistory() {
-    const { data } = await this.core.get('/api/evaluate/history');
+    const { data } = await this.controlPlane.get('/v1/proxy/evaluate/history');
     return data;
   }
 
   // ─── Core: MCP ───────────────────────────────────────────────
 
   async getMcpDescriptor(userId) {
-    const { data } = await this.core.get(`/api/mcp/servers/${userId}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/mcp/servers/${userId}`);
     return data;
   }
 
   async getStats() {
-    const { data } = await this.core.get('/api/stats');
+    const { data } = await this.controlPlane.get('/v1/proxy/stats');
     return data;
   }
 
   // ─── Core: SOTA Engine — Cognitive Frame ────────────────────
 
   async getCognitiveFrame(query, options = {}) {
-    const { data } = await this.core.post('/api/cognitive-frame', {
+    const { data } = await this.controlPlane.post('/v1/proxy/cognitive-frame', {
       query,
       max_tokens: options.maxTokens || 4000,
       context_budget: options.contextBudget || 2000,
@@ -460,24 +461,24 @@ class HiveMindApiClient {
   }
 
   async checkCoherence(content, memoryType = 'fact') {
-    const { data } = await this.core.post('/api/coherence-check', { content, memory_type: memoryType });
+    const { data } = await this.controlPlane.post('/v1/proxy/coherence-check', { content, memory_type: memoryType });
     return data;
   }
 
   // ─── Core: SOTA Engine — Context Autopilot ──────────────────
 
   async monitorContext(sessionId, tokenCount) {
-    const { data } = await this.core.post('/api/context/monitor', { session_id: sessionId, token_count: tokenCount });
+    const { data } = await this.controlPlane.post('/v1/proxy/context/monitor', { session_id: sessionId, token_count: tokenCount });
     return data;
   }
 
   async archiveContext(sessionId, turns) {
-    const { data } = await this.core.post('/api/context/archive', { session_id: sessionId, turns });
+    const { data } = await this.controlPlane.post('/v1/proxy/context/archive', { session_id: sessionId, turns });
     return data;
   }
 
   async compactContext(sessionId, options = {}) {
-    const { data } = await this.core.post('/api/context/compact', {
+    const { data } = await this.controlPlane.post('/v1/proxy/context/compact', {
       session_id: sessionId,
       project: options.project,
       recent_messages: options.recentMessages,
@@ -488,7 +489,7 @@ class HiveMindApiClient {
   // ─── Core: SOTA Engine — Bi-Temporal ────────────────────────
 
   async temporalAsOf({ transactionTime, validTime } = {}) {
-    const { data } = await this.core.post('/api/temporal/as-of', {
+    const { data } = await this.controlPlane.post('/v1/proxy/temporal/as-of', {
       transaction_time: transactionTime,
       valid_time: validTime,
     });
@@ -496,19 +497,19 @@ class HiveMindApiClient {
   }
 
   async temporalDiff(timeA, timeB) {
-    const { data } = await this.core.post('/api/temporal/diff', { time_a: timeA, time_b: timeB });
+    const { data } = await this.controlPlane.post('/v1/proxy/temporal/diff', { time_a: timeA, time_b: timeB });
     return data;
   }
 
   async temporalTimeline(memoryId) {
-    const { data } = await this.core.post('/api/temporal/timeline', { memory_id: memoryId });
+    const { data } = await this.controlPlane.post('/v1/proxy/temporal/timeline', { memory_id: memoryId });
     return data;
   }
 
   // ─── Core: SOTA Engine — Swarm (Stigmergic CoT) ────────────
 
   async swarmRecordThought(agentId, content, options = {}) {
-    const { data } = await this.core.post('/api/swarm/thought', {
+    const { data } = await this.controlPlane.post('/v1/proxy/swarm/thought', {
       agent_id: agentId,
       content,
       task_id: options.taskId,
@@ -519,7 +520,7 @@ class HiveMindApiClient {
   }
 
   async swarmDepositTrace(agentId, { action, result, success, taskId } = {}) {
-    const { data } = await this.core.post('/api/swarm/trace', {
+    const { data } = await this.controlPlane.post('/v1/proxy/swarm/trace', {
       agent_id: agentId,
       action,
       result,
@@ -530,7 +531,7 @@ class HiveMindApiClient {
   }
 
   async swarmFollowTraces(options = {}) {
-    const { data } = await this.core.post('/api/swarm/follow', {
+    const { data } = await this.controlPlane.post('/v1/proxy/swarm/follow', {
       task_id: options.taskId,
       action: options.action,
       limit: options.limit || 20,
@@ -539,14 +540,14 @@ class HiveMindApiClient {
   }
 
   async swarmPrune(maxAgeDays) {
-    const { data } = await this.core.post('/api/swarm/prune', { max_age_days: maxAgeDays });
+    const { data } = await this.controlPlane.post('/v1/proxy/swarm/prune', { max_age_days: maxAgeDays });
     return data;
   }
 
   // ─── Core: SOTA Engine — Byzantine Consensus ────────────────
 
   async evaluateConsensus(content, memoryType = 'fact', externalVotes = []) {
-    const { data } = await this.core.post('/api/consensus/evaluate', {
+    const { data } = await this.controlPlane.post('/v1/proxy/consensus/evaluate', {
       content,
       memory_type: memoryType,
       external_votes: externalVotes,

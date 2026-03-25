@@ -1,0 +1,11 @@
+# Da'vinci Solutions — davinciai.eu
+User-agent: *
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+# Sitemap
+Sitemap: https://www.davinciai.eu/sitemap.xml

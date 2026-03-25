@@ -1,0 +1,69 @@
+id,name,category,description,price
+1,Dal Makhani,Indian - Veg,Traditional black lentil curry,150
+2,Dal Fry,Indian - Veg,Sautéed split lentils with spices,100
+3,Dal Tadka,Indian - Veg,Lentils simmered with tempering spices,120
+4,Mix Veg,Indian - Veg,Assorted vegetables in a gravy,120
+5,Mix Veg Curry,Indian - Veg,Mixed vegetables in a spiced curry,100
+6,Aloo Gobhi,Indian - Veg,Potatoes and cauliflower in a spiced gravy,120 
+7,Aloo Jeera,Indian - Veg,Potatoes sautéed with cumin and spices,100
+8,Paneer Butter Masala,Indian - Veg,Cottage cheese in a creamy tomato-based gravy,210
+9,Shahi Paneer,Indian - Veg,Cottage cheese in an aromatic creamy curry,250
+10,Paneer Pasanda,Indian - Veg,Cottage cheese in a mildly spiced cashew-based sauce,260
+11,Kadai Paneer,Indian - Veg,Cottage cheese in a spiced onion-tomato gravy,220
+12,Paneer Kofta,Indian - Veg,Cottage cheese dumplings in a creamy curry,250
+13,Mutter Paneer,Indian - Veg,Cottage cheese and green peas in a mild gravy,180
+14,Mushroom Masala,Indian - Veg,Mushrooms in a rich  spiced tomato-based curry,200
+15,Kaju Korma,Indian - Veg,Cashews in a creamy fragrant curry,250
+16,Kaju Masala,Indian - Veg,Cashews in a mildly spiced masala sauce,230
+17,Kaju Curry,Indian - Veg,Cashews in a tangy spiced curry,199
+18,Stuff Capsicum,Indian - Veg,Bell peppers stuffed with spiced vegetables,200
+19,Veg. Kofta,Indian - Veg,Vegetable dumplings in a creamy gravy,200
+20,Malai Kofta,Indian - Veg,Cottage cheese and vegetable dumplings in a creamy sauce,220
+21,Veg. Kolapuri,Indian - Veg,Mixed vegetables in a spicy onion-tomato gravy,170
+22,Kashmiri Dum Aloo,Indian - Veg,Potatoes in a creamy  aromatic Kashmiri-style curry,200
+23,Chana Masala,Indian - Veg,Spiced chickpea curry,120
+24,Egg Curry,Indian - Non Veg,Eggs cooked in a flavorful spiced curry,160
+25,Chicken Curry (Full),Indian - Non Veg,Boneless chicken in a spiced curry,300
+26,Chicken Curry (Half),Indian - Non Veg,Boneless chicken in a spiced curry,160
+27,Chicken Masala (Full),Indian - Non Veg,Boneless chicken in a spiced masala sauce,350
+28,Chicken Masala (Half),Indian - Non Veg,Boneless chicken in a spiced masala sauce,180
+29,Butter Chicken (Full),Indian - Non Veg,Boneless chicken in a creamy tomato-based sauce,350
+30,Butter Chicken (Half),Indian - Non Veg,Boneless chicken in a creamy tomato-based sauce,180
+31,Chicken Tikka Masala (Full),Indian - Non Veg,Boneless chicken tikka in a spiced masala sauce,390
+32,Chicken Tikka Masala (Half),Indian - Non Veg,Boneless chicken tikka in a spiced masala sauce,200
+33,Chicken Sultana (Full),Indian - Non Veg,Boneless chicken in a sweet and sour sauce,330
+34,Chicken Sultana (Half),Indian - Non Veg,Boneless chicken in a sweet and sour sauce,170
+35,Chicken Hyderabadi (Full),Indian - Non Veg,Boneless chicken in a Hyderabadi-style gravy,350
+36,Chicken Hyderabadi (Half),Indian - Non Veg,Boneless chicken in a Hyderabadi-style gravy,180
+37,Kadai Chicken (Full),Indian - Non Veg,Boneless chicken cooked in a spiced kadai gravy,350
+38,Kadai Chicken (Half),Indian - Non Veg,Boneless chicken cooked in a spiced kadai gravy,180
+39,Chicken Korma,Indian - Non Veg,Boneless chicken cooked in a creamy korma sauce,400
+40,Chicken Rara (Full),Indian - Non Veg,Boneless chicken in a spiced tangy sauce,380
+41,Chicken Rara (Half),Indian - Non Veg,Boneless chicken in a spiced tangy sauce,199
+40,Plain Rice,Rice,Steamed basmati rice,60
+41,Zira Rice,Rice,Basmati rice flavored with cumin,89
+42,Lemon Rice,Rice,Basmati rice flavored with lemon and spices,99
+43,Veg. Biryani,Rice,Aromatic basmati rice with mixed vegetables,150
+44,Chicken Biryani,Rice,Aromatic basmati rice with chicken,189
+45,Veg. Pulao,Rice,Aromatic basmati rice with mixed vegetables,119
+46,Kashmiri Pulao,Rice,Aromatic basmati rice with dried fruits,200
+47,Tawa Roti,Roti,Traditional Indian flatbread cooked on a griddle,12
+48,Butter Roti,Roti,Traditional Indian flatbread with butter,20
+49,Laccha Parantha,Roti,Layered Indian flatbread,49
+34,Veg Manchurian Dry/Gravy,Chinese,Sautéed vegetable fritters in Indo-Chinese sauce,200
+35,Chicken Manchurian,Chinese,Boneless chicken in an Indo-Chinese sauce,350
+36,Veg Fried Rice,Chinese,Stir-fried rice with mixed vegetables,130
+37,Chicken Fried Rice,Chinese,Stir-fried rice with chicken,150
+38,Mix Fried Rice,Chinese,Stir-fried rice with a mix of proteins,299
+39,Sezwan Fried Rice (Veg),Chinese,Spicy stir-fried rice (vegetarian),159
+40,Sezwan Fried Rice (Non Veg),Chinese,Spicy stir-fried rice (non-vegetarian),199
+40,Plain Rice,Rice,Steamed basmati rice,60
+41,Zira Rice,Rice,Basmati rice flavored with cumin,89
+42,Lemon Rice,Rice,Basmati rice flavored with lemon and spices,99
+43,Veg. Biryani,Rice,Aromatic basmati rice with mixed vegetables,150
+44,Chicken Biryani,Rice,Aromatic basmati rice with chicken,189
+45,Veg. Pulao,Rice,Aromatic basmati rice with mixed vegetables,119
+46,Kashmiri Pulao,Rice,Aromatic basmati rice with dried fruits,200
+47,Tawa Roti,Roti,Traditional Indian flatbread cooked on a griddle,12
+48,Butter Roti,Roti,Traditional Indian flatbread with butter,20
+49,Laccha Parantha,Roti,Layered Indian flatbread,49
