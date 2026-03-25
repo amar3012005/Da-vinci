@@ -21,6 +21,7 @@ import {
   Network,
   Cpu,
   BookOpen,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -51,6 +52,7 @@ function buildNavSections({ showWebAdmin }) {
         { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
         { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
+        { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
         { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
       ],
     },

@@ -20,6 +20,7 @@ const McpServer = React.lazy(() => import('./pages/McpServer'));
 const MemoryGraph = React.lazy(() => import('./pages/MemoryGraph'));
 const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
+const AgentSwarm = React.lazy(() => import('./pages/AgentSwarm'));
 
 function PageSuspense({ children }) {
   return (
@@ -69,6 +70,7 @@ export default function HiveMindApp() {
           <Route path="graph" element={<PageSuspense><MemoryGraph /></PageSuspense>} />
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
+          <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
         </Route>
 
         {/* Fallback */}
