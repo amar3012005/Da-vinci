@@ -108,9 +108,9 @@ const TaraVoiceWidget = ({ config: propConfig }) => {
     const config = useMemo(() => {
         const globalConfig = typeof window !== 'undefined' ? window.TaraWidgetConfig : {};
         return {
-            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'davinci',
-            agentId: propConfig?.agentId || globalConfig?.agentId || 'davinci',
-            agentName: propConfig?.agentName || globalConfig?.agentName || 'DAVINCIAI',
+            tenantId: propConfig?.tenantId || globalConfig?.tenantId || 'bundb',
+            agentId: propConfig?.agentId || globalConfig?.agentId || 'bundb',
+            agentName: propConfig?.agentName || globalConfig?.agentName || 'BUNDB AGENT',
             language: propConfig?.language || globalConfig?.language || 'de',
             accessKey: propConfig?.accessKey || globalConfig?.accessKey || '000000',
             region: propConfig?.region || globalConfig?.region || 'EU',
