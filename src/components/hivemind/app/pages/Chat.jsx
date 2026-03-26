@@ -316,52 +316,30 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      // Step 1: Recall memories
+      // Call the chat endpoint — recall + LLM generation in one call
       let sources = [];
-      let injectionText = '';
-
-      try {
-        const recallRes = await apiClient.controlPlane.post('/v1/proxy/recall', {
-          query_context: trimmed,
-          max_memories: 5,
-        });
-        const recallData = recallRes.data;
-        sources = recallData.memories || recallData.results || [];
-        injectionText = recallData.injection_text || recallData.context || '';
-      } catch (recallErr) {
-        // Recall failure is non-fatal — continue with empty context
-        console.warn('[Chat] recall failed:', recallErr?.message);
-      }
-
-      // Step 2: Format the assistant response from recall data
       let responseContent = '';
 
-      if (injectionText) {
-        responseContent = injectionText;
-      } else if (sources.length > 0) {
-        const lines = sources.map((s, i) => {
-          const title = s.title || s.content?.slice(0, 80) || `Memory ${i + 1}`;
-          return `${i + 1}. ${title}`;
+      try {
+        const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
+          message: trimmed,
+          model: selectedModel,
+          history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
         });
-        responseContent = `Here are the most relevant memories I found:\n\n${lines.join('\n')}`;
-      } else {
-        responseContent =
-          "I searched your memory graph but couldn't find anything directly relevant to your query. Try rephrasing or adding more memories.";
+        const chatData = chatRes.data;
+        responseContent = chatData.response || '';
+        sources = chatData.sources || [];
+      } catch (chatErr) {
+        console.warn('[Chat] chat failed:', chatErr?.message);
+        responseContent = "I couldn't process your request right now. Please try again.";
       }
-
-      // Append notice about full LLM chat
-      const modelLabel = MODELS.find((m) => m.id === selectedModel)?.label || selectedModel;
-      const notice =
-        sources.length > 0
-          ? `\n\n_Full LLM generation with ${modelLabel} requires model API key configuration (coming soon)._`
-          : '';
 
       const assistantMsg = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: responseContent + notice,
-        sources,
-        model: modelLabel,
+        content: responseContent || "I couldn't find relevant information in your memories.",
+        sources: sources.map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
+        model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -380,7 +358,7 @@ export default function Chat() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, selectedModel]);
+  }, [input, loading, selectedModel, messages]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
