@@ -9,6 +9,7 @@ import {
   MessageSquare,
   ChevronRight,
   AlertTriangle,
+  X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -35,6 +36,12 @@ const fadeUp = {
 const messageVariants = {
   hidden: { opacity: 0, y: 8, scale: 0.98 },
   visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.22, ease: 'easeOut' } },
+};
+
+const panelVariants = {
+  hidden: { x: '100%', opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  exit: { x: '100%', opacity: 0, transition: { duration: 0.22, ease: 'easeIn' } },
 };
 
 // ─── Typing Indicator ─────────────────────────────────────────────────────────
@@ -228,7 +235,7 @@ function ModelSelector({ selectedId, onSelect }) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#faf9f4] transition-colors text-[12px] text-[#525252] font-['Space_Grotesk']"
       >
-        <span className="truncate max-w-[140px]">{selected.label}</span>
+        <span className="truncate max-w-[120px]">{selected.label}</span>
         {selected.tag && (
           <span className="text-[9px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
             {selected.tag}
@@ -243,7 +250,7 @@ function ModelSelector({ selectedId, onSelect }) {
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.15 } }}
             exit={{ opacity: 0, y: -4, scale: 0.97, transition: { duration: 0.1 } }}
-            className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-50 overflow-hidden py-1"
+            className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-[60] overflow-hidden py-1"
           >
             <div className="px-3 py-1.5">
               <span className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-[0.08em]">Groq (Free)</span>
@@ -283,9 +290,9 @@ function ModelSelector({ selectedId, onSelect }) {
   );
 }
 
-// ─── Main Chat Page ───────────────────────────────────────────────────────────
+// ─── Chat Panel (slide-out) ───────────────────────────────────────────────────
 
-export default function Chat() {
+export function ChatPanel({ isOpen, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -306,6 +313,15 @@ export default function Chat() {
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
+  // Close on Escape key
+  useEffect(() => {
+    function handleKeyUp(e) {
+      if (e.key === 'Escape' && isOpen) onClose();
+    }
+    document.addEventListener('keyup', handleKeyUp);
+    return () => document.removeEventListener('keyup', handleKeyUp);
+  }, [isOpen, onClose]);
+
   const sendMessage = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
@@ -316,7 +332,6 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      // Call the chat endpoint — recall + LLM generation in one call
       let sources = [];
       let responseContent = '';
 
@@ -371,102 +386,140 @@ export default function Chat() {
   const overLimit = charCount > MAX_CHARS;
 
   return (
-    <div className="flex flex-col h-full bg-[#faf9f4] font-['Space_Grotesk']">
-      {/* ── Header ── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 bg-white border-b border-[#e3e0db] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#117dff]/[0.07] border border-[#117dff]/10 flex items-center justify-center">
-            <Brain size={16} className="text-[#117dff]" />
-          </div>
-          <div>
-            <h1 className="text-[#0a0a0a] text-[15px] font-semibold leading-tight">Talk to HIVE</h1>
-            <p className="text-[#a3a3a3] text-[10px] font-mono leading-tight">
-              Memory-augmented AI assistant
-            </p>
-          </div>
-        </div>
-        <ModelSelector selectedId={selectedModel} onSelect={setSelectedModel} />
-      </div>
-
-      {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-4">
-        {messages.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <>
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} />
-            ))}
-            {loading && (
-              <motion.div
-                variants={messageVariants}
-                initial="hidden"
-                animate="visible"
-                className="flex justify-start"
-              >
-                <div className="max-w-[80%]">
-                  <div className="flex items-center gap-1.5 mb-1.5 px-1">
-                    <div className="w-5 h-5 rounded-full bg-[#117dff]/10 flex items-center justify-center">
-                      <Brain size={11} className="text-[#117dff]" />
-                    </div>
-                    <span className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-[0.06em]">HIVE</span>
-                  </div>
-                  <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                    <TypingDots />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* ── Input Bar ── */}
-      <div className="flex-shrink-0 px-4 sm:px-8 py-4 bg-white border-t border-[#e3e0db]">
-        <div
-          className={`flex items-end gap-3 rounded-2xl border bg-[#faf9f4] px-4 py-3 transition-colors ${
-            overLimit
-              ? 'border-[#ef4444]/40 focus-within:border-[#ef4444]'
-              : 'border-[#e3e0db] focus-within:border-[#117dff]/40'
-          }`}
-        >
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask HIVE anything..."
-            rows={1}
-            className="flex-1 bg-transparent resize-none outline-none text-[13px] text-[#0a0a0a] placeholder-[#c4c1bb] leading-relaxed min-h-[22px] max-h-[160px] font-['Space_Grotesk']"
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Dark overlay */}
+          <motion.div
+            key="chat-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={onClose}
           />
-          <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
-            {charCount > 0 && (
-              <span
-                className={`text-[10px] font-mono tabular-nums ${
-                  overLimit ? 'text-[#ef4444]' : 'text-[#c4c1bb]'
+
+          {/* Slide-out panel */}
+          <motion.div
+            key="chat-panel"
+            variants={panelVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed top-0 right-0 h-screen w-[420px] z-50 flex flex-col bg-[#faf9f4] shadow-[−8px_0_32px_rgba(0,0,0,0.12)] font-['Space_Grotesk']"
+          >
+            {/* ── Header ── */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 bg-white border-b border-[#e3e0db] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#117dff]/[0.07] border border-[#117dff]/10 flex items-center justify-center">
+                  <Brain size={16} className="text-[#117dff]" />
+                </div>
+                <div>
+                  <h2 className="text-[#0a0a0a] text-[15px] font-semibold leading-tight">Talk to HIVE</h2>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono leading-tight">
+                    Memory-augmented AI assistant
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ModelSelector selectedId={selectedModel} onSelect={setSelectedModel} />
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"
+                  aria-label="Close chat"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Messages ── */}
+            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+              {messages.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <>
+                  {messages.map((msg) => (
+                    <MessageBubble key={msg.id} msg={msg} />
+                  ))}
+                  {loading && (
+                    <motion.div
+                      variants={messageVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="flex justify-start"
+                    >
+                      <div className="max-w-[80%]">
+                        <div className="flex items-center gap-1.5 mb-1.5 px-1">
+                          <div className="w-5 h-5 rounded-full bg-[#117dff]/10 flex items-center justify-center">
+                            <Brain size={11} className="text-[#117dff]" />
+                          </div>
+                          <span className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-[0.06em]">HIVE</span>
+                        </div>
+                        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                          <TypingDots />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* ── Input Bar ── */}
+            <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-[#e3e0db]">
+              <div
+                className={`flex items-end gap-3 rounded-2xl border bg-[#faf9f4] px-4 py-3 transition-colors ${
+                  overLimit
+                    ? 'border-[#ef4444]/40 focus-within:border-[#ef4444]'
+                    : 'border-[#e3e0db] focus-within:border-[#117dff]/40'
                 }`}
               >
-                {charCount}/{MAX_CHARS}
-              </span>
-            )}
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || loading || overLimit}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-[#117dff] text-white hover:bg-[#0066e0] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#117dff]"
-            >
-              {loading ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Send size={14} />
-              )}
-            </button>
-          </div>
-        </div>
-        <p className="text-[10px] text-[#c4c1bb] mt-2 text-center font-mono">
-          Enter to send · Shift+Enter for newline
-        </p>
-      </div>
-    </div>
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask HIVE anything..."
+                  rows={1}
+                  className="flex-1 bg-transparent resize-none outline-none text-[13px] text-[#0a0a0a] placeholder-[#c4c1bb] leading-relaxed min-h-[22px] max-h-[160px] font-['Space_Grotesk']"
+                />
+                <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
+                  {charCount > 0 && (
+                    <span
+                      className={`text-[10px] font-mono tabular-nums ${
+                        overLimit ? 'text-[#ef4444]' : 'text-[#c4c1bb]'
+                      }`}
+                    >
+                      {charCount}/{MAX_CHARS}
+                    </span>
+                  )}
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim() || loading || overLimit}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-[#117dff] text-white hover:bg-[#0066e0] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#117dff]"
+                  >
+                    {loading ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Send size={14} />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-[#c4c1bb] mt-2 text-center font-mono">
+                Enter to send · Shift+Enter for newline · Esc to close
+              </p>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
+
+// ─── Legacy default export (kept for any residual import) ─────────────────────
+
+export default ChatPanel;

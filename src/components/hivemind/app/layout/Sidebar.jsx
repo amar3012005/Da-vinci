@@ -22,7 +22,6 @@ import {
   Cpu,
   BookOpen,
   Bot,
-  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -47,7 +46,6 @@ function buildNavSections({ showWebAdmin }) {
     {
       label: 'Data',
       items: [
-        { to: '/hivemind/app/chat', icon: MessageSquare, label: 'Talk to HIVE' },
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
         { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
         { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
