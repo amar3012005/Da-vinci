@@ -27,7 +27,16 @@ const TYPE_COLORS = {
   goal: '#8b5cf6',
   event: '#0891b2',
   relationship: '#db2777',
+  observation: '#f59e0b',    // amber — agent observations
   default: '#525252',
+};
+// Resident layer visual encodings
+const LAYER_COLORS = {
+  fact: '#10b981',        // emerald — extracted facts
+  observation: '#f59e0b', // amber — observations
+  promoted: '#ef4444',    // red — promoted risks
+  verified: '#22c55e',    // green — turing verified
+  memory: null,           // use TYPE_COLORS
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -176,13 +185,20 @@ export default function MemoryGraph() {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [projectFilter, setProjectFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showResidents, setShowResidents] = useState(false);
+  const [residentActivity, setResidentActivity] = useState(null);
+  const [residentTouchedIds, setResidentTouchedIds] = useState(new Set());
 
   // Fetch graph data
   const fetchGraph = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getGraph({ project: projectFilter || undefined, limit: 300 });
+      const data = await apiClient.getGraph({
+        project: projectFilter || undefined,
+        limit: 500,
+        include_residents: showResidents,
+      });
       const nodes = (data.nodes || []).map(n => ({
         ...n,
         val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
@@ -192,17 +208,24 @@ export default function MemoryGraph() {
         target: e.target,
         type: e.type,
         confidence: e.confidence || 1,
+        createdBy: e.createdBy || null,
       }));
       setGraphData({ nodes, links });
       setRawEdges(data.edges || []);
       setMeta(data.meta || null);
+
+      // Resident overlay
+      if (data.residentActivity) {
+        setResidentActivity(data.residentActivity);
+        setResidentTouchedIds(new Set(data.residentActivity.touchedNodeIds || []));
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setGraphData({ nodes: [], links: [] });
     } finally {
       setLoading(false);
     }
-  }, [projectFilter]);
+  }, [projectFilter, showResidents]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
 
@@ -256,15 +279,51 @@ export default function MemoryGraph() {
     const isHighlighted = highlightNodes.size > 0 && highlightNodes.has(node.id);
     const isDimmed = highlightNodes.size > 0 && !highlightNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
-    const baseColor = TYPE_COLORS[node.memoryType] || TYPE_COLORS.default;
+    const isResidentTouched = showResidents && residentTouchedIds.has(node.id);
+
+    // Use layer-specific color if available, else type color
+    const layerColor = LAYER_COLORS[node.nodeLayer];
+    const baseColor = layerColor || TYPE_COLORS[node.memoryType] || TYPE_COLORS.default;
     const glow = node.temporalWeight || 0.3;
-    const radius = Math.sqrt(node.val || 4) * 2.5;
+    let radius = Math.sqrt(node.val || 4) * 2.5;
+
+    // Fact nodes are smaller but more prominent
+    if (node.nodeLayer === 'fact') radius = Math.max(radius * 0.7, 3);
+    // Promoted risks are larger
+    if (node.nodeLayer === 'promoted') radius = radius * 1.5;
+
+    // Resident touch — orange pulse ring
+    if (isResidentTouched && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 6, 0, 2 * Math.PI);
+      ctx.strokeStyle = hexToRgba('#f97316', 0.5); // orange
+      ctx.lineWidth = 2 / globalScale;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Promoted risk — red halo
+    if (node.nodeLayer === 'promoted' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#ef4444', 0.15);
+      ctx.fill();
+    }
+
+    // Verified — green badge glow
+    if (node.nodeLayer === 'verified' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#22c55e', 0.12);
+      ctx.fill();
+    }
 
     // Outer glow (temporal decay)
     if (glow > 0.3 && !isDimmed) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius + 4 + glow * 6, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba(baseColor, glow * 0.2);
+      ctx.fillStyle = hexToRgba(baseColor, glow * 0.15);
       ctx.fill();
     }
 
@@ -286,16 +345,40 @@ export default function MemoryGraph() {
       ctx.stroke();
     }
 
-    // Node body
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
-    ctx.fill();
-
-    // Border
-    ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
-    ctx.lineWidth = 0.5 / globalScale;
-    ctx.stroke();
+    // Node body — facts are diamond-shaped, observations are squares
+    if (node.nodeLayer === 'fact') {
+      // Diamond shape for facts
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - radius);
+      ctx.lineTo(node.x + radius, node.y);
+      ctx.lineTo(node.x, node.y + radius);
+      ctx.lineTo(node.x - radius, node.y);
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.7);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.9);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+    } else if (node.nodeLayer === 'observation') {
+      // Rounded square for observations
+      const s = radius * 0.85;
+      ctx.beginPath();
+      ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+    } else {
+      // Circle for regular memories
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
+      ctx.fill();
+      ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+    }
 
     // Label (only at zoom)
     if (globalScale > 1.8 && !isDimmed) {
@@ -306,13 +389,19 @@ export default function MemoryGraph() {
       ctx.fillStyle = isDimmed ? 'rgba(0,0,0,0.1)' : 'rgba(10,10,10,0.8)';
       ctx.fillText(label, node.x, node.y + radius + 2);
     }
-  }, [highlightNodes, selectedNode]);
+  }, [highlightNodes, selectedNode, showResidents, residentTouchedIds]);
 
   // Custom link painting
   const paintLink = useCallback((link, ctx) => {
     const color = EDGE_COLORS[link.type] || '#e3e0db';
+    const isTuringEdge = link.createdBy === 'turing' || link.createdBy === 'memory_processor';
     ctx.strokeStyle = hexToRgba(color, 0.35 + (link.confidence || 0.5) * 0.3);
     ctx.lineWidth = link.type === 'Extends' ? 1.5 : 0.8;
+    // Turing-created edges are thicker + glow
+    if (isTuringEdge && showResidents) {
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = hexToRgba('#22c55e', 0.6); // green for agent-created
+    }
     if (link.type === 'Derives') {
       ctx.setLineDash([4, 3]);
     }
@@ -321,7 +410,7 @@ export default function MemoryGraph() {
     ctx.lineTo(link.target.x, link.target.y);
     ctx.stroke();
     ctx.setLineDash([]);
-  }, []);
+  }, [showResidents]);
 
   // Stats
   const stats = useMemo(() => {
@@ -411,12 +500,36 @@ export default function MemoryGraph() {
           <Maximize2 size={13} />
         </button>
 
+        {/* Resident Layer Toggle */}
+        <button
+          onClick={() => setShowResidents(!showResidents)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] border transition-colors ${
+            showResidents
+              ? 'border-[#f97316] bg-[#f97316]/10 text-[#f97316]'
+              : 'border-[#e3e0db] text-[#a3a3a3] hover:border-[#f97316]/20 hover:text-[#f97316]'
+          }`}
+          title="Toggle Resident Agent Activity"
+        >
+          <Brain size={12} />
+          Residents
+        </button>
+
         {/* Stats */}
         {stats && (
           <div className="flex items-center gap-3 ml-auto text-[10px] font-mono text-[#a3a3a3]">
             <span>{stats.nodes} nodes</span>
             <span>{stats.edges} edges</span>
-            <span>{stats.projects} projects</span>
+            {meta?.totalMemories && <span className="text-[#117dff]">{meta.totalMemories} total</span>}
+            {meta?.loadedLayers && (
+              <span className="text-[#10b981]">
+                {meta.loadedLayers.highValue}★ {meta.loadedLayers.connected}⟷ {meta.loadedLayers.recent}⏱
+              </span>
+            )}
+            {showResidents && residentActivity && (
+              <span className="text-[#f97316]">
+                F:{residentActivity.observations.faraday} Fe:{residentActivity.observations.feynman} T:{residentActivity.observations.turing}
+              </span>
+            )}
           </div>
         )}
       </div>

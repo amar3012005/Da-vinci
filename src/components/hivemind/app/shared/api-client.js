@@ -452,10 +452,11 @@ class HiveMindApiClient {
 
   // ─── Core: Memory Graph ─────────────────────────────────────
 
-  async getGraph({ project, limit = 200 } = {}) {
+  async getGraph({ project, limit = 500, include_residents = true } = {}) {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
     if (limit) params.set('limit', String(limit));
+    if (include_residents) params.set('include_residents', 'true');
     const qs = params.toString();
     const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
     return data;
