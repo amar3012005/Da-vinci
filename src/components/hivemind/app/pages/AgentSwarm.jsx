@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Sparkles, Eye, Brain, ShieldCheck, Play, Loader2,
   ChevronDown, Folder, Globe2, AlertTriangle, CheckCircle2,
-  XCircle, Clock3, GitBranch, Zap, RefreshCcw,
+  XCircle, GitBranch, Zap,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -65,15 +65,6 @@ function verdictBadge(verdict) {
   return <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Weak</span>;
 }
 
-function timeAgo(ts) {
-  if (!ts) return '';
-  const diff = Date.now() - new Date(ts).getTime();
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return `${Math.floor(diff / 86400000)}d ago`;
-}
-
 /* ─── Main Component ───────────────────────────────────────── */
 
 export default function AgentSwarm() {
@@ -86,12 +77,12 @@ export default function AgentSwarm() {
   // Run state
   const [running, setRunning] = useState(false);
   const [runPhase, setRunPhase] = useState(null); // which agent is currently running
-  const [runIds, setRunIds] = useState({}); // { faraday: id, feynman: id, turing: id }
+  const [, setRunIds] = useState({}); // { faraday: id, feynman: id, turing: id }
   const [results, setResults] = useState({}); // { faraday: {...}, feynman: {...}, turing: {...} }
   const [error, setError] = useState(null);
 
   // Findings panel
-  const [showFindings, setShowFindings] = useState(false);
+  const [, setShowFindings] = useState(false);
 
   const pollRef = useRef(null);
 
