@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ForceGraph2D from 'react-force-graph-2d';
 import {
   Network, X, Search, Filter, RefreshCw, Maximize2,
-  GitBranch, Clock, ChevronDown,
+  GitBranch, Clock, ChevronDown, Brain,
   ZoomIn, ZoomOut, Crosshair,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
