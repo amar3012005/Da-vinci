@@ -250,6 +250,36 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Resident Agents ──────────────────────────────────
+
+  async listResidentAgents() {
+    const { data } = await this.controlPlane.get('/v1/proxy/swarm/resident/agents');
+    return data;
+  }
+
+  async runResidentAgent(agentId, payload = {}) {
+    const { data } = await this.controlPlane.post(
+      `/v1/proxy/swarm/resident/agents/${agentId}/run`,
+      payload,
+    );
+    return data;
+  }
+
+  async getResidentRun(runId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/swarm/resident/runs/${runId}`);
+    return data;
+  }
+
+  async listResidentRunObservations(runId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/swarm/resident/runs/${runId}/observations`);
+    return data;
+  }
+
+  async cancelResidentRun(runId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/swarm/resident/runs/${runId}/cancel`);
+    return data;
+  }
+
   // ─── Core: Context & Profile ─────────────────────────────────
 
   async getContext(query) {
