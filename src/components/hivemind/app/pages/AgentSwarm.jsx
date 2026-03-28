@@ -44,6 +44,22 @@ const AGENTS = [
 
 const TERMINAL = new Set(['completed', 'complete', 'succeeded', 'failed', 'cancelled', 'error', 'done']);
 
+// Optimized system goals per agent — used when "Run All" or no custom goal
+const AGENT_GOALS = {
+  faraday: 'Perform a deep scan of the knowledge graph. For each semantic cluster: (1) identify exact and near-duplicate memories, (2) detect stale or conflicting facts that were updated across conversations, (3) find temporal update chains where newer info supersedes older, (4) flag orphaned memories with no relationships. Use LLM analysis on every cluster with 2+ memories. Output specific memory IDs for each finding.',
+  feynman: 'Analyze Faraday\'s findings and form testable hypotheses. For each cluster: (1) classify as duplicate_cluster, stale_truth, update_chain, recurring_issue, or emerging_pattern, (2) identify the canonical memory (most complete/recent), (3) list which memories should be merged, linked, or suppressed, (4) compute confidence based on evidence spread and cross-session coverage. Include all related memory IDs.',
+  turing: 'Verify each hypothesis rigorously. For verified findings: (1) execute merge_duplicate_cluster to consolidate duplicates into canonical nodes, (2) execute link_update_chain to connect old→new fact versions, (3) execute suppress_noise_cluster on low-value repetitive memories, (4) execute promote_known_risk for validated recurring issues. Mark superseded memories with clear reasons. Update the graph — do not just recommend.',
+};
+
+// Suggested goals for individual runs
+const GOAL_PRESETS = [
+  { label: 'Find & merge duplicates', goal: 'Find all duplicate and near-duplicate memories. Merge them into canonical nodes.' },
+  { label: 'Detect stale truths', goal: 'Find facts that were updated or corrected across conversations. Link old→new as update chains.' },
+  { label: 'Full graph cleanup', goal: 'Comprehensive cleanup: merge duplicates, link update chains, suppress noise, promote verified patterns.' },
+  { label: 'Temporal analysis', goal: 'Analyze temporal patterns. Find events mentioned with dates, track how facts evolved over time.' },
+  { label: 'Conflict detection', goal: 'Find contradicting facts across memories. Flag where the user said X in one conversation but Y in another.' },
+];
+
 /* ─── Helpers ──────────────────────────────────────────────── */
 
 function confBar(value) {
@@ -91,10 +107,14 @@ export default function AgentSwarm() {
 
   /* ── Run agent ──────────────────────────────────── */
 
-  const runAgent = useCallback(async (agentId) => {
+  const runAgent = useCallback(async (agentId, useSystemGoal = false) => {
+    const agentGoal = useSystemGoal
+      ? AGENT_GOALS[agentId] || 'Analyze the knowledge graph'
+      : goal.trim() || AGENT_GOALS[agentId] || 'Scan for anomalies and patterns';
+
     const payload = {
       scope,
-      goal: goal.trim() || `Scan for anomalies and patterns`,
+      goal: agentGoal,
       project: project.trim() || undefined,
       dry_run: dryRun,
     };
@@ -155,19 +175,17 @@ export default function AgentSwarm() {
     setShowFindings(false);
 
     try {
-      // Faraday
+      // Run All uses optimized system goals for each agent
       setRunPhase('faraday');
-      const fId = await runAgent('faraday');
+      const fId = await runAgent('faraday', true);
       await pollRun('faraday', fId);
 
-      // Feynman
       setRunPhase('feynman');
-      const feId = await runAgent('feynman');
+      const feId = await runAgent('feynman', true);
       await pollRun('feynman', feId);
 
-      // Turing
       setRunPhase('turing');
-      const tId = await runAgent('turing');
+      const tId = await runAgent('turing', true);
       await pollRun('turing', tId);
 
       setShowFindings(true);
@@ -318,14 +336,26 @@ export default function AgentSwarm() {
                     </div>
                   )}
 
-                  {/* Goal */}
-                  <input
-                    type="text"
-                    value={goal}
-                    onChange={e => setGoal(e.target.value)}
-                    placeholder="Goal (optional)"
-                    className="flex-1 min-w-[200px] text-xs border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/40"
-                  />
+                  {/* Goal with presets */}
+                  <div className="flex-1 min-w-[200px] flex gap-1">
+                    <select
+                      onChange={e => { if (e.target.value) setGoal(e.target.value); e.target.value = ''; }}
+                      className="text-xs border border-[#e3e0db] rounded-lg px-2 py-1.5 bg-[#faf9f4] text-[#a3a3a3] focus:outline-none w-[130px] shrink-0"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Presets...</option>
+                      {GOAL_PRESETS.map((p, i) => (
+                        <option key={i} value={p.goal}>{p.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={goal}
+                      onChange={e => setGoal(e.target.value)}
+                      placeholder={selected === 'all' ? 'Auto-optimized per agent' : 'Custom goal (or pick a preset)'}
+                      className="flex-1 text-xs border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/40"
+                    />
+                  </div>
 
                   {/* Dry run */}
                   <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
