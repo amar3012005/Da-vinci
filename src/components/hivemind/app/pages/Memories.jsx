@@ -516,7 +516,7 @@ export default function Memories() {
     loading: searchLoading,
     error: searchError,
   } = useApiQuery(
-    () => (isSearching ? apiClient.searchMemories(debouncedQuery) : Promise.resolve(null)),
+    () => (isSearching ? apiClient.quickSearch(debouncedQuery) : Promise.resolve(null)),
     [debouncedQuery, isSearching],
   );
 

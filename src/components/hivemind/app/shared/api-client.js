@@ -250,6 +250,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  async recallMemories(query, params = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/recall', {
+      query_context: query,
+      max_memories: params.maxMemories || 10,
+      inject_parent_chunks: params.injectParentChunks !== false,
+      is_latest: params.isLatest,
+      sort: params.sort,
+      ...params,
+    });
+    return data;
+  }
+
   // ─── Core: Resident Agents ──────────────────────────────────
 
   async listResidentAgents() {

@@ -128,29 +128,6 @@ function isFindingObservation(observation) {
   return /(anomaly|candidate|conflict|risk|smell|hypothesis|finding|alert)/.test(kind);
 }
 
-function agentDisplayName(agent) {
-  if (!agent) return 'Resident agent';
-  return agent.name || agent.id || 'Resident agent';
-}
-
-function getDefaultGoalForAgent(agent) {
-  const id = String(agent?.id || '').toLowerCase();
-  if (id === 'feynman') {
-    return 'Explain the strongest Faraday trail, connect the evidence, and produce verification-ready hypotheses.';
-  }
-  if (id === 'turing') {
-    return 'Verify the strongest Feynman hypotheses, check cross-memory evidence, and decide what is promotion-ready.';
-  }
-  return 'Sweep the current scope for semantic anomalies, stale assumptions, duplicate clusters, and high-risk signals.';
-}
-
-function getGoalPlaceholderForAgent(agent) {
-  const id = String(agent?.id || '').toLowerCase();
-  if (id === 'feynman') return 'Describe what Feynman should explain or which Faraday trail to interpret.';
-  if (id === 'turing') return 'Describe what Turing should verify or which hypothesis cluster to check.';
-  return 'Describe what Faraday should look for.';
-}
-
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
@@ -304,8 +281,7 @@ export default function AgentSwarm() {
   const [scope, setScope] = useState('project');
   const [project, setProject] = useState('');
   const [region, setRegion] = useState('');
-  const [goal, setGoal] = useState('');
-  const [goalByAgent, setGoalByAgent] = useState({});
+  const [goal, setGoal] = useState('Sweep the current scope for anomalies, stale assumptions, and high-risk signals.');
   const [dryRun, setDryRun] = useState(true);
   const [currentRunId, setCurrentRunId] = useState('');
   const [currentRun, setCurrentRun] = useState(null);
@@ -319,8 +295,6 @@ export default function AgentSwarm() {
     () => agents.find((agent) => agent.id === selectedAgentId) || agents[0] || null,
     [agents, selectedAgentId],
   );
-  const selectedAgentName = agentDisplayName(selectedAgent);
-  const goalPlaceholder = getGoalPlaceholderForAgent(selectedAgent);
 
   const sortedObservations = useMemo(
     () =>
@@ -385,20 +359,6 @@ export default function AgentSwarm() {
   useEffect(() => {
     loadAgents();
   }, [loadAgents]);
-
-  useEffect(() => {
-    if (!selectedAgent?.id) return;
-    setGoal((current) => {
-      const agentGoal = goalByAgent[selectedAgent.id];
-      if (typeof agentGoal === 'string') return agentGoal;
-      const nextGoal = getDefaultGoalForAgent(selectedAgent);
-      setGoalByAgent((previous) => ({
-        ...previous,
-        [selectedAgent.id]: nextGoal,
-      }));
-      return nextGoal;
-    });
-  }, [goalByAgent, selectedAgent]);
 
   useEffect(() => {
     if (!currentRunId) return undefined;
@@ -501,7 +461,7 @@ export default function AgentSwarm() {
                   Resident agents
                 </span>
               </div>
-              <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">{selectedAgentName} Console</h1>
+              <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">Faraday Console</h1>
               <p className="text-[#525252] text-sm font-['Space_Grotesk'] max-w-2xl leading-relaxed">
                 Run resident graph-native agents, inspect live progress, and review the observations they emit
                 while they sweep your scope for anomalies, stale assumptions, and risk signals.
@@ -523,7 +483,7 @@ export default function AgentSwarm() {
         className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 mb-6"
       >
         <Metric label="Agents" value={agentsLoading ? 'Loading…' : String(agents.length)} tone="text-[#0a0a0a]" />
-        <Metric label="Selected agent" value={selectedAgentName} tone="text-[#0a0a0a]" />
+        <Metric label="Selected agent" value={selectedAgent?.name || 'Faraday'} tone="text-[#0a0a0a]" />
         <Metric label="Run status" value={currentStatus} tone="text-[#117dff]" />
         <Metric label="Observations" value={String(sortedObservations.length)} tone="text-[#0a0a0a]" />
       </motion.div>
@@ -567,7 +527,7 @@ export default function AgentSwarm() {
 
               {!agentsLoading && !agents.length && !agentsError ? (
                 <div className="rounded-xl border border-dashed border-[#e3e0db] bg-[#faf9f4] px-4 py-5 text-sm text-[#525252]">
-                  No resident agents were returned yet. Once the backend exposes them, they will appear here.
+                  No resident agents were returned yet. Once the backend exposes them, Faraday will appear here.
                 </div>
               ) : null}
 
@@ -621,7 +581,7 @@ export default function AgentSwarm() {
           <motion.section variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-2xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-2 mb-4">
               <Target size={16} className="text-[#117dff]" />
-              <h2 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">{selectedAgentName} run form</h2>
+              <h2 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">Faraday run form</h2>
             </div>
 
             <div className="space-y-4">
@@ -689,18 +649,9 @@ export default function AgentSwarm() {
                 </span>
                 <textarea
                   value={goal}
-                  onChange={(event) => {
-                    const nextGoal = event.target.value;
-                    setGoal(nextGoal);
-                    if (selectedAgent?.id) {
-                      setGoalByAgent((previous) => ({
-                        ...previous,
-                        [selectedAgent.id]: nextGoal,
-                      }));
-                    }
-                  }}
+                  onChange={(event) => setGoal(event.target.value)}
                   rows={4}
-                  placeholder={goalPlaceholder}
+                  placeholder="Describe what Faraday should look for."
                   className="w-full rounded-xl border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] outline-none transition-colors placeholder:text-[#c4c4c4] focus:border-[#117dff]/30 focus:ring-2 focus:ring-[#117dff]/10 resize-none"
                 />
               </label>
@@ -726,7 +677,7 @@ export default function AgentSwarm() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(17,125,255,0.18)] transition-colors hover:bg-[#0f6fe0] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                  {`Run ${selectedAgentName}`}
+                  Run Faraday
                 </button>
                 <button
                   type="button"
@@ -873,7 +824,7 @@ export default function AgentSwarm() {
                   ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-[#e3e0db] bg-[#faf9f4] px-4 py-8 text-center text-sm text-[#525252]">
-                    {`Observations will appear here while ${selectedAgentName} is running.`}
+                    Observations will appear here while Faraday is running.
                   </div>
                 )}
               </div>
@@ -898,7 +849,7 @@ export default function AgentSwarm() {
                   ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-[#e3e0db] bg-[#faf9f4] px-4 py-8 text-center text-sm text-[#525252]">
-                    {`Candidate findings will appear here when ${selectedAgentName} detects a meaningful signal.`}
+                    Candidate findings will appear here when Faraday detects a meaningful signal.
                   </div>
                 )}
               </div>
