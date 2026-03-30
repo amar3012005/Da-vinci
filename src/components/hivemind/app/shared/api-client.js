@@ -300,8 +300,17 @@ class HiveMindApiClient {
   }
 
   async getProfile() {
-    const { data } = await this.controlPlane.get('/v1/proxy/profile');
-    return data;
+    try {
+      const { data } = await this.controlPlane.get('/v1/proxy/profile');
+      return data;
+    } catch (proxyErr) {
+      // Fallback: hit core API directly if proxy is unavailable
+      if (this._apiKey && this._coreBaseUrl) {
+        const { data } = await this.core.get('/profile');
+        return data;
+      }
+      throw proxyErr;
+    }
   }
 
   // ─── Core: Connectors (MCP) ─────────────────────────────────

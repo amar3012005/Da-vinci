@@ -357,7 +357,11 @@ function PerQueryBreakdown({ results }) {
 export default function Evaluation() {
   /* ── Data fetching ───────────────────────────────────────────── */
 
-  // Memories for health stats
+  // Profile for accurate total memory count
+  const { data: profile } =
+    useApiQuery(() => apiClient.getProfile().catch(() => null));
+
+  // Memories for health stats (sample — capped at 100)
   const { data: memoriesData, loading: memoriesLoading } =
     useApiQuery(() => apiClient.listMemories({ limit: 100 }));
 
@@ -392,9 +396,11 @@ export default function Evaluation() {
   }, [memoriesData]);
 
   const totalCount = useMemo(() => {
+    // Prefer profile.memory_count (accurate server-side total) over sample array length
+    if (profile?.memory_count != null) return profile.memory_count;
     if (!memoriesData) return 0;
     return memoriesData.pagination?.total ?? memoriesData.total ?? memories.length;
-  }, [memoriesData, memories]);
+  }, [profile, memoriesData, memories]);
 
   const sourceCounts = useMemo(() => {
     const counts = {};
@@ -434,12 +440,14 @@ export default function Evaluation() {
     return scores.reduce((a, b) => a + b, 0) / scores.length;
   }, [memories]);
 
-  // Sources breakdown string
+  // Sources breakdown string (based on sample of up to 100 memories)
   const sourcesSub = useMemo(() => {
     const entries = Object.entries(sourceCounts);
     if (entries.length === 0) return 'No sources detected';
-    return entries.map(([k, v]) => `${k}: ${v}`).join(', ');
-  }, [sourceCounts]);
+    const sampled = memories.length < totalCount;
+    const label = entries.map(([k, v]) => `${k}: ${v}`).join(', ');
+    return sampled ? `${label} (sample of ${memories.length})` : label;
+  }, [sourceCounts, memories.length, totalCount]);
 
   /* ── Gmail connector info ────────────────────────────────────── */
 
@@ -533,7 +541,7 @@ export default function Evaluation() {
           icon={Database}
           label="Total Memories"
           value={totalCount.toLocaleString()}
-          sub={memories.length === 0 ? 'Add memories to get started' : `${Object.keys(sourceCounts).length} source${Object.keys(sourceCounts).length === 1 ? '' : 's'}`}
+          sub={totalCount === 0 ? 'Add memories to get started' : `${Object.keys(sourceCounts).length} source${Object.keys(sourceCounts).length === 1 ? '' : 's'}`}
         />
         <HealthCard
           icon={Layers}
@@ -546,7 +554,7 @@ export default function Evaluation() {
           label="Freshness"
           value={memories.length > 0 ? `${freshness.week}%` : '--'}
           sub={memories.length > 0
-            ? `${freshness.week}% <7d, ${freshness.month}% <30d, ${freshness.older}% older`
+            ? `${freshness.week}% <7d, ${freshness.month}% <30d, ${freshness.older}% older${memories.length < totalCount ? ` (sampled ${memories.length})` : ''}`
             : 'No data available'}
           color={memories.length > 0 ? (freshness.week >= 30 ? '#22c55e' : freshness.week >= 10 ? '#f59e0b' : '#ef4444') : '#a3a3a3'}
         />

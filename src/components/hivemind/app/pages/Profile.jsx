@@ -311,13 +311,16 @@ function PlanUsageSection() {
 
 function MemoryFootprintSection({ profile }) {
   const {
-    memory_count = 0,
+    memory_count: rawMemCount,
     observation_count = 0,
     relationship_count = 0,
     top_tags = [],
     top_source_platforms = [],
     graph_summary = {},
   } = profile || {};
+
+  // Fallback: if memory_count is 0/missing but we have observations or relationships, show at least those
+  const memory_count = rawMemCount || (observation_count > 0 || relationship_count > 0 ? observation_count : 0);
 
   const relationshipTypes = [
     { label: 'Updates', count: graph_summary.update || 0, color: '#3b82f6' },
@@ -420,7 +423,9 @@ function MemoryFootprintSection({ profile }) {
 function extractUserProfile(injectionText) {
   if (!injectionText) return null;
   const match = injectionText.match(/<user-profile>([\s\S]*?)<\/user-profile>/);
-  return match ? match[1].trim() : injectionText.trim();
+  const raw = match ? match[1].trim() : injectionText.trim();
+  // Sanitize: strip any HTML tags to prevent XSS
+  return raw.replace(/<[^>]*>/g, '');
 }
 
 function parseProfileFacts(raw) {

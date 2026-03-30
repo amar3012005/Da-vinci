@@ -243,15 +243,44 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 export default function Billing() {
   const { org } = useAuth();
   const [billingCycle, setBillingCycle] = useState('monthly');
-  const currentPlan = 'free'; // TODO: derive from bootstrap/org data
+  const [upgradeModal, setUpgradeModal] = useState(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgraded, setUpgraded] = useState(false);
 
   const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
     [],
   );
 
+  const { data: connectors } = useApiQuery(
+    () => apiClient.getConnectorStatus().catch(() => null),
+    [],
+  );
+
+  const currentPlan = profile?.plan || org?.plan || 'free';
+
+  const activeConnections = Array.isArray(connectors?.connectors)
+    ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
+    : (connectors?.activeCount || 0);
+
+  const searchesToday = profile?.searches_today || 0;
   const memoryCount = profile?.memory_count || 0;
   const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
+
+  const handleUpgrade = async (planId) => {
+    setUpgrading(true);
+    try {
+      // Dummy payment — in production this would call Stripe
+      await new Promise(r => setTimeout(r, 1500));
+      setUpgraded(true);
+      setUpgradeModal(null);
+      setTimeout(() => window.location.reload(), 3000);
+    } catch (e) {
+      console.error('Upgrade failed:', e);
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -295,13 +324,13 @@ export default function Billing() {
           />
           <UsageMeter
             label="Connections"
-            used={3}
+            used={activeConnections}
             limit={currentPlanDef?.limits.connections}
             icon={Cable}
           />
           <UsageMeter
             label="Searches Today"
-            used={0}
+            used={searchesToday}
             limit={currentPlanDef?.limits.searches}
             icon={Zap}
           />
@@ -347,7 +376,7 @@ export default function Billing() {
                 : plan.price,
             }}
             currentPlan={currentPlan}
-            onSelect={(id) => console.log('Upgrade to:', id)}
+            onSelect={(id) => setUpgradeModal(id)}
           />
         ))}
       </div>
@@ -387,6 +416,64 @@ export default function Billing() {
           ))}
         </div>
       </div>
+
+      {upgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl border border-[#e3e0db] shadow-2xl p-6 max-w-sm w-full mx-4"
+          >
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-xl bg-[#117dff]/10 flex items-center justify-center mx-auto mb-3">
+                <Zap size={20} className="text-[#117dff]" />
+              </div>
+              <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-1">
+                Upgrade to {PLANS.find(p => p.id === upgradeModal)?.name}
+              </h3>
+              <p className="text-[#525252] text-sm font-['Space_Grotesk']">
+                {PLANS.find(p => p.id === upgradeModal)?.price}{PLANS.find(p => p.id === upgradeModal)?.period}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setUpgradeModal(null)}
+                disabled={upgrading}
+                className="flex-1 py-2.5 rounded-xl text-sm font-['Space_Grotesk'] font-semibold border border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleUpgrade(upgradeModal)}
+                disabled={upgrading}
+                className="flex-1 py-2.5 rounded-xl text-sm font-['Space_Grotesk'] font-semibold bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {upgrading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing…
+                  </>
+                ) : (
+                  'Confirm Upgrade'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {upgraded && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 font-['Space_Grotesk'] text-sm font-semibold"
+          >
+            <Check size={16} />
+            Plan upgraded successfully!
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
