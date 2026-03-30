@@ -270,13 +270,13 @@ export default function Billing() {
   const handleUpgrade = async (planId) => {
     setUpgrading(true);
     try {
-      // Dummy payment — in production this would call Stripe
-      await new Promise(r => setTimeout(r, 1500));
+      await apiClient.core.post('/api/billing/upgrade', { plan: planId });
       setUpgraded(true);
       setUpgradeModal(null);
-      setTimeout(() => window.location.reload(), 3000);
+      setTimeout(() => window.location.reload(), 2000);
     } catch (e) {
       console.error('Upgrade failed:', e);
+      alert('Upgrade failed. Please try again.');
     } finally {
       setUpgrading(false);
     }
