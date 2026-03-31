@@ -110,20 +110,15 @@ function ConfigEditor({ config, onSave, saving }) {
               className="w-full md:w-1/2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50/30 text-[#0a0a0a] text-xs font-mono focus:outline-none focus:border-purple-400/40"
             >
               <option value="">Same as main model</option>
-              <optgroup label="Groq (fast, low latency)">
+              <optgroup label="Reasoning (recommended for clinical)">
+                <option value="openai/gpt-oss-120b">GPT-OSS 120B (reasoning)</option>
+                <option value="openai/gpt-oss-20b">GPT-OSS 20B (fast reasoning)</option>
+              </optgroup>
+              <optgroup label="Groq Models">
                 <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-                <option value="qwen/qwen3-32b">qwen3-32b</option>
-                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
-              </optgroup>
-              <optgroup label="Reasoning Models (deep thinking)">
-                <option value="academic-deepseek-r1">DeepSeek-R1 (671B reasoning)</option>
-                <option value="academic-qwq-32b">QwQ-32B (Qwen reasoning)</option>
-                <option value="academic-qwen3-235b-a22b">Qwen3-235B (large reasoning)</option>
-              </optgroup>
-              <optgroup label="Frontier Models">
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="qwen/qwen3-32b">Qwen3-32B</option>
+                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest)</option>
+                <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama-4 Scout 17B</option>
               </optgroup>
             </select>
           </div>
