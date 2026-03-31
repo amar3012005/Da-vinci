@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#F25623">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>TARA x B&B v2 - Voice Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════════
+           CSS Custom Properties - B&B Brand Palette (Rust Orange & Black)
+           ═══════════════════════════════════════════════════════════════════════ */
+        :root {
+            --color-black: #171717;
+            --color-orange: #F25623;
+            --color-orange-dark: #d94a1d;
+            --color-orange-light: #ff6b3d;
+            --color-dark-gray: #4D4D4D;
+            --color-light-gray: #DEDEDE;
+            --color-white: #FFFFFF;
+            --color-background: #F5F5F5;
+            --color-success: #22c55e;
+            --color-warning: #f59e0b;
+            --color-error: #ef4444;
+            --color-info: #3b82f6;
+
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--color-background);
+            color: var(--color-black);
+            min-height: 100vh;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           Layout - Mobile First
+           ═══════════════════════════════════════════════════════════════════════ */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--color-black);
+            color: var(--color-white);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-brand .logo {
+            width: 32px;
+            height: 32px;
+            background: var(--color-orange);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-brand .logo .material-icons-round {
+            font-size: 20px;
+            color: var(--color-white);
+        }
+
+        .header-brand h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--color-dark-gray);
+        }
+
+        .status-indicator.connected {
+            background: var(--color-success);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+
+        .status-indicator.connecting {
+            background: var(--color-warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator.error {
+            background: var(--color-error);
+        }
+
+        .status-text {
+            font-size: 0.75rem;
+            color: var(--color-light-gray);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main Content - Mobile Layout */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                flex-direction: row;
+            }
+            .chat-panel {
+                flex: 1;
+                border-right: 1px solid var(--color-light-gray);
+            }
+            .controls-panel {
+                width: 320px;
+                max-width: 100%;
+            }
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--color-white);
+            height: calc(100vh - 60px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            animation: slideIn 0.2s ease;
+            word-wrap: break-word;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--color-black);
+            color: var(--color-white);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.agent {
+            align-self: flex-start;
+            background: var(--color-background);
+            color: var(--color-black);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .timestamp {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        /* Chat Input Area */
+        .chat-input-area {
+            padding: 12px 16px 16px;
+            background: var(--color-white);
+            border-top: 1px solid var(--color-light-gray);
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            background: var(--color-background);
+            border-radius: var(--border-radius);
+            padding: 6px 10px;
+        }
+
+        .text-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-family: var(--font-family);
+            font-size: 0.9375rem;
+            padding: 6px 4px;
+            resize: none;
+            outline: none;
+            min-height: 20px;
+            max-height: 100px;
+        }
+
+        .text-input::placeholder {
+            color: var(--color-dark-gray);
+        }
+
+        .mic-button, .send-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .mic-button {
+            background: var(--color-light-gray);
+            color: var(--color-dark-gray);
+        }
+
+        .mic-button:hover:not(:disabled) {
+            background: var(--color-black);
+            color: var(--color-white);
+        }
+
+        .mic-button.active {
+            background: var(--color-orange);
+            color: var(--color-white);
+            animation: micPulse 1.5s infinite;
+        }
+
+        .mic-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .send-button {
+            background: var(--color-orange);
+            color: var(--color-white);
+        }
+
+        .send-button:hover:not(:disabled) {
+            background: var(--color-orange-dark);
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            background: var(--color-light-gray);
+            color: var(--color-dark-gray);
+            cursor: not-allowed;
+        }
+
+        @keyframes micPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(242, 86, 35, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(242, 86, 35, 0); }
+        }
+
+        /* Controls Panel - Collapsible on Mobile */
+        .controls-panel {
+            background: var(--color-black);
+            color: var(--color-white);
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 40vh;
+        }
+
+        @media (min-width: 768px) {
+            .controls-panel {
+                max-height: none;
+            }
+        }
+
+        .panel-section {
+            margin-bottom: 20px;
+        }
+
+        .panel-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--color-dark-gray);
+            margin-bottom: 10px;
+        }
+
+        /* Phone Input */
+        .phone-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .session-input {
+            flex: 1;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-dark-gray);
+            border-radius: var(--border-radius-sm);
+            font-family: var(--font-family);
+            font-size: 0.875rem;
+            color: var(--color-white);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .session-input:focus {
+            border-color: var(--color-orange);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .session-input:disabled {
+            opacity: 0.5;
+        }
+
+        /* Session Buttons */
+        .session-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-family: var(--font-family);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .session-button.start {
+            background: var(--color-orange);
+            color: var(--color-white);
+        }
+
+        .session-button.start:hover:not(:disabled) {
+            background: var(--color-orange-dark);
+        }
+
+        .session-button.end {
+            background: transparent;
+            border: 1px solid var(--color-dark-gray);
+            color: var(--color-light-gray);
+        }
+
+        .session-button.end:hover:not(:disabled) {
+            border-color: var(--color-error);
+            color: var(--color-error);
+        }
+
+        .session-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .call-button {
+            background: #10b981;
+            color: var(--color-white);
+        }
+
+        .call-button:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        /* Language Toggle */
+        .language-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .lang-label {
+            font-size: 0.8125rem;
+            color: var(--color-dark-gray);
+            transition: var(--transition);
+        }
+
+        .lang-label.active {
+            color: var(--color-white);
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            width: 40px;
+            height: 22px;
+            background: var(--color-dark-gray);
+            border-radius: 11px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .toggle-switch.active {
+            background: var(--color-orange);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            width: 20px;
+            height: 20px;
+            background: var(--color-white);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(18px);
+        }
+
+        /* Status Info Grid */
+        .info-grid {
+            display: grid;
+            gap: 6px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: var(--color-dark-gray);
+        }
+
+        .info-value {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--color-light-gray);
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .info-value.state-listening { color: var(--color-info); }
+        .info-value.state-speaking { color: var(--color-orange); }
+        .info-value.state-thinking { color: #a855f7; }
+
+        /* VAD Visualizer */
+        .vad-visualizer {
+            height: 32px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--border-radius-sm);
+            margin: 8px 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 2px;
+        }
+
+        .vad-bar {
+            width: 3px;
+            background: var(--color-orange);
+            border-radius: 1px;
+            transition: height 0.1s ease;
+            flex: 1;
+        }
+
+        /* Logs */
+        .logs-container {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--border-radius-sm);
+            padding: 10px;
+        }
+
+        .log-item {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 0.7rem;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--color-light-gray);
+        }
+
+        .log-item:last-child { border-bottom: none; }
+        .log-item.info { color: #60a5fa; }
+        .log-item.success { color: #4ade80; }
+        .log-item.warning { color: #fbbf24; }
+        .log-item.error { color: #f87171; }
+
+        .log-time { opacity: 0.6; margin-right: 6px; }
+
+        /* Empty State */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px;
+            color: var(--color-dark-gray);
+        }
+
+        .empty-state .material-icons-round {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .empty-state p {
+            font-size: 0.8125rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-light-gray); border-radius: 2px; }
+        .controls-panel::-webkit-scrollbar-thumb { background: var(--color-dark-gray); }
+
+        .hidden { display: none !important; }
+
+        /* Floating Action Button for Start Session - Mobile */
+        .fab-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fab-button {
+            background: var(--color-orange);
+            color: var(--color-white);
+            border: none;
+            border-radius: 24px;
+            padding: 14px 28px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(242, 86, 35, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .fab-button:hover:not(:disabled) {
+            background: var(--color-orange-dark);
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 6px 24px rgba(242, 86, 35, 0.5);
+        }
+
+        .fab-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .fab-button.end {
+            background: var(--color-error);
+        }
+
+        .fab-button.end:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        @media (min-width: 768px) {
+            .fab-container {
+                position: static;
+                transform: none;
+                flex-direction: row;
+                justify-content: center;
+                margin-bottom: 16px;
+            }
+            .fab-button {
+                width: 100%;
+                justify-content: center;
+            }
+            .fab-button:hover:not(:disabled) {
+                transform: scale(1.05);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-brand">
+                <div class="logo">
+                    <span class="material-icons-round">smart_toy</span>
+                </div>
+                <h1>TARA x B&B v2</h1>
+            </div>
+            <div class="header-status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span class="status-text" id="statusText">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat Panel -->
+            <div class="chat-panel">
+                <div class="vad-visualizer" id="vadVisualizer"></div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state" id="emptyState">
+                        <span class="material-icons-round">chat_bubble_outline</span>
+                        <h3>Start a conversation</h3>
+                        <p>Tap the button below to begin</p>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="chat-input-area">
+                    <div class="input-container">
+                        <textarea class="text-input" id="textInput" placeholder="Type your message..." rows="1" disabled></textarea>
+                        <button class="mic-button" id="micButton" disabled title="Toggle microphone">
+                            <span class="material-icons-round">mic</span>
+                        </button>
+                        <button class="send-button" id="sendButton" disabled title="Send message">
+                            <span class="material-icons-round">send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Action Button for Session Control -->
+        <div class="fab-container">
+            <button class="fab-button" id="startSession">
+                <span class="material-icons-round">play_arrow</span>
+                Start Session
+            </button>
+            <button class="fab-button end hidden" id="endSession">
+                <span class="material-icons-round">stop</span>
+                End Session
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════════
+        // TARA x B&B v2 Client - Mobile-Optimized Voice Assistant
+        // ═══════════════════════════════════════════════════════════════════════
+
+        const MIC_SAMPLE_RATE = 16000;
+        const PLAYBACK_SAMPLE_RATE = 16000;
+        const URL_PARAMS = new URLSearchParams(window.location.search);
+        const DEFAULT_POLICY_MODE = URL_PARAMS.get('mode') === 'clinical' ? 'clinical' : 'sales';
+        const DEFAULT_TENANT_ID = URL_PARAMS.get('tenant')
+            || ((window.TARA_ENV && window.TARA_ENV.TENANT_ID)
+                ? window.TARA_ENV.TENANT_ID
+                : 'bundb');
+        const DEFAULT_AGENT_NAME = (window.TARA_ENV && window.TARA_ENV.AGENT_NAME)
+            ? window.TARA_ENV.AGENT_NAME
+            : 'TARA';
+        const WS_URL = (() => {
+            const base = window.location.protocol === 'https:'
+                ? `wss://${window.location.host}/ws`
+                : `ws://${window.location.host}/ws`;
+            const params = new URLSearchParams({
+                tenant_id: DEFAULT_TENANT_ID,
+                agent_id: DEFAULT_TENANT_ID.toLowerCase(),
+                session_type: 'webcall',
+                user_id: 'anonymous_user',
+                agent_name: DEFAULT_AGENT_NAME
+            });
+            return `${base}?${params.toString()}`;
+        })();
+        const START_FLOW_CONFIG = DEFAULT_POLICY_MODE === 'clinical'
+            ? {
+                policy_mode: 'clinical',
+                conversation_policy: 'clinical',
+                policy_flags: {
+                    enable_strategic_policy: true,
+                    enable_stage_aware_retrieval: true,
+                    enable_micro_reasoning: true
+                },
+                intro_in_primary_lang: 'Hallo, ich bin TARA. Ich stelle Ihnen jetzt gezielte Fragen, damit ich Ihre Beschwerden strukturiert verstehen kann.',
+                intro_in_secondary_lang: 'Hello, I am TARA. I will ask a few structured questions so I can understand your symptoms properly.'
+            }
+            : {
+                policy_mode: 'sales',
+                conversation_policy: 'sales',
+                policy_flags: {
+                    enable_strategic_policy: true,
+                    enable_stage_aware_retrieval: true,
+                    enable_micro_reasoning: true
+                }
+            };
+
+        class TARAClient {
+            constructor() {
+                this.ws = null;
+                this.sessionId = null;
+                this.state = 'idle';
+                this.audioContext = null;
+                this.micAudioContext = null;
+                this.audioQueue = [];
+                this.binaryQueue = [];
+                this.isProcessingQueue = false;
+                this.isPlayingAudio = false;
+                this.currentSource = null;
+                this.activeSources = new Set();
+                this.playbackStartTime = null;
+                this.currentPlaybackTurnId = null;
+                this.minAcceptedPlaybackTurnId = 0;
+                this.audioStreamComplete = false;
+                this.playedAudioThisTurn = false;
+                this.playbackFallbackTimer = null;
+                this.chunkCount = 0;
+                this.isMicActive = false;
+                this.totalLatency = 0;
+                this.successfulResponses = 0;
+                this.chunkCounter = 0;
+                this.sessionActive = false;
+                this.fillerLanguage = 'de';
+                this.agentResponseBuffer = '';
+                this.conversationHistory = [];
+                this.nextPlayTime = 0;
+                this.turnStartTime = null;
+                this.hasTtftForTurn = false;
+                this.hasTtfcForTurn = false;
+                this.init();
+            }
+
+            init() {
+                // DOM Elements
+                this.statusIndicator = document.getElementById('statusIndicator');
+                this.statusText = document.getElementById('statusText');
+                this.chatMessages = document.getElementById('chatMessages');
+                this.emptyState = document.getElementById('emptyState');
+                this.textInput = document.getElementById('textInput');
+                this.micButton = document.getElementById('micButton');
+                this.sendButton = document.getElementById('sendButton');
+                this.startSessionBtn = document.getElementById('startSession');
+                this.endSessionBtn = document.getElementById('endSession');
+                this.vadVisualizer = document.getElementById('vadVisualizer');
+
+                // Initialize VAD bars
+                if (this.vadVisualizer) {
+                    this.vadVisualizer.innerHTML = '';
+                    for (let i = 0; i < 30; i++) {
+                        const bar = document.createElement('div');
+                        bar.className = 'vad-bar';
+                        bar.style.height = '4px';
+                        this.vadVisualizer.appendChild(bar);
+                    }
+                }
+
+                // Event listeners
+                this.startSessionBtn.onclick = () => this.connect();
+                this.endSessionBtn.onclick = () => this.endSession();
+                this.micButton.onclick = () => this.toggleMicrophone();
+                this.sendButton.onclick = () => this.sendTextInput();
+
+                this.textInput.onkeydown = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendTextInput();
+                    }
+                };
+
+                this.textInput.oninput = () => {
+                    this.textInput.style.height = 'auto';
+                    this.textInput.style.height = Math.min(this.textInput.scrollHeight, 100) + 'px';
+                };
+
+                this.addLog('Ready to connect', 'info');
+            }
+
+            connect() {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.addLog('Already connected', 'warning');
+                    return;
+                }
+
+                this.updateStatus('connecting', 'Connecting...');
+                this.addLog('Connecting to TARA...', 'info');
+
+                this.ws = new WebSocket(WS_URL);
+                this.ws.binaryType = 'arraybuffer';
+
+                this.ws.onopen = async () => {
+                    this.addLog('WebSocket connected', 'success');
+                    this.updateStatus('connected', 'Connected');
+                    await this.initAudio();
+                    this.sessionId = 'session_' + Date.now();
+
+                    this.startSessionBtn.classList.add('hidden');
+                    this.endSessionBtn.classList.remove('hidden');
+                    this.textInput.disabled = false;
+                    this.sendButton.disabled = false;
+                    this.micButton.disabled = false;
+
+                    this.send({
+                        type: 'session_config',
+                        config: {
+                            mode: 'voice',
+                            tenant_id: DEFAULT_TENANT_ID,
+                            agent_id: DEFAULT_TENANT_ID.toLowerCase(),
+                            agent_name: DEFAULT_AGENT_NAME,
+                            user_id: 'anonymous_user',
+                            stt_mode: 'audio',
+                            tts_mode: 'audio',
+                            language: 'de'
+                        }
+                    });
+                    this.addLog(`Session config sent: tenant=${DEFAULT_TENANT_ID}`, 'info');
+
+                    this.send({
+                        type: 'start_session',
+                        flow_config: START_FLOW_CONFIG,
+                        timestamp: Date.now() / 1000
+                    });
+                    this.addLog(`Policy flow enabled: ${DEFAULT_POLICY_MODE}`, 'info');
+                    this.sessionActive = true;
+                };
+
+                this.ws.onmessage = async (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        this.binaryQueue.push(event.data);
+                        return;
+                    }
+                    try {
+                        const data = JSON.parse(event.data);
+                        await this.handleMessage(data);
+                    } catch (e) {
+                        console.error('Message handling error:', e, event.data);
+                    }
+                };
+
+                this.ws.onerror = () => {
+                    this.addLog('Connection error', 'error');
+                    this.updateStatus('error', 'Error');
+                };
+
+                this.ws.onclose = () => {
+                    this.addLog('Disconnected', 'warning');
+                    this.updateStatus('disconnected', 'Disconnected');
+                    this.resetUI();
+                };
+            }
+
+            send(data) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(data));
+                }
+            }
+
+            endSession() {
+                if (this.isMicActive) this.stopMicrophone();
+                this.send({ type: 'end_session' });
+                if (this.ws) this.ws.close();
+                this.resetUI();
+            }
+
+            resetUI() {
+                this.ws = null;
+                this.sessionId = null;
+                this.sessionActive = false;
+                this.nextPlayTime = 0;
+
+                this.startSessionBtn.classList.remove('hidden');
+                this.endSessionBtn.classList.add('hidden');
+                this.micButton.disabled = true;
+                this.sendButton.disabled = true;
+                this.textInput.disabled = true;
+
+                // Reset VAD bars
+                if (this.vadVisualizer) {
+                    const bars = this.vadVisualizer.children;
+                    for (let i = 0; i < bars.length; i++) {
+                        bars[i].style.height = '4px';
+                        bars[i].style.background = 'var(--color-dark-gray)';
+                    }
+                }
+            }
+
+            async handleMessage(data) {
+                const { type } = data;
+
+                switch (type) {
+                    case 'session_ready':
+                        this.addLog('Session ready', 'success');
+                        break;
+
+                    case 'state_update':
+                        this.state = data.state;
+                        if (data.state === 'thinking' || data.state === 'interrupt' || data.state === 'listening') {
+                            this.stopAudioPlayback();
+                        }
+                        if (data.state === 'listening' && !this.isMicActive) {
+                            this.startMicrophone();
+                        }
+                        break;
+
+                    case 'transcript':
+                        if (data.text && data.text.trim()) {
+                            if (data.is_final) {
+                                this.addMessage(data.text, 'user');
+                                this.turnStartTime = performance.now();
+                                this.hasTtftForTurn = false;
+                                this.hasTtfcForTurn = false;
+                            }
+                            this.updatePerformanceMetrics(data);
+                        }
+                        break;
+
+                    case 'agent_response':
+                        if (data.text && data.text.trim()) {
+                            if (data.is_streaming) {
+                                if (this.turnStartTime && !this.hasTtftForTurn) {
+                                    const ttft = Math.round(performance.now() - this.turnStartTime);
+                                    this.hasTtftForTurn = true;
+                                    this.addLog(`TTFT: ${ttft}ms`, 'info');
+                                }
+                                this.agentResponseBuffer += data.text;
+                                this.updateAgentMessage(this.agentResponseBuffer);
+                            } else {
+                                if (this.agentResponseBuffer) {
+                                    this.finalizeAgentMessage();
+                                } else {
+                                    this.addMessage(data.text, 'agent');
+                                }
+                            }
+                        }
+                        if (data.is_complete || data.is_final) {
+                            if (this.agentResponseBuffer) this.finalizeAgentMessage();
+                            this.agentResponseBuffer = '';
+                        }
+                        break;
+
+                    case 'audio_chunk':
+                        if (data.playback_turn_id !== undefined && data.playback_turn_id !== null) {
+                            const turnId = Number(data.playback_turn_id);
+                            if (Number.isFinite(turnId) && turnId < this.minAcceptedPlaybackTurnId) {
+                                if (data.binary_sent && this.binaryQueue.length > 0) this.binaryQueue.shift();
+                                break;
+                            }
+                            this.currentPlaybackTurnId = turnId;
+                        }
+                        if (data.is_final) {
+                            this.audioStreamComplete = true;
+                            if (data.binary_sent && this.binaryQueue.length > 0) this.binaryQueue.shift();
+                            this.checkPlaybackComplete();
+                        } else if (data.binary_sent && this.binaryQueue.length > 0) {
+                            const chunk = this.binaryQueue.shift();
+                            if (this.turnStartTime && !this.hasTtfcForTurn) {
+                                const ttfc = Math.round(performance.now() - this.turnStartTime);
+                                this.hasTtfcForTurn = true;
+                                this.addLog(`TTFC: ${ttfc}ms`, 'success');
+                            }
+                            await this.processAudioChunk(chunk, data.sample_rate || 16000, data.format || 'pcm_s16le');
+                        } else if (data.data || data.audio) {
+                            const audioB64 = data.data || data.audio;
+                            await this.processAudioChunk(audioB64, data.sample_rate || 16000, data.format || 'pcm_s16le');
+                        }
+                        break;
+
+                    case 'audio_complete':
+                        this.audioStreamComplete = true;
+                        this.checkPlaybackComplete();
+                        break;
+
+                    case 'interrupt':
+                    case 'clear':
+                    case 'playback_stop':
+                        this.stopAudioPlayback();
+                        break;
+
+                    case 'language_changed':
+                        this.addLog(`Language: ${data.language}`, 'success');
+                        break;
+
+                    case 'ping':
+                        this.send({ type: 'pong', timestamp: Date.now() / 1000 });
+                        break;
+                }
+            }
+
+            addMessage(text, sender) {
+                this.emptyState.classList.add('hidden');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                messageDiv.innerHTML = `<div class="content">${this.escapeHtml(text)}</div><div class="timestamp">${new Date().toLocaleTimeString()}</div>`;
+                this.chatMessages.appendChild(messageDiv);
+                this.scrollToBottom();
+                return messageDiv;
+            }
+
+            updateAgentMessage(text) {
+                this.emptyState.classList.add('hidden');
+                let streamingMsg = this.chatMessages.querySelector('.message.agent.streaming');
+                if (!streamingMsg) {
+                    streamingMsg = document.createElement('div');
+                    streamingMsg.className = 'message agent streaming';
+                    streamingMsg.innerHTML = '<div class="content"></div>';
+                    this.chatMessages.appendChild(streamingMsg);
+                }
+                streamingMsg.querySelector('.content').textContent = text;
+                this.scrollToBottom();
+            }
+
+            finalizeAgentMessage() {
+                const streamingMsg = this.chatMessages.querySelector('.message.agent.streaming');
+                if (streamingMsg) {
+                    streamingMsg.classList.remove('streaming');
+                    const timestamp = document.createElement('div');
+                    timestamp.className = 'timestamp';
+                    timestamp.textContent = new Date().toLocaleTimeString();
+                    streamingMsg.appendChild(timestamp);
+                }
+            }
+
+            scrollToBottom() {
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            async sendTextInput() {
+                const text = this.textInput.value.trim();
+                if (!text) return;
+
+                this.addMessage(text, 'user');
+                this.textInput.value = '';
+                this.textInput.style.height = 'auto';
+
+                this.turnStartTime = performance.now();
+                this.hasTtftForTurn = false;
+                this.hasTtfcForTurn = false;
+
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    this.addLog('Not connected', 'error');
+                    return;
+                }
+
+                this.send({ type: 'text_input', text: text, timestamp: Date.now() / 1000 });
+                this.addLog('Sent: ' + text.substring(0, 40) + (text.length > 40 ? '...' : ''), 'info');
+            }
+
+            updatePerformanceMetrics(data) {
+                // VAD visualization
+                if (data.logprob !== undefined && this.vadVisualizer) {
+                    const bars = this.vadVisualizer.children;
+                    const confidence = Math.max(0, Math.min(1, data.logprob));
+                    const height = Math.max(4, confidence * 28);
+
+                    for (let i = 0; i < bars.length; i++) {
+                        if (i === bars.length - 1) {
+                            bars[i].style.height = `${height}px`;
+                            bars[i].style.background = confidence > 0.7 ? 'var(--color-orange)' : 'var(--color-dark-gray)';
+                        } else {
+                            bars[i].style.height = `${parseInt(bars[i].style.height) * 0.8}px`;
+                        }
+                    }
+                }
+            }
+
+            async initAudio() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: PLAYBACK_SAMPLE_RATE
+                    });
+                }
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+            }
+
+            async processAudioChunk(chunk, sampleRate, format) {
+                if (!this.audioContext) return;
+
+                let audioBuffer;
+                if (format === 'pcm_s16le') {
+                    const int16Data = new Int16Array(chunk);
+                    audioBuffer = this.audioContext.createBuffer(1, int16Data.length, sampleRate);
+                    const channelData = audioBuffer.getChannelData(0);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        channelData[i] = int16Data[i] / 32768;
+                    }
+                } else {
+                    const float32Data = new Float32Array(chunk);
+                    audioBuffer = this.audioContext.createBuffer(1, float32Data.length, sampleRate);
+                    const channelData = audioBuffer.getChannelData(0);
+                    for (let i = 0; i < float32Data.length; i++) {
+                        channelData[i] = float32Data[i];
+                    }
+                }
+
+                this.audioQueue.push(audioBuffer);
+                this.processAudioQueue();
+            }
+
+            async processAudioQueue() {
+                if (this.isProcessingQueue || this.audioQueue.length === 0) return;
+
+                this.isProcessingQueue = true;
+
+                while (this.audioQueue.length > 0) {
+                    const buffer = this.audioQueue.shift();
+                    await this.playAudioBuffer(buffer);
+                }
+
+                this.isProcessingQueue = false;
+            }
+
+            playAudioBuffer(buffer) {
+                return new Promise((resolve) => {
+                    const source = this.audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(this.audioContext.destination);
+
+                    const startTime = Math.max(this.nextPlayTime, this.audioContext.currentTime);
+                    if (!this.playbackStartTime) {
+                        this.playbackStartTime = Date.now();
+                    }
+                    this.nextPlayTime = startTime + buffer.duration;
+                    this.playedAudioThisTurn = true;
+
+                    source.onended = () => {
+                        this.activeSources.delete(source);
+                        this.checkPlaybackComplete();
+                        resolve();
+                    };
+
+                    this.activeSources.add(source);
+                    source.start(startTime);
+                });
+            }
+
+            stopAudioPlayback() {
+                if (Number.isFinite(this.currentPlaybackTurnId)) {
+                    this.minAcceptedPlaybackTurnId = Math.max(
+                        this.minAcceptedPlaybackTurnId,
+                        this.currentPlaybackTurnId + 1
+                    );
+                }
+                this.audioQueue = [];
+                this.activeSources.forEach(source => {
+                    try { source.stop(); } catch (e) {}
+                });
+                this.activeSources.clear();
+                this.nextPlayTime = 0;
+                this.currentPlaybackTurnId = null;
+                this.audioStreamComplete = false;
+                this.playedAudioThisTurn = false;
+                this.playbackStartTime = null;
+            }
+
+            checkPlaybackComplete() {
+                if (this.audioStreamComplete && this.audioQueue.length === 0 && !this.isProcessingQueue) {
+                    this.addLog('Playback complete', 'info');
+                    if (
+                        this.playedAudioThisTurn &&
+                        this.ws &&
+                        this.ws.readyState === WebSocket.OPEN
+                    ) {
+                        const duration = this.playbackStartTime ? Date.now() - this.playbackStartTime : 0;
+                        this.send({
+                            type: 'playback_done',
+                            duration_ms: duration,
+                            playback_turn_id: this.currentPlaybackTurnId,
+                            timestamp: Date.now() / 1000
+                        });
+                    }
+                    this.audioStreamComplete = false;
+                    this.playedAudioThisTurn = false;
+                    this.playbackStartTime = null;
+                    this.currentPlaybackTurnId = null;
+                }
+            }
+
+            async toggleMicrophone() {
+                if (this.isMicActive) {
+                    this.stopMicrophone();
+                } else {
+                    await this.startMicrophone();
+                }
+            }
+
+            async startMicrophone() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            sampleRate: MIC_SAMPLE_RATE,
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+
+                    this.isMicActive = true;
+                    this.micButton.classList.add('active');
+                    this.micButton.innerHTML = '<span class="material-icons-round">mic_off</span>';
+                    this.addLog('Microphone started', 'success');
+
+                    this.micAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: MIC_SAMPLE_RATE });
+                    const source = this.micAudioContext.createMediaStreamSource(stream);
+                    const processor = this.micAudioContext.createScriptProcessor(2048, 1, 1);
+
+                    source.connect(processor);
+                    processor.connect(this.micAudioContext.destination);
+
+                    processor.onaudioprocess = (e) => {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+                        }
+
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(pcmData.buffer);
+                        }
+                    };
+
+                    this.micProcessor = processor;
+                    this.micSource = source;
+                    this.micStream = stream;
+                } catch (e) {
+                    this.addLog(`Mic error: ${e.message}`, 'error');
+                }
+            }
+
+            stopMicrophone() {
+                if (this.micProcessor) {
+                    this.micProcessor.disconnect();
+                    this.micProcessor = null;
+                }
+                if (this.micSource) {
+                    this.micSource.disconnect();
+                    this.micSource = null;
+                }
+                if (this.micStream) {
+                    this.micStream.getTracks().forEach(track => track.stop());
+                    this.micStream = null;
+                }
+                if (this.micAudioContext) {
+                    this.micAudioContext.close();
+                    this.micAudioContext = null;
+                }
+
+                this.isMicActive = false;
+                this.micButton.classList.remove('active');
+                this.micButton.innerHTML = '<span class="material-icons-round">mic</span>';
+                this.addLog('Microphone stopped', 'info');
+            }
+
+            updateStatus(status, text) {
+                this.statusIndicator.className = `status-indicator ${status}`;
+                this.statusText.textContent = text;
+            }
+
+            addLog(message, type = 'info') {
+                // Skip logging if logsContainer doesn't exist (e.g., in production UI)
+                if (!this.logsContainer) return;
+
+                const logItem = document.createElement('div');
+                logItem.className = `log-item ${type}`;
+                const time = new Date().toLocaleTimeString();
+                logItem.innerHTML = `<span class="log-time">[${time}]</span>${message}`;
+                this.logsContainer.appendChild(logItem);
+                this.logsContainer.scrollTop = this.logsContainer.scrollHeight;
+
+                while (this.logsContainer.children.length > 50) {
+                    this.logsContainer.removeChild(this.logsContainer.firstChild);
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            window.taraClient = new TARAClient();
+        });
+    </script>
+</body>
+</html>

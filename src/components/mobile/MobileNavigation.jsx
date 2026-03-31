@@ -45,7 +45,13 @@ const MobileNavigation = () => {
           <div className="px-6 h-16 flex items-center justify-between">
             {/* Logo */}
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
+                  window.location.href = '/';
+                  return;
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="flex items-center bg-transparent border-none cursor-pointer"
             >
               <img

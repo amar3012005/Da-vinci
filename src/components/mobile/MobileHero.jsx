@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
@@ -9,6 +9,113 @@ const fade = (delay) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.8, delay, ease },
 });
+
+const SCRAMBLE_CHARS = '·•:+/×○□01';
+
+const splitText = (text) => Array.from(text);
+
+const ScrambleText = ({
+  text,
+  as: Component = 'span',
+  className = '',
+  hoverOnly = false,
+  startDelay = 0,
+}) => {
+  const targetChars = useMemo(() => splitText(text), [text]);
+  const [displayText, setDisplayText] = useState(text);
+  const frameRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  const buildFrame = useCallback((progress) => {
+    const revealIndex = Math.floor(progress * targetChars.length);
+    const activeWindow = Math.max(2, Math.ceil((1 - progress) * 7));
+
+    return targetChars
+      .map((char, index) => {
+        if (char === ' ' || char === '\u00A0') {
+          return char;
+        }
+        if (index < revealIndex || progress >= 1) {
+          return char;
+        }
+        if (index > revealIndex + activeWindow) {
+          return char;
+        }
+        return Math.random() > 0.32
+          ? char
+          : SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+      })
+      .join('');
+  }, [targetChars]);
+
+  const runScramble = useCallback((duration) => {
+    const startedAt = performance.now();
+
+    const tick = (timestamp) => {
+      const elapsed = timestamp - startedAt;
+      const progress = Math.min(1, elapsed / duration);
+      setDisplayText(buildFrame(progress));
+
+      if (progress < 1) {
+        frameRef.current = window.requestAnimationFrame(tick);
+      } else {
+        setDisplayText(text);
+      }
+    };
+
+    if (frameRef.current) {
+      window.cancelAnimationFrame(frameRef.current);
+    }
+    frameRef.current = window.requestAnimationFrame(tick);
+  }, [buildFrame, text]);
+
+  useEffect(() => {
+    if (!hoverOnly) {
+      timeoutRef.current = window.setTimeout(() => runScramble(900), startDelay);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [hoverOnly, runScramble, startDelay]);
+
+  const handlePointerEnter = () => {
+    runScramble(650);
+  };
+
+  return (
+    <Component
+      className={className}
+      onMouseEnter={handlePointerEnter}
+      onFocus={handlePointerEnter}
+      aria-label={text}
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        whiteSpace: 'pre-wrap',
+      }}
+    >
+      <span style={{ visibility: 'hidden' }}>{text}</span>
+      <span
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          whiteSpace: 'pre-wrap',
+          opacity: 0.96,
+          transition: 'opacity 220ms ease',
+        }}
+      >
+        {displayText}
+      </span>
+    </Component>
+  );
+};
 
 const MobileHero = () => {
   const { isDark } = useTheme();
@@ -33,10 +140,10 @@ const MobileHero = () => {
             {...fade(0)}
           >
             <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              DV — Series
+              <ScrambleText text="DV — Series" startDelay={0} />
             </span>
             <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              /2026
+              <ScrambleText text="/2026" startDelay={80} />
             </span>
           </motion.div>
 
@@ -56,7 +163,10 @@ const MobileHero = () => {
                 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`}
                 {...fade(0.1)}
               >
-                DV-S001 <span className="ml-8">52.3759° N, 9.7320° E</span>
+                <ScrambleText text="DV-S001" startDelay={120} />
+                <span className="ml-8">
+                  <ScrambleText text="52.3759° N, 9.7320° E" startDelay={180} />
+                </span>
               </motion.p>
 
               {/* Main headline */}
@@ -64,11 +174,15 @@ const MobileHero = () => {
                 className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
                 {...fade(0.15)}
               >
-                AI-POWERED
-                <br />
-                ENTERPRISE
-                <br />
-                <span className={isDark ? 'text-white' : 'text-[#0a0a0a]'}>AUTOMATION</span>
+                <span className="block">
+                  <ScrambleText text="AI-POWERED" startDelay={220} />
+                </span>
+                <span className="block">
+                  <ScrambleText text="ENTERPRISE" startDelay={320} />
+                </span>
+                <span className={`block ${isDark ? 'text-white' : 'text-[#0a0a0a]'}`}>
+                  <ScrambleText text="AUTOMATION" startDelay={420} />
+                </span>
               </motion.h1>
 
               {/* Arrow CTA — pill shape like reference */}
@@ -77,14 +191,14 @@ const MobileHero = () => {
                   href="/hivemind"
                   className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
                 >
-                  HIVEMIND
+                  <ScrambleText text="HIVEMIND" startDelay={520} />
                   <ArrowRight size={14} />
                 </a>
                 <a
                   href="https://enterprise.davinciai.eu"
                   className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
                 >
-                  Enterprise
+                  <ScrambleText text="Enterprise" startDelay={580} />
                 </a>
               </motion.div>
 
@@ -93,7 +207,10 @@ const MobileHero = () => {
                 className={`text-sm ${c.textSecondary} mt-10 max-w-md leading-relaxed`}
                 {...fade(0.3)}
               >
-                Not what looks cool — <span className={`${c.text} font-medium`}>what actually lasts.</span>
+                <ScrambleText text="Not what looks cool — " startDelay={640} />
+                <span className={`${c.text} font-medium`}>
+                  <ScrambleText text="what actually lasts." startDelay={720} />
+                </span>
               </motion.p>
             </div>
 
@@ -126,7 +243,7 @@ const MobileHero = () => {
                 {/* Metadata overlay on image */}
                 <div className={`absolute bottom-6 left-6 z-10`}>
                   <span className="text-white/70 text-[9px] font-mono uppercase tracking-[0.2em]">
-                    Hannover, Germany
+                    <ScrambleText text="Hannover, Germany" startDelay={780} />
                   </span>
                 </div>
               </div>
@@ -139,10 +256,10 @@ const MobileHero = () => {
             {...fade(0.4)}
           >
             <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              Made by Da'Vinci Solutions
+              <ScrambleText text="Made by Da'Vinci Solutions" startDelay={840} />
             </span>
             <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              Save for this later
+              <ScrambleText text="Save for this later" startDelay={900} />
             </span>
           </motion.div>
         </div>
