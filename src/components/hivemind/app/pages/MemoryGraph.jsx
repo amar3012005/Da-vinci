@@ -36,6 +36,7 @@ const LAYER_COLORS = {
   observation: '#f59e0b', // amber — observations
   promoted: '#ef4444',    // red — promoted risks
   verified: '#22c55e',    // green — turing verified
+  tara: '#a855f7',        // purple — TARA conversation turns
   memory: null,           // use TYPE_COLORS
 };
 
@@ -345,8 +346,34 @@ export default function MemoryGraph() {
       ctx.stroke();
     }
 
-    // Node body — facts are diamond-shaped, observations are squares
-    if (node.nodeLayer === 'fact') {
+    // TARA turn — purple halo + slightly larger
+    if (node.nodeLayer === 'tara' && !isDimmed) {
+      radius = radius * 1.2;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#a855f7', 0.12);
+      ctx.fill();
+    }
+
+    // Node body — facts are diamond-shaped, observations are squares, tara turns are hexagons
+    if (node.nodeLayer === 'tara') {
+      // Hexagon shape for TARA conversation turns
+      const sides = 6;
+      ctx.beginPath();
+      for (let i = 0; i < sides; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 6;
+        const px = node.x + radius * Math.cos(angle);
+        const py = node.y + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.75);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+    } else if (node.nodeLayer === 'fact') {
       // Diamond shape for facts
       ctx.beginPath();
       ctx.moveTo(node.x, node.y - radius);
