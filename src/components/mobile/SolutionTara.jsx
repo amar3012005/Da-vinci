@@ -86,18 +86,6 @@ const DitherEdge = ({ isDark, rows = 10 }) => {
   );
 };
 
-const DotBar = ({ value = 70, isDark }) => {
-  const total = 20;
-  const filled = Math.round((value / 100) * total);
-  return (
-    <div className="flex gap-[1px]">
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className={`w-[4px] h-[6px] ${i < filled ? (isDark ? 'bg-white' : 'bg-[#0a0a0a]') : (isDark ? 'bg-white/10' : 'bg-black/5')}`} />
-      ))}
-    </div>
-  );
-};
-
 /* ═══════════════════════════════════════════════════════════
    FULL PAGE — Meet TARA
    ═══════════════════════════════════════════════════════════ */
@@ -143,106 +131,94 @@ const SolutionTara = () => {
           </motion.div>
         </div>
 
-        {/* ─── Orb + Conversation demo ─── */}
+        {/* ─── Orb (small) + Chat conversation ─── */}
         <div className="px-6 md:px-10 lg:px-20 pb-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-5 gap-8 items-start">
 
-            {/* Left — Live Orb + Talk to TARA */}
+            {/* Left col (2/5) — Compact Orb */}
             <motion.div
               initial={{ opacity: 0, y: 32 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
-              className="relative"
+              className="lg:col-span-2 relative"
             >
-              {/* Dither decoration */}
               <div className="absolute -top-3 -right-2 z-10">
-                <DitherEdge isDark={isDark} rows={8} />
+                <DitherEdge isDark={isDark} rows={6} />
               </div>
 
               <div
                 className={`${c.bgCard} border ${c.border} relative overflow-hidden cursor-pointer group`}
                 onClick={handleTalkToTara}
               >
-                {/* Terminal header */}
-                <div className={`px-5 py-2.5 border-b ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>
-                    TARA_X1 // READY
-                  </span>
+                <div className={`px-4 py-2 border-b ${c.border} flex items-center justify-between`}>
+                  <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>TARA_X1</span>
                   <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-1.5 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} animate-pulse`} />
                     <span className={`text-[7px] font-mono ${c.textMuted}`}>LIVE</span>
                   </div>
                 </div>
 
-                {/* Orb canvas */}
-                <div className="w-full h-[280px] relative">
+                <div className="w-full h-[180px] relative">
                   <Canvas resize={{ debounce: 100 }} gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}>
                     <Suspense fallback={null}><OrbScene /></Suspense>
                   </Canvas>
                 </div>
 
-                {/* CTA overlay */}
-                <div className={`px-5 py-4 border-t ${c.border} flex items-center justify-between`}>
-                  <div>
-                    <span className={`text-sm font-semibold ${c.text} font-['Space_Grotesk']`}>Talk to TARA</span>
-                    <span className={`text-[9px] font-mono ${c.textMuted} ml-3`}>Click to start voice call</span>
-                  </div>
-                  <div className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#080808' : '#fff'} strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                <div className={`px-4 py-3 border-t ${c.border} flex items-center justify-between`}>
+                  <span className={`text-xs font-semibold ${c.text} font-['Space_Grotesk']`}>Talk to TARA</span>
+                  <div className={`w-7 h-7 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#080808' : '#fff'} strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                   </div>
                 </div>
               </div>
+
+              <p className={`text-[9px] font-mono ${c.textMuted} mt-3 text-center`}>Click orb to start voice call</p>
             </motion.div>
 
-            {/* Right — Appointment demo card (from reference image) */}
+            {/* Right col (3/5) — Chat conversation, alternating L/R */}
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: 0.15 }}
-              className="space-y-4"
+              transition={{ duration: 0.8, delay: 0.15 }}
+              className="lg:col-span-3 space-y-3"
             >
-              {/* Glass calendar card */}
-              <div className={`${c.bgCard} border ${c.border} p-5`}>
-                <div className={`flex items-center justify-between mb-4 pb-3 border-b ${c.border}`}>
-                  <span className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest`}>Thu July 24</span>
-                  <span className={`text-[8px] font-mono ${c.textMuted}`}>10:30 - 11:00</span>
-                </div>
-                <div className={`${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]'} border ${c.border} p-4`}>
-                  <span className={`text-[9px] font-mono ${c.textMuted} uppercase tracking-widest block mb-1`}>Event</span>
-                  <span className={`text-sm font-semibold ${c.text} font-['Space_Grotesk']`}>Doctor Appointment</span>
-                  <span className={`text-xs ${c.textMuted} block mt-1`}>Booked by TARA via voice call</span>
-                </div>
-              </div>
-
-              {/* Chat conversation */}
-              <div className={`${c.bgCard} border ${c.border} p-5 space-y-4`}>
-                <div className={`text-[8px] font-mono ${c.textMuted} uppercase tracking-widest mb-3`}>Conversation</div>
-
-                {/* User message */}
-                <div className="flex items-start gap-3">
-                  <div className={`w-6 h-6 ${isDark ? 'bg-white/10' : 'bg-black/5'} flex items-center justify-center text-[8px] font-mono ${c.textMuted} shrink-0`}>J</div>
-                  <p className={`text-sm ${c.text} leading-relaxed`}>
-                    Hi, I need to book an appointment with Dr. Smith sometime next week please.
-                  </p>
-                </div>
-
-                {/* TARA response */}
-                <div className="flex items-start gap-3">
-                  <div className={`w-6 h-6 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center shrink-0`}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#080808' : '#fff'} strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M8 12l2 2 4-4" /></svg>
+              {[
+                { from: 'user', text: 'Hey, what exactly does Da Vinci AI do?' },
+                { from: 'tara', text: 'We build enterprise AI infrastructure. Voice agents, memory engines, and sovereign deployment — all from Europe.' },
+                { from: 'user', text: 'So TARA is the voice part?' },
+                { from: 'tara', text: 'Exactly. I handle calls, qualify leads, book appointments, resolve tickets. No scripts — I reason in real time.' },
+                { from: 'user', text: 'What about HIVEMIND?' },
+                { from: 'tara', text: 'That\'s the memory layer. It stores context across every tool your team uses — Gmail, Slack, GitHub — so your AI never forgets.' },
+                { from: 'user', text: 'Is it GDPR compliant?' },
+                { from: 'tara', text: 'Fully. EU-only infrastructure. Hetzner, OVH, Scaleway. Zero transatlantic data transfer.' },
+              ].map((msg, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }}
+                  className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] backdrop-blur-xl rounded-2xl px-4 py-3 ${
+                      msg.from === 'user'
+                        ? `${isDark ? 'bg-white/[0.06] border-white/[0.08]' : 'bg-black/[0.04] border-black/[0.06]'}`
+                        : `${isDark ? 'bg-white/[0.10] border-white/[0.12]' : 'bg-black/[0.06] border-black/[0.08]'}`
+                    } border`}
+                  >
+                    {i === 0 && <span className={`text-[9px] font-mono ${c.textMuted} block mb-1`}>You</span>}
+                    {i === 1 && <span className={`text-[9px] font-mono ${c.textMuted} block mb-1`}>TARA</span>}
+                    <p className={`text-[13px] ${c.text} leading-relaxed`}>{msg.text}</p>
                   </div>
-                  <p className={`text-sm ${c.text} leading-relaxed`}>
-                    Sure. And, just to confirm, are you Jane Reynolds? I have Thursday the 24th open at 10:30 AM.
-                  </p>
-                </div>
+                </motion.div>
+              ))}
 
-                {/* Status bar */}
-                <div className={`pt-3 border-t ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[8px] font-mono ${c.textMuted}`}>RESPONSE: 480ms</span>
-                  <DotBar value={96} isDark={isDark} />
-                </div>
+              {/* Response time */}
+              <div className="flex justify-start">
+                <span className={`text-[8px] font-mono ${c.textMuted} tracking-widest`}>AVG RESPONSE: 480ms</span>
               </div>
             </motion.div>
           </div>
