@@ -247,7 +247,7 @@ export default function Billing() {
   const [upgrading, setUpgrading] = useState(false);
   const [upgraded, setUpgraded] = useState(false);
 
-  const { data: profile } = useApiQuery(
+  const { data: profile, refetch: refetchProfile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
     [],
   );
@@ -273,7 +273,8 @@ export default function Billing() {
       await apiClient.core.post('/api/billing/upgrade', { plan: planId });
       setUpgraded(true);
       setUpgradeModal(null);
-      setTimeout(() => window.location.reload(), 2000);
+      // Refetch profile so the new plan reflects immediately without a page reload
+      await refetchProfile();
     } catch (e) {
       console.error('Upgrade failed:', e);
       alert('Upgrade failed. Please try again.');

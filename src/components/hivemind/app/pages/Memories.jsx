@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -540,6 +540,19 @@ export default function Memories() {
     return arr;
   }, [isSearching, searchData, listData, allMemories, offset]);
 
+  // Total count from API pagination (server-side truth), not client array length
+  const totalCount = useMemo(() => {
+    if (isSearching) return null;
+    return listData?.pagination?.total ?? listData?.total ?? null;
+  }, [isSearching, listData]);
+
+  // Sync hasMore from initial API response
+  useEffect(() => {
+    if (listData && !isSearching && offset === 0) {
+      if (listData.pagination?.has_more === false) setHasMore(false);
+    }
+  }, [listData, isSearching, offset]);
+
   const loading = isSearching ? searchLoading : listLoading;
   const error = isSearching ? searchError : listError;
 
@@ -787,7 +800,9 @@ export default function Memories() {
             <>
               {/* Count */}
               <p className="text-[#d4d0ca] text-[11px] font-mono mb-3">
-                {isSearching ? 'Search results' : `${resolvedList.length} memories`}
+                {isSearching
+                  ? `${resolvedList.length} result${resolvedList.length !== 1 ? 's' : ''}`
+                  : `${totalCount != null ? totalCount : resolvedList.length} memories`}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 
@@ -807,7 +822,7 @@ export default function Memories() {
               </div>
 
               {/* Load more */}
-              {!isSearching && hasMore && resolvedList.length >= PAGE_SIZE && (
+              {!isSearching && hasMore && resolvedList.length >= PAGE_SIZE && (totalCount == null || resolvedList.length < totalCount) && (
                 <div className="flex justify-center mt-8">
                   <button
                     onClick={handleLoadMore}

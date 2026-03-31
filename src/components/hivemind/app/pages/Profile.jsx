@@ -134,6 +134,7 @@ function PlanBadge({ plan }) {
   const map = {
     free: { label: 'Free', variant: 'gray', dot: '#a3a3a3' },
     pro: { label: 'Pro', variant: 'blue', dot: '#117dff' },
+    team: { label: 'Team', variant: 'purple', dot: '#a855f7' },
     scale: { label: 'Scale', variant: 'purple', dot: '#a855f7' },
     enterprise: { label: 'Enterprise', variant: 'green', dot: '#059669' },
   };
@@ -235,15 +236,13 @@ function AccountSection({ user, org }) {
 
 // ─── Section 2: Plan & Usage ──────────────────────────────────────────────────
 
-function PlanUsageSection() {
+function PlanUsageSection({ profile }) {
   const navigate = useNavigate();
-  const { data: usageData, loading, error } = useApiQuery(
-    () => apiClient.controlPlane.get('/v1/proxy/billing/usage').then((r) => r.data),
-    []
-  );
 
-  const plan = usageData?.plan || 'free';
-  const usage = usageData?.usage || {};
+  const plan = profile?.plan || 'free';
+  const memoryCount = profile?.memory_count || 0;
+  const observationCount = profile?.observation_count || 0;
+  const relationshipCount = profile?.relationship_count || 0;
 
   return (
     <Card>
@@ -255,45 +254,23 @@ function PlanUsageSection() {
         <PlanBadge plan={plan} />
       </div>
 
-      {loading ? (
-        <div className="flex items-center gap-2 py-4">
-          <div className="w-4 h-4 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[#a3a3a3] text-sm font-mono">Loading usage…</span>
-        </div>
-      ) : error ? (
-        <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] py-2">
-          Usage tracking initializing…
-        </p>
-      ) : (
-        <div className="mb-5">
-          {usage.tokens !== undefined && (
-            <UsageBar
-              label="Tokens"
-              used={usage.tokens?.used}
-              limit={usage.tokens?.limit}
-            />
-          )}
-          {usage.queries !== undefined && (
-            <UsageBar
-              label="Queries"
-              used={usage.queries?.used}
-              limit={usage.queries?.limit}
-            />
-          )}
-          {usage.uploads !== undefined && (
-            <UsageBar
-              label="Uploads"
-              used={usage.uploads?.used}
-              limit={usage.uploads?.limit}
-            />
-          )}
-          {Object.keys(usage).length === 0 && (
-            <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] py-1">
-              Usage tracking initializing…
-            </p>
-          )}
-        </div>
-      )}
+      <div className="mb-5">
+        <UsageBar
+          label="Memories"
+          used={memoryCount}
+          limit={plan === 'free' ? 1000 : plan === 'pro' ? 50000 : 0}
+        />
+        <UsageBar
+          label="Observations"
+          used={observationCount}
+          limit={0}
+        />
+        <UsageBar
+          label="Relationships"
+          used={relationshipCount}
+          limit={0}
+        />
+      </div>
 
       <button
         onClick={() => navigate('/hivemind/app/billing')}
@@ -793,7 +770,7 @@ export default function Profile() {
         <AccountSection user={user} org={org} />
 
         {/* Section 2: Plan & Usage */}
-        <PlanUsageSection />
+        <PlanUsageSection profile={profile} />
 
         {/* Section 3: Memory Footprint */}
         <MemoryFootprintSection profile={profile} />

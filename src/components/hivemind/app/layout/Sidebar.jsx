@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import { useApiQuery } from '../shared/hooks';
 
 /** Build nav sections, conditionally including admin items. */
 function buildNavSections({ showWebAdmin }) {
@@ -75,6 +76,12 @@ export default function Sidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
+
+  // Fetch profile for plan display
+  const { data: profile } = useApiQuery(() => apiClient.getProfile().catch(() => null), []);
+  const planLabel = profile?.plan
+    ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan'
+    : 'Free Plan';
 
   // Probe admin access once on mount
   useEffect(() => {
@@ -186,8 +193,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Upgrade Banner */}
-      {!collapsed && (
+      {/* Upgrade Banner — hide if already on pro */}
+      {!collapsed && profile?.plan !== 'pro' && (
         <div className="mx-2.5 mb-2">
           <div className="bg-[#117dff]/[0.04] border border-[#117dff]/10 rounded-xl p-3">
             <div className="flex items-center gap-2 mb-1.5">
@@ -223,7 +230,7 @@ export default function Sidebar() {
                 {user.display_name || user.email || 'User'}
               </p>
               <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
-                Free Plan
+                {planLabel}
               </p>
             </div>
           </div>

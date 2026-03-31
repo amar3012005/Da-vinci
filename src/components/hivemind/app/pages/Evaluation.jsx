@@ -396,7 +396,9 @@ export default function Evaluation() {
   }, [memoriesData]);
 
   const totalCount = useMemo(() => {
-    // Prefer profile.memory_count (accurate server-side total) over sample array length
+    // Prefer profile.profile.memory_count (accurate server-side total) over sample array length
+    // getProfile() returns { ok, profile: { memory_count, ... } }
+    if (profile?.profile?.memory_count != null) return profile.profile.memory_count;
     if (profile?.memory_count != null) return profile.memory_count;
     if (!memoriesData) return 0;
     return memoriesData.pagination?.total ?? memoriesData.total ?? memories.length;
@@ -508,14 +510,14 @@ export default function Evaluation() {
     return [a, b];
   }, [compareA, compareB, historyList]);
 
-  const latestReport = latest?.report || latest;
+  const latestReport = latest?.report || (latest?.summary ? latest : null);
   const latestScores = latestReport ? extractScores(latestReport) : {};
   const latestPassed = latestReport ? derivePassFail(latestReport) : null;
   const benchmarks = latestReport ? extractBenchmarks(latestReport) : {};
 
   /* ── Loading state ───────────────────────────────────────────── */
 
-  if (memoriesLoading && latestLoading && historyLoading) {
+  if (memoriesLoading && latestLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-6 h-6 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />

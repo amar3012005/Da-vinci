@@ -302,12 +302,17 @@ class HiveMindApiClient {
   async getProfile() {
     try {
       const { data } = await this.controlPlane.get('/v1/proxy/profile');
-      return data;
+      // Unwrap: API returns { ok, profile: {...}, graph_summary } — callers expect the profile object directly
+      const profile = data?.profile || data;
+      if (data?.graph_summary) profile.graph_summary = data.graph_summary;
+      return profile;
     } catch (proxyErr) {
       // Fallback: hit core API directly if proxy is unavailable
       if (this._apiKey && this._coreBaseUrl) {
-        const { data } = await this.core.get('/profile');
-        return data;
+        const { data } = await this.core.get('/api/profile');
+        const profile = data?.profile || data;
+        if (data?.graph_summary) profile.graph_summary = data.graph_summary;
+        return profile;
       }
       throw proxyErr;
     }
