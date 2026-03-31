@@ -37,6 +37,7 @@ const LAYER_COLORS = {
   promoted: '#ef4444',    // red — promoted risks
   verified: '#22c55e',    // green — turing verified
   tara: '#a855f7',        // purple — TARA conversation turns
+  'tara-insight': '#f97316', // orange — clinical reasoning insights
   memory: null,           // use TYPE_COLORS
 };
 
@@ -355,8 +356,36 @@ export default function MemoryGraph() {
       ctx.fill();
     }
 
-    // Node body — facts are diamond-shaped, observations are squares, tara turns are hexagons
-    if (node.nodeLayer === 'tara') {
+    // Clinical insight — orange pulsing glow
+    if (node.nodeLayer === 'tara-insight' && !isDimmed) {
+      radius = radius * 1.1;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#f97316', 0.15);
+      ctx.fill();
+    }
+
+    // Node body — shape per type
+    if (node.nodeLayer === 'tara-insight') {
+      // 4-point star for clinical insights
+      const spikes = 4;
+      const outerR = radius;
+      const innerR = radius * 0.45;
+      ctx.beginPath();
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (Math.PI / spikes) * i - Math.PI / 2;
+        const px = node.x + r * Math.cos(angle);
+        const py = node.y + r * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.8);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+    } else if (node.nodeLayer === 'tara') {
       // Hexagon shape for TARA conversation turns
       const sides = 6;
       ctx.beginPath();
