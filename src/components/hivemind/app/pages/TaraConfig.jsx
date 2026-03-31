@@ -30,10 +30,12 @@ function ConfigEditor({ config, onSave, saving }) {
   const [temperature, setTemperature] = useState(config?.temperature ?? 0.7);
   const [maxTokens, setMaxTokens] = useState(config?.max_tokens ?? 300);
   const [voiceOptimized, setVoiceOptimized] = useState(config?.voice_optimized !== false);
+  const [clinicalPrompt, setClinicalPrompt] = useState(config?.clinical_prompt || '');
 
   useEffect(() => {
     if (config) {
       setSystemPrompt(config.system_prompt || '');
+      setClinicalPrompt(config.clinical_prompt || '');
       setModel(config.model || 'llama-3.3-70b-versatile');
       setTemperature(config.temperature ?? 0.7);
       setMaxTokens(config.max_tokens ?? 300);
@@ -42,7 +44,7 @@ function ConfigEditor({ config, onSave, saving }) {
   }, [config]);
 
   const handleSave = () => {
-    onSave({ system_prompt: systemPrompt, model, temperature, max_tokens: maxTokens, voice_optimized: voiceOptimized });
+    onSave({ system_prompt: systemPrompt, clinical_prompt: clinicalPrompt, model, temperature, max_tokens: maxTokens, voice_optimized: voiceOptimized });
   };
 
   const MODELS = [
@@ -77,6 +79,27 @@ function ConfigEditor({ config, onSave, saving }) {
         className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/10 resize-y"
         placeholder="Enter the system prompt for your voice agent..."
       />
+
+      {/* Clinical Reasoning Prompt (optional) */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">
+            Clinical Reasoning Prompt (optional — enables background analysis)
+          </label>
+          {clinicalPrompt && (
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
+              Active
+            </span>
+          )}
+        </div>
+        <textarea
+          value={clinicalPrompt}
+          onChange={(e) => setClinicalPrompt(e.target.value)}
+          rows={5}
+          className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-purple-400/40 focus:ring-2 focus:ring-purple-400/10 resize-y"
+          placeholder="Leave empty to disable clinical reasoning. When set, a background reasoning model analyzes each turn and provides strategic insights to the main agent..."
+        />
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
         <div>
