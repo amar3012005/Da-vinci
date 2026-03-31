@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ArrowRight, Hexagon } from 'lucide-react';
+import { Menu, X, ArrowRight } from 'lucide-react';
 
 const navLinks = [
   { label: 'Platform', href: '#features' },
@@ -9,6 +9,7 @@ const navLinks = [
   { label: 'Developers', href: '#developers' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Docs', href: '/hivemind/app/connectors' },
+  { label: './ Research', href: '/research' },
 ];
 
 const Navbar = () => {
@@ -52,10 +53,13 @@ const Navbar = () => {
               onClick={() => handleNavClick('/hivemind')}
               className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
-                <Hexagon size={16} className="text-[#117dff]" />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">HIVEMIND</span>
+              <img
+                src="/images/davinci-logo.svg"
+                alt="Da Vinci"
+                className="h-8"
+              />
+              <span className="text-[#0a0a0a]/30 text-lg font-light">|</span>
+              <span className="text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Hivemind</span>
             </button>
 
             {/* Center Links — Desktop */}

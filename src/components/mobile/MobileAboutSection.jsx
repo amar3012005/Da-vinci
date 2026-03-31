@@ -1,34 +1,94 @@
+import React from 'react';
 import { motion } from 'framer-motion';
+import { Mail, MapPin, ArrowRight } from 'lucide-react';
+import { useTheme, t } from './ThemeContext';
 
-/**
- * MobileAboutSection - Clean Theme
- * Minimal, monospaced typography with bracketed cards.
- */
 const MobileAboutSection = () => {
-    return (
-        <section id="cta-section" className="py-20 px-6 pb-32 relative overflow-hidden bg-[#0a0a0a] min-h-[40vh] flex flex-col justify-center">
-            <div className="relative z-10 max-w-lg mx-auto">
+    const { isDark } = useTheme();
+    const c = t(isDark);
 
-                {/* About Us Header Bar */}
+    return (
+        <section id="cta-section" className={`${c.bg} border-t ${c.border} py-24 px-6 pb-36`}>
+            <div className="max-w-[1200px] mx-auto">
+                {/* Section label */}
                 <motion.div
-                    className="relative bg-white/[0.03] border border-white/10 p-4 mb-8"
+                    className="mb-10"
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
                 >
-                    {/* Corner Brackets */}
-                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/30" />
-                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/30" />
-                    <div className="text-[10px] font-mono text-white/90 uppercase tracking-widest">./Contact Us - At admin@da-vinci.ai</div>
+                    <div className={`text-xs font-mono ${c.textMuted} uppercase tracking-[0.3em] mb-4`}>
+                        Contact
+                    </div>
+                    <h2 className={`text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-3`}>
+                        Get in touch
+                    </h2>
+                    <p className={`text-sm ${c.textSecondary} leading-relaxed`}>
+                        Have a question, partnership inquiry, or just want to say hello? We'd love to hear from you.
+                    </p>
                 </motion.div>
 
+                {/* Contact card */}
+                <motion.div
+                    className={`${c.bgCard} border ${c.border} p-6 mb-6 ${c.shadow}`}
+                    initial={{ opacity: 0, y: 15 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    {/* Email */}
+                    <a
+                        href="mailto:admin@davincisolutions.de"
+                        className={`flex items-center gap-4 ${c.bg} border ${c.border} p-4 mb-4 ${c.hoverBg} transition-colors group no-underline`}
+                    >
+                        <div className={`w-10 h-10 ${isDark ? 'bg-[#1a1a1a]' : 'bg-black/[0.04]'} flex items-center justify-center shrink-0`}>
+                            <Mail size={16} className={c.textSecondary} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>Email</div>
+                            <div className={`text-sm ${c.text} font-medium truncate`}>admin@davincisolutions.de</div>
+                        </div>
+                        <ArrowRight size={14} className={`${c.textMuted} group-hover:translate-x-0.5 transition-all shrink-0`} />
+                    </a>
 
+                    {/* Location */}
+                    <div className={`flex items-center gap-4 ${c.bg} border ${c.border} p-4`}>
+                        <div className={`w-10 h-10 ${isDark ? 'bg-[#1a1a1a]' : 'bg-black/[0.04]'} flex items-center justify-center shrink-0`}>
+                            <MapPin size={16} className={c.textSecondary} />
+                        </div>
+                        <div className="flex-1">
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>Location</div>
+                            <div className={`text-sm ${c.text} font-medium`}>Hannover, Germany</div>
+                        </div>
+                    </div>
+                </motion.div>
 
+                {/* CTA button */}
+                <motion.a
+                    href="mailto:admin@davincisolutions.de"
+                    className={`w-full py-3.5 rounded-full ${c.accentBg} ${c.accentText} font-semibold text-xs uppercase tracking-[0.15em] ${c.accentHover} no-underline flex items-center justify-center gap-2 transition-colors`}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                >
+                    Send us a message
+                    <ArrowRight size={14} />
+                </motion.a>
 
-
-
-
-
+                {/* Footer */}
+                <motion.div
+                    className={`text-[10px] font-mono ${c.textMuted} tracking-[0.3em] uppercase text-center mt-12 pt-6 border-t ${c.border}`}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                >
+                    Da'Vinci Solutions / 2026
+                </motion.div>
             </div>
         </section>
     );

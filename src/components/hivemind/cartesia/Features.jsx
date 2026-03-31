@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 const StripedSeparator = () => (
   <div
@@ -89,122 +89,6 @@ const Features = () => {
           </div>
         </section>
 
-        {/* Section 2: Speed/Latency */}
-        <section className="relative border-t border-[#e3e0db]">
-          <StripedSeparator />
-
-          <div className="px-10 lg:px-20 py-20 lg:py-32">
-            <div className="grid lg:grid-cols-2 gap-16 lg:gap-8 mb-20">
-              <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight font-['Space_Grotesk']">
-                  HIVEMIND responds faster<br />
-                  than you can blink
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button className="px-5 py-2.5 rounded-lg bg-[#117dff]/[0.08] text-sm font-medium border border-[#117dff]/20 text-[#117dff]">
-                    Human speed
-                  </button>
-                  <button className="px-5 py-2.5 rounded-lg border border-[#e3e0db] text-sm font-medium text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors bg-white">
-                    Competitive advantage
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <p className="text-lg text-[#525252] leading-relaxed max-w-md">
-                  At #1, HIVEMIND sets the standard for ultra-low latency memory retrieval. It's contextual AI that's fast, fluid—and virtually human.
-                </p>
-                <button onClick={() => navigate('/hivemind/login')} className="px-6 py-3 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-sm uppercase tracking-[0.075em]">
-                  Try for free
-                </button>
-              </div>
-            </div>
-
-            {/* Speed visualization */}
-            <div className="grid lg:grid-cols-2 gap-8 mb-24 relative">
-              {/* Left side - Arc visualization */}
-              <div className="h-[300px] relative flex items-center justify-center">
-                <div className="relative w-full max-w-[400px]">
-                  {/* Arc bars */}
-                  <div className="space-y-6">
-                    <div className="relative">
-                      <div className="h-16 rounded-xl bg-gradient-to-r from-transparent via-[#117dff]/20 to-[#117dff] flex items-center justify-end pr-6" style={{ width: '40%' }}>
-                        <span className="text-sm font-semibold text-white">40ms</span>
-                      </div>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full ml-4 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-[#117dff] rounded-full"></div>
-                        <span className="text-sm text-[#525252] font-medium">HIVEMIND</span>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <div className="h-16 rounded-xl bg-gradient-to-r from-transparent via-[#e3e0db]/40 to-[#d4d0ca] flex items-center justify-end pr-6" style={{ width: '70%' }}>
-                        <span className="text-sm font-medium text-[#525252]">100ms</span>
-                      </div>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full ml-4">
-                        <span className="text-sm text-[#a3a3a3]">Blink of an eye</span>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <div className="h-16 rounded-xl bg-gradient-to-r from-transparent via-[#eae7e1]/40 to-[#eae7e1] flex items-center justify-end pr-6" style={{ width: '90%' }}>
-                        <span className="text-sm font-medium text-[#a3a3a3]">150ms</span>
-                      </div>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full ml-4">
-                        <span className="text-sm text-[#d4d0ca]">Human conversational threshold</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right side - Labels */}
-              <div className="flex flex-col justify-center space-y-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 bg-[#117dff] rounded-full"></div>
-                  <span className="text-[#525252] font-medium">HIVEMIND Core</span>
-                </div>
-                <div className="h-px bg-[#e3e0db] w-full"></div>
-                <div className="text-[#a3a3a3]">Sub-50ms retrieval</div>
-                <div className="h-px bg-[#e3e0db] w-full"></div>
-                <div className="text-[#d4d0ca]">Edge cached responses</div>
-              </div>
-            </div>
-
-            {/* Three column features */}
-            <div className="grid md:grid-cols-3 gap-8 pt-10 border-t border-[#e3e0db]">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-[#117dff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 2v20M17 5v14M7 5v14M22 9v6M2 9v6" />
-                  </svg>
-                  <h4 className="font-semibold text-sm text-[#0a0a0a]">Real-time responses</h4>
-                </div>
-                <p className="text-[#525252] text-sm leading-relaxed">
-                  Speed designed for real-time interactions means conversations feel seamless, not laggy.
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Globe2 className="w-4 h-4 text-[#117dff]" />
-                  <h4 className="font-semibold text-sm text-[#0a0a0a]">Proven at scale, worldwide</h4>
-                </div>
-                <p className="text-[#525252] text-sm leading-relaxed">
-                  From Frankfurt to Tokyo, HIVEMIND leads in latency at P50 to P99 consistently and reliably.
-                </p>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-[#117dff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                  </svg>
-                  <h4 className="font-semibold text-sm text-[#0a0a0a]">Performance budget</h4>
-                </div>
-                <p className="text-[#525252] text-sm leading-relaxed">
-                  Low-latency memory retrieval creates affordances across the rest of your AI stack.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Section 3: Powering agents across industries */}
         <section id="solutions" className="relative border-t border-[#e3e0db]">

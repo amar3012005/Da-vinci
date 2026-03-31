@@ -1,27 +1,22 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-
-// Import all mobile components
+import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
+import SolutionTara from './SolutionTara';
+import SolutionHivemind from './SolutionHivemind';
+import SolutionEnterprise from './SolutionEnterprise';
 import PhaseOneBrandSection from './PhaseOneBrandSection';
-import MeetTaraSection from './MeetTaraSection';
-import MeetHivemindSection from './MeetHivemindSection';
-import ContextProblemSection from './ContextProblemSection';
-import ComparisonSection from './ComparisonSection';
-import MobilePricingSection from './MobilePricingSection';
+import ResearchTeaser from './ResearchTeaser';
 import MobileAboutSection from './MobileAboutSection';
 import TaraVoiceWidget from './TaraVoiceWidget';
 import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
+import { useTheme, t } from './ThemeContext';
 
-/**
- * MobileHomepage - Main container orchestrating all mobile sections
- * Premium redesigned mobile experience for TARA
- */
-const MobileHomepage = () => {
-    // Detect domain for regional widget selection
+const PageContent = () => {
+    const { isDark } = useTheme();
+    const c = t(isDark);
+
     const [isIndicDomain, setIsIndicDomain] = React.useState(false);
-
     React.useEffect(() => {
         if (typeof window !== 'undefined') {
             const hostname = window.location.hostname;
@@ -32,43 +27,24 @@ const MobileHomepage = () => {
     }, []);
 
     return (
-        <motion.div
-            className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-        >
-            {/* Navigation */}
+        <div className={`min-h-screen ${c.bg} ${c.text} overflow-x-hidden transition-colors duration-300`}>
             <MobileNavigation />
-
-            {/* Hero Section */}
             <MobileHero />
-
-            {/* Phase 1 Brand Transformation Section */}
+            <SolutionTara />
+            <SolutionHivemind />
+            <SolutionEnterprise />
             <PhaseOneBrandSection />
-
-            {/* Meet TARA - Introduction */}
-            <MeetTaraSection />
-
-            {/* Meet HIVEMIND - Dedicated Section */}
-            <MeetHivemindSection />
-
-            {/* Context Problem + MMAR Solution */}
-            <ContextProblemSection />
-
-            {/* Comparison: Traditional vs TARA */}
-            <ComparisonSection />
-
-            {/* Pricing Plans */}
-            <MobilePricingSection />
-
-            {/* Contact Us Section */}
+            <ResearchTeaser />
             <MobileAboutSection />
-
-            {/* TARA Voice Widget - Persistent Overlay */}
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />}
-        </motion.div>
+        </div>
     );
 };
+
+const MobileHomepage = () => (
+    <ThemeProvider>
+        <PageContent />
+    </ThemeProvider>
+);
 
 export default MobileHomepage;

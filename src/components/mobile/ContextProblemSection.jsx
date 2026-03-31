@@ -1,107 +1,134 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-// import { Cpu, Globe } from 'lucide-react'; // Removing unused icons
 
-/**
- * ContextProblemSection - Redesigned to mirror MeetTaraSection
- * Featuring a generative HiveMind visualization on the left and 
- * high-impact capabilities branding on the right.
- */
+const Crosshair = ({ className = '' }) => (
+    <div className={`absolute w-4 h-4 ${className}`}>
+        <div className="absolute top-1/2 left-0 w-4 h-px bg-[#525252]/85 -translate-y-1/2" />
+        <div className="absolute left-1/2 top-0 h-4 w-px bg-[#525252]/85 -translate-x-1/2" />
+    </div>
+);
+
 const ContextProblemSection = () => {
-    const rightPanelRef = useRef(null);
-    const sectionRef = useRef(null);
-    const [isRightHovered, setIsRightHovered] = useState(false);
-
+    const features = [
+        {
+            title: 'Structured Memory',
+            description: 'Graph-based knowledge persistence with temporal indexing and cross-session retrieval.',
+            node: 'MEM_GRAPH',
+        },
+        {
+            title: 'Adaptive Routing',
+            description: 'Force-directed agent selection with reputation scoring and blueprint matching.',
+            node: 'FORCE_ROUTER',
+        },
+        {
+            title: 'Blueprint Learning',
+            description: 'Pattern extraction from repeated workflows, promoted into reusable execution templates.',
+            node: 'BLUEPRINT_ENG',
+        },
+    ];
 
     return (
         <section
             id="context-problem-section"
-            ref={sectionRef}
-            className="min-h-screen relative overflow-hidden bg-black flex items-stretch"
+            className="bg-[#080808] relative overflow-hidden py-20"
         >
-            {/* Background Grain/Texture */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-            />
+            <div className="max-w-7xl mx-auto px-6">
+                {/* Two-column layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
+                    {/* Left — Particle Visualization */}
+                    <motion.div
+                        className="relative border border-[#525252]/80 bg-[#080808] aspect-square max-h-[560px] w-full overflow-hidden"
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7 }}
+                    >
+                        <Crosshair className="top-2 left-2" />
+                        <Crosshair className="top-2 right-2" />
+                        <Crosshair className="bottom-2 left-2" />
+                        <Crosshair className="bottom-2 right-2" />
 
-            <div className="relative z-10 w-full flex flex-col lg:flex-row-reverse overflow-hidden">
+                        <div className="absolute inset-0">
+                            <HiveMindCanvas />
+                        </div>
 
-                {/* Left Panel: Generative HiveMind Visualization (Now on the left) */}
-                <div className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen flex flex-col items-center justify-center bg-black overflow-hidden border-r border-white/10">
-                    {/* Generative HiveMind Canvas */}
-                    <div className="absolute inset-0 pointer-events-none">
-                        <HiveMindCanvas />
-                    </div>
+                        {/* Bottom label */}
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
+                            <span className="text-[9px] font-mono text-[#525252] uppercase tracking-[0.5em]">
+                                ./HIVEMIND
+                            </span>
+                        </div>
+                    </motion.div>
 
-                    {/* Subtle Branding Centered Below Cluster */}
-                    <div className="relative z-20 mt-[35vh] md:mt-[45vh]">
-                        <span className="text-white/20 font-mono text-[9px] uppercase tracking-[0.5em] tracking-widest">
-                            ./HIVEMIND
-                        </span>
-                    </div>
+                    {/* Right — Text content */}
+                    <motion.div
+                        className="flex flex-col justify-center"
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7, delay: 0.15 }}
+                    >
+                        <p className="text-[11px] font-mono text-[#E7E7ED]/45 uppercase tracking-widest mb-4">
+                            HIVEMIND POWERING
+                        </p>
+
+                        <h2 className="text-4xl md:text-5xl font-light text-white leading-[0.9] font-['Montserrat'] mb-6">
+                            M.M.A.R{' '}
+                            <span className="italic font-serif">Architecture</span>
+                        </h2>
+
+                        <p className="text-base text-[#9E9E9E] leading-relaxed mb-6 max-w-md">
+                            Memory, Modular, Adaptive, Routing — four pillars that give HIVEMIND
+                            persistent context, composable agents, dynamic force-routing, and
+                            self-improving blueprint execution across every session.
+                        </p>
+
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {['Memory', 'Modular', 'Adaptive', 'Routing'].map((badge) => (
+                                <span
+                                    key={badge}
+                                    className="bg-[#262626] text-[#E7E7ED]/65 py-1 px-4 text-sm"
+                                >
+                                    {badge}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Node indicator */}
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#525252] animate-pulse" />
+                            <span className="text-[10px] font-mono text-[#676767]">
+                                Node: MMAR_CENTRAL
+                            </span>
+                        </div>
+                    </motion.div>
                 </div>
 
-                {/* Right Panel: High-Impact Visual (Now on the right) */}
-                <div
-                    ref={rightPanelRef}
-                    onMouseEnter={() => setIsRightHovered(true)}
-                    onMouseLeave={() => setIsRightHovered(false)}
-                    className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen overflow-hidden bg-black"
-                >
-                    <div className="absolute inset-0">
-                        <img
-                            src="/hivemind_bg.jpeg"
-                            alt="HiveMind Architecture"
-                            className={`w-full h-full object-cover transition-all duration-1000 grayscale opacity-60 ${isRightHovered ? "scale-110" : "scale-105"}`}
-                        />
-                    </div>
-
-                    {/* Overlay Gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90 pointer-events-none" />
-
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 p-12 text-center">
+                {/* Bottom feature cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[#525252]/20">
+                    {features.map((feature, i) => (
                         <motion.div
-                            className={`mb-8 transition-all duration-1000 ${isRightHovered ? "opacity-100" : "opacity-40"}`}
+                            key={feature.title}
+                            className="relative bg-[#080808] border border-[#525252]/40 p-8"
+                            initial={{ opacity: 0, y: 16 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5, delay: i * 0.1 }}
                         >
-                            <img
-                                src="/images/davinci-logo.svg"
-                                alt="DA'VINCI"
-                                width={80}
-                                height={80}
-                                className="filter brightness-0 invert"
-                            />
+                            <Crosshair className="top-2 right-2" />
+
+                            <p className="text-[10px] font-mono text-[#676767] uppercase tracking-widest mb-3">
+                                {feature.node}
+                            </p>
+                            <h3 className="text-lg font-light text-white font-['Montserrat'] mb-2">
+                                {feature.title}
+                            </h3>
+                            <p className="text-sm text-[#9E9E9E] leading-relaxed">
+                                {feature.description}
+                            </p>
                         </motion.div>
-
-                        <div className="space-y-4">
-                            <motion.p
-                                className="text-white/30 font-mono text-[10px] uppercase tracking-[0.5em]"
-                                initial={{ opacity: 0, y: 10 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                            >
-                                HIVEMIND POWERING
-                            </motion.p>
-                            <motion.h2
-                                className="text-4xl md:text-5xl font-thin text-white tracking-widest leading-tight uppercase"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                M M A R - core <br />
-                                <span className="text-[20px] md:text-[30px] opacity-40">Architecture</span>
-                            </motion.h2>
-                        </div>
-
-                    </div>
-
-                    {/* Top Right Label */}
-                    <div className="absolute top-8 right-8 z-20">
-                        <div className="flex items-center gap-3">
-                            <span className="text-white/40 font-mono text-[10px] uppercase tracking-widest italic">Node: MMAR_CENTRAL</span>
-                            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </section>
@@ -109,8 +136,7 @@ const ContextProblemSection = () => {
 };
 
 /**
- * HiveMindCanvas - A simplified regenerative neural visualization
- * Inspired by HiveMind.tsx and NeuralMind.tsx
+ * HiveMindCanvas - Regenerative neural particle visualization
  */
 const HiveMindCanvas = () => {
     const canvasRef = useRef(null);
@@ -133,7 +159,7 @@ const HiveMindCanvas = () => {
 
         const particles = [];
         const isMobile = width < 768;
-        const particleCount = isMobile ? 90 : 240; // Reduced density for mobile
+        const particleCount = isMobile ? 90 : 240;
         const centerX = width / 2;
         const centerY = height / 2;
         const clusterRadius = Math.min(width, height) * (isMobile ? 0.38 : 0.32);
@@ -151,7 +177,7 @@ const HiveMindCanvas = () => {
                 rotationSpeed: (Math.random() - 0.5) * 0.002,
                 driftSpeed: 0.001 + Math.random() * 0.002,
                 size: Math.random() * 1.5 + 0.5,
-                twinkle: Math.random() * Math.PI * 2
+                twinkle: Math.random() * Math.PI * 2,
             });
         }
 
@@ -159,20 +185,17 @@ const HiveMindCanvas = () => {
             const time = Date.now() * 0.001;
             ctx.clearRect(0, 0, width, height);
 
-            // Update particle positions with structured rotational drift
             particles.forEach((p) => {
                 p.baseAngle += p.rotationSpeed;
                 const dynamicR = p.baseR + Math.sin(time * 0.5 + p.angleOffset) * 5;
-
                 p.x = centerX + Math.cos(p.baseAngle) * dynamicR;
                 p.y = centerY + Math.sin(p.baseAngle) * dynamicR;
                 p.twinkle += 0.03;
             });
 
-            // Draw bright connections first (underneath particles)
+            // Draw connections
             for (let i = 0; i < particles.length; i++) {
                 const p1 = particles[i];
-                // Check local neighbors to create a dense web
                 for (let j = i + 1; j < particles.length; j++) {
                     const p2 = particles[j];
                     const dx = p1.x - p2.x;
@@ -182,7 +205,6 @@ const HiveMindCanvas = () => {
 
                     if (distSq < maxDist * maxDist) {
                         const dist = Math.sqrt(distSq);
-                        // Significantly brighter lines as requested
                         const alpha = (1 - dist / maxDist) * (isMobile ? 0.25 : 0.35);
                         ctx.beginPath();
                         ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
@@ -196,7 +218,9 @@ const HiveMindCanvas = () => {
 
             // Draw particles
             particles.forEach((p) => {
-                const mouseDist = Math.sqrt(Math.pow(mouseRef.current.x - p.x, 2) + Math.pow(mouseRef.current.y - p.y, 2));
+                const mouseDist = Math.sqrt(
+                    Math.pow(mouseRef.current.x - p.x, 2) + Math.pow(mouseRef.current.y - p.y, 2)
+                );
                 const brightness = mouseDist < 120 ? 1 : 0.6 + Math.sin(p.twinkle) * 0.4;
 
                 ctx.beginPath();
@@ -221,7 +245,7 @@ const HiveMindCanvas = () => {
             const rect = canvas.getBoundingClientRect();
             mouseRef.current = {
                 x: e.clientX - rect.left,
-                y: e.clientY - rect.top
+                y: e.clientY - rect.top,
             };
         };
 

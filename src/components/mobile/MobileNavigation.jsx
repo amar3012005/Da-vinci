@@ -1,220 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Bell, AlertCircle, ExternalLink } from 'lucide-react';
+import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
+import { useTheme, t } from './ThemeContext';
 
-/**
- * MobileNavigation - Floating hamburger menu with full-screen overlay
- */
+const navLinks = [
+  { label: 'Solutions', sectionId: 'solutions' },
+  { label: 'Research', href: '/research' },
+  { label: 'Contact', sectionId: 'cta-section' },
+];
+
 const MobileNavigation = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { isDark, toggle } = useTheme();
+  const c = t(isDark);
 
-    // Scroll Lock Effect
-    React.useEffect(() => {
-        if (isOpen || showAnnouncements) {
-            document.body.style.overflow = 'hidden';
-            window.lenis?.stop();
-        } else {
-            document.body.style.overflow = 'unset';
-            window.lenis?.start();
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-            window.lenis?.start();
-        };
-    }, [isOpen, showAnnouncements]);
-
-    const handleNavClick = (sectionId) => {
-        if (sectionId === 'announcements-toggle') {
-            setShowAnnouncements(true);
-            setIsOpen(false);
-            return;
-        }
-
-        const element = document.getElementById(sectionId);
-        if (element) {
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-            setIsOpen(false);
-        }
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+      window.lenis?.stop();
+    } else {
+      document.body.style.overflow = 'unset';
+      window.lenis?.start();
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.lenis?.start();
     };
+  }, [mobileOpen]);
 
-    const navItems = [
-        { label: './Meet Tara', sectionId: 'meet-tara-section' },
-        { label: './Pricings', sectionId: 'pricing-section' },
-        { label: './Contact Us', sectionId: 'cta-section' },
-        { label: './Announcements', sectionId: 'announcements-toggle' },
-    ];
+  const handleNavClick = (item) => {
+    setMobileOpen(false);
+    if (item.href) {
+      window.location.href = item.href;
+    } else if (item.sectionId) {
+      const el = document.getElementById(item.sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-    return (
-        <>
-            {/* Floating Menu Button */}
-            <motion.button
-                className="fixed top-4 right-4 z-50 w-12 h-12 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center"
-                onClick={() => setIsOpen(!isOpen)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+  return (
+    <>
+      <nav className={`fixed top-0 inset-x-0 z-[100] ${c.navBg} border-b ${c.border}`}>
+        <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
+          <div className="px-6 h-16 flex items-center justify-between">
+            {/* Logo */}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex items-center bg-transparent border-none cursor-pointer"
             >
-                <AnimatePresence mode="wait">
-                    {isOpen ? (
-                        <motion.div
-                            key="close"
-                            initial={{ rotate: -90, opacity: 0 }}
-                            animate={{ rotate: 0, opacity: 1 }}
-                            exit={{ rotate: 90, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <X className="w-5 h-5 text-white" />
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="menu"
-                            initial={{ rotate: 90, opacity: 0 }}
-                            animate={{ rotate: 0, opacity: 1 }}
-                            exit={{ rotate: -90, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <Menu className="w-5 h-5 text-white" />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.button>
+              <img
+                src="/images/davinci-logo.svg"
+                alt="Da Vinci"
+                className={`h-8 ${isDark ? 'invert brightness-150' : ''}`}
+              />
+            </button>
 
+            {/* Center Links — Desktop */}
+            <div className="hidden md:flex items-center gap-8">
+              {navLinks.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavClick(item)}
+                  className={`text-sm font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer tracking-wide`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
+            {/* Right Buttons — Desktop */}
+            <div className="hidden md:flex items-center gap-3">
+              <button
+                onClick={toggle}
+                className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer`}
+                aria-label="Toggle theme"
+              >
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+              <a
+                href="/hivemind"
+                className={`flex items-center gap-1.5 px-5 py-2 ${c.accentBg} ${c.accentText} text-xs font-semibold rounded-full ${c.accentHover} transition-colors uppercase tracking-[0.1em] cursor-pointer border-none no-underline`}
+              >
+                HIVEMIND
+                <ArrowRight size={12} />
+              </a>
+            </div>
 
-            {/* Full-Screen Menu Overlay */}
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        className="fixed inset-0 z-40 bg-black/98 backdrop-blur-2xl"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        {/* Background gradient */}
-                        {/* Black Background with Dots */}
-                        <div className="absolute inset-0 bg-black" />
-                        <div
-                            className="absolute inset-0 opacity-20 pointer-events-none"
-                            style={{
-                                backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)`,
-                                backgroundSize: '20px 20px',
-                            }}
-                        />
+            {/* Mobile Hamburger */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className={`md:hidden p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+      </nav>
 
-                        {/* Navigation Items */}
-                        <div className="flex flex-col items-center justify-center h-full space-y-8 relative z-10">
-                            {navItems.map((item, index) => (
-                                <motion.button
-                                    key={item.sectionId}
-                                    onClick={() => handleNavClick(item.sectionId)}
-                                    className="text-white/70 hover:text-white text-3xl font-light tracking-wide transition-colors duration-300"
-                                    initial={{ opacity: 0, y: 30 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    transition={{ duration: 0.4, delay: 0.1 + index * 0.08 }}
-                                    whileHover={{ scale: 1.05, x: 10 }}
-                                    whileTap={{ scale: 0.98 }}
-                                >
-                                    {item.label}
-                                </motion.button>
-                            ))}
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed inset-0 z-[99] ${isDark ? 'bg-[#080808]/95' : 'bg-[#faf9f4]/95'} backdrop-blur-xl md:hidden`}
+          >
+            <div className="pt-24 px-8 flex flex-col gap-2">
+              {navLinks.map((item, i) => (
+                <motion.button
+                  key={item.label}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => handleNavClick(item)}
+                  className={`text-left text-2xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
+                >
+                  {item.label}
+                </motion.button>
+              ))}
 
-                            {/* Hivemind Button */}
-                            <motion.a
-                                href="https://hivemind.davinciai.eu"
-                                className="group flex items-center gap-3 text-[#A63E1B] hover:text-[#ff6b35] text-3xl font-light tracking-wide transition-colors duration-300"
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.4, delay: 0.1 + navItems.length * 0.08 }}
-                                whileHover={{ scale: 1.05, x: 10 }}
-                                whileTap={{ scale: 0.98 }}
-                            >
-                                <span>HIVEMIND</span>
-                                <ExternalLink className="w-6 h-6 opacity-50 group-hover:opacity-100 transition-opacity" />
-                            </motion.a>
+              {/* Theme toggle row */}
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: navLinks.length * 0.05 }}
+                onClick={toggle}
+                className={`flex items-center gap-3 text-left text-2xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
+              >
+                {isDark ? <Sun size={22} /> : <Moon size={22} />}
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </motion.button>
 
-                            {/* Brand at bottom */}
-                            <motion.div
-                                className="absolute bottom-12 left-0 right-0 text-center"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.5 }}
-                            >
-                                <p className="text-white/30 text-xs font-mono tracking-widest">
-                                    DA'VINCI SOLUTIONS
-                                </p>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Announcements Slide-in Panel */}
-            <AnimatePresence>
-                {showAnnouncements && (
-                    <>
-                        {/* Backdrop to close */}
-                        <motion.div
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowAnnouncements(false)}
-                        />
-
-                        {/* Slide-in Panel */}
-                        <motion.div
-                            className="fixed top-0 right-0 bottom-0 w-80 bg-[#0a0a0a] border-l border-white/10 z-[60] shadow-2xl p-6 flex flex-col"
-                            initial={{ x: "100%" }}
-                            animate={{ x: 0 }}
-                            exit={{ x: "100%" }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        >
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <Bell size={18} className="text-[#A63E1B]" />
-                                    <span className="text-sm font-mono text-white/70 uppercase tracking-widest">Announcements</span>
-                                </div>
-                                <button
-                                    onClick={() => setShowAnnouncements(false)}
-                                    className="text-white/40 hover:text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {/* Content */}
-                            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-                                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                    <AlertCircle size={24} className="text-white/30" />
-                                </div>
-                                <h3 className="text-white font-light text-lg mb-2">No New Updates</h3>
-                                <p className="text-white/40 text-xs font-mono max-w-[200px]">
-                                    Check back later for the latest news and releases from Da'Vinci.
-                                </p>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="mt-auto pt-6 border-t border-white/5">
-                                <div className="text-[10px] font-mono text-white/20 text-center">
-                                    SYSTEM: ALL SYSTEMS OPERATIONAL
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-        </>
-    );
+              <div className="flex flex-col gap-3 mt-8">
+                <a
+                  href="/hivemind"
+                  onClick={() => setMobileOpen(false)}
+                  className={`w-full py-3.5 rounded-full ${c.accentBg} ${c.accentText} ${c.accentHover} font-semibold text-xs uppercase tracking-[0.1em] no-underline flex items-center justify-center gap-2 transition-colors`}
+                >
+                  HIVEMIND
+                  <ArrowRight size={14} />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 };
 
 export default MobileNavigation;

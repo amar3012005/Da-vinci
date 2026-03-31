@@ -1,485 +1,154 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { gsap } from 'gsap';
-import { ChevronDown, ArrowRight, X, Construction, Bell, AlertCircle } from 'lucide-react';
-import JoinTeamForm from './JoinTeamForm';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import { useTheme, t } from './ThemeContext';
 
-/**
- * MobileHero - Premium hero section with existing DA'VINCI logo
- * Includes project info header and action buttons
- */
-
-// Project Info Card Component
-const ProjectInfoCard = ({ title, value, className = '' }) => (
-    <motion.div
-        className={`${className}`}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-    >
-        <div className="bg-black/40 backdrop-blur-md border border-white/10 p-3 rounded-lg">
-            <div className="text-white/50 font-mono text-[10px] uppercase tracking-wider mb-1">
-                {title}
-            </div>
-            <div className="text-white font-mono text-[10px]">
-                {value}
-            </div>
-        </div>
-    </motion.div>
-);
+const ease = [0.16, 1, 0.3, 1];
+const fade = (delay) => ({
+  initial: { opacity: 0, y: 30 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.8, delay, ease },
+});
 
 const MobileHero = () => {
-    const logoRef = useRef(null);
-    const { scrollY } = useScroll();
-    const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-    const scale = useTransform(scrollY, [0, 400], [1, 0.9]);
-    const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-    const [showAnnouncements, setShowAnnouncements] = useState(false);
-    const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
-    const [isPrometheusTransitioning, setIsPrometheusTransitioning] = useState(false);
-    const [isEnterpriseTransitioning, setIsEnterpriseTransitioning] = useState(false);
+  const { isDark } = useTheme();
+  const c = t(isDark);
 
-    const [isIndia, setIsIndia] = useState(false);
+  return (
+    <section className={`${c.bg} pt-24 pb-0 lg:pt-28 relative overflow-hidden`}>
+      <div className={`max-w-[1200px] mx-auto border-x ${c.border} relative`}>
 
-    useEffect(() => {
-        setIsIndia(window.location.hostname.includes('davinciai.in'));
-        // Logo entrance animation
-        if (logoRef.current) {
-            gsap.fromTo(logoRef.current,
-                { opacity: 0, scale: 0.8, y: 30 },
-                { opacity: 1, scale: 1, y: 0, duration: 1.5, ease: "power3.out" }
-            );
-        }
+        {/* Subtle grid lines */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className={`absolute top-0 left-1/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
+          <div className={`absolute top-0 left-2/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
+        </div>
 
-        // Reset transition states when navigating back (handles bfcache)
-        const handlePageShow = (event) => {
-            if (event.persisted) {
-                setIsPrometheusTransitioning(false);
-                setIsEnterpriseTransitioning(false);
-            }
-        };
-        window.addEventListener('pageshow', handlePageShow);
-        return () => window.removeEventListener('pageshow', handlePageShow);
-    }, []);
+        {/* Main layout — editorial overlap */}
+        <div className="relative px-6 md:px-10 lg:px-20 pt-8 pb-0">
 
-    const handlePrometheusClick = () => {
-        setIsPrometheusTransitioning(true);
-        setTimeout(() => {
-            window.location.href = isIndia ? 'https://prometheus.davinciai.eu/' : 'https://prometheus.davinciai.eu/';
-        }, 5200); // Increased to 5s + buffer
-    };
+          {/* Top metadata row */}
+          <motion.div
+            className="flex items-center justify-between mb-8"
+            {...fade(0)}
+          >
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
+              DV — Series
+            </span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
+              /2026
+            </span>
+          </motion.div>
 
-    const handleEnterpriseClick = () => {
-        setIsEnterpriseTransitioning(true);
-        setTimeout(() => {
-            window.location.href = isIndia ? 'https://enterprise.davinciai.eu' : 'https://enterprise.davinciai.eu';
-        }, 5200); // 5s + buffer
-    };
+          {/* Two-column editorial layout */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-0 items-end relative">
 
-    // Scroll Lock Effect
-    useEffect(() => {
-        if (isDemoModalOpen || isJoinTeamOpen || showAnnouncements || isPrometheusTransitioning || isEnterpriseTransitioning) {
-            document.body.style.overflow = 'hidden';
-            window.lenis?.stop();
-        } else {
-            document.body.style.overflow = 'unset';
-            window.lenis?.start();
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-            window.lenis?.start();
-        };
-    }, [isDemoModalOpen, isJoinTeamOpen, showAnnouncements, isPrometheusTransitioning, isEnterpriseTransitioning]);
+            {/* Left column — Text content */}
+            <div className="relative z-10 pb-12 lg:pb-20">
+              {/* Solid accent square — design element */}
+              <motion.div
+                className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} mb-8`}
+                {...fade(0.05)}
+              />
 
-    return (
-        <section className="relative min-h-screen flex flex-col overflow-hidden">
+              {/* Label */}
+              <motion.p
+                className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`}
+                {...fade(0.1)}
+              >
+                DV-S001 <span className="ml-8">52.3759° N, 9.7320° E</span>
+              </motion.p>
+
+              {/* Main headline */}
+              <motion.h1
+                className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
+                {...fade(0.15)}
+              >
+                AI-POWERED
+                <br />
+                ENTERPRISE
+                <br />
+                <span className={isDark ? 'text-white' : 'text-[#0a0a0a]'}>AUTOMATION</span>
+              </motion.h1>
+
+              {/* Arrow CTA — pill shape like reference */}
+              <motion.div className="flex items-center gap-6 mt-10" {...fade(0.25)}>
+                <a
+                  href="/hivemind"
+                  className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
+                >
+                  HIVEMIND
+                  <ArrowRight size={14} />
+                </a>
+                <a
+                  href="https://enterprise.davinciai.eu"
+                  className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
+                >
+                  Enterprise
+                </a>
+              </motion.div>
+
+              {/* Bottom tagline */}
+              <motion.p
+                className={`text-sm ${c.textSecondary} mt-10 max-w-md leading-relaxed`}
+                {...fade(0.3)}
+              >
+                Not what looks cool — <span className={`${c.text} font-medium`}>what actually lasts.</span>
+              </motion.p>
+            </div>
+
+            {/* Right column — Image as element */}
             <motion.div
-                className="flex-1 flex flex-col px-4 pt-4 pb-8"
-                style={{
-                    opacity,
-                    scale
-                }}
-                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              className="relative lg:-mr-20 lg:ml-0"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.2, ease }}
             >
-                {/* Project Info Cards - Header */}
-                <div className="w-full mb-2 z-30"> {/* Reduced mb-4 to mb-2 */}
-                    <div className="flex flex-col gap-2">
-                        <ProjectInfoCard
-                            title="PROJECT"
-                            value={
-                                <div className="space-y-0.5">
-                                    <div>Location / {isIndia ? 'India / Hyderabad' : 'Germany / Hannover'}</div>
-                                    <div>Project / {isIndia ? 'Snowflake' : 'Mooun'}</div>
-                                    <div>Category / Agentic</div>
-                                    <div>Date / 2026</div>
-                                </div>
-                            }
-                        />
-                        <ProjectInfoCard
-                            title="THE MAIN IDEA"
-                        />
+              {/* Image element — NOT background */}
+              <div className="relative">
+                {/* Small solid accent square — overlapping top-left */}
+                <div className={`absolute -top-4 -left-4 w-16 h-16 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
 
-                        {/* Announcements Button - Aligned Right */}
-                        <motion.button
-                            onClick={() => setShowAnnouncements(true)}
-                            className="self-end mt-1"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
-                        >
-                            <div className="bg-black/40 backdrop-blur-md border border-white/10 p-3 rounded-lg flex items-center gap-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#A63E1B] animate-pulse" />
-                                <div className="text-white font-mono text-[10px]">
-                                    ./Announcements
-                                </div>
-                            </div>
-                        </motion.button>
-                    </div>
+                {/* The featured image */}
+                <div className="relative overflow-hidden rounded-none">
+                  <img
+                    src="/hivemind_bg.jpeg"
+                    alt="Da Vinci AI"
+                    className="w-full h-[500px] md:h-[600px] lg:h-[700px] object-cover"
+                  />
+                  {/* Subtle overlay for text contrast */}
+                  <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-t from-[#080808]/60 via-transparent to-transparent' : 'bg-gradient-to-t from-[#faf9f4]/60 via-transparent to-transparent'}`} />
                 </div>
 
-                {/* Main Homepage Background - Monochromatic Grayscale */}
-                <div
-                    className="absolute inset-x-0 inset-y-0 z-0 pointer-events-none"
-                    style={{
-                        backgroundImage: 'url(/main_background.jpeg)',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'grayscale(100%) contrast(1.2) brightness(0.8)',
-                        opacity: 0.25
-                    }}
-                />
+                {/* Small solid accent square — bottom-right */}
+                <div className={`absolute -bottom-3 -right-3 w-10 h-10 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
 
-                {/* Dark overlay for better text readability */}
-                <div className="absolute inset-0 bg-black/60 z-[1] pointer-events-none" />
-
-                {/* Subtle monochromatic gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/20 pointer-events-none z-[2]" />
-
-                {/* Radial glow behind logo (monochromatic) */}
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/5 rounded-full blur-[100px] pointer-events-none z-[2]" />
-
-                {/* Main Content Container */}
-                <div className="flex-1 flex flex-col items-center justify-center -mt-8 pb-28"> {/* pb-28 clears the fixed TARA widget at bottom */}
-                    {/* DA'VINCI Logo */}
-                    <motion.div
-                        ref={logoRef}
-                        className="relative z-10 mb-2" // Reduced mb-4
-                    >
-                        <img
-                            src="/logo.svg"
-                            alt="DA'VINCI Solutions"
-                            className="w-64 h-64 object-contain" // Reduced from w-80 h-80
-                        />
-                    </motion.div>
-
-                    {/* Brand Text */}
-                    <motion.div
-                        className="text-center mb-4 z-10 -mt-6" // Reduced mb-6, adjusted mt
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.6 }}
-                    >
-                        <h2 className="text-lg font-bold text-white tracking-wider mb-1">
-                            AGENTIC
-                        </h2>
-                        <p className="text-xs text-white/50 tracking-[0.4em] font-light">
-                            PIPELINE
-                        </p>
-                    </motion.div>
-
-                    {/* Main Headline - DA'VINCI AI Focus */}
-                    <motion.div
-                        className="text-center max-w-sm z-10 mb-6"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.9 }}
-                    >
-                        <h1 className="text-xl font-light text-white leading-relaxed mb-3">
-                            <span className="inline-block px-3 py-0.5 bg-white text-black font-black transform -skew-x-12">
-                                <span className="inline-block transform skew-x-12">AI-Powered</span>
-                            </span>
-                            {' '}Enterprise Automation
-                        </h1>
-                        <p className="text-xs text-white/60 leading-relaxed mb-4">
-                            A full suite of intelligent tools to streamline operations, unify insights, and unlock new efficiencies across every workflow.
-                        </p>
-                    </motion.div>
-
-                    {/* Action Buttons */}
-                    <motion.div
-                        className="flex gap-4 z-10 w-full max-w-sm px-4"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 1.4 }}
-                    >
-                        {/* Primary Button */}
-                        <motion.button
-                            onClick={handlePrometheusClick}
-                            className="flex-1 py-3 px-3 bg-[#e5e5e5] text-black text-[10px] font-black uppercase tracking-widest 
-                       flex items-center justify-center gap-2 hover:bg-white transition-all relative overflow-hidden group shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
-                                Prometheus <ArrowRight className="w-3 h-3 stroke-[3px]" />
-                            </span>
-                            {/* Corner Accents */}
-                            <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-black opacity-20" />
-                            <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-black opacity-20" />
-                        </motion.button>
-
-                        {/* Secondary Button */}
-                        <motion.button
-                            onClick={handleEnterpriseClick}
-                            className="flex-1 py-3 px-3 bg-[#111] border border-white/20 text-white text-[10px] font-bold uppercase tracking-widest 
-                       flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/40 transition-colors relative"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <span className="relative z-10 flex items-center gap-2">
-                                Enterprise
-                            </span>
-                            {/* Tech corners */}
-                            <div className="absolute top-0 left-0 w-1 h-1 bg-white/50" />
-                            <div className="absolute top-0 right-0 w-1 h-1 bg-white/50" />
-                            <div className="absolute bottom-0 left-0 w-1 h-1 bg-white/50" />
-                            <div className="absolute bottom-0 right-0 w-1 h-1 bg-white/50" />
-                        </motion.button>
-                    </motion.div>
-                    {/* Scroll Indicator */}
-                    <motion.div
-                        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1, y: [0, 8, 0] }}
-                        transition={{
-                            opacity: { delay: 1.5, duration: 0.5 },
-                            y: { delay: 1.5, duration: 2, repeat: Infinity, ease: "easeInOut" }
-                        }}
-                    >
-                        <ChevronDown className="w-5 h-5 text-white/30" />
-                    </motion.div>
+                {/* Metadata overlay on image */}
+                <div className={`absolute bottom-6 left-6 z-10`}>
+                  <span className="text-white/70 text-[9px] font-mono uppercase tracking-[0.2em]">
+                    Hannover, Germany
+                  </span>
                 </div>
+              </div>
             </motion.div>
+          </div>
 
-            {/* Prometheus Transition Overlay (Swipes from Left) */}
-            <AnimatePresence>
-                {isPrometheusTransitioning && (
-                    <motion.div
-                        className="fixed inset-0 z-[20000] bg-black flex flex-col items-center justify-center p-6 overflow-hidden"
-                        initial={{ x: '-100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '100%' }}
-                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                        {/* Background Grain/Noise */}
-                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-                        />
-
-                        <motion.div
-                            className="flex flex-col items-center justify-center relative z-10"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 1.0, duration: 1.2, ease: "easeOut" }}
-                        >
-                            <img
-                                src="/davinci x prometheus.svg"
-                                alt="Da'Vinci x Prometheus"
-                                className="h-20 md:h-28 w-auto object-contain brightness-0 invert opacity-95"
-                            />
-
-                            <p className="text-white/30 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.6em] mt-8">
-                                {"// Initializing_Node"}
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-white/10 overflow-hidden"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.8 }}
-                        >
-                            <motion.div
-                                className="w-full h-full bg-[#A63E1B]"
-                                initial={{ x: "-100%" }}
-                                animate={{ x: "100%" }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                            />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Enterprise Transition Overlay (Swipes from Right) */}
-            <AnimatePresence>
-                {isEnterpriseTransitioning && (
-                    <motion.div
-                        className="fixed inset-0 z-[20000] bg-black flex flex-col items-center justify-center p-6 overflow-hidden"
-                        initial={{ x: '100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '-100%' }}
-                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                        {/* Background Grain/Noise */}
-                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3BaseFilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/baseFilter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-                        />
-
-                        <motion.div
-                            className="flex flex-col items-center justify-center relative z-10"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 1.0, duration: 1.2, ease: "easeOut" }}
-                        >
-                            <img
-                                src="/davinci x enterprise.svg"
-                                alt="Da'Vinci x Enterprise"
-                                className="h-20 md:h-28 w-auto object-contain brightness-0 invert opacity-95"
-                            />
-
-                            <p className="text-white/30 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.6em] mt-8">
-                                {"// Connecting_Enterprise"}
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            className="absolute bottom-24 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-white/10 overflow-hidden"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.8 }}
-                        >
-                            <motion.div
-                                className="w-full h-full bg-[#A63E1B]"
-                                initial={{ x: "-100%" }}
-                                animate={{ x: "100%" }}
-                                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                            />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Join Team Form Overlay - Outside transform context */}
-            <JoinTeamForm
-                isOpen={isJoinTeamOpen}
-                onClose={() => setIsJoinTeamOpen(false)}
-            />
-
-            {/* Demo Request Modal - Full Screen Overlay - Outside transform context */}
-            <AnimatePresence>
-                {isDemoModalOpen && (
-                    <motion.div
-                        className="fixed inset-0 z-[10000] bg-[#0a0a0a] flex flex-col items-center justify-center p-6"
-                        initial={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
-                        animate={{ opacity: 1, clipPath: 'circle(150% at 50% 50%)' }}
-                        exit={{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                    >
-                        {/* Background Subtle Grid */}
-                        <div className="absolute inset-0 pointer-events-none opacity-20"
-                            style={{
-                                backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
-                                backgroundSize: '40px 40px',
-                            }}
-                        />
-
-                        {/* Close Button - Moved to TOP LEFT to avoid Hamburger */}
-                        <motion.button
-                            onClick={() => setIsDemoModalOpen(false)}
-                            className="absolute top-6 left-6 w-12 h-12 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-                            whileHover={{ scale: 1.1, rotate: -90 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
-                            <X size={24} />
-                        </motion.button>
-
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-center relative z-10"
-                        >
-                            <div className="inline-flex items-center justify-center w-20 h-20 bg-[#A63E1B]/10 rounded-2xl mb-8 border border-[#A63E1B]/20">
-                                <Construction size={40} className="text-[#A63E1B]" />
-                            </div>
-
-                            <h2 className="text-4xl font-black text-white mb-2 uppercase tracking-tighter">
-                                Under Progress
-                            </h2>
-                            <div className="w-16 h-1 bg-[#A63E1B] mx-auto mb-6 rounded-full" />
-
-                            <p className="text-white/60 font-mono text-sm max-w-xs mx-auto leading-relaxed">
-                                Da'VINCI-Code Sandbox is under progress.
-                            </p>
-
-                            <motion.button
-                                onClick={() => setIsDemoModalOpen(false)}
-                                className="mt-12 px-8 py-4 bg-white text-black font-bold uppercase tracking-widest text-[10px] rounded-full hover:bg-gray-200 transition-colors"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                Return to Homepage
-                            </motion.button>
-                        </motion.div>
-
-                        {/* Footer Tech Text */}
-                        <div className="absolute bottom-8 text-[10px] text-white/20 font-mono tracking-[0.5em] uppercase">
-                            Status: Building_V1
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Announcements Slide-in Panel - Outside transform context */}
-            <AnimatePresence>
-                {showAnnouncements && (
-                    <>
-                        <motion.div
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10010]"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowAnnouncements(false)}
-                        />
-                        <motion.div
-                            className="fixed top-0 right-0 bottom-0 w-80 bg-[#0a0a0a] border-l border-white/10 z-[10020] shadow-2xl p-6 flex flex-col"
-                            initial={{ x: "100%" }}
-                            animate={{ x: 0 }}
-                            exit={{ x: "100%" }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        >
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <Bell size={18} className="text-[#A63E1B]" />
-                                    <span className="text-sm font-mono text-white/70 uppercase tracking-widest">Announcements</span>
-                                </div>
-                                <button
-                                    onClick={() => setShowAnnouncements(false)}
-                                    className="text-white/40 hover:text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-60">
-                                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                    <AlertCircle size={24} className="text-white/30" />
-                                </div>
-                                <h3 className="text-white font-light text-lg mb-2">No New Updates</h3>
-                                <p className="text-white/40 text-xs font-mono max-w-[200px]">
-                                    Check back later for the latest news and releases from Da'Vinci.
-                                </p>
-                            </div>
-                            <div className="mt-auto pt-6 border-t border-white/5">
-                                <div className="text-[10px] font-mono text-white/20 text-center">
-                                    SYSTEM: ALL SYSTEMS OPERATIONAL
-                                </div>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-        </section>
-    );
+          {/* Bottom row — footer metadata */}
+          <motion.div
+            className={`flex items-center justify-between py-6 border-t ${c.border} mt-0`}
+            {...fade(0.4)}
+          >
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>
+              Made by Da'Vinci Solutions
+            </span>
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>
+              Save for this later
+            </span>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
 };
 
 export default MobileHero;

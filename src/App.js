@@ -6,6 +6,7 @@ import UnderProgress from './components/UnderProgress';
 import Terms from './components/Terms';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
+import ResearchPage from './components/ResearchPage';
 
 // Portal Component for Iframe Persistence
 import PortalLayout from './components/PortalLayout';
@@ -37,11 +38,15 @@ function App() {
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
+        <Route path="/research" element={<ResearchPage />} />
 
         {/* HIVEMIND — consolidated parent route */}
         <Route path="/hivemind">
-          {/* Exact /hivemind → marketing landing */}
-          <Route index element={<HivemindRedirect />} />
+          {/* Exact /hivemind → landing on localhost, app on production */}
+          <Route index element={isHivemindHost
+            ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
+            : <HivemindRedirect />
+          } />
           {/* /hivemind/login, /hivemind/app/* → dashboard app */}
           <Route
             path="*"
