@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Suspense, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';

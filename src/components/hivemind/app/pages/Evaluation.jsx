@@ -372,7 +372,7 @@ export default function Evaluation() {
   // Evaluation data (for admin benchmark section)
   const { data: latest, loading: latestLoading, error: latestError, refetch: refetchLatest } =
     useApiQuery(() => apiClient.getEvalResults());
-  const { data: history, loading: historyLoading, refetch: refetchHistory } =
+  const { data: history, refetch: refetchHistory } =
     useApiQuery(() => apiClient.getEvalHistory());
 
   /* ── Local state ─────────────────────────────────────────────── */

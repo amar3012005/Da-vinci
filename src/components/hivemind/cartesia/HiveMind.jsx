@@ -52,7 +52,6 @@ export default function HiveMind({
         return inside;
     };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -211,7 +210,7 @@ export default function HiveMind({
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor, backgroundColor]);
+    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor, backgroundColor, isInsideBrain]);
 
     const handleMouseMove = (e) => {
         if (!canvasRef.current) return;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Menu, X, ArrowRight, ArrowLeft, Brain, Network, Route, Fingerprint,
+  Menu, X, ArrowLeft, Brain, Network, Route, Fingerprint,
   RefreshCw, Target, Layers, GitBranch, Shield, BarChart3, Zap,
   BookOpen, ChevronDown, ExternalLink
 } from 'lucide-react';
