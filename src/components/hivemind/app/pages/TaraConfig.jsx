@@ -31,11 +31,13 @@ function ConfigEditor({ config, onSave, saving }) {
   const [maxTokens, setMaxTokens] = useState(config?.max_tokens ?? 300);
   const [voiceOptimized, setVoiceOptimized] = useState(config?.voice_optimized !== false);
   const [clinicalPrompt, setClinicalPrompt] = useState(config?.clinical_prompt || '');
+  const [clinicalModel, setClinicalModel] = useState(config?.clinical_model || '');
 
   useEffect(() => {
     if (config) {
       setSystemPrompt(config.system_prompt || '');
       setClinicalPrompt(config.clinical_prompt || '');
+      setClinicalModel(config.clinical_model || '');
       setModel(config.model || 'llama-3.3-70b-versatile');
       setTemperature(config.temperature ?? 0.7);
       setMaxTokens(config.max_tokens ?? 300);
@@ -44,7 +46,7 @@ function ConfigEditor({ config, onSave, saving }) {
   }, [config]);
 
   const handleSave = () => {
-    onSave({ system_prompt: systemPrompt, clinical_prompt: clinicalPrompt, model, temperature, max_tokens: maxTokens, voice_optimized: voiceOptimized });
+    onSave({ system_prompt: systemPrompt, clinical_prompt: clinicalPrompt, clinical_model: clinicalModel, model, temperature, max_tokens: maxTokens, voice_optimized: voiceOptimized });
   };
 
   const MODELS = [
@@ -99,6 +101,33 @@ function ConfigEditor({ config, onSave, saving }) {
           className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-purple-400/40 focus:ring-2 focus:ring-purple-400/10 resize-y"
           placeholder="Leave empty to disable clinical reasoning. When set, a background reasoning model analyzes each turn and provides strategic insights to the main agent..."
         />
+        {clinicalPrompt && (
+          <div className="mt-3">
+            <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">Reasoning Model</label>
+            <select
+              value={clinicalModel}
+              onChange={(e) => setClinicalModel(e.target.value)}
+              className="w-full md:w-1/2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50/30 text-[#0a0a0a] text-xs font-mono focus:outline-none focus:border-purple-400/40"
+            >
+              <option value="">Same as main model</option>
+              <optgroup label="Groq (fast, low latency)">
+                <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+                <option value="qwen/qwen3-32b">qwen3-32b</option>
+                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+              </optgroup>
+              <optgroup label="Reasoning Models (deep thinking)">
+                <option value="academic-deepseek-r1">DeepSeek-R1 (671B reasoning)</option>
+                <option value="academic-qwq-32b">QwQ-32B (Qwen reasoning)</option>
+                <option value="academic-qwen3-235b-a22b">Qwen3-235B (large reasoning)</option>
+              </optgroup>
+              <optgroup label="Frontier Models">
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+              </optgroup>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
