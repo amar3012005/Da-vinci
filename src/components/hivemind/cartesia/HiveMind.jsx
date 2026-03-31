@@ -14,45 +14,33 @@ export default function HiveMind({
     const mouseRef = useRef({ x: -1000, y: -1000 });
     const animationFrameRef = useRef(undefined);
 
-    // Brain shape boundary (simplified polygon normalized 0-1)
-    // Points approx tracing a side-view brain shape
-    const brainShapePoints = [
-        [0.2, 0.7], [0.15, 0.6], [0.15, 0.4], [0.25, 0.25],
-        [0.4, 0.15], [0.6, 0.15], [0.8, 0.25], [0.9, 0.4],
-        [0.9, 0.6], [0.8, 0.8], [0.6, 0.9], [0.4, 0.85],
-        [0.35, 0.8], [0.3, 0.85], [0.25, 0.8]
-    ];
-
-    // Check if point is inside brain polygon (Ray casting algorithm)
-    const isInsideBrain = (x, y, w, h) => {
-        // Center the shape in the canvas
-        // The polygon is 0-1, so we scale it by width/height but add padding/centering offset
-        // Effective width/height of brain
-        const bw = w * 0.8;
-        const bh = h * 0.8;
-        const offsetX = w * 0.1;
-        const offsetY = h * 0.1;
-
-        // Transform point back to 0-1 space relative to the brain box
-        const nx = (x - offsetX) / bw;
-        const ny = (y - offsetY) / bh;
-
-        // Bounding box check in normalized space
-        if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return false;
-
-        let inside = false;
-        for (let i = 0, j = brainShapePoints.length - 1; i < brainShapePoints.length; j = i++) {
-            const xi = brainShapePoints[i][0], yi = brainShapePoints[i][1];
-            const xj = brainShapePoints[j][0], yj = brainShapePoints[j][1];
-
-            const intersect = ((yi > ny) !== (yj > ny))
-                && (nx < (xj - xi) * (ny - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
-        }
-        return inside;
-    };
-
     useEffect(() => {
+        const brainShapePoints = [
+            [0.2, 0.7], [0.15, 0.6], [0.15, 0.4], [0.25, 0.25],
+            [0.4, 0.15], [0.6, 0.15], [0.8, 0.25], [0.9, 0.4],
+            [0.9, 0.6], [0.8, 0.8], [0.6, 0.9], [0.4, 0.85],
+            [0.35, 0.8], [0.3, 0.85], [0.25, 0.8]
+        ];
+
+        const isInsideBrain = (x, y, w, h) => {
+            const bw = w * 0.8;
+            const bh = h * 0.8;
+            const offsetX = w * 0.1;
+            const offsetY = h * 0.1;
+            const nx = (x - offsetX) / bw;
+            const ny = (y - offsetY) / bh;
+            if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return false;
+            let inside = false;
+            for (let i = 0, j = brainShapePoints.length - 1; i < brainShapePoints.length; j = i++) {
+                const xi = brainShapePoints[i][0], yi = brainShapePoints[i][1];
+                const xj = brainShapePoints[j][0], yj = brainShapePoints[j][1];
+                const intersect = ((yi > ny) !== (yj > ny))
+                    && (nx < (xj - xi) * (ny - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        };
+
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -210,7 +198,7 @@ export default function HiveMind({
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor, backgroundColor, isInsideBrain]);
+    }, [width, height, nodeCount, connectionDistance, nodeColor, lineColor, backgroundColor]);
 
     const handleMouseMove = (e) => {
         if (!canvasRef.current) return;
