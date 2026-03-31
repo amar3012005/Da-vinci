@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { GlobeCdn } from '../../ui/cobe-globe-cdn';
 
 const Languages = () => {
   const navigate = useNavigate();
@@ -73,55 +74,17 @@ const Languages = () => {
         </div>
 
         {/* Globe visualization */}
-        <div className="relative h-[400px] mb-12 flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-[600px] h-[300px] relative" style={{ perspective: '1000px' }}>
-              {/* Globe arcs */}
-              <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg)' }}></div>
-              <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(30deg)' }}></div>
-              <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(-30deg)' }}></div>
-              <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(60deg)' }}></div>
-              <div className="absolute inset-0 border border-[#e3e0db] rounded-full" style={{ transform: 'rotateX(60deg) rotateY(-60deg)' }}></div>
-
-              {/* Datacenter markers on globe */}
-              <motion.div
-                className="absolute top-1/4 left-1/4 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <div className="w-2 h-2 rounded-full bg-[#117dff]"></div>
-                <span className="text-xs font-medium text-[#0a0a0a]">Frankfurt</span>
-              </motion.div>
-
-              <motion.div
-                className="absolute top-1/3 right-1/3 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              >
-                <div className="w-2 h-2 rounded-full bg-[#0066e0]"></div>
-                <span className="text-xs font-medium text-[#0a0a0a]">Paris</span>
-              </motion.div>
-
-              <motion.div
-                className="absolute bottom-1/3 left-1/3 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              >
-                <div className="w-2 h-2 rounded-full bg-[#16a34a]"></div>
-                <span className="text-xs font-medium text-[#0a0a0a]">Amsterdam</span>
-              </motion.div>
-
-              <motion.div
-                className="absolute top-1/2 right-1/4 bg-white border border-[#117dff]/20 rounded-xl px-3 py-2 flex items-center gap-2 shadow-[0_0_10px_rgba(17,125,255,0.08)]"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-              >
-                <svg className="w-3 h-3 text-[#117dff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span className="text-xs font-medium text-[#117dff]">GDPR</span>
-              </motion.div>
-            </div>
+        <motion.div
+          className="relative mb-12 flex items-center justify-center"
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          <div className="relative w-full max-w-[720px] min-h-[380px] sm:min-h-[460px] flex items-center justify-center">
+            <GlobeCdn className="w-full max-w-[620px] mx-auto" />
           </div>
-        </div>
+        </motion.div>
 
         {/* Category tabs */}
         <div className="flex flex-wrap justify-center gap-2 mb-12 border-b border-[#e3e0db] pb-6">
