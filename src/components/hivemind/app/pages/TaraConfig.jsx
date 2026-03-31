@@ -10,7 +10,6 @@ import {
   MessageSquare,
   Zap,
   Brain,
-  RefreshCw,
   CheckCircle,
   AlertTriangle,
   Loader2,
