@@ -40,8 +40,19 @@ function PageSuspense({ children }) {
 /**
  * HIVEMIND Dashboard Application
  * Mounts under /hivemind/app/* and /hivemind/login
+ *
+ * If accessed from www.davinciai.eu or davinciai.eu, redirect to hivemind.davinciai.eu
+ * so all dashboard interactions happen on the canonical HIVEMIND domain.
  */
 export default function HiveMindApp() {
+  // Redirect non-hivemind domains to hivemind.davinciai.eu
+  const host = window.location.hostname;
+  if (host !== 'hivemind.davinciai.eu' && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('vercel.app')) {
+    const target = `https://hivemind.davinciai.eu${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.replace(target);
+    return null;
+  }
+
   return (
     <AuthProvider>
       <Routes>

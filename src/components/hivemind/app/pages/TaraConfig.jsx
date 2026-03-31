@@ -145,14 +145,13 @@ function LiveTest() {
 
     try {
       const resp = await fetch(
-        `${apiClient.core.defaults.baseURL}/api/tara/stream`,
+        `${apiClient.controlPlane.defaults.baseURL}/v1/proxy/tara/stream`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': apiClient._apiKey || '',
-            'Authorization': `Bearer ${apiClient._apiKey || ''}`,
           },
+          credentials: 'include',  // Send session cookie
           body: JSON.stringify({
             query: query.trim(),
             session_id: sessionId,
@@ -271,7 +270,7 @@ function LiveTest() {
 
 function ActiveSessions() {
   const { data: sessions, loading } = useApiQuery(
-    () => apiClient.core.get('/api/tara/sessions').then(r => r.data?.sessions || []).catch(() => []),
+    () => apiClient.controlPlane.get('/v1/proxy/tara/sessions').then(r => r.data?.sessions || []).catch(() => []),
     []
   );
 
@@ -316,7 +315,7 @@ export default function TaraConfig() {
   const [saveStatus, setSaveStatus] = useState(null);
 
   const { data: config, loading, refetch } = useApiQuery(
-    () => apiClient.core.get('/api/tara/config').then(r => r.data?.config || r.data).catch(() => null),
+    () => apiClient.controlPlane.get('/v1/proxy/tara/config').then(r => r.data?.config || r.data).catch(() => null),
     []
   );
 
@@ -324,7 +323,7 @@ export default function TaraConfig() {
     setSaving(true);
     setSaveStatus(null);
     try {
-      await apiClient.core.post('/api/tara/config', newConfig);
+      await apiClient.controlPlane.post('/v1/proxy/tara/config', newConfig);
       setSaveStatus('saved');
       refetch();
       setTimeout(() => setSaveStatus(null), 3000);
