@@ -30,6 +30,16 @@ const TYPE_COLORS = {
   relationship: '#db2777',
   default: '#525252',
 };
+// Resident layer visual encodings
+const LAYER_COLORS = {
+  fact: '#10b981',        // emerald — extracted facts
+  observation: '#f59e0b', // amber — observations
+  promoted: '#ef4444',    // red — promoted risks
+  verified: '#22c55e',    // green — turing verified
+  tara: '#a855f7',        // purple — TARA conversation turns
+  'tara-insight': '#f97316', // orange — clinical reasoning insights
+  memory: null,           // use TYPE_COLORS
+};
 const USER_COLORS = ['#117dff', '#16a34a', '#d97706', '#8b5cf6', '#dc2626', '#0891b2', '#db2777', '#525252'];
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -263,22 +273,65 @@ export default function MemoryGraph() {
     if (node) handleNodeClick(node);
   }, [graphData.nodes, handleNodeClick]);
 
-  // Custom node painting
+  // Custom node painting — shapes per layer type
   const paintNode = useCallback((node, ctx, globalScale) => {
     const isHighlighted = highlightNodes.size > 0 && highlightNodes.has(node.id);
     const isDimmed = highlightNodes.size > 0 && !highlightNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
-    const baseColor = (scope === 'team' || scope === 'all')
-      ? (userColorMap[node.userId] || TYPE_COLORS.default)
-      : (TYPE_COLORS[node.memoryType] || TYPE_COLORS.default);
+
+    // Color: layer-specific > user-specific (team scope) > type-specific
+    const layerColor = LAYER_COLORS[node.nodeLayer];
+    const baseColor = layerColor
+      || ((scope === 'team' || scope === 'all') ? (userColorMap[node.userId] || TYPE_COLORS.default) : null)
+      || TYPE_COLORS[node.memoryType]
+      || TYPE_COLORS.default;
+
     const glow = node.temporalWeight || 0.3;
-    const radius = Math.sqrt(node.val || 4) * 2.5;
+    let radius = Math.sqrt(node.val || 4) * 2.5;
+
+    // Size adjustments per layer
+    if (node.nodeLayer === 'fact') radius = Math.max(radius * 0.7, 3);
+    if (node.nodeLayer === 'promoted') radius = radius * 1.5;
+    if (node.nodeLayer === 'tara') radius = radius * 1.2;
+    if (node.nodeLayer === 'tara-insight') radius = radius * 1.1;
 
     // Outer glow (temporal decay)
     if (glow > 0.3 && !isDimmed) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius + 4 + glow * 6, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba(baseColor, glow * 0.2);
+      ctx.fillStyle = hexToRgba(baseColor, glow * 0.15);
+      ctx.fill();
+    }
+
+    // Promoted risk — red halo
+    if (node.nodeLayer === 'promoted' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#ef4444', 0.15);
+      ctx.fill();
+    }
+
+    // Verified — green badge glow
+    if (node.nodeLayer === 'verified' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#22c55e', 0.12);
+      ctx.fill();
+    }
+
+    // TARA turn — purple halo
+    if (node.nodeLayer === 'tara' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#a855f7', 0.12);
+      ctx.fill();
+    }
+
+    // Clinical insight — orange glow
+    if (node.nodeLayer === 'tara-insight' && !isDimmed) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba('#f97316', 0.15);
       ctx.fill();
     }
 
@@ -300,16 +353,75 @@ export default function MemoryGraph() {
       ctx.stroke();
     }
 
-    // Node body
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
-    ctx.fill();
+    // ── Node body — shape per layer type ──
 
-    // Border
-    ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
-    ctx.lineWidth = 0.5 / globalScale;
-    ctx.stroke();
+    if (node.nodeLayer === 'tara-insight') {
+      // 4-point star for clinical insights
+      const spikes = 4;
+      const outerR = radius;
+      const innerR = radius * 0.45;
+      ctx.beginPath();
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (Math.PI / spikes) * i - Math.PI / 2;
+        ctx.lineTo(node.x + r * Math.cos(angle), node.y + r * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.8);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+
+    } else if (node.nodeLayer === 'tara') {
+      // Hexagon for TARA conversation turns
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 6;
+        ctx.lineTo(node.x + radius * Math.cos(angle), node.y + radius * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.75);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+
+    } else if (node.nodeLayer === 'fact') {
+      // Diamond for extracted facts
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - radius);
+      ctx.lineTo(node.x + radius, node.y);
+      ctx.lineTo(node.x, node.y + radius);
+      ctx.lineTo(node.x - radius, node.y);
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.7);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.9);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+
+    } else if (node.nodeLayer === 'observation') {
+      // Rounded square for observations
+      const s = radius * 0.85;
+      ctx.beginPath();
+      ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+
+    } else {
+      // Circle for regular memories
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
+      ctx.fill();
+      ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+    }
 
     // Label (only at zoom)
     if (globalScale > 1.8 && !isDimmed) {
