@@ -153,7 +153,17 @@ function PlanBadge({ plan }) {
 
 // ─── Confirmation Dialog ──────────────────────────────────────────────────────
 
-function ConfirmDialog({ title, message, confirmLabel, confirmVariant = 'red', onConfirm, onCancel }) {
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  confirmVariant = 'red',
+  confirmDisabled = false,
+  confirmLoading = false,
+  onConfirm,
+  onCancel,
+  children,
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div
@@ -168,6 +178,7 @@ function ConfirmDialog({ title, message, confirmLabel, confirmVariant = 'red', o
             <p className="text-[#525252] text-sm font-['Space_Grotesk']">{message}</p>
           </div>
         </div>
+        {children ? <div className="mb-4">{children}</div> : null}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
@@ -177,11 +188,12 @@ function ConfirmDialog({ title, message, confirmLabel, confirmVariant = 'red', o
           </button>
           <button
             onClick={onConfirm}
+            disabled={confirmDisabled || confirmLoading}
             className={`px-4 py-2 rounded-xl text-sm font-['Space_Grotesk'] font-semibold text-white transition-colors ${
-              confirmVariant === 'red' ? 'bg-[#dc2626] hover:bg-red-700' : 'bg-[#117dff] hover:bg-[#0066e0]'
+              confirmVariant === 'red' ? 'bg-[#dc2626] hover:bg-red-700 disabled:bg-red-300' : 'bg-[#117dff] hover:bg-[#0066e0] disabled:bg-[#7fb5ff]'
             }`}
           >
-            {confirmLabel}
+            {confirmLoading ? 'Deleting...' : confirmLabel}
           </button>
         </div>
       </motion.div>
@@ -598,9 +610,13 @@ function ContextPreviewSection() {
 // ─── Section 6: Data & Privacy ────────────────────────────────────────────────
 
 function DataPrivacySection() {
+  const { logout } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportMsg, setExportMsg] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -619,9 +635,19 @@ function DataPrivacySection() {
     }
   };
 
-  const handleDeleteConfirm = () => {
-    setShowDeleteDialog(false);
-    // Coming soon — no destructive action
+  const handleDeleteConfirm = async () => {
+    setDeleteLoading(true);
+    setDeleteMsg(null);
+    try {
+      await apiClient.deleteAccount(deleteConfirm);
+      apiClient.clearApiKey();
+      setShowDeleteDialog(false);
+      await logout();
+    } catch (err) {
+      setDeleteMsg(err.response?.data?.error || err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   return (
@@ -689,9 +715,18 @@ function DataPrivacySection() {
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
                 Permanently delete all your data. This action cannot be undone.
               </p>
+              {deleteMsg && (
+                <p className="text-[#dc2626] text-xs font-mono mt-1.5">
+                  {deleteMsg}
+                </p>
+              )}
             </div>
             <button
-              onClick={() => setShowDeleteDialog(true)}
+              onClick={() => {
+                setDeleteConfirm('');
+                setDeleteMsg(null);
+                setShowDeleteDialog(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-[#dc2626] text-sm font-['Space_Grotesk'] font-semibold hover:bg-red-50 transition-colors ml-4 flex-shrink-0"
             >
               <Trash2 size={14} />
@@ -717,12 +752,30 @@ function DataPrivacySection() {
       {showDeleteDialog && (
         <ConfirmDialog
           title="Delete Account"
-          message="Account deletion is coming soon. Our team will be in touch to process your request securely."
-          confirmLabel="Got it"
+          message="This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue."
+          confirmLabel="Delete Account"
           confirmVariant="red"
+          confirmDisabled={deleteConfirm.trim().toUpperCase() !== 'DELETE'}
+          confirmLoading={deleteLoading}
           onConfirm={handleDeleteConfirm}
-          onCancel={() => setShowDeleteDialog(false)}
-        />
+          onCancel={() => {
+            if (!deleteLoading) {
+              setShowDeleteDialog(false);
+              setDeleteMsg(null);
+            }
+          }}
+        >
+          <input
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type DELETE"
+            className="w-full rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-sm font-mono text-[#0a0a0a] outline-none focus:border-[#dc2626]"
+            autoFocus
+          />
+          {deleteMsg ? (
+            <p className="mt-2 text-[#dc2626] text-xs font-mono">{deleteMsg}</p>
+          ) : null}
+        </ConfirmDialog>
       )}
     </>
   );

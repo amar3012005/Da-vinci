@@ -148,6 +148,11 @@ class HiveMindApiClient {
     await this.controlPlane.post('/auth/logout');
   }
 
+  async deleteAccount(confirm = 'DELETE') {
+    const { data } = await this.controlPlane.delete('/v1/account', { data: { confirm } });
+    return data;
+  }
+
   // ─── Control Plane: Organizations ────────────────────────────
 
   async createOrg(payload) {
