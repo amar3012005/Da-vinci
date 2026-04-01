@@ -16,9 +16,9 @@ import apiClient from '../shared/api-client';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MODELS = [
+  { id: 'gpt-oss-120b', label: 'GPT-OSS 120B', tag: 'Default', group: 'groq' },
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', tag: 'Free', group: 'groq' },
-  { id: 'deepseek-r1-distill-llama-70b', label: 'GPT-OSS 120B', tag: 'Reasoning', group: 'groq' },
-  { id: 'deepseek-r1-distill-qwen-7b', label: 'GPT-OSS 20B', tag: 'Fast', group: 'groq' },
+  { id: 'gpt-oss-20b', label: 'GPT-OSS 20B', tag: 'Fast', group: 'groq' },
   { id: 'openai-custom', label: 'Custom (OpenAI)', disabled: true, group: 'custom' },
   { id: 'anthropic-custom', label: 'Custom (Anthropic)', disabled: true, group: 'custom' },
 ];
@@ -190,7 +190,7 @@ function EmptyState() {
           Talk to HIVE
         </p>
         <p className="text-[#a3a3a3] text-[13px] leading-relaxed max-w-xs">
-          Ask anything about your memories. HIVE has access to your entire knowledge graph.
+          Ask anything about your memories. HIVE answers like your second brain, not a search dump.
         </p>
       </div>
       <div className="flex flex-wrap gap-2 justify-center">
@@ -296,7 +296,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+  const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const textareaRef = useRef(null);
   const bottomRef = useRef(null);
 
@@ -418,7 +418,7 @@ export function ChatPanel({ isOpen, onClose }) {
                 <div>
                   <h2 className="text-[#0a0a0a] text-[15px] font-semibold leading-tight">Talk to HIVE</h2>
                   <p className="text-[#a3a3a3] text-[10px] font-mono leading-tight">
-                    Memory-augmented AI assistant
+                    Memory engine second brain
                   </p>
                 </div>
               </div>
