@@ -101,13 +101,13 @@ const CONNECTORS = [
   {
     id: 'notebooklm',
     name: 'NotebookLM',
-    description: 'NotebookLM second mind via local MCP bridge',
+    description: 'NotebookLM via a local MCP bridge on your machine',
     icon: BookOpen,
     category: 'mcp_clients',
     status: 'available',
     color: '#117dff',
     configKey: 'notebooklm',
-    mcpEndpointName: 'notebooklm',
+    setupOnly: true,
   },
   // Workspace (coming soon)
   {
@@ -348,6 +348,8 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
   const isComingSoon = connector.status === 'coming_soon';
   const hasConfig = config && connector.configKey;
+  const isSetupOnly = connector.setupOnly === true;
+  const canShowConfig = hasConfig && (isActive || isSetupOnly);
   const configStr = hasConfig ? JSON.stringify(config, null, 2) : null;
 
   return (
@@ -422,7 +424,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          {isActive && hasConfig && (
+          {canShowConfig && (
             <>
               <button
                 onClick={() => setExpanded(!expanded)}
@@ -435,7 +437,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
             </>
           )}
 
-          {connector.status === 'available' && (
+          {connector.status === 'available' && !isSetupOnly && (
             <button
               onClick={onConnect}
               disabled={connecting}
@@ -447,6 +449,16 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
                 <Plus size={12} />
               )}
               {connecting ? 'Connecting...' : 'Connect'}
+            </button>
+          )}
+
+          {connector.status === 'available' && isSetupOnly && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] transition-all"
+            >
+              {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {expanded ? 'Hide Setup' : 'Setup'}
             </button>
           )}
 
@@ -508,6 +520,19 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
             className="overflow-hidden border-t border-[#eae7e1]"
           >
             <div className="p-4">
+              {isSetupOnly && (
+                <div className="mb-4 rounded-xl border border-[#117dff]/15 bg-[#117dff]/[0.05] p-4">
+                  <h4 className="text-[#0a0a0a] text-xs font-semibold font-['Space_Grotesk'] mb-2">
+                    NotebookLM Setup
+                  </h4>
+                  <ol className="space-y-1.5 text-[12px] leading-relaxed text-[#525252] font-['Space_Grotesk'] list-decimal pl-4">
+                    <li>Install <code className="text-[#117dff] font-mono">pip install \"notebooklm-py[browser]\"</code></li>
+                    <li>Install Chromium for Playwright with <code className="text-[#117dff] font-mono">playwright install chromium</code></li>
+                    <li>Run <code className="text-[#117dff] font-mono">notebooklm login</code> on your machine</li>
+                    <li>Copy the config below into your MCP client and replace the placeholder paths</li>
+                  </ol>
+                </div>
+              )}
               <JsonBlock data={config} />
             </div>
           </motion.div>
@@ -928,42 +953,6 @@ export default function Connectors() {
     }
   }, [refetchOAuth, targetScopes]);
 
-  const handleNotebookLMConnect = useCallback(async () => {
-    setConnectingProvider('notebooklm');
-    try {
-      const notebooklmDescriptor = descriptors?.notebooklm
-        ? { config: descriptors.notebooklm }
-        : await apiClient.getDescriptor('notebooklm');
-      const endpoint = notebooklmDescriptor?.config?.mcpServers?.notebooklm || {
-        command: 'node',
-        args: ['mcp-server/notebooklm-mcp-server.js'],
-        env: {
-          NOTEBOOKLM_BIN: 'notebooklm',
-          NOTEBOOKLM_DEFAULT_NOTEBOOK_TITLE: 'Second Mind',
-          NOTEBOOKLM_AUTO_CREATE_DEFAULT_NOTEBOOK: '1',
-          NOTEBOOKLM_TIMEOUT_MS: '120000',
-          NOTEBOOKLM_RESEARCH_TIMEOUT_MS: '600000',
-        },
-      };
-
-      await apiClient.registerMcpEndpoint({
-        name: 'notebooklm',
-        transport: 'stdio',
-        adapter_type: 'notebooklm',
-        default_project: 'research',
-        default_tags: ['notebooklm', 'research', 'second-mind'],
-        ...endpoint,
-      });
-
-      setToastMessage({ type: 'success', text: 'NotebookLM connected' });
-      await refetchStatus();
-    } catch (err) {
-      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
-    } finally {
-      setConnectingProvider(null);
-    }
-  }, [descriptors, refetchStatus]);
-
   const handleGmailSync = useCallback(async (settings) => {
     try {
       await apiClient.gmailSync({ ...settings, target_scope: targetScopes.gmail || 'personal' });
@@ -1123,10 +1112,6 @@ export default function Connectors() {
             onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
             allowTeamScope={org?.plan === 'enterprise'}
             onConnect={() => {
-              if (connector.id === 'notebooklm') {
-                handleNotebookLMConnect();
-                return;
-              }
               if (connector.oauthProvider) {
                 handleOAuthConnect(connector.oauthProvider);
               }
