@@ -141,6 +141,11 @@ class HiveMindApiClient {
     if (data.connectivity?.core_api_base_url) {
       this.setCoreBaseUrl(data.connectivity.core_api_base_url);
     }
+    // Session bootstrap must override any stale locally persisted key so org/plan changes
+    // take effect immediately for the signed-in user.
+    if (data.session_api_key) {
+      this.setApiKey(data.session_api_key);
+    }
     return data;
   }
 
