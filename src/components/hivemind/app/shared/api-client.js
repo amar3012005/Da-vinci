@@ -149,8 +149,9 @@ class HiveMindApiClient {
   }
 
   async deleteAccount(confirm = 'DELETE') {
-    const { data } = await this.controlPlane.delete('/v1/account', {
-      data: { confirm },
+    const { data } = await this.controlPlane.post('/v1/account/delete', {
+      confirm,
+    }, {
       timeout: 120000,
     });
     return data;
