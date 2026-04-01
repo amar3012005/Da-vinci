@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
@@ -11,6 +11,8 @@ import {
   Tag,
   Clock,
   HardDrive,
+  X,
+  FolderKanban,
   Users,
   User,
 } from 'lucide-react';
@@ -24,6 +26,174 @@ const fadeUp = {
 };
 
 const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv'];
+
+function UploadScopeModal({
+  open,
+  files,
+  org,
+  projects,
+  loadingProjects,
+  selectedScope,
+  onScopeChange,
+  selectedProject,
+  onProjectChange,
+  onConfirm,
+  onClose,
+}) {
+  if (!open) return null;
+
+  const requiresProject = selectedScope === 'organization' && projects.length > 0;
+  const canUseTeamWorkspace = org?.plan === 'enterprise' || org?.plan === 'team';
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.98 }}
+          transition={{ duration: 0.18 }}
+          className="w-full max-w-lg rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">Save uploaded memories to</h3>
+              <p className="text-[#525252] text-sm mt-1">
+                Choose where these files should live before upload starts.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
+            <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">
+              Upload batch
+            </p>
+            <div className="space-y-1">
+              {files.map((file) => (
+                <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate text-[#0a0a0a]">{file.name}</span>
+                  <span className="text-[#a3a3a3] text-[11px] font-mono shrink-0">{formatBytes(file.size)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => onScopeChange('personal')}
+              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+                selectedScope === 'personal'
+                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
+                  <User size={16} className="text-[#117dff]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">My Space</p>
+                  <p className="text-xs text-[#525252]">Private memories only visible in your personal workspace.</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              disabled={!canUseTeamWorkspace}
+              onClick={() => canUseTeamWorkspace && onScopeChange('organization')}
+              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+                selectedScope === 'organization'
+                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
+              } ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
+                  <Users size={16} className="text-[#117dff]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Team Workspace</p>
+                  <p className="text-xs text-[#525252]">
+                    Shared with your org{org?.name ? `: ${org.name}` : ''}.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {selectedScope === 'organization' && (
+            <div className="mt-5">
+              <div className="flex items-center gap-2 mb-2">
+                <FolderKanban size={14} className="text-[#525252]" />
+                <p className="text-xs font-mono uppercase tracking-[0.08em] text-[#525252]">Project</p>
+              </div>
+              {loadingProjects ? (
+                <p className="text-xs text-[#a3a3a3]">Loading projects...</p>
+              ) : projects.length > 0 ? (
+                <>
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => onProjectChange(e.target.value)}
+                    className="w-full rounded-[8px] border border-[#e3e0db] px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
+                  >
+                    <option value="">Select a team project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.slug}>
+                        {project.name} ({project.slug})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-[11px] text-[#a3a3a3]">
+                    Team uploads should be attached to a project when projects exist.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-[#a3a3a3]">
+                  No team projects yet. This upload will be shared to the team workspace without a project bucket.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[8px] border border-[#e3e0db] px-4 py-2.5 text-sm font-semibold text-[#525252]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={requiresProject && !selectedProject}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
+            >
+              <Upload size={14} />
+              Upload files
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 function getFileIcon(filename) {
   const ext = (filename || '').split('.').pop()?.toLowerCase();
@@ -53,15 +223,18 @@ export default function KnowledgeBase() {
   const [uploads, setUploads] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const [customTags, setCustomTags] = useState('');
-  const [targetScope, setTargetScope] = useState('personal');
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [scopeModalOpen, setScopeModalOpen] = useState(false);
+  const [selectedScope, setSelectedScope] = useState('personal');
+  const [selectedProject, setSelectedProject] = useState('');
+  const [teamProjects, setTeamProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const fileInputRef = useRef(null);
-  const isEnterprise = org?.plan === 'enterprise' || org?.plan === 'team';
 
-  // Fetch existing knowledge base documents
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
     try {
       const result = await apiClient.quickSearch('knowledge-base document-summary');
-      return (result?.results || result?.memories || []).filter(m =>
+      return (result?.results || result?.memories || []).filter((m) =>
         (m.tags || []).includes('document-summary')
       );
     } catch {
@@ -71,11 +244,39 @@ export default function KnowledgeBase() {
 
   const documents = kbMemories || [];
 
-  const handleFiles = useCallback(async (files) => {
+  useEffect(() => {
+    let cancelled = false;
+    if ((org?.plan !== 'enterprise' && org?.plan !== 'team') || !org?.id) {
+      setTeamProjects([]);
+      return;
+    }
+    setLoadingProjects(true);
+    apiClient.listProjects(org.id)
+      .then((data) => {
+        if (!cancelled) {
+          setTeamProjects(data.projects || []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTeamProjects([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingProjects(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, org?.plan]);
+
+  const handleFiles = useCallback(async (files, { targetScope = 'personal', project = null } = {}) => {
     for (const file of files) {
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (!ACCEPTED_EXTS.includes(ext)) {
-        setUploads(prev => [...prev, {
+        setUploads((prev) => [...prev, {
           id: Date.now() + Math.random(),
           filename: file.name,
           status: 'error',
@@ -85,7 +286,7 @@ export default function KnowledgeBase() {
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        setUploads(prev => [...prev, {
+        setUploads((prev) => [...prev, {
           id: Date.now() + Math.random(),
           filename: file.name,
           status: 'error',
@@ -102,37 +303,60 @@ export default function KnowledgeBase() {
         chunks: null,
       };
 
-      setUploads(prev => [...prev, uploadEntry]);
+      setUploads((prev) => [...prev, uploadEntry]);
 
       try {
         const result = await apiClient.uploadDocument(file, {
           tags: customTags || undefined,
-          visibility: targetScope === 'organization' ? 'organization' : 'private',
+          targetScope,
+          containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
         });
-        setUploads(prev => prev.map(u =>
+        setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id }
             : u
         ));
-        // Refresh document list after short delay (ingestion is async)
         setTimeout(() => refetchKb(), 3000);
       } catch (err) {
-        setUploads(prev => prev.map(u =>
+        setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? { ...u, status: 'error', error: err.response?.data?.error || err.message }
             : u
         ));
       }
     }
-  }, [customTags, refetchKb, targetScope]);
+  }, [customTags, refetchKb]);
+
+  const queueFilesForUpload = useCallback((files) => {
+    if (!files?.length) return;
+    setPendingFiles(files);
+    setSelectedScope('personal');
+    setSelectedProject('');
+    setScopeModalOpen(true);
+  }, []);
+
+  const handleConfirmUploadScope = useCallback(() => {
+    const project = selectedScope === 'organization' ? (selectedProject || null) : null;
+    const files = pendingFiles;
+    setScopeModalOpen(false);
+    setPendingFiles([]);
+    handleFiles(files, { targetScope: selectedScope, project });
+  }, [handleFiles, pendingFiles, selectedProject, selectedScope]);
+
+  const handleCloseScopeModal = useCallback(() => {
+    setScopeModalOpen(false);
+    setPendingFiles([]);
+    setSelectedProject('');
+    setSelectedScope('personal');
+  }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragActive(false);
     if (e.dataTransfer.files?.length) {
-      handleFiles(Array.from(e.dataTransfer.files));
+      queueFilesForUpload(Array.from(e.dataTransfer.files));
     }
-  }, [handleFiles]);
+  }, [queueFilesForUpload]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
@@ -143,7 +367,6 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-full">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Knowledge Base</h1>
@@ -157,7 +380,6 @@ export default function KnowledgeBase() {
         </div>
       </motion.div>
 
-      {/* Upload Zone */}
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
         <div
           onDrop={handleDrop}
@@ -177,7 +399,7 @@ export default function KnowledgeBase() {
             accept=".pdf,.docx,.txt,.md,.csv"
             className="hidden"
             onChange={(e) => {
-              if (e.target.files?.length) handleFiles(Array.from(e.target.files));
+              if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
               e.target.value = '';
             }}
           />
@@ -193,52 +415,32 @@ export default function KnowledgeBase() {
           </p>
         </div>
 
-        {/* Options row: tags + scope */}
-        <div className="flex items-center gap-3 mt-3">
-          <div className="flex items-center gap-2 flex-1">
-            <Tag size={12} className="text-[#a3a3a3]" />
-            <input
-              type="text"
-              value={customTags}
-              onChange={(e) => setCustomTags(e.target.value)}
-              placeholder="Optional tags (comma-separated)"
-              className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
-            />
-          </div>
-
-          {/* Scope selector — Enterprise/Team only */}
-          {isEnterprise && (
-            <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
-              <button
-                type="button"
-                onClick={() => setTargetScope('personal')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-['Space_Grotesk'] font-medium transition-colors ${
-                  targetScope === 'personal'
-                    ? 'bg-[#117dff]/10 text-[#117dff]'
-                    : 'text-[#737373] hover:text-[#525252]'
-                }`}
-              >
-                <User size={11} />
-                My Space
-              </button>
-              <button
-                type="button"
-                onClick={() => setTargetScope('organization')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-['Space_Grotesk'] font-medium transition-colors ${
-                  targetScope === 'organization'
-                    ? 'bg-[#16a34a]/10 text-[#16a34a]'
-                    : 'text-[#737373] hover:text-[#525252]'
-                }`}
-              >
-                <Users size={11} />
-                Team
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-2 mt-3">
+          <Tag size={12} className="text-[#a3a3a3]" />
+          <input
+            type="text"
+            value={customTags}
+            onChange={(e) => setCustomTags(e.target.value)}
+            placeholder="Optional tags (comma-separated): project-docs, research, notes..."
+            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
+          />
         </div>
       </motion.div>
 
-      {/* Upload Progress */}
+      <UploadScopeModal
+        open={scopeModalOpen}
+        files={pendingFiles}
+        org={org}
+        projects={teamProjects}
+        loadingProjects={loadingProjects}
+        selectedScope={selectedScope}
+        onScopeChange={setSelectedScope}
+        selectedProject={selectedProject}
+        onProjectChange={setSelectedProject}
+        onConfirm={handleConfirmUploadScope}
+        onClose={handleCloseScopeModal}
+      />
+
       <AnimatePresence>
         {uploads.length > 0 && (
           <motion.div
@@ -266,7 +468,7 @@ export default function KnowledgeBase() {
                 {u.status === 'uploading' && <span className="text-[#117dff]">Processing...</span>}
               </div>
             ))}
-            {uploads.some(u => u.status !== 'uploading') && (
+            {uploads.some((u) => u.status !== 'uploading') && (
               <button
                 onClick={() => setUploads([])}
                 className="text-[#a3a3a3] text-[10px] font-mono hover:text-[#525252] transition-colors"
@@ -278,7 +480,6 @@ export default function KnowledgeBase() {
         )}
       </AnimatePresence>
 
-      {/* Existing Documents */}
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 mb-5">
           <FileText size={16} className="text-[#525252]" />
@@ -314,7 +515,7 @@ export default function KnowledgeBase() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {(doc.tags || []).filter(t => !['knowledge-base', 'document', 'document-summary'].includes(t)).slice(0, 3).map(tag => (
+                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary'].includes(t)).slice(0, 3).map((tag) => (
                       <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                         {tag}
                       </span>

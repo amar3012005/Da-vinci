@@ -416,6 +416,7 @@ class HiveMindApiClient {
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
+    if (options.targetScope) formData.append('targetScope', options.targetScope);
     const { data } = await this.controlPlane.post('/v1/proxy/knowledge/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
