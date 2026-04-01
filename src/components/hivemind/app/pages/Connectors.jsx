@@ -29,6 +29,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
+import { useAuth } from '../auth/AuthProvider';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -96,6 +97,17 @@ const CONNECTORS = [
     status: 'available',
     color: '#22c55e',
     configKey: 'remote-mcp',
+  },
+  {
+    id: 'notebooklm',
+    name: 'NotebookLM',
+    description: 'NotebookLM second mind via local MCP bridge',
+    icon: BookOpen,
+    category: 'mcp_clients',
+    status: 'available',
+    color: '#117dff',
+    configKey: 'notebooklm',
+    mcpEndpointName: 'notebooklm',
   },
   // Workspace (coming soon)
   {
@@ -330,7 +342,7 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // ─── Connector Card (Supermemory-style) ──────────────────────────────────────
 
-function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, connecting }) {
+function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, connecting, targetScope, onTargetScopeChange, allowTeamScope }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = connector.icon;
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
@@ -383,6 +395,30 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
           </div>
           <ConnectorStatusBadge status={connector.status} />
         </div>
+
+        {connector.oauthProvider && (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Sync to</span>
+            {[
+              { key: 'personal', label: 'My Space', disabled: false },
+              { key: 'organization', label: 'Team Workspace', disabled: !allowTeamScope },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                disabled={option.disabled}
+                onClick={() => !option.disabled && onTargetScopeChange?.(option.key)}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                  targetScope === option.key
+                    ? 'border-[#117dff]/30 bg-[#117dff]/10 text-[#117dff]'
+                    : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'
+                } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
@@ -741,12 +777,14 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function Connectors() {
+  const { org } = useAuth();
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
   const [gmailEmail, setGmailEmail] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
+  const [targetScopes, setTargetScopes] = useState({});
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -818,12 +856,26 @@ export default function Connectors() {
     return () => clearInterval(interval);
   }, [refetchOAuth, searchParams]);
 
+  useEffect(() => {
+    if (!oauthConnectors?.connectors) return;
+    setTargetScopes((prev) => {
+      const next = { ...prev };
+      for (const connector of oauthConnectors.connectors) {
+        if (!(connector.provider in next)) {
+          next[connector.provider] = connector.target_scope || 'personal';
+        }
+      }
+      return next;
+    });
+  }, [oauthConnectors]);
+
   const handleOAuthConnect = useCallback(async (provider) => {
     setConnectingProvider(provider);
     try {
+      const targetScope = targetScopes[provider] || 'personal';
       // Use direct Gmail API for Gmail, control plane for others
       if (provider === 'gmail') {
-        const data = await apiClient.gmailConnect();
+        const data = await apiClient.gmailConnect(targetScope);
         if (data.url) {
           window.location.href = data.url;
         } else {
@@ -835,6 +887,7 @@ export default function Connectors() {
       const { auth_url } = await apiClient.startConnectorOAuth(
         provider,
         window.location.pathname,
+        targetScope,
       );
       if (auth_url) {
         window.location.href = auth_url;
@@ -845,7 +898,7 @@ export default function Connectors() {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
       setConnectingProvider(null);
     }
-  }, []);
+  }, [targetScopes]);
 
   const handleDisconnect = useCallback(async (provider) => {
     try {
@@ -867,17 +920,53 @@ export default function Connectors() {
         setGmailSettingsOpen(true);
         return;
       }
-      await apiClient.resyncConnector(provider);
+      await apiClient.resyncConnector(provider, { targetScope: targetScopes[provider] || 'personal' });
       setToastMessage({ type: 'success', text: `${provider} sync started` });
       refetchOAuth();
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
-  }, [refetchOAuth]);
+  }, [refetchOAuth, targetScopes]);
+
+  const handleNotebookLMConnect = useCallback(async () => {
+    setConnectingProvider('notebooklm');
+    try {
+      const notebooklmDescriptor = descriptors?.notebooklm
+        ? { config: descriptors.notebooklm }
+        : await apiClient.getDescriptor('notebooklm');
+      const endpoint = notebooklmDescriptor?.config?.mcpServers?.notebooklm || {
+        command: 'node',
+        args: ['mcp-server/notebooklm-mcp-server.js'],
+        env: {
+          NOTEBOOKLM_BIN: 'notebooklm',
+          NOTEBOOKLM_DEFAULT_NOTEBOOK_TITLE: 'Second Mind',
+          NOTEBOOKLM_AUTO_CREATE_DEFAULT_NOTEBOOK: '1',
+          NOTEBOOKLM_TIMEOUT_MS: '120000',
+          NOTEBOOKLM_RESEARCH_TIMEOUT_MS: '600000',
+        },
+      };
+
+      await apiClient.registerMcpEndpoint({
+        name: 'notebooklm',
+        transport: 'stdio',
+        adapter_type: 'notebooklm',
+        default_project: 'research',
+        default_tags: ['notebooklm', 'research', 'second-mind'],
+        ...endpoint,
+      });
+
+      setToastMessage({ type: 'success', text: 'NotebookLM connected' });
+      await refetchStatus();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    } finally {
+      setConnectingProvider(null);
+    }
+  }, [descriptors, refetchStatus]);
 
   const handleGmailSync = useCallback(async (settings) => {
     try {
-      await apiClient.gmailSync(settings);
+      await apiClient.gmailSync({ ...settings, target_scope: targetScopes.gmail || 'personal' });
       setToastMessage({ type: 'success', text: 'Gmail sync started! Check status for progress.' });
       setGmailSettingsOpen(false);
       refetchOAuth();
@@ -912,12 +1001,24 @@ export default function Connectors() {
         return {
           ...c,
           status: derivedStatus,
+          target_scope: live.target_scope || 'personal',
           accountRef: live.account_ref,
           lastSyncAt: live.last_sync_at,
           lastError: live.last_error,
           description: live.configured === false && live.disabled_reason
             ? `${c.description} (${live.disabled_reason})`
             : c.description,
+        };
+      }
+    } else if (c.mcpEndpointName) {
+      const live = endpoints.find((ep) => ep.name === c.mcpEndpointName);
+      if (live) {
+        return {
+          ...c,
+          status: live.healthy ? 'connected' : 'error',
+          accountRef: live.url || 'Local MCP bridge',
+          lastSyncAt: live.updated_at,
+          lastError: live.error,
         };
       }
     }
@@ -1018,7 +1119,14 @@ export default function Connectors() {
             key={connector.id}
             connector={connector}
             config={descriptors?.[connector.configKey]}
+            targetScope={targetScopes[connector.oauthProvider] || connector.target_scope || 'personal'}
+            onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
+            allowTeamScope={org?.plan === 'enterprise'}
             onConnect={() => {
+              if (connector.id === 'notebooklm') {
+                handleNotebookLMConnect();
+                return;
+              }
               if (connector.oauthProvider) {
                 handleOAuthConnect(connector.oauthProvider);
               }
@@ -1033,7 +1141,7 @@ export default function Connectors() {
                 handleResync(connector.oauthProvider);
               }
             }}
-            connecting={connectingProvider === connector.oauthProvider}
+            connecting={connectingProvider === connector.oauthProvider || connectingProvider === connector.id}
           />
         ))}
       </div>

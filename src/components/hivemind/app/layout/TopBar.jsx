@@ -17,6 +17,8 @@ const pageTitles = {
   '/hivemind/app/mcp': 'MCP Server',
   '/hivemind/app/graph': 'Memory Graph',
   '/hivemind/app/engine': 'Engine Intelligence',
+  '/hivemind/app/team/members': 'Team Members',
+  '/hivemind/app/team/projects': 'Team Projects',
 };
 
 const pageDescriptions = {
@@ -33,6 +35,8 @@ const pageDescriptions = {
   '/hivemind/app/mcp': '13 MCP tools for memory, search, and web intelligence — with setup guides',
   '/hivemind/app/graph': 'Explore connections between memories — semantic clusters, temporal decay, and relationship traversal',
   '/hivemind/app/engine': 'SOTA memory engine — cognitive framing, temporal queries, swarm reasoning, and Byzantine consensus',
+  '/hivemind/app/team/members': 'Invite, review, and manage enterprise workspace members',
+  '/hivemind/app/team/projects': 'Organize shared memory streams into enterprise projects',
 };
 
 export default function TopBar() {

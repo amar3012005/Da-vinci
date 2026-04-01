@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ForceGraph2D from 'react-force-graph-2d';
 import {
   Network, X, Search, Filter, RefreshCw, Maximize2,
-  GitBranch, Clock, ChevronDown, Brain,
+  GitBranch, Clock, ChevronDown,
   ZoomIn, ZoomOut, Crosshair,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { useAuth } from '../auth/AuthProvider';
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 const EDGE_COLORS = {
@@ -27,19 +28,9 @@ const TYPE_COLORS = {
   goal: '#8b5cf6',
   event: '#0891b2',
   relationship: '#db2777',
-  observation: '#f59e0b',    // amber — agent observations
   default: '#525252',
 };
-// Resident layer visual encodings
-const LAYER_COLORS = {
-  fact: '#10b981',        // emerald — extracted facts
-  observation: '#f59e0b', // amber — observations
-  promoted: '#ef4444',    // red — promoted risks
-  verified: '#22c55e',    // green — turing verified
-  tara: '#a855f7',        // purple — TARA conversation turns
-  'tara-insight': '#f97316', // orange — clinical reasoning insights
-  memory: null,           // use TYPE_COLORS
-};
+const USER_COLORS = ['#117dff', '#16a34a', '#d97706', '#8b5cf6', '#dc2626', '#0891b2', '#db2777', '#525252'];
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 function truncate(str, len = 80) {
@@ -176,6 +167,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph() {
+  const { org } = useAuth();
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
@@ -186,21 +178,15 @@ export default function MemoryGraph() {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [projectFilter, setProjectFilter] = useState('');
+  const [scope, setScope] = useState('personal');
   const [showFilters, setShowFilters] = useState(false);
-  const [showResidents, setShowResidents] = useState(false);
-  const [residentActivity, setResidentActivity] = useState(null);
-  const [residentTouchedIds, setResidentTouchedIds] = useState(new Set());
 
   // Fetch graph data
   const fetchGraph = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getGraph({
-        project: projectFilter || undefined,
-        limit: 500,
-        include_residents: showResidents,
-      });
+      const data = await apiClient.getGraph({ project: projectFilter || undefined, limit: 300, scope });
       const nodes = (data.nodes || []).map(n => ({
         ...n,
         val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
@@ -210,24 +196,25 @@ export default function MemoryGraph() {
         target: e.target,
         type: e.type,
         confidence: e.confidence || 1,
-        createdBy: e.createdBy || null,
       }));
       setGraphData({ nodes, links });
       setRawEdges(data.edges || []);
       setMeta(data.meta || null);
-
-      // Resident overlay
-      if (data.residentActivity) {
-        setResidentActivity(data.residentActivity);
-        setResidentTouchedIds(new Set(data.residentActivity.touchedNodeIds || []));
-      }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setGraphData({ nodes: [], links: [] });
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, showResidents]);
+  }, [projectFilter, scope]);
+
+  const userColorMap = useMemo(() => {
+    const ids = [...new Set(graphData.nodes.map((node) => node.userId).filter(Boolean))];
+    return ids.reduce((acc, id, index) => {
+      acc[id] = USER_COLORS[index % USER_COLORS.length];
+      return acc;
+    }, {});
+  }, [graphData.nodes]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
 
@@ -281,51 +268,17 @@ export default function MemoryGraph() {
     const isHighlighted = highlightNodes.size > 0 && highlightNodes.has(node.id);
     const isDimmed = highlightNodes.size > 0 && !highlightNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
-    const isResidentTouched = showResidents && residentTouchedIds.has(node.id);
-
-    // Use layer-specific color if available, else type color
-    const layerColor = LAYER_COLORS[node.nodeLayer];
-    const baseColor = layerColor || TYPE_COLORS[node.memoryType] || TYPE_COLORS.default;
+    const baseColor = (scope === 'team' || scope === 'all')
+      ? (userColorMap[node.userId] || TYPE_COLORS.default)
+      : (TYPE_COLORS[node.memoryType] || TYPE_COLORS.default);
     const glow = node.temporalWeight || 0.3;
-    let radius = Math.sqrt(node.val || 4) * 2.5;
-
-    // Fact nodes are smaller but more prominent
-    if (node.nodeLayer === 'fact') radius = Math.max(radius * 0.7, 3);
-    // Promoted risks are larger
-    if (node.nodeLayer === 'promoted') radius = radius * 1.5;
-
-    // Resident touch — orange pulse ring
-    if (isResidentTouched && !isDimmed) {
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 6, 0, 2 * Math.PI);
-      ctx.strokeStyle = hexToRgba('#f97316', 0.5); // orange
-      ctx.lineWidth = 2 / globalScale;
-      ctx.setLineDash([3, 3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Promoted risk — red halo
-    if (node.nodeLayer === 'promoted' && !isDimmed) {
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba('#ef4444', 0.15);
-      ctx.fill();
-    }
-
-    // Verified — green badge glow
-    if (node.nodeLayer === 'verified' && !isDimmed) {
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba('#22c55e', 0.12);
-      ctx.fill();
-    }
+    const radius = Math.sqrt(node.val || 4) * 2.5;
 
     // Outer glow (temporal decay)
     if (glow > 0.3 && !isDimmed) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius + 4 + glow * 6, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba(baseColor, glow * 0.15);
+      ctx.fillStyle = hexToRgba(baseColor, glow * 0.2);
       ctx.fill();
     }
 
@@ -347,94 +300,16 @@ export default function MemoryGraph() {
       ctx.stroke();
     }
 
-    // TARA turn — purple halo + slightly larger
-    if (node.nodeLayer === 'tara' && !isDimmed) {
-      radius = radius * 1.2;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba('#a855f7', 0.12);
-      ctx.fill();
-    }
+    // Node body
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
+    ctx.fill();
 
-    // Clinical insight — orange pulsing glow
-    if (node.nodeLayer === 'tara-insight' && !isDimmed) {
-      radius = radius * 1.1;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba('#f97316', 0.15);
-      ctx.fill();
-    }
-
-    // Node body — shape per type
-    if (node.nodeLayer === 'tara-insight') {
-      // 4-point star for clinical insights
-      const spikes = 4;
-      const outerR = radius;
-      const innerR = radius * 0.45;
-      ctx.beginPath();
-      for (let i = 0; i < spikes * 2; i++) {
-        const r = i % 2 === 0 ? outerR : innerR;
-        const angle = (Math.PI / spikes) * i - Math.PI / 2;
-        const px = node.x + r * Math.cos(angle);
-        const py = node.y + r * Math.sin(angle);
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.8);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.stroke();
-    } else if (node.nodeLayer === 'tara') {
-      // Hexagon shape for TARA conversation turns
-      const sides = 6;
-      ctx.beginPath();
-      for (let i = 0; i < sides; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 6;
-        const px = node.x + radius * Math.cos(angle);
-        const py = node.y + radius * Math.sin(angle);
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.75);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.stroke();
-    } else if (node.nodeLayer === 'fact') {
-      // Diamond shape for facts
-      ctx.beginPath();
-      ctx.moveTo(node.x, node.y - radius);
-      ctx.lineTo(node.x + radius, node.y);
-      ctx.lineTo(node.x, node.y + radius);
-      ctx.lineTo(node.x - radius, node.y);
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.7);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.9);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
-    } else if (node.nodeLayer === 'observation') {
-      // Rounded square for observations
-      const s = radius * 0.85;
-      ctx.beginPath();
-      ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.8);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
-    } else {
-      // Circle for regular memories
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.15) : hexToRgba(baseColor, 0.6 + glow * 0.4);
-      ctx.fill();
-      ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
-    }
+    // Border
+    ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.1) : hexToRgba(baseColor, 0.8);
+    ctx.lineWidth = 0.5 / globalScale;
+    ctx.stroke();
 
     // Label (only at zoom)
     if (globalScale > 1.8 && !isDimmed) {
@@ -445,19 +320,13 @@ export default function MemoryGraph() {
       ctx.fillStyle = isDimmed ? 'rgba(0,0,0,0.1)' : 'rgba(10,10,10,0.8)';
       ctx.fillText(label, node.x, node.y + radius + 2);
     }
-  }, [highlightNodes, selectedNode, showResidents, residentTouchedIds]);
+  }, [highlightNodes, selectedNode, scope, userColorMap]);
 
   // Custom link painting
   const paintLink = useCallback((link, ctx) => {
     const color = EDGE_COLORS[link.type] || '#e3e0db';
-    const isTuringEdge = link.createdBy === 'turing' || link.createdBy === 'memory_processor';
     ctx.strokeStyle = hexToRgba(color, 0.35 + (link.confidence || 0.5) * 0.3);
     ctx.lineWidth = link.type === 'Extends' ? 1.5 : 0.8;
-    // Turing-created edges are thicker + glow
-    if (isTuringEdge && showResidents) {
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = hexToRgba('#22c55e', 0.6); // green for agent-created
-    }
     if (link.type === 'Derives') {
       ctx.setLineDash([4, 3]);
     }
@@ -466,7 +335,7 @@ export default function MemoryGraph() {
     ctx.lineTo(link.target.x, link.target.y);
     ctx.stroke();
     ctx.setLineDash([]);
-  }, [showResidents]);
+  }, []);
 
   // Stats
   const stats = useMemo(() => {
@@ -539,6 +408,28 @@ export default function MemoryGraph() {
           </AnimatePresence>
         </div>
 
+        <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
+          {[
+            { key: 'personal', label: 'My' },
+            { key: 'team', label: 'Team', disabled: org?.plan !== 'enterprise' },
+            { key: 'all', label: 'All', disabled: org?.plan !== 'enterprise' },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              disabled={option.disabled}
+              onClick={() => !option.disabled && setScope(option.key)}
+              className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] ${
+                scope === option.key
+                  ? 'bg-[#117dff]/10 text-[#117dff]'
+                  : 'text-[#737373]'
+              } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         {/* Actions */}
         <button
           onClick={fetchGraph}
@@ -556,36 +447,12 @@ export default function MemoryGraph() {
           <Maximize2 size={13} />
         </button>
 
-        {/* Resident Layer Toggle */}
-        <button
-          onClick={() => setShowResidents(!showResidents)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] border transition-colors ${
-            showResidents
-              ? 'border-[#f97316] bg-[#f97316]/10 text-[#f97316]'
-              : 'border-[#e3e0db] text-[#a3a3a3] hover:border-[#f97316]/20 hover:text-[#f97316]'
-          }`}
-          title="Toggle Resident Agent Activity"
-        >
-          <Brain size={12} />
-          Residents
-        </button>
-
         {/* Stats */}
         {stats && (
           <div className="flex items-center gap-3 ml-auto text-[10px] font-mono text-[#a3a3a3]">
             <span>{stats.nodes} nodes</span>
             <span>{stats.edges} edges</span>
-            {meta?.totalMemories && <span className="text-[#117dff]">{meta.totalMemories} total</span>}
-            {meta?.loadedLayers && (
-              <span className="text-[#10b981]">
-                {meta.loadedLayers.highValue}★ {meta.loadedLayers.connected}⟷ {meta.loadedLayers.recent}⏱
-              </span>
-            )}
-            {showResidents && residentActivity && (
-              <span className="text-[#f97316]">
-                F:{residentActivity.observations.faraday} Fe:{residentActivity.observations.feynman} T:{residentActivity.observations.turing}
-              </span>
-            )}
+            <span>{stats.projects} projects</span>
           </div>
         )}
       </div>
@@ -645,7 +512,7 @@ export default function MemoryGraph() {
         )}
 
         {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-[#e3e0db] rounded-xl px-3 py-2.5 z-10">
+        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-[#e3e0db] rounded-xl px-3 py-2.5 z-10 max-w-[420px]">
           <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">Relationships</p>
           <div className="flex items-center gap-3">
             {Object.entries(EDGE_COLORS).map(([type, color]) => (
@@ -663,6 +530,19 @@ export default function MemoryGraph() {
             <div className="w-3 h-3 rounded-full bg-[#117dff]/15" />
             <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">Old</span>
           </div>
+          {(scope === 'team' || scope === 'all') && Object.keys(userColorMap).length > 0 && (
+            <>
+              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">Node Color = Member</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(userColorMap).map(([memberId, color]) => (
+                  <div key={memberId} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">{memberId.slice(0, 8)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Zoom controls */}

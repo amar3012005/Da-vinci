@@ -132,7 +132,7 @@ class HiveMindApiClient {
    *   organization: { id, name, slug } | null,
    *   onboarding: { needs_org_setup, has_api_key },
    *   connectivity: { core_api_base_url, core_health },
-   *   client_support: ['claude', 'antigravity', 'vscode', 'remote-mcp']
+   *   client_support: ['claude', 'antigravity', 'vscode', 'remote-mcp', 'notebooklm']
    * }
    */
   async bootstrap() {
@@ -150,8 +150,64 @@ class HiveMindApiClient {
 
   // ─── Control Plane: Organizations ────────────────────────────
 
-  async createOrg(name) {
-    const { data } = await this.controlPlane.post('/v1/orgs', { name });
+  async createOrg(payload) {
+    const request = typeof payload === 'string' ? { name: payload } : payload;
+    const { data } = await this.controlPlane.post('/v1/orgs', request);
+    return data;
+  }
+
+  async listMembers(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/members`);
+    return data;
+  }
+
+  async updateMemberRole(orgId, userId, role) {
+    const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/members/${userId}`, { role });
+    return data;
+  }
+
+  async removeMember(orgId, userId) {
+    const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/members/${userId}`);
+    return data;
+  }
+
+  async createInvite(orgId, payload = {}) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites`, payload);
+    return data;
+  }
+
+  async listInvites(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/invites`);
+    return data;
+  }
+
+  async revokeInvite(orgId, inviteId) {
+    const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/invites/${inviteId}`);
+    return data;
+  }
+
+  async acceptInvite(token) {
+    const { data } = await this.controlPlane.post(`/v1/join/${token}`);
+    return data;
+  }
+
+  async listProjects(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/projects`);
+    return data;
+  }
+
+  async createProject(orgId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/projects`, payload);
+    return data;
+  }
+
+  async updateProject(orgId, projectId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/projects/${projectId}`, payload);
+    return data;
+  }
+
+  async deleteProject(orgId, projectId) {
+    const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/projects/${projectId}`);
     return data;
   }
 
@@ -250,18 +306,6 @@ class HiveMindApiClient {
     return data;
   }
 
-  async recallMemories(query, params = {}) {
-    const { data } = await this.controlPlane.post('/v1/proxy/recall', {
-      query_context: query,
-      max_memories: params.maxMemories || 10,
-      inject_parent_chunks: params.injectParentChunks !== false,
-      is_latest: params.isLatest,
-      sort: params.sort,
-      ...params,
-    });
-    return data;
-  }
-
   // ─── Core: Resident Agents ──────────────────────────────────
 
   async listResidentAgents() {
@@ -300,22 +344,8 @@ class HiveMindApiClient {
   }
 
   async getProfile() {
-    try {
-      const { data } = await this.controlPlane.get('/v1/proxy/profile');
-      // Unwrap: API returns { ok, profile: {...}, graph_summary } — callers expect the profile object directly
-      const profile = data?.profile || data;
-      if (data?.graph_summary) profile.graph_summary = data.graph_summary;
-      return profile;
-    } catch (proxyErr) {
-      // Fallback: hit core API directly if proxy is unavailable
-      if (this._apiKey && this._coreBaseUrl) {
-        const { data } = await this.core.get('/api/profile');
-        const profile = data?.profile || data;
-        if (data?.graph_summary) profile.graph_summary = data.graph_summary;
-        return profile;
-      }
-      throw proxyErr;
-    }
+    const { data } = await this.controlPlane.get('/v1/proxy/profile');
+    return data;
   }
 
   // ─── Core: Connectors (MCP) ─────────────────────────────────
@@ -330,6 +360,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async registerMcpEndpoint(endpoint) {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/mcp/endpoints', endpoint);
+    return data;
+  }
+
   // ─── Control Plane: OAuth Connectors ──────────────────────
 
   async listOAuthConnectors() {
@@ -337,9 +372,10 @@ class HiveMindApiClient {
     return data;
   }
 
-  async startConnectorOAuth(provider, returnTo) {
+  async startConnectorOAuth(provider, returnTo, targetScope = 'personal') {
     const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/start`, {
       return_to: returnTo,
+      target_scope: targetScope,
     });
     return data;
   }
@@ -354,8 +390,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async resyncConnector(provider, { incremental = true } = {}) {
-    const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/resync`, { incremental });
+  async resyncConnector(provider, { incremental = true, targetScope } = {}) {
+    const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/resync`, { incremental, target_scope: targetScope });
     return data;
   }
 
@@ -374,8 +410,10 @@ class HiveMindApiClient {
 
   // ─── Core: Gmail Connector (direct) ─────────────────────────
 
-  async gmailConnect() {
-    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/connect');
+  async gmailConnect(targetScope = 'personal') {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/connect', {
+      params: { target_scope: targetScope },
+    });
     return data;
   }
 
@@ -466,11 +504,11 @@ class HiveMindApiClient {
 
   // ─── Core: Memory Graph ─────────────────────────────────────
 
-  async getGraph({ project, limit = 500, include_residents = true } = {}) {
+  async getGraph({ project, limit = 200, scope } = {}) {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
     if (limit) params.set('limit', String(limit));
-    if (include_residents) params.set('include_residents', 'true');
+    if (scope) params.set('scope', scope);
     const qs = params.toString();
     const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
     return data;

@@ -21,7 +21,9 @@ const MemoryGraph = React.lazy(() => import('./pages/MemoryGraph'));
 const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
 const AgentSwarm = React.lazy(() => import('./pages/AgentSwarm'));
-const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
+const TeamMembers = React.lazy(() => import('./pages/TeamMembers'));
+const TeamProjects = React.lazy(() => import('./pages/TeamProjects'));
+const JoinOrg = React.lazy(() => import('./pages/JoinOrg'));
 
 function PageSuspense({ children }) {
   return (
@@ -40,23 +42,20 @@ function PageSuspense({ children }) {
 /**
  * HIVEMIND Dashboard Application
  * Mounts under /hivemind/app/* and /hivemind/login
- *
- * If accessed from www.davinciai.eu or davinciai.eu, redirect to hivemind.davinciai.eu
- * so all dashboard interactions happen on the canonical HIVEMIND domain.
  */
 export default function HiveMindApp() {
-  // Redirect non-hivemind domains to hivemind.davinciai.eu
-  const host = window.location.hostname;
-  if (host !== 'hivemind.davinciai.eu' && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('vercel.app')) {
-    const target = `https://hivemind.davinciai.eu${window.location.pathname}${window.location.search}${window.location.hash}`;
-    window.location.replace(target);
-    return null;
-  }
-
   return (
     <AuthProvider>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        <Route
+          path="join/:slug/:token"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><JoinOrg /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected dashboard */}
         <Route
@@ -83,7 +82,8 @@ export default function HiveMindApp() {
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
-          <Route path="tara" element={<PageSuspense><TaraConfig /></PageSuspense>} />
+          <Route path="team/members" element={<PageSuspense><TeamMembers /></PageSuspense>} />
+          <Route path="team/projects" element={<PageSuspense><TeamProjects /></PageSuspense>} />
         </Route>
 
         {/* Fallback */}

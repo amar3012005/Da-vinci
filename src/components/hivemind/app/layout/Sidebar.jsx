@@ -22,14 +22,14 @@ import {
   Cpu,
   BookOpen,
   Bot,
-  Mic,
+  Users,
+  FolderKanban,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
-import { useApiQuery } from '../shared/hooks';
 
 /** Build nav sections, conditionally including admin items. */
-function buildNavSections({ showWebAdmin }) {
+function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
   const devItems = [
     { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
     { to: '/hivemind/app/mcp', icon: Server, label: 'MCP Server' },
@@ -38,7 +38,7 @@ function buildNavSections({ showWebAdmin }) {
   if (showWebAdmin) {
     devItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
   }
-  return [
+  const sections = [
     {
       label: null,
       items: [
@@ -55,7 +55,6 @@ function buildNavSections({ showWebAdmin }) {
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
         { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
         { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
-        { to: '/hivemind/app/tara', icon: Mic, label: 'TARA × HIVE' },
         { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
       ],
     },
@@ -71,6 +70,18 @@ function buildNavSections({ showWebAdmin }) {
       ],
     },
   ];
+
+  if (showEnterpriseTeam) {
+    sections.splice(2, 0, {
+      label: 'Team',
+      items: [
+        { to: '/hivemind/app/team/members', icon: Users, label: 'Members' },
+        { to: '/hivemind/app/team/projects', icon: FolderKanban, label: 'Projects' },
+      ],
+    });
+  }
+
+  return sections;
 }
 
 export default function Sidebar() {
@@ -79,12 +90,6 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [showWebAdmin, setShowWebAdmin] = useState(false);
 
-  // Fetch profile for plan display
-  const { data: profile } = useApiQuery(() => apiClient.getProfile().catch(() => null), []);
-  const planLabel = profile?.plan
-    ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) + ' Plan'
-    : 'Free Plan';
-
   // Probe admin access once on mount
   useEffect(() => {
     apiClient.getWebAdminMetrics()
@@ -92,7 +97,8 @@ export default function Sidebar() {
       .catch(() => setShowWebAdmin(false));
   }, []);
 
-  const navSections = buildNavSections({ showWebAdmin });
+  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise' });
+  const planLabel = org?.plan ? `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` : 'Free Plan';
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 
@@ -195,8 +201,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Upgrade Banner — hide if already on pro */}
-      {!collapsed && profile?.plan !== 'pro' && (
+      {/* Upgrade Banner */}
+      {!collapsed && (
         <div className="mx-2.5 mb-2">
           <div className="bg-[#117dff]/[0.04] border border-[#117dff]/10 rounded-xl p-3">
             <div className="flex items-center gap-2 mb-1.5">
