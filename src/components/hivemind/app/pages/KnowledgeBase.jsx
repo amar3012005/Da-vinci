@@ -11,9 +11,12 @@ import {
   Tag,
   Clock,
   HardDrive,
+  Users,
+  User,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
+import { useAuth } from '../auth/AuthProvider';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -46,10 +49,13 @@ function formatDate(ts) {
 }
 
 export default function KnowledgeBase() {
+  const { org } = useAuth();
   const [uploads, setUploads] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const [customTags, setCustomTags] = useState('');
+  const [targetScope, setTargetScope] = useState('personal');
   const fileInputRef = useRef(null);
+  const isEnterprise = org?.plan === 'enterprise' || org?.plan === 'team';
 
   // Fetch existing knowledge base documents
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
@@ -101,6 +107,7 @@ export default function KnowledgeBase() {
       try {
         const result = await apiClient.uploadDocument(file, {
           tags: customTags || undefined,
+          visibility: targetScope === 'organization' ? 'organization' : 'private',
         });
         setUploads(prev => prev.map(u =>
           u.id === uploadEntry.id
@@ -186,16 +193,48 @@ export default function KnowledgeBase() {
           </p>
         </div>
 
-        {/* Optional tags input */}
-        <div className="flex items-center gap-2 mt-3">
-          <Tag size={12} className="text-[#a3a3a3]" />
-          <input
-            type="text"
-            value={customTags}
-            onChange={(e) => setCustomTags(e.target.value)}
-            placeholder="Optional tags (comma-separated): project-docs, research, notes..."
-            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
-          />
+        {/* Options row: tags + scope */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="flex items-center gap-2 flex-1">
+            <Tag size={12} className="text-[#a3a3a3]" />
+            <input
+              type="text"
+              value={customTags}
+              onChange={(e) => setCustomTags(e.target.value)}
+              placeholder="Optional tags (comma-separated)"
+              className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
+            />
+          </div>
+
+          {/* Scope selector — Enterprise/Team only */}
+          {isEnterprise && (
+            <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setTargetScope('personal')}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-['Space_Grotesk'] font-medium transition-colors ${
+                  targetScope === 'personal'
+                    ? 'bg-[#117dff]/10 text-[#117dff]'
+                    : 'text-[#737373] hover:text-[#525252]'
+                }`}
+              >
+                <User size={11} />
+                My Space
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetScope('organization')}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-['Space_Grotesk'] font-medium transition-colors ${
+                  targetScope === 'organization'
+                    ? 'bg-[#16a34a]/10 text-[#16a34a]'
+                    : 'text-[#737373] hover:text-[#525252]'
+                }`}
+              >
+                <Users size={11} />
+                Team
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
 
