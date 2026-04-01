@@ -4,46 +4,6 @@ import { useTheme, t } from './ThemeContext';
 import { Link } from 'react-router-dom';
 import HiveMind from '../hivemind/cartesia/HiveMind';
 
-/* ── Pixel / Dither decorative elements ─────────────────── */
-
-const DitherCorner = ({ isDark }) => {
-  const fg = isDark ? 'bg-white' : 'bg-[#0a0a0a]';
-  const fgSoft = isDark ? 'bg-white/15' : 'bg-black/8';
-  return (
-    <div className="flex flex-col gap-0">
-      {Array.from({ length: 8 }).map((_, row) => (
-        <div key={row} className="flex gap-0">
-          {Array.from({ length: 8 }).map((_, col) => {
-            const dist = row + col;
-            const show = dist < 4;
-            const edge = dist >= 4 && dist < 6;
-            const scatter = dist >= 6 && dist < 8 && (row + col) % 3 === 0;
-            return <div key={col} className={`w-[5px] h-[5px] ${show ? fg : edge ? fgSoft : scatter ? fgSoft : 'bg-transparent'}`} />;
-          })}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const DataMatrix = ({ isDark }) => {
-  const nums = [[1,0,1,2,1],[2,1,0,1,0],[1,2,1,1,2]];
-  const fg = isDark ? 'text-white/25' : 'text-black/15';
-  const fgFill = isDark ? 'bg-white text-[#080808]' : 'bg-[#0a0a0a] text-white';
-  return (
-    <div className="flex flex-col gap-0">
-      {nums.map((row, ri) => (
-        <div key={ri} className="flex gap-0">
-          {row.map((n, ci) => {
-            const filled = (ri === 1 && ci === 2) || (ri === 0 && ci === 4);
-            return <div key={ci} className={`w-4 h-4 flex items-center justify-center text-[6px] font-mono ${filled ? fgFill : fg}`}>{n}</div>;
-          })}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 const CheckerBlock = ({ isDark, size = 4 }) => {
   const fg = isDark ? 'bg-white' : 'bg-[#0a0a0a]';
   return (
@@ -56,12 +16,6 @@ const CheckerBlock = ({ isDark, size = 4 }) => {
   );
 };
 
-const TermLabel = ({ text, isDark }) => (
-  <div className={`inline-flex items-center px-2 py-1 border ${isDark ? 'border-white/15' : 'border-black/10'}`}>
-    <span className={`text-[7px] font-mono uppercase tracking-[0.2em] ${isDark ? 'text-white/40' : 'text-black/30'}`}>{text}</span>
-  </div>
-);
-
 const DotBar = ({ value = 70, isDark }) => {
   const total = 20;
   const filled = Math.round((value / 100) * total);
@@ -73,6 +27,19 @@ const DotBar = ({ value = 70, isDark }) => {
     </div>
   );
 };
+
+const CrosshairMark = ({ className = '', isDark }) => (
+  <div className={`absolute w-8 h-8 pointer-events-none ${className}`}>
+    <div className={`absolute left-0 top-1/2 w-8 h-px ${isDark ? 'bg-white/38' : 'bg-black/25'}`} />
+    <div className={`absolute top-0 left-1/2 h-8 w-px ${isDark ? 'bg-white/38' : 'bg-black/25'}`} />
+  </div>
+);
+
+const HudChip = ({ children, isDark, strong = false }) => (
+  <div className={`px-4 py-3 border ${isDark ? 'border-white/10' : 'border-black/10'} ${strong ? (isDark ? 'bg-white/[0.08]' : 'bg-black/[0.05]') : (isDark ? 'bg-white/[0.04]' : 'bg-black/[0.03]')}`}>
+    <span className={`text-[8px] font-mono uppercase tracking-[0.24em] ${isDark ? 'text-white/72' : 'text-black/55'}`}>{children}</span>
+  </div>
+);
 
 /* ═══════════════════════════════════════════════════════════
    FULL PAGE — HIVEMIND Memory Engine
@@ -100,18 +67,36 @@ const SolutionHivemind = () => {
     'add_relation', 'get_relations', 'knowledge_upload', 'memory_health', 'bulk_ingest',
   ];
 
+  const cities = [
+    { time: '04:00:34', city: 'Paris', line1: '3 Pl. des Victoires', line2: '75001 Paris, France' },
+    { time: '04:00:34', city: 'Berlin', line1: 'Unter den Linden 77', line2: '10117 Berlin, Germany' },
+    { time: '04:00:34', city: 'Dubai', line1: 'DIFC Node Cluster', line2: 'Sovereign relay zone' },
+  ];
+
   return (
-    <section className={`${c.bg} border-t ${c.border}`}>
+    <section className={`${c.bg} border-t ${c.border} relative overflow-hidden`}>
+      <div className="absolute inset-0 pointer-events-none">
+        <div className={`absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_18%_16%,rgba(98,135,94,0.18),transparent_28%),radial-gradient(circle_at_76%_44%,rgba(126,145,156,0.16),transparent_30%),radial-gradient(circle_at_72%_78%,rgba(173,128,72,0.18),transparent_34%)]' : 'bg-[radial-gradient(circle_at_18%_16%,rgba(130,160,120,0.10),transparent_28%),radial-gradient(circle_at_76%_44%,rgba(120,130,140,0.10),transparent_30%),radial-gradient(circle_at_72%_78%,rgba(176,150,120,0.12),transparent_34%)]'}`} />
+        <div className={`absolute inset-0 ${isDark ? 'bg-black/72' : 'bg-[#f7f4ed]/78'} backdrop-blur-[40px]`} />
+      </div>
       <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
 
         {/* ─── Hero area ─── */}
-        <div className="px-6 md:px-10 lg:px-20 pt-20 lg:pt-32 pb-16">
+        <div className="px-6 md:px-10 lg:px-20 pt-20 lg:pt-32 pb-16 relative">
+          <CrosshairMark isDark={isDark} className="left-0 top-24 -translate-x-1/2" />
+          <CrosshairMark isDark={isDark} className="right-0 top-24 translate-x-1/2" />
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
+            <div className="flex flex-wrap gap-2 mb-8">
+              <HudChip isDark={isDark} strong>HIVEMIND</HudChip>
+              <HudChip isDark={isDark}>Memory sync</HudChip>
+              <HudChip isDark={isDark}>EU sovereign</HudChip>
+              <HudChip isDark={isDark}>MCP native</HudChip>
+            </div>
             <p className={`text-xs font-mono uppercase tracking-widest ${c.textMuted} mb-4`}>
               Solutions / 02
             </p>
@@ -127,7 +112,9 @@ const SolutionHivemind = () => {
         </div>
 
         {/* ─── Brain visualization + Stats ─── */}
-        <div className="px-6 md:px-10 lg:px-20 pb-16">
+        <div className="px-6 md:px-10 lg:px-20 pb-16 relative">
+          <CrosshairMark isDark={isDark} className="left-0 bottom-8 -translate-x-1/2" />
+          <CrosshairMark isDark={isDark} className="right-0 bottom-8 translate-x-1/2" />
           <div className="grid lg:grid-cols-2 gap-12 items-center">
 
             {/* Left — Live brain network */}
@@ -138,23 +125,19 @@ const SolutionHivemind = () => {
               transition={{ duration: 0.7 }}
               className="relative"
             >
-              {/* Pixel decorations */}
-              <div className="absolute -top-3 -left-3 z-10"><DitherCorner isDark={isDark} /></div>
-              <div className="absolute -top-5 right-6 z-10"><DataMatrix isDark={isDark} /></div>
-              <div className="absolute -bottom-3 -right-2 z-10"><CheckerBlock isDark={isDark} size={5} /></div>
+              <div className="absolute -top-4 right-4 z-10"><CheckerBlock isDark={isDark} size={4} /></div>
 
-              <div className={`${c.bgCard} border ${c.border} ${c.shadow} relative overflow-hidden`}>
-                <div className={`px-5 py-2.5 border-b ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>
-                    HIVEMIND // NEURAL MAP
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} animate-pulse`} />
-                    <span className={`text-[7px] font-mono ${c.textMuted}`}>LIVE</span>
+              <div className={`${isDark ? 'bg-[#121315]/72' : 'bg-white/70'} border ${c.border} ${c.shadow} relative overflow-hidden backdrop-blur-xl`}>
+                <div className="px-5 pt-5">
+                  <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] gap-2">
+                    <HudChip isDark={isDark} strong>HIVEMIND</HudChip>
+                    <HudChip isDark={isDark}>Map</HudChip>
+                    <HudChip isDark={isDark}>Recall</HudChip>
+                    <HudChip isDark={isDark}>Contact</HudChip>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center">
+                <div className="px-5 pt-16 pb-10 flex items-center justify-center min-h-[360px]">
                   <HiveMind
                     width={480}
                     height={320}
@@ -166,13 +149,20 @@ const SolutionHivemind = () => {
                   />
                 </div>
 
-                <div className={`px-5 py-2.5 border-t ${c.border} flex items-center justify-between`}>
-                  <div className="flex items-center gap-3">
-                    <TermLabel text="Vector" isDark={isDark} />
-                    <TermLabel text="Graph" isDark={isDark} />
-                    <TermLabel text="Search" isDark={isDark} />
+                <div className="px-5 pb-5 space-y-2">
+                  <div className="grid grid-cols-[1fr_1fr] gap-2">
+                    <HudChip isDark={isDark}>Info & credits</HudChip>
+                    <HudChip isDark={isDark}>Launch campaign</HudChip>
                   </div>
-                  <span className={`text-[7px] font-mono ${c.textMuted}`}>DV-02</span>
+                  <div className={`px-4 py-3 border ${c.border} ${isDark ? 'bg-white/[0.05]' : 'bg-black/[0.03]'} flex items-center justify-between gap-3`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-2.5 h-2.5 bg-[#f97316]" />
+                      <span className={`text-[8px] font-mono uppercase tracking-[0.24em] ${c.text}`}>Pause</span>
+                      <div className={`h-px flex-1 min-w-[80px] ${isDark ? 'bg-white/20' : 'bg-black/12'}`} />
+                    </div>
+                    <span className={`text-[8px] font-mono uppercase tracking-[0.24em] ${c.textMuted}`}>00:54</span>
+                    <span className="text-[8px] font-mono uppercase tracking-[0.24em] text-[#7ddc6f]">Sound on</span>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -186,8 +176,11 @@ const SolutionHivemind = () => {
               className="space-y-4"
             >
               {/* Stats card */}
-              <div className={`${c.bgCard} border ${c.border} p-5`}>
-                <div className={`text-[8px] font-mono ${c.textMuted} uppercase tracking-widest mb-4`}>Performance</div>
+              <div className={`${isDark ? 'bg-[#17181a]/66' : 'bg-white/64'} border ${c.border} p-5 backdrop-blur-xl`}>
+                <div className="grid grid-cols-[1.15fr_1fr] gap-2 mb-4">
+                  <HudChip isDark={isDark} strong>Info & credits</HudChip>
+                  <HudChip isDark={isDark}>Memory relay</HudChip>
+                </div>
                 {stats.map((s, i) => (
                   <div key={i} className={`py-3 ${i < stats.length - 1 ? `border-b ${c.border}` : ''}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -200,7 +193,7 @@ const SolutionHivemind = () => {
               </div>
 
               {/* Recall demo card */}
-              <div className={`${c.bgCard} border ${c.border} p-5`}>
+              <div className={`${isDark ? 'bg-[#17181a]/66' : 'bg-white/64'} border ${c.border} p-5 backdrop-blur-xl`}>
                 <div className={`text-[8px] font-mono ${c.textMuted} uppercase tracking-widest mb-3`}>Context-Aware Recall</div>
                 <div className={`${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]'} border ${c.border} p-4`}>
                   <p className={`text-sm ${c.text} leading-relaxed`}>
@@ -209,6 +202,18 @@ const SolutionHivemind = () => {
                   <div className={`mt-3 pt-3 border-t ${c.border}`}>
                     <span className={`text-[9px] font-mono ${c.textMuted}`}>[3 memories found — 42ms]</span>
                   </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-6">
+                  {cities.map((item) => (
+                    <div key={item.city}>
+                      <div className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>{item.time}</div>
+                      <div className={`mt-4 text-[11px] font-mono uppercase tracking-[0.16em] ${c.text}`}>{item.city}</div>
+                      <div className={`mt-3 text-[10px] font-mono leading-[1.35] ${c.textMuted}`}>
+                        <div>{item.line1}</div>
+                        <div>{item.line2}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>

@@ -64,41 +64,23 @@ function OrbScene() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Pixel / Dither elements
-   ═══════════════════════════════════════════════════════════ */
-
-const DitherEdge = ({ isDark, rows = 10 }) => {
-  const fg = isDark ? 'bg-white' : 'bg-[#0a0a0a]';
-  const fgSoft = isDark ? 'bg-white/10' : 'bg-black/5';
-  return (
-    <div className="flex flex-col gap-0">
-      {Array.from({ length: rows }).map((_, row) => (
-        <div key={row} className="flex gap-0">
-          {Array.from({ length: 6 }).map((_, col) => {
-            const threshold = (row / rows) * 6;
-            const show = col >= threshold;
-            const edge = Math.abs(col - threshold) < 1.5;
-            return <div key={col} className={`w-[5px] h-[5px] ${show ? fg : edge ? fgSoft : 'bg-transparent'}`} />;
-          })}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════
    FULL PAGE — Meet TARA
    ═══════════════════════════════════════════════════════════ */
 
 const SolutionTara = () => {
   const { isDark } = useTheme();
   const c = t(isDark);
+  const orbBorderColor = isDark ? 'rgba(202, 220, 252, 0.82)' : 'rgba(10, 10, 10, 0.5)';
+  const orbOuterGlow = isDark
+    ? '0 0 32px rgba(202, 220, 252, 0.24)'
+    : '0 0 20px rgba(10, 10, 10, 0.10)';
+  const orbHaloBorder = isDark ? 'rgba(160, 185, 209, 0.14)' : 'rgba(10, 10, 10, 0.08)';
 
   const variants = [
     { num: '01', title: 'Visual Co-Pilot', desc: 'Sees the user\'s screen. Guides them through any form, dashboard, or process — in real time.' },
     { num: '02', title: 'Telephony', desc: 'Replaces IVR completely. Speaks German natively. Books appointments, resolves tickets, qualifies leads.' },
     { num: '03', title: 'Web Call', desc: 'Your website speaks. Visitors talk to TARA directly from the browser. Zero telco costs.' },
-    { num: '04', title: 'HR Assistant', desc: 'Onboards. Answers. Escalates. Always available. Never forgets.' },
+    { num: '04', title: 'Chat Assistant', desc: 'Onboards. Answers. Escalates. Always available. Never forgets.' },
   ];
 
   const handleTalkToTara = () => {
@@ -107,9 +89,28 @@ const SolutionTara = () => {
     if (orbBtn) orbBtn.click();
   };
 
+  const conversation = [
+    { from: 'user', label: 'YOU', text: 'What does Da Vinci AI do?' },
+    { from: 'tara', label: 'TARA', text: 'We build enterprise AI infrastructure across voice, memory, and sovereign deployment.' },
+    { from: 'user', label: 'YOU', text: 'And TARA handles the voice side?' },
+    { from: 'tara', label: 'TARA', text: 'Yes. Calls, lead qualification, appointment booking, and support in real time.' },
+    { from: 'user', label: 'YOU', text: 'Is it GDPR compliant?' },
+    { from: 'tara', label: 'TARA', text: 'Fully EU-hosted. No transatlantic data transfer.' },
+  ];
+
   return (
     <section id="solutions" className={`${c.bg} border-t ${c.border}`}>
       <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
+        <style>{`
+          @keyframes taraOrbBreathe {
+            0%, 100% { transform: scale(0.98); opacity: 0.62; }
+            50% { transform: scale(1.03); opacity: 1; }
+          }
+          @keyframes taraOrbListen {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.06); opacity: 1; }
+          }
+        `}</style>
 
         {/* ─── Hero area ─── */}
         <div className="px-6 md:px-10 lg:px-20 pt-20 lg:pt-32 pb-16">
@@ -133,47 +134,107 @@ const SolutionTara = () => {
 
         {/* ─── Orb (small) + Chat conversation ─── */}
         <div className="px-6 md:px-10 lg:px-20 pb-16">
-          <div className="grid lg:grid-cols-5 gap-8 items-start">
+          <div className="grid lg:grid-cols-[360px_minmax(0,1fr)] gap-8 lg:gap-10 items-stretch">
 
-            {/* Left col (2/5) — Compact Orb */}
+            {/* Left col (2/5) — Poster call card */}
             <motion.div
               initial={{ opacity: 0, y: 32 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
-              className="lg:col-span-2 relative"
+              className="relative h-full lg:w-[360px]"
             >
-              <div className="absolute -top-3 -right-2 z-10">
-                <DitherEdge isDark={isDark} rows={6} />
-              </div>
-
               <div
-                className={`${c.bgCard} border ${c.border} relative overflow-hidden cursor-pointer group`}
+                className="relative overflow-hidden cursor-pointer group border h-full"
+                style={{
+                  borderColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(10,10,10,0.12)',
+                  background: isDark ? '#f3f1ec' : '#ffffff',
+                }}
                 onClick={handleTalkToTara}
               >
-                <div className={`px-4 py-2 border-b ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>TARA_X1</span>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} animate-pulse`} />
-                    <span className={`text-[7px] font-mono ${c.textMuted}`}>LIVE</span>
+                <div
+                  className="relative m-4"
+                  style={{
+                    background: '#141414',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
+                    minHeight: '330px',
+                  }}
+                >
+                  <div className="relative z-10 flex items-center justify-between px-5 pt-5">
+                    <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/58">Idle</span>
+                    <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/45">0:00</span>
+                  </div>
+
+                  <div className="relative z-10 flex items-center justify-center px-5 pt-7 pb-10">
+                  <div
+                      className="relative w-[122px] md:w-[132px] aspect-square rounded-full"
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: '-10%',
+                          borderRadius: '50%',
+                          border: `2px solid ${orbHaloBorder}`,
+                          opacity: 0.82,
+                          animation: 'taraOrbBreathe 2.8s ease-in-out infinite',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: '3%',
+                          borderRadius: '50%',
+                          border: `3px solid ${orbBorderColor}`,
+                          boxShadow: orbOuterGlow,
+                          opacity: 1,
+                          animation: 'taraOrbListen 1.6s ease-in-out infinite',
+                        }}
+                      />
+                      <div className="absolute inset-0">
+                        <Canvas resize={{ debounce: 100 }} gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}>
+                          <Suspense fallback={null}><OrbScene /></Suspense>
+                        </Canvas>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-x-0 bottom-7 z-10 flex items-center justify-center px-5">
+                    <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/62">Ready to start</span>
                   </div>
                 </div>
 
-                <div className="w-full h-[180px] relative">
-                  <Canvas resize={{ debounce: 100 }} gl={{ alpha: true, antialias: true, premultipliedAlpha: true }}>
-                    <Suspense fallback={null}><OrbScene /></Suspense>
-                  </Canvas>
-                </div>
-
-                <div className={`px-4 py-3 border-t ${c.border} flex items-center justify-between`}>
-                  <span className={`text-xs font-semibold ${c.text} font-['Space_Grotesk']`}>Talk to TARA</span>
-                  <div className={`w-7 h-7 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isDark ? '#080808' : '#fff'} strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                <div className="grid grid-cols-[1fr_auto] items-end gap-3 px-4 pt-4 pb-2 min-h-[168px]">
+                  <div className="flex h-full flex-col">
+                    <div className="text-[10px] font-bold tracking-[-0.02em] text-[#171717]/88">
+                      DAVINCI AI
+                    </div>
+                    <div className="mt-1 text-[20px] md:text-[22px] font-bold tracking-[-0.055em] leading-none text-[#171717]">
+                      DAVINCI AI x TARA
+                    </div>
+                    <div className="mt-auto pb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#171717]/70">
+                      DE
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    className="self-end mb-1 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-transform duration-200 group-hover:scale-[1.03]"
+                    style={{
+                      background: '#cadcfc',
+                      color: '#171717',
+                      borderRadius: '6px',
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleTalkToTara();
+                    }}
+                  >
+                    Start call
+                  </button>
                 </div>
               </div>
 
-              <p className={`text-[9px] font-mono ${c.textMuted} mt-3 text-center`}>Click orb to start voice call</p>
+              <p className={`text-[9px] font-mono ${c.textMuted} mt-3 text-center`}>Click the poster to start the voice call</p>
             </motion.div>
 
             {/* Right col (3/5) — Chat conversation, alternating L/R */}
@@ -182,42 +243,44 @@ const SolutionTara = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.15 }}
-              className="lg:col-span-3 space-y-3"
+              className="flex flex-col lg:min-h-[468px]"
             >
-              {[
-                { from: 'user', text: 'Hey, what exactly does Da Vinci AI do?' },
-                { from: 'tara', text: 'We build enterprise AI infrastructure. Voice agents, memory engines, and sovereign deployment — all from Europe.' },
-                { from: 'user', text: 'So TARA is the voice part?' },
-                { from: 'tara', text: 'Exactly. I handle calls, qualify leads, book appointments, resolve tickets. No scripts — I reason in real time.' },
-                { from: 'user', text: 'What about HIVEMIND?' },
-                { from: 'tara', text: 'That\'s the memory layer. It stores context across every tool your team uses — Gmail, Slack, GitHub — so your AI never forgets.' },
-                { from: 'user', text: 'Is it GDPR compliant?' },
-                { from: 'tara', text: 'Fully. EU-only infrastructure. Hetzner, OVH, Scaleway. Zero transatlantic data transfer.' },
-              ].map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }}
-                  className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] backdrop-blur-xl rounded-2xl px-4 py-3 ${
-                      msg.from === 'user'
-                        ? `${isDark ? 'bg-white/[0.06] border-white/[0.08]' : 'bg-black/[0.04] border-black/[0.06]'}`
-                        : `${isDark ? 'bg-white/[0.10] border-white/[0.12]' : 'bg-black/[0.06] border-black/[0.08]'}`
-                    } border`}
+              <div className="flex-1 flex flex-col justify-between lg:min-h-[430px] py-2">
+                {conversation.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: 0.2 + i * 0.08 }}
+                    className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} ${i === 0 ? '' : 'mt-3'}`}
                   >
-                    {i === 0 && <span className={`text-[9px] font-mono ${c.textMuted} block mb-1`}>You</span>}
-                    {i === 1 && <span className={`text-[9px] font-mono ${c.textMuted} block mb-1`}>TARA</span>}
-                    <p className={`text-[13px] ${c.text} leading-relaxed`}>{msg.text}</p>
-                  </div>
-                </motion.div>
-              ))}
+                    <div
+                      className={`max-w-[72%] rounded-[20px] px-4 py-3 ${
+                        msg.from === 'user'
+                          ? `${isDark ? 'bg-white/[0.05] border-white/[0.08]' : 'bg-black/[0.03] border-black/[0.06]'}`
+                          : `${isDark ? 'bg-white/[0.08] border-white/[0.10]' : 'bg-black/[0.05] border-black/[0.08]'}`
+                      } border shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]`}
+                    >
+                      <span
+                        className="block mb-2 text-[10px] font-mono uppercase tracking-[0.18em]"
+                        style={{
+                          color: msg.from === 'user'
+                            ? (isDark ? 'rgba(202,220,252,0.92)' : 'rgba(10,10,10,0.7)')
+                            : (isDark ? 'rgba(160,185,209,0.82)' : 'rgba(10,10,10,0.55)'),
+                        }}
+                      >
+                        {msg.label}
+                      </span>
+                      <p className={`text-[12px] md:text-[13px] ${c.text} leading-[1.55] tracking-[-0.01em]`}>
+                        {msg.text}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
-              {/* Response time */}
-              <div className="flex justify-start">
+              <div className="flex justify-start pt-3">
                 <span className={`text-[8px] font-mono ${c.textMuted} tracking-widest`}>AVG RESPONSE: 480ms</span>
               </div>
             </motion.div>

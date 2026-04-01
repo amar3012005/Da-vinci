@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
@@ -10,109 +10,20 @@ const fade = (delay) => ({
   transition: { duration: 0.8, delay, ease },
 });
 
-const SCRAMBLE_CHARS = '·•:+/×○□01';
-
-const splitText = (text) => Array.from(text);
-
 const ScrambleText = ({
   text,
   as: Component = 'span',
   className = '',
-  hoverOnly = false,
-  startDelay = 0,
 }) => {
-  const targetChars = useMemo(() => splitText(text), [text]);
-  const [displayText, setDisplayText] = useState(text);
-  const frameRef = useRef(null);
-  const timeoutRef = useRef(null);
-
-  const buildFrame = useCallback((progress) => {
-    const revealIndex = Math.floor(progress * targetChars.length);
-    const activeWindow = Math.max(2, Math.ceil((1 - progress) * 7));
-
-    return targetChars
-      .map((char, index) => {
-        if (char === ' ' || char === '\u00A0') {
-          return char;
-        }
-        if (index < revealIndex || progress >= 1) {
-          return char;
-        }
-        if (index > revealIndex + activeWindow) {
-          return char;
-        }
-        return Math.random() > 0.32
-          ? char
-          : SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-      })
-      .join('');
-  }, [targetChars]);
-
-  const runScramble = useCallback((duration) => {
-    const startedAt = performance.now();
-
-    const tick = (timestamp) => {
-      const elapsed = timestamp - startedAt;
-      const progress = Math.min(1, elapsed / duration);
-      setDisplayText(buildFrame(progress));
-
-      if (progress < 1) {
-        frameRef.current = window.requestAnimationFrame(tick);
-      } else {
-        setDisplayText(text);
-      }
-    };
-
-    if (frameRef.current) {
-      window.cancelAnimationFrame(frameRef.current);
-    }
-    frameRef.current = window.requestAnimationFrame(tick);
-  }, [buildFrame, text]);
-
-  useEffect(() => {
-    if (!hoverOnly) {
-      timeoutRef.current = window.setTimeout(() => runScramble(900), startDelay);
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      if (frameRef.current) {
-        window.cancelAnimationFrame(frameRef.current);
-      }
-    };
-  }, [hoverOnly, runScramble, startDelay]);
-
-  const handlePointerEnter = () => {
-    runScramble(650);
-  };
-
   return (
     <Component
       className={className}
-      onMouseEnter={handlePointerEnter}
-      onFocus={handlePointerEnter}
-      aria-label={text}
       style={{
-        position: 'relative',
         display: 'inline-block',
         whiteSpace: 'pre-wrap',
       }}
     >
-      <span style={{ visibility: 'hidden' }}>{text}</span>
-      <span
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          whiteSpace: 'pre-wrap',
-          opacity: 0.96,
-          transition: 'opacity 220ms ease',
-        }}
-      >
-        {displayText}
-      </span>
+      {text}
     </Component>
   );
 };

@@ -124,7 +124,7 @@ export default function KnowledgeBase() {
         ));
       }
     }
-  }, [customTags, refetchKb]);
+  }, [customTags, refetchKb, targetScope]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
