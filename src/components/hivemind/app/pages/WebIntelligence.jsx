@@ -589,12 +589,6 @@ export default function WebIntelligence() {
       setDomainPolicy(null);
       return;
     }
-    try {
-      new URL(url); // validate
-    } catch {
-      setDomainPolicy(null);
-      return;
-    }
     setCheckingPolicy(true);
     try {
       const policy = await apiClient.checkDomainPolicy(url);
