@@ -973,7 +973,7 @@ export default function Connectors() {
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
-  }, [refetchOAuth]);
+  }, [refetchOAuth, targetScopes.gmail]);
 
   const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
   const endpoints = connectorStatus?.statuses || [];
