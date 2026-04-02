@@ -7,6 +7,7 @@ import Terms from './components/Terms';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 import ResearchPage from './components/ResearchPage';
+import BenchmarkPage from './components/BenchmarkPage';
 import VoiceAgentTestPage from './components/testing/VoiceAgentTestPage';
 import TestingIndexPage from './components/testing/TestingIndexPage';
 import { bundbTestConfig, davinciTestConfig } from './components/testing/testConfigs';
@@ -42,6 +43,7 @@ function App() {
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/research" element={<ResearchPage />} />
+        <Route path="/benchmark" element={<BenchmarkPage />} />
         <Route path="/test" element={<TestingIndexPage />} />
         <Route
           path="/test/davinci"

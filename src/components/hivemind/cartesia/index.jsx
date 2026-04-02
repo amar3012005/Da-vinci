@@ -194,6 +194,44 @@ const CartesiaReplica = () => {
       {/* 5. VISUAL PROOF */}
       <GraphSection />
 
+      {/* Benchmark Proof */}
+      <section className="bg-white border-b border-[#e3e0db]">
+        <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-16">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20 mb-4">
+              Benchmark Results
+            </span>
+            <h2 className="text-3xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-3">
+              81% on LongMemEval
+            </h2>
+            <p className="text-[#525252] text-sm max-w-md mx-auto">
+              Tested against 500 questions across 6 categories. Outperforming industry baselines.
+            </p>
+          </motion.div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: 'Overall', value: '81%', color: '#117dff' },
+              { label: 'Single-Session', value: '100%', color: '#16a34a' },
+              { label: 'Multi-Session', value: '75.9%', color: '#117dff' },
+              { label: 'Preference', value: '83.3%', color: '#117dff' },
+            ].map(s => (
+              <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-5 text-center">
+                <div className="text-3xl font-bold font-mono mb-1" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider">{s.label}</div>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center">
+            <button onClick={() => window.location.href = '/benchmark'}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-[#e3e0db] rounded-lg text-sm font-medium text-[#0a0a0a] hover:border-[#117dff]/30 hover:shadow-[0_2px_12px_rgba(17,125,255,0.08)] transition-all cursor-pointer">
+              View Full Benchmark
+              <span className="text-[#117dff]">→</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* 6. DESIRE — EU Sovereign */}
       <Languages />
 

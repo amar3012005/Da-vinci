@@ -10,6 +10,7 @@ const navLinks = [
   { label: 'Pricing', href: '#pricing' },
   { label: 'Docs', href: '/hivemind/app/connectors' },
   { label: './ Research', href: '/research' },
+  { label: './ Benchmark', href: '/benchmark' },
 ];
 
 const Navbar = () => {
