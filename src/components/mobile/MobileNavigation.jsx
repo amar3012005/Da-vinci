@@ -2,17 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
-
-const navLinks = [
-  { label: 'Solutions', sectionId: 'solutions' },
-  { label: 'Research', href: '/research' },
-  { label: 'Contact', sectionId: 'cta-section' },
-];
+import { getMobileCopy } from './mobileCopy';
 
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { isDark, toggle } = useTheme();
+  const { isDark, toggle, locale, setLocale } = useTheme();
   const c = t(isDark);
+  const copy = getMobileCopy(locale);
+  const navLinks = [
+    { label: copy.nav.links.solutions, sectionId: 'solutions' },
+    { label: copy.nav.links.research, href: '/research' },
+    { label: copy.nav.links.contact, sectionId: 'cta-section' },
+  ];
 
   useEffect(() => {
     if (mobileOpen) {
@@ -42,6 +43,29 @@ const MobileNavigation = () => {
     <>
       <nav className={`fixed top-0 inset-x-0 z-[100] ${c.navBg} border-b ${c.border}`}>
         <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
+          <div className={`md:hidden h-9 px-6 flex items-center justify-end border-b ${c.border}`}>
+            <div className={`inline-flex items-center rounded-full border ${c.border} p-1 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
+              {['en', 'de'].map((lang) => {
+                const active = locale === lang;
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLocale(lang)}
+                    className={`min-w-[38px] rounded-full px-3 py-1 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors ${
+                      active
+                        ? `${c.accentBg} ${c.accentText}`
+                        : `${c.textMuted} bg-transparent`
+                    }`}
+                    aria-label={`${copy.nav.languageLabel} ${lang.toUpperCase()}`}
+                  >
+                    {lang}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="px-6 h-16 flex items-center justify-between">
             {/* Logo */}
             <button
@@ -76,6 +100,26 @@ const MobileNavigation = () => {
 
             {/* Right Buttons — Desktop */}
             <div className="hidden md:flex items-center gap-3">
+              <div className={`inline-flex items-center rounded-full border ${c.border} p-1 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
+                {['en', 'de'].map((lang) => {
+                  const active = locale === lang;
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setLocale(lang)}
+                      className={`min-w-[38px] rounded-full px-3 py-1 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors ${
+                        active
+                          ? `${c.accentBg} ${c.accentText}`
+                          : `${c.textMuted} bg-transparent`
+                      }`}
+                      aria-label={`${copy.nav.languageLabel} ${lang.toUpperCase()}`}
+                    >
+                      {lang}
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 onClick={toggle}
                 className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer`}
@@ -93,13 +137,15 @@ const MobileNavigation = () => {
             </div>
 
             {/* Mobile Hamburger */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className={`md:hidden p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            <div className="md:hidden flex items-center">
+              <button
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
+                aria-label="Toggle menu"
+              >
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -137,7 +183,7 @@ const MobileNavigation = () => {
                 className={`flex items-center gap-3 text-left text-2xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
               >
                 {isDark ? <Sun size={22} /> : <Moon size={22} />}
-                {isDark ? 'Light Mode' : 'Dark Mode'}
+                {isDark ? copy.nav.lightMode : copy.nav.darkMode}
               </motion.button>
 
               <div className="flex flex-col gap-3 mt-8">

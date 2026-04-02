@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useTheme, t } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 /* ═══════════════════════════════════════════════════════════
    ORB — Extracted from TaraVoiceWidget (idle preview only)
@@ -68,20 +69,16 @@ function OrbScene() {
    ═══════════════════════════════════════════════════════════ */
 
 const SolutionTara = () => {
-  const { isDark } = useTheme();
+  const { isDark, locale } = useTheme();
   const c = t(isDark);
+  const copy = getMobileCopy(locale).tara;
   const orbBorderColor = isDark ? 'rgba(202, 220, 252, 0.82)' : 'rgba(10, 10, 10, 0.5)';
   const orbOuterGlow = isDark
     ? '0 0 32px rgba(202, 220, 252, 0.24)'
     : '0 0 20px rgba(10, 10, 10, 0.10)';
   const orbHaloBorder = isDark ? 'rgba(160, 185, 209, 0.14)' : 'rgba(10, 10, 10, 0.08)';
 
-  const variants = [
-    { num: '01', title: 'Visual Co-Pilot', desc: 'Sees the user\'s screen. Guides them through any form, dashboard, or process — in real time.' },
-    { num: '02', title: 'Telephony', desc: 'Replaces IVR completely. Speaks German natively. Books appointments, resolves tickets, qualifies leads.' },
-    { num: '03', title: 'Web Call', desc: 'Your website speaks. Visitors talk to TARA directly from the browser. Zero telco costs.' },
-    { num: '04', title: 'Chat Assistant', desc: 'Onboards. Answers. Escalates. Always available. Never forgets.' },
-  ];
+  const variants = copy.variants;
 
   const handleTalkToTara = () => {
     // Find and click the existing floating TaraVoiceWidget orb button
@@ -89,14 +86,7 @@ const SolutionTara = () => {
     if (orbBtn) orbBtn.click();
   };
 
-  const conversation = [
-    { from: 'user', label: 'YOU', text: 'What does Da Vinci AI do?' },
-    { from: 'tara', label: 'TARA', text: 'We build enterprise AI infrastructure across voice, memory, and sovereign deployment.' },
-    { from: 'user', label: 'YOU', text: 'And TARA handles the voice side?' },
-    { from: 'tara', label: 'TARA', text: 'Yes. Calls, lead qualification, appointment booking, and support in real time.' },
-    { from: 'user', label: 'YOU', text: 'Is it GDPR compliant?' },
-    { from: 'tara', label: 'TARA', text: 'Fully EU-hosted. No transatlantic data transfer.' },
-  ];
+  const conversation = copy.conversation;
 
   return (
     <section id="solutions" className={`${c.bg} border-t ${c.border}`}>
@@ -121,13 +111,13 @@ const SolutionTara = () => {
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <p className={`text-xs font-mono uppercase tracking-widest ${c.textMuted} mb-4`}>
-              Solutions / 01
+              {copy.sectionLabel}
             </p>
             <h2 className={`text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk'] mb-6`}>
-              Meet <span className={c.accent}>TARA</span>
+              {copy.titlePrefix} <span className={c.accent}>{copy.titleAccent}</span>
             </h2>
             <p className={`text-xl md:text-2xl ${c.textSecondary} leading-relaxed max-w-2xl`}>
-              The soul of your brand. Available 24/7.
+              {copy.subtitle}
             </p>
           </motion.div>
         </div>
@@ -162,7 +152,7 @@ const SolutionTara = () => {
                   }}
                 >
                   <div className="relative z-10 flex items-center justify-between px-5 pt-5">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/58">Idle</span>
+                    <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/58">{copy.posterStatus}</span>
                     <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/45">0:00</span>
                   </div>
 
@@ -200,20 +190,20 @@ const SolutionTara = () => {
                   </div>
 
                   <div className="absolute inset-x-0 bottom-7 z-10 flex items-center justify-center px-5">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/62">Ready to start</span>
+                    <span className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/62">{copy.posterReady}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-[1fr_auto] items-end gap-3 px-4 pt-4 pb-2 min-h-[168px]">
                   <div className="flex h-full flex-col">
                     <div className="text-[10px] font-bold tracking-[-0.02em] text-[#171717]/88">
-                      DAVINCI AI
+                      {copy.posterEyebrow}
                     </div>
                     <div className="mt-1 text-[20px] md:text-[22px] font-bold tracking-[-0.055em] leading-none text-[#171717]">
-                      DAVINCI AI x TARA
+                      {copy.posterTitle}
                     </div>
                     <div className="mt-auto pb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[#171717]/70">
-                      DE
+                      {copy.posterLocale}
                     </div>
                   </div>
                   <button
@@ -229,12 +219,12 @@ const SolutionTara = () => {
                       handleTalkToTara();
                     }}
                   >
-                    Start call
+                    {copy.posterButton}
                   </button>
                 </div>
               </div>
 
-              <p className={`text-[9px] font-mono ${c.textMuted} mt-3 text-center`}>Click the poster to start the voice call</p>
+              <p className={`text-[9px] font-mono ${c.textMuted} mt-3 text-center`}>{copy.posterHint}</p>
             </motion.div>
 
             {/* Right col (3/5) — Chat conversation, alternating L/R */}
@@ -281,7 +271,7 @@ const SolutionTara = () => {
               </div>
 
               <div className="flex justify-start pt-3">
-                <span className={`text-[8px] font-mono ${c.textMuted} tracking-widest`}>AVG RESPONSE: 480ms</span>
+                <span className={`text-[8px] font-mono ${c.textMuted} tracking-widest`}>{copy.avgResponse}</span>
               </div>
             </motion.div>
           </div>
@@ -297,28 +287,23 @@ const SolutionTara = () => {
             className="max-w-3xl"
           >
             <h3 className={`text-2xl md:text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-4`}>
-              Not a chatbot. Not a script.
+              {copy.reasoningTitle}
             </h3>
             <p className={`text-base ${c.textSecondary} leading-relaxed mb-8`}>
-              TARA is the first enterprise voice agent that <span className={`${c.text} font-medium`}>reasons — not retrieves</span>. While your customer is still speaking, TARA runs a clinical reasoning loop in parallel — processing four layers simultaneously:
+              {copy.reasoningBody}
             </p>
 
             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-              {[
-                { arrow: '→', text: 'What the user said' },
-                { arrow: '→', text: 'What they actually mean' },
-                { arrow: '→', text: 'The root problem underneath' },
-                { arrow: '→', text: 'The optimal path forward' },
-              ].map((item, i) => (
+              {copy.reasoningPoints.map((text, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <span className={`font-mono text-sm ${c.accent} shrink-0`}>{item.arrow}</span>
-                  <span className={`text-sm ${c.textSecondary}`}>{item.text}</span>
+                  <span className={`font-mono text-sm ${c.accent} shrink-0`}>→</span>
+                  <span className={`text-sm ${c.textSecondary}`}>{text}</span>
                 </div>
               ))}
             </div>
 
             <p className={`text-sm font-mono ${c.textMuted}`}>
-              Response delivered in under 500ms. Indistinguishable from human.
+              {copy.reasoningFooter}
             </p>
           </motion.div>
         </div>
@@ -333,7 +318,7 @@ const SolutionTara = () => {
             className="mb-10"
           >
             <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              Four variants. One intelligence.
+              {copy.variantsLabel}
             </span>
           </motion.div>
 

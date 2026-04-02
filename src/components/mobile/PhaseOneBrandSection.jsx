@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion';
+import { useTheme } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 /**
  * PhaseOneBrandSection
@@ -9,6 +11,8 @@ import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'fr
 const PhaseOneBrandSection = () => {
     const sectionRef = useRef(null);
     const prefersReducedMotion = useReducedMotion();
+    const { locale } = useTheme();
+    const copy = getMobileCopy(locale).brand;
 
     // Scroll progress tracking for the entire section
     const { scrollYProgress } = useScroll({
@@ -181,7 +185,7 @@ const PhaseOneBrandSection = () => {
                         viewport={{ once: true, margin: "-20%" }}
                         variants={bgTextVariants}
                     >
-                        BRAND
+                        {copy.background[0]}
                     </motion.h1>
 
                     {/* VOICE - Bottom Right with parallax (opposite direction) */}
@@ -197,7 +201,7 @@ const PhaseOneBrandSection = () => {
                         viewport={{ once: true, margin: "-20%" }}
                         variants={bgTextVariants}
                     >
-                        VOICE
+                        {copy.background[1]}
                     </motion.h1>
                 </div>
             </div>
@@ -289,7 +293,7 @@ const PhaseOneBrandSection = () => {
                                 variants={itemVariants}
                             >
                                 <p className="text-[11px] sm:text-[12px] text-white/50 font-light tracking-wide">
-                                    Your digital presence, amplified.
+                                    {copy.tagline}
                                 </p>
                             </motion.div>
 
@@ -356,7 +360,7 @@ const PhaseOneBrandSection = () => {
                                     viewport={{ once: true }}
                                     transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                                 >
-                                    Meet TARA.
+                                    {copy.title}
                                 </motion.span>
                             </motion.h2>
 
@@ -365,8 +369,7 @@ const PhaseOneBrandSection = () => {
                                 className="text-[13px] sm:text-[14px] text-white/50 leading-relaxed mb-8 font-light max-w-sm"
                                 variants={itemVariants}
                             >
-                                Your brand's first employee. She engages, qualifies, and converts—
-                                in your voice, across web, calls, and video.
+                                {copy.description}
                             </motion.p>
 
                             {/* Oval CTA Button with magnetic effect */}
@@ -391,7 +394,7 @@ const PhaseOneBrandSection = () => {
                                     }}
                                 />
                                 <span className="relative text-[11px] text-white/80 uppercase tracking-[0.2em] font-medium pl-1 group-hover:text-white transition-colors duration-300">
-                                    Start Conversation
+                                    {copy.cta}
                                 </span>
                                 <motion.svg 
                                     width="14" 
@@ -423,7 +426,7 @@ const PhaseOneBrandSection = () => {
                                 </motion.div>
 
                                 <div className="flex items-center gap-2 sm:gap-3">
-                                    {["WEB", "VOICE", "VIDEO"].map((item, index) => (
+                                    {copy.footer.map((item, index) => (
                                         <React.Fragment key={item}>
                                             <motion.span 
                                                 className="text-[9px] sm:text-[10px] text-white/40 font-mono tracking-widest hover:text-white/60 transition-colors cursor-default"

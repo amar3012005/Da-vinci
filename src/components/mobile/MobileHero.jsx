@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 const ease = [0.16, 1, 0.3, 1];
 const fade = (delay) => ({
@@ -29,11 +30,15 @@ const ScrambleText = ({
 };
 
 const MobileHero = () => {
-  const { isDark } = useTheme();
+  const { isDark, locale } = useTheme();
   const c = t(isDark);
+  const copy = getMobileCopy(locale).hero;
+  const headlineClass = locale === 'de'
+    ? 'text-4xl md:text-5xl lg:text-[5rem] font-bold tracking-tight leading-[0.95]'
+    : 'text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95]';
 
   return (
-    <section className={`${c.bg} pt-24 pb-0 lg:pt-28 relative overflow-hidden`}>
+    <section className={`${c.bg} pt-28 pb-0 lg:pt-28 relative overflow-hidden`}>
       <div className={`max-w-[1200px] mx-auto border-x ${c.border} relative`}>
 
         {/* Subtle grid lines */}
@@ -51,10 +56,10 @@ const MobileHero = () => {
             {...fade(0)}
           >
             <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              <ScrambleText text="DV — Series" startDelay={0} />
+              <ScrambleText text={copy.series} startDelay={0} />
             </span>
             <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              <ScrambleText text="/2026" startDelay={80} />
+              <ScrambleText text={copy.year} startDelay={80} />
             </span>
           </motion.div>
 
@@ -74,25 +79,25 @@ const MobileHero = () => {
                 className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`}
                 {...fade(0.1)}
               >
-                <ScrambleText text="DV-S001" startDelay={120} />
+                <ScrambleText text={copy.metaCode} startDelay={120} />
                 <span className="ml-8">
-                  <ScrambleText text="52.3759° N, 9.7320° E" startDelay={180} />
+                  <ScrambleText text={copy.coordinates} startDelay={180} />
                 </span>
               </motion.p>
 
               {/* Main headline */}
               <motion.h1
-                className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
+                className={`${headlineClass} ${c.text} font-['Space_Grotesk']`}
                 {...fade(0.15)}
               >
                 <span className="block">
-                  <ScrambleText text="AI-POWERED" startDelay={220} />
+                  <ScrambleText text={copy.headline[0]} startDelay={220} />
                 </span>
                 <span className="block">
-                  <ScrambleText text="ENTERPRISE" startDelay={320} />
+                  <ScrambleText text={copy.headline[1]} startDelay={320} />
                 </span>
                 <span className={`block ${isDark ? 'text-white' : 'text-[#0a0a0a]'}`}>
-                  <ScrambleText text="AUTOMATION" startDelay={420} />
+                  <ScrambleText text={copy.headline[2]} startDelay={420} />
                 </span>
               </motion.h1>
 
@@ -102,14 +107,14 @@ const MobileHero = () => {
                   href="/hivemind"
                   className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
                 >
-                  <ScrambleText text="HIVEMIND" startDelay={520} />
+                  <ScrambleText text={copy.primaryCta} startDelay={520} />
                   <ArrowRight size={14} />
                 </a>
                 <a
                   href="https://enterprise.davinciai.eu"
                   className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
                 >
-                  <ScrambleText text="Enterprise" startDelay={580} />
+                  <ScrambleText text={copy.secondaryCta} startDelay={580} />
                 </a>
               </motion.div>
 
@@ -118,9 +123,9 @@ const MobileHero = () => {
                 className={`text-sm ${c.textSecondary} mt-10 max-w-md leading-relaxed`}
                 {...fade(0.3)}
               >
-                <ScrambleText text="Not what looks cool — " startDelay={640} />
+                <ScrambleText text={copy.taglineLead} startDelay={640} />
                 <span className={`${c.text} font-medium`}>
-                  <ScrambleText text="what actually lasts." startDelay={720} />
+                  <ScrambleText text={copy.taglineStrong} startDelay={720} />
                 </span>
               </motion.p>
             </div>
@@ -154,7 +159,7 @@ const MobileHero = () => {
                 {/* Metadata overlay on image */}
                 <div className={`absolute bottom-6 left-6 z-10`}>
                   <span className="text-white/70 text-[9px] font-mono uppercase tracking-[0.2em]">
-                    <ScrambleText text="Hannover, Germany" startDelay={780} />
+                    <ScrambleText text={copy.imageLocation} startDelay={780} />
                   </span>
                 </div>
               </div>
@@ -167,10 +172,10 @@ const MobileHero = () => {
             {...fade(0.4)}
           >
             <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              <ScrambleText text="Made by Da'Vinci Solutions" startDelay={840} />
+              <ScrambleText text={copy.footerLeft} startDelay={840} />
             </span>
             <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              <ScrambleText text="Save for this later" startDelay={900} />
+              <ScrambleText text={copy.footerRight} startDelay={900} />
             </span>
           </motion.div>
         </div>

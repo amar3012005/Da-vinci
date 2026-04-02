@@ -55,15 +55,27 @@ export const t = (isDark) => ({
 
 export const ThemeProvider = ({ children }) => {
   const [isDark, setIsDark] = useState(true);
+  const [locale, setLocale] = useState(() => {
+    if (typeof window === 'undefined') return 'en';
+    const stored = window.localStorage.getItem('davinci-mobile-locale');
+    if (stored === 'de' || stored === 'en') return stored;
+    return 'en';
+  });
 
   const toggle = () => setIsDark((prev) => !prev);
+  const toggleLocale = () => setLocale((prev) => (prev === 'en' ? 'de' : 'en'));
 
   useEffect(() => {
     document.documentElement.style.backgroundColor = isDark ? '#080808' : '#faf9f4';
   }, [isDark]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('davinci-mobile-locale', locale);
+  }, [locale]);
+
   return (
-    <ThemeContext.Provider value={{ isDark, toggle }}>
+    <ThemeContext.Provider value={{ isDark, toggle, locale, setLocale, toggleLocale }}>
       {children}
     </ThemeContext.Provider>
   );

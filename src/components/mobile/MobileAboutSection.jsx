@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, MapPin, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 const MobileAboutSection = () => {
-    const { isDark } = useTheme();
+    const { isDark, locale } = useTheme();
     const c = t(isDark);
+    const copy = getMobileCopy(locale).about;
 
     return (
         <section id="cta-section" className={`${c.bg} border-t ${c.border} py-24 px-6 pb-36`}>
@@ -19,13 +21,13 @@ const MobileAboutSection = () => {
                     transition={{ duration: 0.5 }}
                 >
                     <div className={`text-xs font-mono ${c.textMuted} uppercase tracking-[0.3em] mb-4`}>
-                        Contact
+                        {copy.label}
                     </div>
                     <h2 className={`text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-3`}>
-                        Get in touch
+                        {copy.title}
                     </h2>
                     <p className={`text-sm ${c.textSecondary} leading-relaxed`}>
-                        Have a question, partnership inquiry, or just want to say hello? We'd love to hear from you.
+                        {copy.body}
                     </p>
                 </motion.div>
 
@@ -46,7 +48,7 @@ const MobileAboutSection = () => {
                             <Mail size={16} className={c.textSecondary} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>Email</div>
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>{copy.email}</div>
                             <div className={`text-sm ${c.text} font-medium truncate`}>admin@davincisolutions.de</div>
                         </div>
                         <ArrowRight size={14} className={`${c.textMuted} group-hover:translate-x-0.5 transition-all shrink-0`} />
@@ -58,8 +60,8 @@ const MobileAboutSection = () => {
                             <MapPin size={16} className={c.textSecondary} />
                         </div>
                         <div className="flex-1">
-                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>Location</div>
-                            <div className={`text-sm ${c.text} font-medium`}>Hannover, Germany</div>
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>{copy.locationLabel}</div>
+                            <div className={`text-sm ${c.text} font-medium`}>{copy.location}</div>
                         </div>
                     </div>
                 </motion.div>
@@ -75,7 +77,7 @@ const MobileAboutSection = () => {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                 >
-                    Send us a message
+                    {copy.cta}
                     <ArrowRight size={14} />
                 </motion.a>
 
@@ -87,7 +89,7 @@ const MobileAboutSection = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    Da'Vinci Solutions / 2026
+                    {copy.footer}
                 </motion.div>
             </div>
         </section>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Menu, X, ArrowLeft, Brain, Network, Layers, Search,
-  Database, Cpu, GitBranch, Zap, Clock, Users, MessageSquare
+  Database, GitBranch, Clock, Users, MessageSquare
 } from 'lucide-react';
 
 /* ─── Navbar ─── */

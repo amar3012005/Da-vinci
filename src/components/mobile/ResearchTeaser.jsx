@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 const ResearchTeaser = () => {
-    const { isDark } = useTheme();
+    const { isDark, locale } = useTheme();
     const c = t(isDark);
+    const copy = getMobileCopy(locale).research;
 
     return (
         <section className={`${c.bg} border-t ${c.border}`}>
@@ -17,13 +19,13 @@ const ResearchTeaser = () => {
                     transition={{ duration: 0.6 }}
                 >
                     <div className={`text-xs font-mono uppercase tracking-widest ${c.textMuted} mb-4`}>
-                        Research
+                        {copy.label}
                     </div>
 
                     <h2 className={`text-4xl md:text-5xl font-bold tracking-tight ${c.text} font-['Space_Grotesk'] mb-6`}>
-                        Cognitive Swarm
+                        {copy.title[0]}
                         <br />
-                        <span className={c.accent}>Intelligence</span>
+                        <span className={c.accent}>{copy.title[1]}</span>
                     </h2>
                 </motion.div>
 
@@ -35,10 +37,10 @@ const ResearchTeaser = () => {
                     transition={{ duration: 0.6, delay: 0.1 }}
                 >
                     <p className={`text-lg md:text-xl font-semibold ${c.text} leading-relaxed`}>
-                        "The system remembers. The agents just act."
+                        {copy.quote}
                     </p>
                     <p className={`text-sm ${c.textMuted} mt-3 font-mono`}>
-                        — DavinciAI Labs, CSI Paper 2026
+                        {copy.citation}
                     </p>
                 </motion.div>
 
@@ -49,16 +51,14 @@ const ResearchTeaser = () => {
                     transition={{ duration: 0.6, delay: 0.2 }}
                 >
                     <p className={`text-base ${c.textSecondary} leading-relaxed mb-8 max-w-2xl`}>
-                        We published the architecture behind HIVEMIND. CSI proposes environment-centric
-                        intelligence — where memory, behavior, and policy are externalized into a shared
-                        cognitive substrate.
+                        {copy.body}
                     </p>
 
                     <a
                         href="/research"
                         className={`${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] px-7 py-3 text-xs inline-flex items-center gap-2 no-underline transition-colors`}
                     >
-                        Read the paper
+                        {copy.cta}
                         <ArrowRight size={14} />
                     </a>
                 </motion.div>

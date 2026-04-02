@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme, t } from './ThemeContext';
+import { getMobileCopy } from './mobileCopy';
 
 const ShieldIcon = ({ color }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -24,21 +25,17 @@ const LockIcon = ({ color }) => (
 );
 
 const SolutionEnterprise = () => {
-  const { isDark } = useTheme();
+  const { isDark, locale } = useTheme();
   const c = t(isDark);
-
-  const features = [
-    { title: 'Sovereign Hosting', desc: 'EU data centers, GDPR compliant by design' },
-    { title: 'Custom Integration', desc: 'Connect to your existing tools and workflows' },
-    { title: 'Managed Platform', desc: 'We handle infrastructure, you handle innovation' },
-  ];
+  const copy = getMobileCopy(locale).enterprise;
+  const features = copy.features;
 
   const iconColor = isDark ? '#E7E7ED' : '#0a0a0a';
 
   const complianceRows = [
-    { Icon: ShieldIcon, label: 'SOC 2 Compliant' },
-    { Icon: GlobeIcon, label: 'EU Data Residency' },
-    { Icon: LockIcon, label: 'End-to-End Encryption' },
+    { Icon: ShieldIcon, label: copy.compliance[0] },
+    { Icon: GlobeIcon, label: copy.compliance[1] },
+    { Icon: LockIcon, label: copy.compliance[2] },
   ];
 
   return (
@@ -53,15 +50,15 @@ const SolutionEnterprise = () => {
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <p className={`text-xs font-mono uppercase tracking-widest ${c.textMuted} mb-4`}>
-              Solutions / 03
+              {copy.sectionLabel}
             </p>
             <h2 className={`text-4xl md:text-5xl font-bold tracking-tight leading-tight ${c.text} font-['Space_Grotesk'] mb-6`}>
-              <span className={c.accent}>Enterprise</span>
+              <span className={c.accent}>{copy.title[0]}</span>
               <br />
-              Deployment
+              {copy.title[1]}
             </h2>
             <p className={`text-lg ${c.textSecondary} leading-relaxed mb-6`}>
-              Deploy sovereign AI infrastructure on your terms. Full control over data residency, compliance, and operational policies with Da Vinci's managed platform.
+              {copy.subtitle}
             </p>
 
             <div className="space-y-0">

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { Link } from 'react-router-dom';
-import HiveMind from '../hivemind/cartesia/HiveMind';
+import { getMobileCopy } from './mobileCopy';
 
 const ease = [0.16, 1, 0.3, 1];
 const fade = (delay) => ({
@@ -13,26 +13,200 @@ const fade = (delay) => ({
   transition: { duration: 0.8, delay, ease },
 });
 
+function DashboardHiveMindStructure({
+  width = '100%',
+  height = 360,
+}) {
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const animationRef = useRef();
+  const particlesRef = useRef([]);
+  const mouseRef = useRef({ x: -1000, y: -1000 });
+  const sizeRef = useRef({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return undefined;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return undefined;
+
+    const initializeParticles = (canvasWidth, canvasHeight) => {
+      const centerX = canvasWidth / 2;
+      const centerY = canvasHeight / 2;
+      const clusterRadius = Math.min(canvasWidth, canvasHeight) * 0.42;
+      const particleCount = 220;
+      const seeded = [];
+
+      for (let i = 0; i < particleCount; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.pow(Math.random(), 0.7) * clusterRadius;
+        seeded.push({
+          x: centerX + Math.cos(angle) * r,
+          y: centerY + Math.sin(angle) * r,
+          baseR: r,
+          baseAngle: angle,
+          angleOffset: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.0016,
+          size: Math.random() * 1.1 + 0.35,
+          twinkle: Math.random() * Math.PI * 2,
+          primary: i % 16 === 0,
+        });
+      }
+
+      particlesRef.current = seeded;
+      sizeRef.current = { width: canvasWidth, height: canvasHeight };
+    };
+
+    const render = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+      }
+
+      const w = rect.width;
+      const h = rect.height;
+      if (w <= 0 || h <= 0) {
+        animationRef.current = window.requestAnimationFrame(render);
+        return;
+      }
+
+      if (
+        particlesRef.current.length === 0 ||
+        Math.abs(sizeRef.current.width - w) > 2 ||
+        Math.abs(sizeRef.current.height - h) > 2
+      ) {
+        initializeParticles(w, h);
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const time = Date.now() * 0.001;
+      const centerX = w / 2;
+      const centerY = h / 2;
+
+      particlesRef.current.forEach((particle) => {
+        particle.baseAngle += particle.rotationSpeed;
+        const dynamicR = particle.baseR + Math.sin(time * 0.5 + particle.angleOffset) * 4;
+        particle.x = centerX + Math.cos(particle.baseAngle) * dynamicR;
+        particle.y = centerY + Math.sin(particle.baseAngle) * dynamicR;
+        particle.twinkle += 0.03;
+      });
+
+      for (let i = 0; i < particlesRef.current.length; i += 1) {
+        const p1 = particlesRef.current[i];
+        for (let j = i + 1; j < particlesRef.current.length; j += 1) {
+          const p2 = particlesRef.current[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const distSq = dx * dx + dy * dy;
+          const maxDist = 70;
+
+          if (distSq < maxDist * maxDist) {
+            const dist = Math.sqrt(distSq);
+            const alpha = (1 - dist / maxDist) * 0.25;
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      particlesRef.current.forEach((particle, index) => {
+        const mouseDist = Math.sqrt(
+          Math.pow(mouseRef.current.x - particle.x, 2) +
+          Math.pow(mouseRef.current.y - particle.y, 2)
+        );
+        const isPrimary = particle.primary || index % 16 === 0;
+        const brightness = mouseDist < 120
+          ? (isPrimary ? 0.95 : 0.7)
+          : (isPrimary ? 0.58 : 0.3) + Math.sin(particle.twinkle) * (isPrimary ? 0.22 : 0.18);
+        const size = particle.size * (mouseDist < 80 ? 1.2 : 1) * (isPrimary ? 1.55 : 1);
+
+        if (isPrimary) {
+          const glow = ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, size * 3.2);
+          glow.addColorStop(0, `rgba(255, 255, 255, ${Math.max(0.18, brightness * 0.45)})`);
+          glow.addColorStop(0.5, `rgba(255, 255, 255, ${Math.max(0.08, brightness * 0.18)})`);
+          glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.beginPath();
+          ctx.fillStyle = glow;
+          ctx.arc(particle.x, particle.y, size * 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.12, Math.min(1, brightness))})`;
+        ctx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      animationRef.current = window.requestAnimationFrame(render);
+    };
+
+    render();
+    return () => {
+      if (animationRef.current) {
+        window.cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: typeof width === 'number' ? `${width}px` : width,
+        height: typeof height === 'number' ? `${height}px` : height,
+        minHeight: '320px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        onMouseMove={(event) => {
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          mouseRef.current = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          };
+        }}
+        onMouseLeave={() => {
+          mouseRef.current = { x: -1000, y: -1000 };
+        }}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          cursor: 'crosshair',
+        }}
+      />
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    HIVEMIND — Your Second Brain
    Editorial layout matching MobileHero style
    ═══════════════════════════════════════════════════════════ */
 
 const SolutionHivemind = () => {
-  const { isDark } = useTheme();
+  const { isDark, locale } = useTheme();
   const c = t(isDark);
-  const [activeDemo, setActiveDemo] = useState(-1);
-
-  const demos = [
-    { q: 'What did we decide about the rebrand?', a: 'In the March strategy call, the team decided to shift to a minimal identity. Sarah noted this aligns with the Q2 launch.', n: 3 },
-    { q: 'When is Lisa\'s birthday?', a: 'September 14th. Last year you got her a book about marine biology.', n: 1 },
-    { q: 'What was my workout last week?', a: 'Monday: upper body. Wednesday: 5K run, 26:34. Friday: yoga. You said your shoulder felt better.', n: 4 },
-  ];
-
-  const handleDemo = (i) => {
-    setActiveDemo(-1);
-    setTimeout(() => setActiveDemo(i), 100);
-  };
+  const copy = getMobileCopy(locale).hivemind;
+  const headingClass = locale === 'de'
+    ? 'text-4xl md:text-5xl lg:text-[4.75rem] font-bold tracking-tight leading-[0.95]'
+    : 'text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95]';
 
   return (
     <section className={`${c.bg} border-t ${c.border} relative overflow-hidden`}>
@@ -48,12 +222,12 @@ const SolutionHivemind = () => {
 
           {/* Top metadata row */}
           <motion.div className="flex items-center justify-between mb-8" {...fade(0)}>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>Solutions / 02</span>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>Memory Engine</span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>{copy.sectionLabel}</span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>{copy.topLabel}</span>
           </motion.div>
 
           {/* Two-column editorial layout */}
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-0 items-start relative">
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-8 lg:gap-0 items-start relative">
 
             {/* ─── Left column — Text ─── */}
             <div className="relative z-10 pb-12 lg:pb-20">
@@ -62,24 +236,23 @@ const SolutionHivemind = () => {
 
               {/* Label */}
               <motion.p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`} {...fade(0.1)}>
-                DV-HM002
-                <span className="ml-8">Second Brain</span>
+                {copy.metaCode}
+                <span className="ml-8">{copy.metaSuffix}</span>
               </motion.p>
 
               {/* Main headline */}
               <motion.h2
-                className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
+                className={`${headingClass} ${c.text} font-['Space_Grotesk']`}
                 {...fade(0.15)}
               >
-                <span className={`block ${c.accent}`}>HIVEMIND</span>
-                <span className="block text-[0.6em]">Your Sovereign</span>
-                <span className="block text-[0.6em]">Memory Engine</span>
+                <span className={`block ${c.accent}`}>{copy.headlineAccent}</span>
+                <span className="block text-[0.6em]">{copy.headlineLines[0]}</span>
+                <span className="block text-[0.6em]">{copy.headlineLines[1]}</span>
               </motion.h2>
 
               {/* Subtitle */}
               <motion.p className={`text-sm ${c.textSecondary} mt-8 max-w-md leading-relaxed`} {...fade(0.2)}>
-                Your second brain that never forgets. Connect your emails, notes, conversations — ask any question months later and get the{' '}
-                <span className={`${c.text} font-medium`}>exact answer.</span>
+                {copy.subtitle}
               </motion.p>
 
               {/* CTA row */}
@@ -88,24 +261,20 @@ const SolutionHivemind = () => {
                   to="/hivemind/login"
                   className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
                 >
-                  Try Free
+                  {copy.primaryCta}
                   <ArrowRight size={14} />
                 </Link>
                 <Link
                   to="/benchmark"
                   className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
                 >
-                  87.2% Accuracy
+                  {copy.secondaryCta}
                 </Link>
               </motion.div>
 
               {/* Key numbers */}
               <motion.div className={`flex gap-8 mt-12 pt-8 border-t ${c.border}`} {...fade(0.3)}>
-                {[
-                  { val: '<50ms', label: 'Recall' },
-                  { val: '87.2%', label: 'Accuracy' },
-                  { val: '∞', label: 'Memory' },
-                ].map(s => (
+                {copy.stats.map((s) => (
                   <div key={s.label}>
                     <span className={`text-2xl font-bold font-mono ${c.text}`}>{s.val}</span>
                     <span className={`block text-[9px] font-mono uppercase tracking-widest ${c.textMuted} mt-1`}>{s.label}</span>
@@ -116,7 +285,7 @@ const SolutionHivemind = () => {
 
             {/* ─── Right column — Interactive demo + graph ─── */}
             <motion.div
-              className="relative lg:-mr-10"
+              className="relative lg:-mr-14"
               initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -127,82 +296,13 @@ const SolutionHivemind = () => {
                 <div className={`absolute -top-4 -left-4 w-16 h-16 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
 
                 {/* Brain graph — raw, no bounding box */}
-                <div className="flex items-center justify-center h-[320px] md:h-[380px] relative">
-                  <HiveMind
-                    width={500}
-                    height={360}
-                    nodeCount={90}
-                    connectionDistance={52}
-                    nodeColor={isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(10, 10, 10, 0.45)'}
-                    lineColor={isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(10, 10, 10, 0.06)'}
-                    backgroundColor="transparent"
-                  />
+                <div className="flex items-center justify-center h-[380px] md:h-[460px] lg:h-[520px] relative">
+                  <DashboardHiveMindStructure width="100%" height={500} />
                   {/* Subtle label on graph */}
                   <span className={`absolute bottom-4 right-4 text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>
-                    Interactive · hover to explore
+                    {copy.graphLabel}
                   </span>
                 </div>
-
-                {/* Interactive recall demo — below graph, minimal border */}
-                <div className={`mt-4 border ${c.border} ${isDark ? 'bg-[#0c0d0f]/60' : 'bg-white/60'} backdrop-blur-sm`}>
-                    <div className={`px-5 py-3 border-b ${c.border}`}>
-                      <div className={`flex items-center gap-3 px-4 py-3 border ${c.border} ${isDark ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}>
-                        <span className={`text-xs font-mono ${c.textMuted}`}>&gt;</span>
-                        <AnimatePresence mode="wait">
-                          <motion.span
-                            key={activeDemo}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className={`text-sm ${c.text} flex-1`}
-                          >
-                            {activeDemo >= 0 ? demos[activeDemo].q : 'Ask your memory anything...'}
-                          </motion.span>
-                        </AnimatePresence>
-                        {activeDemo >= 0 && (
-                          <span className={`text-[8px] font-mono ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>{demos[activeDemo].n} found</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Answer area */}
-                    <div className="px-5 py-4 min-h-[60px]">
-                      <AnimatePresence mode="wait">
-                        {activeDemo >= 0 ? (
-                          <motion.p
-                            key={`a-${activeDemo}`}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            className={`text-sm ${c.text} leading-relaxed`}
-                          >
-                            {demos[activeDemo].a}
-                          </motion.p>
-                        ) : (
-                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} className={`text-sm ${c.textMuted}`}>
-                            Try an example below
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Example buttons */}
-                    <div className={`px-5 pb-4 flex flex-wrap gap-1.5`}>
-                      {demos.map((d, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleDemo(i)}
-                          className={`px-3 py-1.5 text-[9px] font-mono border cursor-pointer transition-all ${
-                            activeDemo === i
-                              ? (isDark ? 'bg-white/[0.08] border-white/20 text-white' : 'bg-black/[0.05] border-black/15 text-black')
-                              : `${c.border} ${isDark ? 'bg-white/[0.02] text-white/50 hover:bg-white/[0.05]' : 'bg-black/[0.01] text-black/40 hover:bg-black/[0.03]'}`
-                          }`}
-                        >
-                          {d.q.length > 28 ? d.q.slice(0, 28) + '...' : d.q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
                 {/* Bottom accent square */}
                 <div className={`absolute -bottom-3 -right-3 w-10 h-10 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
@@ -212,15 +312,10 @@ const SolutionHivemind = () => {
 
           {/* ─── Feature cards ─── */}
           <motion.div className={`py-16 border-t ${c.border}`} {...fade(0)}>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-10`}>How it works</span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-10`}>{copy.featuresLabel}</span>
 
             <div className="grid sm:grid-cols-2 gap-3">
-              {[
-                { n: '01', title: 'It remembers everything', desc: 'Every conversation, email, and document — stored, indexed, and connected.', tag: 'Total recall' },
-                { n: '02', title: 'It connects the dots', desc: 'Related ideas from Slack, Gmail, and your docs? Linked automatically.', tag: 'Knowledge graph' },
-                { n: '03', title: 'It gets smarter over time', desc: 'Three AI agents scan for duplicates, conflicts, and missing links.', tag: 'Self-improving' },
-                { n: '04', title: 'Your data stays yours', desc: 'Hosted in Frankfurt. GDPR by architecture. Zero US data transfers.', tag: 'EU sovereign' },
-              ].map((f, i) => (
+              {copy.features.map((f, i) => (
                 <motion.div
                   key={f.n}
                   {...fade(0.05 + i * 0.06)}
@@ -245,18 +340,13 @@ const SolutionHivemind = () => {
 
           {/* ─── Use cases ─── */}
           <motion.div className={`pb-16 border-t ${c.border} pt-12`} {...fade(0)}>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-3`}>Built for</span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-3`}>{copy.useCasesLabel}</span>
             <h3 className={`text-2xl md:text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-8`}>
-              Anyone who thinks for a living
+              {copy.useCasesTitle}
             </h3>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { e: '💼', t: 'Founders', d: 'Never lose a meeting insight or investor feedback.' },
-                { e: '🧑‍💻', t: 'Developers', d: 'Codebase context and decisions — always retrievable.' },
-                { e: '📝', t: 'Researchers', d: 'Connect papers, notes, and conversations.' },
-                { e: '🏢', t: 'Teams', d: 'Shared memory. When someone leaves, knowledge stays.' },
-              ].map((u, i) => (
+              {copy.useCases.map((u, i) => (
                 <motion.div key={u.t} {...fade(0.05 + i * 0.04)} className={`${c.bgCard} border ${c.border} p-4 ${c.shadow}`}>
                   <span className="text-xl mb-2 block">{u.e}</span>
                   <h4 className={`text-xs font-semibold ${c.text} font-['Space_Grotesk'] mb-1`}>{u.t}</h4>
@@ -268,8 +358,8 @@ const SolutionHivemind = () => {
 
           {/* Bottom metadata row */}
           <motion.div className={`flex items-center justify-between py-6 border-t ${c.border}`} {...fade(0.3)}>
-            <span className={`text-[10px] font-mono ${c.textMuted}`}>HIVEMIND Memory Engine</span>
-            <span className={`text-[10px] font-mono ${c.textMuted}`}>EU Sovereign · GDPR Native</span>
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>{copy.footerLeft}</span>
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>{copy.footerRight}</span>
           </motion.div>
         </div>
       </div>
