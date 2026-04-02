@@ -699,16 +699,16 @@ function VoiceAgentTestPageContent({ config, brand }) {
       return;
     }
 
-    const nextText = partialAgentTranscript ? `${partialAgentTranscript}${text}` : text;
+    // Use ref for latest partial (avoids stale closure)
+    const accumulated = partialAgentTranscriptRef.current;
+    const nextText = accumulated ? `${accumulated}${text}` : text;
     const id = `agent-${Date.now()}-${transcriptCounterRef.current += 1}`;
-    setTranscriptItems((previous) => appendTranscript(previous, {
-      id,
-      role: 'agent',
-      text: nextText,
-      final: true,
-    }));
+    setTranscriptItems((previous) => appendTranscript(
+      previous.filter((item) => item.id !== 'agent-streaming'),
+      { id, role: 'agent', text: nextText, final: true }
+    ));
     setPartialAgentTranscript('');
-  }, [partialAgentTranscript]);
+  }, []);
 
   useEffect(() => {
     if (!partialAgentTranscript) {
@@ -732,17 +732,25 @@ function VoiceAgentTestPageContent({ config, brand }) {
 
   useEffect(() => {
     if (!partialUserTranscript) {
-      setTranscriptItems((previous) => previous.filter((item) => item.id !== 'user-streaming'));
+      // Only remove streaming indicator if there's no text — don't flash
+      setTranscriptItems((previous) => {
+        const streaming = previous.find((item) => item.id === 'user-streaming');
+        if (streaming && streaming.text) return previous; // Keep if has text (will be replaced by final)
+        return previous.filter((item) => item.id !== 'user-streaming');
+      });
       return;
     }
 
-    setTranscriptItems((previous) => appendTranscript(previous, {
-      id: 'user-streaming',
-      role: 'user',
-      text: partialUserTranscript,
-      final: false,
-      streaming: true,
-    }));
+    setTranscriptItems((previous) => {
+      const withoutStreaming = previous.filter((item) => item.id !== 'user-streaming');
+      return [...withoutStreaming, {
+        id: 'user-streaming',
+        role: 'user',
+        text: partialUserTranscript,
+        final: false,
+        streaming: true,
+      }].slice(-MAX_TRANSCRIPT_ITEMS);
+    });
   }, [partialUserTranscript]);
 
   const startVoiceCall = useCallback(async (stream) => {
@@ -1310,48 +1318,75 @@ function VoiceAgentTestPageContent({ config, brand }) {
                   {transcriptItems.map((item) => (
                     <motion.div
                       key={item.id}
-                      initial={{ opacity: 0, y: 10 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.22, ease: 'easeOut' }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
                       style={{
-                        paddingTop: '14px',
-                        borderTop: `1px solid ${hairline}`,
+                        display: 'flex',
+                        justifyContent: item.role === 'user' ? 'flex-end' : 'flex-start',
+                        paddingTop: '8px',
                         maxWidth: '760px',
                       }}
                     >
                       <div
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          marginBottom: '10px',
-                          flexWrap: 'wrap',
+                          maxWidth: '80%',
+                          padding: '12px 16px',
+                          borderRadius: item.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                          background: item.role === 'user'
+                            ? withAlpha(mergedBrand.accent || '#117dff', 0.12)
+                            : withAlpha(mergedBrand.textMuted || '#888', 0.08),
+                          border: `1px solid ${item.role === 'user'
+                            ? withAlpha(mergedBrand.accent || '#117dff', 0.15)
+                            : withAlpha(mergedBrand.textMuted || '#888', 0.1)}`,
                         }}
                       >
                         <div
                           style={{
-                            fontSize: '11px',
-                            letterSpacing: '0.12em',
+                            fontSize: '10px',
+                            letterSpacing: '0.1em',
                             textTransform: 'uppercase',
-                            color: item.role === 'user' ? mergedBrand.text : mergedBrand.textMuted,
+                            color: item.role === 'user'
+                              ? (mergedBrand.accent || '#117dff')
+                              : mergedBrand.textMuted,
+                            marginBottom: '6px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '8px',
                           }}
                         >
-                          {item.role === 'user' ? 'Client' : mergedConfig.agentName}
+                          <span>{item.role === 'user' ? 'You' : mergedConfig.agentName}</span>
+                          {item.streaming && (
+                            <span style={{ opacity: 0.6, animation: 'pulse 1.5s ease-in-out infinite' }}>
+                              streaming...
+                            </span>
+                          )}
                         </div>
-                        <div style={{ fontSize: '11px', color: mergedBrand.textMuted }}>
-                          {item.streaming ? 'Streaming' : 'Final'}
+                        <div
+                          style={{
+                            fontSize: '15px',
+                            lineHeight: 1.65,
+                            color: item.streaming
+                              ? withAlpha(mergedBrand.text, 0.75)
+                              : mergedBrand.text,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {item.text}
+                          {item.streaming && (
+                            <span style={{
+                              display: 'inline-block',
+                              width: '2px',
+                              height: '16px',
+                              background: mergedBrand.accent || '#117dff',
+                              marginLeft: '2px',
+                              verticalAlign: 'text-bottom',
+                              animation: 'pulse 1s ease-in-out infinite',
+                            }} />
+                          )}
                         </div>
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '16px',
-                          lineHeight: 1.8,
-                          color: item.streaming ? withAlpha(mergedBrand.text, 0.86) : mergedBrand.text,
-                          whiteSpace: 'pre-wrap',
-                        }}
-                      >
-                        {item.text}
                       </div>
                     </motion.div>
                   ))}
