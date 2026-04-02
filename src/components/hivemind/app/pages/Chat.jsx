@@ -327,6 +327,8 @@ export function ChatPanel({ isOpen, onClose }) {
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    // Build history BEFORE updating state (includes all previous messages + current user msg)
+    const fullHistory = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setLoading(true);
@@ -339,7 +341,7 @@ export function ChatPanel({ isOpen, onClose }) {
         const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
           message: trimmed,
           model: selectedModel,
-          history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          history: fullHistory,
         });
         const chatData = chatRes.data;
         responseContent = chatData.response || '';
