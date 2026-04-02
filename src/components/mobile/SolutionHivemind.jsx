@@ -203,7 +203,6 @@ const SolutionHivemind = () => {
                       ))}
                     </div>
                   </div>
-                </div>
 
                 {/* Bottom accent square */}
                 <div className={`absolute -bottom-3 -right-3 w-10 h-10 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
