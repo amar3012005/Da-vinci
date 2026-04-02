@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Menu, X, ArrowLeft, Brain, Network, Layers, Search,
-  ChevronDown, CheckCircle2, XCircle, Database, Cpu,
-  BarChart3, GitBranch, Shield, Zap
+  CheckCircle2, XCircle, Database, Cpu,
+  GitBranch, Zap
 } from 'lucide-react';
 
 /* ─── Navbar ─── */
