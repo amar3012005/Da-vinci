@@ -1,332 +1,283 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { Link } from 'react-router-dom';
 import HiveMind from '../hivemind/cartesia/HiveMind';
 
-/* ─── Interactive Demo Card ─── */
-const DemoCard = ({ isDark, c }) => {
-  const [query, setQuery] = useState('');
-  const [showResult, setShowResult] = useState(false);
-  const [activeDemo, setActiveDemo] = useState(0);
-
-  const demos = [
-    { q: 'What did we decide about the rebrand?', a: 'In the March strategy call, the team decided to shift to a minimal brand identity with blue as the primary accent. Sarah noted this aligns with the Q2 launch timeline.', sources: 3, time: '42ms' },
-    { q: 'When is Lisa\'s birthday?', a: 'Lisa\'s birthday is on September 14th. Last year you got her a book about marine biology.', sources: 1, time: '28ms' },
-    { q: 'What was my workout routine last week?', a: 'Monday: upper body at 7am. Wednesday: 5K run (26:34). Friday: yoga session. You mentioned your shoulder felt better after Wednesday.', sources: 4, time: '35ms' },
-  ];
-
-  const handleDemo = (idx) => {
-    setActiveDemo(idx);
-    setQuery(demos[idx].q);
-    setShowResult(false);
-    setTimeout(() => setShowResult(true), 600);
-  };
-
-  return (
-    <div className={`${isDark ? 'bg-[#121315]/72' : 'bg-white/70'} border ${c.border} backdrop-blur-xl overflow-hidden`}>
-      {/* Query bar */}
-      <div className={`px-5 py-4 border-b ${c.border}`}>
-        <div className={`flex items-center gap-3 px-4 py-3 border ${c.border} ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]'}`}>
-          <span className={`text-xs font-mono ${c.textMuted}`}>&gt;</span>
-          <motion.span
-            key={activeDemo}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={`text-sm ${c.text} flex-1`}
-          >
-            {query || 'Ask your memory anything...'}
-          </motion.span>
-          <span className={`text-[9px] font-mono ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>
-            {showResult ? `${demos[activeDemo].sources} found` : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* Result */}
-      <div className="px-5 py-5 min-h-[120px]">
-        <AnimatePresence mode="wait">
-          {showResult ? (
-            <motion.div
-              key={`result-${activeDemo}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <p className={`text-sm ${c.text} leading-relaxed mb-3`}>{demos[activeDemo].a}</p>
-              <div className="flex items-center gap-3">
-                <span className={`text-[9px] font-mono ${c.textMuted}`}>{demos[activeDemo].sources} memories</span>
-                <span className={`text-[9px] font-mono ${c.textMuted}`}>{demos[activeDemo].time}</span>
-              </div>
-            </motion.div>
-          ) : query ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-2"
-            >
-              <div className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/30'} animate-pulse`} />
-              <span className={`text-xs font-mono ${c.textMuted}`}>Searching memories...</span>
-            </motion.div>
-          ) : (
-            <p className={`text-sm ${c.textMuted}`}>Try one of the examples below</p>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Example buttons */}
-      <div className={`px-5 pb-5 flex flex-wrap gap-2`}>
-        {demos.map((d, i) => (
-          <button
-            key={i}
-            onClick={() => handleDemo(i)}
-            className={`px-3 py-1.5 text-[10px] font-mono border ${c.border} cursor-pointer transition-all ${
-              activeDemo === i && showResult
-                ? (isDark ? 'bg-white/[0.1] text-white border-white/20' : 'bg-black/[0.06] text-black border-black/15')
-                : (isDark ? 'bg-white/[0.03] text-white/60 hover:bg-white/[0.06]' : 'bg-black/[0.02] text-black/50 hover:bg-black/[0.04]')
-            }`}
-          >
-            {d.q.slice(0, 30)}...
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
+const ease = [0.16, 1, 0.3, 1];
+const fade = (delay) => ({
+  initial: { opacity: 0, y: 30 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-60px' },
+  transition: { duration: 0.8, delay, ease },
+});
 
 /* ═══════════════════════════════════════════════════════════
-   FULL PAGE — HIVEMIND: Your Second Brain
+   HIVEMIND — Your Second Brain
+   Editorial layout matching MobileHero style
    ═══════════════════════════════════════════════════════════ */
 
 const SolutionHivemind = () => {
   const { isDark } = useTheme();
   const c = t(isDark);
+  const [activeDemo, setActiveDemo] = useState(-1);
 
-  const features = [
-    {
-      num: '01',
-      title: 'It remembers everything',
-      desc: 'Every conversation, email, document, and decision — stored and connected. Ask a question six months later and get the exact answer.',
-      tag: 'Total recall',
-    },
-    {
-      num: '02',
-      title: 'It connects the dots',
-      desc: 'Your second brain doesn\'t just store information — it links related ideas across sources. A Slack message, a PDF, and an email about the same topic? Connected automatically.',
-      tag: 'Knowledge graph',
-    },
-    {
-      num: '03',
-      title: 'It gets smarter over time',
-      desc: 'Three AI agents continuously scan your knowledge for duplicates, contradictions, and missing links. Your memory actually improves the more you use it.',
-      tag: 'Self-improving',
-    },
-    {
-      num: '04',
-      title: 'Your data stays yours',
-      desc: 'Hosted in Frankfurt, Germany. GDPR-compliant by architecture. No US data transfers. Your memories never leave European soil.',
-      tag: 'EU sovereign',
-    },
+  const demos = [
+    { q: 'What did we decide about the rebrand?', a: 'In the March strategy call, the team decided to shift to a minimal identity. Sarah noted this aligns with the Q2 launch.', n: 3 },
+    { q: 'When is Lisa\'s birthday?', a: 'September 14th. Last year you got her a book about marine biology.', n: 1 },
+    { q: 'What was my workout last week?', a: 'Monday: upper body. Wednesday: 5K run, 26:34. Friday: yoga. You said your shoulder felt better.', n: 4 },
   ];
 
-  const useCases = [
-    { emoji: '💼', title: 'For founders', desc: 'Never lose a meeting insight, investor feedback, or product decision again.' },
-    { emoji: '🧑‍💻', title: 'For developers', desc: 'Your codebase context, debugging history, and architectural decisions — always retrievable.' },
-    { emoji: '📝', title: 'For researchers', desc: 'Connect papers, notes, and conversations into one searchable knowledge base.' },
-    { emoji: '🏢', title: 'For teams', desc: 'Shared organizational memory. When someone leaves, their knowledge stays.' },
-  ];
+  const handleDemo = (i) => {
+    setActiveDemo(-1);
+    setTimeout(() => setActiveDemo(i), 100);
+  };
 
   return (
     <section className={`${c.bg} border-t ${c.border} relative overflow-hidden`}>
-      <div className="absolute inset-0 pointer-events-none">
-        <div className={`absolute inset-0 ${isDark ? 'bg-[radial-gradient(circle_at_18%_16%,rgba(98,135,94,0.18),transparent_28%),radial-gradient(circle_at_76%_44%,rgba(126,145,156,0.16),transparent_30%)]' : 'bg-[radial-gradient(circle_at_18%_16%,rgba(130,160,120,0.10),transparent_28%),radial-gradient(circle_at_76%_44%,rgba(120,130,140,0.10),transparent_30%)]'}`} />
-        <div className={`absolute inset-0 ${isDark ? 'bg-black/72' : 'bg-[#f7f4ed]/78'} backdrop-blur-[40px]`} />
-      </div>
-      <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
+      <div className={`max-w-[1200px] mx-auto border-x ${c.border} relative`}>
 
-        {/* ─── Hero ─── */}
-        <div className="px-6 md:px-10 lg:px-20 pt-20 lg:pt-32 pb-16 relative">
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
-            <div className="flex flex-wrap gap-2 mb-8">
-              {['Your Second Brain', 'AI-Powered', 'EU Sovereign', '87.2% Accuracy'].map(tag => (
-                <span key={tag} className={`px-4 py-2.5 border ${isDark ? 'border-white/10 bg-white/[0.04]' : 'border-black/10 bg-black/[0.03]'}`}>
-                  <span className={`text-[9px] font-mono uppercase tracking-[0.2em] ${isDark ? 'text-white/72' : 'text-black/55'}`}>{tag}</span>
-                </span>
-              ))}
-            </div>
-            <p className={`text-xs font-mono uppercase tracking-widest ${c.textMuted} mb-4`}>
-              Solutions / 02
-            </p>
-            <h2 className={`text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk'] mb-6`}>
-              <span className={c.accent}>HIVEMIND</span>
-              <br />
-              Your Second Brain
-            </h2>
-            <p className={`text-xl md:text-2xl ${c.textSecondary} leading-relaxed max-w-2xl`}>
-              A memory that never forgets. Connect your tools, ask any question, get the exact answer — even months later. Like having a photographic memory for your entire digital life.
-            </p>
-          </motion.div>
+        {/* Subtle grid lines */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className={`absolute top-0 left-1/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
+          <div className={`absolute top-0 left-2/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
         </div>
 
-        {/* ─── Interactive Demo + Live Graph ─── */}
-        <div className="px-6 md:px-10 lg:px-20 pb-16 relative">
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <div className="relative px-6 md:px-10 lg:px-20 pt-20 lg:pt-28 pb-0">
 
-            {/* Left — Interactive recall demo */}
-            <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-            >
-              <DemoCard isDark={isDark} c={c} />
-            </motion.div>
+          {/* Top metadata row */}
+          <motion.div className="flex items-center justify-between mb-8" {...fade(0)}>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>Solutions / 02</span>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>Memory Engine</span>
+          </motion.div>
 
-            {/* Right — Live brain network */}
+          {/* Two-column editorial layout */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-0 items-start relative">
+
+            {/* ─── Left column — Text ─── */}
+            <div className="relative z-10 pb-12 lg:pb-20">
+              {/* Accent square */}
+              <motion.div className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} mb-8`} {...fade(0.05)} />
+
+              {/* Label */}
+              <motion.p className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`} {...fade(0.1)}>
+                DV-HM002
+                <span className="ml-8">Second Brain</span>
+              </motion.p>
+
+              {/* Main headline */}
+              <motion.h2
+                className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
+                {...fade(0.15)}
+              >
+                <span className="block">YOUR</span>
+                <span className="block">SECOND</span>
+                <span className={`block ${c.accent}`}>BRAIN</span>
+              </motion.h2>
+
+              {/* Subtitle */}
+              <motion.p className={`text-sm ${c.textSecondary} mt-8 max-w-md leading-relaxed`} {...fade(0.2)}>
+                A memory that never forgets. Connect your emails, notes, conversations — ask any question months later and get the{' '}
+                <span className={`${c.text} font-medium`}>exact answer.</span>
+              </motion.p>
+
+              {/* CTA row */}
+              <motion.div className="flex items-center gap-6 mt-10" {...fade(0.25)}>
+                <Link
+                  to="/hivemind/login"
+                  className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
+                >
+                  Try Free
+                  <ArrowRight size={14} />
+                </Link>
+                <Link
+                  to="/benchmark"
+                  className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
+                >
+                  87.2% Accuracy
+                </Link>
+              </motion.div>
+
+              {/* Key numbers */}
+              <motion.div className={`flex gap-8 mt-12 pt-8 border-t ${c.border}`} {...fade(0.3)}>
+                {[
+                  { val: '<50ms', label: 'Recall' },
+                  { val: '87.2%', label: 'Accuracy' },
+                  { val: '∞', label: 'Memory' },
+                ].map(s => (
+                  <div key={s.label}>
+                    <span className={`text-2xl font-bold font-mono ${c.text}`}>{s.val}</span>
+                    <span className={`block text-[9px] font-mono uppercase tracking-widest ${c.textMuted} mt-1`}>{s.label}</span>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* ─── Right column — Interactive demo + graph ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              className="relative lg:-mr-10"
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.7, delay: 0.15 }}
+              transition={{ duration: 1, delay: 0.2, ease }}
             >
-              <div className={`${isDark ? 'bg-[#121315]/72' : 'bg-white/70'} border ${c.border} backdrop-blur-xl overflow-hidden`}>
-                <div className={`px-5 py-3 border-b ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[9px] font-mono uppercase tracking-widest ${c.textMuted}`}>Knowledge Graph — Live</span>
-                  <span className={`text-[9px] font-mono ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>● Connected</span>
+              <div className="relative">
+                {/* Accent square overlay */}
+                <div className={`absolute -top-4 -left-4 w-16 h-16 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
+
+                {/* Live graph + recall card */}
+                <div className={`relative ${isDark ? 'bg-[#0c0d0f]' : 'bg-white'} border ${c.border} overflow-hidden`}>
+
+                  {/* Graph header */}
+                  <div className={`px-5 py-3 border-b ${c.border} flex items-center justify-between`}>
+                    <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>Knowledge Graph</span>
+                    <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>● Live</span>
+                  </div>
+
+                  {/* Graph */}
+                  <div className="flex items-center justify-center h-[280px] md:h-[320px]">
+                    <HiveMind
+                      width={460}
+                      height={300}
+                      nodeCount={70}
+                      connectionDistance={48}
+                      nodeColor={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(10, 10, 10, 0.5)'}
+                      lineColor={isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(10, 10, 10, 0.07)'}
+                      backgroundColor="transparent"
+                    />
+                  </div>
+
+                  {/* Interactive recall demo */}
+                  <div className={`border-t ${c.border}`}>
+                    <div className={`px-5 py-3 border-b ${c.border}`}>
+                      <div className={`flex items-center gap-3 px-4 py-3 border ${c.border} ${isDark ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}>
+                        <span className={`text-xs font-mono ${c.textMuted}`}>&gt;</span>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={activeDemo}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className={`text-sm ${c.text} flex-1`}
+                          >
+                            {activeDemo >= 0 ? demos[activeDemo].q : 'Ask your memory anything...'}
+                          </motion.span>
+                        </AnimatePresence>
+                        {activeDemo >= 0 && (
+                          <span className={`text-[8px] font-mono ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>{demos[activeDemo].n} found</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Answer area */}
+                    <div className="px-5 py-4 min-h-[60px]">
+                      <AnimatePresence mode="wait">
+                        {activeDemo >= 0 ? (
+                          <motion.p
+                            key={`a-${activeDemo}`}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className={`text-sm ${c.text} leading-relaxed`}
+                          >
+                            {demos[activeDemo].a}
+                          </motion.p>
+                        ) : (
+                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} className={`text-sm ${c.textMuted}`}>
+                            Try an example below
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Example buttons */}
+                    <div className={`px-5 pb-4 flex flex-wrap gap-1.5`}>
+                      {demos.map((d, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleDemo(i)}
+                          className={`px-3 py-1.5 text-[9px] font-mono border cursor-pointer transition-all ${
+                            activeDemo === i
+                              ? (isDark ? 'bg-white/[0.08] border-white/20 text-white' : 'bg-black/[0.05] border-black/15 text-black')
+                              : `${c.border} ${isDark ? 'bg-white/[0.02] text-white/50 hover:bg-white/[0.05]' : 'bg-black/[0.01] text-black/40 hover:bg-black/[0.03]'}`
+                          }`}
+                        >
+                          {d.q.length > 28 ? d.q.slice(0, 28) + '...' : d.q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center min-h-[340px]">
-                  <HiveMind
-                    width={480}
-                    height={320}
-                    nodeCount={80}
-                    connectionDistance={50}
-                    nodeColor={isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(10, 10, 10, 0.6)'}
-                    lineColor={isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(10, 10, 10, 0.08)'}
-                    backgroundColor="transparent"
-                  />
-                </div>
-                <div className={`px-5 py-3 border-t ${c.border} flex items-center justify-between`}>
-                  <span className={`text-[9px] font-mono ${c.textMuted}`}>Every dot is a memory. Every line is a connection.</span>
-                  <span className={`text-[9px] font-mono ${c.textMuted}`}>87.2% recall accuracy</span>
-                </div>
+
+                {/* Bottom accent square */}
+                <div className={`absolute -bottom-3 -right-3 w-10 h-10 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
               </div>
             </motion.div>
           </div>
-        </div>
 
-        {/* ─── Features — human-readable ─── */}
-        <div className={`px-6 md:px-10 lg:px-20 py-16 border-t ${c.border}`}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-10"
-          >
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              How it works
-            </span>
-          </motion.div>
+          {/* ─── Feature cards ─── */}
+          <motion.div className={`py-16 border-t ${c.border}`} {...fade(0)}>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-10`}>How it works</span>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            {features.map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={`${c.bgCard} border ${c.border} p-6 ${c.shadow} group hover:border-opacity-40 transition-all`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center shrink-0`}>
-                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-[#080808]' : 'text-white'}`}>{f.num}</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className={`text-base font-semibold ${c.text} font-['Space_Grotesk']`}>{f.title}</h4>
-                      <span className={`text-[8px] font-mono uppercase tracking-widest px-2 py-0.5 ${isDark ? 'bg-white/[0.06] text-white/50' : 'bg-black/[0.04] text-black/40'}`}>
-                        {f.tag}
-                      </span>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                { n: '01', title: 'It remembers everything', desc: 'Every conversation, email, and document — stored, indexed, and connected.', tag: 'Total recall' },
+                { n: '02', title: 'It connects the dots', desc: 'Related ideas from Slack, Gmail, and your docs? Linked automatically.', tag: 'Knowledge graph' },
+                { n: '03', title: 'It gets smarter over time', desc: 'Three AI agents scan for duplicates, conflicts, and missing links.', tag: 'Self-improving' },
+                { n: '04', title: 'Your data stays yours', desc: 'Hosted in Frankfurt. GDPR by architecture. Zero US data transfers.', tag: 'EU sovereign' },
+              ].map((f, i) => (
+                <motion.div
+                  key={f.n}
+                  {...fade(0.05 + i * 0.06)}
+                  className={`${c.bgCard} border ${c.border} p-5 ${c.shadow}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-7 h-7 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} flex items-center justify-center shrink-0`}>
+                      <span className={`text-[9px] font-mono font-bold ${isDark ? 'text-[#080808]' : 'text-white'}`}>{f.n}</span>
                     </div>
-                    <p className={`text-sm ${c.textSecondary} leading-relaxed`}>{f.desc}</p>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h4 className={`text-sm font-semibold ${c.text} font-['Space_Grotesk']`}>{f.title}</h4>
+                        <span className={`text-[7px] font-mono uppercase tracking-widest px-1.5 py-0.5 ${isDark ? 'bg-white/[0.05] text-white/40' : 'bg-black/[0.03] text-black/35'}`}>{f.tag}</span>
+                      </div>
+                      <p className={`text-xs ${c.textSecondary} leading-relaxed`}>{f.desc}</p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* ─── Use cases ─── */}
-        <div className={`px-6 md:px-10 lg:px-20 py-16 border-t ${c.border}`}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-10"
-          >
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-3`}>
-              Built for
-            </span>
-            <h3 className={`text-2xl md:text-3xl font-bold ${c.text} font-['Space_Grotesk']`}>
-              Anyone who thinks for a living
-            </h3>
-          </motion.div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {useCases.map((u, i) => (
-              <motion.div
-                key={u.title}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
-                className={`${c.bgCard} border ${c.border} p-5 ${c.shadow}`}
-              >
-                <span className="text-2xl mb-3 block">{u.emoji}</span>
-                <h4 className={`text-sm font-semibold ${c.text} font-['Space_Grotesk'] mb-1`}>{u.title}</h4>
-                <p className={`text-xs ${c.textSecondary} leading-relaxed`}>{u.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* ─── CTA ─── */}
-        <div className={`px-6 md:px-10 lg:px-20 py-16 border-t ${c.border} text-center`}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className={`text-xl md:text-2xl font-medium ${c.text} font-['Space_Grotesk'] mb-6`}>
-              Stop forgetting. Start remembering.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link
-                to="/hivemind/login"
-                className={`px-6 py-3 ${isDark ? 'bg-white text-black' : 'bg-[#0a0a0a] text-white'} text-sm font-semibold font-['Space_Grotesk'] no-underline hover:opacity-90 transition-opacity`}
-              >
-                Try HIVEMIND Free &rarr;
-              </Link>
-              <Link
-                to="/benchmark"
-                className={`px-6 py-3 border ${c.border} ${c.text} text-sm font-medium font-['Space_Grotesk'] no-underline hover:opacity-80 transition-opacity`}
-              >
-                See Benchmark
-              </Link>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
-        </div>
 
-        <div className="h-8" />
+          {/* ─── Use cases ─── */}
+          <motion.div className={`pb-16 border-t ${c.border} pt-12`} {...fade(0)}>
+            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted} block mb-3`}>Built for</span>
+            <h3 className={`text-2xl md:text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-8`}>
+              Anyone who thinks for a living
+            </h3>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { e: '💼', t: 'Founders', d: 'Never lose a meeting insight or investor feedback.' },
+                { e: '🧑‍💻', t: 'Developers', d: 'Codebase context and decisions — always retrievable.' },
+                { e: '📝', t: 'Researchers', d: 'Connect papers, notes, and conversations.' },
+                { e: '🏢', t: 'Teams', d: 'Shared memory. When someone leaves, knowledge stays.' },
+              ].map((u, i) => (
+                <motion.div key={u.t} {...fade(0.05 + i * 0.04)} className={`${c.bgCard} border ${c.border} p-4 ${c.shadow}`}>
+                  <span className="text-xl mb-2 block">{u.e}</span>
+                  <h4 className={`text-xs font-semibold ${c.text} font-['Space_Grotesk'] mb-1`}>{u.t}</h4>
+                  <p className={`text-[11px] ${c.textSecondary} leading-relaxed`}>{u.d}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Bottom metadata row */}
+          <motion.div className={`flex items-center justify-between py-6 border-t ${c.border}`} {...fade(0.3)}>
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>HIVEMIND Memory Engine</span>
+            <span className={`text-[10px] font-mono ${c.textMuted}`}>EU Sovereign · GDPR Native</span>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
