@@ -71,14 +71,14 @@ const SolutionHivemind = () => {
                 className={`text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95] ${c.text} font-['Space_Grotesk']`}
                 {...fade(0.15)}
               >
-                <span className="block">YOUR</span>
-                <span className="block">SECOND</span>
-                <span className={`block ${c.accent}`}>BRAIN</span>
+                <span className={`block ${c.accent}`}>HIVEMIND</span>
+                <span className="block text-[0.6em]">Your Sovereign</span>
+                <span className="block text-[0.6em]">Memory Engine</span>
               </motion.h2>
 
               {/* Subtitle */}
               <motion.p className={`text-sm ${c.textSecondary} mt-8 max-w-md leading-relaxed`} {...fade(0.2)}>
-                A memory that never forgets. Connect your emails, notes, conversations — ask any question months later and get the{' '}
+                Your second brain that never forgets. Connect your emails, notes, conversations — ask any question months later and get the{' '}
                 <span className={`${c.text} font-medium`}>exact answer.</span>
               </motion.p>
 
@@ -126,30 +126,25 @@ const SolutionHivemind = () => {
                 {/* Accent square overlay */}
                 <div className={`absolute -top-4 -left-4 w-16 h-16 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
 
-                {/* Live graph + recall card */}
-                <div className={`relative ${isDark ? 'bg-[#0c0d0f]' : 'bg-white'} border ${c.border} overflow-hidden`}>
+                {/* Brain graph — raw, no bounding box */}
+                <div className="flex items-center justify-center h-[320px] md:h-[380px] relative">
+                  <HiveMind
+                    width={500}
+                    height={360}
+                    nodeCount={90}
+                    connectionDistance={52}
+                    nodeColor={isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(10, 10, 10, 0.45)'}
+                    lineColor={isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(10, 10, 10, 0.06)'}
+                    backgroundColor="transparent"
+                  />
+                  {/* Subtle label on graph */}
+                  <span className={`absolute bottom-4 right-4 text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>
+                    Interactive · hover to explore
+                  </span>
+                </div>
 
-                  {/* Graph header */}
-                  <div className={`px-5 py-3 border-b ${c.border} flex items-center justify-between`}>
-                    <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${c.textMuted}`}>Knowledge Graph</span>
-                    <span className={`text-[8px] font-mono uppercase tracking-[0.2em] ${isDark ? 'text-[#7ddc6f]' : 'text-[#16a34a]'}`}>● Live</span>
-                  </div>
-
-                  {/* Graph */}
-                  <div className="flex items-center justify-center h-[280px] md:h-[320px]">
-                    <HiveMind
-                      width={460}
-                      height={300}
-                      nodeCount={70}
-                      connectionDistance={48}
-                      nodeColor={isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(10, 10, 10, 0.5)'}
-                      lineColor={isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(10, 10, 10, 0.07)'}
-                      backgroundColor="transparent"
-                    />
-                  </div>
-
-                  {/* Interactive recall demo */}
-                  <div className={`border-t ${c.border}`}>
+                {/* Interactive recall demo — below graph, minimal border */}
+                <div className={`mt-4 border ${c.border} ${isDark ? 'bg-[#0c0d0f]/60' : 'bg-white/60'} backdrop-blur-sm`}>
                     <div className={`px-5 py-3 border-b ${c.border}`}>
                       <div className={`flex items-center gap-3 px-4 py-3 border ${c.border} ${isDark ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}>
                         <span className={`text-xs font-mono ${c.textMuted}`}>&gt;</span>
