@@ -202,7 +202,7 @@ const CartesiaReplica = () => {
               Benchmark Results
             </span>
             <h2 className="text-3xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-3">
-              81% on LongMemEval
+              87.2% on LongMemEval
             </h2>
             <p className="text-[#525252] text-sm max-w-md mx-auto">
               Tested against 500 questions across 6 categories. Outperforming industry baselines.
