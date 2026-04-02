@@ -26,7 +26,7 @@ const fadeUp = {
 
 function ConfigEditor({ config, onSave, saving }) {
   const [systemPrompt, setSystemPrompt] = useState(config?.system_prompt || '');
-  const [model, setModel] = useState(config?.model || 'llama-3.3-70b-versatile');
+  const [model, setModel] = useState(config?.model || 'openai/gpt-oss-120b');
   const [temperature, setTemperature] = useState(config?.temperature ?? 0.7);
   const [maxTokens, setMaxTokens] = useState(config?.max_tokens ?? 300);
   const [voiceOptimized, setVoiceOptimized] = useState(config?.voice_optimized !== false);
@@ -50,11 +50,12 @@ function ConfigEditor({ config, onSave, saving }) {
   };
 
   const MODELS = [
+    'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
     'llama-3.3-70b-versatile',
     'gemini-2.5-flash',
     'gemini-2.5-pro',
     'gpt-4o-mini',
-    'gpt-5.2',
   ];
 
   return (
