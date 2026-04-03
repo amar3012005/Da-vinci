@@ -51,6 +51,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
       items: [
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
         { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
+        { to: '/hivemind/app/brain', icon: Sparkles, label: 'Second Brain' },
         { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
         { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
