@@ -971,22 +971,15 @@ export default function Profile() {
   const { user, org } = useAuth();
 
   // Fetch persistent profile facts from /api/profiles (plural)
-  const {
-    data: profilesData,
-    loading: profilesLoading,
-    error: _profilesError,
-    refetch: refetchProfiles,
-  } = useApiQuery(async () => {
+  const profilesQuery = useApiQuery(async () => {
     const { data } = await apiClient.controlPlane.get('/v1/proxy/profiles');
     return data;
   });
+  const { data: profilesData, loading: profilesLoading, refetch: refetchProfiles } = profilesQuery;
 
   // Fetch stats from /api/profile (singular, existing)
-  const {
-    data: statsData,
-    loading: statsLoading,
-    error: _statsError,
-  } = useApiQuery(() => apiClient.getProfile());
+  const statsQuery = useApiQuery(() => apiClient.getProfile());
+  const { data: statsData, loading: statsLoading } = statsQuery;
 
   const facts = profilesData?.facts || [];
   const context = profilesData?.context || '';
