@@ -100,6 +100,13 @@ export default function AgentSwarm() {
   // Findings panel
   const [, setShowFindings] = useState(false);
 
+  // Hygiene proposals (post-Turing)
+  const [hygieneProposals, setHygieneProposals] = useState([]);
+  const [hygieneStats, setHygieneStats] = useState(null);
+  const [hygieneLoading, setHygieneLoading] = useState(false);
+  const [executingIds, setExecutingIds] = useState(new Set());
+  const [executedIds, setExecutedIds] = useState(new Set());
+
   const pollRef = useRef(null);
 
   // Cleanup polling on unmount
@@ -149,33 +156,82 @@ export default function AgentSwarm() {
     });
   }, []);
 
+  /* ── Hygiene scan (runs automatically after Turing) ── */
+
+  const runHygieneScan = useCallback(async () => {
+    setHygieneLoading(true);
+    try {
+      const { data } = await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/scan', {
+        limit: 50,
+        categories: ['duplicates', 'noise', 'stale', 'orphans', 'artifacts'],
+      });
+      setHygieneProposals(data.proposals || []);
+      setHygieneStats(data.stats || null);
+    } catch (err) {
+      console.warn('Hygiene scan failed:', err.message);
+    } finally {
+      setHygieneLoading(false);
+    }
+  }, []);
+
+  const executeProposal = useCallback(async (proposal, action) => {
+    setExecutingIds(prev => new Set([...prev, proposal.id]));
+    try {
+      await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/execute', {
+        proposals: [proposal],
+        action,
+      });
+      setExecutedIds(prev => new Set([...prev, proposal.id]));
+    } catch (err) {
+      console.error('Execute failed:', err.message);
+    } finally {
+      setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
+    }
+  }, []);
+
+  const executeBulk = useCallback(async (action, category) => {
+    const targets = hygieneProposals
+      .filter(p => !executedIds.has(p.id) && (!category || p.category === category));
+    for (const p of targets) {
+      await executeProposal(p, action);
+    }
+  }, [hygieneProposals, executedIds, executeProposal]);
+
   const handleRunSingle = useCallback(async (agentId) => {
     setRunning(true);
     setRunPhase(agentId);
     setError(null);
     setResults({});
     setShowFindings(false);
+    setHygieneProposals([]);
+    setExecutedIds(new Set());
 
     try {
       const runId = await runAgent(agentId);
       await pollRun(agentId, runId);
       setShowFindings(true);
+      // Auto-run hygiene scan after Turing
+      if (agentId === 'turing') {
+        setRunPhase('hygiene');
+        await runHygieneScan();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setRunning(false);
       setRunPhase(null);
     }
-  }, [runAgent, pollRun]);
+  }, [runAgent, pollRun, runHygieneScan]);
 
   const handleRunAll = useCallback(async () => {
     setRunning(true);
     setError(null);
     setResults({});
     setShowFindings(false);
+    setHygieneProposals([]);
+    setExecutedIds(new Set());
 
     try {
-      // Run All uses optimized system goals for each agent
       setRunPhase('faraday');
       const fId = await runAgent('faraday', true);
       await pollRun('faraday', fId);
@@ -188,6 +244,10 @@ export default function AgentSwarm() {
       const tId = await runAgent('turing', true);
       await pollRun('turing', tId);
 
+      // Auto-run hygiene scan after full chain
+      setRunPhase('hygiene');
+      await runHygieneScan();
+
       setShowFindings(true);
     } catch (err) {
       setError(err.message);
@@ -195,7 +255,7 @@ export default function AgentSwarm() {
       setRunning(false);
       setRunPhase(null);
     }
-  }, [runAgent, pollRun]);
+  }, [runAgent, pollRun, runHygieneScan]);
 
   /* ── Extract findings ──────────────────────────── */
 
@@ -412,6 +472,7 @@ export default function AgentSwarm() {
                 {runPhase === 'faraday' && 'Faraday is scanning your knowledge graph...'}
                 {runPhase === 'feynman' && 'Feynman is forming hypotheses...'}
                 {runPhase === 'turing' && 'Turing is verifying and executing graph actions...'}
+                {runPhase === 'hygiene' && 'Scanning graph for cleanup opportunities...'}
               </p>
               <div className="flex items-center justify-center gap-4 mt-3">
                 {AGENTS.map(a => (
@@ -542,6 +603,140 @@ export default function AgentSwarm() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Graph Hygiene Proposals (post-Turing) ── */}
+        {(hygieneProposals.length > 0 || hygieneLoading) && (
+          <div className="space-y-3 mt-3">
+            <div className="bg-white border border-[#e3e0db] rounded-xl shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#f5f3ee]">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-amber-500" />
+                  <h3 className="text-sm font-bold text-[#0a0a0a]">Graph Cleanup Proposals</h3>
+                  {hygieneStats && (
+                    <span className="text-[10px] font-mono text-[#a3a3a3]">
+                      {hygieneStats.scanned} scanned · {hygieneStats.issues} issues
+                    </span>
+                  )}
+                </div>
+                {hygieneProposals.length > 0 && (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => executeBulk('merge', 'duplicate')}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors font-medium"
+                    >
+                      Merge All Dupes
+                    </button>
+                    <button
+                      onClick={() => executeBulk('delete', 'noise')}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors font-medium"
+                    >
+                      Delete All Noise
+                    </button>
+                    <button
+                      onClick={() => executeBulk('archive')}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
+                    >
+                      Archive All Stale
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {hygieneLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={20} className="animate-spin text-[#117dff]" />
+                  <span className="text-xs text-[#a3a3a3] ml-2">Scanning graph health...</span>
+                </div>
+              )}
+
+              <div className="max-h-[400px] overflow-y-auto">
+                {hygieneProposals.map(proposal => {
+                  const isExecuted = executedIds.has(proposal.id);
+                  const isExecuting = executingIds.has(proposal.id);
+                  const memories = proposal.memories || [];
+                  const catColors = {
+                    duplicate: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                    noise: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
+                    stale: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                    orphan: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+                    artifact: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                    contradiction: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+                  };
+                  const cc = catColors[proposal.category] || catColors.stale;
+
+                  return (
+                    <div
+                      key={proposal.id}
+                      className={`px-4 py-3 border-b border-[#f5f3ee] last:border-0 transition-all ${isExecuted ? 'opacity-40 bg-[#faf9f4]' : ''}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cc.bg} ${cc.text} border ${cc.border}`}>
+                              {proposal.category}
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${proposal.severity === 'high' ? 'bg-red-100 text-red-700' : proposal.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {proposal.severity}
+                            </span>
+                            {confBar(proposal.confidence)}
+                          </div>
+                          <p className="text-xs text-[#525252] mb-1">{proposal.reason}</p>
+                          {/* Memory list */}
+                          <div className="space-y-0.5">
+                            {memories.slice(0, 3).map(m => (
+                              <div key={m.id} className="flex items-center gap-1.5 text-[10px]">
+                                {m.is_canonical && <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">keep</span>}
+                                <span className="text-[#a3a3a3] font-mono">{m.id?.slice(0, 8)}</span>
+                                <span className="text-[#525252] truncate">{m.title || m.content_preview || '—'}</span>
+                              </div>
+                            ))}
+                            {memories.length > 3 && (
+                              <span className="text-[10px] text-[#a3a3a3]">+{memories.length - 3} more</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="shrink-0 flex flex-col gap-1">
+                          {isExecuted ? (
+                            <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                              <CheckCircle2 size={12} /> Done
+                            </span>
+                          ) : isExecuting ? (
+                            <Loader2 size={14} className="animate-spin text-[#117dff]" />
+                          ) : (
+                            <>
+                              {proposal.category === 'duplicate' && (
+                                <button
+                                  onClick={() => executeProposal(proposal, 'merge')}
+                                  className="text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+                                >
+                                  Merge
+                                </button>
+                              )}
+                              <button
+                                onClick={() => executeProposal(proposal, 'delete')}
+                                className="text-[10px] px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors font-medium"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => executeProposal(proposal, 'archive')}
+                                className="text-[10px] px-2.5 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors font-medium"
+                              >
+                                Archive
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
