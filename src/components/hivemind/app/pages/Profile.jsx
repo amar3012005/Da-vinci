@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -6,15 +6,12 @@ import {
   Tag,
   Link,
   Clock,
-  Send,
   Building2,
   Shield,
-  CreditCard,
   Eye,
   Download,
   Trash2,
   AlertTriangle,
-  CheckCircle,
   MapPin,
   ExternalLink,
   Zap,
@@ -977,7 +974,7 @@ export default function Profile() {
   const {
     data: profilesData,
     loading: profilesLoading,
-    error: profilesError,
+    error: _profilesError,
     refetch: refetchProfiles,
   } = useApiQuery(async () => {
     const { data } = await apiClient.controlPlane.get('/v1/proxy/profiles');
@@ -988,7 +985,7 @@ export default function Profile() {
   const {
     data: statsData,
     loading: statsLoading,
-    error: statsError,
+    error: _statsError,
   } = useApiQuery(() => apiClient.getProfile());
 
   const facts = profilesData?.facts || [];
