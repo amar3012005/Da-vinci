@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -14,17 +14,22 @@ import {
   AlertTriangle,
   MapPin,
   ExternalLink,
-  Zap,
   BarChart2,
   Plus,
   Pencil,
   X,
   Check,
   ChevronDown,
-  Code2,
+  ChevronRight,
   Target,
   Settings2,
   Sparkles,
+  Activity,
+  MessageSquare,
+  ArrowRight,
+  Globe,
+  Mail,
+  Briefcase,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -35,13 +40,49 @@ import { useAuth } from '../auth/AuthProvider';
 
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
+  visible: { transition: { staggerChildren: 0.08 } },
 };
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
+
+// ─── Animated Counter ─────────────────────────────────────────────────────────
+
+function AnimatedCounter({ value, duration = 1000 }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef(null);
+  const startTime = useRef(null);
+  const target = value || 0;
+
+  useEffect(() => {
+    if (target === 0) {
+      setDisplay(0);
+      return;
+    }
+
+    const animate = (timestamp) => {
+      if (!startTime.current) startTime.current = timestamp;
+      const elapsed = timestamp - startTime.current;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(eased * target));
+      if (progress < 1) {
+        ref.current = requestAnimationFrame(animate);
+      }
+    };
+
+    startTime.current = null;
+    ref.current = requestAnimationFrame(animate);
+    return () => {
+      if (ref.current) cancelAnimationFrame(ref.current);
+    };
+  }, [target, duration]);
+
+  return <>{display.toLocaleString()}</>;
+}
 
 // ─── Small Reusable Components ────────────────────────────────────────────────
 
@@ -80,36 +121,6 @@ function Card({ children, className = '' }) {
   );
 }
 
-function UsageBar({ label, used, limit, unit = '' }) {
-  const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
-  const color =
-    pct >= 80
-      ? '#dc2626'
-      : pct >= 50
-      ? '#d97706'
-      : '#059669';
-
-  return (
-    <div className="mb-4 last:mb-0">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[#525252] text-sm font-['Space_Grotesk']">{label}</span>
-        <span className="text-[#0a0a0a] font-mono text-xs">
-          {used?.toLocaleString() ?? '\u2014'}{unit} / {limit ? `${limit.toLocaleString()}${unit}` : '\u221E'}
-        </span>
-      </div>
-      <div className="w-full h-2 rounded-full bg-[#f3f1ec] overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
-          className="h-full rounded-full"
-          style={{ background: color }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function UserAvatar({ displayName, email }) {
   const initials = (displayName || email || '?')
     .split(/[\s@.]+/)
@@ -144,17 +155,6 @@ function PlanBadge({ plan }) {
       {cfg.label}
     </span>
   );
-}
-
-function RoleBadge({ role }) {
-  const map = {
-    admin: { label: 'Admin', variant: 'blue' },
-    developer: { label: 'Developer', variant: 'purple' },
-    viewer: { label: 'Viewer', variant: 'gray' },
-    owner: { label: 'Owner', variant: 'blue' },
-  };
-  const cfg = map[role?.toLowerCase()] || { label: role || 'Member', variant: 'gray' };
-  return <PillBadge variant={cfg.variant}>{cfg.label}</PillBadge>;
 }
 
 // ─── Category Helpers ────────────────────────────────────────────────────────
@@ -252,54 +252,418 @@ function ConfirmDialog({
   );
 }
 
-// ─── Section 1: Profile Header ───────────────────────────────────────────────
+// ─── Section 1: Brain Metrics Hero ──────────────────────────────────────────
 
-function ProfileHeaderSection({ user, org, plan, profileFacts }) {
+function BrainMetricsHero({ user, org, plan, stats, profileFacts }) {
+  const navigate = useNavigate();
   const nameFromFacts = profileFacts?.find((f) => f.key === 'name')?.value;
-  const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'Unknown User';
+  const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'User';
 
-  const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : null;
+  const {
+    memory_count: rawMemCount,
+    observation_count = 0,
+    relationship_count = 0,
+  } = stats || {};
+  const memoryCount = rawMemCount || (observation_count > 0 ? observation_count : 0);
+  const factCount = profileFacts?.length || 0;
+
+  const sourcePlatforms = stats?.top_source_platforms || [];
+
+  const metrics = [
+    { label: 'memories', value: memoryCount, icon: Brain },
+    { label: 'connections', value: relationship_count, icon: Link },
+    { label: 'facts', value: factCount, icon: User },
+    { label: 'sources', value: sourcePlatforms.length, icon: Globe },
+  ];
+
+  return (
+    <motion.div
+      variants={fadeUp}
+      className="rounded-xl overflow-hidden"
+      style={{ background: '#0a0a0f' }}
+    >
+      <div className="p-8">
+        {/* Header row */}
+        <div className="flex items-center gap-5 mb-8">
+          <UserAvatar displayName={displayName} email={user?.email} />
+          <div>
+            <h2 className="text-white text-2xl font-bold font-['Space_Grotesk']">
+              {displayName}&apos;s Second Brain
+            </h2>
+            <div className="flex items-center gap-3 mt-1">
+              {org && (
+                <span className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] flex items-center gap-1.5">
+                  <Building2 size={13} />
+                  {org.name}
+                </span>
+              )}
+              <PlanBadge plan={plan} />
+            </div>
+          </div>
+        </div>
+
+        {/* Metric cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {metrics.map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.08] transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Icon size={14} className="text-[#117dff]" />
+              </div>
+              <p className="text-white text-3xl font-bold font-mono leading-none mb-1">
+                <AnimatedCounter value={value} />
+              </p>
+              <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => navigate('/hivemind/app/graph')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#117dff] text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-[#0066e0] transition-colors"
+          >
+            View Graph
+            <ArrowRight size={14} />
+          </button>
+          <button
+            onClick={() => navigate('/hivemind/app/chat')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/20 text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-white/10 transition-colors"
+          >
+            <MessageSquare size={14} />
+            Talk to HIVE
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Section 2: Knowledge Identity Card ─────────────────────────────────────
+
+const IDENTITY_ICON_MAP = {
+  name: User,
+  company: Building2,
+  organization: Building2,
+  location: MapPin,
+  city: MapPin,
+  country: MapPin,
+  timezone: Clock,
+  role: Briefcase,
+  job: Briefcase,
+  title: Briefcase,
+  focus: Target,
+  goal: Target,
+  email: Mail,
+  preference: Settings2,
+};
+
+function getIconForKey(key) {
+  const lower = (key || '').toLowerCase();
+  for (const [keyword, icon] of Object.entries(IDENTITY_ICON_MAP)) {
+    if (lower.includes(keyword)) return icon;
+  }
+  return Sparkles;
+}
+
+function KnowledgeIdentityCard({ facts, onToggleEditor }) {
+  if (!facts || facts.length === 0) {
+    return (
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <Eye size={16} className="text-[#117dff]" />
+          <SectionHeading>What Your Brain Knows About You</SectionHeading>
+        </div>
+        <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
+          <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
+          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
+            No identity facts yet.
+          </p>
+          <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
+            Profile facts build automatically as you use HIVEMIND, or add them manually below.
+          </p>
+        </div>
+        <button
+          onClick={onToggleEditor}
+          className="mt-4 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+        >
+          <Plus size={14} />
+          Add Profile Facts
+        </button>
+      </Card>
+    );
+  }
+
+  // Separate preferences from identity facts
+  const identityFacts = facts.filter((f) => f.category !== 'preference');
+  const preferences = facts.filter((f) => f.category === 'preference');
 
   return (
     <Card>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <UserAvatar displayName={displayName} email={user?.email} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] truncate">
-              {displayName}
-            </p>
-            <PlanBadge plan={plan} />
-          </div>
-          <p className="text-[#525252] text-sm font-mono mt-0.5 truncate">{user?.email}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {org && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-mono text-[#525252]">
-                <Building2 size={12} className="text-[#a3a3a3]" />
-                {org.name}
-              </span>
-            )}
-            {user?.role && <RoleBadge role={user.role} />}
-            {memberSince && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a3a3a3]">
-                <Clock size={12} />
-                Joined {memberSince}
-              </span>
-            )}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Eye size={16} className="text-[#117dff]" />
+          <SectionHeading>What Your Brain Knows About You</SectionHeading>
+        </div>
+        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      {/* Identity grid */}
+      {identityFacts.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          {identityFacts.map((fact) => {
+            const Icon = getIconForKey(fact.key);
+            return (
+              <div
+                key={fact.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/30 transition-colors group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
+                  <Icon size={14} className="text-[#117dff]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">{fact.key}</p>
+                  <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold truncate">{fact.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Preferences */}
+      {preferences.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider mb-2">Preferences</p>
+          <div className="flex flex-wrap gap-2">
+            {preferences.map((pref) => (
+              <PillBadge key={pref.id} variant="amber">
+                {pref.key}: {pref.value}
+              </PillBadge>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      <button
+        onClick={onToggleEditor}
+        className="flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+      >
+        <Pencil size={13} />
+        Edit Profile Facts
+        <ChevronDown size={14} />
+      </button>
     </Card>
   );
 }
 
-// ─── Section 2: Profile Facts ────────────────────────────────────────────────
+// ─── Section 3: Knowledge Breakdown ─────────────────────────────────────────
+
+function KnowledgeBreakdown({ stats }) {
+  const {
+    top_source_platforms = [],
+    memory_count: rawMemCount,
+    observation_count = 0,
+    graph_summary = {},
+  } = stats || {};
+
+  const memoryCount = rawMemCount || (observation_count > 0 ? observation_count : 0);
+
+  // Build source data with estimated proportions
+  const totalSources = top_source_platforms.length;
+  const sourceData = top_source_platforms.map((platform, idx) => {
+    // Estimate proportions — first platform gets most, decreasing
+    const weight = totalSources > 1 ? Math.max(1, totalSources - idx) : 1;
+    return { name: platform, weight };
+  });
+  const totalWeight = sourceData.reduce((s, d) => s + d.weight, 0) || 1;
+  const sourcesWithPct = sourceData.map((s) => ({
+    ...s,
+    pct: Math.round((s.weight / totalWeight) * 100),
+    count: Math.round((s.weight / totalWeight) * memoryCount),
+  }));
+
+  const relationshipTypes = [
+    { label: 'Updates', count: graph_summary.update || 0, color: '#3b82f6' },
+    { label: 'Extends', count: graph_summary.extend || 0, color: '#117dff' },
+    { label: 'Derives', count: graph_summary.derive || 0, color: '#a855f7' },
+  ];
+  const maxRelCount = Math.max(...relationshipTypes.map((r) => r.count), 1);
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-5">
+        <BarChart2 size={16} className="text-[#117dff]" />
+        <SectionHeading>Knowledge Breakdown</SectionHeading>
+      </div>
+
+      {/* Knowledge Sources */}
+      {sourcesWithPct.length > 0 && (
+        <div className="mb-6">
+          <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Knowledge Sources</p>
+          <div className="space-y-3">
+            {sourcesWithPct.map(({ name, pct, count }) => (
+              <div key={name}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{name}</span>
+                  <span className="text-[#a3a3a3] text-xs font-mono">
+                    ~{count.toLocaleString()} memories &middot; {pct}%
+                  </span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-[#f3f1ec] overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+                    className="h-full rounded-full bg-[#117dff]"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Connection Strength */}
+      <div>
+        <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Connection Strength</p>
+        <div className="space-y-3">
+          {relationshipTypes.map(({ label, count, color }) => (
+            <div key={label}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[#525252] text-sm font-['Space_Grotesk']">{label}</span>
+                <span className="text-[#0a0a0a] font-mono text-sm font-semibold">{count}</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-[#f3f1ec] overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(count / maxRelCount) * 100}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+                  className="h-full rounded-full"
+                  style={{ background: color }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top Tags */}
+      {(stats?.top_tags || []).length > 0 && (
+        <div className="mt-6 pt-5 border-t border-[#f3f1ec]">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Tag size={13} className="text-[#117dff]" />
+            <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Top Tags</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {stats.top_tags.map((tag) => (
+              <PillBadge key={tag} variant="blue">{tag}</PillBadge>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Section 4: Recent Brain Activity ───────────────────────────────────────
+
+function RecentBrainActivity() {
+  const navigate = useNavigate();
+  const recentQuery = useApiQuery(
+    useCallback(async () => {
+      try {
+        const { data } = await apiClient.controlPlane.get('/v1/proxy/memories?limit=5&sort=recent');
+        return data;
+      } catch {
+        return null;
+      }
+    }, [])
+  );
+  const { data: recentData, loading: recentLoading } = recentQuery;
+
+  const memories = recentData?.memories || recentData?.results || (Array.isArray(recentData) ? recentData : []);
+
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diffMs = now - then;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return `${Math.floor(days / 7)}w ago`;
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-5">
+        <Activity size={16} className="text-[#117dff]" />
+        <SectionHeading>Recent Brain Activity</SectionHeading>
+      </div>
+
+      {recentLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-5 h-5 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : memories.length === 0 ? (
+        <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
+          <Brain size={24} className="text-[#d4d0ca] mx-auto mb-2" />
+          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
+            No recent memories found. Start adding knowledge to your second brain.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {memories.slice(0, 5).map((mem, idx) => {
+            const title = mem.title || mem.content?.slice(0, 60) || mem.text?.slice(0, 60) || 'Untitled memory';
+            const source = mem.source_platform || mem.source || mem.metadata?.source || '';
+            const time = mem.updated_at || mem.created_at || mem.timestamp;
+            return (
+              <div
+                key={mem.id || idx}
+                className="flex items-start gap-3 py-3 border-b border-[#f3f1ec] last:border-b-0 group hover:bg-[#faf9f4] -mx-2 px-2 rounded-lg transition-colors"
+              >
+                <div className="mt-1.5 w-2 h-2 rounded-full bg-[#117dff] flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium truncate">
+                    {title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {time && (
+                      <span className="text-[#a3a3a3] text-xs font-mono">{formatTimeAgo(time)}</span>
+                    )}
+                    {source && (
+                      <PillBadge variant="gray">{source}</PillBadge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        onClick={() => navigate('/hivemind/app/memories')}
+        className="mt-4 inline-flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+      >
+        View All Memories
+        <ArrowRight size={14} />
+      </button>
+    </Card>
+  );
+}
+
+// ─── Section 5: Profile Facts (Collapsible) ─────────────────────────────────
 
 function ProfileFactsSection({ facts, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
@@ -411,15 +775,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
 
   return (
     <>
-      <Card>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <User size={16} className="text-[#117dff]" />
-            <SectionHeading>Profile Facts</SectionHeading>
-          </div>
-          <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
-        </div>
-
+      <div>
         {facts.length === 0 && !showAddRow ? (
           <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
             <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
@@ -609,7 +965,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
             Add Fact
           </button>
         )}
-      </Card>
+      </div>
 
       {/* Delete Confirmation */}
       {deleteTarget && (
@@ -629,171 +985,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
   );
 }
 
-// ─── Section 3: Profile Context Preview ──────────────────────────────────────
-
-function ProfileContextPreviewSection({ context }) {
-  return (
-    <Card>
-      <div className="flex items-center gap-2 mb-2">
-        <Code2 size={16} className="text-[#117dff]" />
-        <SectionHeading>Profile Context Preview</SectionHeading>
-      </div>
-      <p className="text-[#525252] text-xs font-['Space_Grotesk'] mb-4">
-        This is what your AI sees about you. This context string is injected into every LLM prompt.
-      </p>
-
-      {context ? (
-        <pre className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-xs font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed">
-          {context}
-        </pre>
-      ) : (
-        <div className="px-4 py-6 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
-          <Eye size={24} className="text-[#d4d0ca] mx-auto mb-2" />
-          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
-            No profile context generated yet. Add some profile facts to see what your AI will know about you.
-          </p>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Section 4: Memory Stats ─────────────────────────────────────────────────
-
-function MemoryStatsSection({ profile }) {
-  const navigate = useNavigate();
-  const {
-    memory_count: rawMemCount,
-    observation_count = 0,
-    relationship_count = 0,
-    top_tags = [],
-    top_source_platforms = [],
-    graph_summary = {},
-    plan,
-  } = profile || {};
-
-  const memory_count = rawMemCount || (observation_count > 0 || relationship_count > 0 ? observation_count : 0);
-
-  const relationshipTypes = [
-    { label: 'Updates', count: graph_summary.update || 0, color: '#3b82f6' },
-    { label: 'Extends', count: graph_summary.extend || 0, color: '#117dff' },
-    { label: 'Derives', count: graph_summary.derive || 0, color: '#a855f7' },
-  ];
-  const maxRelCount = Math.max(...relationshipTypes.map((r) => r.count), 1);
-
-  return (
-    <Card>
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <Brain size={16} className="text-[#117dff]" />
-          <SectionHeading>Memory Stats</SectionHeading>
-        </div>
-        <PlanBadge plan={plan || 'free'} />
-      </div>
-
-      {/* Usage bars */}
-      <div className="mb-5">
-        <UsageBar
-          label="Memories"
-          used={memory_count}
-          limit={plan === 'free' ? 1000 : plan === 'pro' ? 50000 : 0}
-        />
-        <UsageBar label="Observations" used={observation_count} limit={0} />
-        <UsageBar label="Relationships" used={relationship_count} limit={0} />
-      </div>
-
-      {/* Stat pills */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { label: 'Memories', value: memory_count, accent: true },
-          { label: 'Observations', value: observation_count, accent: false },
-          { label: 'Relationships', value: relationship_count, accent: false },
-        ].map(({ label, value, accent }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-[#e3e0db] p-4 bg-[#faf9f4]"
-          >
-            <p
-              className="text-2xl font-bold font-mono leading-none mb-1"
-              style={{ color: accent ? '#117dff' : '#0a0a0a' }}
-            >
-              {(value || 0).toLocaleString()}
-            </p>
-            <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Tags */}
-      {top_tags.length > 0 && (
-        <div className="mb-5">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Tag size={13} className="text-[#117dff]" />
-            <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Top Tags</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {top_tags.map((tag) => (
-              <PillBadge key={tag} variant="blue">{tag}</PillBadge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Platforms */}
-      {top_source_platforms.length > 0 && (
-        <div className="mb-5">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Link size={13} className="text-[#525252]" />
-            <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Source Platforms</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {top_source_platforms.map((platform) => (
-              <PillBadge key={platform} variant="gray">{platform}</PillBadge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Relationship distribution */}
-      <div className="mb-5">
-        <div className="flex items-center gap-1.5 mb-3">
-          <BarChart2 size={13} className="text-[#525252]" />
-          <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Relationship Distribution</span>
-        </div>
-        <div className="space-y-3">
-          {relationshipTypes.map(({ label, count, color }) => (
-            <div key={label}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[#525252] text-sm font-['Space_Grotesk']">{label}</span>
-                <span className="text-[#0a0a0a] font-mono text-sm font-semibold">{count}</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-[#f3f1ec] overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(count / maxRelCount) * 100}%` }}
-                  transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
-                  className="h-full rounded-full"
-                  style={{ background: color }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <button
-        onClick={() => navigate('/hivemind/app/billing')}
-        className="inline-flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
-      >
-        <Zap size={14} />
-        Manage Plan
-        <ExternalLink size={12} />
-      </button>
-    </Card>
-  );
-}
-
-// ─── Section 5: Data & Privacy ───────────────────────────────────────────────
+// ─── Section 6: Data & Privacy ──────────────────────────────────────────────
 
 function DataPrivacySection() {
   const { logout } = useAuth();
@@ -969,6 +1161,7 @@ function DataPrivacySection() {
 
 export default function Profile() {
   const { user, org } = useAuth();
+  const [factsExpanded, setFactsExpanded] = useState(false);
 
   // Fetch persistent profile facts from /api/profiles (plural)
   const profilesQuery = useApiQuery(async () => {
@@ -978,11 +1171,16 @@ export default function Profile() {
   const { data: profilesData, loading: profilesLoading, refetch: refetchProfiles } = profilesQuery;
 
   // Fetch stats from /api/profile (singular, existing)
+  // getProfile() returns { ok, profile: { memory_count, plan, ... }, graph_summary }
   const statsQuery = useApiQuery(() => apiClient.getProfile());
-  const { data: statsData, loading: statsLoading } = statsQuery;
+  const { data: statsRaw, loading: statsLoading } = statsQuery;
+
+  // Flatten so downstream components can destructure memory_count, plan, etc. directly
+  const statsData = statsRaw
+    ? { ...statsRaw.profile, graph_summary: statsRaw.graph_summary }
+    : null;
 
   const facts = profilesData?.facts || [];
-  const context = profilesData?.context || '';
   const loading = profilesLoading && statsLoading;
 
   if (loading) {
@@ -997,9 +1195,9 @@ export default function Profile() {
     <div className="min-h-full">
       {/* Page header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Profile</h1>
+        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Second Brain Dashboard</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          Your profile facts, memory footprint and privacy controls
+          Your knowledge identity, memory footprint, and privacy controls
         </p>
       </motion.div>
 
@@ -1009,27 +1207,67 @@ export default function Profile() {
         animate="visible"
         className="space-y-6"
       >
-        {/* Section 1: Profile Header */}
-        <ProfileHeaderSection
+        {/* Section 1: Brain Metrics Hero */}
+        <BrainMetricsHero
           user={user}
           org={org}
           plan={statsData?.plan}
+          stats={statsData}
           profileFacts={facts}
         />
 
-        {/* Section 2: Profile Facts */}
-        <ProfileFactsSection
+        {/* Section 2: Knowledge Identity Card */}
+        <KnowledgeIdentityCard
           facts={facts}
-          onRefresh={refetchProfiles}
+          onToggleEditor={() => setFactsExpanded((p) => !p)}
         />
 
-        {/* Section 3: Profile Context Preview */}
-        <ProfileContextPreviewSection context={context} />
+        {/* Section 3: Knowledge Breakdown */}
+        <KnowledgeBreakdown stats={statsData} />
 
-        {/* Section 4: Memory Stats */}
-        <MemoryStatsSection profile={statsData} />
+        {/* Section 4: Recent Brain Activity */}
+        <RecentBrainActivity />
 
-        {/* Section 5: Data & Privacy */}
+        {/* Section 5: Profile Facts (collapsible) */}
+        <Card>
+          <button
+            onClick={() => setFactsExpanded((p) => !p)}
+            className="flex items-center justify-between w-full group"
+          >
+            <div className="flex items-center gap-2">
+              <User size={16} className="text-[#117dff]" />
+              <SectionHeading>Profile Facts Editor</SectionHeading>
+              <span className="text-[#a3a3a3] text-xs font-mono ml-2">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
+            </div>
+            <motion.div
+              animate={{ rotate: factsExpanded ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronRight size={18} className="text-[#a3a3a3] group-hover:text-[#117dff] transition-colors" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {factsExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className="mt-5 pt-5 border-t border-[#f3f1ec]">
+                  <ProfileFactsSection
+                    facts={facts}
+                    onRefresh={refetchProfiles}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+
+        {/* Section 6: Data & Privacy */}
         <DataPrivacySection />
       </motion.div>
     </div>
