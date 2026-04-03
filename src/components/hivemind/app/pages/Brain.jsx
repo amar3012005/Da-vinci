@@ -282,6 +282,7 @@ export default function Brain() {
       const nodes = (data.nodes || []).map(n => ({
         ...n,
         val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
+        _pulsePhase: Math.random() * Math.PI * 2, // random phase so nodes pulse independently
       }));
       const links = (data.edges || []).map(e => ({
         source: e.source,
@@ -343,8 +344,8 @@ export default function Brain() {
         const data = fg.graphData();
         data.nodes.forEach((node, i) => {
           if (!node._fx && !node._fy) {
-            node.x += Math.sin(time + i * 0.7) * 0.08;
-            node.y += Math.cos(time + i * 0.5) * 0.06;
+            node.x += Math.sin(time + i * 0.7) * 0.15;
+            node.y += Math.cos(time * 0.8 + i * 0.5) * 0.12;
           }
         });
         fg.refresh();
@@ -369,7 +370,16 @@ export default function Brain() {
     if (node) handleNodeClick(node);
   }, [graphData.nodes, handleNodeClick]);
 
-  /* ─── Custom node painting ─────────────────────────────────────── */
+  /* ─── Animate time ref for pulsing effects ──────────────────────── */
+  const timeRef = useRef(0);
+  useEffect(() => {
+    let frame;
+    const tick = () => { timeRef.current += 0.015; frame = requestAnimationFrame(tick); };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  /* ─── Custom node painting — NEURAL ORBS ──────────────────────── */
   const paintNode = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
 
@@ -378,137 +388,128 @@ export default function Brain() {
     const isSelected = selectedNode?.id === node.id;
 
     const layerColor = DARK_LAYER_COLORS[node.nodeLayer];
-    const baseColor = layerColor
-      || DARK_TYPE_COLORS[node.memoryType]
-      || DARK_TYPE_COLORS.default;
+    const baseColor = layerColor || DARK_TYPE_COLORS[node.memoryType] || DARK_TYPE_COLORS.default;
 
     const glow = node.temporalWeight || 0.3;
-    let radius = Math.sqrt(node.val || 4) * 2.2;
+    const t = timeRef.current;
+    // Pulsing factor — each node pulses at its own phase
+    const pulse = 0.85 + Math.sin(t * 1.2 + (node._pulsePhase || 0)) * 0.15;
 
-    // Size adjustments per layer
-    if (node.nodeLayer === 'fact') radius = Math.max(radius * 0.7, 3);
-    if (node.nodeLayer === 'promoted') radius = radius * 1.5;
-    if (node.nodeLayer === 'tara') radius = radius * 1.2;
-    if (node.nodeLayer === 'tara-insight') radius = radius * 1.1;
+    let radius = Math.sqrt(node.val || 4) * 2.5 * pulse;
+    if (node.nodeLayer === 'promoted') radius *= 1.4;
+    if (node.nodeLayer === 'tara') radius *= 1.15;
 
-    // Outer glow ring (temporal energy)
-    if (!isDimmed) {
-      const glowRadius = radius + 4 + glow * 8;
-      const gradient = ctx.createRadialGradient(node.x, node.y, radius * 0.5, node.x, node.y, glowRadius);
-      gradient.addColorStop(0, hexToRgba(baseColor, 0.4));
-      gradient.addColorStop(0.6, hexToRgba(baseColor, 0.08));
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    if (isDimmed) {
+      // Dimmed: just a tiny faint dot
       ctx.beginPath();
-      ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI);
-      ctx.fillStyle = gradient;
+      ctx.arc(node.x, node.y, radius * 0.5, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba(baseColor, 0.06);
       ctx.fill();
+      return;
     }
 
-    // Selection ring
+    // ── Layer 1: Outer nebula halo (large, very faint) ──
+    const nebulaR = radius * 4 + glow * 12;
+    const nebula = ctx.createRadialGradient(node.x, node.y, radius, node.x, node.y, nebulaR);
+    nebula.addColorStop(0, hexToRgba(baseColor, 0.12 * glow));
+    nebula.addColorStop(0.4, hexToRgba(baseColor, 0.04 * glow));
+    nebula.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, nebulaR, 0, 2 * Math.PI);
+    ctx.fillStyle = nebula;
+    ctx.fill();
+
+    // ── Layer 2: Inner glow ring ──
+    const glowR = radius * 2.2;
+    const innerGlow = ctx.createRadialGradient(node.x, node.y, radius * 0.3, node.x, node.y, glowR);
+    innerGlow.addColorStop(0, hexToRgba(baseColor, 0.5));
+    innerGlow.addColorStop(0.5, hexToRgba(baseColor, 0.15));
+    innerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, glowR, 0, 2 * Math.PI);
+    ctx.fillStyle = innerGlow;
+    ctx.fill();
+
+    // ── Layer 3: Core orb (bright center) ──
+    const coreGrad = ctx.createRadialGradient(
+      node.x - radius * 0.15, node.y - radius * 0.15, radius * 0.1,
+      node.x, node.y, radius
+    );
+    coreGrad.addColorStop(0, hexToRgba('#ffffff', 0.9));
+    coreGrad.addColorStop(0.2, hexToRgba(baseColor, 0.95));
+    coreGrad.addColorStop(0.7, hexToRgba(baseColor, 0.6));
+    coreGrad.addColorStop(1, hexToRgba(baseColor, 0.15));
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+
+    // ── Layer 4: Specular highlight (tiny bright spot top-left) ──
+    const specR = radius * 0.35;
+    const spec = ctx.createRadialGradient(
+      node.x - radius * 0.3, node.y - radius * 0.3, 0,
+      node.x - radius * 0.3, node.y - radius * 0.3, specR
+    );
+    spec.addColorStop(0, 'rgba(255,255,255,0.7)');
+    spec.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(node.x - radius * 0.3, node.y - radius * 0.3, specR, 0, 2 * Math.PI);
+    ctx.fillStyle = spec;
+    ctx.fill();
+
+    // ── Selection: glowing ring ──
     if (isSelected) {
       ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
+      ctx.strokeStyle = hexToRgba('#60a5fa', 0.9);
+      ctx.lineWidth = 2.5 / globalScale;
+      ctx.shadowColor = '#60a5fa';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // ── Highlight: warm ring ──
+    if (isHighlighted) {
+      ctx.beginPath();
       ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI);
-      ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 2 / globalScale;
+      ctx.strokeStyle = hexToRgba('#fbbf24', 0.8);
+      ctx.lineWidth = 1.8 / globalScale;
       ctx.stroke();
     }
 
-    // Highlight ring
-    if (isHighlighted) {
+    // ── Promoted risk: pulsing red halo ──
+    if (node.nodeLayer === 'promoted') {
+      const pr = radius + 6 + Math.sin(t * 2) * 2;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
-      ctx.strokeStyle = '#fbbf24';
+      ctx.arc(node.x, node.y, pr, 0, 2 * Math.PI);
+      ctx.strokeStyle = hexToRgba('#f87171', 0.3 + Math.sin(t * 2) * 0.15);
       ctx.lineWidth = 1.5 / globalScale;
       ctx.stroke();
     }
 
-    // ── Node body — shape per layer type ──
-    if (node.nodeLayer === 'tara-insight') {
-      // 4-point star for clinical insights
-      const spikes = 4;
-      const outerR = radius;
-      const innerR = radius * 0.45;
-      ctx.beginPath();
-      for (let i = 0; i < spikes * 2; i++) {
-        const r = i % 2 === 0 ? outerR : innerR;
-        const angle = (Math.PI / spikes) * i - Math.PI / 2;
-        ctx.lineTo(node.x + r * Math.cos(angle), node.y + r * Math.sin(angle));
-      }
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.08) : hexToRgba(baseColor, 0.85);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.stroke();
-
-    } else if (node.nodeLayer === 'tara') {
-      // Hexagon for TARA conversation turns
-      ctx.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - Math.PI / 6;
-        ctx.lineTo(node.x + radius * Math.cos(angle), node.y + radius * Math.sin(angle));
-      }
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.08) : hexToRgba(baseColor, 0.8);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-      ctx.lineWidth = 1 / globalScale;
-      ctx.stroke();
-
-    } else if (node.nodeLayer === 'fact') {
-      // Diamond for extracted facts
-      ctx.beginPath();
-      ctx.moveTo(node.x, node.y - radius);
-      ctx.lineTo(node.x + radius, node.y);
-      ctx.lineTo(node.x, node.y + radius);
-      ctx.lineTo(node.x - radius, node.y);
-      ctx.closePath();
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.08) : hexToRgba(baseColor, 0.75);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.9);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
-
-    } else if (node.nodeLayer === 'observation') {
-      // Rounded square for observations
-      const s = radius * 0.85;
-      ctx.beginPath();
-      ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.08) : hexToRgba(baseColor, 0.65);
-      ctx.fill();
-      ctx.strokeStyle = hexToRgba(baseColor, 0.85);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
-
-    } else {
-      // Circle for regular memories
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = isDimmed ? hexToRgba(baseColor, 0.08) : hexToRgba(baseColor, 0.65 + glow * 0.35);
-      ctx.fill();
-      ctx.strokeStyle = isDimmed ? hexToRgba(baseColor, 0.05) : hexToRgba(baseColor, 0.85);
-      ctx.lineWidth = 0.5 / globalScale;
-      ctx.stroke();
+    // ── Source icon badge ──
+    if (node.sourcePlatform && globalScale > 0.8) {
+      drawSourceIcon(ctx, node.x + radius * 0.8, node.y + radius * 0.8, node.sourcePlatform, '#ffffff');
     }
 
-    // Source icon badge (bottom-right of node)
-    if (node.sourcePlatform && !isDimmed && globalScale > 0.8) {
-      drawSourceIcon(ctx, node.x + radius * 0.7, node.y + radius * 0.7, node.sourcePlatform, baseColor);
-    }
-
-    // Labels: progressive opacity based on zoom level
-    const labelOpacity = Math.min(1, Math.max(0, (globalScale - 1.2) / 1.0));
-    if (labelOpacity > 0.05 && !isDimmed) {
+    // ── Labels: progressive reveal ──
+    const labelOpacity = Math.min(1, Math.max(0, (globalScale - 1.0) / 0.8));
+    if (labelOpacity > 0.05) {
       const label = truncate(node.title || '', 25);
-      ctx.font = `${Math.max(10, 11 / globalScale)}px Space Grotesk, sans-serif`;
+      const fontSize = Math.max(9, 10 / globalScale);
+      ctx.font = `${fontSize}px Space Grotesk, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = `rgba(255,255,255,${labelOpacity * 0.85})`;
-      ctx.fillText(label, node.x, node.y + radius + 3);
+      // Text shadow for readability on dark bg
+      ctx.fillStyle = `rgba(0,0,0,${labelOpacity * 0.6})`;
+      ctx.fillText(label, node.x + 0.5, node.y + radius + 4.5);
+      ctx.fillStyle = `rgba(255,255,255,${labelOpacity * 0.9})`;
+      ctx.fillText(label, node.x, node.y + radius + 4);
     }
   }, [highlightNodes, selectedNode]);
 
-  /* ─── Custom link painting (curved Bezier) ─────────────────────── */
+  /* ─── Custom link painting — GLOWING SYNAPTIC CONNECTIONS ──────── */
   const paintLink = useCallback((link, ctx) => {
     const sx = link.source?.x ?? link.source;
     const sy = link.source?.y ?? link.source;
@@ -519,25 +520,39 @@ export default function Brain() {
     const color = DARK_EDGE_COLORS[link.type] || '#334155';
     const confidence = link.confidence || 0.5;
 
-    ctx.strokeStyle = hexToRgba(color, 0.2 + confidence * 0.4);
-    ctx.lineWidth = 0.5 + confidence * 1.5;
+    // Bezier curve control point
+    const dx = tx - sx;
+    const dy = ty - sy;
+    const curvature = 0.2;
+    const cx = (sx + tx) / 2 - dy * curvature;
+    const cy = (sy + ty) / 2 + dx * curvature;
 
-    if (link.type === 'Derives') {
-      ctx.setLineDash([4, 4]);
-    }
-
-    // Bezier curve
-    const dx = link.target.x - link.source.x;
-    const dy = link.target.y - link.source.y;
-    const curvature = 0.15;
-    const cx = (link.source.x + link.target.x) / 2 - dy * curvature;
-    const cy = (link.source.y + link.target.y) / 2 + dx * curvature;
-
+    // Layer 1: Wide faint glow (synaptic channel)
     ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.quadraticCurveTo(cx, cy, link.target.x, link.target.y);
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
+    ctx.strokeStyle = hexToRgba(color, 0.06 + confidence * 0.06);
+    ctx.lineWidth = 3 + confidence * 3;
+    ctx.stroke();
+
+    // Layer 2: Core line
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
+    ctx.strokeStyle = hexToRgba(color, 0.15 + confidence * 0.35);
+    ctx.lineWidth = 0.4 + confidence * 1.2;
+    if (link.type === 'Derives') ctx.setLineDash([3, 5]);
+    else if (link.type === 'Contradicts') ctx.setLineDash([2, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Layer 3: Bright center highlight (thin)
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
+    ctx.strokeStyle = hexToRgba(color, 0.08 + confidence * 0.15);
+    ctx.lineWidth = 0.3;
+    ctx.stroke();
   }, []);
 
   /* ─── Stats ────────────────────────────────────────────────────── */
@@ -554,11 +569,19 @@ export default function Brain() {
 
   return (
     <div className="h-screen w-full relative overflow-hidden" style={{ backgroundColor: '#08080c' }}>
-      {/* Radial gradient background */}
+      {/* Radial gradient background with subtle blue tint */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at 50% 50%, #0d1117 0%, #08080c 70%)',
+          background: 'radial-gradient(ellipse at 50% 40%, #0c1220 0%, #080a10 50%, #06060a 100%)',
+        }}
+      />
+      {/* Subtle grid overlay for depth perception */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #60a5fa 0.5px, transparent 0.5px)',
+          backgroundSize: '40px 40px',
         }}
       />
 
@@ -721,10 +744,12 @@ export default function Brain() {
           linkDirectionalArrowLength={3}
           linkDirectionalArrowRelPos={0.9}
           linkDirectionalArrowColor={(link) => DARK_EDGE_COLORS[link.type] || '#334155'}
-          cooldownTicks={100}
-          warmupTicks={50}
-          d3AlphaDecay={0.02}
-          d3VelocityDecay={0.3}
+          cooldownTicks={150}
+          warmupTicks={80}
+          d3AlphaDecay={0.015}
+          d3VelocityDecay={0.25}
+          d3Force="charge"
+          d3ReheatSimulation={false}
           backgroundColor="rgba(0,0,0,0)"
           width={typeof window !== 'undefined' ? window.innerWidth - (selectedNode ? 340 : 0) : 800}
           height={typeof window !== 'undefined' ? window.innerHeight : 600}
