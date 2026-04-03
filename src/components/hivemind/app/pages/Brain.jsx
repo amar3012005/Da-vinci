@@ -371,6 +371,8 @@ export default function Brain() {
 
   /* ─── Custom node painting ─────────────────────────────────────── */
   const paintNode = useCallback((node, ctx, globalScale) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+
     const isHighlighted = highlightNodes.size > 0 && highlightNodes.has(node.id);
     const isDimmed = highlightNodes.size > 0 && !highlightNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
@@ -508,6 +510,12 @@ export default function Brain() {
 
   /* ─── Custom link painting (curved Bezier) ─────────────────────── */
   const paintLink = useCallback((link, ctx) => {
+    const sx = link.source?.x ?? link.source;
+    const sy = link.source?.y ?? link.source;
+    const tx = link.target?.x ?? link.target;
+    const ty = link.target?.y ?? link.target;
+    if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Number.isFinite(tx) || !Number.isFinite(ty)) return;
+
     const color = DARK_EDGE_COLORS[link.type] || '#334155';
     const confidence = link.confidence || 0.5;
 
