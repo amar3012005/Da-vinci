@@ -24,65 +24,75 @@ const PLANS = [
   {
     id: 'free',
     name: 'Free',
-    price: '$0',
-    period: 'forever',
+    price: '€0',
+    period: '/month',
     description: 'For personal projects and experimentation',
     accent: false,
     features: [
-      { label: '1,000 memories', icon: Brain },
-      { label: '2 MCP connections', icon: Cable },
-      { label: '100 searches/day', icon: Zap },
-      { label: '7-day retention', icon: Clock },
-      { label: 'Community support', icon: Users },
+      { label: '1M tokens/month', icon: Brain },
+      { label: '10K searches/month', icon: Zap },
+      { label: '1 user', icon: Users },
+      { label: '1 connector', icon: Cable },
+      { label: 'Memory Graph', icon: HardDrive },
+      { label: 'MCP Protocol', icon: Cable },
+      { label: 'Agent Swarm', icon: Zap },
+      { label: 'Community support', icon: Headphones },
     ],
     limits: {
-      memories: 1000,
-      connections: 2,
-      searches: 100,
+      tokens: 1_000_000,
+      connections: 1,
+      searches: 10_000,
     },
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '$29',
+    price: '€19',
     period: '/month',
     description: 'For developers and power users',
     accent: true,
     popular: true,
     features: [
-      { label: '50,000 memories', icon: Brain },
-      { label: 'Unlimited MCP connections', icon: Cable },
-      { label: 'Unlimited searches', icon: Zap },
-      { label: '1 year retention', icon: Clock },
-      { label: 'All workspace connectors', icon: HardDrive },
-      { label: 'Priority support', icon: Headphones },
+      { label: '5M tokens/month', icon: Brain },
+      { label: '100K searches/month', icon: Zap },
+      { label: '5 users', icon: Users },
+      { label: '10 connectors', icon: Cable },
+      { label: 'Everything in Free', icon: Check },
+      { label: 'Web Intelligence', icon: Sparkles },
+      { label: 'LLM Observer', icon: Shield },
+      { label: 'TARA Voice Agent', icon: Headphones },
+      { label: 'Email support', icon: Headphones },
+      { label: '99.5% SLA', icon: Clock },
     ],
     limits: {
-      memories: 50000,
-      connections: null,
-      searches: null,
+      tokens: 5_000_000,
+      connections: 10,
+      searches: 100_000,
     },
   },
   {
-    id: 'team',
-    name: 'Team',
-    price: '$79',
+    id: 'scale',
+    name: 'Scale',
+    price: '€199',
     period: '/month',
     description: 'For teams building with shared memory',
     accent: false,
     features: [
-      { label: '500,000 memories', icon: Brain },
-      { label: 'Unlimited connections', icon: Cable },
-      { label: 'Unlimited searches', icon: Zap },
-      { label: 'Unlimited retention', icon: Clock },
-      { label: 'All connectors + SSO', icon: Shield },
-      { label: 'Up to 10 team members', icon: Users },
-      { label: 'Dedicated support', icon: Headphones },
+      { label: '80M tokens/month', icon: Brain },
+      { label: '2M searches/month', icon: Zap },
+      { label: '25 users', icon: Users },
+      { label: 'Unlimited connectors', icon: Cable },
+      { label: 'Everything in Pro', icon: Check },
+      { label: 'SSO / SAML', icon: Shield },
+      { label: 'Audit Logs', icon: Clock },
+      { label: 'DPA compliance', icon: Shield },
+      { label: 'Priority support', icon: Headphones },
+      { label: '99.9% SLA', icon: Clock },
     ],
     limits: {
-      memories: 500000,
+      tokens: 80_000_000,
       connections: null,
-      searches: null,
+      searches: 2_000_000,
     },
   },
   {
@@ -93,16 +103,18 @@ const PLANS = [
     description: 'For organizations with advanced needs',
     accent: false,
     features: [
-      { label: 'Unlimited memories', icon: Brain },
-      { label: 'Unlimited everything', icon: Zap },
-      { label: 'Custom retention policies', icon: Clock },
-      { label: 'SAML/SSO + SCIM', icon: Shield },
+      { label: 'Unlimited tokens', icon: Brain },
+      { label: 'Unlimited searches', icon: Zap },
+      { label: 'Unlimited users', icon: Users },
+      { label: 'Unlimited connectors', icon: Cable },
+      { label: 'Everything in Scale', icon: Check },
+      { label: 'HYOK (customer-managed keys)', icon: Shield },
       { label: 'Dedicated infrastructure', icon: HardDrive },
-      { label: 'SLA guarantee', icon: Headphones },
-      { label: 'Unlimited team members', icon: Users },
+      { label: 'Custom SLA', icon: Clock },
+      { label: 'Dedicated CSM', icon: Headphones },
     ],
     limits: {
-      memories: null,
+      tokens: null,
       connections: null,
       searches: null,
     },
@@ -230,7 +242,7 @@ function PlanCard({ plan, currentPlan, onSelect }) {
               : 'bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] hover:bg-[#eae7e1]'
           }`}
         >
-          {plan.accent ? 'Upgrade to Pro' : `Switch to ${plan.name}`}
+          {`Upgrade to ${plan.name}`}
           <ArrowRight size={13} />
         </button>
       )}
@@ -263,8 +275,8 @@ export default function Billing() {
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
     : (connectors?.activeCount || 0);
 
-  const searchesToday = profile?.searches_today || 0;
-  const memoryCount = profile?.memory_count || 0;
+  const searchesThisMonth = profile?.searches_this_month || profile?.searches_today || 0;
+  const tokensUsed = profile?.tokens_used || 0;
   const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
 
   const handleUpgrade = async (planId) => {
@@ -318,9 +330,9 @@ export default function Billing() {
         {/* Usage Meters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <UsageMeter
-            label="Memories"
-            used={memoryCount}
-            limit={currentPlanDef?.limits.memories}
+            label="Tokens This Month"
+            used={tokensUsed}
+            limit={currentPlanDef?.limits.tokens}
             icon={Brain}
           />
           <UsageMeter
@@ -330,8 +342,8 @@ export default function Billing() {
             icon={Cable}
           />
           <UsageMeter
-            label="Searches Today"
-            used={searchesToday}
+            label="Searches This Month"
+            used={searchesThisMonth}
             limit={currentPlanDef?.limits.searches}
             icon={Zap}
           />
@@ -372,8 +384,8 @@ export default function Billing() {
             key={plan.id}
             plan={{
               ...plan,
-              price: billingCycle === 'annual' && plan.price !== '$0' && plan.price !== 'Custom'
-                ? `$${Math.round(parseInt(plan.price.replace('$', '')) * 0.8)}`
+              price: billingCycle === 'annual' && plan.price !== '€0' && plan.price !== 'Custom'
+                ? `€${Math.round(parseInt(plan.price.replace('€', '')) * 0.8)}`
                 : plan.price,
             }}
             currentPlan={currentPlan}
@@ -390,8 +402,8 @@ export default function Billing() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              q: 'What counts as a memory?',
-              a: 'Each piece of information stored \u2014 a note, conversation snippet, code block, or document chunk \u2014 counts as one memory.',
+              q: 'What are tokens?',
+              a: 'Tokens are units of text processed by HIVEMIND. Every piece of information ingested, stored, or retrieved consumes tokens from your monthly quota.',
             },
             {
               q: 'Can I switch plans anytime?',
@@ -399,7 +411,7 @@ export default function Billing() {
             },
             {
               q: 'What happens when I hit my limit?',
-              a: 'New memories will be queued but not stored. Existing memories remain accessible. Upgrade to resume ingestion.',
+              a: 'New ingestion will be paused until the next billing cycle. Existing data remains accessible. Upgrade or wait for your quota to reset.',
             },
             {
               q: 'Do you offer refunds?',

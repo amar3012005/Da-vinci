@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Brain,
@@ -19,6 +19,15 @@ import {
   ExternalLink,
   Zap,
   BarChart2,
+  Plus,
+  Pencil,
+  X,
+  Check,
+  ChevronDown,
+  Code2,
+  Target,
+  Settings2,
+  Sparkles,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -41,7 +50,7 @@ const fadeUp = {
 
 function SectionHeading({ children }) {
   return (
-    <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-4">{children}</h3>
+    <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-0">{children}</h3>
   );
 }
 
@@ -88,7 +97,7 @@ function UsageBar({ label, used, limit, unit = '' }) {
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[#525252] text-sm font-['Space_Grotesk']">{label}</span>
         <span className="text-[#0a0a0a] font-mono text-xs">
-          {used?.toLocaleString() ?? '—'}{unit} / {limit ? `${limit.toLocaleString()}${unit}` : '∞'}
+          {used?.toLocaleString() ?? '\u2014'}{unit} / {limit ? `${limit.toLocaleString()}${unit}` : '\u221E'}
         </span>
       </div>
       <div className="w-full h-2 rounded-full bg-[#f3f1ec] overflow-hidden">
@@ -119,17 +128,6 @@ function UserAvatar({ displayName, email }) {
   );
 }
 
-function RoleBadge({ role }) {
-  const map = {
-    admin: { label: 'Admin', variant: 'blue' },
-    developer: { label: 'Developer', variant: 'purple' },
-    viewer: { label: 'Viewer', variant: 'gray' },
-    owner: { label: 'Owner', variant: 'blue' },
-  };
-  const cfg = map[role?.toLowerCase()] || { label: role || 'Member', variant: 'gray' };
-  return <PillBadge variant={cfg.variant}>{cfg.label}</PillBadge>;
-}
-
 function PlanBadge({ plan }) {
   const map = {
     free: { label: 'Free', variant: 'gray', dot: '#a3a3a3' },
@@ -151,7 +149,63 @@ function PlanBadge({ plan }) {
   );
 }
 
-// ─── Confirmation Dialog ──────────────────────────────────────────────────────
+function RoleBadge({ role }) {
+  const map = {
+    admin: { label: 'Admin', variant: 'blue' },
+    developer: { label: 'Developer', variant: 'purple' },
+    viewer: { label: 'Viewer', variant: 'gray' },
+    owner: { label: 'Owner', variant: 'blue' },
+  };
+  const cfg = map[role?.toLowerCase()] || { label: role || 'Member', variant: 'gray' };
+  return <PillBadge variant={cfg.variant}>{cfg.label}</PillBadge>;
+}
+
+// ─── Category Helpers ────────────────────────────────────────────────────────
+
+const CATEGORIES = ['static', 'dynamic', 'preference', 'goal'];
+
+const CATEGORY_CONFIG = {
+  static: { variant: 'blue', icon: User, label: 'Static' },
+  dynamic: { variant: 'purple', icon: Sparkles, label: 'Dynamic' },
+  preference: { variant: 'amber', icon: Settings2, label: 'Preference' },
+  goal: { variant: 'green', icon: Target, label: 'Goal' },
+};
+
+function CategoryBadge({ category }) {
+  const cfg = CATEGORY_CONFIG[category] || { variant: 'gray', icon: Tag, label: category || 'Unknown' };
+  const Icon = cfg.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono border ${
+        {
+          blue: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20',
+          purple: 'bg-purple-50 text-purple-700 border-purple-200',
+          amber: 'bg-amber-50 text-amber-700 border-amber-200',
+          green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          gray: 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]',
+        }[cfg.variant]
+      }`}
+    >
+      <Icon size={11} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function ConfidenceBar({ value }) {
+  const pct = Math.round((value || 0) * 100);
+  const color = pct >= 80 ? '#059669' : pct >= 50 ? '#d97706' : '#dc2626';
+  return (
+    <div className="flex items-center gap-2 min-w-[100px]">
+      <div className="flex-1 h-1.5 rounded-full bg-[#f3f1ec] overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <span className="text-[#a3a3a3] text-xs font-mono w-8 text-right">{pct}%</span>
+    </div>
+  );
+}
+
+// ─── Confirmation Dialog ─────────────────────────────────────────────────────
 
 function ConfirmDialog({
   title,
@@ -193,7 +247,7 @@ function ConfirmDialog({
               confirmVariant === 'red' ? 'bg-[#dc2626] hover:bg-red-700 disabled:bg-red-300' : 'bg-[#117dff] hover:bg-[#0066e0] disabled:bg-[#7fb5ff]'
             }`}
           >
-            {confirmLoading ? 'Deleting...' : confirmLabel}
+            {confirmLoading ? 'Processing...' : confirmLabel}
           </button>
         </div>
       </motion.div>
@@ -201,9 +255,12 @@ function ConfirmDialog({
   );
 }
 
-// ─── Section 1: Account Info ──────────────────────────────────────────────────
+// ─── Section 1: Profile Header ───────────────────────────────────────────────
 
-function AccountSection({ user, org }) {
+function ProfileHeaderSection({ user, org, plan, profileFacts }) {
+  const nameFromFacts = profileFacts?.find((f) => f.key === 'name')?.value;
+  const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'Unknown User';
+
   const memberSince = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -214,16 +271,15 @@ function AccountSection({ user, org }) {
 
   return (
     <Card>
-      <div className="flex items-center gap-2 mb-5">
-        <User size={16} className="text-[#525252]" />
-        <SectionHeading>Account</SectionHeading>
-      </div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <UserAvatar displayName={user?.display_name} email={user?.email} />
+        <UserAvatar displayName={displayName} email={user?.email} />
         <div className="flex-1 min-w-0">
-          <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] truncate">
-            {user?.display_name || user?.email?.split('@')[0] || 'Unknown User'}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] truncate">
+              {displayName}
+            </p>
+            <PlanBadge plan={plan} />
+          </div>
           <p className="text-[#525252] text-sm font-mono mt-0.5 truncate">{user?.email}</p>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {org && (
@@ -246,59 +302,369 @@ function AccountSection({ user, org }) {
   );
 }
 
-// ─── Section 2: Plan & Usage ──────────────────────────────────────────────────
+// ─── Section 2: Profile Facts ────────────────────────────────────────────────
 
-function PlanUsageSection({ profile }) {
-  const navigate = useNavigate();
+function ProfileFactsSection({ facts, onRefresh }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showAddRow, setShowAddRow] = useState(false);
+  const [newFact, setNewFact] = useState({ category: 'static', key: '', value: '' });
+  const [addError, setAddError] = useState(null);
 
-  const plan = profile?.plan || 'free';
-  const memoryCount = profile?.memory_count || 0;
-  const observationCount = profile?.observation_count || 0;
-  const relationshipCount = profile?.relationship_count || 0;
+  const startEdit = (fact) => {
+    setEditingId(fact.id);
+    setEditValue(fact.value);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const saveEdit = async (fact) => {
+    if (!editValue.trim() || editValue === fact.value) {
+      cancelEdit();
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.controlPlane.post('/v1/proxy/profiles', {
+        category: fact.category,
+        key: fact.key,
+        value: editValue.trim(),
+        confidence: fact.confidence,
+      });
+      cancelEdit();
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to update fact:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await apiClient.controlPlane.delete(`/v1/proxy/profiles?id=${deleteTarget.id}`);
+      setDeleteTarget(null);
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to delete fact:', err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    setAddError(null);
+    if (!newFact.key.trim() || !newFact.value.trim()) {
+      setAddError('Both key and value are required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.controlPlane.post('/v1/proxy/profiles', {
+        category: newFact.category,
+        key: newFact.key.trim(),
+        value: newFact.value.trim(),
+        confidence: 1.0,
+      });
+      setShowAddRow(false);
+      setNewFact({ category: 'static', key: '', value: '' });
+      onRefresh();
+    } catch (err) {
+      setAddError(err.response?.data?.error || err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd();
+    }
+    if (e.key === 'Escape') {
+      setShowAddRow(false);
+      setNewFact({ category: 'static', key: '', value: '' });
+      setAddError(null);
+    }
+  };
+
+  const handleEditKeyDown = (e, fact) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit(fact);
+    }
+    if (e.key === 'Escape') {
+      cancelEdit();
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '\u2014';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <CreditCard size={16} className="text-[#117dff]" />
-          <SectionHeading>Plan &amp; Usage</SectionHeading>
+    <>
+      <Card>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <User size={16} className="text-[#117dff]" />
+            <SectionHeading>Profile Facts</SectionHeading>
+          </div>
+          <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
         </div>
-        <PlanBadge plan={plan} />
-      </div>
 
-      <div className="mb-5">
-        <UsageBar
-          label="Memories"
-          used={memoryCount}
-          limit={plan === 'free' ? 1000 : plan === 'pro' ? 50000 : 0}
-        />
-        <UsageBar
-          label="Observations"
-          used={observationCount}
-          limit={0}
-        />
-        <UsageBar
-          label="Relationships"
-          used={relationshipCount}
-          limit={0}
-        />
-      </div>
+        {facts.length === 0 && !showAddRow ? (
+          <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
+            <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
+            <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
+              No profile facts yet.
+            </p>
+            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
+              Profile facts build automatically as you use HIVEMIND, or you can add them manually.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#f3f1ec]">
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Category</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Key</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Value</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">Confidence</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden md:table-cell">Confirmed</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">Last Seen</th>
+                  <th className="text-right text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {facts.map((fact) => (
+                  <tr key={fact.id} className="border-b border-[#f3f1ec] last:border-b-0 group hover:bg-[#faf9f4] transition-colors">
+                    <td className="py-3 pr-3">
+                      <CategoryBadge category={fact.category} />
+                    </td>
+                    <td className="py-3 pr-3">
+                      <span className="text-[#0a0a0a] font-['Space_Grotesk'] font-semibold">{fact.key}</span>
+                    </td>
+                    <td className="py-3 pr-3 max-w-[200px]">
+                      {editingId === fact.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => handleEditKeyDown(e, fact)}
+                            className="flex-1 bg-white border border-[#117dff]/40 rounded-lg py-1.5 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] outline-none"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => saveEdit(fact)}
+                            disabled={saving}
+                            className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1.5 rounded-lg text-[#a3a3a3] hover:bg-[#f3f1ec] transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[#525252] font-['Space_Grotesk'] truncate block">{fact.value}</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-3 hidden lg:table-cell">
+                      <ConfidenceBar value={fact.confidence} />
+                    </td>
+                    <td className="py-3 pr-3 hidden md:table-cell">
+                      <span className="text-[#525252] font-mono text-xs">
+                        {fact.confirmedCount ?? 0}x
+                      </span>
+                    </td>
+                    <td className="py-3 pr-3 hidden lg:table-cell">
+                      <span className="text-[#a3a3a3] font-mono text-xs">
+                        {formatDate(fact.lastConfirmedAt)}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      {editingId !== fact.id && (
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => startEdit(fact)}
+                            className="p-1.5 rounded-lg text-[#525252] hover:bg-[#f3f1ec] hover:text-[#117dff] transition-colors"
+                            title="Edit value"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(fact)}
+                            className="p-1.5 rounded-lg text-[#525252] hover:bg-red-50 hover:text-[#dc2626] transition-colors"
+                            title="Delete fact"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      <button
-        onClick={() => navigate('/hivemind/app/billing')}
-        className="inline-flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
-      >
-        <Zap size={14} />
-        Manage Plan
-        <ExternalLink size={12} />
-      </button>
+        {/* Add Fact Row */}
+        <AnimatePresence>
+          {showAddRow && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 p-4 rounded-xl bg-[#faf9f4] border border-[#e3e0db] space-y-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Category selector */}
+                  <div className="relative">
+                    <select
+                      value={newFact.category}
+                      onChange={(e) => setNewFact((prev) => ({ ...prev, category: e.target.value }))}
+                      className="appearance-none bg-white border border-[#e3e0db] rounded-lg py-2 pl-3 pr-8 text-[#0a0a0a] text-sm font-mono outline-none focus:border-[#117dff]/40 transition-colors cursor-pointer"
+                    >
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {CATEGORY_CONFIG[cat]?.label || cat}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+                  </div>
+                  {/* Key */}
+                  <input
+                    type="text"
+                    value={newFact.key}
+                    onChange={(e) => setNewFact((prev) => ({ ...prev, key: e.target.value }))}
+                    onKeyDown={handleAddKeyDown}
+                    placeholder="Key (e.g. favorite_color)"
+                    className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
+                  />
+                  {/* Value */}
+                  <input
+                    type="text"
+                    value={newFact.value}
+                    onChange={(e) => setNewFact((prev) => ({ ...prev, value: e.target.value }))}
+                    onKeyDown={handleAddKeyDown}
+                    placeholder="Value (e.g. blue)"
+                    className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
+                  />
+                </div>
+                {addError && (
+                  <p className="text-[#dc2626] text-xs font-mono">{addError}</p>
+                )}
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowAddRow(false);
+                      setNewFact({ category: 'static', key: '', value: '' });
+                      setAddError(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-sm font-['Space_Grotesk'] font-semibold text-[#525252] hover:bg-[#e3e0db] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAdd}
+                    disabled={saving || !newFact.key.trim() || !newFact.value.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-['Space_Grotesk'] font-semibold text-white bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {saving ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Check size={13} />
+                    )}
+                    Save Fact
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Add Fact Button */}
+        {!showAddRow && (
+          <button
+            onClick={() => setShowAddRow(true)}
+            className="mt-4 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+          >
+            <Plus size={14} />
+            Add Fact
+          </button>
+        )}
+      </Card>
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Profile Fact"
+          message={`Remove "${deleteTarget.key}: ${deleteTarget.value}" from your profile? This fact may be re-learned from future conversations.`}
+          confirmLabel="Delete Fact"
+          confirmVariant="red"
+          confirmLoading={deleteLoading}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            if (!deleteLoading) setDeleteTarget(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Section 3: Profile Context Preview ──────────────────────────────────────
+
+function ProfileContextPreviewSection({ context }) {
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-2">
+        <Code2 size={16} className="text-[#117dff]" />
+        <SectionHeading>Profile Context Preview</SectionHeading>
+      </div>
+      <p className="text-[#525252] text-xs font-['Space_Grotesk'] mb-4">
+        This is what your AI sees about you. This context string is injected into every LLM prompt.
+      </p>
+
+      {context ? (
+        <pre className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-xs font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed">
+          {context}
+        </pre>
+      ) : (
+        <div className="px-4 py-6 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
+          <Eye size={24} className="text-[#d4d0ca] mx-auto mb-2" />
+          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
+            No profile context generated yet. Add some profile facts to see what your AI will know about you.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
 
-// ─── Section 3: Memory Footprint ─────────────────────────────────────────────
+// ─── Section 4: Memory Stats ─────────────────────────────────────────────────
 
-function MemoryFootprintSection({ profile }) {
+function MemoryStatsSection({ profile }) {
+  const navigate = useNavigate();
   const {
     memory_count: rawMemCount,
     observation_count = 0,
@@ -306,9 +672,9 @@ function MemoryFootprintSection({ profile }) {
     top_tags = [],
     top_source_platforms = [],
     graph_summary = {},
+    plan,
   } = profile || {};
 
-  // Fallback: if memory_count is 0/missing but we have observations or relationships, show at least those
   const memory_count = rawMemCount || (observation_count > 0 || relationship_count > 0 ? observation_count : 0);
 
   const relationshipTypes = [
@@ -320,9 +686,23 @@ function MemoryFootprintSection({ profile }) {
 
   return (
     <Card>
-      <div className="flex items-center gap-2 mb-5">
-        <Brain size={16} className="text-[#117dff]" />
-        <SectionHeading>Memory Footprint</SectionHeading>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Brain size={16} className="text-[#117dff]" />
+          <SectionHeading>Memory Stats</SectionHeading>
+        </div>
+        <PlanBadge plan={plan || 'free'} />
+      </div>
+
+      {/* Usage bars */}
+      <div className="mb-5">
+        <UsageBar
+          label="Memories"
+          used={memory_count}
+          limit={plan === 'free' ? 1000 : plan === 'pro' ? 50000 : 0}
+        />
+        <UsageBar label="Observations" used={observation_count} limit={0} />
+        <UsageBar label="Relationships" used={relationship_count} limit={0} />
       </div>
 
       {/* Stat pills */}
@@ -378,7 +758,7 @@ function MemoryFootprintSection({ profile }) {
       )}
 
       {/* Relationship distribution */}
-      <div>
+      <div className="mb-5">
         <div className="flex items-center gap-1.5 mb-3">
           <BarChart2 size={13} className="text-[#525252]" />
           <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Relationship Distribution</span>
@@ -403,211 +783,20 @@ function MemoryFootprintSection({ profile }) {
           ))}
         </div>
       </div>
+
+      <button
+        onClick={() => navigate('/hivemind/app/billing')}
+        className="inline-flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+      >
+        <Zap size={14} />
+        Manage Plan
+        <ExternalLink size={12} />
+      </button>
     </Card>
   );
 }
 
-// ─── Section 4: User Profile Preview ─────────────────────────────────────────
-
-function extractUserProfile(injectionText) {
-  if (!injectionText) return null;
-  const match = injectionText.match(/<user-profile>([\s\S]*?)<\/user-profile>/);
-  const raw = match ? match[1].trim() : injectionText.trim();
-  // Sanitize: strip any HTML tags to prevent XSS
-  return raw.replace(/<[^>]*>/g, '');
-}
-
-function parseProfileFacts(raw) {
-  if (!raw) return [];
-  // Split on newlines, filter blank lines
-  return raw
-    .split('\n')
-    .map((l) => l.replace(/^[-•*]\s*/, '').trim())
-    .filter(Boolean);
-}
-
-function UserProfilePreviewSection() {
-  const { data, loading, error } = useApiQuery(
-    () =>
-      apiClient.controlPlane
-        .post('/v1/proxy/recall', {
-          query_context: 'Tell me about the user',
-          max_memories: 1,
-        })
-        .then((r) => r.data),
-    []
-  );
-
-  const rawProfile = extractUserProfile(data?.injectionText || data?.injection_text || '');
-  const facts = parseProfileFacts(rawProfile);
-
-  return (
-    <Card>
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Eye size={16} className="text-[#117dff]" />
-          <SectionHeading>What HIVEMIND Knows About You</SectionHeading>
-        </div>
-      </div>
-      <p className="text-[#525252] text-xs font-['Space_Grotesk'] mb-5">
-        This is what your AI assistants know about you — auto-generated from your memory.
-      </p>
-
-      {loading ? (
-        <div className="flex items-center gap-2 py-4">
-          <div className="w-4 h-4 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[#a3a3a3] text-sm font-mono">Loading profile…</span>
-        </div>
-      ) : error || (!loading && facts.length === 0) ? (
-        <div className="px-4 py-5 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
-          <Brain size={24} className="text-[#d4d0ca] mx-auto mb-2" />
-          <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
-            Your profile builds automatically as you use HIVEMIND.
-          </p>
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {facts.map((fact, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[#faf9f4] border border-[#eae7e1] hover:border-[#117dff]/20 transition-colors"
-            >
-              <CheckCircle size={14} className="text-[#117dff] flex-shrink-0 mt-0.5" />
-              <span className="text-[#0a0a0a]/80 text-sm font-['Space_Grotesk']">{fact}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  );
-}
-
-// ─── Section 5: Context Preview ───────────────────────────────────────────────
-
-function ContextPreviewSection() {
-  const [query, setQuery] = useState('');
-  const [contextResult, setContextResult] = useState(null);
-  const [contextLoading, setContextLoading] = useState(false);
-  const [contextError, setContextError] = useState(null);
-
-  const handleGenerateContext = async () => {
-    if (!query.trim()) return;
-    setContextLoading(true);
-    setContextError(null);
-    setContextResult(null);
-    try {
-      const result = await apiClient.getContext(query.trim());
-      setContextResult(result);
-    } catch (err) {
-      setContextError(err.response?.data?.error || err.message);
-    } finally {
-      setContextLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleGenerateContext();
-    }
-  };
-
-  return (
-    <Card>
-      <div className="flex items-center gap-2 mb-4">
-        <Brain size={16} className="text-[#117dff]" />
-        <SectionHeading>Context Preview</SectionHeading>
-      </div>
-      <p className="text-[#525252] text-xs font-['Space_Grotesk'] mb-4">
-        See what context would be injected into an AI conversation for a given query.
-      </p>
-
-      <div className="flex gap-3 mb-6">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter a query…"
-          className="flex-1 bg-transparent border border-[#e3e0db] rounded-xl py-3 px-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 transition-colors"
-        />
-        <button
-          onClick={handleGenerateContext}
-          disabled={!query.trim() || contextLoading}
-          className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk'] group"
-        >
-          {contextLoading ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <Send size={14} className="group-hover:translate-x-0.5 transition-transform" />
-              Generate Context
-            </>
-          )}
-        </button>
-      </div>
-
-      {contextError && (
-        <p className="text-[#dc2626] text-xs font-mono mb-4">{contextError}</p>
-      )}
-
-      {contextResult && (
-        <div className="space-y-4">
-          {contextResult.context?.system_prompt && (
-            <div>
-              <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider mb-2">
-                System Prompt
-              </label>
-              <pre className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
-                {contextResult.context.system_prompt}
-              </pre>
-            </div>
-          )}
-          {contextResult.context?.injection_text && (
-            <div>
-              <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider mb-2">
-                Injection Text
-              </label>
-              <pre className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
-                {contextResult.context.injection_text}
-              </pre>
-            </div>
-          )}
-          {contextResult.context?.memories?.length > 0 && (
-            <div>
-              <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider mb-2">
-                Matched Memories ({contextResult.context.memories.length})
-              </label>
-              <ul className="space-y-2">
-                {contextResult.context.memories.map((mem, i) => (
-                  <li
-                    key={mem.id || i}
-                    className="px-4 py-3 rounded-xl bg-white border border-[#eae7e1] text-[#525252] text-sm font-['Space_Grotesk']"
-                  >
-                    <span className="text-[#a3a3a3] font-mono text-xs mr-2">#{i + 1}</span>
-                    {mem.title || mem.content?.slice(0, 120) || 'Untitled memory'}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {contextResult.profile && (
-            <div>
-              <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider mb-2">
-                Profile Data
-              </label>
-              <pre className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-xs font-mono whitespace-pre-wrap overflow-auto max-h-48">
-                {JSON.stringify(contextResult.profile, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Section 6: Data & Privacy ────────────────────────────────────────────────
+// ─── Section 5: Data & Privacy ───────────────────────────────────────────────
 
 function DataPrivacySection() {
   const { logout } = useAuth();
@@ -666,7 +855,7 @@ function DataPrivacySection() {
               Your data is stored in Frankfurt, Germany
             </p>
             <p className="text-emerald-700 text-xs font-['Space_Grotesk'] mt-0.5">
-              GDPR compliant &nbsp;·&nbsp; No US data transfer &nbsp;·&nbsp; EU data residency guaranteed
+              GDPR compliant &nbsp;&middot;&nbsp; No US data transfer &nbsp;&middot;&nbsp; EU data residency guaranteed
             </p>
           </div>
         </div>
@@ -716,9 +905,7 @@ function DataPrivacySection() {
                 Permanently delete all your data. This action cannot be undone.
               </p>
               {deleteMsg && (
-                <p className="text-[#dc2626] text-xs font-mono mt-1.5">
-                  {deleteMsg}
-                </p>
+                <p className="text-[#dc2626] text-xs font-mono mt-1.5">{deleteMsg}</p>
               )}
             </div>
             <button
@@ -781,24 +968,37 @@ function DataPrivacySection() {
   );
 }
 
-// ─── Main Profile Page ────────────────────────────────────────────────────────
+// ─── Main Profile Page ───────────────────────────────────────────────────────
 
 export default function Profile() {
   const { user, org } = useAuth();
-  const { data: profile, loading, error } = useApiQuery(() => apiClient.getProfile());
+
+  // Fetch persistent profile facts from /api/profiles (plural)
+  const {
+    data: profilesData,
+    loading: profilesLoading,
+    error: profilesError,
+    refetch: refetchProfiles,
+  } = useApiQuery(async () => {
+    const { data } = await apiClient.controlPlane.get('/v1/proxy/profiles');
+    return data;
+  });
+
+  // Fetch stats from /api/profile (singular, existing)
+  const {
+    data: statsData,
+    loading: statsLoading,
+    error: statsError,
+  } = useApiQuery(() => apiClient.getProfile());
+
+  const facts = profilesData?.facts || [];
+  const context = profilesData?.context || '';
+  const loading = profilesLoading && statsLoading;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="w-6 h-6 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-[#dc2626] text-sm font-mono">{error}</p>
       </div>
     );
   }
@@ -809,7 +1009,7 @@ export default function Profile() {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Profile</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          Your account, memory footprint and privacy controls
+          Your profile facts, memory footprint and privacy controls
         </p>
       </motion.div>
 
@@ -819,22 +1019,27 @@ export default function Profile() {
         animate="visible"
         className="space-y-6"
       >
-        {/* Section 1: Account Info */}
-        <AccountSection user={user} org={org} />
+        {/* Section 1: Profile Header */}
+        <ProfileHeaderSection
+          user={user}
+          org={org}
+          plan={statsData?.plan}
+          profileFacts={facts}
+        />
 
-        {/* Section 2: Plan & Usage */}
-        <PlanUsageSection profile={profile} />
+        {/* Section 2: Profile Facts */}
+        <ProfileFactsSection
+          facts={facts}
+          onRefresh={refetchProfiles}
+        />
 
-        {/* Section 3: Memory Footprint */}
-        <MemoryFootprintSection profile={profile} />
+        {/* Section 3: Profile Context Preview */}
+        <ProfileContextPreviewSection context={context} />
 
-        {/* Section 4: What HIVEMIND Knows About You */}
-        <UserProfilePreviewSection />
+        {/* Section 4: Memory Stats */}
+        <MemoryStatsSection profile={statsData} />
 
-        {/* Section 5: Context Preview */}
-        <ContextPreviewSection />
-
-        {/* Section 6: Data & Privacy */}
+        {/* Section 5: Data & Privacy */}
         <DataPrivacySection />
       </motion.div>
     </div>

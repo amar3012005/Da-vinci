@@ -981,7 +981,7 @@ function VoiceAgentTestPageContent({ config, brand }) {
       return 'Bundb@2026';
     }
     if (mergedConfig.tenantId === 'davinci') {
-      return 'Davinci@2025';
+      return 'Davinci@2026';
     }
     return '';
   }, [mergedConfig.tenantId]);
