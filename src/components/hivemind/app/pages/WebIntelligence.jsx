@@ -287,6 +287,7 @@ function SearchResultCard({ result, jobId, index, onSave }) {
 function CrawlResultCard({ result, jobId, index, onSave }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showContent, setShowContent] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -305,30 +306,59 @@ function CrawlResultCard({ result, jobId, index, onSave }) {
     }
   };
 
+  const content = result.text || result.content || result.markdown || '';
+  const charCount = content.length;
+
   return (
-    <motion.div variants={fadeUp} className="flex items-center justify-between border border-[#e3e0db] rounded-lg px-3 py-2 hover:border-[#117dff]/30 transition-colors">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <FileText size={13} className="text-[#a3a3a3] shrink-0" />
-        <div className="min-w-0">
-          <p className="text-[#0a0a0a] text-xs font-semibold font-['Space_Grotesk'] truncate">{result.title || result.url}</p>
-          <p className="text-[#a3a3a3] text-[10px] font-mono truncate">{result.url}</p>
+    <motion.div variants={fadeUp} className="border border-[#e3e0db] rounded-lg hover:border-[#117dff]/30 transition-colors overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <FileText size={13} className="text-[#a3a3a3] shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[#0a0a0a] text-xs font-semibold font-['Space_Grotesk'] truncate">{result.title || result.url}</p>
+            <p className="text-[#a3a3a3] text-[10px] font-mono truncate">{result.url}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {result.word_count != null && (
+            <span className="text-[9px] font-mono text-[#a3a3a3] bg-[#f3f1ec] px-1.5 py-0.5 rounded">
+              {result.word_count.toLocaleString()} words
+            </span>
+          )}
+          {charCount > 0 && (
+            <button
+              onClick={() => setShowContent(!showContent)}
+              className="text-[10px] font-mono text-[#117dff] hover:text-[#0066e0] px-1.5 py-0.5 rounded bg-[#117dff]/5 hover:bg-[#117dff]/10 transition-colors"
+            >
+              {showContent ? 'Hide' : 'Preview'} ({charCount > 1000 ? `${(charCount/1000).toFixed(1)}k` : charCount} chars)
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving || saved}
+            className={`${saved ? 'text-emerald-500' : 'text-[#a3a3a3] hover:text-[#117dff]'} transition-colors`}
+            title={saved ? 'Saved' : 'Save this result'}
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <BookmarkPlus size={14} />}
+          </button>
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
-        {result.word_count != null && (
-          <span className="text-[9px] font-mono text-[#a3a3a3] bg-[#f3f1ec] px-1.5 py-0.5 rounded">
-            {result.word_count.toLocaleString()} words
-          </span>
+      <AnimatePresence>
+        {showContent && content && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 pt-1 border-t border-[#f3f1ec]">
+              <pre className="text-[11px] text-[#525252] font-['Space_Grotesk'] whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto bg-[#faf9f4] rounded-lg p-3">
+                {content.slice(0, 3000)}{content.length > 3000 ? '\n\n... (truncated)' : ''}
+              </pre>
+            </div>
+          </motion.div>
         )}
-        <button
-          onClick={handleSave}
-          disabled={saving || saved}
-          className={`${saved ? 'text-emerald-500' : 'text-[#a3a3a3] hover:text-[#117dff]'} transition-colors`}
-          title={saved ? 'Saved' : 'Save this result'}
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <BookmarkPlus size={14} />}
-        </button>
-      </div>
+      </AnimatePresence>
     </motion.div>
   );
 }
