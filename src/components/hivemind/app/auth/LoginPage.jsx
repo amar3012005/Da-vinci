@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import apiClient from '../shared/api-client';
 
 function GoogleIcon({ size = 18 }) {
   return (
@@ -43,14 +44,16 @@ export default function LoginPage() {
   }, [userName, enterpriseName, accountType]);
 
   const handleCreateAccount = () => {
-    const params = new URLSearchParams({
-      action: 'register',
+    // Save onboarding data for post-auth pickup
+    localStorage.setItem('hivemind_onboarding', JSON.stringify({
       type: accountType,
       name: userName,
       hivemind_name: hivemindName,
-      ...(accountType === 'enterprise' ? { enterprise: enterpriseName } : {}),
-    });
-    window.location.href = `/hivemind/login?${params.toString()}`;
+      enterprise: enterpriseName || null,
+    }));
+    // Redirect to Google OAuth which auto-creates accounts
+    const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
+    window.location.href = apiClient.getGoogleLoginUrl(returnTo);
   };
 
   const resetOnboarding = () => {
