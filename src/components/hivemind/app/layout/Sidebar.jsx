@@ -26,19 +26,23 @@ import {
   FolderKanban,
   Mic,
   Search,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 
 /** Build nav sections, conditionally including admin items. */
 function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
-  const devItems = [
-    { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
+  const advancedItems = [
+    { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
+    { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
+    { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
     { to: '/hivemind/app/mcp', icon: Server, label: 'MCP Server' },
+    { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
   ];
   if (showWebAdmin) {
-    devItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
+    advancedItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
   }
   const sections = [
     {
@@ -48,24 +52,27 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
       ],
     },
     {
-      label: 'Data',
+      label: 'Your Brain',
       items: [
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
-        { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
         { to: '/hivemind/app/brain', icon: Sparkles, label: 'Second Brain' },
-        { to: '/hivemind/app/research', icon: Search, label: 'Deep Research' },
-        { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
         { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
-        { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
-        { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
-        { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
-        { to: '/hivemind/app/tara', icon: Mic, label: 'TARA × HIVE' },
         { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
+        { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
       ],
     },
     {
-      label: 'Developer',
-      items: devItems,
+      label: 'AI Features',
+      items: [
+        { to: '/hivemind/app/overview', icon: MessageSquare, label: 'Talk to HIVE' },
+        { to: '/hivemind/app/research', icon: Search, label: 'Deep Research' },
+        { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
+        { to: '/hivemind/app/tara', icon: Mic, label: 'TARA × HIVE' },
+      ],
+    },
+    {
+      label: 'Advanced',
+      items: advancedItems,
     },
     {
       label: 'Account',
@@ -77,7 +84,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
   ];
 
   if (showEnterpriseTeam) {
-    sections.splice(2, 0, {
+    sections.splice(4, 0, {
       label: 'Team',
       items: [
         { to: '/hivemind/app/team/members', icon: Users, label: 'Members' },
