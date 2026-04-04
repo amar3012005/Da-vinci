@@ -387,8 +387,8 @@ export default function DeepResearch() {
   /* ─── Render ───────────────────────────────────────────────────── */
   return (
     <div
-      className="relative w-full h-full overflow-hidden"
-      style={{ background: BG, margin: '-1.5rem', width: 'calc(100% + 3rem)', height: 'calc(100% + 3rem)' }}
+      className="fixed inset-0 overflow-hidden"
+      style={{ background: BG, left: '260px', top: '0', right: '0', bottom: '0', zIndex: 10 }}
     >
       {/* ── Watermark ──────────────────────────────────────────────── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
