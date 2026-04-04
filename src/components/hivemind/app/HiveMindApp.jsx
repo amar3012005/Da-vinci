@@ -19,6 +19,7 @@ const WebAdmin = React.lazy(() => import('./pages/WebAdmin'));
 const McpServer = React.lazy(() => import('./pages/McpServer'));
 const MemoryGraph = React.lazy(() => import('./pages/MemoryGraph'));
 const Brain = React.lazy(() => import('./pages/Brain'));
+const DeepResearch = React.lazy(() => import('./pages/DeepResearch'));
 const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
 const AgentSwarm = React.lazy(() => import('./pages/AgentSwarm'));
@@ -82,6 +83,7 @@ export default function HiveMindApp() {
           <Route path="mcp" element={<PageSuspense><McpServer /></PageSuspense>} />
           <Route path="graph" element={<PageSuspense><MemoryGraph /></PageSuspense>} />
           <Route path="brain" element={<PageSuspense><Brain /></PageSuspense>} />
+          <Route path="research" element={<PageSuspense><DeepResearch /></PageSuspense>} />
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />

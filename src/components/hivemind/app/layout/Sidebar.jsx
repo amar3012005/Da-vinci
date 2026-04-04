@@ -25,6 +25,7 @@ import {
   Users,
   FolderKanban,
   Mic,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -52,6 +53,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
         { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
         { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
         { to: '/hivemind/app/brain', icon: Sparkles, label: 'Second Brain' },
+        { to: '/hivemind/app/research', icon: Search, label: 'Deep Research' },
         { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
         { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
         { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
