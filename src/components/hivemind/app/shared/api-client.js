@@ -125,6 +125,13 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
+  getRegisterUrl(returnTo) {
+    const params = new URLSearchParams();
+    if (returnTo) params.set('return_to', returnTo);
+    const qs = params.toString();
+    return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
+  }
+
   /**
    * Bootstrap response shape from control plane:
    * {

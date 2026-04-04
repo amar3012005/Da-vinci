@@ -43,7 +43,7 @@ export default function LoginPage() {
     }
   }, [userName, enterpriseName, accountType]);
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = (provider = 'google') => {
     // Save onboarding data for post-auth pickup
     localStorage.setItem('hivemind_onboarding', JSON.stringify({
       type: accountType,
@@ -51,9 +51,14 @@ export default function LoginPage() {
       hivemind_name: hivemindName,
       enterprise: enterpriseName || null,
     }));
-    // Redirect to Google OAuth which auto-creates accounts
     const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
-    window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+    if (provider === 'zitadel') {
+      // Zitadel with prompt=create → shows registration screen
+      window.location.href = apiClient.getRegisterUrl(returnTo);
+    } else {
+      // Google OAuth auto-creates accounts
+      window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+    }
   };
 
   const resetOnboarding = () => {
@@ -276,11 +281,18 @@ export default function LoginPage() {
                       <p className="text-xs text-[#a3a3a3] mt-1">This is your memory workspace name</p>
                     </div>
                     <button
-                      onClick={handleCreateAccount}
+                      onClick={() => handleCreateAccount('google')}
                       disabled={!userName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none"
+                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                     >
-                      Create My Second Brain &rarr;
+                      <GoogleIcon size={16} /> Continue with Google
+                    </button>
+                    <button
+                      onClick={() => handleCreateAccount('zitadel')}
+                      disabled={!userName.trim()}
+                      className="w-full py-2.5 rounded-xl bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2 mt-2"
+                    >
+                      <Shield size={14} /> Enterprise SSO (EU Sovereign)
                     </button>
                   </div>
                 )}
@@ -321,11 +333,18 @@ export default function LoginPage() {
                       <p className="text-xs text-purple-500 mt-1">Full access to all features. No credit card required.</p>
                     </div>
                     <button
-                      onClick={handleCreateAccount}
+                      onClick={() => handleCreateAccount('zitadel')}
                       disabled={!userName.trim() || !enterpriseName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none"
+                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                     >
-                      Create Enterprise HIVEMIND &rarr;
+                      <Shield size={14} /> Create with Enterprise SSO (EU)
+                    </button>
+                    <button
+                      onClick={() => handleCreateAccount('google')}
+                      disabled={!userName.trim() || !enterpriseName.trim()}
+                      className="w-full py-2.5 rounded-xl bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2 mt-2"
+                    >
+                      <GoogleIcon size={16} /> Continue with Google
                     </button>
                   </div>
                 )}
