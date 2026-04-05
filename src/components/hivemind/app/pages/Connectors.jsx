@@ -22,6 +22,7 @@ import {
   BookOpen,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Clock,
   Zap,
   Plus,
@@ -68,6 +69,14 @@ const CONNECTORS = [
     color: '#117dff',
     configKey: 'claude',
     mcpEndpointName: 'claude',
+    isMcpClient: true,
+    setupTitle: 'Connect Claude Desktop',
+    setupSteps: [
+      'Open Claude Desktop → Settings → Developer → Edit Config',
+      'Paste the JSON config below into claude_desktop_config.json',
+      'Restart Claude Desktop',
+    ],
+    configPath: '~/Library/Application Support/Claude/claude_desktop_config.json',
   },
   {
     id: 'vscode',
@@ -79,6 +88,15 @@ const CONNECTORS = [
     color: '#3b82f6',
     configKey: 'vscode',
     mcpEndpointName: 'vscode',
+    isMcpClient: true,
+    setupTitle: 'Connect VS Code',
+    setupSteps: [
+      'Open VS Code → Settings (Ctrl+,) → Search "mcp"',
+      'Click "Edit in settings.json"',
+      'Add the config below under "mcp.servers"',
+      'Restart VS Code',
+    ],
+    configPath: '.vscode/settings.json',
   },
   {
     id: 'antigravity',
@@ -90,6 +108,14 @@ const CONNECTORS = [
     color: '#a855f7',
     configKey: 'antigravity',
     mcpEndpointName: 'antigravity',
+    isMcpClient: true,
+    setupTitle: 'Connect Antigravity',
+    setupSteps: [
+      'Open Antigravity settings',
+      'Go to Integrations → MCP Servers',
+      'Add new server with the config below',
+    ],
+    configPath: 'Antigravity MCP Settings',
   },
   {
     id: 'remote',
@@ -802,10 +828,132 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   );
 }
 
+// ─── MCP Setup Modal ─────────────────────────────────────────────────────────
+
+function McpSetupModal({ connector, onClose, user, apiKeys }) {
+  const [copied, setCopied] = useState(false);
+  const userId = user?.id || user?.userId || 'YOUR_USER_ID';
+  const apiKey = apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
+
+  const config = JSON.stringify({
+    mcpServers: {
+      hivemind: {
+        command: 'npx',
+        args: ['-y', '@amar_528/mcp-bridge', 'hosted', '--url', `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}`],
+        env: { HIVEMIND_API_KEY: apiKey },
+      },
+    },
+  }, null, 2);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(config).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (!connector) return null;
+
+  const Icon = connector.icon;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
+      >
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-[#f3f1ec]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center border" style={{ backgroundColor: `${connector.color}10`, borderColor: `${connector.color}20` }}>
+              <Icon size={20} style={{ color: connector.color }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">{connector.setupTitle || `Connect ${connector.name}`}</h2>
+              <p className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">One-time setup — paste config into your tool</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="px-6 py-4">
+          <div className="space-y-3 mb-5">
+            {(connector.setupSteps || []).map((step, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</div>
+                <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed">{step}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Config path hint */}
+          {connector.configPath && (
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db]">
+              <FileText size={12} className="text-[#a3a3a3] shrink-0" />
+              <span className="text-[10px] font-mono text-[#737373] truncate">{connector.configPath}</span>
+            </div>
+          )}
+
+          {/* Config block */}
+          <div className="relative">
+            <div className="absolute top-2 right-2 z-10">
+              <button
+                onClick={handleCopy}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                  copied
+                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                    : 'bg-white/90 text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec]'
+                }`}
+              >
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+                {copied ? 'Copied!' : 'Copy Config'}
+              </button>
+            </div>
+            <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre">
+              {config}
+            </pre>
+          </div>
+
+          {/* API Key warning */}
+          {apiKey === 'YOUR_API_KEY' && (
+            <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+              <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 font-['Space_Grotesk']">
+                Create an API key first in <a href="/hivemind/app/keys" className="underline font-semibold">API Keys</a>, then replace YOUR_API_KEY in the config.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-5 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
+          >
+            Done
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] transition-all flex items-center justify-center gap-2"
+          >
+            <Copy size={14} />
+            {copied ? 'Copied!' : 'Copy & Close'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function Connectors() {
-  const { org } = useAuth();
+  const { org, user } = useAuth();
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
@@ -813,6 +961,10 @@ export default function Connectors() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
   const [targetScopes, setTargetScopes] = useState({});
+  const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
+
+  // Fetch API keys for MCP config auto-fill
+  const { data: apiKeysData } = useApiQuery(() => apiClient.listApiKeys().catch(() => null), []);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -1115,7 +1267,9 @@ export default function Connectors() {
             onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
             allowTeamScope={org?.plan === 'enterprise'}
             onConnect={() => {
-              if (connector.oauthProvider) {
+              if (connector.isMcpClient) {
+                setMcpSetupConnector(connector);
+              } else if (connector.oauthProvider) {
                 handleOAuthConnect(connector.oauthProvider);
               }
             }}
@@ -1222,6 +1376,18 @@ export default function Connectors() {
             email={gmailEmail}
             onSync={handleGmailSync}
             onClose={() => setGmailSettingsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* MCP Setup Modal */}
+      <AnimatePresence>
+        {mcpSetupConnector && (
+          <McpSetupModal
+            connector={mcpSetupConnector}
+            onClose={() => setMcpSetupConnector(null)}
+            user={user}
+            apiKeys={apiKeysData?.keys || []}
           />
         )}
       </AnimatePresence>
