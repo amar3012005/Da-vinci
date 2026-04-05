@@ -426,6 +426,9 @@ class HiveMindApiClient {
     if (options.targetScope) formData.append('targetScope', options.targetScope);
     const { data } = await this.controlPlane.post('/v1/proxy/knowledge/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000, // 5 minutes for large file uploads
+      maxBodyLength: 110 * 1024 * 1024, // 110MB
+      maxContentLength: 110 * 1024 * 1024,
     });
     return data;
   }

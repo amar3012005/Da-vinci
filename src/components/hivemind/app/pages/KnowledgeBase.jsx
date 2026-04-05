@@ -233,12 +233,27 @@ export default function KnowledgeBase() {
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
     try {
-      const result = await apiClient.quickSearch('knowledge-base document-summary');
-      return (result?.results || result?.memories || []).filter((m) =>
-        (m.tags || []).includes('document-summary')
-      );
+      // Fetch uploaded documents by listing memories with document-summary tag
+      const result = await apiClient.listMemories({ tags: 'document-summary', limit: 100 });
+      const mems = result?.memories || [];
+      // Filter to actual document summaries (have metadata.total_chunks or title starts with "Document:")
+      const docs = mems.filter((m) => {
+        const meta = m.metadata || {};
+        const title = m.title || '';
+        return meta.total_chunks || meta.document_title || title.startsWith('Document:');
+      });
+      // Sort by date descending (newest first)
+      return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     } catch {
-      return [];
+      // Fallback to search
+      try {
+        const result = await apiClient.quickSearch('knowledge-base document-summary');
+        return (result?.results || result?.memories || []).filter((m) =>
+          (m.tags || []).includes('document-summary')
+        );
+      } catch {
+        return [];
+      }
     }
   }, []);
 
@@ -285,12 +300,12 @@ export default function KnowledgeBase() {
         continue;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > 100 * 1024 * 1024) {
         setUploads((prev) => [...prev, {
           id: Date.now() + Math.random(),
           filename: file.name,
           status: 'error',
-          error: 'File too large (max 10MB)',
+          error: 'File too large (max 100MB)',
         }]);
         continue;
       }
@@ -408,7 +423,7 @@ export default function KnowledgeBase() {
             Drop files here or click to upload
           </p>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-            PDF, DOCX, TXT, MD, CSV — max 10MB per file
+            PDF, DOCX, TXT, MD, CSV — max 100MB per file
           </p>
           <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
             Files are chunked into semantic sections and stored as searchable memories
