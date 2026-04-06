@@ -1,11 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useSpring } from 'framer-motion';
 import {
   Menu, X, ArrowLeft, Brain, Network, Route, Fingerprint,
   RefreshCw, Target, Layers, GitBranch, Shield, BarChart3, Zap,
-  BookOpen, ChevronDown, ExternalLink
+  BookOpen, ChevronDown, ExternalLink, Sparkles, FileText
 } from 'lucide-react';
+
+/* ─── View Mode Toggle ─── */
+const ViewModeToggle = ({ viewMode, setViewMode }) => {
+  return (
+    <div className="fixed top-20 right-6 z-50 hidden xl:block">
+      <div className="bg-white border border-[#e3e0db] rounded-xl p-1 shadow-[0_4px_12px_rgba(0,0,0,0.08)] flex gap-1">
+        <button
+          onClick={() => setViewMode('page')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+            viewMode === 'page'
+              ? 'bg-[#117dff] text-white shadow-sm'
+              : 'text-[#525252] hover:bg-[#faf9f4]'
+          }`}
+        >
+          <FileText size={14} />
+          <span>Page Layout</span>
+        </button>
+        <button
+          onClick={() => setViewMode('interactive')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+            viewMode === 'interactive'
+              ? 'bg-[#117dff] text-white shadow-sm'
+              : 'text-[#525252] hover:bg-[#faf9f4]'
+          }`}
+        >
+          <Sparkles size={14} />
+          <span>Interactive</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 /* ─── Cartesia Navbar (reused pattern) ─── */
 const ResearchNavbar = () => {
@@ -83,59 +115,357 @@ const ResearchNavbar = () => {
 };
 
 /* ─── Table of Contents (Right Side Index) ─── */
-const TableOfContents = () => {
-  const [activeSection, setActiveSection] = useState('');
+const TableOfContents = ({ activeSection, scrollTo, viewMode }) => {
+  const sections = [
+    { label: 'Thesis', id: 'thesis' },
+    { label: 'Architecture', id: 'architecture' },
+    { label: 'Key Concepts', id: 'concepts' },
+    { label: 'Why It Matters', id: 'why' },
+    { label: 'Future', id: 'future' },
+  ];
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '-20% 0px -60% 0px' }
+  if (viewMode === 'page') {
+    return (
+      <div className="fixed right-8 top-1/2 -translate-y-1/2 hidden xl:block">
+        <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <h4 className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-3">On this page</h4>
+          <ul className="space-y-2">
+            {sections.map((section) => (
+              <li key={section.id}>
+                <button
+                  onClick={() => scrollTo(section.id)}
+                  className={`text-xs font-medium transition-colors text-left block py-1 ${
+                    activeSection === section.id
+                      ? 'text-[#117dff]'
+                      : 'text-[#525252] hover:text-[#117dff]'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     );
+  }
 
-    const sections = ['thesis', 'architecture', 'concepts', 'why', 'future'].map(id => document.getElementById(id));
-    sections.forEach(section => section && observer.observe(section));
+  return null;
+};
 
-    return () => observer.disconnect();
-  }, []);
-
-  const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
+/* ─── Interactive Table of Contents ─── */
+const InteractiveTOC = ({ activeSection, scrollTo }) => {
+  const sections = [
+    { label: 'Thesis', id: 'thesis', icon: Brain },
+    { label: 'Architecture', id: 'architecture', icon: Layers },
+    { label: 'Key Concepts', id: 'concepts', icon: Network },
+    { label: 'Why It Matters', id: 'why', icon: Zap },
+    { label: 'Future', id: 'future', icon: Sparkles },
+  ];
 
   return (
-    <div className="fixed right-8 top-1/2 -translate-y-1/2 hidden xl:block">
-      <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <h4 className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-3">On this page</h4>
-        <ul className="space-y-2">
-          {[
-            { label: 'Thesis', id: 'thesis' },
-            { label: 'Architecture', id: 'architecture' },
-            { label: 'Key Concepts', id: 'concepts' },
-            { label: 'Why It Matters', id: 'why' },
-            { label: 'Future', id: 'future' },
-          ].map((section) => (
-            <li key={section.id}>
-              <button
-                onClick={() => scrollTo(section.id)}
-                className={`text-xs font-medium transition-colors text-left block py-1 ${
-                  activeSection === section.id
-                    ? 'text-[#117dff]'
-                    : 'text-[#525252] hover:text-[#117dff]'
-                }`}
-              >
-                {section.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+    <div className="fixed left-6 top-1/2 -translate-y-1/2 hidden lg:block z-40">
+      <div className="flex flex-col gap-4">
+        {sections.map((section, index) => {
+          const Icon = section.icon;
+          const isActive = activeSection === section.id;
+          return (
+            <motion.button
+              key={section.id}
+              onClick={() => scrollTo(section.id)}
+              className={`group flex items-center gap-3 transition-all ${
+                isActive ? 'translate-x-2' : 'hover:translate-x-1'
+              }`}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                isActive
+                  ? 'bg-[#117dff] text-white shadow-[0_0_20px_rgba(17,125,255,0.4)]'
+                  : 'bg-white/80 border border-[#e3e0db] text-[#525252] group-hover:border-[#117dff]/40 group-hover:text-[#117dff]'
+              }`}>
+                <Icon size={14} />
+              </div>
+              {isActive && (
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-xs font-medium text-[#117dff] whitespace-nowrap"
+                >
+                  {section.label}
+                </motion.span>
+              )}
+            </motion.button>
+          );
+        })}
       </div>
+    </div>
+  );
+};
+
+/* ─── Reading Progress Bar ─── */
+const ReadingProgress = () => {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  return (
+    <motion.div
+      className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#117dff] via-[#117dff] to-[#8b5cf6] origin-left z-[100]"
+      style={{ scaleX }}
+    />
+  );
+};
+
+/* ─── Interactive Background ─── */
+const InteractiveBackground = ({ viewMode }) => {
+  if (viewMode !== 'interactive') return null;
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {/* Animated gradient orbs */}
+      <motion.div
+        className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-[#117dff]/15 to-[#8b5cf6]/10 rounded-full blur-[120px]"
+        animate={{
+          x: [0, 50, -30, 0],
+          y: [0, -40, 30, 0],
+          scale: [1, 1.1, 0.95, 1],
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-gradient-to-tl from-[#117dff]/12 to-[#0ea5e9]/8 rounded-full blur-[100px]"
+        animate={{
+          x: [0, -40, 20, 0],
+          y: [0, 30, -20, 0],
+          scale: [1, 1.05, 0.98, 1],
+        }}
+        transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-r from-[#8b5cf6]/8 to-[#117dff]/10 rounded-full blur-[80px]"
+        animate={{
+          x: ['calc(-50% + 30px)', 'calc(-50% - 20px)', 'calc(-50% + 10px)', 'calc(-50%)'],
+          y: ['calc(-50% - 20px)', 'calc(-50% + 25px)', 'calc(-50% - 10px)', 'calc(-50%)'],
+        }}
+        transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Floating particles */}
+      {[...Array(20)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 bg-[#117dff]/30 rounded-full"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -100, 0],
+            opacity: [0.3, 0.8, 0.3],
+            scale: [1, 1.5, 1],
+          }}
+          transition={{
+            duration: 8 + Math.random() * 7,
+            repeat: Infinity,
+            delay: Math.random() * 3,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+/* ─── Interactive Hero Network Visualization ─── */
+const InteractiveHeroNetwork = () => {
+  const nodes = [
+    { cx: '20%', cy: '30%', r: 8, delay: 0 },
+    { cx: '50%', cy: '20%', r: 12, delay: 0.1 },
+    { cx: '80%', cy: '35%', r: 6, delay: 0.2 },
+    { cx: '30%', cy: '60%', r: 10, delay: 0.15 },
+    { cx: '70%', cy: '55%', r: 7, delay: 0.25 },
+    { cx: '45%', cy: '45%', r: 9, delay: 0.05 },
+  ];
+
+  const connections = [
+    { from: 0, to: 1 },
+    { from: 1, to: 2 },
+    { from: 1, to: 5 },
+    { from: 3, to: 5 },
+    { from: 4, to: 5 },
+    { from: 0, to: 3 },
+    { from: 2, to: 4 },
+  ];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        {/* Connection lines */}
+        {connections.map((conn, i) => (
+          <motion.line
+            key={i}
+            x1={nodes[conn.from].cx}
+            y1={nodes[conn.from].cy}
+            x2={nodes[conn.to].cx}
+            y2={nodes[conn.to].cy}
+            stroke="url(#lineGradient)"
+            strokeWidth="0.5"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.4 }}
+            transition={{ duration: 2, delay: 0.5 + i * 0.1 }}
+          />
+        ))}
+
+        {/* Gradient definition */}
+        <defs>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#117dff" stopOpacity="0" />
+            <stop offset="50%" stopColor="#117dff" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#117dff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Animated nodes */}
+        {nodes.map((node, i) => (
+          <motion.g key={i}>
+            <motion.circle
+              cx={node.cx}
+              cy={node.cy}
+              r={node.r}
+              fill="url(#nodeGradient)"
+              stroke="#117dff"
+              strokeWidth="0.5"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, delay: node.delay, type: 'spring' }}
+            />
+            <motion.circle
+              cx={node.cx}
+              cy={node.cy}
+              r={node.r * 1.5}
+              fill="none"
+              stroke="#117dff"
+              strokeWidth="0.3"
+              initial={{ scale: 1, opacity: 0.5 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+            />
+          </motion.g>
+        ))}
+      </svg>
+    </div>
+  );
+};
+
+/* ─── Interactive Architecture Layers ─── */
+const ArchitectureLayers = ({ viewMode }) => {
+  if (viewMode !== 'interactive') return null;
+
+  const layers = [
+    { name: 'Canonical', prefix: 'kg/*', desc: 'Durable knowledge', color: '#117dff', x: '50%', y: '15%' },
+    { name: 'Operational', prefix: 'op/*', desc: 'Active cognition', color: '#8b5cf6', x: '20%', y: '70%' },
+    { name: 'Control', prefix: 'meta/*', desc: 'Learning & adaptation', color: '#0ea5e9', x: '80%', y: '70%' },
+  ];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        {/* Connection flows */}
+        <motion.path
+          d="M 50 25 Q 35 45 20 65"
+          fill="none"
+          stroke="url(#flowGradient1)"
+          strokeWidth="0.8"
+          strokeDasharray="2 1"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 3, delay: 1 }}
+        />
+        <motion.path
+          d="M 50 25 Q 65 45 80 65"
+          fill="none"
+          stroke="url(#flowGradient2)"
+          strokeWidth="0.8"
+          strokeDasharray="2 1"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 3, delay: 1.5 }}
+        />
+        <motion.path
+          d="M 20 70 Q 50 80 80 70"
+          fill="none"
+          stroke="url(#flowGradient3)"
+          strokeWidth="0.8"
+          strokeDasharray="2 1"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 3, delay: 2 }}
+        />
+
+        <defs>
+          <linearGradient id="flowGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#117dff" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#117dff" stopOpacity="0.2" />
+          </linearGradient>
+          <linearGradient id="flowGradient2" x1="100%" y1="0%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.2" />
+          </linearGradient>
+          <linearGradient id="flowGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.3" />
+          </linearGradient>
+        </defs>
+
+        {/* Layer nodes */}
+        {layers.map((layer, i) => (
+          <motion.g key={layer.name}>
+            <motion.circle
+              cx={layer.x}
+              cy={layer.y}
+              r="12"
+              fill={`${layer.color}15`}
+              stroke={layer.color}
+              strokeWidth="1"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 + i * 0.2, type: 'spring' }}
+            />
+            <motion.circle
+              cx={layer.x}
+              cy={layer.y}
+              r="12"
+              fill="none"
+              stroke={layer.color}
+              strokeWidth="0.5"
+              initial={{ scale: 1, opacity: 0.6 }}
+              animate={{ scale: 1.5, opacity: 0 }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.5 }}
+            />
+          </motion.g>
+        ))}
+      </svg>
+
+      {/* Labels */}
+      {layers.map((layer, i) => (
+        <motion.div
+          key={layer.name}
+          className="absolute transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none"
+          style={{ left: layer.x, top: layer.y }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 + i * 0.2 }}
+        >
+          <span className="px-2 py-0.5 text-xs font-mono bg-white/90 border border-[#e3e0db] rounded text-[#117dff]">
+            {layer.prefix}
+          </span>
+        </motion.div>
+      ))}
     </div>
   );
 };
@@ -163,20 +493,46 @@ const FadeUp = ({ children, delay = 0, className = '' }) => (
 );
 
 /* ─── Concept Card ─── */
-const ConceptCard = ({ icon: Icon, title, description, number, delay = 0 }) => (
-  <FadeUp delay={delay}>
-    <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#d4d0ca] transition-colors h-full">
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
-          <Icon size={18} className="text-[#117dff]" />
+const ConceptCard = ({ icon: Icon, title, description, number, delay = 0, viewMode = 'page' }) => {
+  if (viewMode === 'interactive') {
+    return (
+      <FadeUp delay={delay}>
+        <motion.div
+          whileHover={{ y: -8, scale: 1.02 }}
+          className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(17,125,255,0.15)] hover:border-[#117dff]/40 transition-all duration-300 h-full group"
+        >
+          <div className="flex items-start justify-between mb-4">
+            <motion.div
+              whileHover={{ rotate: 360, scale: 1.1 }}
+              transition={{ duration: 0.4 }}
+              className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#117dff]/10 to-[#117dff]/5 border border-[#117dff]/20 flex items-center justify-center group-hover:border-[#117dff]/40"
+            >
+              <Icon size={20} className="text-[#117dff]" />
+            </motion.div>
+            <span className="text-xs font-mono text-[#a3a3a3] group-hover:text-[#117dff] transition-colors">[{number}]</span>
+          </div>
+          <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2 group-hover:text-[#117dff] transition-colors">{title}</h3>
+          <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
+        </motion.div>
+      </FadeUp>
+    );
+  }
+
+  return (
+    <FadeUp delay={delay}>
+      <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#d4d0ca] transition-colors h-full">
+        <div className="flex items-start justify-between mb-4">
+          <div className="w-10 h-10 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
+            <Icon size={18} className="text-[#117dff]" />
+          </div>
+          <span className="text-xs font-mono text-[#a3a3a3]">[{number}]</span>
         </div>
-        <span className="text-xs font-mono text-[#a3a3a3]">[{number}]</span>
+        <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2">{title}</h3>
+        <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
       </div>
-      <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2">{title}</h3>
-      <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
-    </div>
-  </FadeUp>
-);
+    </FadeUp>
+  );
+};
 
 /* ─── Claim Row ─── */
 const ClaimRow = ({ number, title, description, delay = 0 }) => (
@@ -207,13 +563,64 @@ const ForceItem = ({ label, description, type }) => (
 /* ════════════════════════════════════════ */
 
 const ResearchPage = () => {
+  const [viewMode, setViewMode] = useState('page');
+  const [activeSection, setActiveSection] = useState('hero');
+
+  useEffect(() => {
+    // Load saved view mode from localStorage
+    const saved = localStorage.getItem('research-view-mode');
+    if (saved) setViewMode(saved);
+  }, []);
+
+  useEffect(() => {
+    // Save view mode preference
+    localStorage.setItem('research-view-mode', viewMode);
+  }, [viewMode]);
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  useEffect(() => {
+    // Track active section for TOC highlighting
+    const sections = ['thesis', 'architecture', 'concepts', 'why', 'future'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.3, rootMargin: '-100px 0px -40% 0px' }
+    );
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#faf9f4]">
       <ResearchNavbar />
-      <TableOfContents />
+
+      {/* Interactive mode components */}
+      <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
+      <InteractiveTOC activeSection={activeSection} scrollTo={scrollTo} />
+      <ReadingProgress />
+      <InteractiveBackground viewMode={viewMode} />
+
+      {/* Page layout mode TOC */}
+      <TableOfContents activeSection={activeSection} scrollTo={scrollTo} viewMode={viewMode} />
 
       {/* ── HERO ── */}
       <Section id="hero" className="pt-28 pb-20 lg:pt-36 lg:pb-28 relative overflow-hidden">
+        {viewMode === 'interactive' && <InteractiveHeroNetwork />}
+
         {/* Subtle glow */}
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#117dff]/[0.04] rounded-full blur-[150px] pointer-events-none" />
 
@@ -344,10 +751,12 @@ const ResearchPage = () => {
 
       {/* ── ARCHITECTURE ── */}
       <Section id="architecture">
-        <div className="py-20 lg:py-28">
+        <div className="py-20 lg:py-28 relative">
+          {viewMode === 'interactive' && <ArchitectureLayers viewMode={viewMode} />}
+
           <FadeUp>
-            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block">[03] Architecture</span>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block relative z-10">[03] Architecture</span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10 relative z-10">
               Three-layer <span className="text-[#117dff]">cognitive runtime</span>
             </h2>
           </FadeUp>
