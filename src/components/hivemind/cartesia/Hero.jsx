@@ -55,6 +55,7 @@ const Hero = () => {
           clearInterval(typeInterval);
           setTimeout(() => {
             setShowResult(true);
+            setIsPlaying(false);
             let count = 0;
             const countInterval = setInterval(() => {
               count++;
