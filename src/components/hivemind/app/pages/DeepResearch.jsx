@@ -10,32 +10,45 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
-/* ─── Constants ──────────────────────────────────────────────────── */
+/* ─── Dark Background for Fullscreen Graph ───────────────────────────────── */
 const BG = '#08080c';
 
+/* ─── Cartesia Light Theme Constants ───────────────────────────────── */
+const THEME = {
+  bg: '#faf9f4',
+  bgSecondary: '#ffffff',
+  border: '#e3e0db',
+  borderLight: '#d4d0ca',
+  text: '#0a0a0a',
+  textSecondary: '#525252',
+  textMuted: '#a3a3a3',
+  accent: '#117dff',
+  accentHover: '#0a6ddb',
+};
+
 const ACTION_BADGES = {
-  SEARCH_WEB:    { label: 'Web Search',    color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
-  SEARCH_MEMORY: { label: 'Memory Search', color: '#22c55e', bg: 'rgba(34,197,94,0.15)' },
-  READ_URL:      { label: 'Reading',       color: '#a855f7', bg: 'rgba(168,85,247,0.15)' },
-  SYNTHESIZE:    { label: 'Synthesize',    color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  FINISH:        { label: 'Finish',        color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+  SEARCH_WEB:    { label: 'Web Search',    color: '#117dff', bg: 'rgba(17,125,255,0.12)' },
+  SEARCH_MEMORY: { label: 'Memory Search', color: '#16a34a', bg: 'rgba(22,163,74,0.12)' },
+  READ_URL:      { label: 'Reading',       color: '#9333ea', bg: 'rgba(147,51,234,0.12)' },
+  SYNTHESIZE:    { label: 'Synthesize',    color: '#d97706', bg: 'rgba(217,119,6,0.12)' },
+  FINISH:        { label: 'Finish',        color: '#059669', bg: 'rgba(5,150,105,0.12)' },
 };
 
 const AGENT_COLORS = {
-  Explorer: '#3b82f6',
-  Analyst: '#a855f7',
-  Verifier: '#22c55e',
-  Synthesizer: '#f59e0b',
+  Explorer: '#117dff',
+  Analyst: '#9333ea',
+  Verifier: '#16a34a',
+  Synthesizer: '#d97706',
 };
 
 const GRAPH_LAYERS = {
-  sources: { label: 'Sources', color: '#3b82f6', icon: Globe },
-  claims: { label: 'Claims', color: '#a855f7', icon: FileText },
-  trails: { label: 'Trails', color: '#22c55e', icon: GitBranch },
-  blueprints: { label: 'Blueprints', color: '#f59e0b', icon: Layers },
+  sources: { label: 'Sources', color: '#117dff', icon: Globe },
+  claims: { label: 'Claims', color: '#9333ea', icon: FileText },
+  trails: { label: 'Trails', color: '#16a34a', icon: GitBranch },
+  blueprints: { label: 'Blueprints', color: '#d97706', icon: Layers },
 };
 
-/* ─── Simple Markdown Renderer ───────────────────────────────────── */
+/* ─── Simple Markdown Renderer (Light Theme) ───────────────────────── */
 function renderMarkdown(text) {
   if (!text) return '';
   const escaped = text
@@ -43,22 +56,22 @@ function renderMarkdown(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   return escaped
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold text-white/90 mt-4 mb-2">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-white/90 mt-6 mb-2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-white mt-6 mb-3">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white/90 font-semibold">$1</strong>')
+    .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold text-[#0a0a0a]/90 mt-4 mb-2">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-[#0a0a0a]/90 mt-6 mb-2">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-[#0a0a0a] mt-6 mb-3">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-[#0a0a0a]/90 font-semibold">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1.5 py-0.5 rounded bg-white/10 text-emerald-300 text-xs font-mono">$1</code>')
-    .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc text-white/70">$1</li>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-white/70">$1</li>')
-    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-white/70">$1</li>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">$1</a>')
-    .replace(/^---$/gm, '<hr class="border-white/10 my-4" />')
-    .replace(/\n\n/g, '</p><p class="text-white/70 leading-relaxed mb-2">')
+    .replace(/`(.+?)`/g, '<code class="px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff] text-xs font-mono">$1</code>')
+    .replace(/^\* (.+)$/gm, '<li class="ml-4 list-disc text-[#525252]/80">$1</li>')
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-[#525252]/80">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-[#525252]/80">$1</li>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#117dff] hover:text-[#0a6ddb] underline underline-offset-2">$1</a>')
+    .replace(/^---$/gm, '<hr class="border-[#e3e0db] my-4" />')
+    .replace(/\n\n/g, '</p><p class="text-[#525252]/80 leading-relaxed mb-2">')
     .replace(/\n/g, '<br/>');
 }
 
-/* ─── Event Card ─────────────────────────────────────────────────── */
+/* ─── Event Card (Light Theme) ────────────────────────────────────── */
 function EventCard({ event, index }) {
   const getContent = () => {
     switch (event.type) {
@@ -67,7 +80,7 @@ function EventCard({ event, index }) {
         return (
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
-              <Brain size={14} className="text-white/40" />
+              <Brain size={14} className="text-[#a3a3a3]" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -78,7 +91,7 @@ function EventCard({ event, index }) {
                   {badge.label}
                 </span>
               </div>
-              <p className="text-xs text-white/60 leading-relaxed">{event.thought || event.message}</p>
+              <p className="text-xs text-[#525252]/70 leading-relaxed">{event.thought || event.message}</p>
             </div>
           </div>
         );
@@ -86,53 +99,53 @@ function EventCard({ event, index }) {
       case 'web.searching':
         return (
           <div className="flex items-center gap-3">
-            <Loader2 size={14} className="text-blue-400 animate-spin" />
-            <span className="text-xs text-white/60">Searching: <span className="text-blue-400">{event.query}</span></span>
+            <Loader2 size={14} className="text-[#117dff] animate-spin" />
+            <span className="text-xs text-[#525252]/70">Searching: <span className="text-[#117dff]">{event.query}</span></span>
           </div>
         );
       case 'web.results':
         return (
           <div className="flex items-center gap-3">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            <span className="text-xs text-white/60"><span className="text-emerald-400 font-medium">{event.count}</span> results found</span>
+            <CheckCircle2 size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#525252]/70"><span className="text-[#16a34a] font-medium">{event.count}</span> results found</span>
           </div>
         );
       case 'web.reading':
         return (
           <div className="flex items-center gap-3">
-            <Loader2 size={14} className="text-purple-400 animate-spin" />
-            <span className="text-xs text-white/60 truncate">Reading: <span className="text-purple-400">{event.url}</span></span>
+            <Loader2 size={14} className="text-[#9333ea] animate-spin" />
+            <span className="text-xs text-[#525252]/70 truncate">Reading: <span className="text-[#9333ea]">{event.url}</span></span>
           </div>
         );
       case 'web.read_complete':
         return (
           <div className="flex items-center gap-3">
-            <BookOpen size={14} className="text-purple-400" />
-            <span className="text-xs text-white/60">Read <span className="text-purple-400 font-medium">{event.length?.toLocaleString()}</span> chars from <span className="text-purple-300 truncate">{event.url}</span></span>
+            <BookOpen size={14} className="text-[#9333ea]" />
+            <span className="text-xs text-[#525252]/70">Read <span className="text-[#9333ea] font-medium">{event.length?.toLocaleString()}</span> chars from <span className="text-[#9333ea] truncate">{event.url}</span></span>
           </div>
         );
       case 'task.completed':
         return (
           <div className="flex items-center gap-3">
-            <Zap size={14} className="text-amber-400" />
-            <span className="text-xs text-white/60">
-              Task complete: <span className="text-amber-400 font-medium">{event.findingCount}</span> findings
-              {event.confidence != null && <>, confidence <span className="text-amber-400 font-medium">{(event.confidence * 100).toFixed(0)}%</span></>}
+            <Zap size={14} className="text-[#d97706]" />
+            <span className="text-xs text-[#525252]/70">
+              Task complete: <span className="text-[#d97706] font-medium">{event.findingCount}</span> findings
+              {event.confidence != null && <>, confidence <span className="text-[#d97706] font-medium">{(event.confidence * 100).toFixed(0)}%</span></>}
             </span>
           </div>
         );
       case 'research.synthesizing':
         return (
           <div className="flex items-center gap-3">
-            <Loader2 size={14} className="text-amber-400 animate-spin" />
-            <span className="text-xs text-amber-400 font-medium">Synthesizing final report...</span>
+            <Loader2 size={14} className="text-[#d97706] animate-spin" />
+            <span className="text-xs text-[#d97706] font-medium">Synthesizing final report...</span>
           </div>
         );
       case 'research.completed':
         return (
           <div className="flex items-center gap-3">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            <span className="text-xs text-emerald-400 font-medium">
+            <CheckCircle2 size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#16a34a] font-medium">
               Research complete! {event.findingCount} findings in {((event.durationMs || 0) / 1000).toFixed(1)}s
             </span>
           </div>
@@ -140,8 +153,8 @@ function EventCard({ event, index }) {
       default:
         return (
           <div className="flex items-center gap-3">
-            <Globe size={14} className="text-white/30" />
-            <span className="text-xs text-white/50">{event.message || event.type}</span>
+            <Globe size={14} className="text-[#a3a3a3]" />
+            <span className="text-xs text-[#a3a3a3]">{event.message || event.type}</span>
           </div>
         );
     }
@@ -152,26 +165,26 @@ function EventCard({ event, index }) {
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3, delay: index * 0.03 }}
-      className="bg-white/[0.04] backdrop-blur-md border border-white/[0.07] rounded-xl px-4 py-2.5"
+      className="bg-white border border-[#e3e0db] rounded-xl px-4 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       {getContent()}
     </motion.div>
   );
 }
 
-/* ─── Graph Node Painter ─────────────────────────────────────────── */
+/* ─── Graph Node Painter (Light Theme) ────────────────────────────── */
 function usePaintNode() {
   return useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
 
     const radius = Math.sqrt(node.val || 4) * 2;
-    const color = node.tags?.includes('research-finding') ? '#60a5fa'
-      : node.tags?.includes('research-trail') ? '#c084fc'
-      : '#94a3b8';
+    const color = node.tags?.includes('research-finding') ? '#117dff'
+      : node.tags?.includes('research-trail') ? '#9333ea'
+      : '#6b7280';
 
     // Outer glow
     const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.3, node.x, node.y, radius * 3);
-    glow.addColorStop(0, `${color}44`);
+    glow.addColorStop(0, `${color}33`);
     glow.addColorStop(1, 'transparent');
     ctx.beginPath();
     ctx.arc(node.x, node.y, radius * 3, 0, 2 * Math.PI);
@@ -180,9 +193,9 @@ function usePaintNode() {
 
     // Core orb
     const core = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius);
-    core.addColorStop(0, '#ffffffdd');
+    core.addColorStop(0, '#ffffff');
     core.addColorStop(0.3, `${color}cc`);
-    core.addColorStop(1, `${color}33`);
+    core.addColorStop(1, `${color}66`);
     ctx.beginPath();
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
     ctx.fillStyle = core;
@@ -194,7 +207,7 @@ function usePaintNode() {
       ctx.font = `${fontSize}px 'Space Grotesk', sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.fillStyle = 'rgba(10,10,10,0.75)';
       ctx.fillText((node.title || node.label || '').slice(0, 30), node.x, node.y + radius + 3);
     }
   }, []);
@@ -210,7 +223,7 @@ function usePaintLink() {
     ctx.beginPath();
     ctx.moveTo(src.x, src.y);
     ctx.lineTo(tgt.x, tgt.y);
-    ctx.strokeStyle = 'rgba(148,163,184,0.08)';
+    ctx.strokeStyle = 'rgba(107,114,128,0.15)';
     ctx.lineWidth = 0.6;
     ctx.stroke();
   }, []);
@@ -504,7 +517,7 @@ export default function DeepResearch() {
   return (
     <div
       className="fixed inset-0 overflow-hidden"
-      style={{ background: BG, left: '260px', top: '0', right: '0', bottom: '0', zIndex: 10 }}
+      style={{ background: THEME.bg, left: '260px', top: '0', right: '0', bottom: '0', zIndex: 10 }}
     >
       {/* ── Watermark ──────────────────────────────────────────────── */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
@@ -513,7 +526,7 @@ export default function DeepResearch() {
             fontSize: '20vw',
             fontWeight: 900,
             fontFamily: "'Space Grotesk', sans-serif",
-            color: 'rgba(255,255,255,0.02)',
+            color: 'rgba(17,125,255,0.03)',
             letterSpacing: '-0.05em',
             lineHeight: 1,
           }}
@@ -527,15 +540,15 @@ export default function DeepResearch() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.05] backdrop-blur-md border border-white/[0.08]"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
         >
           {/* Process Panel Toggle */}
           <button
             onClick={() => setShowProcessPanel(!showProcessPanel)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
               showProcessPanel
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-white/70 hover:bg-white/[0.1]'
+                ? 'bg-[#9333ea]/10 text-[#9333ea]'
+                : 'text-[#525252] hover:bg-[#faf9f4]'
             }`}
           >
             <ListTodo size={14} />
@@ -547,8 +560,8 @@ export default function DeepResearch() {
             onClick={() => setShowGraph(!showGraph)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
               showGraph
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-white/70 hover:bg-white/[0.1]'
+                ? 'bg-[#117dff]/10 text-[#117dff]'
+                : 'text-[#525252] hover:bg-[#faf9f4]'
             }`}
           >
             <Network size={14} />
@@ -556,9 +569,9 @@ export default function DeepResearch() {
           </button>
 
           {/* Blueprint Badge (V2 placeholder) */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <Trophy size={12} className="text-amber-400" />
-            <span className="text-[10px] text-amber-400 font-medium">Blueprint Ready</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d97706]/10 border border-[#d97706]/20">
+            <Trophy size={12} className="text-[#d97706]" />
+            <span className="text-[10px] text-[#d97706] font-medium">Blueprint Ready</span>
           </div>
         </motion.div>
       )}
@@ -568,7 +581,7 @@ export default function DeepResearch() {
         <div className="absolute top-4 left-4 z-30">
           <button
             onClick={() => setShowSessions(!showSessions)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.05] backdrop-blur-md border border-white/[0.08] text-white/70 text-xs hover:bg-white/[0.1] transition-all duration-200"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#faf9f4] transition-all duration-200 shadow-sm"
           >
             <History size={14} />
             History
@@ -584,18 +597,18 @@ export default function DeepResearch() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="mt-2 bg-black/80 backdrop-blur-xl rounded-xl border border-white/[0.08] p-2 w-80 max-h-80 overflow-y-auto"
+                className="mt-2 bg-white rounded-xl border border-[#e3e0db] p-2 w-80 max-h-80 overflow-y-auto shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
               >
                 {sessions.map((s) => (
                   <button
                     key={s.id || s.session_id}
                     onClick={() => loadSession(s.id || s.session_id)}
-                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-white/[0.06] transition-colors group"
+                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#faf9f4] transition-colors group"
                   >
-                    <p className="text-xs text-white/80 truncate group-hover:text-white transition-colors">
+                    <p className="text-xs text-[#0a0a0a]/80 truncate group-hover:text-[#0a0a0a] transition-colors">
                       {s.query || s.title || 'Untitled research'}
                     </p>
-                    <p className="text-[10px] text-white/35 mt-0.5">
+                    <p className="text-[10px] text-[#525252]/50 mt-0.5">
                       {s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}
                       {s.status && <> &middot; {s.status}</>}
                     </p>
@@ -613,7 +626,7 @@ export default function DeepResearch() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           onClick={handleNewResearch}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.05] backdrop-blur-md border border-white/[0.08] text-white/60 text-xs hover:bg-white/[0.1] hover:text-white/80 transition-all duration-200"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#faf9f4] transition-all duration-200 shadow-sm"
         >
           <Sparkles size={12} />
           New Research

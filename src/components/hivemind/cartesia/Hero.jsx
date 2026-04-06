@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Settings2, ChevronDown, ArrowRight, Sparkles, Zap, Brain, Cable } from 'lucide-react';
+import { Play, ChevronDown, ArrowRight, Sparkles, Zap, Brain, Cable, RefreshCcw } from 'lucide-react';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -53,19 +53,17 @@ const Hero = () => {
           charIndex++;
         } else {
           clearInterval(typeInterval);
-          // Show results after typing completes
           setTimeout(() => {
             setShowResult(true);
-            // Animate result count
             let count = 0;
             const countInterval = setInterval(() => {
               count++;
               setResultCount(count);
               if (count >= 3) clearInterval(countInterval);
-            }, 150);
-          }, 300);
+            }, 200);
+          }, 400);
         }
-      }, 50);
+      }, 40);
 
       return () => clearInterval(typeInterval);
     }
@@ -75,54 +73,66 @@ const Hero = () => {
     setIsPlaying(true);
   };
 
+  const handleReset = () => {
+    setIsPlaying(false);
+    setShowResult(false);
+    setTypedText('');
+    setResultCount(0);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    handleReset();
+  };
+
   return (
-    <section className="relative pt-24 sm:pt-28 pb-12 sm:pb-20 min-h-screen flex items-center overflow-hidden bg-[#faf9f4]">
-      {/* Background Glows - Reduced for mobile */}
+    <section className="relative pt-20 sm:pt-24 lg:pt-28 pb-12 sm:pb-16 lg:pb-20 min-h-screen flex items-center overflow-hidden bg-[#faf9f4]">
+      {/* Background Glows */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[80vw] sm:w-[50vw] h-[80vw] sm:h-[50vw] bg-[#117dff]/[0.04] rounded-full blur-[100px] sm:blur-[150px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[40vw] sm:w-[30vw] h-[40vw] sm:h-[30vw] bg-[#117dff]/[0.02] rounded-full blur-[80px] sm:blur-[120px] pointer-events-none" />
 
       <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-4 sm:px-6 w-full">
         <div className="flex flex-col items-center text-center relative z-10">
-          {/* Eyebrow with sparkle */}
+          {/* Eyebrow */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6 }}
             className="mb-4 sm:mb-6"
           >
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/15 text-[#117dff] text-xs font-semibold tracking-wide uppercase">
-              <Sparkles size={12} className="text-[#117dff]" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/15 text-[#117dff] text-[10px] sm:text-xs font-semibold tracking-wide uppercase">
+              <Sparkles size={10} className="sm:w-3 sm:h-3 text-[#117dff]" />
               Built in Hannover, Germany
             </span>
           </motion.div>
 
-          {/* Main Heading - Updated tagline */}
+          {/* Main Heading */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.1 }}
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4 sm:mb-6 max-w-4xl text-[#0a0a0a] font-['Space_Grotesk']"
           >
             Europe's AI<br />
             <span className="text-[#117dff]">Memory Engine.</span>
           </motion.h1>
 
-          {/* Subtext - Updated */}
+          {/* Subtext */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-base sm:text-lg md:text-xl text-[#525252] mb-6 sm:mb-8 max-w-xl leading-relaxed px-2"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-[#525252] mb-6 sm:mb-8 max-w-2xl leading-relaxed px-2"
           >
             Sovereign. Sub-50ms. GDPR-compliant. Built in Hannover for individuals, developers, and enterprise teams.
           </motion.p>
 
-          {/* CTA Buttons - Stacked on mobile */}
+          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8 sm:mb-12 w-full sm:w-auto"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10 sm:mb-12 w-full sm:w-auto"
           >
             <motion.button
               whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(17,125,255,0.25)' }}
@@ -146,86 +156,72 @@ const Hero = () => {
             </motion.button>
           </motion.div>
 
-          {/* Demo Widget - Mobile optimized */}
+          {/* Demo Widget - Redesigned */}
           <motion.div
-            initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="relative w-full max-w-2xl"
           >
-            <div className="relative bg-white rounded-xl sm:rounded-[20px] border border-[#e3e0db] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-              {/* Top bar */}
-              <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-[#e3e0db]">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-[#f3f1ec] hover:bg-[#eae7e1] transition-colors text-xs font-medium cursor-pointer text-[#0a0a0a]"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse" />
-                  <span className="hidden sm:inline">Model Context</span>
-                  <span className="sm:hidden">Context</span>
-                  <ChevronDown className="w-3 h-4 text-[#a3a3a3]" />
-                </motion.button>
-                {/* Mobile tab selector */}
-                <div className="sm:hidden flex items-center gap-1">
-                  {Object.keys(demoQueries).map((tab) => (
-                    <motion.button
-                      key={tab}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => {
-                        setActiveTab(tab);
-                        setIsPlaying(false);
-                        setShowResult(false);
-                        setTypedText('');
-                        setResultCount(0);
-                      }}
-                      className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
-                        activeTab === tab
-                          ? 'bg-[#117dff]/[0.08] border border-[#117dff]/30 text-[#117dff]'
-                          : 'border border-transparent text-[#525252] hover:bg-[#f3f1ec]'
-                      }`}
-                    >
-                      {tab.slice(0, 3)}
-                    </motion.button>
-                  ))}
+            <div className="relative bg-white rounded-2xl sm:rounded-3xl border border-[#e3e0db] overflow-hidden shadow-2xl">
+              {/* Top Bar - Terminal Style */}
+              <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#e3e0db] bg-gradient-to-b from-[#faf9f4] to-white">
+                {/* Window Controls */}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[#ff5f57] border border-[#e0443e]" />
+                  <div className="w-3 h-3 rounded-full bg-[#febc2e] border border-[#dba520]" />
+                  <div className="w-3 h-3 rounded-full bg-[#28c840] border border-[#1aab29]" />
                 </div>
-                <div className="hidden sm:flex items-center gap-1.5">
+
+                {/* Desktop Tabs */}
+                <div className="hidden sm:flex items-center gap-1 bg-[#e3e0db]/50 rounded-lg p-0.5">
                   {Object.keys(demoQueries).map((tab) => (
                     <motion.button
                       key={tab}
-                      whileHover={{ scale: 1.05 }}
+                      whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                      onClick={() => handleTabChange(tab)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
                         activeTab === tab
-                          ? 'bg-[#117dff]/[0.08] border-[#117dff]/30 text-[#117dff]'
-                          : 'border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec]'
+                          ? 'bg-white text-[#117dff] shadow-sm border border-[#e3e0db]'
+                          : 'text-[#525252] hover:text-[#0a0a0a]'
                       }`}
                     >
                       {tab}
                     </motion.button>
                   ))}
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="p-1.5 sm:p-2 rounded-lg border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors cursor-pointer bg-white"
-                >
-                  <Settings2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#a3a3a3]" />
-                </motion.button>
+
+                {/* Mobile Tabs */}
+                <div className="sm:hidden flex items-center gap-0.5 bg-[#e3e0db]/50 rounded-md p-0.5">
+                  {Object.keys(demoQueries).map((tab) => (
+                    <motion.button
+                      key={tab}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleTabChange(tab)}
+                      className={`px-2 py-1 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                        activeTab === tab
+                          ? 'bg-white text-[#117dff] shadow-sm'
+                          : 'text-[#525252]'
+                      }`}
+                    >
+                      {tab.slice(0, 3)}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
 
-              {/* Content - Animated with typing effect */}
-              <div className="p-4 sm:p-6 min-h-[100px] sm:min-h-[180px]">
+              {/* Content Area */}
+              <div className="p-4 sm:p-5 lg:p-6 min-h-[200px] sm:min-h-[220px] lg:min-h-[240px]">
+                {/* Query Box */}
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-3"
+                  className="mb-4"
                 >
-                  {/* Query input */}
-                  <div className="bg-[#faf9f4] rounded-lg sm:rounded-xl p-3 sm:p-4 border border-[#e3e0db]">
-                    <p className="text-sm sm:text-base leading-relaxed text-[#0a0a0a]">
-                      <span className="text-[#117dff] font-mono text-xs sm:text-sm">&gt; recall</span>{' '}
+                  <div className="bg-[#faf9f4] rounded-xl p-3 sm:p-4 border border-[#e3e0db]">
+                    <p className="text-sm sm:text-base leading-relaxed text-[#0a0a0a] font-mono">
+                      <span className="text-[#117dff]">&gt;</span>{' '}
                       <span className={isPlaying ? 'text-[#117dff]' : ''}>
                         {typedText || demoQueries[activeTab].query}
                         {isPlaying && (
@@ -238,106 +234,110 @@ const Hero = () => {
                       </span>
                     </p>
                   </div>
-
-                  {/* Results - Animate in */}
-                  <AnimatePresence>
-                    {showResult && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center gap-2 text-xs text-[#16a34a] font-mono">
-                          <Zap size={12} />
-                          <span>{resultCount} memories found in {45 + resultCount * 3}ms</span>
-                        </div>
-                        {demoQueries[activeTab].results.slice(0, resultCount).map((result, idx) => (
-                          <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-[#e3e0db] hover:border-[#117dff]/30 hover:shadow-sm transition-all cursor-pointer"
-                          >
-                            <span className="text-base">{result.icon}</span>
-                            <span className="text-xs sm:text-sm text-[#0a0a0a]">{result.text}</span>
-                          </motion.div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </motion.div>
+
+                {/* Results */}
+                <AnimatePresence>
+                  {showResult && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2.5"
+                    >
+                      {/* Status Line */}
+                      <div className="flex items-center gap-2 text-xs text-[#16a34a] font-mono">
+                        <Zap size={12} />
+                        <span>{resultCount} memories found in {45 + resultCount * 3}ms</span>
+                      </div>
+                      {/* Result Cards */}
+                      {demoQueries[activeTab].results.slice(0, resultCount).map((result, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.08 }}
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#e3e0db] hover:border-[#117dff]/30 hover:shadow-md transition-all cursor-pointer group"
+                        >
+                          <span className="text-lg flex-shrink-0">{result.icon}</span>
+                          <span className="text-xs sm:text-sm text-[#0a0a0a] flex-1 text-left group-hover:text-[#117dff] transition-colors">
+                            {result.text}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Bottom bar */}
-              <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-t border-[#e3e0db] bg-[#f3f1ec]/50">
+              {/* Bottom Bar */}
+              <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-t border-[#e3e0db] bg-[#faf9f4]">
+                {/* EU Badge */}
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white cursor-pointer"
+                >
+                  <span className="text-base">🇪🇺</span>
+                  <span className="text-xs text-[#525252] hidden sm:inline">EU Sovereign</span>
+                  <ChevronDown className="w-3 h-3 text-[#a3a3a3]" />
+                </motion.div>
+
+                {/* Action Buttons */}
                 <div className="flex items-center gap-2">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white cursor-pointer"
-                  >
-                    <span className="text-base">🇪🇺</span>
-                    <span className="text-xs text-[#525252] hidden sm:inline">EU Sovereign</span>
-                    <ChevronDown className="w-2.5 h-2.5 text-[#a3a3a3]" />
-                  </motion.div>
                   {showResult && (
                     <motion.button
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       whileHover={{ scale: 1.05 }}
-                      onClick={() => {
-                        setIsPlaying(false);
-                        setShowResult(false);
-                        setTypedText('');
-                        setResultCount(0);
-                      }}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] transition-colors cursor-pointer"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleReset}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] transition-colors cursor-pointer"
                     >
-                      <span className="text-xs text-[#525252]">Reset</span>
+                      <RefreshCcw size={14} className="text-[#525252]" />
+                      <span className="text-xs text-[#525252] hidden sm:inline">Reset</span>
                     </motion.button>
                   )}
+                  <motion.button
+                    whileHover={{ scale: 1.02, boxShadow: showResult ? '0 2px 8px rgba(22,163,74,0.3)' : '0 2px 8px rgba(17,125,255,0.2)' }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handlePlayDemo}
+                    disabled={isPlaying}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 rounded-[4px] font-semibold transition-all cursor-pointer border-none text-xs sm:text-sm uppercase tracking-[0.075em] ${
+                      showResult
+                        ? 'bg-[#16a34a] text-white hover:bg-[#158f3a]'
+                        : 'bg-[#117dff] text-white hover:bg-[#0066e0]'
+                    } ${isPlaying ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  >
+                    {isPlaying ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"
+                      />
+                    ) : showResult ? (
+                      <Zap size={14} fill="currentColor" />
+                    ) : (
+                      <Play size={14} fill="currentColor" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isPlaying ? 'Running...' : showResult ? 'Run Again' : 'Try Live'}
+                    </span>
+                    <span className="sm:hidden">{isPlaying ? '...' : showResult ? 'Again' : 'Try'}</span>
+                  </motion.button>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.02, boxShadow: showResult ? '0 2px 8px rgba(22,163,74,0.3)' : '0 2px 8px rgba(17,125,255,0.2)' }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handlePlayDemo}
-                  disabled={isPlaying}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 sm:py-2 rounded-[4px] font-semibold transition-all cursor-pointer border-none text-xs uppercase tracking-[0.075em] ${
-                    showResult
-                      ? 'bg-[#16a34a] text-white hover:bg-[#158f3a]'
-                      : 'bg-[#117dff] text-white hover:bg-[#0066e0]'
-                  } ${isPlaying ? 'opacity-75 cursor-not-allowed' : ''}`}
-                >
-                  {isPlaying ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      className="w-3 h-3 border-2 border-white border-t-transparent rounded-full"
-                    />
-                  ) : showResult ? (
-                    <Zap size={12} fill="currentColor" />
-                  ) : (
-                    <Play size={12} fill="currentColor" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {isPlaying ? 'Running...' : showResult ? 'Run Again' : 'Try Live'}
-                  </span>
-                  <span className="sm:hidden">{isPlaying ? '...' : showResult ? 'Again' : 'Try'}</span>
-                </motion.button>
               </div>
             </div>
 
-            {/* Glow */}
-            <div className="absolute -inset-2 sm:-inset-4 bg-[#117dff]/[0.04] blur-2xl sm:blur-3xl -z-10 rounded-2xl sm:rounded-[40px]" />
+            {/* Glow Effect */}
+            <div className="absolute -inset-3 sm:-inset-4 bg-gradient-to-b from-[#117dff]/[0.06] to-transparent blur-2xl sm:blur-3xl -z-10 rounded-3xl sm:rounded-[40px]" />
           </motion.div>
 
-          {/* Trust signals - With icons */}
+          {/* Trust Signals */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.6 }}
-            className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6"
+            className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-4 sm:gap-6"
           >
             {[
               { icon: Zap, label: 'Sub-50ms Recall', color: '#117dff' },
@@ -347,11 +347,11 @@ const Hero = () => {
             ].map((item, i, arr) => (
               <motion.div
                 key={item.label}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 + i * 0.1 }}
                 whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[#a3a3a3] font-mono"
+                className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[#525252]"
               >
                 {item.icon && <item.icon size={12} style={{ color: item.color }} />}
                 <span>{item.label}</span>
