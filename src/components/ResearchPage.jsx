@@ -114,47 +114,8 @@ const ResearchNavbar = () => {
   );
 };
 
-/* ─── Table of Contents (Right Side Index) ─── */
-const TableOfContents = ({ activeSection, scrollTo, viewMode }) => {
-  const sections = [
-    { label: 'Thesis', id: 'thesis' },
-    { label: 'Architecture', id: 'architecture' },
-    { label: 'Key Concepts', id: 'concepts' },
-    { label: 'Why It Matters', id: 'why' },
-    { label: 'Future', id: 'future' },
-  ];
-
-  if (viewMode === 'page') {
-    return (
-      <div className="fixed right-8 top-1/2 -translate-y-1/2 hidden xl:block">
-        <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h4 className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-3">On this page</h4>
-          <ul className="space-y-2">
-            {sections.map((section) => (
-              <li key={section.id}>
-                <button
-                  onClick={() => scrollTo(section.id)}
-                  className={`text-xs font-medium transition-colors text-left block py-1 ${
-                    activeSection === section.id
-                      ? 'text-[#117dff]'
-                      : 'text-[#525252] hover:text-[#117dff]'
-                  }`}
-                >
-                  {section.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
-
-/* ─── Interactive Table of Contents ─── */
-const InteractiveTOC = ({ activeSection, scrollTo }) => {
+/* ─── Sleek Right Side Navigation ─── */
+const RightSideNav = ({ activeSection, scrollTo, viewMode }) => {
   const sections = [
     { label: 'Thesis', id: 'thesis', icon: Brain },
     { label: 'Architecture', id: 'architecture', icon: Layers },
@@ -164,42 +125,45 @@ const InteractiveTOC = ({ activeSection, scrollTo }) => {
   ];
 
   return (
-    <div className="fixed left-6 top-1/2 -translate-y-1/2 hidden lg:block z-40">
-      <div className="flex flex-col gap-4">
-        {sections.map((section, index) => {
-          const Icon = section.icon;
-          const isActive = activeSection === section.id;
-          return (
-            <motion.button
-              key={section.id}
-              onClick={() => scrollTo(section.id)}
-              className={`group flex items-center gap-3 transition-all ${
-                isActive ? 'translate-x-2' : 'hover:translate-x-1'
-              }`}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+    <div className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-3 sm:gap-4">
+      {sections.map((section, index) => {
+        const Icon = section.icon;
+        const isActive = activeSection === section.id;
+        return (
+          <motion.button
+            key={section.id}
+            onClick={() => scrollTo(section.id)}
+            className="group flex items-center justify-end gap-2 sm:gap-3 transition-all"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: isActive ? -4 : 0 }}
+            transition={{ delay: index * 0.08 }}
+          >
+            {/* Label - visible on active or hover */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: isActive ? 1 : 0, scale: isActive ? 1 : 0.9 }}
+              className={`text-right min-w-0 ${isActive ? 'max-w-[120px]' : 'max-w-0'} overflow-hidden transition-all duration-300`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                isActive
-                  ? 'bg-[#117dff] text-white shadow-[0_0_20px_rgba(17,125,255,0.4)]'
-                  : 'bg-white/80 border border-[#e3e0db] text-[#525252] group-hover:border-[#117dff]/40 group-hover:text-[#117dff]'
+              <span className={`text-xs font-medium whitespace-nowrap ${
+                viewMode === 'interactive' ? 'text-[#117dff]' : 'text-[#0a0a0a]'
               }`}>
-                <Icon size={14} />
-              </div>
-              {isActive && (
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="text-xs font-medium text-[#117dff] whitespace-nowrap"
-                >
-                  {section.label}
-                </motion.span>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
+                {section.label}
+              </span>
+            </motion.div>
+
+            {/* Icon button */}
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+              isActive
+                ? viewMode === 'interactive'
+                  ? 'bg-[#117dff] text-white shadow-[0_0_16px_rgba(17,125,255,0.5)]'
+                  : 'bg-[#0a0a0a] text-white shadow-[0_0_16px_rgba(0,0,0,0.3)]'
+                : 'bg-white/90 backdrop-blur-sm border border-[#e3e0db] text-[#525252] group-hover:border-[#117dff]/40 group-hover:text-[#117dff] group-hover:shadow-[0_2px_8px_rgba(17,125,255,0.1)]'
+            }`}>
+              <Icon size={13} className="sm:w-4 sm:h-4" />
+            </div>
+          </motion.button>
+        );
+      })}
     </div>
   );
 };
@@ -912,13 +876,12 @@ const ResearchPage = () => {
 
       {/* Interactive mode components */}
       <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
-      <InteractiveTOC activeSection={activeSection} scrollTo={scrollTo} />
       <ReadingProgress />
       <ScrollPulse viewMode={viewMode} />
       <InteractiveBackground viewMode={viewMode} />
 
-      {/* Page layout mode TOC */}
-      <TableOfContents activeSection={activeSection} scrollTo={scrollTo} viewMode={viewMode} />
+      {/* Right side navigation - visible on all screen sizes */}
+      <RightSideNav activeSection={activeSection} scrollTo={scrollTo} viewMode={viewMode} />
 
       {/* ── HERO ── */}
       <Section id="hero" className="pt-28 pb-20 lg:pt-36 lg:pb-28 relative overflow-hidden">
