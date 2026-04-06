@@ -96,8 +96,6 @@ function hexToRgba(hex, alpha) {
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
 function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
-  if (!node) return null;
-
   // Create node lookup for resolving IDs to titles
   const nodeMap = useMemo(() => {
     const map = {};
@@ -106,6 +104,8 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
     });
     return map;
   }, [nodes]);
+
+  if (!node) return null;
 
   const inbound = edges.filter(
     (e) => e.target === node.id || e.target?.id === node.id,
