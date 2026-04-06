@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Settings2, ChevronDown, ArrowRight, Sparkles, Zap, Brain, Cable } from 'lucide-react';
@@ -11,7 +11,7 @@ const Hero = () => {
   const [typedText, setTypedText] = useState('');
   const [resultCount, setResultCount] = useState(0);
 
-  const demoQueries = {
+  const demoQueries = useMemo(() => ({
     Memories: {
       query: '"What was the deployment fix from last Tuesday?"',
       results: [
@@ -36,10 +36,9 @@ const Hero = () => {
         { icon: '💼', text: 'EU AI Act: Memory compliance requirements' },
       ],
     },
-  };
+  }), []);
 
   // Typing effect
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isPlaying) {
       const currentQuery = demoQueries[activeTab].query;
@@ -70,7 +69,7 @@ const Hero = () => {
 
       return () => clearInterval(typeInterval);
     }
-  }, [isPlaying, activeTab]);
+  }, [isPlaying, activeTab, demoQueries]);
 
   const handlePlayDemo = () => {
     setIsPlaying(true);
