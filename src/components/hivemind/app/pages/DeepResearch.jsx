@@ -1,28 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ForceGraph2D from 'react-force-graph-2d';
 import {
   ArrowUp, Sparkles, Network, History,
   Loader2, Search, CheckCircle2, BookOpen, Brain,
   Globe, Zap, AlertCircle, ChevronRight,
   GitBranch, Target, ListTodo, Users, FileText, X,
-  Layers, Eye, EyeOff, Trophy,
+  Layers, Trophy,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 /* ─── Cartesia Light Theme Constants ───────────────────────────────── */
-const THEME = {
-  bg: '#faf9f4',
-  bgSecondary: '#ffffff',
-  border: '#e3e0db',
-  borderLight: '#d4d0ca',
-  text: '#0a0a0a',
-  textSecondary: '#525252',
-  textMuted: '#a3a3a3',
-  accent: '#117dff',
-  accentHover: '#0a6ddb',
-};
-
 const ACTION_BADGES = {
   SEARCH_WEB:    { label: 'Web Search',    color: '#117dff', bg: 'rgba(17,125,255,0.12)' },
   SEARCH_MEMORY: { label: 'Memory Search', color: '#16a34a', bg: 'rgba(22,163,74,0.12)' },
@@ -36,13 +23,6 @@ const AGENT_COLORS = {
   Analyst: '#9333ea',
   Verifier: '#16a34a',
   Synthesizer: '#d97706',
-};
-
-const GRAPH_LAYERS = {
-  sources: { label: 'Sources', color: '#117dff', icon: Globe },
-  claims: { label: 'Claims', color: '#9333ea', icon: FileText },
-  trails: { label: 'Trails', color: '#16a34a', icon: GitBranch },
-  blueprints: { label: 'Blueprints', color: '#d97706', icon: Layers },
 };
 
 /* ─── Simple Markdown Renderer (Light Theme) ───────────────────────── */
@@ -169,68 +149,10 @@ function EventCard({ event, index }) {
   );
 }
 
-/* ─── Graph Node Painter (Light Theme) ────────────────────────────── */
-function usePaintNode() {
-  return useCallback((node, ctx, globalScale) => {
-    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-
-    const radius = Math.sqrt(node.val || 4) * 2;
-    const color = node.tags?.includes('research-finding') ? '#117dff'
-      : node.tags?.includes('research-trail') ? '#9333ea'
-      : '#6b7280';
-
-    // Outer glow
-    const glow = ctx.createRadialGradient(node.x, node.y, radius * 0.3, node.x, node.y, radius * 3);
-    glow.addColorStop(0, `${color}33`);
-    glow.addColorStop(1, 'transparent');
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius * 3, 0, 2 * Math.PI);
-    ctx.fillStyle = glow;
-    ctx.fill();
-
-    // Core orb
-    const core = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius);
-    core.addColorStop(0, '#ffffff');
-    core.addColorStop(0.3, `${color}cc`);
-    core.addColorStop(1, `${color}66`);
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = core;
-    ctx.fill();
-
-    // Label at higher zoom
-    if (globalScale > 1) {
-      const fontSize = Math.max(10 / globalScale, 3);
-      ctx.font = `${fontSize}px 'Space Grotesk', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(10,10,10,0.75)';
-      ctx.fillText((node.title || node.label || '').slice(0, 30), node.x, node.y + radius + 3);
-    }
-  }, []);
-}
-
-/* ─── Link Painter ───────────────────────────────────────────────── */
-function usePaintLink() {
-  return useCallback((link, ctx) => {
-    const src = link.source;
-    const tgt = link.target;
-    if (!src || !tgt || !Number.isFinite(src.x) || !Number.isFinite(tgt.x)) return;
-
-    ctx.beginPath();
-    ctx.moveTo(src.x, src.y);
-    ctx.lineTo(tgt.x, tgt.y);
-    ctx.strokeStyle = 'rgba(107,114,128,0.15)';
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-  }, []);
-}
-
 /* ═══════════════════════════════════════════════════════════════════
    DeepResearch — Main Component
    ═══════════════════════════════════════════════════════════════════ */
 export default function DeepResearch() {
-  /* ── State ─────────────────────────────────────────────────────── */
   const [query, setQuery] = useState('');
   const [sessionId, setSessionId] = useState(null);
   const [status, setStatus] = useState('idle');
@@ -241,35 +163,17 @@ export default function DeepResearch() {
   const [confidence, setConfidence] = useState(0);
   const [fromCache, setFromCache] = useState(false);
   const [projectId, setProjectId] = useState(null);
-  const [showGraph, setShowGraph] = useState(false);
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [sessions, setSessions] = useState([]);
   const [showSessions, setShowSessions] = useState(false);
   const [error, setError] = useState(null);
-
-  // Process Panel state
   const [showProcessPanel, setShowProcessPanel] = useState(false);
   const [trailSteps, setTrailSteps] = useState([]);
-  const [contradictions, setContradictions] = useState([]);
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);
   const [activeGoal, setActiveGoal] = useState('');
-  const [confidenceOverTime, setConfidenceOverTime] = useState([]);
-
-  // Graph layer toggles
-  const [graphLayers, setGraphLayers] = useState({
-    sources: true,
-    claims: true,
-    trails: true,
-    blueprints: false,
-  });
 
   const eventsEndRef = useRef(null);
   const textareaRef = useRef(null);
-  const graphRef = useRef(null);
-
-  const paintNode = usePaintNode();
-  const paintLink = usePaintLink();
 
   /* ── Fetch Trail Steps ─────────────────────────────────────────── */
   const fetchTrailSteps = useCallback(async (sid) => {
@@ -277,7 +181,6 @@ export default function DeepResearch() {
       const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/trail`);
       setTrailSteps(Array.isArray(data) ? data : data?.trail || []);
 
-      // Extract subgoals from trail
       if (data?.tasks) {
         setSubgoals(data.tasks.map((t, i) => ({
           id: t.id || i,
@@ -287,22 +190,11 @@ export default function DeepResearch() {
         })));
       }
 
-      // Update active goal
       if (data?.query) {
         setActiveGoal(data.query);
       }
     } catch (e) {
       console.error('Failed to fetch trail:', e);
-    }
-  }, []);
-
-  /* ── Fetch Contradictions ──────────────────────────────────────── */
-  const fetchContradictions = useCallback(async (sid) => {
-    try {
-      const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/contradictions`);
-      setContradictions(Array.isArray(data) ? data : data?.contradictions || []);
-    } catch (e) {
-      console.error('Failed to fetch contradictions:', e);
     }
   }, []);
 
@@ -335,19 +227,8 @@ export default function DeepResearch() {
             setFromCache(!!rpt.fromCache);
             if (rpt.projectId) setProjectId(rpt.projectId);
 
-            // Fetch sub-graph
-            const pid = rpt.projectId || projectId;
-            if (pid) {
-              const graphResult = await apiClient.getGraph({ project: pid, limit: 200, scope: 'personal' });
-              setGraphData({
-                nodes: graphResult.nodes || [],
-                links: graphResult.edges || graphResult.links || [],
-              });
-            }
-
-            // Fetch trail and contradictions on completion
+            // Fetch trail on completion
             fetchTrailSteps(sessionId);
-            fetchContradictions(sessionId);
           } catch (e) {
             console.error('Failed to fetch report:', e);
           }
@@ -362,7 +243,7 @@ export default function DeepResearch() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [sessionId, status, projectId, fetchTrailSteps, fetchContradictions]);
+  }, [sessionId, status, projectId, fetchTrailSteps]);
 
   /* ── Auto-scroll events ────────────────────────────────────────── */
   useEffect(() => {
@@ -381,7 +262,6 @@ export default function DeepResearch() {
     setEvents([]);
     setReport(null);
     setFindings([]);
-    setShowGraph(false);
 
     try {
       const { data } = await apiClient.controlPlane.post('/v1/proxy/research/start', {
@@ -427,14 +307,7 @@ export default function DeepResearch() {
         setConfidence(rpt.confidence ?? 0);
         setFromCache(!!rpt.fromCache);
         setQuery(rpt.query || '');
-        if (rpt.projectId) {
-          setProjectId(rpt.projectId);
-          const graphResult = await apiClient.getGraph({ project: rpt.projectId, limit: 200, scope: 'personal' });
-          setGraphData({
-            nodes: graphResult.nodes || [],
-            links: graphResult.edges || graphResult.links || [],
-          });
-        }
+        if (rpt.projectId) setProjectId(rpt.projectId);
       }
     } catch (e) {
       setError('Failed to load session');
@@ -458,7 +331,6 @@ export default function DeepResearch() {
     setReport(null);
     setFindings([]);
     setProjectId(null);
-    setShowGraph(false);
     setError(null);
     setDurationMs(0);
     setConfidence(0);
@@ -626,15 +498,6 @@ export default function DeepResearch() {
             >
               <ListTodo size={14} />
               <span className="hidden sm:inline">Process</span>
-            </button>
-            <button
-              onClick={() => setShowGraph(!showGraph)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                showGraph ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#525252] hover:bg-[#faf9f4]'
-              }`}
-            >
-              <Network size={14} />
-              {showGraph ? 'Research' : 'Graph'}
             </button>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d97706]/10 border border-[#d97706]/20">
               <Trophy size={12} className="text-[#d97706]" />
