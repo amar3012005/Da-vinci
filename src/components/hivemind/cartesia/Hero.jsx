@@ -1,23 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Play, Settings2, ChevronDown, ArrowRight, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Settings2, ChevronDown, ArrowRight, Sparkles, Zap, Brain, Cable } from 'lucide-react';
 
 const Hero = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Memories');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [typedText, setTypedText] = useState('');
+  const [resultCount, setResultCount] = useState(0);
 
-  const tabs = ['Memories', 'Knowledge Base', 'Web Intel'];
-  const demoTexts = {
-    Memories: '"What was the deployment fix from last Tuesday?"',
-    'Knowledge Base': '"Show me the Q4 roadmap document"',
-    'Web Intel': '"Find latest news about AI memory systems"',
+  const demoQueries = {
+    Memories: {
+      query: '"What was the deployment fix from last Tuesday?"',
+      results: [
+        { icon: '🔧', text: 'Kubernetes pod scaling fix — increased replicas to 5' },
+        { icon: '📝', text: 'Meeting notes: DevOps sync 2024-01-15' },
+        { icon: '🔗', text: 'GitHub PR #342: Hotfix deployment pipeline' },
+      ],
+    },
+    'Knowledge Base': {
+      query: '"Show me the Q4 roadmap document"',
+      results: [
+        { icon: '📊', text: 'Q4 2024 Product Roadmap — v3.2' },
+        { icon: '🎯', text: 'OKRs Q4: Memory performance improvements' },
+        { icon: '📋', text: 'Engineering sprint planning template' },
+      ],
+    },
+    'Web Intel': {
+      query: '"Find latest news about AI memory systems"',
+      results: [
+        { icon: '📰', text: 'TechCrunch: Memory layers for AI agents trend up' },
+        { icon: '🔬', text: 'arXiv: Long-context retrieval benchmarks 2024' },
+        { icon: '💼', text: 'EU AI Act: Memory compliance requirements' },
+      ],
+    },
   };
+
+  // Typing effect
+  useEffect(() => {
+    if (isPlaying) {
+      const currentQuery = demoQueries[activeTab].query;
+      let charIndex = 0;
+      setTypedText('');
+      setShowResult(false);
+      setResultCount(0);
+
+      const typeInterval = setInterval(() => {
+        if (charIndex < currentQuery.length) {
+          setTypedText(currentQuery.slice(0, charIndex + 1));
+          charIndex++;
+        } else {
+          clearInterval(typeInterval);
+          // Show results after typing completes
+          setTimeout(() => {
+            setShowResult(true);
+            // Animate result count
+            let count = 0;
+            const countInterval = setInterval(() => {
+              count++;
+              setResultCount(count);
+              if (count >= 3) clearInterval(countInterval);
+            }, 150);
+          }, 300);
+        }
+      }, 50);
+
+      return () => clearInterval(typeInterval);
+    }
+  }, [isPlaying, activeTab]);
 
   const handlePlayDemo = () => {
     setIsPlaying(true);
-    setTimeout(() => setIsPlaying(false), 2000);
   };
 
   return (
@@ -37,29 +92,29 @@ const Hero = () => {
           >
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/15 text-[#117dff] text-xs font-semibold tracking-wide uppercase">
               <Sparkles size={12} className="text-[#117dff]" />
-              The Sovereign Memory Engine
+              Built in Hannover, Germany
             </span>
           </motion.div>
 
-          {/* Main Heading - Smaller on mobile */}
+          {/* Main Heading - Updated tagline */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4 sm:mb-6 max-w-4xl text-[#0a0a0a] font-['Space_Grotesk']"
           >
-            Give your AI<br />
-            <span className="text-[#117dff]">a perfect memory.</span>
+            Europe's AI<br />
+            <span className="text-[#117dff]">Memory Engine.</span>
           </motion.h1>
 
-          {/* Subtext - Tighter on mobile */}
+          {/* Subtext - Updated */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="text-base sm:text-lg md:text-xl text-[#525252] mb-6 sm:mb-8 max-w-xl leading-relaxed px-2"
           >
-            Europe's sovereign memory engine and API. We handle the vector graphs, context, and compliance — your agents just remember.
+            Sovereign. Sub-50ms. GDPR-compliant. Built in Hannover for individuals, developers, and enterprise teams.
           </motion.p>
 
           {/* CTA Buttons - Stacked on mobile */}
@@ -111,8 +166,31 @@ const Hero = () => {
                   <span className="sm:hidden">Context</span>
                   <ChevronDown className="w-3 h-4 text-[#a3a3a3]" />
                 </motion.button>
+                {/* Mobile tab selector */}
+                <div className="sm:hidden flex items-center gap-1">
+                  {Object.keys(demoQueries).map((tab) => (
+                    <motion.button
+                      key={tab}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setIsPlaying(false);
+                        setShowResult(false);
+                        setTypedText('');
+                        setResultCount(0);
+                      }}
+                      className={`px-2 py-1 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                        activeTab === tab
+                          ? 'bg-[#117dff]/[0.08] border border-[#117dff]/30 text-[#117dff]'
+                          : 'border border-transparent text-[#525252] hover:bg-[#f3f1ec]'
+                      }`}
+                    >
+                      {tab.slice(0, 3)}
+                    </motion.button>
+                  ))}
+                </div>
                 <div className="hidden sm:flex items-center gap-1.5">
-                  {tabs.map((tab) => (
+                  {Object.keys(demoQueries).map((tab) => (
                     <motion.button
                       key={tab}
                       whileHover={{ scale: 1.05 }}
@@ -137,47 +215,99 @@ const Hero = () => {
                 </motion.button>
               </div>
 
-              {/* Content - Animated */}
-              <div className="p-4 sm:p-6 min-h-[100px] sm:min-h-[120px]">
+              {/* Content - Animated with typing effect */}
+              <div className="p-4 sm:p-6 min-h-[100px] sm:min-h-[180px]">
                 <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-[#faf9f4] rounded-lg sm:rounded-xl p-3 sm:p-4 border border-[#e3e0db]"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-3"
                 >
-                  <p className="text-sm sm:text-base leading-relaxed text-[#0a0a0a]">
-                    <span className="text-[#117dff] font-mono text-xs sm:text-sm">&gt; recall</span>{' '}
-                    <span className={isPlaying ? 'text-[#117dff]' : ''}>{demoTexts[activeTab]}</span>
-                    {isPlaying && (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-[#16a34a] font-mono text-xs sm:text-sm ml-2"
+                  {/* Query input */}
+                  <div className="bg-[#faf9f4] rounded-lg sm:rounded-xl p-3 sm:p-4 border border-[#e3e0db]">
+                    <p className="text-sm sm:text-base leading-relaxed text-[#0a0a0a]">
+                      <span className="text-[#117dff] font-mono text-xs sm:text-sm">&gt; recall</span>{' '}
+                      <span className={isPlaying ? 'text-[#117dff]' : ''}>
+                        {typedText || demoQueries[activeTab].query}
+                        {isPlaying && (
+                          <motion.span
+                            animate={{ opacity: [0, 1, 0] }}
+                            transition={{ duration: 0.8, repeat: Infinity }}
+                            className="inline-block w-0.5 h-4 ml-0.5 bg-[#117dff]"
+                          />
+                        )}
+                      </span>
+                    </p>
+                  </div>
+
+                  {/* Results - Animate in */}
+                  <AnimatePresence>
+                    {showResult && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-2"
                       >
-                        [3 memories found]
-                      </motion.span>
+                        <div className="flex items-center gap-2 text-xs text-[#16a34a] font-mono">
+                          <Zap size={12} />
+                          <span>{resultCount} memories found in {45 + resultCount * 3}ms</span>
+                        </div>
+                        {demoQueries[activeTab].results.slice(0, resultCount).map((result, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="flex items-center gap-2 p-2.5 bg-white rounded-lg border border-[#e3e0db] hover:border-[#117dff]/30 hover:shadow-sm transition-all cursor-pointer"
+                          >
+                            <span className="text-base">{result.icon}</span>
+                            <span className="text-xs sm:text-sm text-[#0a0a0a]">{result.text}</span>
+                          </motion.div>
+                        ))}
+                      </motion.div>
                     )}
-                  </p>
+                  </AnimatePresence>
                 </motion.div>
               </div>
 
               {/* Bottom bar */}
               <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-t border-[#e3e0db] bg-[#f3f1ec]/50">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white cursor-pointer"
-                >
-                  <span className="text-base">🇪🇺</span>
-                  <span className="text-xs text-[#525252] hidden sm:inline">EU Sovereign</span>
-                  <ChevronDown className="w-2.5 h-2.5 text-[#a3a3a3]" />
-                </motion.div>
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white cursor-pointer"
+                  >
+                    <span className="text-base">🇪🇺</span>
+                    <span className="text-xs text-[#525252] hidden sm:inline">EU Sovereign</span>
+                    <ChevronDown className="w-2.5 h-2.5 text-[#a3a3a3]" />
+                  </motion.div>
+                  {showResult && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => {
+                        setIsPlaying(false);
+                        setShowResult(false);
+                        setTypedText('');
+                        setResultCount(0);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] transition-colors cursor-pointer"
+                    >
+                      <span className="text-xs text-[#525252]">Reset</span>
+                    </motion.button>
+                  )}
+                </div>
                 <motion.button
-                  whileHover={{ scale: 1.02, boxShadow: '0 2px 8px rgba(17,125,255,0.2)' }}
+                  whileHover={{ scale: 1.02, boxShadow: showResult ? '0 2px 8px rgba(22,163,74,0.3)' : '0 2px 8px rgba(17,125,255,0.2)' }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handlePlayDemo}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 sm:py-2 bg-[#117dff] text-white rounded-[4px] font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-xs uppercase tracking-[0.075em]"
+                  disabled={isPlaying}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 sm:py-2 rounded-[4px] font-semibold transition-all cursor-pointer border-none text-xs uppercase tracking-[0.075em] ${
+                    showResult
+                      ? 'bg-[#16a34a] text-white hover:bg-[#158f3a]'
+                      : 'bg-[#117dff] text-white hover:bg-[#0066e0]'
+                  } ${isPlaying ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
                   {isPlaying ? (
                     <motion.div
@@ -185,10 +315,15 @@ const Hero = () => {
                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                       className="w-3 h-3 border-2 border-white border-t-transparent rounded-full"
                     />
+                  ) : showResult ? (
+                    <Zap size={12} fill="currentColor" />
                   ) : (
-                    <Play className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" />
+                    <Play size={12} fill="currentColor" />
                   )}
-                  <span className="hidden sm:inline">{isPlaying ? 'Running...' : 'Try Live'}</span>
+                  <span className="hidden sm:inline">
+                    {isPlaying ? 'Running...' : showResult ? 'Run Again' : 'Try Live'}
+                  </span>
+                  <span className="sm:hidden">{isPlaying ? '...' : showResult ? 'Again' : 'Try'}</span>
                 </motion.button>
               </div>
             </div>
@@ -197,23 +332,31 @@ const Hero = () => {
             <div className="absolute -inset-2 sm:-inset-4 bg-[#117dff]/[0.04] blur-2xl sm:blur-3xl -z-10 rounded-2xl sm:rounded-[40px]" />
           </motion.div>
 
-          {/* Trust signals - Wrap on mobile */}
+          {/* Trust signals - With icons */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.6 }}
-            className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[10px] sm:text-xs text-[#a3a3a3] font-mono"
+            className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-6"
           >
             {[
-              '9 MCP Tools',
-              'Sub-50ms Recall',
-              'Cross-Platform Memory',
-              'European Sovereign Cloud',
+              { icon: Zap, label: 'Sub-50ms Recall', color: '#117dff' },
+              { icon: Brain, label: '9 MCP Tools', color: '#16a34a' },
+              { icon: Cable, label: 'Cross-Platform', color: '#ea580c' },
+              { label: '🇪🇺 EU Sovereign', color: '#117dff' },
             ].map((item, i, arr) => (
-              <React.Fragment key={item}>
-                <span>{item}</span>
-                {i < arr.length - 1 && <span className="w-1 h-1 rounded-full bg-[#d4d0ca]" />}
-              </React.Fragment>
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 + i * 0.1 }}
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[#a3a3a3] font-mono"
+              >
+                {item.icon && <item.icon size={12} style={{ color: item.color }} />}
+                <span>{item.label}</span>
+                {i < arr.length - 1 && <span className="w-1 h-1 rounded-full bg-[#d4d0ca] hidden sm:inline" />}
+              </motion.div>
             ))}
           </motion.div>
         </div>
