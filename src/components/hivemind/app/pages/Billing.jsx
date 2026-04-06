@@ -39,7 +39,6 @@ const PLANS = [
       { label: '10 KB uploads/month', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
-      { label: 'Second Brain', icon: Check },
       { label: 'MCP Protocol', icon: Check },
       { label: 'Agent Swarm (CSI)', icon: Check },
       { label: 'Web Intelligence', icon: Check },
@@ -56,6 +55,7 @@ const PLANS = [
       connections: 3,
       deepResearch: 3,
       webIntel: 5,
+      searches: 10_000,
       users: 1,
       kbUploads: 10,
     },
@@ -79,7 +79,6 @@ const PLANS = [
       { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
-      { label: 'Second Brain', icon: Check },
       { label: 'MCP Protocol', icon: Check },
       { label: 'Agent Swarm (CSI)', icon: Check },
       { label: 'Web Intelligence', icon: Check },
@@ -97,6 +96,7 @@ const PLANS = [
       connections: 10,
       deepResearch: 20,
       webIntel: 50,
+      searches: 100_000,
       users: 5,
       kbUploads: null,
     },
@@ -119,7 +119,6 @@ const PLANS = [
       { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
-      { label: 'Second Brain', icon: Check },
       { label: 'MCP Protocol', icon: Check },
       { label: 'Agent Swarm (CSI)', icon: Check },
       { label: 'Web Intelligence', icon: Check },
@@ -143,6 +142,7 @@ const PLANS = [
       connections: null,
       deepResearch: null,
       webIntel: 500,
+      searches: 2_000_000,
       users: 25,
       kbUploads: null,
     },
@@ -165,7 +165,6 @@ const PLANS = [
       { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
-      { label: 'Second Brain', icon: Check },
       { label: 'MCP Protocol', icon: Check },
       { label: 'Agent Swarm (CSI)', icon: Check },
       { label: 'Web Intelligence', icon: Check },
@@ -192,6 +191,7 @@ const PLANS = [
       connections: null,
       deepResearch: null,
       webIntel: null,
+      searches: null,
       users: null,
       kbUploads: null,
     },
@@ -346,14 +346,26 @@ export default function Billing() {
     [],
   );
 
-  const currentPlan = profile?.plan || org?.plan || 'free';
+  const { data: usage } = useApiQuery(
+    () => apiClient.core.get('/api/billing/usage').catch(() => null),
+    [],
+  );
+
+  const currentPlan = profile?.plan || org?.plan || usage?.plan || 'free';
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
     : (connectors?.activeCount || 0);
 
-  const searchesThisMonth = profile?.searches_this_month || profile?.searches_today || 0;
-  const tokensUsed = profile?.tokens_used || 0;
+  // Use usage API data if available, fallback to profile data
+  const tokensUsed = usage?.tokens?.used ?? profile?.tokens_used ?? 0;
+  const memoriesUsed = usage?.memories?.used ?? 0;
+  const deepResearchUsed = usage?.deepResearch?.used ?? 0;
+  const webIntelUsed = usage?.webIntel?.used ?? 0;
+  const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
+  const kbUploadsUsed = usage?.uploads?.used ?? 0;
+  const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
+
   const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
 
   const handleUpgrade = async (planId) => {
@@ -405,7 +417,7 @@ export default function Billing() {
         </div>
 
         {/* Usage Meters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <UsageMeter
             label="Tokens This Month"
             used={tokensUsed}
@@ -413,16 +425,46 @@ export default function Billing() {
             icon={Brain}
           />
           <UsageMeter
+            label="Memories"
+            used={memoriesUsed}
+            limit={currentPlanDef?.limits.memories}
+            icon={HardDrive}
+          />
+          <UsageMeter
+            label="Deep Research"
+            used={deepResearchUsed}
+            limit={currentPlanDef?.limits.deepResearch}
+            icon={Zap}
+          />
+          <UsageMeter
+            label="Web Intel (Daily)"
+            used={webIntelUsed}
+            limit={currentPlanDef?.limits.webIntel}
+            icon={Sparkles}
+          />
+          <UsageMeter
+            label="Searches This Month"
+            used={searchesUsed}
+            limit={currentPlanDef?.limits.searches}
+            icon={Zap}
+          />
+          <UsageMeter
+            label="KB Uploads"
+            used={kbUploadsUsed}
+            limit={currentPlanDef?.limits.kbUploads}
+            icon={HardDrive}
+          />
+          <UsageMeter
+            label="Graph Queries"
+            used={graphQueriesUsed}
+            limit={currentPlanDef?.limits.searches}
+            icon={Brain}
+          />
+          <UsageMeter
             label="Connections"
             used={activeConnections}
             limit={currentPlanDef?.limits.connections}
             icon={Cable}
-          />
-          <UsageMeter
-            label="Searches This Month"
-            used={searchesThisMonth}
-            limit={currentPlanDef?.limits.searches}
-            icon={Zap}
           />
         </div>
       </motion.div>

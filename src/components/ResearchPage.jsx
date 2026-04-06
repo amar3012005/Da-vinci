@@ -619,14 +619,121 @@ const ResearchPage = () => {
         </div>
       </Section>
 
+      {/* ── LICENSE ── */}
+      <Section>
+        <div className="py-16 lg:py-20">
+          <FadeUp>
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen size={16} className="text-[#117dff]" />
+                <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3]">License</span>
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-6">
+                Open Access — CC BY 4.0
+              </h2>
+
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-6 md:p-8 mb-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                <p className="text-sm font-mono text-[#a3a3a3] mb-4">
+                  © 2026 DavinciAI Labs
+                </p>
+                <p className="text-base text-[#525252] leading-relaxed mb-4">
+                  This work is licensed under the <strong className="text-[#0a0a0a]">Creative Commons Attribution 4.0 International License (CC BY 4.0)</strong>.
+                </p>
+                <p className="text-sm text-[#525252] leading-relaxed">
+                  You are free to share, adapt, and build upon this work for any purpose, even commercially, provided you give appropriate credit to DavinciAI Labs.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-[#0a0a0a] mb-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    You are free to
+                  </h4>
+                  <ul className="text-xs text-[#525252] space-y-1">
+                    <li>• Share — copy and redistribute in any medium</li>
+                    <li>• Adapt — remix, transform, and build upon</li>
+                    <li>• Use for any purpose, including commercial</li>
+                  </ul>
+                </div>
+                <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-[#0a0a0a] mb-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#117dff]" />
+                    Under these terms
+                  </h4>
+                  <ul className="text-xs text-[#525252] space-y-1">
+                    <li>• Attribution — give appropriate credit</li>
+                    <li>• Indicate if changes were made</li>
+                    <li>• No additional restrictions</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="bg-[#117dff]/[0.06] border border-[#117dff]/20 rounded-lg p-4 md:p-5">
+                <h4 className="text-sm font-semibold text-[#0a0a0a] mb-3">How to attribute this work:</h4>
+                <div className="bg-white border border-[#e3e0db] rounded-md px-4 py-3 mb-3">
+                  <p className="text-xs font-mono text-[#525252]">
+                    DavinciAI Labs. "Cognitive Swarm Intelligence: An Environment-Centric Architecture for Persistent, Collective, Self-Improving AI." (2026)<br />
+                    <a href="https://hivemind.davinciai.eu/research" className="text-[#117dff] hover:underline" target="_blank" rel="noopener noreferrer">https://hivemind.davinciai.eu/research</a>
+                  </p>
+                </div>
+                <p className="text-xs text-[#525252]">
+                  Full license:{' '}
+                  <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" className="text-[#117dff] hover:underline">
+                    https://creativecommons.org/licenses/by/4.0/
+                  </a>
+                </p>
+              </div>
+            </div>
+          </FadeUp>
+        </div>
+      </Section>
+
       {/* ── FOOTER ── */}
-      <footer className="border-t border-[#e3e0db]">
-        <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <img src="/images/davinci-logo.svg" alt="Da Vinci" className="h-4" />
-            <span className="text-xs font-mono text-[#a3a3a3]">DavinciAI Labs / 2026</span>
+      <footer className="border-t border-[#e3e0db] bg-white">
+        <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 pb-6 border-b border-[#e3e0db]">
+            <div className="flex items-center gap-2">
+              <img src="/images/davinci-logo.svg" alt="Da Vinci" className="h-4" />
+              <span className="text-xs font-mono text-[#a3a3a3]">DavinciAI Labs / 2026</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#117dff]/[0.06] border border-[#117dff]/20 text-[#117dff] text-xs font-medium hover:bg-[#117dff]/[0.1] transition-colors no-underline">
+                <BookOpen size={12} />
+                CC BY 4.0
+              </a>
+            </div>
           </div>
-          <span className="text-xs font-mono text-[#a3a3a3]">Cognitive Swarm Intelligence (CSI)</span>
+
+          <div className="grid md:grid-cols-3 gap-6 text-xs">
+            <div>
+              <p className="text-[#525252] leading-relaxed mb-2">
+                This work is licensed under the Creative Commons Attribution 4.0 International License.
+              </p>
+              <p className="text-[#a3a3a3]">
+                You are free to share, adapt, and build upon this work for any purpose, even commercially, provided you give appropriate credit.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-[#0a0a0a] mb-2">Citation</h4>
+              <p className="text-[#525252] font-mono text-[10px] leading-relaxed">
+                DavinciAI Labs.<br />
+                "Cognitive Swarm Intelligence: An Environment-Centric Architecture for Persistent, Collective, Self-Improving AI." (2026)<br />
+                https://hivemind.davinciai.eu/research
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-[#0a0a0a] mb-2">Key Terms</h4>
+              <ul className="text-[#525252] space-y-1">
+                <li>✓ Share — copy and redistribute</li>
+                <li>✓ Adapt — remix, transform, build upon</li>
+                <li>✓ Commercial use permitted</li>
+                <li>• Attribution required</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
