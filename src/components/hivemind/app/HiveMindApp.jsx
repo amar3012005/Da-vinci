@@ -19,7 +19,7 @@ const WebAdmin = React.lazy(() => import('./pages/WebAdmin'));
 const McpServer = React.lazy(() => import('./pages/McpServer'));
 const MemoryGraph = React.lazy(() => import('./pages/MemoryGraph'));
 const Brain = React.lazy(() => import('./pages/Brain'));
-const DeepResearch = React.lazy(() => import('./pages/DeepResearch'));
+const DeepResearch = React.lazy(() => import('./pages/DeepResearch')); // Reserved for future /research/deep route
 const ResearchPage = React.lazy(() => import('../../ResearchPage'));
 const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
