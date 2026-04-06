@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowUp, Sparkles, Network, History,
+  ArrowUp, Sparkles, History,
   Loader2, Search, CheckCircle2, BookOpen, Brain,
-  Globe, Zap, AlertCircle, ChevronRight,
-  GitBranch, Target, ListTodo, Users, FileText, X,
-  Layers, Trophy,
+  Globe, Zap, AlertCircle,
+  GitBranch, Target, ListTodo, Users, X,
+  Trophy,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
