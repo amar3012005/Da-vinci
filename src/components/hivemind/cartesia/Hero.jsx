@@ -212,7 +212,7 @@ const Hero = () => {
               </div>
 
               {/* Content Area */}
-              <div className="p-4 sm:p-5 lg:p-6 min-h-[200px] sm:min-h-[220px] lg:min-h-[240px]">
+              <div className={`p-4 sm:p-5 lg:p-6 ${isPlaying || showResult ? 'min-h-[200px] sm:min-h-[220px] lg:min-h-[240px]' : 'min-h-[120px] sm:min-h-[140px] lg:min-h-[160px]'}`}>
                 {/* Query Box */}
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
