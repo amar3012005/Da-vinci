@@ -46,15 +46,6 @@ const ResearchNavbar = () => {
               <span className="text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Research</span>
             </button>
 
-            <div className="hidden md:flex items-center gap-8">
-              {sections.map((s) => (
-                <button key={s.id} onClick={() => scrollTo(s.id)}
-                  className="text-sm font-medium text-[#525252] hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer">
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
             <div className="hidden md:flex items-center gap-3">
               <button onClick={() => navigate('/')}
                 className="flex items-center gap-1.5 text-sm font-medium text-[#525252] hover:text-[#0a0a0a] transition-colors px-4 py-2 rounded-lg border border-[#e3e0db] hover:border-[#d4d0ca] bg-white cursor-pointer">
@@ -88,6 +79,64 @@ const ResearchNavbar = () => {
         </motion.div>
       )}
     </>
+  );
+};
+
+/* ─── Table of Contents (Right Side Index) ─── */
+const TableOfContents = () => {
+  const [activeSection, setActiveSection] = useState('');
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -60% 0px' }
+    );
+
+    const sections = ['thesis', 'architecture', 'concepts', 'why', 'future'].map(id => document.getElementById(id));
+    sections.forEach(section => section && observer.observe(section));
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <div className="fixed right-8 top-1/2 -translate-y-1/2 hidden xl:block">
+      <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <h4 className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-3">On this page</h4>
+        <ul className="space-y-2">
+          {[
+            { label: 'Thesis', id: 'thesis' },
+            { label: 'Architecture', id: 'architecture' },
+            { label: 'Key Concepts', id: 'concepts' },
+            { label: 'Why It Matters', id: 'why' },
+            { label: 'Future', id: 'future' },
+          ].map((section) => (
+            <li key={section.id}>
+              <button
+                onClick={() => scrollTo(section.id)}
+                className={`text-xs font-medium transition-colors text-left block py-1 ${
+                  activeSection === section.id
+                    ? 'text-[#117dff]'
+                    : 'text-[#525252] hover:text-[#117dff]'
+                }`}
+              >
+                {section.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 };
 
@@ -161,6 +210,7 @@ const ResearchPage = () => {
   return (
     <div className="min-h-screen bg-[#faf9f4]">
       <ResearchNavbar />
+      <TableOfContents />
 
       {/* ── HERO ── */}
       <Section id="hero" className="pt-28 pb-20 lg:pt-36 lg:pb-28 relative overflow-hidden">
