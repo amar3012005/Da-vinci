@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Shield, Lock, Key, Server, FileText, CheckCircle } from 'lucide-react';
 import { GlobeCdn } from '../../ui/cobe-globe-cdn';
 
 const Languages = () => {
@@ -48,110 +48,155 @@ const Languages = () => {
     { name: 'Warsaw', provider: 'Scaleway', region: 'Eastern Europe' },
   ];
 
+  const categoryIcons = {
+    'Hosting': Server,
+    'Compliance': FileText,
+    'Security': Shield
+  };
+
   return (
-    <section className="bg-[#faf9f4] text-[#0a0a0a] py-32 border-t border-[#e3e0db] relative overflow-hidden">
+    <section className="bg-[#faf9f4] text-[#0a0a0a] py-12 sm:py-16 lg:py-24 border-t border-[#e3e0db] relative overflow-hidden">
       {/* Striped separator at top */}
       <div
-        className="h-16 w-full border-b border-[#e3e0db] absolute top-0"
+        className="h-8 sm:h-12 w-full border-b border-[#e3e0db] absolute top-0"
         style={{ backgroundImage: 'linear-gradient(90deg, transparent 50%, rgba(0,0,0,0.015) 50%)', backgroundSize: '4px 100%' }}
       />
 
-      <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 pt-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 font-['Space_Grotesk']">
+      <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-4 sm:px-6 pt-10 sm:pt-14">
+        <div className="text-center mb-10 sm:mb-14">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/20 mb-4"
+          >
+            <Shield size={12} className="text-[#117dff]" />
+            <span className="text-[10px] font-mono text-[#117dff] uppercase tracking-wider">100% EU Owned</span>
+          </motion.div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4 sm:mb-6 font-['Space_Grotesk']">
             EU Sovereign<br />
             Infrastructure
           </h2>
-          <p className="text-lg text-[#525252] max-w-2xl mx-auto mb-8">
+          <p className="text-sm sm:text-base lg:text-lg text-[#525252] max-w-xl sm:max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
             Your data never leaves the European Union. HIVEMIND runs exclusively on EU-owned infrastructure — Hetzner, OVHcloud, and Scaleway — with full GDPR compliance and zero US data transfer.
           </p>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/hivemind/login')}
-            className="px-6 py-3 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-sm uppercase tracking-[0.075em]"
+            className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-xs sm:text-sm uppercase tracking-[0.075em] shadow-[0_2px_12px_rgba(17,125,255,0.2)]"
           >
             Explore Our Infrastructure
-          </button>
+          </motion.button>
         </div>
 
         {/* Globe visualization */}
         <motion.div
-          className="relative mb-12 flex items-center justify-center"
+          className="relative mb-8 sm:mb-12 flex items-center justify-center"
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <div className="relative w-full max-w-[720px] min-h-[380px] sm:min-h-[460px] flex items-center justify-center">
-            <GlobeCdn className="w-full max-w-[620px] mx-auto" />
+          <div className="relative w-full max-w-[720px] min-h-[300px] sm:min-h-[380px] flex items-center justify-center">
+            <GlobeCdn className="w-full max-w-[500px] sm:max-w-[620px] mx-auto" />
           </div>
         </motion.div>
 
         {/* Category tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12 border-b border-[#e3e0db] pb-6">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${
-                activeCategory === category
-                  ? 'text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20'
-                  : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] border border-transparent'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-10 border-b border-[#e3e0db] pb-4 sm:pb-6">
+          {categories.map((category) => {
+            const Icon = categoryIcons[category];
+            return (
+              <motion.button
+                key={category}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveCategory(category)}
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all rounded-lg cursor-pointer ${
+                  activeCategory === category
+                    ? 'text-[#117dff] bg-[#117dff]/[0.08] border border-[#117dff]/25 shadow-[0_2px_8px_rgba(17,125,255,0.15)]'
+                    : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] border border-transparent'
+                }`}
+              >
+                <Icon size={14} className="sm:w-[15px] sm:h-[15px]" />
+                {category}
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Infrastructure grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-10">
           {items[activeCategory]?.map((item, idx) => (
             <motion.div
               key={item.name}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05, duration: 0.3 }}
-              className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors cursor-pointer group rounded-lg"
+              transition={{ delay: idx * 0.04, duration: 0.3 }}
+              whileHover={{ scale: 1.01, x: 4 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors cursor-pointer group rounded-lg"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{item.icon}</span>
-                <span className="text-sm font-medium text-[#0a0a0a]">{item.name}</span>
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <span className="text-xl sm:text-2xl">{item.icon}</span>
+                <span className="text-xs sm:text-sm font-medium text-[#0a0a0a]">{item.name}</span>
               </div>
-              <ArrowRight className="w-4 h-4 text-[#d4d0ca] group-hover:text-[#117dff] transition-colors" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#d4d0ca] group-hover:text-[#117dff] group-hover:translate-x-0.5 transition-all" />
             </motion.div>
           ))}
         </div>
 
         {/* Datacenters section */}
-        <div className="mt-20 pt-12 border-t border-[#e3e0db]">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold mb-2 font-['Space_Grotesk']">The Sovereign Trust.</h3>
-            <p className="text-[#525252]">The European Edge.</p>
+        <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#e3e0db]">
+          <div className="text-center mb-6 sm:mb-8">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+            >
+              <h3 className="text-xl sm:text-2xl font-bold mb-2 font-['Space_Grotesk']">The Sovereign Trust.</h3>
+              <p className="text-[#525252] text-sm sm:text-base">The European Edge.</p>
+            </motion.div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-3xl mx-auto">
             {datacenters.map((dc, idx) => (
               <motion.div
                 key={dc.name}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: idx * 0.05, duration: 0.4 }}
-                className="px-5 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-sm font-medium hover:bg-[#f3f1ec] hover:border-[#d4d0ca] transition-colors cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-[#0a0a0a]"
+                transition={{ delay: idx * 0.04, duration: 0.4 }}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-[#e3e0db] bg-white text-xs sm:text-sm font-medium hover:bg-[#f3f1ec] hover:border-[#d4d0ca] transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-[#0a0a0a]"
               >
-                {dc.name} ({dc.provider})
+                <span className="hidden sm:inline">{dc.name}</span>
+                <span className="sm:hidden">{dc.name.split(',')[0]}</span>
+                <span className="text-[#a3a3a3] text-[10px] sm:text-xs">({dc.provider})</span>
               </motion.div>
             ))}
-            <div className="px-5 py-2.5 rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.06] text-sm font-medium text-[#117dff] cursor-default flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse"></span> HYOK Enabled
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: datacenters.length * 0.04 + 0.2, duration: 0.4 }}
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.08] text-xs sm:text-sm font-medium text-[#117dff] cursor-default flex items-center gap-2"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse" />
+              <span className="hidden sm:inline">HYOK Encryption Enabled</span>
+              <span className="sm:hidden">HYOK Enabled</span>
+            </motion.div>
           </div>
         </div>
       </div>
 
       {/* Striped separator at bottom */}
       <div
-        className="h-16 w-full border-t border-[#e3e0db] absolute bottom-0"
+        className="h-8 sm:h-12 w-full border-t border-[#e3e0db] absolute bottom-0"
         style={{ backgroundImage: 'linear-gradient(90deg, transparent 50%, rgba(0,0,0,0.015) 50%)', backgroundSize: '4px 100%' }}
       />
     </section>

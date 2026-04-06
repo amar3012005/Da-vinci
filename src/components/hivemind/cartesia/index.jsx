@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Brain, Shield, Zap, Globe, BookOpen, Cable } from 'lucide-react';
+import { ArrowRight, Brain, Shield, Zap, Globe, BookOpen, Cable, Layers, Database } from 'lucide-react';
 
 // Sections
 import Navbar from './Navbar';
@@ -26,12 +26,12 @@ const stagger = {
 
 const TrustBar = () => (
   <section className="bg-[#faf9f4] border-b border-[#e3e0db]">
-    <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-6">
+    <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-4 sm:px-6 py-8 sm:py-10">
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="flex flex-wrap items-center justify-center gap-8 md:gap-16"
+        className="grid grid-cols-2 md:flex md:flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-12"
       >
         {[
           { icon: Shield, label: 'EU Sovereign', sub: 'Frankfurt' },
@@ -41,13 +41,18 @@ const TrustBar = () => (
           { icon: BookOpen, label: 'Knowledge', sub: 'Base' },
           { icon: Cable, label: 'Gmail +', sub: 'Connectors' },
         ].map((item) => (
-          <div key={item.label} className="flex items-center gap-2.5">
-            <item.icon size={18} className="text-[#117dff]" />
+          <motion.div
+            key={item.label}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex flex-col items-center justify-center text-center gap-1.5 p-3 sm:p-4 rounded-xl hover:bg-[#f3f1ec] transition-colors cursor-pointer"
+          >
+            <item.icon size={16} className="sm:w-5 sm:h-5 text-[#117dff]" />
             <div>
-              <span className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] block leading-tight">{item.label}</span>
-              <span className="text-[#a3a3a3] text-[10px] font-mono">{item.sub}</span>
+              <span className="text-[#0a0a0a] text-[11px] sm:text-sm font-semibold font-['Space_Grotesk'] block leading-tight">{item.label}</span>
+              <span className="text-[#a3a3a3] text-[9px] sm:text-[10px] font-mono">{item.sub}</span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </motion.div>
     </div>
@@ -63,41 +68,58 @@ const FinalCTA = () => {
     <section className="bg-[#faf9f4] relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#117dff]/[0.02] to-[#117dff]/[0.04] pointer-events-none" />
 
-      <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-24 lg:py-32 relative z-10">
-        <div className="text-center mb-16">
+      <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-4 sm:px-6 py-16 sm:py-20 lg:py-28 relative z-10">
+        <div className="text-center mb-12 sm:mb-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-[#0a0a0a] font-['Space_Grotesk']">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/20 mb-6"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse" />
+              <span className="text-[11px] font-mono text-[#117dff] uppercase tracking-wider">Now in Public Beta</span>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 sm:mb-6 text-[#0a0a0a] font-['Space_Grotesk']">
               Ready to give your<br />
               <span className="text-[#117dff]">AI a memory?</span>
             </h2>
-            <p className="text-lg text-[#525252] max-w-xl mx-auto mb-10 leading-relaxed">
+            <p className="text-base sm:text-lg text-[#525252] max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
               Join the teams building the next generation of AI agents with persistent, sovereign memory.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <button
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <motion.button
+                whileHover={{ scale: 1.02, boxShadow: '0 6px 24px rgba(17,125,255,0.3)' }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/hivemind/login')}
-                className="flex items-center gap-2 px-8 py-4 bg-[#117dff] text-white font-semibold rounded-[4px] hover:bg-[#0066e0] transition-all text-sm uppercase tracking-[0.1em] group cursor-pointer border-none shadow-[0_4px_24px_rgba(17,125,255,0.25)]"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 bg-[#117dff] text-white font-semibold rounded-[4px] hover:bg-[#0066e0] transition-all text-xs sm:text-sm uppercase tracking-[0.1em] group cursor-pointer border-none shadow-[0_4px_24px_rgba(17,125,255,0.25)]"
               >
                 Start Building Free
-                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
+                <ArrowRight size={14} className="sm:group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/hivemind/login')}
-                className="flex items-center gap-2 px-8 py-4 bg-white text-[#0a0a0a] font-medium rounded-[4px] border border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f3f1ec] transition-all text-sm cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 bg-white text-[#0a0a0a] font-medium rounded-[4px] border border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f3f1ec] transition-all text-xs sm:text-sm cursor-pointer"
               >
                 Open Dashboard
-              </button>
+              </motion.button>
             </div>
+            <p className="text-[10px] sm:text-xs text-[#a3a3a3] mt-6 font-mono">
+              Free tier includes 100 memories, 500 monthly tokens, unlimited searches
+            </p>
           </motion.div>
         </div>
 
         {/* Platform Cards */}
-        <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
             { icon: Brain, title: 'Memory Dashboard', desc: 'Browse, search, and manage your entire knowledge graph.', link: '/hivemind/app/memories' },
             { icon: BookOpen, title: 'Knowledge Base', desc: 'Upload PDFs, docs, and text — chunked into searchable memories.', link: '/hivemind/app/knowledge' },
@@ -107,16 +129,18 @@ const FinalCTA = () => {
             <motion.button
               key={feat.title}
               variants={fadeUp}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate(feat.link)}
-              className="text-left bg-white border border-[#e3e0db] rounded-xl p-6 hover:border-[#117dff]/30 hover:shadow-[0_4px_16px_rgba(17,125,255,0.08)] transition-all group cursor-pointer"
+              className="text-left bg-white border border-[#e3e0db] rounded-xl p-4 sm:p-5 hover:border-[#117dff]/30 hover:shadow-[0_4px_16px_rgba(17,125,255,0.08)] transition-all group cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-xl bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center mb-4 group-hover:bg-[#117dff]/[0.15] transition-colors">
-                <feat.icon size={18} className="text-[#117dff]" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-[#117dff]/[0.15] transition-colors">
+                <feat.icon size={16} className="sm:w-[18px] sm:h-[18px] text-[#117dff]" />
               </div>
-              <h3 className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk'] mb-2">{feat.title}</h3>
-              <p className="text-[#525252] text-sm leading-relaxed">{feat.desc}</p>
-              <div className="mt-4 flex items-center gap-1 text-[#117dff] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                Open <ArrowRight size={12} />
+              <h3 className="text-[#0a0a0a] text-sm sm:text-base font-semibold font-['Space_Grotesk'] mb-2">{feat.title}</h3>
+              <p className="text-[#525252] text-[11px] sm:text-sm leading-relaxed">{feat.desc}</p>
+              <div className="mt-3 sm:mt-4 flex items-center gap-1 text-[#117dff] text-[10px] sm:text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                Open <ArrowRight size={10} className="sm:w-3 sm:h-3" />
               </div>
             </motion.button>
           ))}
@@ -130,28 +154,64 @@ const FinalCTA = () => {
 
 const GraphSection = () => (
   <section className="bg-[#faf9f4] relative">
-    <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-6 py-20">
+    <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db] px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="text-center mb-10"
+        className="text-center mb-8 sm:mb-10"
       >
-        <span className="text-[#117dff] text-xs font-semibold tracking-wider uppercase">Under the Hood</span>
-        <h2 className="text-3xl md:text-4xl font-bold tracking-tight mt-3 text-[#0a0a0a] font-['Space_Grotesk']">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/20 mb-4"
+        >
+          <Layers size={12} className="text-[#117dff]" />
+          <span className="text-[10px] font-mono text-[#117dff] uppercase tracking-wider">Triple Operator Framework</span>
+        </motion.div>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mt-3 text-[#0a0a0a] font-['Space_Grotesk']">
           A living knowledge graph<br />
           <span className="text-[#a3a3a3]">that grows with every interaction.</span>
         </h2>
+        <p className="text-sm sm:text-base text-[#525252] mt-3 max-w-lg mx-auto">
+          Watch your memory evolve in real-time as the triple-operator framework ingests, indexes, and connects knowledge.
+        </p>
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8, delay: 0.2 }}
-        className="bg-white rounded-[24px] border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
+        className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
       >
         <HivemindGraphPreview />
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.4, duration: 0.6 }}
+        className="grid grid-cols-3 gap-3 sm:gap-4 mt-8 sm:mt-10"
+      >
+        {[
+          { label: 'Nodes', value: 'Real-time', icon: Database },
+          { label: 'Edges', value: 'Dynamic', icon: Layers },
+          { label: 'Traversal', value: '< 50ms', icon: Zap },
+        ].map((stat) => (
+          <motion.div
+            key={stat.label}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-white border border-[#e3e0db] rounded-xl p-3 sm:p-4 text-center hover:border-[#117dff]/20 transition-colors cursor-pointer"
+          >
+            <stat.icon size={14} className="sm:w-4 sm:h-4 text-[#117dff] mx-auto mb-1.5 sm:mb-2" />
+            <div className="text-base sm:text-lg font-bold text-[#0a0a0a] font-mono">{stat.value}</div>
+            <div className="text-[9px] sm:text-[10px] text-[#a3a3a3] uppercase tracking-wider">{stat.label}</div>
+          </motion.div>
+        ))}
       </motion.div>
     </div>
   </section>
