@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import {
   Menu, X, ArrowLeft, Brain, Network, Route, Fingerprint,
   RefreshCw, Target, Layers, GitBranch, Shield, BarChart3, Zap,
@@ -281,87 +281,6 @@ const InteractiveBackground = ({ viewMode }) => {
   );
 };
 
-/* ─── Interactive Hero Network Visualization ─── */
-const InteractiveHeroNetwork = () => {
-  const nodes = [
-    { cx: '20%', cy: '30%', r: 8, delay: 0 },
-    { cx: '50%', cy: '20%', r: 12, delay: 0.1 },
-    { cx: '80%', cy: '35%', r: 6, delay: 0.2 },
-    { cx: '30%', cy: '60%', r: 10, delay: 0.15 },
-    { cx: '70%', cy: '55%', r: 7, delay: 0.25 },
-    { cx: '45%', cy: '45%', r: 9, delay: 0.05 },
-  ];
-
-  const connections = [
-    { from: 0, to: 1 },
-    { from: 1, to: 2 },
-    { from: 1, to: 5 },
-    { from: 3, to: 5 },
-    { from: 4, to: 5 },
-    { from: 0, to: 3 },
-    { from: 2, to: 4 },
-  ];
-
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
-        {/* Connection lines */}
-        {connections.map((conn, i) => (
-          <motion.line
-            key={i}
-            x1={nodes[conn.from].cx}
-            y1={nodes[conn.from].cy}
-            x2={nodes[conn.to].cx}
-            y2={nodes[conn.to].cy}
-            stroke="url(#lineGradient)"
-            strokeWidth="0.5"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.4 }}
-            transition={{ duration: 2, delay: 0.5 + i * 0.1 }}
-          />
-        ))}
-
-        {/* Gradient definition */}
-        <defs>
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#117dff" stopOpacity="0" />
-            <stop offset="50%" stopColor="#117dff" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#117dff" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Animated nodes */}
-        {nodes.map((node, i) => (
-          <motion.g key={i}>
-            <motion.circle
-              cx={node.cx}
-              cy={node.cy}
-              r={node.r}
-              fill="url(#nodeGradient)"
-              stroke="#117dff"
-              strokeWidth="0.5"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.6, delay: node.delay, type: 'spring' }}
-            />
-            <motion.circle
-              cx={node.cx}
-              cy={node.cy}
-              r={node.r * 1.5}
-              fill="none"
-              stroke="#117dff"
-              strokeWidth="0.3"
-              initial={{ scale: 1, opacity: 0.5 }}
-              animate={{ scale: 1.8, opacity: 0 }}
-              transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-            />
-          </motion.g>
-        ))}
-      </svg>
-    </div>
-  );
-};
-
 /* ─── Interactive Architecture Layers ─── */
 const ArchitectureLayers = ({ viewMode }) => {
   if (viewMode !== 'interactive') return null;
@@ -470,6 +389,431 @@ const ArchitectureLayers = ({ viewMode }) => {
   );
 };
 
+/* ═════════════════════════════════════════════════════════════ */
+/*              CINEMATIC INTERACTIVE COMPONENTS                 */
+/* ═════════════════════════════════════════════════════════════ */
+
+/* ─── Cinematic Hero: Particle Explosion ─── */
+const CinematicHero = ({ viewMode }) => {
+  const [exploded, setExploded] = useState(false);
+
+  useEffect(() => {
+    if (viewMode !== 'interactive') return;
+    const timer = setTimeout(() => setExploded(true), 500);
+    return () => clearTimeout(timer);
+  }, [viewMode]);
+
+  if (viewMode !== 'interactive') return null;
+
+  const particles = Array.from({ length: 80 }, (_, i) => ({
+    id: i,
+    angle: (i / 80) * 360,
+    distance: 150 + Math.random() * 200,
+    size: 2 + Math.random() * 4,
+    duration: 0.8 + Math.random() * 0.4,
+    delay: Math.random() * 0.3,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Central glow */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-[#117dff] rounded-full blur-[80px]"
+        initial={{ scale: 0, opacity: 0.8 }}
+        animate={{ scale: exploded ? 3 : 0.2, opacity: exploded ? 0 : 0.8 }}
+        transition={{ duration: 1.5, ease: 'easeOut' }}
+      />
+
+      {/* Exploding particles */}
+      {particles.map((p) => {
+        const radians = (p.angle * Math.PI) / 180;
+        const endX = Math.cos(radians) * p.distance;
+        const endY = Math.sin(radians) * p.distance;
+
+        return (
+          <motion.div
+            key={p.id}
+            className="absolute top-1/2 left-1/2 rounded-full bg-gradient-to-br from-[#117dff] to-[#8b5cf6]"
+            style={{
+              width: p.size,
+              height: p.size,
+              marginLeft: -p.size / 2,
+              marginTop: -p.size / 2,
+            }}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+            animate={{
+              x: exploded ? endX : 0,
+              y: exploded ? endY : 0,
+              opacity: exploded ? [1, 0.6, 0] : 1,
+              scale: exploded ? [0, 1.2, 0.8] : 0,
+            }}
+            transition={{
+              duration: p.duration,
+              delay: p.delay,
+              ease: 'easeOut',
+            }}
+          />
+        );
+      })}
+
+      {/* Connection lines forming network */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+        {exploded && (
+          <>
+            {[0, 72, 144, 216, 288].map((angle, i) => (
+              <motion.line
+                key={i}
+                x1="400"
+                y1="300"
+                x2={400 + Math.cos((angle * Math.PI) / 180) * 250}
+                y2={300 + Math.sin((angle * Math.PI) / 180) * 250}
+                stroke="url(#heroGradient)"
+                strokeWidth="1"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.3 }}
+                transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
+              />
+            ))}
+            <defs>
+              <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#117dff" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+          </>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+/* ─── Scroll Pulse: Continuous Visual Thread ─── */
+const ScrollPulse = ({ viewMode }) => {
+  const { scrollYProgress } = useScroll();
+  const pulseY = useTransform(scrollYProgress, [0, 1], ['10%', '90%']);
+  const pulseScaleX = useTransform(scrollYProgress, [0, 1], [0.5, 1.2]);
+  const pulseGlowY = useTransform(pulseY, (y) => `calc(${y} - 64px)`);
+
+  if (viewMode !== 'interactive') return null;
+
+  return (
+    <>
+      {/* Vertical pulse line */}
+      <motion.div
+        className="fixed left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#117dff]/30 to-transparent pointer-events-none z-0"
+        style={{ y: pulseY }}
+      />
+
+      {/* Horizontal pulse wave */}
+      <motion.div
+        className="fixed left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#117dff]/50 to-transparent pointer-events-none z-0"
+        style={{
+          top: pulseY,
+          scaleX: pulseScaleX,
+        }}
+      />
+
+      {/* Pulse glow at current position */}
+      <motion.div
+        className="fixed left-1/2 top-0 w-32 h-32 -translate-x-1/2 bg-[#117dff]/20 rounded-full blur-[60px] pointer-events-none z-0"
+        style={{ y: pulseGlowY }}
+      />
+    </>
+  );
+};
+
+/* ─── Interactive Thesis: Radiating Nodes ─── */
+const ThesisNodes = ({ viewMode }) => {
+  if (viewMode !== 'interactive') return null;
+
+  const claims = [
+    { num: 1, title: 'Externalized', desc: 'Intelligence in the environment' },
+    { num: 2, title: 'Emergent', desc: 'Coordination without messaging' },
+    { num: 3, title: 'Structural', desc: 'Learning without retraining' },
+    { num: 4, title: 'Shared', desc: 'Local identity, global intelligence' },
+    { num: 5, title: 'Controlled', desc: 'Safe self-improvement' },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Central node */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-gradient-to-br from-[#117dff]/20 to-[#8b5cf6]/10 border-2 border-[#117dff]/40 flex items-center justify-center"
+        initial={{ scale: 0, opacity: 0 }}
+        whileInView={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.6, type: 'spring' }}
+      >
+        <Brain className="text-[#117dff]" size={32} />
+      </motion.div>
+
+      {/* Orbiting claim nodes */}
+      {claims.map((claim, i) => {
+        const angle = (i / claims.length) * 360 - 90;
+        const radius = 180;
+        const x = Math.cos((angle * Math.PI) / 180) * radius;
+        const y = Math.sin((angle * Math.PI) / 180) * radius;
+
+        return (
+          <motion.div
+            key={claim.num}
+            className="absolute top-1/2 left-1/2 pointer-events-auto"
+            style={{ marginLeft: x, marginTop: y }}
+            initial={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
+            whileInView={{ scale: 1, opacity: 1, x: '-50%', y: '-50%' }}
+            transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
+            whileHover={{ scale: 1.1 }}
+          >
+            <div className="w-16 h-16 rounded-full bg-white border-2 border-[#117dff]/30 shadow-[0_4px_20px_rgba(17,125,255,0.15)] flex items-center justify-center">
+              <span className="text-2xl font-bold text-[#117dff]">{claim.num}</span>
+            </div>
+            {/* Connection line */}
+            <svg
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10"
+              style={{ width: radius, height: radius }}
+            >
+              <motion.line
+                x1={angle < 90 || angle > 270 ? radius : 0}
+                y1={angle > 0 && angle < 180 ? radius : 0}
+                x2={radius / 2}
+                y2={radius / 2}
+                stroke="#117dff"
+                strokeWidth="1"
+                strokeOpacity="0.2"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.8, delay: 0.1 + i * 0.1 }}
+              />
+            </svg>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ─── Animated Concept Cards ─── */
+const AnimatedConceptCard = ({ icon: Icon, title, description, number, delay = 0, viewMode = 'page', animated = false }) => {
+  if (viewMode !== 'interactive' || !animated) {
+    return (
+      <FadeUp delay={delay}>
+        <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#d4d0ca] transition-colors h-full">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-10 h-10 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
+              <Icon size={18} className="text-[#117dff]" />
+            </div>
+            <span className="text-xs font-mono text-[#a3a3a3]">[{number}]</span>
+          </div>
+          <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2">{title}</h3>
+          <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
+        </div>
+      </FadeUp>
+    );
+  }
+
+  return (
+    <FadeUp delay={delay}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -8, scale: 1.02 }}
+        className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(17,125,255,0.15)] hover:border-[#117dff]/40 transition-all duration-300 h-full group relative overflow-hidden"
+      >
+        {/* Animated background gradient */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-[#117dff]/5 to-[#8b5cf6]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        />
+
+        {/* Animated icon with trail effect */}
+        <div className="relative mb-4">
+          <motion.div
+            whileHover={{ rotate: 360, scale: 1.1 }}
+            transition={{ duration: 0.6 }}
+            className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#117dff]/10 to-[#117dff]/5 border border-[#117dff]/20 flex items-center justify-center group-hover:border-[#117dff]/40"
+          >
+            <Icon size={20} className="text-[#117dff]" />
+          </motion.div>
+
+          {/* Orbiting particles on hover */}
+          <motion.div
+            className="absolute inset-0"
+            initial={{ rotate: 0 }}
+            whileHover={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+          >
+            <div className="absolute top-0 left-1/2 w-1 h-1 bg-[#117dff] rounded-full -translate-x-1/2 -translate-y-1/2" />
+          </motion.div>
+        </div>
+
+        <div className="relative">
+          <span className="text-xs font-mono text-[#a3a3a3] group-hover:text-[#117dff] transition-colors">[{number}]</span>
+          <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2 group-hover:text-[#117dff] transition-colors">{title}</h3>
+          <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
+        </div>
+      </motion.div>
+    </FadeUp>
+  );
+};
+
+/* ─── Orbiting Benefits (Why It Matters) ─── */
+const OrbitingBenefits = ({ viewMode }) => {
+  if (viewMode !== 'interactive') return null;
+
+  const benefits = [
+    { icon: Zap, title: 'Competence survives', desc: 'Replacing agent keeps intelligence' },
+    { icon: BarChart3, title: 'Intelligence accumulates', desc: 'Compound knowledge over time' },
+    { icon: RefreshCw, title: 'Improvement', desc: 'Policy evolution, not retraining' },
+    { icon: BookOpen, title: 'Auditable', desc: 'Persistent traceable reasoning' },
+    { icon: Network, title: 'Structural', desc: 'Coordination via environment' },
+    { icon: Layers, title: 'Policy evolution', desc: 'Evolve policies and procedures' },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Central core */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-gradient-to-br from-[#117dff]/15 to-[#8b5cf6]/10 border border-[#117dff]/30 flex items-center justify-center"
+        initial={{ scale: 0.8, opacity: 0 }}
+        whileInView={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="text-center">
+          <Brain className="text-[#117dff] mx-auto mb-1" size={28} />
+          <span className="text-xs font-mono text-[#117dff]">CSI Core</span>
+        </div>
+      </motion.div>
+
+      {/* Orbiting benefits */}
+      {benefits.map((benefit, i) => {
+        const angle = (i / benefits.length) * 360;
+        const radiusX = 280;
+        const radiusY = 140;
+        const x = Math.cos((angle * Math.PI) / 180) * radiusX;
+        const y = Math.sin((angle * Math.PI) / 180) * radiusY;
+
+        return (
+          <motion.div
+            key={benefit.title}
+            className="absolute top-1/2 left-1/2 pointer-events-auto"
+            style={{ marginLeft: x, marginTop: y }}
+            initial={{ scale: 0, opacity: 0, x: '-50%', y: '-50%' }}
+            whileInView={{ scale: 1, opacity: 1, x: '-50%', y: '-50%' }}
+            transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
+            whileHover={{ scale: 1.15, zIndex: 10 }}
+          >
+            <div className="bg-white border border-[#e3e0db] rounded-xl p-3 shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-[#117dff]/40 hover:shadow-[0_8px_24px_rgba(17,125,255,0.15)] transition-all min-w-[140px] max-w-[180px]">
+              <benefit.icon size={16} className="text-[#117dff] mb-1.5" />
+              <h4 className="text-xs font-semibold text-[#0a0a0a] mb-0.5">{benefit.title}</h4>
+              <p className="text-[10px] text-[#525252] leading-tight">{benefit.desc}</p>
+            </div>
+          </motion.div>
+        );
+      })}
+
+      {/* Orbit rings */}
+      <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] pointer-events-none" viewBox="0 0 600 300">
+        <motion.ellipse
+          cx="300"
+          cy="150"
+          rx="280"
+          ry="140"
+          fill="none"
+          stroke="#117dff"
+          strokeWidth="0.5"
+          strokeOpacity="0.15"
+          strokeDasharray="4 4"
+          initial={{ scale: 0, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, delay: 0.3 }}
+        />
+      </svg>
+    </div>
+  );
+};
+
+/* ─── Future Timeline Road ─── */
+const FutureTimeline = ({ viewMode }) => {
+  if (viewMode !== 'interactive') return null;
+
+  const items = [
+    { num: '14.1', title: 'Memory benchmarks', desc: 'Long-horizon recall evaluation' },
+    { num: '14.2', title: 'Agent transfer', desc: 'Competence survives replacement' },
+    { num: '14.3', title: 'Procedural learning', desc: 'Blueprint formation studies' },
+    { num: '14.4', title: 'Research intelligence', desc: 'Hypothesis tracking & evidence graphs' },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Timeline path */}
+      <motion.div
+        className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-[#117dff]/20 via-[#117dff]/40 to-[#8b5cf6]/20"
+        initial={{ scaleX: 0, originX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        transition={{ duration: 1.5, delay: 0.2 }}
+      />
+
+      {/* Timeline markers */}
+      {items.map((item, i) => {
+        const left = 15 + i * 23;
+
+        return (
+          <motion.div
+            key={item.num}
+            className="absolute top-1/2 pointer-events-auto"
+            style={{ left: `${left}%` }}
+            initial={{ y: '-50%', opacity: 0, scale: 0 }}
+            whileInView={{ y: '-50%', opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 + i * 0.15 }}
+          >
+            {/* Marker dot */}
+            <motion.div
+              className="w-4 h-4 rounded-full bg-[#117dff] border-2 border-white shadow-[0_0_20px_rgba(17,125,255,0.6)] -translate-x-1/2"
+              whileHover={{ scale: 1.3 }}
+            />
+
+            {/* Content card */}
+            <motion.div
+              className="absolute top-6 left-1/2 -translate-x-1/2 w-48 bg-white border border-[#e3e0db] rounded-lg p-3 shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
+              initial={{ y: 10, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 + i * 0.15 }}
+              whileHover={{ y: -4, shadow: '0_8px_24px_rgba(17,125,255,0.15)' }}
+            >
+              <span className="text-[10px] font-mono text-[#117dff] mb-1 block">{item.num}</span>
+              <h4 className="text-xs font-semibold text-[#0a0a0a] mb-1">{item.title}</h4>
+              <p className="text-[10px] text-[#525252] leading-tight">{item.desc}</p>
+            </motion.div>
+
+            {/* Connection line to path */}
+            <motion.div
+              className="absolute top-4 left-1/2 w-px h-4 bg-[#117dff]/30 -translate-x-1/2"
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: 0.5 + i * 0.15, duration: 0.3 }}
+            />
+          </motion.div>
+        );
+      })}
+
+      {/* Flowing particles along timeline */}
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={`flow-${i}`}
+          className="absolute top-1/2 w-2 h-2 rounded-full bg-[#117dff]"
+          initial={{ left: '0%', opacity: 0 }}
+          animate={{ left: '100%', opacity: [0, 1, 1, 0] }}
+          transition={{
+            duration: 3 + i,
+            delay: i * 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 /* ─── Reusable Section Wrapper ─── */
 const Section = ({ id, children, className = '', border = true }) => (
   <section id={id} className={`${border ? 'border-b border-[#e3e0db]' : ''} ${className}`}>
@@ -491,48 +835,6 @@ const FadeUp = ({ children, delay = 0, className = '' }) => (
     {children}
   </motion.div>
 );
-
-/* ─── Concept Card ─── */
-const ConceptCard = ({ icon: Icon, title, description, number, delay = 0, viewMode = 'page' }) => {
-  if (viewMode === 'interactive') {
-    return (
-      <FadeUp delay={delay}>
-        <motion.div
-          whileHover={{ y: -8, scale: 1.02 }}
-          className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(17,125,255,0.15)] hover:border-[#117dff]/40 transition-all duration-300 h-full group"
-        >
-          <div className="flex items-start justify-between mb-4">
-            <motion.div
-              whileHover={{ rotate: 360, scale: 1.1 }}
-              transition={{ duration: 0.4 }}
-              className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#117dff]/10 to-[#117dff]/5 border border-[#117dff]/20 flex items-center justify-center group-hover:border-[#117dff]/40"
-            >
-              <Icon size={20} className="text-[#117dff]" />
-            </motion.div>
-            <span className="text-xs font-mono text-[#a3a3a3] group-hover:text-[#117dff] transition-colors">[{number}]</span>
-          </div>
-          <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2 group-hover:text-[#117dff] transition-colors">{title}</h3>
-          <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
-        </motion.div>
-      </FadeUp>
-    );
-  }
-
-  return (
-    <FadeUp delay={delay}>
-      <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:border-[#d4d0ca] transition-colors h-full">
-        <div className="flex items-start justify-between mb-4">
-          <div className="w-10 h-10 rounded-lg bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
-            <Icon size={18} className="text-[#117dff]" />
-          </div>
-          <span className="text-xs font-mono text-[#a3a3a3]">[{number}]</span>
-        </div>
-        <h3 className="text-lg font-semibold text-[#0a0a0a] mb-2">{title}</h3>
-        <p className="text-sm text-[#525252] leading-relaxed">{description}</p>
-      </div>
-    </FadeUp>
-  );
-};
 
 /* ─── Claim Row ─── */
 const ClaimRow = ({ number, title, description, delay = 0 }) => (
@@ -605,13 +907,14 @@ const ResearchPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#faf9f4]">
+    <div className="min-h-screen bg-[#faf9f4] relative">
       <ResearchNavbar />
 
       {/* Interactive mode components */}
       <ViewModeToggle viewMode={viewMode} setViewMode={setViewMode} />
       <InteractiveTOC activeSection={activeSection} scrollTo={scrollTo} />
       <ReadingProgress />
+      <ScrollPulse viewMode={viewMode} />
       <InteractiveBackground viewMode={viewMode} />
 
       {/* Page layout mode TOC */}
@@ -619,7 +922,7 @@ const ResearchPage = () => {
 
       {/* ── HERO ── */}
       <Section id="hero" className="pt-28 pb-20 lg:pt-36 lg:pb-28 relative overflow-hidden">
-        {viewMode === 'interactive' && <InteractiveHeroNetwork />}
+        <CinematicHero viewMode={viewMode} />
 
         {/* Subtle glow */}
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#117dff]/[0.04] rounded-full blur-[150px] pointer-events-none" />
@@ -710,7 +1013,7 @@ const ResearchPage = () => {
               { icon: RefreshCw, title: 'No Procedural Learning', desc: 'Repeated successes do not automatically harden into reusable behavior. Every session starts from scratch.' },
               { icon: Layers, title: 'Lost Reasoning', desc: 'Organizations lose decision rationale and execution intelligence because systems store outputs but not the pathways that produced them.' },
             ].map((item, i) => (
-              <ConceptCard key={item.title} icon={item.icon} title={item.title} description={item.desc} number={`0${i + 1}`} delay={i * 0.08} />
+              <AnimatedConceptCard key={item.title} icon={item.icon} title={item.title} description={item.desc} number={`0${i + 1}`} delay={i * 0.08} viewMode={viewMode} animated={viewMode === 'interactive'} />
             ))}
           </div>
         </div>
@@ -718,10 +1021,12 @@ const ResearchPage = () => {
 
       {/* ── CORE THESIS ── */}
       <Section id="thesis">
-        <div className="py-20 lg:py-28">
+        <div className="py-20 lg:py-28 relative">
+          {viewMode === 'interactive' && <ThesisNodes viewMode={viewMode} />}
+
           <FadeUp>
-            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block">[02] Core Thesis</span>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-4">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block relative z-10">[02] Core Thesis</span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-4 relative z-10">
               The central claim
             </h2>
           </FadeUp>
@@ -972,15 +1277,17 @@ const ResearchPage = () => {
 
       {/* ── WHY IT MATTERS ── */}
       <Section id="why">
-        <div className="py-20 lg:py-28">
+        <div className="py-20 lg:py-28 relative">
+          {viewMode === 'interactive' && <OrbitingBenefits viewMode={viewMode} />}
+
           <FadeUp>
-            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block">[06] Why This Matters</span>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block relative z-10">[06] Why This Matters</span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10 relative z-10">
               From isolated agents to <span className="text-[#117dff]">persistent cognitive ecosystems</span>
             </h2>
           </FadeUp>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
             {[
               { icon: Zap, title: 'Competence survives replacement', desc: 'Replacing the agent does not destroy intelligence — it has been externalized into the environment.' },
               { icon: BarChart3, title: 'Operational intelligence accumulates', desc: 'Organizations build compound knowledge rather than losing it when sessions end or teams change.' },
@@ -989,7 +1296,7 @@ const ResearchPage = () => {
               { icon: Network, title: 'Structural coordination', desc: 'Coordination emerges through shared environment modifications rather than expensive message overhead.' },
               { icon: Layers, title: 'Policy evolution', desc: 'Learning is achieved by evolving policies and procedures instead of constantly re-running costly reasoning loops.' },
             ].map((item, i) => (
-              <ConceptCard key={item.title} icon={item.icon} title={item.title} description={item.desc} number={`0${i + 1}`} delay={i * 0.06} />
+              <AnimatedConceptCard key={item.title} icon={item.icon} title={item.title} description={item.desc} number={`0${i + 1}`} delay={i * 0.06} viewMode={viewMode} animated={viewMode === 'interactive'} />
             ))}
           </div>
         </div>
@@ -1034,15 +1341,17 @@ const ResearchPage = () => {
 
       {/* ── FUTURE DIRECTIONS ── */}
       <Section id="future">
-        <div className="py-20 lg:py-28">
+        <div className="py-20 lg:py-28 relative">
+          {viewMode === 'interactive' && <FutureTimeline viewMode={viewMode} />}
+
           <FadeUp>
-            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block">[08] Future Directions</span>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#a3a3a3] mb-4 block relative z-10">[08] Future Directions</span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-10 relative z-10">
               What comes next
             </h2>
           </FadeUp>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 relative z-10">
             {[
               { title: 'Long-term memory benchmarks', desc: 'Evaluating environment-centric memory against long-horizon recall tasks to test whether externalized memory structures outperform context-bound systems.' },
               { title: 'Agent transfer benchmarks', desc: 'A benchmark measuring whether competence survives agent replacement — directly testing CSI\'s central thesis.' },

@@ -86,6 +86,7 @@ export default function HiveMindApp() {
           <Route path="graph" element={<PageSuspense><MemoryGraph /></PageSuspense>} />
           <Route path="brain" element={<PageSuspense><Brain /></PageSuspense>} />
           <Route path="research" element={<PageSuspense><ResearchPage /></PageSuspense>} />
+          <Route path="deep-research" element={<PageSuspense><DeepResearch /></PageSuspense>} />
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
