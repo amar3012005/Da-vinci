@@ -371,15 +371,6 @@ export default function DeepResearch() {
     });
 
     setAgentStates(newAgentStates);
-
-    // Update confidence over time
-    const lastEvent = events[events.length - 1];
-    if (lastEvent?.type === 'task.completed' && lastEvent?.confidence != null) {
-      setConfidenceOverTime((prev) => [...prev, {
-        timestamp: lastEvent.timestamp || Date.now(),
-        confidence: lastEvent.confidence,
-      }]);
-    }
   }, [events]);
 
   /* ─── Render ───────────────────────────────────────────────────── */
