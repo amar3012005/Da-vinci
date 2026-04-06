@@ -355,6 +355,16 @@ export default function MemoryGraph() {
     }, {});
   }, [graphData.nodes]);
 
+  // Filtered nodes based on layer filter
+  const filteredNodes = useMemo(() => {
+    if (layerFilter === "all") return new Set(graphData.nodes.map((n) => n.id));
+    const matches = new Set();
+    graphData.nodes.forEach((n) => {
+      if (n.nodeLayer === layerFilter) matches.add(n.id);
+    });
+    return matches;
+  }, [graphData.nodes, layerFilter]);
+
   useEffect(() => {
     fetchGraph();
   }, [fetchGraph]);
@@ -661,16 +671,6 @@ export default function MemoryGraph() {
     });
     return counts;
   }, [graphData.nodes]);
-
-  // Filtered nodes based on layer filter
-  const filteredNodes = useMemo(() => {
-    if (layerFilter === "all") return new Set(graphData.nodes.map((n) => n.id));
-    const matches = new Set();
-    graphData.nodes.forEach((n) => {
-      if (n.nodeLayer === layerFilter) matches.add(n.id);
-    });
-    return matches;
-  }, [graphData.nodes, layerFilter]);
 
   const matchCount = highlightNodes.size;
 
@@ -1150,7 +1150,7 @@ export default function MemoryGraph() {
                 {hoveredNode.nodeLayer === 'tara' && <Hexagon size={10} className="text-[#a855f7]" />}
                 {hoveredNode.nodeLayer === 'fact' && <div className="w-2 h-2 rotate-45 bg-[#10b981]" />}
                 {hoveredNode.nodeLayer === 'observation' && <Square size={10} className="text-[#f59e0b]" />}
-                {!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory' && <Circle size={10} className="text-[#117dff]" />}
+                {(!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory') && <Circle size={10} className="text-[#117dff]" />}
               </span>
               <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate max-w-[180px]">
                 {hoveredNode.title || 'Untitled'}
