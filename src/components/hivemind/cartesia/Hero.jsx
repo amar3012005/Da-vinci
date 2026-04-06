@@ -39,6 +39,7 @@ const Hero = () => {
   };
 
   // Typing effect
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (isPlaying) {
       const currentQuery = demoQueries[activeTab].query;
