@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Lock, Key, Server, FileText, CheckCircle } from 'lucide-react';
+import { ArrowRight, Shield, Server, FileText } from 'lucide-react';
 import { GlobeCdn } from '../../ui/cobe-globe-cdn';
 
 const Languages = () => {
