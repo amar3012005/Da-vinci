@@ -182,20 +182,38 @@ export default function AgentSwarm() {
         action,
       });
       setExecutedIds(prev => new Set([...prev, proposal.id]));
+      // Remove from executing after completion
+      setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
     } catch (err) {
       console.error('Execute failed:', err.message);
-    } finally {
+      // Remove from executing on error too
       setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
     }
   }, []);
 
   const executeBulk = useCallback(async (action, category) => {
     const targets = hygieneProposals
-      .filter(p => !executedIds.has(p.id) && (!category || p.category === category));
-    for (const p of targets) {
-      await executeProposal(p, action);
-    }
-  }, [hygieneProposals, executedIds, executeProposal]);
+      .filter(p => !executedIds.has(p.id) && !executingIds.has(p.id) && (!category || p.category === category));
+
+    // Execute all in parallel with Promise.all
+    await Promise.all(targets.map(async (p) => {
+      setExecutingIds(prev => new Set([...prev, p.id]));
+      try {
+        await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/execute', {
+          proposals: [p],
+          action,
+        });
+        setExecutedIds(prev => new Set([...prev, p.id]));
+      } catch (err) {
+        console.error(`Bulk execute failed for ${p.id}:`, err.message);
+      } finally {
+        setExecutingIds(prev => { const n = new Set(prev); n.delete(p.id); return n; });
+      }
+    }));
+
+    // Refresh hygiene scan after bulk execution
+    await runHygieneScan();
+  }, [hygieneProposals, executedIds, executingIds, runHygieneScan]);
 
   const handleRunSingle = useCallback(async (agentId) => {
     setRunning(true);
