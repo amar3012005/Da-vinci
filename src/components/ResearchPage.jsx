@@ -169,11 +169,18 @@ const ResearchPage = () => {
 
         <div className="relative z-10 max-w-3xl">
           <FadeUp>
-            <div className="flex items-center gap-3 mb-6">
-              <span className="px-3 py-1 text-xs font-mono uppercase tracking-widest text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20 rounded-full">
-                Research Paper
-              </span>
-              <span className="text-xs font-mono text-[#a3a3a3]">DavinciAI Labs / 2026</span>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 text-xs font-mono uppercase tracking-widest text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20 rounded-full">
+                  Research Paper
+                </span>
+                <span className="text-xs font-mono text-[#a3a3a3]">DavinciAI Labs / 2026</span>
+              </div>
+              <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer"
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#117dff]/[0.06] border border-[#117dff]/20 text-[#117dff] text-xs font-medium hover:bg-[#117dff]/[0.1] transition-colors no-underline">
+                <BookOpen size={11} />
+                CC BY 4.0
+              </a>
             </div>
           </FadeUp>
 
