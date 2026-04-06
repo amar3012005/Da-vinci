@@ -105,16 +105,16 @@ const BarChart = ({ categories }) => {
   };
 
   return (
-    <div className="flex items-end justify-between gap-3 md:gap-6 h-[280px] md:h-[340px]">
+    <div className="flex items-end justify-between gap-2 sm:gap-3 md:gap-6 h-[220px] sm:h-[280px] md:h-[340px]">
       {categories.map((c, i) => (
-        <div key={c.category} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+        <div key={c.category} className="flex-1 flex flex-col items-center gap-1 sm:gap-2 h-full justify-end min-w-0">
           {/* Value label */}
           <motion.span
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.3 + i * 0.08 }}
-            className="text-sm md:text-base font-mono font-bold text-[#0a0a0a]"
+            className="text-[10px] sm:text-sm md:text-base font-mono font-bold text-[#0a0a0a] leading-none"
           >
             {c.score}%
           </motion.span>
@@ -130,11 +130,11 @@ const BarChart = ({ categories }) => {
             />
           </div>
           {/* Label */}
-          <span className="text-[10px] md:text-xs font-['Space_Grotesk'] font-medium text-[#525252] text-center leading-tight h-8">
+          <span className="text-[9px] sm:text-[10px] md:text-xs font-['Space_Grotesk'] font-medium text-[#525252] text-center leading-tight h-8 sm:h-9 md:h-10 flex items-center">
             {c.category}
           </span>
           {/* Engine tag */}
-          <span className="text-[8px] md:text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] px-1.5 py-0.5 rounded bg-[#f3f1ec] border border-[#e3e0db] text-center leading-tight">
+          <span className="text-[7px] sm:text-[8px] md:text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] px-1 py-0.5 sm:px-1.5 sm:py-0.5 rounded bg-[#f3f1ec] border border-[#e3e0db] text-center leading-tight whitespace-nowrap max-w-full truncate">
             {c.engine}
           </span>
         </div>
