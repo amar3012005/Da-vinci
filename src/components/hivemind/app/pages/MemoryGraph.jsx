@@ -24,9 +24,11 @@ import {
   Square,
   Star,
   Hexagon,
+  Map as MapIcon,
 } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
+import { PageIndexViewer } from "../PageIndexViewer";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 const EDGE_COLORS = {
@@ -310,6 +312,7 @@ export default function MemoryGraph() {
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
 
   // Fetch graph data
   const fetchGraph = useCallback(async () => {
@@ -792,6 +795,16 @@ export default function MemoryGraph() {
           ))}
         </div>
 
+        {/* Memory Map button */}
+        <button
+          onClick={() => setPageIndexModalOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
+          title="View memory hierarchy map"
+        >
+          <MapIcon size={12} />
+          <span className="hidden lg:inline">Memory Map</span>
+        </button>
+
         {/* Actions */}
         <button
           onClick={fetchGraph}
@@ -1179,6 +1192,58 @@ export default function MemoryGraph() {
           </div>
         )}
       </div>
+
+      {/* PageIndex Mind Map Modal */}
+      <AnimatePresence>
+        {pageIndexModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setPageIndexModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-5xl h-[80vh] bg-white rounded-2xl border border-[#e3e0db] shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] bg-[#faf9f4]">
+                <div className="flex items-center gap-3">
+                  <MapIcon size={18} className="text-[#117dff]" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Memory Map</h3>
+                    <p className="text-xs text-[#666]">Hierarchical organization of your memories</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPageIndexModalOpen(false)}
+                  className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
+                  title="Close"
+                >
+                  <X size={18} className="text-[#525252]" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="h-[calc(100%-60px)] p-4">
+                <PageIndexViewer
+                  userId={org?.userId || 'current'}
+                  onSelectNode={(node) => {
+                    console.log('Selected node:', node);
+                  }}
+                  selectedNodeId={null}
+                  initialPath="/hivemind"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
