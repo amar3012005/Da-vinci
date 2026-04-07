@@ -252,12 +252,7 @@ export function MemoryLocationBadge({ memoryId, onClick }) {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    fetchLocations();
-  }, [memoryId]);
-
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const nodes = await apiClient.getPageIndexNodesForMemory(memoryId);
       setLocations(nodes || []);
@@ -266,7 +261,11 @@ export function MemoryLocationBadge({ memoryId, onClick }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [memoryId]);
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations, memoryId]);
 
   if (loading || locations.length === 0) {
     return null;
