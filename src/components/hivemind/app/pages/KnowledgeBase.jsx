@@ -15,10 +15,12 @@ import {
   FolderKanban,
   Users,
   User,
+  Map as MapIcon,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { PageIndexViewer } from '../PageIndexViewer';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -230,6 +232,7 @@ export default function KnowledgeBase() {
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [justUploadedDocs, setJustUploadedDocs] = useState([]);
+  const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
@@ -428,9 +431,19 @@ export default function KnowledgeBase() {
             Upload documents to create structured, searchable memories
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
-          <BookOpen size={14} />
-          {documents.length} document{documents.length !== 1 ? 's' : ''}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
+            <BookOpen size={14} />
+            {documents.length} document{documents.length !== 1 ? 's' : ''}
+          </div>
+          <button
+            onClick={() => setPageIndexModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
+            title="View memory hierarchy map"
+          >
+            <MapIcon size={14} />
+            Memory Map
+          </button>
         </div>
       </motion.div>
 
@@ -593,6 +606,59 @@ export default function KnowledgeBase() {
           </div>
         )}
       </motion.div>
+
+      {/* PageIndex Mind Map Modal */}
+      <AnimatePresence>
+        {pageIndexModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setPageIndexModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-5xl h-[80vh] bg-white rounded-2xl border border-[#e3e0db] shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] bg-[#faf9f4]">
+                <div className="flex items-center gap-3">
+                  <MapIcon size={18} className="text-[#117dff]" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Memory Map</h3>
+                    <p className="text-xs text-[#666]">Visual hierarchy of your organized memories</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPageIndexModalOpen(false)}
+                  className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
+                  title="Close"
+                >
+                  <X size={18} className="text-[#525252]" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="h-[calc(100%-60px)] p-4">
+                <PageIndexViewer
+                  userId={org?.userId || 'current'}
+                  onSelectNode={(node) => {
+                    console.log('Selected node:', node);
+                    // Could load memories from this node in a side panel
+                  }}
+                  selectedNodeId={null}
+                  initialPath="/hivemind"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
