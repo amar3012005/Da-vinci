@@ -203,7 +203,7 @@ export default function Overview() {
   const healthy = useHealthStatus(30000);
 
   // Profile / stats
-  const { data: profile, refetch: refetchProfile } = useApiQuery(
+  const { data: profileData, refetch: refetchProfile } = useApiQuery(
     () => apiClient.getProfile(),
     []
   );
@@ -231,13 +231,15 @@ export default function Overview() {
     [debouncedQuery]
   );
 
-  // Derived stats
+  // Derived stats - profile data is nested: { ok: true, profile: {...}, graph_summary: {...} }
+  const profile = profileData?.profile || profileData || null;
   const memoryCount = profile?.memory_count ?? null;
   const relationshipCount = profile?.relationship_count ?? null;
   const activeConnectors = useMemo(() => {
     if (!connectors) return null;
     if (Array.isArray(connectors)) return connectors.filter(c => c && (c.status === 'connected' || c.healthy)).length;
     if (typeof connectors === 'object' && connectors.count != null) return connectors.count;
+    if (typeof connectors === 'object' && connectors.active_count != null) return connectors.active_count;
     return 0;
   }, [connectors]);
   const topTags = profile?.top_tags ?? [];
@@ -294,7 +296,7 @@ export default function Overview() {
         <StatCard
           icon={Tag}
           label="Top Tags"
-          value={topTags.length > 0 ? topTags.length : 0}
+          value={topTags?.length > 0 ? topTags.length : 0}
         />
       </motion.div>
 
