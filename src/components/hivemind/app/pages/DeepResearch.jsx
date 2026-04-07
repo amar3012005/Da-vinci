@@ -6,7 +6,7 @@ import {
   Loader2, Search, CheckCircle2, BookOpen, Brain,
   Globe, Zap, AlertCircle,
   GitBranch, Target, ListTodo, Users, X,
-  Trophy, Layers, Scroll, Award,
+  Layers, Scroll, Award,
   Server, FileText, Save, RotateCcw,
   ChevronUp, ChevronDown, PanelTop,
 } from 'lucide-react';
@@ -185,6 +185,7 @@ export default function DeepResearch() {
   const [durationMs, setDurationMs] = useState(0);
   const [confidence, setConfidence] = useState(0);
   const [fromCache, setFromCache] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [projectId, setProjectId] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [showSessions, setShowSessions] = useState(false);
@@ -210,6 +211,7 @@ export default function DeepResearch() {
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
 
   // Process panel state
+  // eslint-disable-next-line no-unused-vars
   const [trailSteps, setTrailSteps] = useState([]);
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);

@@ -7,11 +7,8 @@ import {
   Folder,
   FolderOpen,
   FileText,
-  Search,
   Plus,
   MoreHorizontal,
-  Move,
-  Trash2,
 } from 'lucide-react';
 // @ts-ignore - api-client.js doesn't have TypeScript declarations
 import apiClient from './shared/api-client';
@@ -255,6 +252,7 @@ export function MemoryLocationBadge({ memoryId, onClick }) {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchLocations();
   }, [memoryId]);
@@ -298,10 +296,12 @@ export function MemoryLocationBadge({ memoryId, onClick }) {
  * MoveMemoryModal — Move memory to different node
  */
 export function MoveMemoryModal({ memoryId, onClose, onSuccess }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tree, setTree] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [moving, setMoving] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     apiClient.getPageIndexTree()
       .then(setTree)
