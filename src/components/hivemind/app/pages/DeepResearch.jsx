@@ -7,6 +7,7 @@ import {
   Globe, Zap, AlertCircle,
   GitBranch, Target, ListTodo, Users, X,
   Trophy, Layers, Scroll, Award,
+  Server, FileText, Save, RotateCcw,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -25,6 +26,30 @@ const AGENT_COLORS = {
   Verifier: '#16a34a',
   Synthesizer: '#d97706',
 };
+
+/* ─── Web Intelligence Runtime Badges ─────────────────────────────── */
+const RUNTIME_BADGES = {
+  tavily: { label: 'Tavily', color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', icon: Server },
+  lightpanda: { label: 'LightPanda', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: Zap },
+  fetch: { label: 'Fetch', color: '#64748b', bg: 'rgba(100,116,139,0.12)', icon: Globe },
+};
+
+/* ─── Node Icons by Type ──────────────────────────────────────────── */
+const NODE_ICONS = {
+  source: Globe,
+  claim: CheckCircle2,
+  trail: Scroll,
+  blueprint: Award,
+};
+
+/* ─── Quota Text Color Helper ────────────────────────────────────── */
+function quotaTextColor(used, limit) {
+  if (!limit) return 'text-[#117dff]';
+  const pct = (used / limit) * 100;
+  if (pct >= 80) return 'text-red-600';
+  if (pct >= 50) return 'text-amber-600';
+  return 'text-emerald-600';
+}
 
 /* ─── Simple Markdown Renderer (Light Theme) ───────────────────────── */
 function renderMarkdown(text) {
@@ -183,6 +208,10 @@ export default function DeepResearch() {
     blueprints: true,   // reused or forming
   });
   const [graphLoading, setGraphLoading] = useState(false);
+  const [webUsage, setWebUsage] = useState(null);
+  const [savingMemories, setSavingMemories] = useState(new Set());
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [graphRefreshKey, setGraphRefreshKey] = useState(0);
 
   const eventsEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -231,6 +260,9 @@ export default function DeepResearch() {
             url: source.url,
             val: 8,
             color: '#117dff',
+            runtime: source.runtime || 'tavily',
+            score: source.score,
+            favicon: source.favicon,
           });
         });
       }
@@ -245,6 +277,7 @@ export default function DeepResearch() {
             confidence: claim.confidence,
             val: 10,
             color: '#16a34a',
+            sourceId: claim.source,
           });
         });
       }
@@ -260,6 +293,8 @@ export default function DeepResearch() {
             agent: step.agent,
             val: 6,
             color: '#9333ea',
+            runtime: step.runtime,
+            confidence: step.confidence,
           });
 
           // Link to previous step
@@ -310,6 +345,16 @@ export default function DeepResearch() {
     }
   }, [graphLayers]);
 
+  /* ── Fetch Web Usage Quota ────────────────────────────────────── */
+  const fetchWebUsage = useCallback(async () => {
+    try {
+      const { data } = await apiClient.controlPlane.get('/v1/proxy/web/usage');
+      setWebUsage(data);
+    } catch (e) {
+      console.error('Failed to fetch web usage:', e);
+    }
+  }, []);
+
   /* ── Load prior sessions on mount ──────────────────────────────── */
   useEffect(() => {
     apiClient.controlPlane
@@ -326,6 +371,11 @@ export default function DeepResearch() {
       try {
         const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
         setEvents(data.events || []);
+
+        // Update graph in real-time during research
+        if (showGraphView) {
+          fetchGraphData(sessionId);
+        }
 
         if (data.status === 'completed') {
           setStatus('completed');
@@ -356,14 +406,15 @@ export default function DeepResearch() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [sessionId, status, projectId, fetchTrailSteps]);
+  }, [sessionId, status, projectId, showGraphView, fetchTrailSteps, fetchGraphData]);
 
   /* ── Fetch Graph when view is opened ───────────────────────────── */
   useEffect(() => {
-    if (showGraphView && sessionId && status === 'completed') {
+    if (showGraphView && sessionId) {
       fetchGraphData(sessionId);
+      fetchWebUsage();
     }
-  }, [showGraphView, sessionId, status, fetchGraphData]);
+  }, [showGraphView, sessionId, fetchGraphData, fetchWebUsage]);
 
   /* ── Auto-scroll events ────────────────────────────────────────── */
   useEffect(() => {
@@ -456,6 +507,46 @@ export default function DeepResearch() {
     setConfidence(0);
     setFromCache(false);
     textareaRef.current?.focus();
+  }, []);
+
+  /* ── Save source to memory ────────────────────────────────────── */
+  const handleSaveToMemory = useCallback(async (source, nodeId) => {
+    if (!sessionId) return;
+
+    setSavingMemories(prev => new Set(prev).add(nodeId));
+    try {
+      await apiClient.controlPlane.post(`/v1/proxy/research/${sessionId}/save-memory`, {
+        sourceId: source.id,
+        title: source.title,
+        url: source.url,
+        tags: ['web-search', 'deep-research'],
+      });
+    } catch (e) {
+      console.error('Failed to save to memory:', e);
+    } finally {
+      setSavingMemories(prev => {
+        const next = new Set(prev);
+        next.delete(nodeId);
+        return next;
+      });
+    }
+  }, [sessionId]);
+
+  /* ── Refresh Graph ────────────────────────────────────────────── */
+  const handleRefreshGraph = useCallback(() => {
+    if (sessionId) {
+      setGraphRefreshKey(prev => prev + 1);
+      fetchGraphData(sessionId);
+    }
+  }, [sessionId, fetchGraphData]);
+
+  /* ── Handle Node Click ────────────────────────────────────────── */
+  const handleNodeClick = useCallback((node) => {
+    if (node.type === 'source' && node.url) {
+      setSelectedNode(node);
+    } else {
+      setSelectedNode(null);
+    }
   }, []);
 
   /* ── Update Agent States from Events ───────────────────────────── */
@@ -865,7 +956,31 @@ export default function DeepResearch() {
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    {/* Web Usage Quota */}
+                    {webUsage && (
+                      <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db]">
+                        <div className="flex items-center gap-1.5">
+                          <Search size={10} className="text-[#a3a3a3]" />
+                          <span className="text-[10px] text-[#525252]">
+                            <span className={quotaTextColor(webUsage.web_search_requests?.used || 0, webUsage.web_search_requests?.limit || 50)}>
+                              {webUsage.web_search_requests?.used || 0}
+                            </span>
+                            /{webUsage.web_search_requests?.limit || 50}
+                          </span>
+                        </div>
+                        <div className="h-3 w-px bg-[#e3e0db]" />
+                        <div className="flex items-center gap-1.5">
+                          <FileText size={10} className="text-[#a3a3a3]" />
+                          <span className="text-[10px] text-[#525252]">
+                            <span className={quotaTextColor(webUsage.web_crawl_pages?.used || 0, webUsage.web_crawl_pages?.limit || 100)}>
+                              {webUsage.web_crawl_pages?.used || 0}
+                            </span>
+                            /{webUsage.web_crawl_pages?.limit || 100}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {graphLoading && (
                       <span className="flex items-center gap-1.5 text-[10px] text-[#525252]">
                         <Loader2 size={12} className="animate-spin" />
@@ -880,8 +995,18 @@ export default function DeepResearch() {
 
                 {/* Graph Canvas */}
                 <div className="relative h-full bg-gradient-to-b from-[#faf9f4] to-white">
+                  {/* Refresh Button */}
+                  <button
+                    onClick={handleRefreshGraph}
+                    className="absolute top-3 right-4 z-10 p-2 rounded-lg bg-white border border-[#e3e0db] text-[#525252] hover:bg-[#faf9f4] hover:text-[#117dff] transition-all shadow-sm"
+                    title="Refresh graph"
+                  >
+                    <RotateCcw size={14} className={graphLoading ? 'animate-spin' : ''} />
+                  </button>
+
                   {sessionId && graphData.nodes.length > 0 ? (
                     <ForceGraph2D
+                      key={graphRefreshKey}
                       graphData={graphData}
                       width={window.innerWidth}
                       height={400}
@@ -894,6 +1019,7 @@ export default function DeepResearch() {
                       enableZoomPan={true}
                       minZoom={0.5}
                       maxZoom={3}
+                      onNodeClick={handleNodeClick}
                       nodeCanvasObject={(node, ctx, globalScale) => {
                         const label = node.title || '';
                         const fontSize = 10 / globalScale;
@@ -904,6 +1030,15 @@ export default function DeepResearch() {
                         ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
                         ctx.fillStyle = node.color;
                         ctx.fill();
+
+                        // Draw runtime badge for source nodes
+                        if (node.type === 'source' && node.runtime) {
+                          const runtimeBadge = RUNTIME_BADGES[node.runtime] || RUNTIME_BADGES.fetch;
+                          ctx.fillStyle = runtimeBadge.color;
+                          ctx.beginPath();
+                          ctx.arc(node.x + node.val - 2, node.y - node.val + 2, 4, 0, 2 * Math.PI);
+                          ctx.fill();
+                        }
 
                         // Draw label
                         ctx.fillStyle = '#0a0a0a';
@@ -918,6 +1053,20 @@ export default function DeepResearch() {
                           ctx.fillStyle = node.color;
                           ctx.font = `bold ${8 / globalScale}px Sans-Serif`;
                           ctx.fillText(node.type, node.x, node.y + node.val + 15);
+                        }
+
+                        // Draw confidence ring for claims
+                        if (node.type === 'claim' && node.confidence != null) {
+                          const ringRadius = node.val + 3;
+                          const confidence = Math.max(0, Math.min(1, node.confidence));
+                          const startAngle = -Math.PI / 2;
+                          const endAngle = startAngle + (confidence * 2 * Math.PI);
+
+                          ctx.beginPath();
+                          ctx.arc(node.x, node.y, ringRadius, startAngle, endAngle);
+                          ctx.strokeStyle = confidence > 0.7 ? '#16a34a' : confidence > 0.4 ? '#d97706' : '#ef4444';
+                          ctx.lineWidth = 2;
+                          ctx.stroke();
                         }
                       }}
                       linkDirectionalParticles={2}
@@ -965,8 +1114,108 @@ export default function DeepResearch() {
                       <div className="w-3 h-3 rounded-full bg-[#d97706]" />
                       <span className="text-[10px] text-[#525252]">Blueprints (patterns)</span>
                     </div>
+                    <div className="h-px bg-[#e3e0db] my-1" />
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="w-3 h-3 rounded-full bg-[#0ea5e9]" />
+                      <span className="text-[10px] text-[#525252]">Tavily runtime</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#8b5cf6]" />
+                      <span className="text-[10px] text-[#525252]">LightPanda runtime</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Node Detail Popup */}
+                <AnimatePresence>
+                  {selectedNode && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute bottom-4 right-4 w-80 bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-2xl p-4 z-20"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: `${selectedNode.color}20` }}
+                          >
+                            {(() => {
+                              const Icon = NODE_ICONS[selectedNode.type] || Globe;
+                              return <Icon size={16} style={{ color: selectedNode.color }} />;
+                            })()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-[#0a0a0a] capitalize">{selectedNode.type}</p>
+                            {selectedNode.runtime && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {(() => {
+                                  const RuntimeIcon = RUNTIME_BADGES[selectedNode.runtime]?.icon || Globe;
+                                  return <RuntimeIcon size={10} className="text-[#a3a3a3]" />;
+                                })()}
+                                <span className="text-[10px] text-[#525252] capitalize">
+                                  {RUNTIME_BADGES[selectedNode.runtime]?.label || selectedNode.runtime}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedNode(null)}
+                          className="p-1 rounded hover:bg-[#e3e0db]/40 text-[#525252]"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-[#525252]/80 leading-relaxed mb-3 line-clamp-2">
+                        {selectedNode.title}
+                      </p>
+
+                      {selectedNode.url && (
+                        <a
+                          href={selectedNode.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-[10px] text-[#117dff] hover:text-[#0a6ddb] hover:underline mb-3"
+                        >
+                          <Globe size={10} />
+                          <span className="truncate">{selectedNode.url}</span>
+                        </a>
+                      )}
+
+                      {selectedNode.confidence != null && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-[10px] text-[#525252]">Confidence:</span>
+                          <span className={`text-[10px] font-semibold ${(selectedNode.confidence * 100) >= 70 ? 'text-emerald-600' : (selectedNode.confidence * 100) >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {(selectedNode.confidence * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+
+                      {selectedNode.type === 'source' && (
+                        <button
+                          onClick={() => handleSaveToMemory(selectedNode, selectedNode.id)}
+                          disabled={savingMemories.has(selectedNode.id)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all"
+                        >
+                          {savingMemories.has(selectedNode.id) ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save size={12} />
+                              Save to Memory
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </>
           )}
