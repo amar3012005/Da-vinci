@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ForceGraph2D from 'react-force-graph-2d';
 import {
   ArrowUp, Sparkles, History,
   Loader2, Search, CheckCircle2, BookOpen, Brain,
   Globe, Zap, AlertCircle,
   GitBranch, Target, ListTodo, Users, X,
-  Trophy,
+  Trophy, Layers, Database, FileText, Scroll, Award,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -167,10 +168,21 @@ export default function DeepResearch() {
   const [showSessions, setShowSessions] = useState(false);
   const [error, setError] = useState(null);
   const [showProcessPanel, setShowProcessPanel] = useState(false);
+  const [showGraphView, setShowGraphView] = useState(false);
   const [trailSteps, setTrailSteps] = useState([]);
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);
   const [activeGoal, setActiveGoal] = useState('');
+
+  /* ── Graph View State ─────────────────────────────────────────── */
+  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [graphLayers, setGraphLayers] = useState({
+    sources: true,      // webpages, docs, notes
+    claims: true,       // extracted findings
+    trails: true,       // research path taken
+    blueprints: true,   // reused or forming
+  });
+  const [graphLoading, setGraphLoading] = useState(false);
 
   const eventsEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -197,6 +209,106 @@ export default function DeepResearch() {
       console.error('Failed to fetch trail:', e);
     }
   }, []);
+
+  /* ── Fetch Graph Data ─────────────────────────────────────────── */
+  const fetchGraphData = useCallback(async (sid) => {
+    setGraphLoading(true);
+    try {
+      const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/graph`);
+
+      // Transform backend data into layered graph structure
+      const layers = data.layers || {};
+      const nodes = [];
+      const links = [];
+
+      // Layer 1: Sources (webpages, docs, notes)
+      if (graphLayers.sources && layers.sources) {
+        layers.sources.forEach((source, idx) => {
+          nodes.push({
+            id: `source-${source.id || idx}`,
+            type: 'source',
+            title: source.title || source.url || 'Source',
+            url: source.url,
+            val: 8,
+            color: '#117dff',
+          });
+        });
+      }
+
+      // Layer 2: Claims (extracted findings)
+      if (graphLayers.claims && layers.claims) {
+        layers.claims.forEach((claim, idx) => {
+          nodes.push({
+            id: `claim-${claim.id || idx}`,
+            type: 'claim',
+            title: claim.content?.slice(0, 80) || 'Finding',
+            confidence: claim.confidence,
+            val: 10,
+            color: '#16a34a',
+          });
+        });
+      }
+
+      // Layer 3: Trails (research path taken)
+      if (graphLayers.trails && layers.trails) {
+        layers.trails.forEach((step, idx) => {
+          nodes.push({
+            id: `trail-${step.id || idx}`,
+            type: 'trail',
+            title: `${step.agent}: ${step.action}`,
+            action: step.action,
+            agent: step.agent,
+            val: 6,
+            color: '#9333ea',
+          });
+
+          // Link to previous step
+          if (idx > 0) {
+            links.push({
+              source: `trail-${step.id || idx}`,
+              target: `trail-${layers.trails[idx - 1].id || idx - 1}`,
+              type: 'sequence',
+              color: '#9333ea40',
+            });
+          }
+        });
+      }
+
+      // Layer 4: Blueprints (reused or forming)
+      if (graphLayers.blueprints && layers.blueprints) {
+        layers.blueprints.forEach((bp, idx) => {
+          nodes.push({
+            id: `blueprint-${bp.blueprintId || idx}`,
+            type: 'blueprint',
+            title: bp.name || 'Blueprint',
+            domain: bp.domain,
+            reused: bp.timesReused || 0,
+            val: 12,
+            color: '#d97706',
+          });
+        });
+      }
+
+      // Add links between layers (sources → claims, trails → sources, etc.)
+      if (layers.weights?.edges) {
+        layers.weights.edges.forEach(edge => {
+          links.push({
+            source: edge.from,
+            target: edge.to,
+            type: edge.type || 'related',
+            confidence: edge.confidence,
+            color: `rgba(147, 51, 234, ${0.2 + (edge.confidence || 0.5) * 0.5})`,
+          });
+        });
+      }
+
+      setGraphData({ nodes, links });
+    } catch (e) {
+      console.error('Failed to fetch graph:', e);
+    } finally {
+      setGraphLoading(false);
+    }
+  }, [graphLayers]);
 
   /* ── Load prior sessions on mount ──────────────────────────────── */
   useEffect(() => {
@@ -227,8 +339,9 @@ export default function DeepResearch() {
             setFromCache(!!rpt.fromCache);
             if (rpt.projectId) setProjectId(rpt.projectId);
 
-            // Fetch trail on completion
+            // Fetch trail and graph on completion
             fetchTrailSteps(sessionId);
+            fetchGraphData(sessionId);
           } catch (e) {
             console.error('Failed to fetch report:', e);
           }
@@ -244,6 +357,13 @@ export default function DeepResearch() {
 
     return () => clearInterval(interval);
   }, [sessionId, status, projectId, fetchTrailSteps]);
+
+  /* ── Fetch Graph when view is opened ───────────────────────────── */
+  useEffect(() => {
+    if (showGraphView && sessionId && status === 'completed') {
+      fetchGraphData(sessionId);
+    }
+  }, [showGraphView, sessionId, status, fetchGraphData]);
 
   /* ── Auto-scroll events ────────────────────────────────────────── */
   useEffect(() => {
@@ -474,7 +594,7 @@ export default function DeepResearch() {
           </motion.div>
         )}
 
-        {/* ── Graph View Toggle (when research active) ─────────────── */}
+        {/* ── View Toggle (when research active) ─────────────── */}
         {(status === 'running' || status === 'completed') && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -482,13 +602,22 @@ export default function DeepResearch() {
             className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
           >
             <button
-              onClick={() => setShowProcessPanel(!showProcessPanel)}
+              onClick={() => { setShowGraphView(false); setShowProcessPanel(!showProcessPanel); }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                showProcessPanel ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#525252] hover:bg-[#faf9f4]'
+                showProcessPanel && !showGraphView ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#525252] hover:bg-[#faf9f4]'
               }`}
             >
               <ListTodo size={14} />
               <span className="hidden sm:inline">Process</span>
+            </button>
+            <button
+              onClick={() => { setShowProcessPanel(false); setShowGraphView(!showGraphView); }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                showGraphView ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#525252] hover:bg-[#faf9f4]'
+              }`}
+            >
+              <GitBranch size={14} />
+              <span className="hidden sm:inline">Graph</span>
             </button>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#d97706]/10 border border-[#d97706]/20">
               <Trophy size={12} className="text-[#d97706]" />
@@ -664,6 +793,179 @@ export default function DeepResearch() {
                       </div>
                     </div>
                   )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* ── Graph View ────────────────────────────────────────── */}
+        <AnimatePresence>
+          {showGraphView && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowGraphView(false)}
+                className="absolute inset-0 bg-[#0a0a0a]/20 z-40"
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="absolute bottom-0 left-0 right-0 h-[60vh] bg-white border-t border-[#e3e0db] z-50 overflow-hidden"
+              >
+                {/* Graph Header */}
+                <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] bg-[#faf9f4]/95 backdrop-blur-md">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <GitBranch size={16} className="text-[#117dff]" />
+                      <span className="text-sm font-semibold text-[#0a0a0a]">Research Graph</span>
+                    </div>
+                    <div className="h-4 w-px bg-[#e3e0db]" />
+                    {/* Layer Toggles */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] transition-all ${
+                          graphLayers.sources ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] hover:bg-[#faf9f4]'
+                        }`}
+                      >
+                        <Globe size={10} />
+                        Sources
+                      </button>
+                      <button
+                        onClick={() => setGraphLayers(prev => ({ ...prev, claims: !prev.claims }))}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] transition-all ${
+                          graphLayers.claims ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'text-[#a3a3a3] hover:bg-[#faf9f4]'
+                        }`}
+                      >
+                        <CheckCircle2 size={10} />
+                        Claims
+                      </button>
+                      <button
+                        onClick={() => setGraphLayers(prev => ({ ...prev, trails: !prev.trails }))}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] transition-all ${
+                          graphLayers.trails ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#a3a3a3] hover:bg-[#faf9f4]'
+                        }`}
+                      >
+                        <Scroll size={10} />
+                        Trails
+                      </button>
+                      <button
+                        onClick={() => setGraphLayers(prev => ({ ...prev, blueprints: !prev.blueprints }))}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] transition-all ${
+                          graphLayers.blueprints ? 'bg-[#d97706]/10 text-[#d97706]' : 'text-[#a3a3a3] hover:bg-[#faf9f4]'
+                        }`}
+                      >
+                        <Award size={10} />
+                        Blueprints
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {graphLoading && (
+                      <span className="flex items-center gap-1.5 text-[10px] text-[#525252]">
+                        <Loader2 size={12} className="animate-spin" />
+                        Loading...
+                      </span>
+                    )}
+                    <button onClick={() => setShowGraphView(false)} className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252]">
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Graph Canvas */}
+                <div className="relative h-full bg-gradient-to-b from-[#faf9f4] to-white">
+                  {sessionId && graphData.nodes.length > 0 ? (
+                    <ForceGraph2D
+                      graphData={graphData}
+                      width={window.innerWidth}
+                      height={400}
+                      nodeLabel="title"
+                      nodeColor={node => node.color}
+                      nodeVal={node => node.val}
+                      linkColor={link => link.color}
+                      nodeRelSize={3}
+                      enableNodeDrag={false}
+                      enableZoomPan={true}
+                      minZoom={0.5}
+                      maxZoom={3}
+                      nodeCanvasObject={(node, ctx, globalScale) => {
+                        const label = node.title || '';
+                        const fontSize = 10 / globalScale;
+                        ctx.font = `${fontSize}px Sans-Serif`;
+
+                        // Draw node circle
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
+                        ctx.fillStyle = node.color;
+                        ctx.fill();
+
+                        // Draw label
+                        ctx.fillStyle = '#0a0a0a';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(label, node.x, node.y - node.val - 2);
+
+                        // Draw type badge
+                        if (node.type) {
+                          ctx.fillStyle = `${node.color}40`;
+                          ctx.fillRect(node.x - 20, node.y + node.val + 4, 40, 14);
+                          ctx.fillStyle = node.color;
+                          ctx.font = `bold ${8 / globalScale}px Sans-Serif`;
+                          ctx.fillText(node.type, node.x, node.y + node.val + 15);
+                        }
+                      }}
+                      linkDirectionalParticles={2}
+                      linkDirectionalParticleWidth={2}
+                      linkDirectionalParticleSpeed={0.005}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-[#525252]">
+                      {graphLoading ? (
+                        <>
+                          <Loader2 size={32} className="animate-spin text-[#117dff] mb-3" />
+                          <p className="text-sm">Loading research graph...</p>
+                        </>
+                      ) : (
+                        <>
+                          <Layers size={48} className="text-[#e3e0db] mb-3" />
+                          <p className="text-sm">
+                            {status === 'running'
+                              ? 'Research in progress. Graph will appear when complete.'
+                              : 'No graph data available. Start a new research session.'}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Graph Legend */}
+                <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur border border-[#e3e0db] rounded-lg p-3 shadow-lg">
+                  <p className="text-[10px] font-semibold text-[#525252] mb-2">Legend</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#117dff]" />
+                      <span className="text-[10px] text-[#525252]">Sources (webpages, docs)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#16a34a]" />
+                      <span className="text-[10px] text-[#525252]">Claims (findings)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#9333ea]" />
+                      <span className="text-[10px] text-[#525252]">Trails (research steps)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#d97706]" />
+                      <span className="text-[10px] text-[#525252]">Blueprints (patterns)</span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </>
