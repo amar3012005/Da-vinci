@@ -43,8 +43,9 @@ const MobileNavigation = () => {
     <>
       <nav className={`fixed top-0 inset-x-0 z-[100] ${c.navBg} border-b ${c.border}`}>
         <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
-          <div className={`md:hidden h-9 px-6 flex items-center justify-end border-b ${c.border}`}>
-            <div className={`inline-flex items-center rounded-full border ${c.border} p-1 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
+          <div className={`md:hidden h-14 px-6 flex items-center justify-between border-b ${c.border}`}>
+            {/* Language Toggle - Mobile Top Bar */}
+            <div className={`inline-flex items-center rounded-full border ${c.border} p-0.5 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
               {['en', 'de'].map((lang) => {
                 const active = locale === lang;
                 return (
@@ -52,7 +53,7 @@ const MobileNavigation = () => {
                     key={lang}
                     type="button"
                     onClick={() => setLocale(lang)}
-                    className={`min-w-[38px] rounded-full px-3 py-1 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors ${
+                    className={`min-w-[34px] rounded-full px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors ${
                       active
                         ? `${c.accentBg} ${c.accentText}`
                         : `${c.textMuted} bg-transparent`
@@ -64,6 +65,15 @@ const MobileNavigation = () => {
                 );
               })}
             </div>
+
+            {/* Hamburger Button */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
 
           <div className="px-6 h-16 flex items-center justify-between">
@@ -135,17 +145,6 @@ const MobileNavigation = () => {
                 <ArrowRight size={12} />
               </a>
             </div>
-
-            {/* Mobile Hamburger */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setMobileOpen(!mobileOpen)}
-                className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
-                aria-label="Toggle menu"
-              >
-                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
           </div>
         </div>
       </nav>
@@ -185,6 +184,35 @@ const MobileNavigation = () => {
                 {isDark ? <Sun size={22} /> : <Moon size={22} />}
                 {isDark ? copy.nav.lightMode : copy.nav.darkMode}
               </motion.button>
+
+              {/* Language toggle row */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: (navLinks.length + 1) * 0.05 }}
+                className={`flex items-center gap-2 py-4 border-b ${c.border}`}
+              >
+                <span className={`text-sm font-medium ${c.textMuted}`}>Language:</span>
+                <div className={`inline-flex items-center rounded-full border ${c.border} p-0.5 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
+                  {['en', 'de'].map((lang) => {
+                    const active = locale === lang;
+                    return (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => setLocale(lang)}
+                        className={`min-w-[40px] rounded-full px-3 py-1 text-xs font-mono uppercase tracking-[0.22em] transition-colors ${
+                          active
+                            ? `${c.accentBg} ${c.accentText}`
+                            : `${c.textMuted} bg-transparent`
+                        }`}
+                      >
+                        {lang}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
 
               <div className="flex flex-col gap-3 mt-8">
                 <a
