@@ -6,7 +6,7 @@ import {
   Loader2, Search, CheckCircle2, BookOpen, Brain,
   Globe, Zap, AlertCircle,
   GitBranch, Target, ListTodo, Users, X,
-  Trophy, Layers, Database, FileText, Scroll, Award,
+  Trophy, Layers, Scroll, Award,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
