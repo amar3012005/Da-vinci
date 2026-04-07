@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
@@ -229,6 +229,7 @@ export default function KnowledgeBase() {
   const [selectedProject, setSelectedProject] = useState('');
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [justUploadedDocs, setJustUploadedDocs] = useState([]);
   const fileInputRef = useRef(null);
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
@@ -257,7 +258,32 @@ export default function KnowledgeBase() {
     }
   }, []);
 
-  const documents = kbMemories || [];
+  // Combine fetched documents with just-uploaded ones for immediate display
+  const documents = useMemo(() => {
+    if (!kbMemories) return justUploadedDocs;
+    if (!justUploadedDocs.length) return kbMemories;
+
+    // Create a Set of fetched doc IDs to avoid duplicates
+    const fetchedIds = new Set(kbMemories.map((d) => d.id));
+
+    // Filter out just-uploaded docs that are now in fetched list
+    const pendingUploads = justUploadedDocs.filter((d) => !fetchedIds.has(d.id));
+
+    // Combine and sort by date
+    const combined = [...kbMemories, ...pendingUploads];
+    return combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }, [kbMemories, justUploadedDocs]);
+
+  // Clear just-uploaded docs once they appear in fetched results
+  useEffect(() => {
+    if (kbMemories && justUploadedDocs.length > 0) {
+      const fetchedIds = new Set(kbMemories.map((d) => d.id));
+      const stillPending = justUploadedDocs.filter((d) => !fetchedIds.has(d.id));
+      if (stillPending.length < justUploadedDocs.length) {
+        setJustUploadedDocs(stillPending);
+      }
+    }
+  }, [kbMemories, justUploadedDocs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,7 +357,20 @@ export default function KnowledgeBase() {
             ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id }
             : u
         ));
-        setTimeout(() => refetchKb(), 3000);
+        // Add to just-uploaded docs for immediate display
+        setJustUploadedDocs((prev) => [{
+          id: result.upload_id || `pending-${uploadEntry.id}`,
+          title: result.filename || file.name,
+          metadata: {
+            document_title: result.filename || file.name,
+            total_chunks: result.chunks || 1,
+            filename: result.filename || file.name,
+          },
+          tags: customTags ? customTags.split(',').map((t) => t.trim()) : [],
+          created_at: new Date().toISOString(),
+        }, ...prev]);
+        // Refetch to sync with server state
+        refetchKb();
       } catch (err) {
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
