@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
+import WebResultModal from '../components/WebResultModal';
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
 
@@ -232,11 +233,12 @@ function InlineToast({ message, type = 'success' }) {
 
 /* ─── Result Preview Components ──────────────────────────────────── */
 
-function SearchResultCard({ result, jobId, index, onSave }) {
+function SearchResultCard({ result, jobId, index, onSave, onClick, runtime, fallback }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    e.stopPropagation();
     setSaving(true);
     try {
       await apiClient.saveWebResultToMemory(jobId, {
@@ -254,18 +256,15 @@ function SearchResultCard({ result, jobId, index, onSave }) {
   };
 
   return (
-    <motion.div variants={fadeUp} className="border border-[#e3e0db] rounded-lg p-3 hover:border-[#117dff]/30 transition-colors">
+    <motion.div variants={fadeUp} onClick={onClick} className="border border-[#e3e0db] rounded-lg p-3 hover:border-[#117dff]/30 transition-colors cursor-pointer">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <a
-            href={result.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#117dff] text-sm font-semibold font-['Space_Grotesk'] hover:underline flex items-center gap-1 truncate"
-          >
-            {result.title || result.url}
-            <ExternalLink size={10} className="shrink-0" />
-          </a>
+          <div className="flex items-center gap-1">
+            <span className="text-[#117dff] text-sm font-semibold font-['Space_Grotesk'] hover:underline truncate">
+              {result.title || result.url}
+            </span>
+            <ExternalLink size={10} className="shrink-0 text-[#a3a3a3]" />
+          </div>
           <p className="text-[#a3a3a3] text-[10px] font-mono truncate mt-0.5">{result.url}</p>
           {result.snippet && (
             <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-1.5 line-clamp-2">{result.snippet}</p>
@@ -284,12 +283,13 @@ function SearchResultCard({ result, jobId, index, onSave }) {
   );
 }
 
-function CrawlResultCard({ result, jobId, index, onSave }) {
+function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallback }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    e.stopPropagation();
     setSaving(true);
     try {
       await apiClient.saveWebResultToMemory(jobId, {
@@ -306,11 +306,16 @@ function CrawlResultCard({ result, jobId, index, onSave }) {
     }
   };
 
+  const handlePreviewToggle = (e) => {
+    e.stopPropagation();
+    setShowContent(!showContent);
+  };
+
   const content = result.text || result.content || result.markdown || '';
   const charCount = content.length;
 
   return (
-    <motion.div variants={fadeUp} className="border border-[#e3e0db] rounded-lg hover:border-[#117dff]/30 transition-colors overflow-hidden">
+    <motion.div variants={fadeUp} onClick={onClick} className="border border-[#e3e0db] rounded-lg hover:border-[#117dff]/30 transition-colors overflow-hidden cursor-pointer">
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <FileText size={13} className="text-[#a3a3a3] shrink-0" />
@@ -319,7 +324,7 @@ function CrawlResultCard({ result, jobId, index, onSave }) {
             <p className="text-[#a3a3a3] text-[10px] font-mono truncate">{result.url}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
           {result.word_count != null && (
             <span className="text-[9px] font-mono text-[#a3a3a3] bg-[#f3f1ec] px-1.5 py-0.5 rounded">
               {result.word_count.toLocaleString()} words
@@ -327,7 +332,7 @@ function CrawlResultCard({ result, jobId, index, onSave }) {
           )}
           {charCount > 0 && (
             <button
-              onClick={() => setShowContent(!showContent)}
+              onClick={handlePreviewToggle}
               className="text-[10px] font-mono text-[#117dff] hover:text-[#0066e0] px-1.5 py-0.5 rounded bg-[#117dff]/5 hover:bg-[#117dff]/10 transition-colors"
             >
               {showContent ? 'Hide' : 'Preview'} ({charCount > 1000 ? `${(charCount/1000).toFixed(1)}k` : charCount} chars)
@@ -365,7 +370,7 @@ function CrawlResultCard({ result, jobId, index, onSave }) {
 
 /* ─── Expandable Job Row ─────────────────────────────────────────── */
 
-function JobRow({ job, onRetry, onSaveAll, pollingJobId }) {
+function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
   const [expanded, setExpanded] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryToast, setRetryToast] = useState(null);
@@ -473,9 +478,25 @@ function JobRow({ job, onRetry, onSaveAll, pollingJobId }) {
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-2">
                     {results.map((r, i) =>
                       job.type === 'search' ? (
-                        <SearchResultCard key={i} result={r} jobId={job.id} index={i} />
+                        <SearchResultCard
+                          key={i}
+                          result={r}
+                          jobId={job.id}
+                          index={i}
+                          runtime={job.runtime_used}
+                          fallback={job.fallback_applied}
+                          onClick={() => onResultClick?.({ result: r, jobId: job.id, index: i, type: 'search', runtime: job.runtime_used, fallback: job.fallback_applied })}
+                        />
                       ) : (
-                        <CrawlResultCard key={i} result={r} jobId={job.id} index={i} />
+                        <CrawlResultCard
+                          key={i}
+                          result={r}
+                          jobId={job.id}
+                          index={i}
+                          runtime={job.runtime_used}
+                          fallback={job.fallback_applied}
+                          onClick={() => onResultClick?.({ result: r, jobId: job.id, index: i, type: 'crawl', runtime: job.runtime_used, fallback: job.fallback_applied })}
+                        />
                       )
                     )}
                   </motion.div>
@@ -544,6 +565,9 @@ export default function WebIntelligence() {
   // ─── Polling state ─────────────────────────────
   const [pollingJobId, setPollingJobId] = useState(null);
   const pollingRef = useRef(null);
+
+  // ─── Modal state ───────────────────────────────
+  const [selectedResult, setSelectedResult] = useState(null); // { result, jobId, index, type, runtime, fallback }
 
   // ─── API queries ───────────────────────────────
   const { data: usage, refetch: refetchUsage } = useApiQuery(() => apiClient.getWebUsage().catch(() => null));
@@ -917,6 +941,7 @@ export default function WebIntelligence() {
                         pollingJobId={pollingJobId}
                         onRetry={() => { refetchJobs(); refetchUsage(); }}
                         onSaveAll={refetchJobs}
+                        onResultClick={setSelectedResult}
                       />
                     ))}
                   </tbody>
@@ -932,6 +957,18 @@ export default function WebIntelligence() {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Result Detail Modal */}
+      <WebResultModal
+        isOpen={!!selectedResult}
+        onClose={() => setSelectedResult(null)}
+        result={selectedResult?.result}
+        jobId={selectedResult?.jobId}
+        index={selectedResult?.index}
+        type={selectedResult?.type}
+        runtime={selectedResult?.runtime}
+        fallback={selectedResult?.fallback}
+      />
     </div>
   );
 }
