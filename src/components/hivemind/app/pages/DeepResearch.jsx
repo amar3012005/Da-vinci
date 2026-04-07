@@ -584,28 +584,43 @@ export default function DeepResearch() {
     setAgentStates(newAgentStates);
   }, [events]);
 
+  /* ── Auto-hide sidebar when research starts ───────────────────── */
+  useEffect(() => {
+    if (status === 'running') {
+      // Emit custom event to close sidebar
+      window.dispatchEvent(new CustomEvent('hivemind:close-sidebar'));
+    }
+    return () => {
+      if (status === 'idle') {
+        window.dispatchEvent(new CustomEvent('hivemind:open-sidebar'));
+      }
+    };
+  }, [status]);
+
   /* ─── Render ───────────────────────────────────────────────────── */
+  const isResearchActive = status === 'running' || status === 'completed';
+
   return (
-    <div className="fixed inset-0 overflow-hidden" style={{ background: '#faf9f4', left: '260px', top: '0', right: '0', bottom: '0' }}>
+    <div className={`fixed inset-0 overflow-hidden transition-all duration-500 ${isResearchActive ? 'sidebar-hidden' : ''}`} style={{ background: '#faf9f4' }}>
       {/* ── Main Content Area ─────────────────────────────────────── */}
-      <div className="relative h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className={`relative h-full flex flex-col transition-all duration-500 ${isResearchActive ? 'items-stretch justify-start pt-8' : 'items-center justify-center'}`}>
 
         {/* ── Header ───────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-8 sm:mb-12"
+          className={`text-center transition-all duration-500 ${isResearchActive ? 'mb-4 sm:mb-6' : 'mb-8 sm:mb-12'}`}
         >
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#117dff]/[0.08] border border-[#117dff]/20 flex items-center justify-center">
               <Search size={20} className="sm:w-5 sm:h-5 text-[#117dff]" />
             </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-3">
+          <h1 className={`font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk'] mb-3 transition-all duration-500 ${isResearchActive ? 'text-xl sm:text-2xl' : 'text-3xl sm:text-4xl md:text-5xl'}`}>
             Deep Research
           </h1>
-          <p className="text-sm sm:text-base text-[#525252] max-w-xl mx-auto leading-relaxed">
+          <p className={`text-[#525252] leading-relaxed transition-all duration-500 ${isResearchActive ? 'text-xs sm:text-sm max-w-lg' : 'text-sm sm:text-base max-w-xl'}`}>
             Ask anything. HIVEMIND searches the web, your memory graph, and synthesizes comprehensive reports.
           </p>
         </motion.div>
@@ -616,9 +631,9 @@ export default function DeepResearch() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="w-full max-w-2xl"
+            className={`transition-all duration-500 ${isResearchActive ? 'w-full max-w-5xl px-4' : 'w-full max-w-2xl'}`}
           >
-            <div className="relative bg-white rounded-2xl sm:rounded-3xl border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+            <div className={`relative bg-white rounded-2xl sm:rounded-3xl border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-500 ${isResearchActive ? 'mx-0' : 'mx-auto'}`}>
               {/* Top Bar */}
               <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-[#e3e0db] bg-gradient-to-b from-[#faf9f4] to-white">
                 <div className="flex items-center gap-1.5">
@@ -686,11 +701,11 @@ export default function DeepResearch() {
         )}
 
         {/* ── View Toggle (when research active) ─────────────── */}
-        {(status === 'running' || status === 'completed') && (
+        {isResearchActive && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
           >
             <button
               onClick={() => { setShowGraphView(false); setShowProcessPanel(!showProcessPanel); }}
@@ -719,7 +734,7 @@ export default function DeepResearch() {
 
         {/* ── History & New Research ───────────────────────────────── */}
         {sessions.length > 0 && status === 'idle' && (
-          <div className="absolute top-4 left-4 z-30">
+          <div className="fixed top-4 left-4 z-40">
             <button
               onClick={() => setShowSessions(!showSessions)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#faf9f4] transition-all shadow-sm"
@@ -758,10 +773,23 @@ export default function DeepResearch() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={handleNewResearch}
-            className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#faf9f4] transition-all shadow-sm"
+            className="fixed top-4 right-4 z-40 flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#faf9f4] transition-all shadow-sm"
           >
             <Sparkles size={12} />
             New Research
+          </motion.button>
+        )}
+
+        {/* ── Close Button (when running) ──────────────────────────── */}
+        {status === 'running' && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={handleNewResearch}
+            className="fixed top-4 right-4 z-50 p-2 rounded-xl bg-white border border-[#e3e0db] text-[#525252] hover:bg-[#faf9f4] transition-all shadow-sm"
+            title="Close research"
+          >
+            <X size={16} />
           </motion.button>
         )}
 
@@ -1226,7 +1254,7 @@ export default function DeepResearch() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="w-full max-w-2xl mt-6"
+            className={`mt-6 ${isResearchActive ? 'w-full max-w-4xl px-4' : 'w-full max-w-2xl'}`}
           >
             <div className="bg-white rounded-2xl border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
               {/* Header */}
@@ -1240,7 +1268,7 @@ export default function DeepResearch() {
               </div>
 
               {/* Events */}
-              <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="p-4 space-y-2 max-h-[500px] overflow-y-auto">
                 {events.map((event, i) => (
                   <EventCard key={`${event.type}-${i}`} event={event} index={i} />
                 ))}
@@ -1280,7 +1308,7 @@ export default function DeepResearch() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="w-full max-w-3xl mt-6 mb-32"
+            className={`mt-6 mb-32 ${isResearchActive ? 'w-full max-w-5xl px-4' : 'w-full max-w-3xl'}`}
           >
             <div className="bg-white rounded-2xl border border-[#e3e0db] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
               {/* Header */}
