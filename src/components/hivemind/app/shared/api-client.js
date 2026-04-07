@@ -674,6 +674,56 @@ class HiveMindApiClient {
     });
     return data;
   }
+
+  // ─── Core: PageIndex (Hierarchical Memory Index) ─────────────
+
+  async getPageIndexTree(options = {}) {
+    const { depth = 4, rootPath = '/hivemind' } = options;
+    const params = new URLSearchParams();
+    if (depth) params.set('depth', String(depth));
+    if (rootPath) params.set('rootPath', rootPath);
+    const qs = params.toString();
+    const { data } = await this.controlPlane.get(`/v1/proxy/pageindex/tree${qs ? `?${qs}` : ''}`);
+    return data.tree || [];
+  }
+
+  async getPageIndexNodesForMemory(memoryId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/pageindex/memory/${memoryId}/nodes`);
+    return data.nodes || [];
+  }
+
+  async moveMemoryToNode(memoryId, nodeId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/pageindex/memory/${memoryId}/move`, {
+      target_node_id: nodeId,
+    });
+    return data;
+  }
+
+  async searchPageIndex(query, options = {}) {
+    const { limit = 20 } = options;
+    const { data } = await this.controlPlane.post('/v1/proxy/search/pageindex', {
+      query,
+      limit,
+    });
+    return data.results || [];
+  }
+
+  async createPageIndexNode({ parentId, label, nodeType = 'topic' }) {
+    const { data } = await this.controlPlane.post('/v1/proxy/pageindex/nodes', {
+      parent_id: parentId,
+      label,
+      node_type: nodeType,
+    });
+    return data.node;
+  }
+
+  async deletePageIndexNode(nodeId, { reassignMemories = false, targetNodeId = null } = {}) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/pageindex/nodes/${nodeId}/delete`, {
+      reassign_memories: reassignMemories,
+      target_node_id: targetNodeId,
+    });
+    return data;
+  }
 }
 
 const apiClient = new HiveMindApiClient();
