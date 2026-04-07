@@ -109,6 +109,20 @@ export default function Sidebar() {
       .catch(() => setShowWebAdmin(false));
   }, []);
 
+  // Listen for hivemind:close-sidebar and hivemind:open-sidebar events
+  useEffect(() => {
+    const handleClose = () => setCollapsed(true);
+    const handleOpen = () => setCollapsed(false);
+
+    window.addEventListener('hivemind:close-sidebar', handleClose);
+    window.addEventListener('hivemind:open-sidebar', handleOpen);
+
+    return () => {
+      window.removeEventListener('hivemind:close-sidebar', handleClose);
+      window.removeEventListener('hivemind:open-sidebar', handleOpen);
+    };
+  }, []);
+
   const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise' });
   const planLabel = org?.plan ? `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` : 'Free Plan';
 

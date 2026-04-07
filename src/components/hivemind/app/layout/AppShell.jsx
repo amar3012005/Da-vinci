@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -15,6 +15,21 @@ import { Brain } from 'lucide-react';
 export default function AppShell() {
   const { needsOnboarding } = useAuth();
   const [chatOpen, setChatOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Track sidebar state for dynamic margin
+  useEffect(() => {
+    const handleCollapse = () => setSidebarCollapsed(true);
+    const handleExpand = () => setSidebarCollapsed(false);
+
+    window.addEventListener('hivemind:close-sidebar', handleCollapse);
+    window.addEventListener('hivemind:open-sidebar', handleExpand);
+
+    return () => {
+      window.removeEventListener('hivemind:close-sidebar', handleCollapse);
+      window.removeEventListener('hivemind:open-sidebar', handleExpand);
+    };
+  }, []);
 
   if (needsOnboarding) {
     return <OnboardingFlow />;
@@ -23,7 +38,7 @@ export default function AppShell() {
   return (
     <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
       <Sidebar />
-      <div className="ml-[260px] flex flex-col min-h-screen transition-all duration-200">
+      <div className={`ml-[260px] transition-all duration-300 ${sidebarCollapsed ? 'sidebar-content-expanded' : ''}`} style={{ marginLeft: sidebarCollapsed ? '0px' : '260px' }}>
         <TopBar />
         <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
