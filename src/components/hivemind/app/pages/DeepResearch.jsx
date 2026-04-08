@@ -786,13 +786,27 @@ export default function DeepResearch() {
           )}
 
           {status !== 'idle' && (
-            <button
-              onClick={handleNewResearch}
-              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
-            >
-              <Sparkles size={12} />
-              <span className="hidden sm:inline">New</span>
-            </button>
+            <>
+              {/* Toggle Process Panel Button */}
+              <button
+                onClick={() => setShowPanel(!showPanel)}
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs transition-colors ${
+                  showPanel
+                    ? 'bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea]'
+                    : 'bg-[#faf9f4] border border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec]'
+                }`}
+              >
+                <GitBranch size={12} />
+                <span className="hidden sm:inline">{showPanel ? 'Hide' : 'Show'} Process</span>
+              </button>
+              <button
+                onClick={handleNewResearch}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
+              >
+                <Sparkles size={12} />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -864,6 +878,16 @@ export default function DeepResearch() {
                           <Loader2 size={12} className="animate-spin" />
                           Researching...
                         </span>
+                      )}
+                      {/* Show Process Button - appears when panel is closed but research is active */}
+                      {(status === 'running' || status === 'completed') && !showPanel && (
+                        <button
+                          onClick={() => setShowPanel(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-xs font-medium hover:bg-[#9333ea]/20 transition-colors"
+                        >
+                          <GitBranch size={12} />
+                          Show Process
+                        </button>
                       )}
                       {fromCache && status === 'completed' && (
                         <span className="px-3 py-1.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-xs font-medium">
@@ -1075,9 +1099,16 @@ export default function DeepResearch() {
                           <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Timeline</span>
                         </div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {events.map((event, i) => (
-                            <EventCard key={`${event.type}-${i}`} event={event} index={i} />
-                          ))}
+                          {events.length === 0 ? (
+                            <div className="text-center py-4 text-[#a3a3a3] text-xs">
+                              <Loader2 size={16} className="animate-spin mx-auto mb-2" />
+                              Waiting for events...
+                            </div>
+                          ) : (
+                            events.map((event, i) => (
+                              <EventCard key={`${event.type}-${i}`} event={event} index={i} />
+                            ))
+                          )}
                           <div ref={eventsEndRef} />
                         </div>
                       </div>
