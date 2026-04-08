@@ -195,9 +195,6 @@ export default function DeepResearch() {
   const [showPanel, setShowPanel] = useState(false);
   const [panelTab, setPanelTab] = useState('status'); // 'status' | 'report' | 'graph'
   const [panelSize, setPanelSize] = useState('large'); // 'compact' | 'medium' | 'large'
-  const [panelPosition, setPanelPosition] = useState({ x: window.innerWidth - 500, y: 80 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const panelRef = useRef(null);
   
   // Graph state
@@ -580,45 +577,6 @@ export default function DeepResearch() {
     setPanelSize(prev => prev === 'compact' ? 'medium' : prev === 'medium' ? 'large' : 'compact');
   }, []);
 
-  const handlePanelMouseDown = useCallback((e) => {
-    if (e.target.closest('.no-drag')) return;
-    setIsDragging(true);
-    const rect = panelRef.current?.getBoundingClientRect();
-    if (rect) {
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
-    const maxX = window.innerWidth - 400;
-    const maxY = window.innerHeight - 100;
-    setPanelPosition({
-      x: Math.max(100, Math.min(newX, maxX)),
-      y: Math.max(80, Math.min(newY, maxY)),
-    });
-  }, [isDragging, dragOffset]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
   /* ─── Render ───────────────────────────────────────────────────── */
   const panelWidths = { compact: 'w-[350px]', medium: 'w-[450px]', large: 'w-[550px]' };
   const isResearchActive = status === 'running' || status === 'completed';
@@ -789,7 +747,7 @@ export default function DeepResearch() {
           </div>
         </div>
 
-        {/* ── Draggable Right Panel - Status/Report/Graph ──────────────── */}
+        {/* ── Right Panel - Status/Report/Graph ──────────────── */}
         <AnimatePresence>
           {showPanel && isResearchActive && (
             <motion.div
@@ -800,10 +758,9 @@ export default function DeepResearch() {
               transition={{ type: 'spring', damping: 30, stiffness: 200 }}
               className="fixed top-0 right-0 h-full bg-white border-l border-[#e3e0db] shadow-2xl z-40 flex flex-col"
               style={{ width: panelWidths[panelSize] }}
-              onMouseDown={handlePanelMouseDown}
             >
-              {/* Panel Header - Drag Handle */}
-              <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4] cursor-move no-drag">
+              {/* Panel Header */}
+              <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
                 <div className="flex items-center gap-1 overflow-x-auto">
                   <button
                     onClick={() => setPanelTab('status')}
@@ -839,7 +796,7 @@ export default function DeepResearch() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0 no-drag">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {/* Panel Size Toggle */}
                   <button
                     onClick={togglePanelSize}
@@ -858,9 +815,6 @@ export default function DeepResearch() {
                   </button>
                 </div>
               </div>
-
-              {/* Drag Handle Bar */}
-              <div className="flex-none h-1 bg-[#e3e0db] cursor-move no-drag" onMouseDown={handlePanelMouseDown} />
 
               {/* Panel Content */}
               <div ref={panelContentRef} className="flex-1 overflow-y-auto p-3">
