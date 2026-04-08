@@ -6,7 +6,7 @@ import {
   Loader2, Search, CheckCircle2, BookOpen, Brain,
   Globe, Zap, AlertCircle,
   GitBranch, Target, ListTodo, Users, X,
-  Layers, Scroll, Award,
+  Layers, Scroll, Award, Eye, Activity,
   Server, FileText, Save, RotateCcw,
   ChevronUp, ChevronDown, PanelTop,
   ExternalLink, SquareX,
@@ -345,6 +345,8 @@ export default function DeepResearch() {
     sources: true,
     claims: true,
     trails: true,
+    observations: true,      // NEW: Real-time observations
+    executionEvents: true,   // NEW: Execution events
     blueprints: true,
   });
   const [graphLoading, setGraphLoading] = useState(false);
@@ -465,6 +467,45 @@ export default function DeepResearch() {
             reused: bp.timesReused || 0,
             val: 12,
             color: '#d97706',
+          });
+        });
+      }
+
+      // NEW: Observations layer (real-time findings from agent actions)
+      if (graphLayers.observations && layers.observations) {
+        layers.observations.forEach((obs, idx) => {
+          nodes.push({
+            id: `obs-${obs.id || idx}`,
+            type: 'observation',
+            title: `${obs.agent}/${obs.action}: ${obs.title?.slice(0, 40) || 'Observation'}`,
+            agent: obs.agent,
+            action: obs.action,
+            findingType: obs.findingType,
+            source: obs.source,
+            sourceId: obs.sourceId,
+            confidence: obs.confidence,
+            val: 7,
+            color: obs.agent === 'explorer' ? '#3b82f6' : obs.agent === 'analyst' ? '#10b981' : obs.agent === 'verifier' ? '#f59e0b' : '#8b5cf6',
+            createdAt: obs.createdAt,
+            isLive: Date.now() - new Date(obs.createdAt).getTime() < 5000, // Mark as live if < 5 seconds old
+          });
+        });
+      }
+
+      // NEW: Execution Events layer (agent phase completions)
+      if (graphLayers.executionEvents && layers.executionEvents) {
+        layers.executionEvents.forEach((exec, idx) => {
+          nodes.push({
+            id: `exec-${exec.id || idx}`,
+            type: 'execution-event',
+            title: `${exec.agent}/${exec.action}`,
+            agent: exec.agent,
+            action: exec.action,
+            success: exec.success,
+            val: 5,
+            color: exec.success ? '#059669' : '#dc2626',
+            createdAt: exec.createdAt,
+            isLive: Date.now() - new Date(exec.createdAt).getTime() < 5000,
           });
         });
       }
@@ -643,7 +684,7 @@ export default function DeepResearch() {
       } catch (e) {
         console.error('Polling error:', e);
       }
-    }, 2000);
+    }, 1000); // Changed from 2000ms to 1000ms for faster real-time updates
 
     return () => clearInterval(interval);
   }, [sessionId, status, panelTab, showPanel, fetchTrailSteps, fetchGraphData]);
@@ -1303,6 +1344,24 @@ export default function DeepResearch() {
                                 <Award size={10} />
                                 <span className="hidden sm:inline">Blueprints</span>
                               </button>
+                              <button
+                                onClick={() => setGraphLayers(prev => ({ ...prev, observations: !prev.observations }))}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
+                                  graphLayers.observations ? 'bg-[#3b82f6]/10 text-[#3b82f6]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
+                                }`}
+                              >
+                                <Eye size={10} />
+                                <span className="hidden sm:inline">Observations</span>
+                              </button>
+                              <button
+                                onClick={() => setGraphLayers(prev => ({ ...prev, executionEvents: !prev.executionEvents }))}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
+                                  graphLayers.executionEvents ? 'bg-[#059669]/10 text-[#059669]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
+                                }`}
+                              >
+                                <Activity size={10} />
+                                <span className="hidden sm:inline">Events</span>
+                              </button>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1356,6 +1415,20 @@ export default function DeepResearch() {
                                 const label = node.title || '';
                                 const fontSize = 10 / globalScale;
                                 ctx.font = `${fontSize}px Sans-Serif`;
+
+                                // Draw pulse ring for live nodes (recently updated)
+                                if (node.isLive) {
+                                  const pulseSize = node.val * 1.8;
+                                  const pulseOpacity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
+                                  ctx.beginPath();
+                                  ctx.arc(node.x, node.y, pulseSize, 0, 2 * Math.PI);
+                                  ctx.fillStyle = `rgba(59, 130, 246, ${pulseOpacity})`;
+                                  ctx.fill();
+                                  ctx.strokeStyle = `rgba(59, 130, 246, ${pulseOpacity + 0.2})`;
+                                  ctx.lineWidth = 1;
+                                  ctx.stroke();
+                                }
+
                                 ctx.beginPath();
                                 ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
                                 ctx.fillStyle = node.color;
@@ -1372,6 +1445,7 @@ export default function DeepResearch() {
                                 ctx.textBaseline = 'bottom';
                                 ctx.fillText(label, node.x, node.y - node.val - 2);
                               }}
+                              nodeCanvasObjectMode="after"
                               linkDirectionalParticles={2}
                               linkDirectionalParticleWidth={2}
                               linkDirectionalParticleSpeed={0.005}
@@ -1527,6 +1601,20 @@ export default function DeepResearch() {
                     >
                       <Award size={12} />
                     </button>
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, observations: !prev.observations }))}
+                      className={`p-1 rounded ${graphLayers.observations ? 'bg-[#3b82f6]/10 text-[#3b82f6]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Observations"
+                    >
+                      <Eye size={12} />
+                    </button>
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, executionEvents: !prev.executionEvents }))}
+                      className={`p-1 rounded ${graphLayers.executionEvents ? 'bg-[#059669]/10 text-[#059669]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Events"
+                    >
+                      <Activity size={12} />
+                    </button>
                   </div>
                   {/* Close/Reattach Button */}
                   <button
@@ -1561,6 +1649,20 @@ export default function DeepResearch() {
                       const label = node.title || '';
                       const fontSize = 10 / globalScale;
                       ctx.font = `${fontSize}px Sans-Serif`;
+
+                      // Draw pulse ring for live nodes (recently updated)
+                      if (node.isLive) {
+                        const pulseSize = node.val * 1.8;
+                        const pulseOpacity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, pulseSize, 0, 2 * Math.PI);
+                        ctx.fillStyle = `rgba(59, 130, 246, ${pulseOpacity})`;
+                        ctx.fill();
+                        ctx.strokeStyle = `rgba(59, 130, 246, ${pulseOpacity + 0.2})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                      }
+
                       ctx.beginPath();
                       ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
                       ctx.fillStyle = node.color;
@@ -1577,6 +1679,7 @@ export default function DeepResearch() {
                       ctx.textBaseline = 'bottom';
                       ctx.fillText(label, node.x, node.y - node.val - 2);
                     }}
+                    nodeCanvasObjectMode="after"
                     linkDirectionalParticles={2}
                     linkDirectionalParticleWidth={2}
                     linkDirectionalParticleSpeed={0.005}
