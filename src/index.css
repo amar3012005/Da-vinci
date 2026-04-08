@@ -45,7 +45,14 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Scoped hero video styling */
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 .hero-video {
   object-fit: cover;
   object-position: center;

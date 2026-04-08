@@ -171,6 +171,69 @@ function EventCard({ event, index }) {
             </span>
           </div>
         );
+      case 'task.started':
+        return (
+          <div className="flex items-center gap-3">
+            <Loader2 size={14} className="text-[#117dff] animate-spin" />
+            <span className="text-xs text-[#525252]/70">Task started: {event.taskId}</span>
+          </div>
+        );
+      case 'task.failed':
+        return (
+          <div className="flex items-center gap-3">
+            <AlertCircle size={14} className="text-[#dc2626]" />
+            <span className="text-xs text-[#dc2626]">Task failed: {event.error}</span>
+          </div>
+        );
+      case 'task.observation':
+        return (
+          <div className="flex items-center gap-3">
+            <Target size={14} className="text-[#9333ea]" />
+            <span className="text-xs text-[#525252]/70">Observation: {event.title}</span>
+          </div>
+        );
+      case 'research.decomposed':
+        return (
+          <div className="flex items-center gap-3">
+            <GitBranch size={14} className="text-[#d97706]" />
+            <span className="text-xs text-[#525252]/70">Decomposed into {event.taskCount || event.dimensions?.length || 'multiple'} tasks</span>
+          </div>
+        );
+      case 'research.reflecting':
+        return (
+          <div className="flex items-center gap-3">
+            <Brain size={14} className="text-[#9333ea] animate-pulse" />
+            <span className="text-xs text-[#525252]/70">Reflecting (round {event.round}, {(event.confidence * 100).toFixed(0)}%)</span>
+          </div>
+        );
+      case 'research.cached':
+        return (
+          <div className="flex items-center gap-3">
+            <History size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#16a34a]">Using {event.findingCount} cached findings</span>
+          </div>
+        );
+      case 'research.blueprint_suggested':
+        return (
+          <div className="flex items-center gap-3">
+            <Award size={14} className="text-[#d97706]" />
+            <span className="text-xs text-[#d97706]">Blueprint suggested: {event.blueprintId || event.name}</span>
+          </div>
+        );
+      case 'research.blueprints_mined':
+        return (
+          <div className="flex items-center gap-3">
+            <Layers size={14} className="text-[#9333ea]" />
+            <span className="text-xs text-[#9333ea]">Mined {event.count || event.blueprintCount} new blueprints</span>
+          </div>
+        );
+      case 'web.read_error':
+        return (
+          <div className="flex items-center gap-3">
+            <AlertCircle size={14} className="text-orange-500" />
+            <span className="text-xs text-orange-500">Read error: {event.error}</span>
+          </div>
+        );
       default:
         return (
           <div className="flex items-center gap-3">
@@ -599,7 +662,7 @@ export default function DeepResearch() {
   }, []);
 
   /* ─── Render ───────────────────────────────────────────────────── */
-  const panelWidths = { compact: 'w-[350px]', medium: 'w-[450px]', large: 'w-[550px]' };
+  const panelWidths = { compact: 'w-full sm:w-[350px]', medium: 'w-full sm:w-[450px]', large: 'w-full sm:w-[550px]' };
   const isResearchActive = status === 'running' || status === 'completed';
 
   return (
@@ -776,7 +839,7 @@ export default function DeepResearch() {
             <>
               {/* Mobile Backdrop */}
               <div
-                className="fixed inset-0 bg-black/20 z-30 lg:hidden"
+                className="fixed inset-0 bg-black/20 z-40 lg:hidden"
                 onClick={() => setShowPanel(false)}
               />
               <motion.div
@@ -790,10 +853,10 @@ export default function DeepResearch() {
               >
               {/* Panel Header */}
               <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
-                <div className="flex items-center gap-1 overflow-x-auto">
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
                   <button
                     onClick={() => setPanelTab('status')}
-                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all flex-shrink-0 ${
                       panelTab === 'status' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                   >
@@ -805,7 +868,7 @@ export default function DeepResearch() {
                   </button>
                   <button
                     onClick={() => setPanelTab('report')}
-                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all flex-shrink-0 ${
                       panelTab === 'report' ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                     disabled={!report}
@@ -816,7 +879,7 @@ export default function DeepResearch() {
                   </button>
                   <button
                     onClick={() => setPanelTab('graph')}
-                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all flex-shrink-0 ${
                       panelTab === 'graph' ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                   >
@@ -988,42 +1051,42 @@ export default function DeepResearch() {
                         {/* Graph Header */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
-                                className={`px-2 py-1 rounded text-[10px] transition-all ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
                                   graphLayers.sources ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
                                 }`}
                               >
-                                <Globe size={10} className="inline mr-1" />
-                                Sources
+                                <Globe size={10} />
+                                <span className="hidden sm:inline">Sources</span>
                               </button>
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, claims: !prev.claims }))}
-                                className={`px-2 py-1 rounded text-[10px] transition-all ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
                                   graphLayers.claims ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
                                 }`}
                               >
-                                <CheckCircle2 size={10} className="inline mr-1" />
-                                Claims
+                                <CheckCircle2 size={10} />
+                                <span className="hidden sm:inline">Claims</span>
                               </button>
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, trails: !prev.trails }))}
-                                className={`px-2 py-1 rounded text-[10px] transition-all ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
                                   graphLayers.trails ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
                                 }`}
                               >
-                                <Scroll size={10} className="inline mr-1" />
-                                Trails
+                                <Scroll size={10} />
+                                <span className="hidden sm:inline">Trails</span>
                               </button>
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, blueprints: !prev.blueprints }))}
-                                className={`px-2 py-1 rounded text-[10px] transition-all ${
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
                                   graphLayers.blueprints ? 'bg-[#d97706]/10 text-[#d97706]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
                                 }`}
                               >
-                                <Award size={10} className="inline mr-1" />
-                                Blueprints
+                                <Award size={10} />
+                                <span className="hidden sm:inline">Blueprints</span>
                               </button>
                             </div>
                           </div>
@@ -1054,6 +1117,8 @@ export default function DeepResearch() {
                             <ForceGraph2D
                               key={graphRefreshKey}
                               graphData={graphData}
+                              width={panelContentRef.current?.clientWidth || 500}
+                              height={panelContentRef.current?.clientHeight || 400}
                               nodeLabel="title"
                               nodeColor={node => node.color}
                               nodeVal={node => node.val}
@@ -1105,7 +1170,7 @@ export default function DeepResearch() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 10 }}
-                                className="absolute bottom-4 right-4 w-72 bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-xl p-4 z-20"
+                                className="absolute bottom-4 right-4 w-64 sm:w-72 max-w-[90vw] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-xl p-4 z-20"
                               >
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-center gap-2">
