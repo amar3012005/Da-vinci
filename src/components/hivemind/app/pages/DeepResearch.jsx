@@ -643,8 +643,10 @@ export default function DeepResearch() {
         </div>
       </div>
 
-        {/* ── Main Content Area ────────────────────────────────── */}
-        <div className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto transition-all duration-300 ${showPanel && isResearchActive ? 'mr-[350px] sm:mr-[450px] lg:mr-[550px]' : ''}`}>
+      {/* Main Layout - Side by Side */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Chat/Content Area */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="w-full max-w-3xl">
 
             {/* Welcome State - Only show when idle */}
@@ -747,26 +749,24 @@ export default function DeepResearch() {
           </div>
         </div>
 
-        {/* ── Mobile Backdrop for Panel ──────────────── */}
-        {showPanel && isResearchActive && (
-          <div
-            className="fixed inset-0 bg-black/20 z-30 lg:hidden"
-            onClick={() => setShowPanel(false)}
-          />
-        )}
-
-        {/* ── Right Panel - Status/Report/Graph ──────────────── */}
+        {/* Right Panel - Status/Report/Graph - Part of flex layout */}
         <AnimatePresence>
           {showPanel && isResearchActive && (
-            <motion.div
-              ref={panelRef}
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full bg-white border-l border-[#e3e0db] shadow-2xl z-40 flex flex-col"
-              style={{ width: panelWidths[panelSize] }}
-            >
+            <>
+              {/* Mobile Backdrop */}
+              <div
+                className="fixed inset-0 bg-black/20 z-30 lg:hidden"
+                onClick={() => setShowPanel(false)}
+              />
+              <motion.div
+                ref={panelRef}
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: panelWidths[panelSize], opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 200 }}
+                className="flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40"
+                style={{ minWidth: 0, maxWidth: '100%' }}
+              >
               {/* Panel Header */}
               <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
                 <div className="flex items-center gap-1 overflow-x-auto">
@@ -1149,8 +1149,10 @@ export default function DeepResearch() {
                 </AnimatePresence>
               </div>
             </motion.div>
+          </>
           )}
         </AnimatePresence>
+      </div>
     </div>
   );
 }
