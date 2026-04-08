@@ -644,7 +644,7 @@ export default function DeepResearch() {
       </div>
 
         {/* ── Main Content Area ────────────────────────────────── */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto transition-all duration-300 ${showPanel && isResearchActive ? 'mr-[350px] sm:mr-[450px] lg:mr-[550px]' : ''}`}>
           <div className="w-full max-w-3xl">
 
             {/* Welcome State - Only show when idle */}
@@ -746,6 +746,14 @@ export default function DeepResearch() {
             )}
           </div>
         </div>
+
+        {/* ── Mobile Backdrop for Panel ──────────────── */}
+        {showPanel && isResearchActive && (
+          <div
+            className="fixed inset-0 bg-black/20 z-30 lg:hidden"
+            onClick={() => setShowPanel(false)}
+          />
+        )}
 
         {/* ── Right Panel - Status/Report/Graph ──────────────── */}
         <AnimatePresence>
