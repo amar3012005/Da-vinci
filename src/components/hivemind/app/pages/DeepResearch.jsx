@@ -577,92 +577,89 @@ export default function DeepResearch() {
   }, []);
 
   /* ─── Render ───────────────────────────────────────────────────── */
-  const panelHeights = { compact: 'h-[350px]', medium: 'h-[50vh]', large: 'h-[75vh]' };
+  const panelHeights = { compact: 'h-[40vh]', medium: 'h-[55vh]', large: 'h-[70vh]' };
   const isResearchActive = status === 'running' || status === 'completed';
 
   return (
-    <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden">
-      {/* ── Main Content - Clean Minimal Layout ─────────────────── */}
-      <div className="relative h-full w-full flex flex-col">
-        
-        {/* Top Bar - Always visible */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e0db] bg-white/80 backdrop-blur-sm z-30">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#117dff]/10 flex items-center justify-center">
-              <Search size={18} className="text-[#117dff]" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Deep Research</h1>
-              <p className="text-[10px] text-[#a3a3a3]">AI-powered research engine</p>
-            </div>
+    <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col">
+      {/* Top Bar - Always visible */}
+      <div className="flex-none flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e3e0db] bg-white/90 backdrop-blur-sm z-30">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
+            <Search size={16} className="sm:w-[18px] sm:h-[18px] text-[#117dff]" />
           </div>
-          
-          <div className="flex items-center gap-2">
-            {sessions.length > 0 && status === 'idle' && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowSessions(!showSessions)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
-                >
-                  <History size={14} />
-                  <span className="hidden sm:inline">History</span>
-                </button>
-                <AnimatePresence>
-                  {showSessions && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                      className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-[#e3e0db] p-2 w-72 max-h-80 overflow-y-auto shadow-xl z-50"
-                    >
-                      {sessions.map((s) => (
-                        <button
-                          key={s.id || s.session_id}
-                          onClick={() => loadSession(s.id || s.session_id)}
-                          className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#faf9f4] transition-colors"
-                        >
-                          <p className="text-xs text-[#0a0a0a] truncate">{s.query || 'Untitled'}</p>
-                          <p className="text-[10px] text-[#a3a3a3] mt-0.5">
-                            {s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}
-                          </p>
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-            
-            {status !== 'idle' && (
-              <button
-                onClick={handleNewResearch}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
-              >
-                <Sparkles size={12} />
-                <span className="hidden sm:inline">New Research</span>
-              </button>
-            )}
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk'] truncate">Deep Research</h1>
+            <p className="text-[9px] sm:text-[10px] text-[#a3a3a3] hidden sm:block">AI-powered research engine</p>
           </div>
         </div>
 
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {sessions.length > 0 && status === 'idle' && (
+            <div className="relative">
+              <button
+                onClick={() => setShowSessions(!showSessions)}
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
+              >
+                <History size={14} />
+                <span className="hidden sm:inline">History</span>
+              </button>
+              <AnimatePresence>
+                {showSessions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-[#e3e0db] p-2 w-64 sm:w-72 max-h-80 overflow-y-auto shadow-xl z-50"
+                  >
+                    {sessions.map((s) => (
+                      <button
+                        key={s.id || s.session_id}
+                        onClick={() => loadSession(s.id || s.session_id)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#faf9f4] transition-colors"
+                      >
+                        <p className="text-xs text-[#0a0a0a] truncate">{s.query || 'Untitled'}</p>
+                        <p className="text-[10px] text-[#a3a3a3] mt-0.5">
+                          {s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}
+                        </p>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {status !== 'idle' && (
+            <button
+              onClick={handleNewResearch}
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
+            >
+              <Sparkles size={12} />
+              <span className="hidden sm:inline">New</span>
+            </button>
+          )}
+        </div>
+      </div>
+
         {/* ── Main Content Area ────────────────────────────────── */}
-        <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="w-full max-w-3xl">
-            
+
             {/* Welcome State - Only show when idle */}
             {status === 'idle' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-8"
+                className="text-center mb-6 sm:mb-8"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#117dff]/10 to-[#9333ea]/10 flex items-center justify-center">
-                  <Search size={28} className="text-[#117dff]" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#117dff]/10 to-[#9333ea]/10 flex items-center justify-center">
+                  <Search size={24} className="sm:w-[28px] sm:h-[28px] text-[#117dff]" />
                 </div>
-                <h2 className="text-3xl font-bold text-[#0a0a0a] font-['Space_Grotesk'] mb-3">
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#0a0a0a] font-['Space_Grotesk'] mb-3 px-4">
                   What would you like to research?
                 </h2>
-                <p className="text-[#525252] max-w-md mx-auto">
+                <p className="text-sm sm:text-base text-[#525252] max-w-md mx-auto px-4">
                   Ask anything. HIVEMIND searches the web, analyzes sources, and synthesizes comprehensive reports.
                 </p>
               </motion.div>
@@ -757,14 +754,15 @@ export default function DeepResearch() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-              className={`absolute bottom-0 left-0 right-0 bg-white border-t border-[#e3e0db] shadow-2xl z-40 ${panelHeights[panelSize]}`}
+              className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#e3e0db] shadow-2xl z-40 flex flex-col"
+              style={{ height: panelHeights[panelSize] }}
             >
               {/* Panel Header */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
-                <div className="flex items-center gap-1">
+              <div className="flex-none flex items-center justify-between px-3 sm:px-4 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
+                <div className="flex items-center gap-0 sm:gap-1 overflow-x-auto">
                   <button
                     onClick={() => setPanelTab('status')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
                       panelTab === 'status' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                   >
@@ -776,7 +774,7 @@ export default function DeepResearch() {
                   </button>
                   <button
                     onClick={() => setPanelTab('report')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
                       panelTab === 'report' ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                     disabled={!report}
@@ -787,7 +785,7 @@ export default function DeepResearch() {
                   </button>
                   <button
                     onClick={() => setPanelTab('graph')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
                       panelTab === 'graph' ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#525252] hover:bg-[#f3f1ec]'
                     }`}
                   >
@@ -796,7 +794,7 @@ export default function DeepResearch() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   {/* Panel Size Toggle */}
                   <button
                     onClick={togglePanelSize}
@@ -817,7 +815,7 @@ export default function DeepResearch() {
               </div>
 
               {/* Panel Content */}
-              <div ref={panelContentRef} className="h-full overflow-y-auto p-4">
+              <div ref={panelContentRef} className="flex-1 overflow-y-auto p-3 sm:p-4">
                 <AnimatePresence mode="wait">
                   {/* STATUS TAB */}
                   {panelTab === 'status' && (
@@ -826,11 +824,11 @@ export default function DeepResearch() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className="h-full"
+                      className="space-y-3"
                     >
                       {/* Active Goal */}
                       {activeGoal && (
-                        <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3 mb-4">
+                        <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Target size={14} className="text-[#117dff]" />
                             <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Active Goal</span>
@@ -840,7 +838,7 @@ export default function DeepResearch() {
                       )}
 
                       {/* Agent States */}
-                      <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3 mb-4">
+                      <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                         <div className="flex items-center gap-2 mb-3">
                           <Users size={14} className="text-[#9333ea]" />
                           <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Agent States</span>
@@ -866,7 +864,7 @@ export default function DeepResearch() {
 
                       {/* Subgoals */}
                       {subgoals.length > 0 && (
-                        <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3 mb-4">
+                        <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-3">
                             <ListTodo size={14} className="text-[#16a34a]" />
                             <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Subgoals</span>
@@ -895,7 +893,7 @@ export default function DeepResearch() {
                           <GitBranch size={14} className="text-[#d97706]" />
                           <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Timeline</span>
                         </div>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
                           {events.map((event, i) => (
                             <EventCard key={`${event.type}-${i}`} event={event} index={i} />
                           ))}
@@ -1143,7 +1141,6 @@ export default function DeepResearch() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
     </div>
   );
 }
