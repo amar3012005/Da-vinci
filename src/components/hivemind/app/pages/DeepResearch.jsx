@@ -96,6 +96,13 @@ function EventCard({ event, index }) {
           </div>
         );
       }
+      case 'research.started':
+        return (
+          <div className="flex items-center gap-3">
+            <Sparkles size={14} className="text-[#117dff]" />
+            <span className="text-xs text-[#117dff] font-medium">Research started: {event.query}</span>
+          </div>
+        );
       case 'web.searching':
         return (
           <div className="flex items-center gap-3">
@@ -107,7 +114,7 @@ function EventCard({ event, index }) {
         return (
           <div className="flex items-center gap-3">
             <CheckCircle2 size={14} className="text-[#16a34a]" />
-            <span className="text-xs text-[#525252]/70"><span className="text-[#16a34a] font-medium">{event.count}</span> results found</span>
+            <span className="text-xs text-[#525252]/70"><span className="text-[#16a34a] font-medium">{event.count}</span> results found {event.via && `via ${event.via}`}</span>
           </div>
         );
       case 'web.reading':
@@ -121,7 +128,21 @@ function EventCard({ event, index }) {
         return (
           <div className="flex items-center gap-3">
             <BookOpen size={14} className="text-[#9333ea]" />
-            <span className="text-xs text-[#525252]/70">Read <span className="text-[#9333ea] font-medium">{event.length?.toLocaleString()}</span> chars</span>
+            <span className="text-xs text-[#525252]/70">Read <span className="text-[#9333ea] font-medium">{event.length?.toLocaleString()}</span> chars {event.via && `via ${event.via}`}</span>
+          </div>
+        );
+      case 'web.error':
+        return (
+          <div className="flex items-center gap-3">
+            <AlertCircle size={14} className="text-[#dc2626]" />
+            <span className="text-xs text-[#dc2626]">Search error: {event.error}</span>
+          </div>
+        );
+      case 'follow_up':
+        return (
+          <div className="flex items-center gap-3">
+            <GitBranch size={14} className="text-[#d97706]" />
+            <span className="text-xs text-[#525252]/70">{event.title}</span>
           </div>
         );
       case 'task.completed':
