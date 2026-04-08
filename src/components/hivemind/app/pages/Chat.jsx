@@ -117,6 +117,29 @@ function Sources({ sources }) {
   );
 }
 
+// ─── Token Usage Display ──────────────────────────────────────────────────────
+
+function TokenUsage({ usage }) {
+  if (!usage) return null;
+  const { prompt_tokens, completion_tokens } = usage;
+  const total = (prompt_tokens || 0) + (completion_tokens || 0);
+  if (total === 0) return null;
+
+  return (
+    <div className="mt-2 flex items-center gap-3 text-[10px] font-mono text-[#a3a3a3]">
+      <span className="flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#117dff]/40" />
+        {prompt_tokens || 0} prompt
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]/40" />
+        {completion_tokens || 0} completion
+      </span>
+      <span className="text-[#c4c1bb]">· {total} total</span>
+    </div>
+  );
+}
+
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }) {
@@ -166,6 +189,7 @@ function MessageBubble({ msg }) {
             msg.content
           )}
           <Sources sources={msg.sources} />
+          <TokenUsage usage={msg.usage} />
         </div>
       </div>
     </motion.div>
@@ -336,6 +360,7 @@ export function ChatPanel({ isOpen, onClose }) {
     try {
       let sources = [];
       let responseContent = '';
+      let usage = null;
 
       try {
         const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
@@ -346,6 +371,7 @@ export function ChatPanel({ isOpen, onClose }) {
         const chatData = chatRes.data;
         responseContent = chatData.response || '';
         sources = chatData.sources || [];
+        usage = chatData.usage || null;
       } catch (chatErr) {
         console.warn('[Chat] chat failed:', chatErr?.message);
         responseContent = "I couldn't process your request right now. Please try again.";
@@ -357,7 +383,7 @@ export function ChatPanel({ isOpen, onClose }) {
         content: responseContent || "I couldn't find relevant information in your memories.",
         sources: sources.map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
-        usage: chatData.usage || null,
+        usage: usage,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
