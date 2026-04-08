@@ -357,6 +357,7 @@ export function ChatPanel({ isOpen, onClose }) {
         content: responseContent || "I couldn't find relevant information in your memories.",
         sources: sources.map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
+        usage: chatData.usage || null,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);

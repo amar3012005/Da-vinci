@@ -738,7 +738,7 @@ export default function DeepResearch() {
   return (
     <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col">
       {/* Top Bar - Always visible */}
-      <div className="flex-none flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e3e0db] bg-white/90 backdrop-blur-sm z-30">
+      <div className="flex-none flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e3e0db] bg-white/90 backdrop-blur-sm z-[60]">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
             <Search size={16} className="sm:w-[18px] sm:h-[18px] text-[#117dff]" />
