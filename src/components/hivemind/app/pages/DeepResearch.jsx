@@ -736,7 +736,7 @@ export default function DeepResearch() {
   const isResearchActive = status === 'running' || status === 'completed';
 
   return (
-    <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col z-[100]">
       {/* Top Bar - Always visible */}
       <div className="flex-none flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[#e3e0db] bg-white/90 backdrop-blur-sm z-[60]">
         <div className="flex items-center gap-2 sm:gap-3">
