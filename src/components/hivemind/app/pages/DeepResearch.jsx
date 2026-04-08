@@ -732,7 +732,8 @@ export default function DeepResearch() {
   }, []);
 
   /* ─── Render ───────────────────────────────────────────────────── */
-  const panelWidths = { compact: 'w-full sm:w-[350px]', medium: 'w-full sm:w-[450px]', large: 'w-full sm:w-[550px]' };
+  const panelWidthClasses = { compact: 'w-full sm:w-[350px]', medium: 'w-full sm:w-[450px]', large: 'w-full sm:w-[550px]' };
+  const panelWidthValues = { compact: 350, medium: 450, large: 550 };
   const isResearchActive = status === 'running' || status === 'completed';
 
   return (
@@ -939,10 +940,10 @@ export default function DeepResearch() {
               <motion.div
                 ref={panelRef}
                 initial={{ width: 0, opacity: 0 }}
-                animate={{ width: panelWidths[panelSize], opacity: 1 }}
+                animate={{ width: panelWidthValues[panelSize], opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-                className="flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40"
+                className={`flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40 ${panelWidthClasses[panelSize]}`}
                 style={{ minWidth: 0, maxWidth: '100%' }}
               >
               {/* Panel Header */}
