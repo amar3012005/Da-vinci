@@ -9,7 +9,7 @@ import {
   Layers, Scroll, Award, Eye, Activity,
   Server, FileText, Save, RotateCcw,
   ChevronUp, ChevronDown, PanelTop,
-  ExternalLink, SquareX,
+  ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -357,6 +357,7 @@ export default function DeepResearch() {
 
   // Detached graph window state
   const [isGraphDetached, setIsGraphDetached] = useState(false);
+  const [showGraphWindow, setShowGraphWindow] = useState(false); // Toggle for showing graph window
   const [detachedGraphPos, setDetachedGraphPos] = useState({ x: 100, y: 100, width: 600, height: 500 });
   const [isDraggingGraph, setIsDraggingGraph] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -533,11 +534,19 @@ export default function DeepResearch() {
   /* ── Detached Graph Window Handlers ─────────────────────────── */
   const handleDetachGraph = useCallback(() => {
     setIsGraphDetached(true);
-    setPanelTab('status'); // Switch back to status tab in main panel
+    setShowGraphWindow(true);
+    setPanelTab('status');
   }, []);
 
-  const handleAttachGraph = useCallback(() => {
-    setIsGraphDetached(false);
+  const handleToggleGraphWindow = useCallback(() => {
+    setShowGraphWindow(prev => !prev);
+    if (!isGraphDetached) {
+      setIsGraphDetached(true);
+    }
+  }, [isGraphDetached]);
+
+  const handleCloseGraphWindow = useCallback(() => {
+    setShowGraphWindow(false);
   }, []);
 
   const handleGraphDragStart = useCallback((e) => {
@@ -856,13 +865,51 @@ export default function DeepResearch() {
     }
   }, [sessionId, fetchGraphData]);
 
+  const handleSaveAsBlueprint = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const { data } = await apiClient.controlPlane.post(`/v1/proxy/research/${sessionId}/save-as-blueprint`, {
+        name: `Research: ${query?.slice(0, 40) || 'Deep Research'}`,
+      });
+      alert(data.message || 'Research saved as reusable blueprint');
+      console.log('[DeepResearch] Saved as blueprint:', data.blueprint);
+    } catch (e) {
+      console.error('Failed to save as blueprint:', e);
+      alert('Failed to save as blueprint: ' + (e.response?.data?.error || e.message));
+    }
+  }, [sessionId, query]);
+
+  const handleRerunFromBlueprint = useCallback(async (blueprintId, baseQuery) => {
+    try {
+      const { data } = await apiClient.controlPlane.post(`/v1/proxy/research/blueprint/${blueprintId}/rerun`, {
+        baseQuery: baseQuery || query,
+      });
+      setSessionId(data.session_id);
+      setStatus('running');
+      setEvents([]);
+      setReport(null);
+      console.log('[DeepResearch] Rerun from blueprint:', data);
+    } catch (e) {
+      console.error('Failed to rerun from blueprint:', e);
+      alert('Failed to rerun from blueprint: ' + (e.response?.data?.error || e.message));
+    }
+  }, [query]);
+
   const handleNodeClick = useCallback((node) => {
     if (node.type === 'source' && node.url) {
       setSelectedNode(node);
+    } else if (node.type === 'blueprint') {
+      // Blueprint clicked - offer to use as base
+      const useAsBase = window.confirm(`Use "${node.title}" as a base for new research?`);
+      if (useAsBase && node.id) {
+        handleRerunFromBlueprint(node.id.replace('blueprint-', ''), node.title);
+      } else {
+        setSelectedNode(null);
+      }
     } else {
       setSelectedNode(null);
     }
-  }, []);
+  }, [handleRerunFromBlueprint]);
 
   const togglePanelSize = useCallback(() => {
     setPanelSize(prev => prev === 'compact' ? 'medium' : prev === 'medium' ? 'large' : 'compact');
@@ -1277,6 +1324,16 @@ export default function DeepResearch() {
                             {fromCache && (
                               <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-[10px] font-medium">Cached</span></>
                             )}
+                            <div className="ml-auto flex items-center gap-2">
+                              <button
+                                onClick={handleSaveAsBlueprint}
+                                className="flex items-center gap-1 px-2 py-1 rounded bg-[#d97706]/10 border border-[#d97706]/20 text-[#d97706] text-[10px] font-medium hover:bg-[#d97706]/20 transition-colors"
+                                title="Save this research state as reusable blueprint"
+                              >
+                                <Award size={10} />
+                                Save as Blueprint
+                              </button>
+                            </div>
                           </div>
                           <div className="p-6 max-h-96 overflow-y-auto">
                             <div
@@ -1382,6 +1439,13 @@ export default function DeepResearch() {
                               title="Refresh graph"
                             >
                               <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
+                            </button>
+                            <button
+                              onClick={handleToggleGraphWindow}
+                              className={`p-1.5 rounded hover:bg-[#117dff]/10 ${showGraphWindow ? 'bg-[#117dff]/20 text-[#117dff]' : 'text-[#525252] hover:text-[#117dff]'}`}
+                              title={showGraphWindow ? 'Hide graph window' : 'Show graph window'}
+                            >
+                              <Layers size={12} />
                             </button>
                             <button
                               onClick={handleDetachGraph}
@@ -1539,7 +1603,7 @@ export default function DeepResearch() {
 
       {/* Detached Graph Overlay Window */}
       <AnimatePresence>
-        {isGraphDetached && (
+        {showGraphWindow && (
           <motion.div
             ref={graphWindowRef}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -1618,11 +1682,11 @@ export default function DeepResearch() {
                   </div>
                   {/* Close/Reattach Button */}
                   <button
-                    onClick={handleAttachGraph}
+                    onClick={handleCloseGraphWindow}
                     className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252] hover:text-[#117dff]"
-                    title="Close and reattach to panel"
+                    title="Close graph window"
                   >
-                    <SquareX size={14} />
+                    <X size={14} />
                   </button>
                 </div>
               </div>
