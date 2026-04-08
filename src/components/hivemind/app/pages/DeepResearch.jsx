@@ -9,6 +9,7 @@ import {
   Layers, Scroll, Award,
   Server, FileText, Save, RotateCcw,
   ChevronUp, ChevronDown, PanelTop,
+  ExternalLink, SquareX,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -337,7 +338,7 @@ export default function DeepResearch() {
   const [panelTab, setPanelTab] = useState('status'); // 'status' | 'report' | 'graph'
   const [panelSize, setPanelSize] = useState('large'); // 'compact' | 'medium' | 'large'
   const panelRef = useRef(null);
-  
+
   // Graph state
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [graphLayers, setGraphLayers] = useState({
@@ -351,6 +352,15 @@ export default function DeepResearch() {
   const [savingMemories, setSavingMemories] = useState(new Set());
   const [selectedNode, setSelectedNode] = useState(null);
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
+
+  // Detached graph window state
+  const [isGraphDetached, setIsGraphDetached] = useState(false);
+  const [detachedGraphPos, setDetachedGraphPos] = useState({ x: 100, y: 100, width: 600, height: 500 });
+  const [isDraggingGraph, setIsDraggingGraph] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizingGraph, setIsResizingGraph] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState(null);
+  const graphWindowRef = useRef(null);
 
   // Process panel state
   // eslint-disable-next-line no-unused-vars
@@ -478,6 +488,89 @@ export default function DeepResearch() {
       setGraphLoading(false);
     }
   }, [graphLayers]);
+
+  /* ── Detached Graph Window Handlers ─────────────────────────── */
+  const handleDetachGraph = useCallback(() => {
+    setIsGraphDetached(true);
+    setPanelTab('status'); // Switch back to status tab in main panel
+  }, []);
+
+  const handleAttachGraph = useCallback(() => {
+    setIsGraphDetached(false);
+  }, []);
+
+  const handleGraphDragStart = useCallback((e) => {
+    if (e.target.closest('[data-no-drag]')) return; // Don't drag when clicking buttons
+    setIsDraggingGraph(true);
+    setDragOffset({
+      x: e.clientX - detachedGraphPos.x,
+      y: e.clientY - detachedGraphPos.y,
+    });
+  }, [detachedGraphPos]);
+
+  const handleGraphDrag = useCallback((e) => {
+    if (!isDraggingGraph) return;
+    setDetachedGraphPos(prev => ({
+      ...prev,
+      x: e.clientX - dragOffset.x,
+      y: e.clientY - dragOffset.y,
+    }));
+  }, [isDraggingGraph, dragOffset]);
+
+  const handleGraphDragEnd = useCallback(() => {
+    setIsDraggingGraph(false);
+  }, []);
+
+  const handleResizeStart = useCallback((e, handle) => {
+    e.stopPropagation();
+    setIsResizingGraph(true);
+    setResizeHandle(handle);
+  }, []);
+
+  const handleGraphResize = useCallback((e) => {
+    if (!isResizingGraph || !resizeHandle) return;
+    setDetachedGraphPos(prev => {
+      const newPos = { ...prev };
+      if (resizeHandle.includes('right')) {
+        newPos.width = Math.max(400, e.clientX - prev.x);
+      }
+      if (resizeHandle.includes('bottom')) {
+        newPos.height = Math.max(300, e.clientY - prev.y);
+      }
+      if (resizeHandle.includes('left')) {
+        const newRight = e.clientX;
+        if (newRight < prev.x + prev.width - 100) {
+          newPos.width = prev.width - (newRight - prev.x);
+          newPos.x = newRight;
+        }
+      }
+      if (resizeHandle.includes('top')) {
+        const newBottom = e.clientY;
+        if (newBottom < prev.y + prev.height - 100) {
+          newPos.height = prev.height - (newBottom - prev.y);
+          newPos.y = newBottom;
+        }
+      }
+      return newPos;
+    });
+  }, [isResizingGraph, resizeHandle]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizingGraph(false);
+    setResizeHandle(null);
+  }, []);
+
+  // Global mouse move/up for drag and resize
+  useEffect(() => {
+    if (isDraggingGraph || isResizingGraph) {
+      window.addEventListener('mousemove', isResizingGraph ? handleGraphResize : handleGraphDrag);
+      window.addEventListener('mouseup', isResizingGraph ? handleResizeEnd : handleGraphDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', isResizingGraph ? handleGraphResize : handleGraphDrag);
+        window.removeEventListener('mouseup', isResizingGraph ? handleResizeEnd : handleGraphDragEnd);
+      };
+    }
+  }, [isDraggingGraph, isResizingGraph, handleGraphDrag, handleGraphResize, handleGraphDragEnd, handleResizeEnd]);
 
   /* ── Fetch Web Usage ────────────────────────────────────────── */
   const fetchWebUsage = useCallback(async () => {
@@ -1227,8 +1320,16 @@ export default function DeepResearch() {
                             <button
                               onClick={handleRefreshGraph}
                               className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252]"
+                              title="Refresh graph"
                             >
                               <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
+                            </button>
+                            <button
+                              onClick={handleDetachGraph}
+                              className="p-1.5 rounded hover:bg-[#117dff]/10 text-[#525252] hover:text-[#117dff]"
+                              title="Detach graph to floating window"
+                            >
+                              <ExternalLink size={12} />
                             </button>
                           </div>
                         </div>
@@ -1361,6 +1462,156 @@ export default function DeepResearch() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Detached Graph Overlay Window */}
+      <AnimatePresence>
+        {isGraphDetached && (
+          <motion.div
+            ref={graphWindowRef}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed z-50"
+            style={{
+              left: detachedGraphPos.x,
+              top: detachedGraphPos.y,
+              width: detachedGraphPos.width,
+              height: detachedGraphPos.height,
+            }}
+          >
+            {/* Window Container */}
+            <div className="w-full h-full bg-white rounded-xl shadow-2xl border border-[#e3e0db] overflow-hidden flex flex-col">
+              {/* Title Bar (Drag Handle) */}
+              <div
+                onMouseDown={handleGraphDragStart}
+                className="flex items-center justify-between px-3 py-2 bg-gradient-to-b from-[#faf9f4] to-white border-b border-[#e3e0db] cursor-move select-none"
+                data-no-drag
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-[#ff5f57] border border-[#e0443e]" />
+                    <div className="w-3 h-3 rounded-full bg-[#febc2e] border border-[#dba520]" />
+                    <div className="w-3 h-3 rounded-full bg-[#28c840] border border-[#1aab29]" />
+                  </div>
+                  <span className="text-xs font-medium text-[#525252] ml-2">Research Graph — Live</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {/* Layer Toggles */}
+                  <div className="flex items-center gap-0.5 mr-2">
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
+                      className={`p-1 rounded ${graphLayers.sources ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Sources"
+                    >
+                      <Globe size={12} />
+                    </button>
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, claims: !prev.claims }))}
+                      className={`p-1 rounded ${graphLayers.claims ? 'bg-[#16a34a]/10 text-[#16a34a]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Claims"
+                    >
+                      <CheckCircle2 size={12} />
+                    </button>
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, trails: !prev.trails }))}
+                      className={`p-1 rounded ${graphLayers.trails ? 'bg-[#9333ea]/10 text-[#9333ea]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Trails"
+                    >
+                      <Scroll size={12} />
+                    </button>
+                    <button
+                      onClick={() => setGraphLayers(prev => ({ ...prev, blueprints: !prev.blueprints }))}
+                      className={`p-1 rounded ${graphLayers.blueprints ? 'bg-[#d97706]/10 text-[#d97706]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
+                      title="Toggle Blueprints"
+                    >
+                      <Award size={12} />
+                    </button>
+                  </div>
+                  {/* Close/Reattach Button */}
+                  <button
+                    onClick={handleAttachGraph}
+                    className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252] hover:text-[#117dff]"
+                    title="Close and reattach to panel"
+                  >
+                    <SquareX size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Graph Canvas */}
+              <div className="flex-1 relative bg-gradient-to-b from-[#faf9f4] to-white overflow-hidden">
+                {graphData.nodes.length > 0 ? (
+                  <ForceGraph2D
+                    key={graphRefreshKey}
+                    graphData={graphData}
+                    width={detachedGraphPos.width}
+                    height={detachedGraphPos.height - 50}
+                    nodeLabel="title"
+                    nodeColor={node => node.color}
+                    nodeVal={node => node.val}
+                    linkColor={link => link.color}
+                    nodeRelSize={3}
+                    enableNodeDrag={false}
+                    enableZoomPan={true}
+                    minZoom={0.5}
+                    maxZoom={3}
+                    onNodeClick={handleNodeClick}
+                    nodeCanvasObject={(node, ctx, globalScale) => {
+                      const label = node.title || '';
+                      const fontSize = 10 / globalScale;
+                      ctx.font = `${fontSize}px Sans-Serif`;
+                      ctx.beginPath();
+                      ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
+                      ctx.fillStyle = node.color;
+                      ctx.fill();
+                      if (node.type === 'source' && node.runtime) {
+                        const runtimeBadge = RUNTIME_BADGES[node.runtime] || RUNTIME_BADGES.fetch;
+                        ctx.fillStyle = runtimeBadge.color;
+                        ctx.beginPath();
+                        ctx.arc(node.x + node.val - 2, node.y - node.val + 2, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                      }
+                      ctx.fillStyle = '#0a0a0a';
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'bottom';
+                      ctx.fillText(label, node.x, node.y - node.val - 2);
+                    }}
+                    linkDirectionalParticles={2}
+                    linkDirectionalParticleWidth={2}
+                    linkDirectionalParticleSpeed={0.005}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-[#525252]">
+                    {graphLoading ? (
+                      <><Loader2 size={32} className="animate-spin text-[#117dff] mb-3" /><p className="text-sm">Loading graph...</p></>
+                    ) : (
+                      <><Layers size={48} className="text-[#e3e0db] mb-3" /><p className="text-sm">No graph data yet — starting research...</p></>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Resize Handles */}
+              {/* Right edge */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'right')}
+                className="absolute right-0 top-0 bottom-0 w-1.5 cursor-e-resize hover:bg-[#117dff]/20"
+              />
+              {/* Bottom edge */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+                className="absolute left-0 right-0 bottom-0 h-1.5 cursor-s-resize hover:bg-[#117dff]/20"
+              />
+              {/* Bottom-right corner */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
+                className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize hover:bg-[#117dff]/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
