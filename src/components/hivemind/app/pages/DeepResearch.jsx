@@ -519,7 +519,9 @@ export default function DeepResearch() {
           }
         });
 
-        if (panelTab === 'graph' && showPanel) {
+        // Poll graph data during research - not just when tab is active
+        // This ensures graph is ready when user switches to graph tab
+        if (showPanel) {
           fetchGraphData(sessionId);
         }
 
@@ -535,7 +537,8 @@ export default function DeepResearch() {
             setFromCache(!!rpt.fromCache);
             if (rpt.projectId) setProjectId(rpt.projectId);
             fetchTrailSteps(sessionId);
-            if (panelTab === 'graph') fetchGraphData(sessionId);
+            // Final graph fetch on completion
+            fetchGraphData(sessionId);
           } catch (e) {
             console.error('Failed to fetch report:', e);
           }
