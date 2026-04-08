@@ -77,10 +77,11 @@ function EventCard({ event, index }) {
     switch (event.type) {
       case 'task.reasoning': {
         const badge = ACTION_BADGES[event.action] || ACTION_BADGES.SYNTHESIZE;
+        const agentColor = AGENT_COLORS[event.agent] || '#a3a3a3';
         return (
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
-              <Brain size={14} className="text-[#a3a3a3]" />
+              <Brain size={14} style={{ color: agentColor }} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -90,6 +91,11 @@ function EventCard({ event, index }) {
                 >
                   {badge.label}
                 </span>
+                {event.agent && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                    {event.agent}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-[#525252]/70 leading-relaxed">{event.thought || event.message}</p>
             </div>
@@ -185,11 +191,62 @@ function EventCard({ event, index }) {
             <span className="text-xs text-[#dc2626]">Task failed: {event.error}</span>
           </div>
         );
-      case 'task.observation':
+      case 'task.observation': {
+        const agentColor = AGENT_COLORS[event.agent] || '#9333ea';
         return (
           <div className="flex items-center gap-3">
-            <Target size={14} className="text-[#9333ea]" />
-            <span className="text-xs text-[#525252]/70">Observation: {event.title}</span>
+            <Target size={14} style={{ color: agentColor }} />
+            <span className="text-xs text-[#525252]/70">
+              {event.agent && <span className="font-medium" style={{ color: agentColor }}>{event.agent}:</span>} {event.title}
+            </span>
+          </div>
+        );
+      }
+      case 'agent.state': {
+        const agentColor = AGENT_COLORS[event.agent] || '#a3a3a3';
+        const stateIcon = event.state === 'active' ? <Loader2 size={14} className="animate-spin" /> :
+                         event.state === 'completed' ? <CheckCircle2 size={14} /> :
+                         <Globe size={14} />;
+        return (
+          <div className="flex items-center gap-3">
+            <span style={{ color: agentColor }}>{stateIcon}</span>
+            <span className="text-xs text-[#525252]/70">
+              <span className="font-medium" style={{ color: agentColor }}>{event.agent}</span>
+              <span className="text-gray-400 mx-1">→</span>
+              <span className={event.state === 'active' ? 'text-[#117dff]' : event.state === 'completed' ? 'text-[#16a34a]' : ''}>
+                {event.state}
+              </span>
+              {event.detail && <span className="text-gray-400 ml-1">({event.detail})</span>}
+            </span>
+          </div>
+        );
+      }
+      case 'agent.states': {
+        const states = event.states || {};
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Agent Status</span>
+            <div className="flex items-center gap-3">
+              {Object.entries(states).map(([agent, state]) => {
+                const color = AGENT_COLORS[agent] || '#a3a3a3';
+                return (
+                  <div key={agent} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color, opacity: state === 'active' ? 1 : state === 'completed' ? 0.8 : 0.3 }} />
+                    <span className="text-[10px]" style={{ color }}>{agent}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+      case 'verifier.contradiction':
+        return (
+          <div className="flex items-center gap-3 bg-red-50 p-2 rounded-lg border border-red-100">
+            <AlertCircle size={14} className="text-red-500" />
+            <span className="text-xs text-red-600 font-medium">
+              Contradiction detected: {event.count} conflicting {event.count === 1 ? 'claim' : 'claims'}
+            </span>
           </div>
         );
       case 'research.decomposed':
@@ -448,6 +505,19 @@ export default function DeepResearch() {
       try {
         const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
         setEvents(data.events || []);
+
+        // Process agent state events
+        const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
+        agentStateEvents.forEach(event => {
+          if (event.type === 'agent.states' && event.states) {
+            setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
+          } else if (event.type === 'agent.state') {
+            setAgentStates(prev => ({
+              ...prev,
+              [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
+            }));
+          }
+        });
 
         if (panelTab === 'graph' && showPanel) {
           fetchGraphData(sessionId);
@@ -932,28 +1002,45 @@ export default function DeepResearch() {
                       )}
 
                       {/* Agent States */}
-                      <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
+                      <div className="bg-gradient-to-br from-[#faf9f4] to-white border border-[#e3e0db] rounded-xl p-3">
                         <div className="flex items-center gap-2 mb-3">
                           <Users size={14} className="text-[#9333ea]" />
-                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Agent States</span>
+                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">CSI Agents</span>
+                          {status === 'running' && (
+                            <span className="ml-auto flex items-center gap-1 text-[10px] text-[#117dff]">
+                              <Loader2 size={10} className="animate-spin" />
+                              Active
+                            </span>
+                          )}
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {['Explorer', 'Analyst', 'Verifier', 'Synthesizer'].map((agent) => {
-                            const state = agentStates[agent] || { status: 'idle' };
-                            const color = AGENT_COLORS[agent];
+                          {Object.entries(AGENT_COLORS).map(([agent, color]) => {
+                            // Get latest state from any task
+                            const latestTaskId = Object.keys(agentStates).pop();
+                            const state = latestTaskId ? agentStates[latestTaskId][agent.toLowerCase()] : 'idle';
+                            const isActive = state === 'active';
+                            const isCompleted = state === 'completed';
+
                             return (
-                              <div key={agent} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-[#e3e0db]">
-                                <div className={`w-2 h-2 rounded-full ${state.status === 'active' ? 'animate-pulse' : ''}`} style={{ backgroundColor: state.status === 'active' ? color : `${color}40` }} />
-                                <span className="text-xs text-[#525252]">{agent}</span>
-                                {state.lastAction && (
-                                  <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${color}12`, color }}>
-                                    {ACTION_BADGES[state.lastAction]?.label || state.lastAction}
-                                  </span>
-                                )}
+                              <div key={agent} className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isActive ? 'bg-white border-[#117dff]/30 shadow-sm' : 'bg-white/50 border-[#e3e0db]'}`}>
+                                <div className={`w-2.5 h-2.5 rounded-full ${isActive ? 'animate-pulse' : ''}`} style={{ backgroundColor: isActive ? color : isCompleted ? color : `${color}40` }} />
+                                <div className="flex-1 min-w-0">
+                                  <span className={`text-xs block ${isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252]'}`}>{agent}</span>
+                                  {state && state !== 'idle' && state !== 'not_used' && (
+                                    <span className={`text-[9px] ${isActive ? 'text-[#117dff]' : isCompleted ? 'text-[#16a34a]' : 'text-[#a3a3a3]'}`}>
+                                      {state}
+                                    </span>
+                                  )}
+                                </div>
+                                {isActive && <Loader2 size={12} className="text-[#117dff] animate-spin flex-shrink-0" />}
+                                {isCompleted && <CheckCircle2 size={12} className="text-[#16a34a] flex-shrink-0" />}
                               </div>
                             );
                           })}
                         </div>
+                        <p className="text-[10px] text-[#a3a3a3] mt-2 leading-relaxed">
+                          Four specialized CSI agents work together: Explorer gathers sources, Analyst extracts claims, Verifier checks quality, and Synthesizer combines findings.
+                        </p>
                       </div>
 
                       {/* Subgoals */}
