@@ -309,6 +309,15 @@ function EventCard({ event, index }) {
             <span className="text-xs text-[#16a34a]">Using {event.findingCount} cached findings</span>
           </div>
         );
+      case 'memory.cache_hit':
+        return (
+          <div className="flex items-center gap-3 bg-[#9333ea]/5 p-2 rounded-lg border border-[#9333ea]/20">
+            <Brain size={14} className="text-[#9333ea]" />
+            <span className="text-xs text-[#9333ea] font-medium">
+              Memory hit: {event.title?.slice(0, 60)} ({((event.confidence || 0) * 100).toFixed(0)}%)
+            </span>
+          </div>
+        );
       case 'research.blueprint_suggested':
         return (
           <div className="flex items-center gap-3">
