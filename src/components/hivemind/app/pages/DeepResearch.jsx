@@ -252,6 +252,24 @@ function EventCard({ event, index }) {
             </span>
           </div>
         );
+      case 'verifier.contradiction_resolved':
+        return (
+          <div className="flex items-center gap-3 bg-green-50 p-2 rounded-lg border border-green-100">
+            <CheckCircle2 size={14} className="text-green-600" />
+            <span className="text-xs text-green-700 font-medium">
+              Contradiction resolved: supports Claim {event.supports} ({(event.confidence * 100).toFixed(0)}% confidence)
+            </span>
+          </div>
+        );
+      case 'verifier.contradictions_summary':
+        return (
+          <div className="flex items-center gap-3">
+            <Activity size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#525252]/70">
+              Contradictions: {event.resolved} resolved, {event.unresolved} unresolved of {event.total}
+            </span>
+          </div>
+        );
       case 'research.decomposed':
         return (
           <div className="flex items-center gap-3">
