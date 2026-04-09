@@ -665,63 +665,87 @@ export default function DeepResearch() {
       .catch(() => {});
   }, []);
 
-  /* ── Polling for status ─────────────────────────────────────── */
+  /* ── SSE stream for real-time events ─────────────────────────── */
   useEffect(() => {
     if (!sessionId || status !== 'running') return;
 
-    const interval = setInterval(async () => {
+    const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
+    const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
+
+    const source = new EventSource(streamUrl, { withCredentials: true });
+
+    source.onmessage = (e) => {
       try {
-        const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
-        setEvents(data.events || []);
+        const event = JSON.parse(e.data);
+        setEvents(prev => [...prev, event]);
 
-        // Process agent state events
-        const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
-        agentStateEvents.forEach(event => {
-          if (event.type === 'agent.states' && event.states) {
-            setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
-          } else if (event.type === 'agent.state') {
-            setAgentStates(prev => ({
-              ...prev,
-              [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
-            }));
-          }
-        });
+        if (event.type === 'agent.states' && event.states) {
+          setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
+        } else if (event.type === 'agent.state') {
+          setAgentStates(prev => ({
+            ...prev,
+            [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
+          }));
+        }
 
-        // Poll graph data during research - not just when tab is active
-        // This ensures graph is ready when user switches to graph tab
-        if (showPanel) {
+        if (event.type === 'task.started' && event.dimension) {
+          setSubgoals(prev => {
+            const exists = prev.find(g => g.id === event.taskId);
+            if (exists) return prev;
+            return [...prev, { id: event.taskId, query: event.query, dimension: event.dimension, status: 'running' }];
+          });
+        }
+        if (event.type === 'task.completed') {
+          setSubgoals(prev => prev.map(g => g.id === event.taskId ? { ...g, status: 'completed', confidence: event.confidence } : g));
+        }
+
+        if (showPanel && event.type?.startsWith('task.completed')) {
           fetchGraphData(sessionId);
         }
-
-        if (data.status === 'completed') {
-          setStatus('completed');
-          clearInterval(interval);
-          try {
-            const { data: rpt } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/report`);
-            setReport(rpt.report);
-            setFindings(rpt.findings || []);
-            setDurationMs(rpt.durationMs || 0);
-            setConfidence(rpt.confidence ?? rpt.taskProgress?.overallConfidence ?? 0);
-            setFromCache(!!rpt.fromCache);
-            if (rpt.projectId) setProjectId(rpt.projectId);
-            fetchTrailSteps(sessionId);
-            // Final graph fetch on completion
-            fetchGraphData(sessionId);
-          } catch (e) {
-            console.error('Failed to fetch report:', e);
-          }
-        } else if (data.status === 'failed') {
-          setStatus('failed');
-          setError(data.error || 'Research failed');
-          clearInterval(interval);
-        }
-      } catch (e) {
-        console.error('Polling error:', e);
+      } catch (err) {
+        console.error('[SSE] Failed to parse event:', err);
       }
-    }, 1000); // Changed from 2000ms to 1000ms for faster real-time updates
+    };
 
-    return () => clearInterval(interval);
-  }, [sessionId, status, panelTab, showPanel, fetchTrailSteps, fetchGraphData]);
+    source.addEventListener('done', async (e) => {
+      const data = JSON.parse(e.data);
+      source.close();
+
+      if (data.status === 'completed') {
+        setStatus('completed');
+        try {
+          const { data: rpt } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/report`);
+          setReport(rpt.report);
+          setFindings(rpt.findings || []);
+          setDurationMs(rpt.durationMs || 0);
+          setConfidence(rpt.confidence ?? rpt.taskProgress?.overallConfidence ?? 0);
+          setFromCache(!!rpt.fromCache);
+          if (rpt.projectId) setProjectId(rpt.projectId);
+          fetchTrailSteps(sessionId);
+          fetchGraphData(sessionId);
+        } catch (err) {
+          console.error('Failed to fetch report:', err);
+        }
+      } else if (data.status === 'failed') {
+        setStatus('failed');
+        setError(data.error || 'Research failed');
+      }
+    });
+
+    source.onerror = () => {
+      console.error('[SSE] Connection error, falling back to status fetch');
+      source.close();
+      apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`)
+        .then(({ data }) => {
+          setEvents(data.events || []);
+          if (data.status === 'completed') setStatus('completed');
+          if (data.status === 'failed') { setStatus('failed'); setError(data.error); }
+        })
+        .catch(() => {});
+    };
+
+    return () => source.close();
+  }, [sessionId, status, showPanel, fetchTrailSteps, fetchGraphData]);
 
   /* ── Fetch Graph when panel opens ───────────────────────────── */
   useEffect(() => {
