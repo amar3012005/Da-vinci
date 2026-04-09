@@ -796,18 +796,54 @@ export default function DeepResearch() {
     });
 
     source.onerror = () => {
-      console.error('[SSE] Connection error, falling back to status fetch');
+      console.error('[SSE] Connection error, falling back to polling');
       source.close();
-      apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`)
-        .then(({ data }) => {
+      // Fall back to polling if SSE fails
+      const fallbackInterval = setInterval(async () => {
+        try {
+          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
           setEvents(data.events || []);
-          if (data.status === 'completed') setStatus('completed');
-          if (data.status === 'failed') { setStatus('failed'); setError(data.error); }
-        })
-        .catch(() => {});
+          const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
+          agentStateEvents.forEach(event => {
+            if (event.type === 'agent.states' && event.states) {
+              setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
+            } else if (event.type === 'agent.state') {
+              setAgentStates(prev => ({
+                ...prev,
+                [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
+              }));
+            }
+          });
+          if (showPanel) fetchGraphData(sessionId);
+          if (data.status === 'completed') {
+            setStatus('completed');
+            clearInterval(fallbackInterval);
+            try {
+              const { data: rpt } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/report`);
+              setReport(rpt.report);
+              setFindings(rpt.findings || []);
+              setDurationMs(rpt.durationMs || 0);
+              setConfidence(rpt.confidence ?? rpt.taskProgress?.overallConfidence ?? 0);
+              setFromCache(!!rpt.fromCache);
+              if (rpt.projectId) setProjectId(rpt.projectId);
+              fetchTrailSteps(sessionId);
+              fetchGraphData(sessionId);
+            } catch (e) { console.error('Failed to fetch report:', e); }
+          } else if (data.status === 'failed') {
+            setStatus('failed');
+            setError(data.error || 'Research failed');
+            clearInterval(fallbackInterval);
+          }
+        } catch (e) { console.error('Polling error:', e); }
+      }, 2000);
+      // Store cleanup ref
+      source._fallbackInterval = fallbackInterval;
     };
 
-    return () => source.close();
+    return () => {
+      source.close();
+      if (source._fallbackInterval) clearInterval(source._fallbackInterval);
+    };
   }, [sessionId, status, showPanel, fetchTrailSteps, fetchGraphData]);
 
   /* ── Fetch Graph when panel opens ───────────────────────────── */
