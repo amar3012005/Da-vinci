@@ -295,6 +295,24 @@ function EventCard({ event, index }) {
             </span>
           </div>
         );
+      case 'research.depth_decision':
+        return (
+          <div className="flex items-center gap-3">
+            <Activity size={14} className={event.decision === 'high_confidence_early_stop' ? 'text-[#16a34a]' : 'text-[#d97706]'} />
+            <span className="text-xs text-[#525252]/70">
+              {event.decision === 'high_confidence_early_stop'
+                ? `High confidence (${(event.avgConfidence * 100).toFixed(0)}%) — skipping to synthesis`
+                : `Low confidence (${(event.avgConfidence * 100).toFixed(0)}%) — extending search depth to ${event.newMaxDepth}`}
+            </span>
+          </div>
+        );
+      case 'research.skipping_waves':
+        return (
+          <div className="flex items-center gap-3">
+            <Zap size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#16a34a]">Confidence sufficient — fast-tracking to gap analysis</span>
+          </div>
+        );
       case 'research.reflecting':
         return (
           <div className="flex items-center gap-3">
