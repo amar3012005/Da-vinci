@@ -1155,14 +1155,29 @@ export default function Connectors() {
         };
       }
     } else if (c.mcpEndpointName) {
+      // MCP Client connectors (Claude, VS Code, Antigravity)
+      // These are client-side configs - show as connected if user has the config
+      // Check both endpoints list and oauth connectors for hivemind connection
       const live = endpoints.find((ep) => ep.name === c.mcpEndpointName);
+      const isMcpClientConnected = oauthList.some((o) =>
+        o.provider === 'hivemind' && o.status === 'connected'
+      );
+
       if (live) {
         return {
           ...c,
-          status: live.healthy ? 'connected' : 'error',
+          status: live.healthy ? 'connected' : 'needs_attention',
           accountRef: live.url || 'Local MCP bridge',
           lastSyncAt: live.updated_at,
           lastError: live.error,
+        };
+      } else if (isMcpClientConnected) {
+        // User has hivemind MCP connected via any client
+        return {
+          ...c,
+          status: 'connected',
+          accountRef: 'MCP Client configured',
+          description: `${c.description} — HIVE MCP connected`,
         };
       }
     }

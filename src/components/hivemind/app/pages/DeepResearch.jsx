@@ -1384,7 +1384,7 @@ export default function DeepResearch() {
                         {/* Graph Header */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide min-w-0">
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
                                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
@@ -1441,7 +1441,7 @@ export default function DeepResearch() {
                               </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             {webUsage && (
                               <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#faf9f4] border border-[#e3e0db]">
                                 <span className="text-[9px] text-[#525252]">

@@ -34,7 +34,6 @@ import apiClient from '../shared/api-client';
 /** Build nav sections, conditionally including admin items. */
 function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
   const advancedItems = [
-    { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
     { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
     { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
     { to: '/hivemind/app/mcp', icon: Server, label: 'MCP Server' },
