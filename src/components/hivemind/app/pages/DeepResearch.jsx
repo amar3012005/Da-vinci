@@ -556,11 +556,12 @@ export default function DeepResearch() {
   }, []);
 
   const handleToggleGraphWindow = useCallback(() => {
-    setShowGraphWindow(prev => !prev);
-    if (!isGraphDetached) {
+    if (!showGraphWindow) {
       setIsGraphDetached(true);
+      setPanelTab('status');
     }
-  }, [isGraphDetached]);
+    setShowGraphWindow(prev => !prev);
+  }, [showGraphWindow]);
 
   const handleCloseGraphWindow = useCallback(() => {
     setShowGraphWindow(false);
@@ -577,11 +578,17 @@ export default function DeepResearch() {
 
   const handleGraphDrag = useCallback((e) => {
     if (!isDraggingGraph) return;
-    setDetachedGraphPos(prev => ({
-      ...prev,
-      x: e.clientX - dragOffset.x,
-      y: e.clientY - dragOffset.y,
-    }));
+    setDetachedGraphPos(prev => {
+      const nextX = e.clientX - dragOffset.x;
+      const nextY = e.clientY - dragOffset.y;
+      const maxX = Math.max(0, window.innerWidth - prev.width);
+      const maxY = Math.max(0, window.innerHeight - prev.height);
+      return {
+        ...prev,
+        x: Math.min(Math.max(0, nextX), maxX),
+        y: Math.min(Math.max(0, nextY), maxY),
+      };
+    });
   }, [isDraggingGraph, dragOffset]);
 
   const handleGraphDragEnd = useCallback(() => {
@@ -1469,8 +1476,8 @@ export default function DeepResearch() {
                             </button>
                             <button
                               onClick={handleDetachGraph}
-                              className="p-1.5 rounded hover:bg-[#117dff]/10 text-[#525252] hover:text-[#117dff]"
-                              title="Detach graph to floating window"
+                              className={`p-1.5 rounded hover:bg-[#117dff]/10 ${isGraphDetached ? 'bg-[#117dff]/20 text-[#117dff]' : 'text-[#525252] hover:text-[#117dff]'}`}
+                              title={isGraphDetached ? 'Graph is detached' : 'Detach graph to floating window'}
                             >
                               <ExternalLink size={12} />
                             </button>
@@ -1695,10 +1702,10 @@ export default function DeepResearch() {
         {showGraphWindow && (
           <motion.div
             ref={graphWindowRef}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 28 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
             className="fixed z-50"
             style={{
               left: detachedGraphPos.x,
@@ -1713,7 +1720,6 @@ export default function DeepResearch() {
               <div
                 onMouseDown={handleGraphDragStart}
                 className="flex items-center justify-between px-3 py-2 bg-gradient-to-b from-[#faf9f4] to-white border-b border-[#e3e0db] cursor-move select-none"
-                data-no-drag
               >
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5">
@@ -1725,7 +1731,7 @@ export default function DeepResearch() {
                 </div>
                 <div className="flex items-center gap-1">
                   {/* Layer Toggles */}
-                  <div className="flex items-center gap-0.5 mr-2">
+                  <div className="flex items-center gap-0.5 mr-2" data-no-drag>
                     <button
                       onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
                       className={`p-1 rounded ${graphLayers.sources ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'}`}
@@ -1774,6 +1780,7 @@ export default function DeepResearch() {
                     onClick={handleCloseGraphWindow}
                     className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252] hover:text-[#117dff]"
                     title="Close graph window"
+                    data-no-drag
                   >
                     <X size={14} />
                   </button>
@@ -1849,6 +1856,16 @@ export default function DeepResearch() {
               </div>
 
               {/* Resize Handles */}
+              {/* Left edge */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'left')}
+                className="absolute left-0 top-0 bottom-0 w-1.5 cursor-w-resize hover:bg-[#117dff]/20"
+              />
+              {/* Top edge */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'top')}
+                className="absolute left-0 right-0 top-0 h-1.5 cursor-n-resize hover:bg-[#117dff]/20"
+              />
               {/* Right edge */}
               <div
                 onMouseDown={(e) => handleResizeStart(e, 'right')}
@@ -1863,6 +1880,21 @@ export default function DeepResearch() {
               <div
                 onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
                 className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize hover:bg-[#117dff]/20"
+              />
+              {/* Top-left corner */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'top-left')}
+                className="absolute left-0 top-0 w-4 h-4 cursor-nw-resize hover:bg-[#117dff]/20"
+              />
+              {/* Top-right corner */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'top-right')}
+                className="absolute right-0 top-0 w-4 h-4 cursor-ne-resize hover:bg-[#117dff]/20"
+              />
+              {/* Bottom-left corner */}
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
+                className="absolute left-0 bottom-0 w-4 h-4 cursor-sw-resize hover:bg-[#117dff]/20"
               />
             </div>
           </motion.div>
