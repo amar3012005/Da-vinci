@@ -38,6 +38,8 @@ const RUNTIME_BADGES = {
 const NODE_ICONS = {
   source: Globe,
   claim: CheckCircle2,
+  'structured-claim': CheckCircle2,
+  'plain-claim': CheckCircle2,
   trail: Scroll,
   blueprint: Award,
 };
@@ -422,15 +424,30 @@ export default function DeepResearch() {
 
       if (graphLayers.claims && layers.claims) {
         layers.claims.forEach((claim, idx) => {
+          const isStructured = claim.type === 'structured-claim' || claim.structured;
           nodes.push({
             id: `claim-${claim.id || idx}`,
-            type: 'claim',
+            type: isStructured ? 'structured-claim' : 'plain-claim',
             title: claim.content?.slice(0, 80) || 'Finding',
             confidence: claim.confidence,
-            val: 10,
-            color: '#16a34a',
+            val: isStructured ? 12 : 8,
+            color: isStructured ? '#16a34a' : '#86efac',
             sourceId: claim.source,
+            // NEW: Structured claim details for popup
+            structured: claim.structured,
+            source: claim.source,
           });
+          // Link structured claims to their sources
+          if (isStructured && claim.structured?.sourceIds?.length > 0) {
+            claim.structured.sourceIds.forEach(sourceId => {
+              links.push({
+                source: `claim-${claim.id || idx}`,
+                target: `source-${sourceId}`,
+                type: 'derived_from',
+                color: '#16a34a40',
+              });
+            });
+          }
         });
       }
 
@@ -906,6 +923,9 @@ export default function DeepResearch() {
       } else {
         setSelectedNode(null);
       }
+    } else if (node.type === 'structured-claim' || node.type === 'plain-claim') {
+      // Claim clicked - show details
+      setSelectedNode(node);
     } else {
       setSelectedNode(null);
     }
@@ -1531,18 +1551,18 @@ export default function DeepResearch() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 10 }}
-                                className="absolute bottom-4 right-4 w-64 sm:w-72 max-w-[90vw] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-xl p-4 z-20"
+                                className="absolute bottom-4 right-4 w-80 sm:w-96 max-w-[90vw] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-xl p-4 z-20 max-h-[80vh] overflow-y-auto"
                               >
                                 <div className="flex items-start justify-between mb-3">
                                   <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${selectedNode.color}20` }}>
                                       {(() => {
-                                        const Icon = NODE_ICONS[selectedNode.type] || Globe;
+                                        const Icon = NODE_ICONS[selectedNode.type] || NODE_ICONS.claim || Globe;
                                         return <Icon size={16} style={{ color: selectedNode.color }} />;
                                       })()}
                                     </div>
                                     <div>
-                                      <p className="text-xs font-semibold text-[#0a0a0a] capitalize">{selectedNode.type}</p>
+                                      <p className="text-xs font-semibold text-[#0a0a0a] capitalize">{selectedNode.type.replace('-', ' ')}</p>
                                       {selectedNode.runtime && (
                                         <div className="flex items-center gap-1">
                                           {(() => {
@@ -1571,6 +1591,75 @@ export default function DeepResearch() {
                                     <span className={`text-[10px] font-semibold ${(selectedNode.confidence * 100) >= 70 ? 'text-emerald-600' : (selectedNode.confidence * 100) >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
                                       {(selectedNode.confidence * 100).toFixed(0)}%
                                     </span>
+                                  </div>
+                                )}
+                                {/* Structured Claim Details */}
+                                {selectedNode.structured && (
+                                  <div className="space-y-3 mb-3">
+                                    {/* Subject-Predicate-Object Breakdown */}
+                                    <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
+                                      <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Structure</p>
+                                      <div className="space-y-1.5">
+                                        {selectedNode.structured.subject && (
+                                          <div className="flex items-start gap-1.5">
+                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Subject:</span>
+                                            <span className="text-[10px] text-[#0a0a0a] font-medium">{selectedNode.structured.subject}</span>
+                                          </div>
+                                        )}
+                                        {selectedNode.structured.predicate && (
+                                          <div className="flex items-start gap-1.5">
+                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Predicate:</span>
+                                            <span className="text-[10px] text-[#0a0a0a]">{selectedNode.structured.predicate}</span>
+                                          </div>
+                                        )}
+                                        {selectedNode.structured.object && (
+                                          <div className="flex items-start gap-1.5">
+                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Object:</span>
+                                            <span className="text-[10px] text-[#0a0a0a]">{selectedNode.structured.object}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {/* Entity List */}
+                                    {selectedNode.structured.entities && selectedNode.structured.entities.length > 0 && (
+                                      <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
+                                        <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Entities</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {selectedNode.structured.entities.map((entity, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white rounded border border-[#e3e0db] text-[9px] text-[#525252]"
+                                            >
+                                              <span className="font-medium text-[#0a0a0a]">{entity.name || entity}</span>
+                                              {entity.type && (
+                                                <span className="text-[8px] text-[#a3a3a3] uppercase">({entity.type})</span>
+                                              )}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* Source Links with Evidence */}
+                                    {selectedNode.structured.sourceIds && selectedNode.structured.sourceIds.length > 0 && (
+                                      <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
+                                        <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Sources</p>
+                                        <div className="space-y-2">
+                                          {selectedNode.structured.sourceIds.map((sourceId, idx) => (
+                                            <div key={idx} className="space-y-1">
+                                              <div className="flex items-center gap-1.5">
+                                                <Globe size={10} className="text-[#117dff]" />
+                                                <span className="text-[10px] text-[#117dff] truncate">Source {idx + 1}</span>
+                                              </div>
+                                              {selectedNode.structured.evidenceSnippets?.[idx] && (
+                                                <p className="text-[9px] text-[#525252] italic pl-4 border-l-2 border-[#117dff]">
+                                                  "{selectedNode.structured.evidenceSnippets[idx].slice(0, 100)}{selectedNode.structured.evidenceSnippets[idx].length > 100 ? '...' : ''}"
+                                                </p>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 {selectedNode.type === 'source' && (
