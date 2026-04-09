@@ -259,6 +259,24 @@ function EventCard({ event, index }) {
             <span className="text-xs text-[#525252]/70">Decomposed into {event.taskCount || event.dimensions?.length || 'multiple'} tasks</span>
           </div>
         );
+      case 'research.wave_started':
+        return (
+          <div className="flex items-center gap-3">
+            <Layers size={14} className="text-[#117dff]" />
+            <span className="text-xs text-[#525252]/70">
+              Wave {event.wave}: Running {event.taskCount} dimensions in parallel
+            </span>
+          </div>
+        );
+      case 'research.wave_completed':
+        return (
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={14} className="text-[#16a34a]" />
+            <span className="text-xs text-[#16a34a]">
+              Wave {event.wave} complete — {event.findingCount} findings ({(event.confidence * 100).toFixed(0)}% confidence)
+            </span>
+          </div>
+        );
       case 'research.reflecting':
         return (
           <div className="flex items-center gap-3">
