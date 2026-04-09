@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import ForceGraph2D from 'react-force-graph-2d';
 import {
   ArrowUp, Sparkles, History,
@@ -340,6 +340,7 @@ export default function DeepResearch() {
   const [panelTab, setPanelTab] = useState('status'); // 'status' | 'report' | 'graph'
   const [panelSize, setPanelSize] = useState('large'); // 'compact' | 'medium' | 'large'
   const panelRef = useRef(null);
+  const panelDragControls = useDragControls();
 
   // Graph state
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -1053,7 +1054,7 @@ export default function DeepResearch() {
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full"
+              className="w-full mt-12"
             >
               <div className="bg-white rounded-2xl border border-[#e3e0db] overflow-hidden shadow-lg">
                 {/* macOS-style traffic lights */}
@@ -1156,10 +1157,24 @@ export default function DeepResearch() {
                 transition={{ type: 'spring', damping: 30, stiffness: 200 }}
                 className={`flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40 ${panelWidthClasses[panelSize]}`}
                 style={{ minWidth: 0, maxWidth: '100%' }}
+                drag="x"
+                dragControls={panelDragControls}
+                dragConstraints={{ left: -400, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(event, info) => {
+                  if (info.offset.x < -100) {
+                    setShowPanel(false);
+                  }
+                }}
               >
               {/* Panel Header */}
-              <div className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
-                <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+              <div
+                className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4] cursor-grab active:cursor-grabbing"
+                onPointerDown={(e) => panelDragControls.start(e)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-6 rounded-full bg-[#d1cfc6] opacity-50 flex-shrink-0" />
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
                   <button
                     onClick={() => setPanelTab('status')}
                     className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all flex-shrink-0 ${
@@ -1192,6 +1207,7 @@ export default function DeepResearch() {
                     <GitBranch size={14} />
                     <span className="font-medium">Graph</span>
                   </button>
+                </div>
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -1310,7 +1326,7 @@ export default function DeepResearch() {
                           <GitBranch size={14} className="text-[#d97706]" />
                           <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Timeline</span>
                         </div>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                        <div className="space-y-2">
                           {events.length === 0 ? (
                             <div className="text-center py-4 text-[#a3a3a3] text-xs">
                               <Loader2 size={16} className="animate-spin mx-auto mb-2" />
@@ -1389,9 +1405,10 @@ export default function DeepResearch() {
                     >
                       <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden h-full flex flex-col">
                         {/* Graph Header */}
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide min-w-0">
+                        <div className="px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pr-1">
                               <button
                                 onClick={() => setGraphLayers(prev => ({ ...prev, sources: !prev.sources }))}
                                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
@@ -1446,41 +1463,52 @@ export default function DeepResearch() {
                                 <Activity size={10} />
                                 <span className="hidden sm:inline">Events</span>
                               </button>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {webUsage && (
-                              <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#faf9f4] border border-[#e3e0db]">
-                                <span className="text-[9px] text-[#525252]">
-                                  <Search size={8} className="inline mr-0.5" />
-                                  <span className={quotaTextColor(webUsage.web_search_requests?.used || 0, webUsage.web_search_requests?.limit || 50)}>
-                                    {webUsage.web_search_requests?.used || 0}
-                                  </span>
-                                  /{webUsage.web_search_requests?.limit || 50}
-                                </span>
                               </div>
-                            )}
-                            <button
-                              onClick={handleRefreshGraph}
-                              className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252]"
-                              title="Refresh graph"
-                            >
-                              <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
-                            </button>
-                            <button
-                              onClick={handleToggleGraphWindow}
-                              className={`p-1.5 rounded hover:bg-[#117dff]/10 ${showGraphWindow ? 'bg-[#117dff]/20 text-[#117dff]' : 'text-[#525252] hover:text-[#117dff]'}`}
-                              title={showGraphWindow ? 'Hide graph window' : 'Show graph window'}
-                            >
-                              <Layers size={12} />
-                            </button>
-                            <button
-                              onClick={handleDetachGraph}
-                              className={`p-1.5 rounded hover:bg-[#117dff]/10 ${isGraphDetached ? 'bg-[#117dff]/20 text-[#117dff]' : 'text-[#525252] hover:text-[#117dff]'}`}
-                              title={isGraphDetached ? 'Graph is detached' : 'Detach graph to floating window'}
-                            >
-                              <ExternalLink size={12} />
-                            </button>
+                            </div>
+                            <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap flex-shrink-0">
+                              {webUsage && (
+                                <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#faf9f4] border border-[#e3e0db]">
+                                  <span className="text-[9px] text-[#525252]">
+                                    <Search size={8} className="inline mr-0.5" />
+                                    <span className={quotaTextColor(webUsage.web_search_requests?.used || 0, webUsage.web_search_requests?.limit || 50)}>
+                                      {webUsage.web_search_requests?.used || 0}
+                                    </span>
+                                    /{webUsage.web_search_requests?.limit || 50}
+                                  </span>
+                                </div>
+                              )}
+                              <button
+                                onClick={handleRefreshGraph}
+                                className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252]"
+                                title="Refresh graph"
+                              >
+                                <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
+                              </button>
+                              <button
+                                onClick={handleToggleGraphWindow}
+                                className={`p-1.5 rounded border transition-colors ${
+                                  showGraphWindow
+                                    ? 'border-[#117dff]/40 bg-[#117dff]/20 text-[#117dff]'
+                                    : 'border-transparent text-[#525252] hover:bg-[#117dff]/10 hover:text-[#117dff]'
+                                }`}
+                                title={showGraphWindow ? 'Hide graph window' : 'Show graph window'}
+                              >
+                                <Layers size={12} />
+                              </button>
+                              <button
+                                onClick={handleDetachGraph}
+                                className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded border text-[10px] font-medium transition-colors ${
+                                  isGraphDetached
+                                    ? 'border-[#117dff]/50 bg-[#117dff]/20 text-[#117dff]'
+                                    : 'border-[#d4d1ca] bg-white text-[#525252] hover:bg-[#117dff]/10 hover:border-[#117dff]/30 hover:text-[#117dff]'
+                                }`}
+                                title={isGraphDetached ? 'Graph is detached' : 'Detach graph to floating window'}
+                                aria-pressed={isGraphDetached}
+                              >
+                                <ExternalLink size={12} />
+                                <span>{isGraphDetached ? 'Detached' : 'Detach'}</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
