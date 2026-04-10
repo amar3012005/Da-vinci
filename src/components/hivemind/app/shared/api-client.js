@@ -418,6 +418,13 @@ class HiveMindApiClient {
 
   // ─── Core: Knowledge Base ────────────────────────────────────
 
+  async deleteDocument(memoryId) {
+    const { data } = await this.controlPlane.delete('/v1/proxy/knowledge/document', {
+      data: { memory_id: memoryId },
+    });
+    return data;
+  }
+
   async uploadDocument(file, options = {}) {
     const formData = new FormData();
     formData.append('file', file);

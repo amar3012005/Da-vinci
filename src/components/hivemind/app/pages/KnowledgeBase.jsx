@@ -19,6 +19,7 @@ import {
   Sparkles,
   ChevronDown,
   Sheet,
+  Trash2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -512,6 +513,8 @@ export default function KnowledgeBase() {
   const [enterpriseModalOpen, setEnterpriseModalOpen] = useState(false);
   const [enterpriseIngesting, setEnterpriseIngesting] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [deletingDocId, setDeletingDocId] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const fileInputRef = useRef(null);
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
@@ -590,6 +593,21 @@ export default function KnowledgeBase() {
       }
     }
   }, [kbMemories, justUploadedDocs]);
+
+  const handleDeleteDocument = useCallback(async (docId) => {
+    setDeletingDocId(docId);
+    try {
+      await apiClient.deleteDocument(docId);
+      // Remove from local state immediately
+      setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
+      setDeleteConfirmId(null);
+      refetchKb();
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setDeletingDocId(null);
+    }
+  }, [refetchKb]);
 
   useEffect(() => {
     let cancelled = false;
@@ -990,7 +1008,7 @@ export default function KnowledgeBase() {
               const docType = meta.document_type || (doc.tags || []).find((t) => t.startsWith('document_type:'))?.split(':')[1];
               const typeStyle = docType ? TYPE_COLORS[docType] || TYPE_COLORS.general : null;
               return (
-                <div key={doc.id} className="flex items-center gap-4 px-4 py-3 rounded-xl border border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
+                <div key={doc.id} className="group flex items-center gap-4 px-4 py-3 rounded-xl border border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
                   {getFileIcon(srcMeta.filename || meta.filename || meta.document_title)}
                   {typeStyle && (
                     <span className={`text-[10px] font-semibold font-['Space_Grotesk'] px-2 py-0.5 rounded-md border shrink-0 ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
@@ -1024,6 +1042,33 @@ export default function KnowledgeBase() {
                     <Clock size={10} />
                     {formatDate(doc.created_at)}
                   </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {deleteConfirmId === doc.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id); }}
+                          disabled={deletingDocId === doc.id}
+                          className="text-[10px] font-mono px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                        >
+                          {deletingDocId === doc.id ? 'Deleting...' : 'Confirm'}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }}
+                          className="text-[10px] font-mono px-2 py-1 rounded-lg text-[#a3a3a3] hover:text-[#525252]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
+                        className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete document and all chunks"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
