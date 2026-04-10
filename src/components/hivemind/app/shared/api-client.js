@@ -433,6 +433,40 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Enterprise Upload ────────────────────────────────
+
+  async enterpriseDetect(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await this.controlPlane.post('/v1/proxy/enterprise/upload/detect', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+    return data;
+  }
+
+  async enterpriseIngest(options = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/enterprise/upload/ingest', {
+      upload_id: options.upload_id,
+      confirmed_type: options.confirmed_type,
+      sheet_configs: options.sheet_configs,
+      tags: options.tags,
+      targetScope: options.targetScope,
+      containerTag: options.containerTag,
+      model: options.model,
+    }, {
+      timeout: 300000,
+    });
+    return data;
+  }
+
+  async getEnterpriseModel() {
+    const { data } = await this.controlPlane.get('/v1/proxy/enterprise/model', {
+      timeout: 5000,
+    });
+    return data;
+  }
+
   // ─── Core: Gmail Connector (direct) ─────────────────────────
 
   async gmailConnect(targetScope = 'personal') {
