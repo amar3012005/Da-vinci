@@ -16,6 +16,9 @@ import {
   Users,
   User,
   Map as MapIcon,
+  Sparkles,
+  ChevronDown,
+  Sheet,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -27,7 +30,25 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
 
-const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv'];
+const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'xlsx', 'xls'];
+
+const TYPE_LABELS = {
+  invoice: 'Invoice / Purchase Order',
+  contract: 'Contract / Legal',
+  sop: 'Knowledge Base / SOP',
+  spreadsheet: 'Spreadsheet / Data Export',
+  meeting: 'Meeting Notes / Reports',
+  general: 'General / Other',
+};
+
+const TYPE_COLORS = {
+  invoice: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  contract: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+  sop: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  spreadsheet: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  meeting: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
+  general: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+};
 
 function UploadScopeModal({
   open,
@@ -202,6 +223,7 @@ function getFileIcon(filename) {
   if (ext === 'pdf') return <FileText size={16} className="text-[#ef4444]" />;
   if (ext === 'docx') return <FileText size={16} className="text-[#3b82f6]" />;
   if (ext === 'csv') return <HardDrive size={16} className="text-[#22c55e]" />;
+  if (ext === 'xlsx' || ext === 'xls') return <Sheet size={16} className="text-[#16a34a]" />;
   return <File size={16} className="text-[#a3a3a3]" />;
 }
 
@@ -220,6 +242,257 @@ function formatDate(ts) {
   } catch { return ts; }
 }
 
+function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, ingesting }) {
+  const [confirmedType, setConfirmedType] = useState(detectionResult?.detected_type || 'general');
+  const [sheetConfigs, setSheetConfigs] = useState([]);
+  const [modalTags, setModalTags] = useState('');
+  const [modalScope, setModalScope] = useState('personal');
+
+  useEffect(() => {
+    if (detectionResult?.sheets) {
+      setSheetConfigs(detectionResult.sheets.map((s) => ({
+        sheet_name: s.sheet_name,
+        confirmed_type: s.detected_type,
+        include: !s.empty && s.row_count > 0,
+        row_count: s.row_count,
+        confidence: s.confidence,
+      })));
+    }
+    if (detectionResult?.detected_type) {
+      setConfirmedType(detectionResult.detected_type);
+    }
+  }, [detectionResult]);
+
+  if (!open || !detectionResult) return null;
+
+  const handleSubmit = () => {
+    onIngest({
+      confirmedType,
+      sheetConfigs: sheetConfigs.length > 0 ? sheetConfigs.filter((s) => s.include) : undefined,
+      tags: modalTags,
+      scope: modalScope,
+      model: detectionResult.model,
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 8, scale: 0.98 }}
+          transition={{ duration: 0.18 }}
+          className="w-full max-w-lg rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)] max-h-[85vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">Document Analysis</h3>
+              <p className="text-[#525252] text-sm mt-1 truncate max-w-[340px]">
+                {detectionResult.filename}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* File info */}
+          <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[#0a0a0a] font-mono text-xs truncate">{detectionResult.filename}</span>
+              <span className="text-[#a3a3a3] text-[11px] font-mono shrink-0 ml-2">
+                {formatBytes(detectionResult.size_bytes || 0)}
+              </span>
+            </div>
+          </div>
+
+          {/* Detected type */}
+          <div className="mb-5">
+            <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
+              Detected Type
+            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs text-[#525252] font-['Space_Grotesk']">
+                {TYPE_LABELS[detectionResult.detected_type] || detectionResult.detected_type}
+                {detectionResult.confidence != null && (
+                  <span className="text-[#a3a3a3] ml-1">({detectionResult.confidence}%)</span>
+                )}
+              </span>
+            </div>
+            <div className="relative">
+              <select
+                value={confirmedType}
+                onChange={(e) => setConfirmedType(e.target.value)}
+                className="w-full appearance-none rounded-[8px] border border-[#e3e0db] px-3 py-2.5 pr-8 text-sm text-[#0a0a0a] font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff]/40 bg-white"
+              >
+                {(detectionResult.available_types || Object.keys(TYPE_LABELS)).map((t) => (
+                  <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Sheets (Excel) */}
+          {sheetConfigs.length > 0 && (
+            <div className="mb-5">
+              <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
+                Sheets
+              </label>
+              <div className="space-y-2">
+                {sheetConfigs.map((sheet, idx) => (
+                  <div key={sheet.sheet_name} className="flex items-center gap-3 rounded-lg border border-[#ece8de] bg-[#faf9f4] px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={sheet.include}
+                      onChange={(e) => {
+                        const next = [...sheetConfigs];
+                        next[idx] = { ...next[idx], include: e.target.checked };
+                        setSheetConfigs(next);
+                      }}
+                      className="rounded border-[#e3e0db] text-[#117dff] focus:ring-[#117dff]/30"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Sheet size={12} className="text-[#525252]" />
+                        <span className="text-xs font-['Space_Grotesk'] text-[#0a0a0a] truncate">{sheet.sheet_name}</span>
+                        <span className="text-[10px] font-mono text-[#a3a3a3]">{sheet.row_count} rows</span>
+                      </div>
+                    </div>
+                    <div className="relative shrink-0">
+                      <select
+                        value={sheet.confirmed_type}
+                        onChange={(e) => {
+                          const next = [...sheetConfigs];
+                          next[idx] = { ...next[idx], confirmed_type: e.target.value };
+                          setSheetConfigs(next);
+                        }}
+                        className="appearance-none rounded border border-[#e3e0db] bg-white pl-2 pr-6 py-1 text-[10px] font-mono text-[#525252] focus:outline-none focus:border-[#117dff]/40"
+                      >
+                        {(detectionResult.available_types || Object.keys(TYPE_LABELS)).map((t) => (
+                          <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Model display */}
+          {detectionResult.model && (
+            <p className="text-[10px] font-mono text-[#a3a3a3] mb-4">
+              Model: {detectionResult.model}
+            </p>
+          )}
+
+          {/* Tags input */}
+          <div className="mb-5">
+            <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
+              Tags
+            </label>
+            <div className="flex items-center gap-2">
+              <Tag size={12} className="text-[#a3a3a3]" />
+              <input
+                type="text"
+                value={modalTags}
+                onChange={(e) => setModalTags(e.target.value)}
+                placeholder="Optional tags (comma-separated)"
+                className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
+              />
+            </div>
+          </div>
+
+          {/* Scope toggle */}
+          <div className="mb-6">
+            <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
+              Scope
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setModalScope('personal')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-['Space_Grotesk'] font-semibold transition-colors ${
+                  modalScope === 'personal'
+                    ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/30'
+                    : 'bg-white text-[#525252] border border-[#e3e0db] hover:bg-[#faf9f4]'
+                }`}
+              >
+                <User size={12} />
+                Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalScope('organization')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-['Space_Grotesk'] font-semibold transition-colors ${
+                  modalScope === 'organization'
+                    ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/30'
+                    : 'bg-white text-[#525252] border border-[#e3e0db] hover:bg-[#faf9f4]'
+                }`}
+              >
+                <Users size={12} />
+                Team
+              </button>
+            </div>
+          </div>
+
+          {/* Reasoning */}
+          {detectionResult.reasoning && (
+            <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
+              <p className="text-[10px] font-mono text-[#a3a3a3] mb-1">Analysis reasoning</p>
+              <p className="text-xs text-[#525252] font-['Space_Grotesk']">{detectionResult.reasoning}</p>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[8px] border border-[#e3e0db] px-4 py-2.5 text-sm font-semibold text-[#525252]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={ingesting}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
+            >
+              {ingesting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Extracting...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  Extract &amp; Ingest
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function KnowledgeBase() {
   const { org } = useAuth();
   const [uploads, setUploads] = useState([]);
@@ -233,18 +506,37 @@ export default function KnowledgeBase() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [justUploadedDocs, setJustUploadedDocs] = useState([]);
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
+  const [smartExtract, setSmartExtract] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+  const [detectionResult, setDetectionResult] = useState(null);
+  const [enterpriseModalOpen, setEnterpriseModalOpen] = useState(false);
+  const [enterpriseIngesting, setEnterpriseIngesting] = useState(false);
+  const [typeFilter, setTypeFilter] = useState('all');
   const fileInputRef = useRef(null);
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
     try {
-      // Fetch uploaded documents by listing memories with document-summary tag
-      const result = await apiClient.listMemories({ tags: 'document-summary', limit: 100 });
-      const mems = result?.memories || [];
+      // Fetch uploaded documents by listing memories with document-summary or schema-record tag
+      const [summaryResult, schemaResult] = await Promise.all([
+        apiClient.listMemories({ tags: 'document-summary', limit: 100 }),
+        apiClient.listMemories({ tags: 'schema-record', limit: 100 }).catch(() => ({ memories: [] })),
+      ]);
+      const summaryMems = summaryResult?.memories || [];
+      const schemaMems = schemaResult?.memories || [];
+      // Merge and deduplicate by id
+      const seenIds = new Set();
+      const allMems = [];
+      for (const m of [...summaryMems, ...schemaMems]) {
+        if (!seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          allMems.push(m);
+        }
+      }
       // Filter to actual document summaries (have metadata.total_chunks or title starts with "Document:")
-      const docs = mems.filter((m) => {
+      const docs = allMems.filter((m) => {
         const meta = m.metadata || {};
         const title = m.title || '';
-        return meta.total_chunks || meta.document_title || title.startsWith('Document:');
+        return meta.total_chunks || meta.document_title || meta.document_type || title.startsWith('Document:');
       });
       // Sort by date descending (newest first)
       return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -253,7 +545,7 @@ export default function KnowledgeBase() {
       try {
         const result = await apiClient.quickSearch('knowledge-base document-summary');
         return (result?.results || result?.memories || []).filter((m) =>
-          (m.tags || []).includes('document-summary')
+          (m.tags || []).includes('document-summary') || (m.tags || []).includes('schema-record')
         );
       } catch {
         return [];
@@ -276,6 +568,17 @@ export default function KnowledgeBase() {
     const combined = [...kbMemories, ...pendingUploads];
     return combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   }, [kbMemories, justUploadedDocs]);
+
+  // Filter documents by type
+  const filteredDocuments = useMemo(() => {
+    if (typeFilter === 'all') return documents;
+    return documents.filter((doc) => {
+      const docType = doc.metadata?.document_type;
+      const typeTag = (doc.tags || []).find((t) => t.startsWith('document_type:'));
+      const tagType = typeTag ? typeTag.split(':')[1] : null;
+      return docType === typeFilter || tagType === typeFilter;
+    });
+  }, [documents, typeFilter]);
 
   // Clear just-uploaded docs once they appear in fetched results
   useEffect(() => {
@@ -392,13 +695,45 @@ export default function KnowledgeBase() {
     setScopeModalOpen(true);
   }, []);
 
-  const handleConfirmUploadScope = useCallback(() => {
+  const handleConfirmUploadScope = useCallback(async () => {
     const project = selectedScope === 'organization' ? (selectedProject || null) : null;
     const files = pendingFiles;
     setScopeModalOpen(false);
     setPendingFiles([]);
-    handleFiles(files, { targetScope: selectedScope, project });
-  }, [handleFiles, pendingFiles, selectedProject, selectedScope]);
+
+    if (smartExtract) {
+      // Enterprise detect flow: process first file through detection
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!ACCEPTED_EXTS.includes(ext)) {
+          setUploads((prev) => [...prev, {
+            id: Date.now() + Math.random(),
+            filename: file.name,
+            status: 'error',
+            error: `Unsupported file type: .${ext}`,
+          }]);
+          continue;
+        }
+        setDetecting(true);
+        try {
+          const result = await apiClient.enterpriseDetect(file);
+          setDetectionResult(result);
+          setEnterpriseModalOpen(true);
+        } catch (err) {
+          setUploads((prev) => [...prev, {
+            id: Date.now() + Math.random(),
+            filename: file.name,
+            status: 'error',
+            error: `Detection failed: ${err.response?.data?.error || err.message}`,
+          }]);
+        } finally {
+          setDetecting(false);
+        }
+      }
+    } else {
+      handleFiles(files, { targetScope: selectedScope, project });
+    }
+  }, [handleFiles, pendingFiles, selectedProject, selectedScope, smartExtract]);
 
   const handleCloseScopeModal = useCallback(() => {
     setScopeModalOpen(false);
@@ -421,6 +756,51 @@ export default function KnowledgeBase() {
   }, []);
 
   const handleDragLeave = useCallback(() => setDragActive(false), []);
+
+  const handleEnterpriseIngest = useCallback(async (options) => {
+    setEnterpriseIngesting(true);
+    try {
+      const result = await apiClient.enterpriseIngest({
+        upload_id: detectionResult.upload_id,
+        confirmed_type: options.confirmedType,
+        sheet_configs: options.sheetConfigs,
+        tags: options.tags || customTags || undefined,
+        targetScope: options.scope || selectedScope,
+        containerTag: (options.scope || selectedScope) === 'organization' ? selectedProject : undefined,
+        model: options.model,
+      });
+      setUploads((prev) => [...prev, {
+        id: Date.now(),
+        filename: detectionResult.filename,
+        status: 'success',
+        chunks: result.memories_queued,
+        documentType: options.confirmedType,
+      }]);
+      setJustUploadedDocs((prev) => [{
+        id: result.job_id,
+        title: result.schema_fields?.[0]?.summary || detectionResult.filename,
+        metadata: {
+          document_type: options.confirmedType,
+          total_chunks: result.memories_queued,
+          filename: detectionResult.filename,
+        },
+        tags: ['enterprise', `document_type:${options.confirmedType}`],
+        created_at: new Date().toISOString(),
+      }, ...prev]);
+      setEnterpriseModalOpen(false);
+      setDetectionResult(null);
+      refetchKb();
+    } catch (err) {
+      setUploads((prev) => [...prev, {
+        id: Date.now(),
+        filename: detectionResult.filename,
+        status: 'error',
+        error: err.response?.data?.error || err.message,
+      }]);
+    } finally {
+      setEnterpriseIngesting(false);
+    }
+  }, [detectionResult, customTags, selectedScope, selectedProject, refetchKb]);
 
   return (
     <div className="min-h-full">
@@ -463,7 +843,7 @@ export default function KnowledgeBase() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.docx,.txt,.md,.csv"
+            accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.xls"
             className="hidden"
             onChange={(e) => {
               if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
@@ -475,7 +855,7 @@ export default function KnowledgeBase() {
             Drop files here or click to upload
           </p>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-            PDF, DOCX, TXT, MD, CSV — max 100MB per file
+            PDF, DOCX, TXT, MD, CSV, XLSX — max 100MB per file
           </p>
           <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
             Files are chunked into semantic sections and stored as searchable memories
@@ -491,7 +871,29 @@ export default function KnowledgeBase() {
             placeholder="Optional tags (comma-separated): project-docs, research, notes..."
             className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
           />
+          <button
+            type="button"
+            onClick={() => setSmartExtract((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold font-['Space_Grotesk'] transition-all shrink-0 ${
+              smartExtract
+                ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/30'
+                : 'bg-white text-[#a3a3a3] border border-[#e3e0db] hover:text-[#525252] hover:border-[#d4d0ca]'
+            }`}
+            title="Smart Extract: auto-detect document type, extract structured data from invoices, contracts, spreadsheets"
+          >
+            <Sparkles size={12} />
+            Smart Extract
+            <div className={`relative w-7 h-4 rounded-full transition-colors ${smartExtract ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${smartExtract ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
         </div>
+        {detecting && (
+          <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-[#117dff]/5 border border-[#117dff]/20">
+            <Loader2 size={12} className="text-[#117dff] animate-spin" />
+            <span className="text-xs font-['Space_Grotesk'] text-[#117dff]">Analyzing document type...</span>
+          </div>
+        )}
       </motion.div>
 
       <UploadScopeModal
@@ -506,6 +908,14 @@ export default function KnowledgeBase() {
         onProjectChange={setSelectedProject}
         onConfirm={handleConfirmUploadScope}
         onClose={handleCloseScopeModal}
+      />
+
+      <EnterpriseDetectModal
+        open={enterpriseModalOpen}
+        onClose={() => { setEnterpriseModalOpen(false); setDetectionResult(null); }}
+        detectionResult={detectionResult}
+        onIngest={handleEnterpriseIngest}
+        ingesting={enterpriseIngesting}
       />
 
       <AnimatePresence>
@@ -548,23 +958,45 @@ export default function KnowledgeBase() {
       </AnimatePresence>
 
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-2 mb-5">
-          <FileText size={16} className="text-[#525252]" />
-          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Documents</h3>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-[#525252]" />
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Documents</h3>
+          </div>
+          <div className="relative">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="appearance-none rounded-lg border border-[#e3e0db] bg-white pl-3 pr-7 py-1.5 text-xs font-['Space_Grotesk'] text-[#525252] focus:outline-none focus:border-[#117dff]/40 cursor-pointer"
+            >
+              <option value="all">All Types</option>
+              {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+          </div>
         </div>
 
         {kbLoading ? (
           <div className="flex items-center justify-center py-10">
             <div className="w-5 h-5 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : documents.length > 0 ? (
+        ) : filteredDocuments.length > 0 ? (
           <div className="space-y-3">
-            {documents.map((doc) => {
+            {filteredDocuments.map((doc) => {
               const meta = doc.metadata || {};
               const srcMeta = doc.source_metadata || {};
+              const docType = meta.document_type || (doc.tags || []).find((t) => t.startsWith('document_type:'))?.split(':')[1];
+              const typeStyle = docType ? TYPE_COLORS[docType] || TYPE_COLORS.general : null;
               return (
                 <div key={doc.id} className="flex items-center gap-4 px-4 py-3 rounded-xl border border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
-                  {getFileIcon(srcMeta.filename || meta.document_title)}
+                  {getFileIcon(srcMeta.filename || meta.filename || meta.document_title)}
+                  {typeStyle && (
+                    <span className={`text-[10px] font-semibold font-['Space_Grotesk'] px-2 py-0.5 rounded-md border shrink-0 ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
+                      {TYPE_LABELS[docType] ? docType.charAt(0).toUpperCase() + docType.slice(1) : docType}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] truncate">
                       {meta.document_title || doc.title || 'Untitled'}
@@ -582,7 +1014,7 @@ export default function KnowledgeBase() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary'].includes(t)).slice(0, 3).map((tag) => (
+                    {(doc.tags || []).filter((t) => !['knowledge-base', 'document', 'document-summary', 'schema-record', 'enterprise'].includes(t) && !t.startsWith('document_type:')).slice(0, 3).map((tag) => (
                       <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                         {tag}
                       </span>
@@ -599,10 +1031,26 @@ export default function KnowledgeBase() {
         ) : (
           <div className="text-center py-10">
             <BookOpen size={28} className="text-[#d4d0ca] mx-auto mb-3" />
-            <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">No documents uploaded yet</p>
-            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-              Upload PDFs, documents, or text files to build your knowledge base
-            </p>
+            {typeFilter !== 'all' && documents.length > 0 ? (
+              <>
+                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">
+                  No {TYPE_LABELS[typeFilter] || typeFilter} documents found
+                </p>
+                <button
+                  onClick={() => setTypeFilter('all')}
+                  className="text-[#117dff] text-xs font-['Space_Grotesk'] hover:underline mt-1"
+                >
+                  Show all documents
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">No documents uploaded yet</p>
+                <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
+                  Upload PDFs, documents, or text files to build your knowledge base
+                </p>
+              </>
+            )}
           </div>
         )}
       </motion.div>
