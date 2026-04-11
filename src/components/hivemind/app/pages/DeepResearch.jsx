@@ -451,6 +451,26 @@ export default function DeepResearch() {
   const textareaRef = useRef(null);
   const panelContentRef = useRef(null);
 
+  /* ── URL Persistence: Update URL when sessionId changes ─────────────────── */
+  useEffect(() => {
+    if (!sessionId) return;
+    const url = new URL(window.location);
+    url.searchParams.set('session', sessionId);
+    window.history.replaceState({}, '', url);
+  }, [sessionId]);
+
+  /* ── Auto-load session if coming from URL on mount ─────────────────────────────── */
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSessionId = urlParams.get('session');
+    if (urlSessionId && !sessionId) {
+      console.log('[DeepResearch] Auto-loading session from URL:', urlSessionId);
+      setSessionId(urlSessionId);
+      setShowPanel(true);
+      setStatus('loading');
+    }
+  }, []); // Only on mount
+
   /* ── Fetch Trail Steps ─────────────────────────────────────────── */
   const fetchTrailSteps = useCallback(async (sid) => {
     try {
