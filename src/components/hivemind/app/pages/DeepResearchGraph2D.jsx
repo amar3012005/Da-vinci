@@ -14,16 +14,18 @@ const LAYER_COLORS = {
   trails: '#9333ea',
   blueprints: '#d97706',
   observations: '#3b82f6',
+  promoted: '#0f766e',
   live: '#f59e0b',
 };
 
-const LAYER_ORDER = ['sources', 'claims', 'trails', 'observations', 'blueprints'];
+const LAYER_ORDER = ['sources', 'claims', 'trails', 'observations', 'promoted', 'blueprints'];
 
 const LAYER_META = {
   sources:      { label: 'Sources',      icon: '◉', z: 4 },
   claims:       { label: 'Claims',       icon: '◇', z: 3 },
   trails:       { label: 'Trails',       icon: '⬡', z: 2 },
   observations: { label: 'Observations', icon: '•', z: 1 },
+  promoted:     { label: 'Promoted',     icon: '✦', z: 1 },
   blueprints:   { label: 'Blueprints',   icon: '◆', z: 0 },
 };
 
@@ -64,42 +66,103 @@ function hashCode(str = '') {
 function buildGraphFromLayers(layers) {
   const nodes = [];
   const links = [];
+  const seenLinks = new Set();
+  const addLink = (source, target, type = 'related', confidence = 0.5) => {
+    if (!source || !target || source === target) return;
+    const key = `${source}|${target}|${type}`;
+    if (seenLinks.has(key)) return;
+    seenLinks.add(key);
+    links.push({ source, target, type, confidence });
+  };
 
   if (layers.sources?.length > 0) {
     layers.sources.forEach((s) => {
       nodes.push({
         id: `source-${s.id}`, title: s.title || s.url || 'Source',
         type: 'source', layer: 'sources', url: s.url,
-        runtime: s.runtime, val: 8,
+        runtime: s.runtime, val: 10,
+        sourceIds: [s.id].filter(Boolean),
       });
     });
   }
   if (layers.claims?.length > 0) {
     layers.claims.forEach((c) => {
+      const sourceIds = [
+        ...(Array.isArray(c.sourceIds) ? c.sourceIds : []),
+        c.source,
+        c.sourceId,
+      ].filter(Boolean);
       nodes.push({
         id: `claim-${c.id}`, title: c.content?.slice(0, 80) || 'Claim',
         type: 'claim', layer: 'claims', confidence: c.confidence,
-        content: c.content, agent: c.agent, val: 8,
+        content: c.content, agent: c.agent, val: 11,
+        sourceIds,
+        trailId: c.trailId || null,
+        observationIds: Array.isArray(c.observationIds) ? c.observationIds : [],
       });
+      sourceIds.forEach((sourceId) => addLink(`claim-${c.id}`, `source-${sourceId}`, 'derived_from', c.confidence ?? 0.7));
     });
   }
   if (layers.trails?.length > 0) {
-    layers.trails.forEach((t) => {
+    layers.trails.forEach((t, idx) => {
+      const sourceIds = [
+        ...(Array.isArray(t.sourceIds) ? t.sourceIds : []),
+        t.sourceId,
+      ].filter(Boolean);
+      const claimIds = [
+        ...(Array.isArray(t.claimIds) ? t.claimIds : []),
+        t.claimId,
+      ].filter(Boolean);
+      const observationIds = [
+        ...(Array.isArray(t.observationIds) ? t.observationIds : []),
+        t.observationId,
+      ].filter(Boolean);
+      const relatedNodeIds = [
+        ...(Array.isArray(t.relatedNodeIds) ? t.relatedNodeIds : []),
+      ].filter(Boolean);
       nodes.push({
         id: `trail-${t.id}`, title: `${t.agent}: ${t.action}`,
         type: 'trail', layer: 'trails', agent: t.agent,
-        action: t.action, val: 6,
+        action: t.action, val: 8,
+        sourceIds,
+        claimIds,
+        observationIds,
+        relatedNodeIds,
+        parentStepId: t.parentStepId || null,
+        relationType: t.relationType || null,
+        reportId: t.reportId || null,
       });
+      if (idx > 0) {
+        const prev = layers.trails[idx - 1];
+        addLink(`trail-${t.id}`, `trail-${prev.id}`, 'sequence', 0.72);
+      }
+      sourceIds.forEach((sourceId) => addLink(`trail-${t.id}`, `source-${sourceId}`, 'used_source', 0.75));
+      claimIds.forEach((claimId) => addLink(`trail-${t.id}`, `claim-${claimId}`, t.relationType || 'derived_from', 0.8));
+      observationIds.forEach((obsId) => addLink(`trail-${t.id}`, `obs-${obsId}`, 'observed', 0.75));
+      relatedNodeIds.forEach((nodeId) => addLink(`trail-${t.id}`, nodeId, 'related', 0.62));
+      if (t.parentStepId) addLink(`trail-${t.id}`, `trail-${t.parentStepId}`, 'sequence', 0.64);
     });
   }
   if (layers.observations?.length > 0) {
     layers.observations.forEach((o) => {
+      const sourceIds = [
+        ...(Array.isArray(o.sourceIds) ? o.sourceIds : []),
+        o.sourceId,
+      ].filter(Boolean);
+      const claimIds = [
+        ...(Array.isArray(o.claimIds) ? o.claimIds : []),
+        o.claimId,
+      ].filter(Boolean);
       nodes.push({
         id: `obs-${o.id}`,
         title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
         type: 'observation', layer: 'observations', agent: o.agent,
-        action: o.action, confidence: o.confidence, val: 6,
+        action: o.action, confidence: o.confidence, val: 8,
+        sourceIds,
+        claimIds,
       });
+      sourceIds.forEach((sourceId) => addLink(`obs-${o.id}`, `source-${sourceId}`, 'found', 0.7));
+      claimIds.forEach((claimId) => addLink(`obs-${o.id}`, `claim-${claimId}`, 'supports', 0.68));
     });
   }
   if (layers.executionEvents?.length > 0) {
@@ -113,14 +176,48 @@ function buildGraphFromLayers(layers) {
   }
   if (layers.blueprints?.length > 0) {
     layers.blueprints.forEach((b) => {
+      const trailIds = [
+        ...(Array.isArray(b.trailIds) ? b.trailIds : []),
+        b.trailId,
+      ].filter(Boolean);
       nodes.push({
         id: `blueprint-${b.blueprintId}`, title: b.name || 'Blueprint',
         type: 'blueprint', layer: 'blueprints', domain: b.domain,
-        timesReused: b.timesReused, val: 10,
+        timesReused: b.timesReused, val: 12,
         patternCount: b.patternCount || (Array.isArray(b.pattern) ? b.pattern.length : 0),
         hasCapturedState: !!b.hasCapturedState,
         capturedStateSummary: b.capturedStateSummary || null,
+        trailIds,
       });
+      trailIds.forEach((trailId) => addLink(`blueprint-${b.blueprintId}`, `trail-${trailId}`, 'used_blueprint', 0.72));
+    });
+  }
+
+  if (layers.promoted?.length > 0) {
+    layers.promoted.forEach((p) => {
+      const sourceIds = [
+        ...(Array.isArray(p.sourceIds) ? p.sourceIds : []),
+      ].filter(Boolean);
+      const claimIds = [
+        ...(Array.isArray(p.claimIds) ? p.claimIds : []),
+      ].filter(Boolean);
+      const trailStepIds = [
+        ...(Array.isArray(p.trailStepIds) ? p.trailStepIds : []),
+      ].filter(Boolean);
+      const recalledMemoryIds = [
+        ...(Array.isArray(p.recalledMemoryIds) ? p.recalledMemoryIds : []),
+      ].filter(Boolean);
+      nodes.push({
+        id: `promoted-${p.id}`, title: p.title || 'Promoted memory',
+        type: 'promoted-memory', layer: 'promoted', confidence: p.confidence,
+        content: p.content, val: 13, reportId: p.reportId || null,
+        goldenLine: p.goldenLine || null, promotedAt: p.promotedAt || null,
+        sourceIds, claimIds, trailStepIds, recalledMemoryIds,
+      });
+      sourceIds.forEach((sourceId) => addLink(`promoted-${p.id}`, `source-${sourceId}`, 'uses', 0.7));
+      claimIds.forEach((claimId) => addLink(`promoted-${p.id}`, `claim-${claimId}`, 'uses', 0.8));
+      trailStepIds.forEach((stepId) => addLink(`promoted-${p.id}`, `trail-${stepId}`, 'recalls', 0.7));
+      recalledMemoryIds.forEach((memoryId) => addLink(`promoted-${p.id}`, memoryId, 'recalls', 0.65));
     });
   }
 
@@ -128,13 +225,34 @@ function buildGraphFromLayers(layers) {
   if (layers.weights?.edges?.length > 0) {
     layers.weights.edges.forEach((edge) => {
       if (nodeIds.has(edge.from) && nodeIds.has(edge.to)) {
-        links.push({
-          source: edge.from, target: edge.to,
-          type: edge.type || 'related', confidence: edge.confidence,
-        });
+        addLink(edge.from, edge.to, edge.type || 'related', edge.confidence);
       }
     });
   }
+
+  // Infer missing structural edges when backend only provides node payloads.
+  const sourcesById = new Set(nodes.filter(n => n.type === 'source').map(n => n.id));
+  const claimsById = new Set(nodes.filter(n => n.type === 'claim').map(n => n.id));
+  const trailsById = new Set(nodes.filter(n => n.type === 'trail').map(n => n.id));
+  const obsById = new Set(nodes.filter(n => n.type === 'observation').map(n => n.id));
+  nodes.forEach((node) => {
+    (node.sourceIds || []).forEach((sourceId) => {
+      const sourceNodeId = `source-${sourceId}`;
+      if (sourcesById.has(sourceNodeId)) addLink(node.id, sourceNodeId, node.type === 'claim' ? 'derived_from' : 'used_source', 0.66);
+    });
+    (node.claimIds || []).forEach((claimId) => {
+      const claimNodeId = `claim-${claimId}`;
+      if (claimsById.has(claimNodeId)) addLink(node.id, claimNodeId, node.type === 'observation' ? 'supports' : 'derived_from', 0.66);
+    });
+    (node.observationIds || []).forEach((obsId) => {
+      const obsNodeId = `obs-${obsId}`;
+      if (obsById.has(obsNodeId)) addLink(node.id, obsNodeId, 'observed', 0.6);
+    });
+    if (node.parentStepId) {
+      const parentId = `trail-${node.parentStepId}`;
+      if (trailsById.has(parentId)) addLink(node.id, parentId, 'sequence', 0.6);
+    }
+  });
 
   return { nodes, links };
 }
@@ -771,6 +889,19 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
     return () => clearTimeout(timer);
   }, [graphData.nodes.length, viewMode, fitRequested]);
 
+  useEffect(() => {
+    if (viewMode !== 'force' || !graphRef.current) return;
+    const charge = graphRef.current.d3Force('charge');
+    if (charge?.strength) charge.strength(-180);
+    const collide = graphRef.current.d3Force('collide');
+    if (collide?.radius) collide.radius((node) => Math.max(10, Math.sqrt(node.val || 6) * 2.2));
+    const center = graphRef.current.d3Force('center');
+    if (center?.x && center?.y) {
+      center.x(dims.w / 2);
+      center.y(dims.h / 2);
+    }
+  }, [viewMode, dims.w, dims.h, graphData.nodes.length]);
+
   // Filtered nodes
   const filteredNodes = useMemo(() => {
     let result = new Set(graphData.nodes.map(n => n.id));
@@ -802,6 +933,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
 
     if (node.layer === 'trails') radius = Math.max(radius * 0.8, 3);
     if (node.layer === 'blueprints') radius = radius * 1.3;
+    if (node.layer === 'promoted') radius = radius * 1.2;
 
     // Glow
     if (!isDimmed) {
@@ -834,6 +966,13 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
       ctx.lineTo(node.x + radius, node.y);
       ctx.lineTo(node.x, node.y + radius);
       ctx.lineTo(node.x - radius, node.y);
+      ctx.closePath();
+    } else if (node.layer === 'promoted') {
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - radius);
+      ctx.lineTo(node.x + radius * 0.85, node.y);
+      ctx.lineTo(node.x, node.y + radius);
+      ctx.lineTo(node.x - radius * 0.85, node.y);
       ctx.closePath();
     } else {
       ctx.beginPath();
@@ -943,6 +1082,13 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
     };
   }, [graphData.nodes]);
 
+  const promotedCounts = useMemo(() => {
+    const promoted = graphData.nodes.filter(node => node.layer === 'promoted');
+    return {
+      total: promoted.length,
+    };
+  }, [graphData.nodes]);
+
   return (
     <div className="h-full bg-gradient-to-b from-[#faf9f4] to-white flex flex-col overflow-hidden relative">
       {showChrome && (
@@ -1035,6 +1181,22 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
             </button>
           )}
 
+          {promotedCounts.total > 0 && (
+            <button
+              onClick={() => setLayerFilter('promoted')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-colors ${
+                layerFilter === 'promoted'
+                  ? 'border-teal-200 bg-teal-50 text-teal-700'
+                  : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373] hover:border-teal-300 hover:text-teal-700'
+              }`}
+              title="Promoted memories retained after synthesis"
+            >
+              <CheckCircle2 size={11} />
+              <span>Promoted</span>
+              <span className="font-mono opacity-80">{promotedCounts.total}</span>
+            </button>
+          )}
+
           {/* Stats */}
           <div className="ml-auto text-[10px] text-[#737373] font-mono">
             {stats.nodes} · {stats.edges}
@@ -1066,12 +1228,12 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
               cooldownTicks={560}
               d3AlphaDecay={0.03}
               d3VelocityDecay={0.45}
-              linkDistance={224}
+              linkDistance={160}
               d3AlphaMin={0.005}
               warmupTicks={80}
-              linkDirectionalParticles={3}
-              linkDirectionalParticleWidth={1.1}
-              linkDirectionalParticleSpeed={0.0024}
+              linkDirectionalParticles={4}
+              linkDirectionalParticleWidth={1.2}
+              linkDirectionalParticleSpeed={0.0034}
               backgroundColor="#fbfaf6"
               width={dims.w}
               height={dims.h}

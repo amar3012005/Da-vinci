@@ -24,11 +24,41 @@ const ACTION_BADGES = {
 };
 
 const AGENT_COLORS = {
+  Faraday: '#117dff',
+  Feynmann: '#9333ea',
+  Turing: '#16a34a',
+  Synthesis: '#d97706',
   Explorer: '#117dff',
   Analyst: '#9333ea',
   Verifier: '#16a34a',
   Synthesizer: '#d97706',
 };
+
+const AGENT_DISPLAY_ALIASES = {
+  faraday: 'Faraday',
+  explorer: 'Faraday',
+  feynmann: 'Feynmann',
+  analyst: 'Feynmann',
+  turing: 'Turing',
+  verifier: 'Turing',
+  synthesis: 'Synthesis',
+  synthesizer: 'Synthesis',
+};
+
+function normalizeAgentDisplay(agent) {
+  if (!agent) return '';
+  const key = String(agent).toLowerCase();
+  return AGENT_DISPLAY_ALIASES[key] || agent;
+}
+
+function normalizeAgentStateMap(states = {}) {
+  const normalized = {};
+  Object.entries(states || {}).forEach(([agent, state]) => {
+    const display = normalizeAgentDisplay(agent);
+    normalized[display.toLowerCase()] = state;
+  });
+  return normalized;
+}
 
 const RUNTIME_BADGES = {
   tavily: { label: 'Tavily', color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', icon: Server },
@@ -81,7 +111,7 @@ function EventCard({ event, index }) {
     switch (event.type) {
       case 'task.reasoning': {
         const badge = ACTION_BADGES[event.action] || ACTION_BADGES.SYNTHESIZE;
-        const agentColor = AGENT_COLORS[event.agent] || '#a3a3a3';
+        const agentColor = AGENT_COLORS[normalizeAgentDisplay(event.agent)] || '#a3a3a3';
         return (
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
@@ -196,7 +226,7 @@ function EventCard({ event, index }) {
           </div>
         );
       case 'task.observation': {
-        const agentColor = AGENT_COLORS[event.agent] || '#9333ea';
+        const agentColor = AGENT_COLORS[normalizeAgentDisplay(event.agent)] || '#9333ea';
         return (
           <div className="flex items-center gap-3">
             <Target size={14} style={{ color: agentColor }} />
@@ -207,7 +237,7 @@ function EventCard({ event, index }) {
         );
       }
       case 'agent.state': {
-        const agentColor = AGENT_COLORS[event.agent] || '#a3a3a3';
+        const agentColor = AGENT_COLORS[normalizeAgentDisplay(event.agent)] || '#a3a3a3';
         const stateIcon = event.state === 'active' ? <Loader2 size={14} className="animate-spin" /> :
                          event.state === 'completed' ? <CheckCircle2 size={14} /> :
                          <Globe size={14} />;
@@ -232,7 +262,7 @@ function EventCard({ event, index }) {
             <span className="text-[10px] text-gray-400 uppercase tracking-wider">Agent Status</span>
             <div className="flex items-center gap-3">
               {Object.entries(states).map(([agent, state]) => {
-                const color = AGENT_COLORS[agent] || '#a3a3a3';
+                const color = AGENT_COLORS[normalizeAgentDisplay(agent)] || '#a3a3a3';
                 return (
                   <div key={agent} className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color, opacity: state === 'active' ? 1 : state === 'completed' ? 0.8 : 0.3 }} />
@@ -415,6 +445,7 @@ export default function DeepResearch() {
     trails: true,
     observations: true,      // NEW: Real-time observations
     executionEvents: true,   // NEW: Execution events
+    promoted: true,
     blueprints: true,
   });
   const [csiNodes, setCsiNodes] = useState([]); // CSI analysis nodes
@@ -443,6 +474,9 @@ export default function DeepResearch() {
   // Process panel state
   // eslint-disable-next-line no-unused-vars
   const [trailSteps, setTrailSteps] = useState([]);
+  const [trailDiagnostics, setTrailDiagnostics] = useState(null);
+  const [reportProvenance, setReportProvenance] = useState(null);
+  const [goldenLine, setGoldenLine] = useState('');
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);
   const [activeGoal, setActiveGoal] = useState('');
@@ -450,6 +484,9 @@ export default function DeepResearch() {
   const eventsEndRef = useRef(null);
   const textareaRef = useRef(null);
   const panelContentRef = useRef(null);
+  const latestEvents = events.slice(0, 6);
+  const retainedMemoryCount = reportProvenance?.recalledMemoryIds?.length || 0;
+  const reportInfluencedByRetention = retainedMemoryCount > 0 || (trailDiagnostics?.source_path || '').includes('trail_store_memories');
 
   /* ── URL Persistence: Update URL when sessionId changes ─────────────────── */
   useEffect(() => {
@@ -475,6 +512,9 @@ export default function DeepResearch() {
     try {
       const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/trail`);
       setTrailSteps(Array.isArray(data) ? data : data?.trail || []);
+      setTrailDiagnostics(data?.trail_diagnostics || data?.diagnostics || null);
+      setReportProvenance(data?.reportProvenance || data?.trail?.reportProvenance || data?.result?.reportProvenance || null);
+      setGoldenLine(data?.goldenLine || data?.trail?.goldenLine || data?.result?.goldenLine || '');
       if (data?.tasks) {
         setSubgoals(data.tasks.map((t, i) => ({
           id: t.id || i,
@@ -581,9 +621,43 @@ export default function DeepResearch() {
         });
       }
 
+      if (graphLayers.promoted && layers.promoted) {
+        layers.promoted.forEach((mem, idx) => {
+          nodes.push({
+            id: `promoted-${mem.id || idx}`,
+            type: 'promoted-memory',
+            title: mem.title || 'Promoted memory',
+            content: mem.content,
+            confidence: mem.confidence,
+            val: 11,
+            color: '#0f766e',
+            reportId: mem.reportId || null,
+            goldenLine: mem.goldenLine || null,
+          });
+          (mem.claimIds || []).forEach((claimId) => {
+            links.push({
+              source: `promoted-${mem.id || idx}`,
+              target: `claim-${claimId}`,
+              type: 'uses',
+              color: '#0f766e40',
+            });
+          });
+          (mem.sourceIds || []).forEach((sourceId) => {
+            links.push({
+              source: `promoted-${mem.id || idx}`,
+              target: `source-${sourceId}`,
+              type: 'uses',
+              color: '#0f766e40',
+            });
+          });
+        });
+      }
+
       // NEW: Observations layer (real-time findings from agent actions)
       if (graphLayers.observations && layers.observations) {
         layers.observations.forEach((obs, idx) => {
+          const obsAgent = String(obs.agent || '').toLowerCase();
+          const normalizedObsAgent = obsAgent === 'explorer' ? 'faraday' : obsAgent === 'analyst' ? 'feynmann' : obsAgent === 'verifier' ? 'turing' : obsAgent;
           nodes.push({
             id: `obs-${obs.id || idx}`,
             type: 'observation',
@@ -595,7 +669,7 @@ export default function DeepResearch() {
             sourceId: obs.sourceId,
             confidence: obs.confidence,
             val: 7,
-            color: obs.agent === 'explorer' ? '#3b82f6' : obs.agent === 'analyst' ? '#10b981' : obs.agent === 'verifier' ? '#f59e0b' : '#8b5cf6',
+            color: normalizedObsAgent === 'faraday' ? '#3b82f6' : normalizedObsAgent === 'feynmann' ? '#10b981' : normalizedObsAgent === 'turing' ? '#f59e0b' : '#8b5cf6',
             createdAt: obs.createdAt,
             isLive: Date.now() - new Date(obs.createdAt).getTime() < 5000, // Mark as live if < 5 seconds old
           });
@@ -788,11 +862,12 @@ export default function DeepResearch() {
         setEvents(prev => [...prev, event]);
 
         if (event.type === 'agent.states' && event.states) {
-          setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
+          setAgentStates(prev => ({ ...prev, [event.taskId]: normalizeAgentStateMap(event.states) }));
         } else if (event.type === 'agent.state') {
+          const agentKey = normalizeAgentDisplay(event.agent || event.agent_id || '').toLowerCase();
           setAgentStates(prev => ({
             ...prev,
-            [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
+            [event.taskId]: { ...(prev[event.taskId] || {}), [agentKey]: event.state }
           }));
         }
 
@@ -883,11 +958,12 @@ export default function DeepResearch() {
           const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
           agentStateEvents.forEach(event => {
             if (event.type === 'agent.states' && event.states) {
-              setAgentStates(prev => ({ ...prev, [event.taskId]: event.states }));
+              setAgentStates(prev => ({ ...prev, [event.taskId]: normalizeAgentStateMap(event.states) }));
             } else if (event.type === 'agent.state') {
+              const agentKey = normalizeAgentDisplay(event.agent || event.agent_id || '').toLowerCase();
               setAgentStates(prev => ({
                 ...prev,
-                [event.taskId]: { ...(prev[event.taskId] || {}), [event.agent]: event.state }
+                [event.taskId]: { ...(prev[event.taskId] || {}), [agentKey]: event.state }
               }));
             }
           });
@@ -955,15 +1031,15 @@ export default function DeepResearch() {
     if (events.length === 0) return;
     const newAgentStates = {};
     const actionToAgent = {
-      SEARCH_WEB: 'Explorer',
-      SEARCH_MEMORY: 'Explorer',
-      READ_URL: 'Explorer',
-      SYNTHESIZE: 'Analyst',
-      FINISH: 'Synthesizer',
+      SEARCH_WEB: 'Faraday',
+      SEARCH_MEMORY: 'Feynmann',
+      READ_URL: 'Faraday',
+      SYNTHESIZE: 'Synthesis',
+      FINISH: 'Synthesis',
     };
     events.forEach((event) => {
       if (event.type === 'task.reasoning' && event.action) {
-        const agent = actionToAgent[event.action] || 'Verifier';
+        const agent = actionToAgent[event.action] || 'Turing';
         newAgentStates[agent] = {
           status: 'active',
           lastAction: event.action,
@@ -971,7 +1047,7 @@ export default function DeepResearch() {
         };
       }
     });
-    ['Explorer', 'Analyst', 'Verifier', 'Synthesizer'].forEach((agent) => {
+    ['Faraday', 'Feynmann', 'Turing', 'Synthesis'].forEach((agent) => {
       if (!newAgentStates[agent]) {
         newAgentStates[agent] = { status: 'idle' };
       }
@@ -1103,6 +1179,17 @@ export default function DeepResearch() {
       alert('Failed to save as blueprint: ' + (e.response?.data?.error || e.message));
     }
   }, [sessionId, query]);
+
+  const handlePromoteResearchToMemory = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const { data } = await apiClient.controlPlane.post(`/v1/proxy/research/${sessionId}/promote-memory`, {});
+      alert(`Promoted ${data.promotedCount || 0} claims into durable memory`);
+    } catch (e) {
+      console.error('Failed to promote research to memory:', e);
+      alert('Failed to promote memory: ' + (e.response?.data?.error || e.message));
+    }
+  }, [sessionId]);
 
   const handleRerunFromBlueprint = useCallback(async (blueprintOrId, baseQuery) => {
     try {
@@ -1326,36 +1413,144 @@ export default function DeepResearch() {
       {/* Main Layout - Side by Side */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Chat/Content Area */}
-        <div className="flex-1 flex flex-col items-center justify-start pt-10 sm:pt-16 px-4 sm:px-6 pb-6 overflow-y-auto">
-          <div className="w-full max-w-2xl xl:max-w-[44rem]">
-
-            {/* Welcome State - Only show when idle */}
-            {status === 'idle' && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center mb-6 sm:mb-8"
-              >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#117dff]/10 to-[#9333ea]/10 flex items-center justify-center">
-                  <Search size={24} className="sm:w-[28px] sm:h-[28px] text-[#117dff]" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-[#0a0a0a] font-['Space_Grotesk'] mb-3 px-4">
-                  What would you like to research?
-                </h2>
-                <p className="text-sm sm:text-base text-[#525252] max-w-md mx-auto px-4">
-                  Ask anything. HIVEMIND searches the web, analyzes sources, and synthesizes comprehensive reports.
-                </p>
-              </motion.div>
-            )}
-
-            {/* ── Search Input - Always visible, moved down ───────── */}
+        <div className="flex-1 flex flex-col justify-start pt-6 sm:pt-8 px-4 sm:px-6 pb-6 overflow-y-auto">
+          <div className="w-full max-w-[58rem]">
             <motion.div
               layout
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full mt-12"
+              className="space-y-4"
             >
-              <div className="bg-white rounded-2xl border border-[#e3e0db] overflow-hidden shadow-lg">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Current brief</p>
+                  <p className="mt-2 text-sm text-[#0a0a0a] leading-relaxed line-clamp-3">
+                    {activeGoal || query || 'Start a research question to build a live evidence graph, trail, and report workspace.'}
+                  </p>
+                </div>
+                <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Run status</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${
+                      status === 'running' ? 'bg-[#117dff] animate-pulse' :
+                      status === 'completed' ? 'bg-[#16a34a]' :
+                      status === 'failed' ? 'bg-[#dc2626]' :
+                      'bg-[#a3a3a3]'
+                    }`} />
+                    <p className="text-sm text-[#0a0a0a] capitalize">{status}</p>
+                  </div>
+                  <p className="mt-2 text-[11px] text-[#737373]">
+                    {confidence ? `${(confidence * 100).toFixed(0)}% confidence` : 'Waiting for a run'}
+                    {durationMs ? ` · ${(durationMs / 1000).toFixed(1)}s` : ''}
+                  </p>
+                  {reportInfluencedByRetention && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0f766e]/10 text-[#0f766e] text-[10px] font-medium">
+                      <Award size={10} />
+                      Retained memory influenced this run
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Graph layers</p>
+                  <p className="mt-2 text-sm text-[#0a0a0a]">
+                    {Object.entries(graphLayers).filter(([, enabled]) => enabled).length} visible
+                    <span className="text-[#737373]"> / {Object.keys(graphLayers).length}</span>
+                  </p>
+                  <p className="mt-2 text-[11px] text-[#737373]">Sources, claims, trails, observations, events, blueprints</p>
+                </div>
+              </div>
+
+              {status === 'idle' && (
+                <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] items-start">
+                  <div className="bg-white rounded-[1.5rem] border border-[#e3e0db] overflow-hidden shadow-lg">
+                    <div className="px-5 py-4 border-b border-[#e3e0db] bg-gradient-to-b from-[#faf9f4] to-white">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-[#117dff]/10 flex items-center justify-center">
+                          <Search size={22} className="text-[#117dff]" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Deep Research workspace</h2>
+                          <p className="text-sm text-[#525252]">Ask a question, then track sources, claims, trails, and the generated report in one place.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <textarea
+                        ref={textareaRef}
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="What would you like to research?"
+                        rows={4}
+                        className="w-full bg-transparent text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] resize-none focus:outline-none leading-relaxed font-mono min-h-[120px]"
+                        disabled={status === 'running'}
+                      />
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#e3e0db]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-3 py-1.5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff] text-xs font-medium">
+                            Live graph + provenance
+                          </span>
+                          <span className="px-3 py-1.5 rounded-full bg-[#d97706]/10 border border-[#d97706]/20 text-[#d97706] text-xs font-medium">
+                            Blueprint-aware
+                          </span>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(17,125,255,0.3)' }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleSubmit}
+                          disabled={!query.trim() || status === 'running'}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
+                        >
+                          {status === 'running' ? (
+                            <><Loader2 size={14} className="animate-spin" /><span className="hidden sm:inline">Running...</span></>
+                          ) : (
+                            <><span className="hidden sm:inline">Start Research</span><ArrowUp size={14} /></>
+                          )}
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">What this page does</p>
+                      <ul className="mt-3 space-y-2 text-sm text-[#525252] leading-relaxed">
+                        <li>Builds a live evidence graph from sources, claims, trails, and blueprints.</li>
+                        <li>Surfaces agent states and event timeline while research is running.</li>
+                        <li>Turns completed runs into reusable blueprints and report provenance.</li>
+                      </ul>
+                    </div>
+                    {sessions.length > 0 && (
+                      <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Recent sessions</p>
+                        <div className="mt-3 space-y-2 max-h-52 overflow-y-auto">
+                          {sessions.slice(0, 4).map((s) => (
+                            <button
+                              key={s.id || s.session_id}
+                              onClick={() => loadSession(s.id || s.session_id)}
+                              className="w-full text-left px-3 py-2 rounded-lg border border-[#e3e0db] hover:border-[#117dff]/30 hover:bg-[#faf9f4] transition-colors"
+                            >
+                              <p className="text-sm text-[#0a0a0a] truncate">{s.query || 'Untitled'}</p>
+                              <p className="text-[10px] text-[#737373] mt-0.5">
+                                {s.createdAt ? new Date(s.createdAt).toLocaleDateString() : ''}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Search Input - Always visible ───────── */}
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`w-full ${status === 'idle' ? 'mt-2' : 'mt-3'}`}
+              >
+                <div className="bg-white rounded-2xl border border-[#e3e0db] overflow-hidden shadow-lg">
                 {/* macOS-style traffic lights */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e3e0db] bg-gradient-to-b from-[#faf9f4] to-white">
                   <div className="flex items-center gap-1.5">
@@ -1384,7 +1579,7 @@ export default function DeepResearch() {
                   />
                   
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#e3e0db]">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                       {status === 'running' && (
                         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff] text-xs font-medium">
                           <Loader2 size={12} className="animate-spin" />
@@ -1422,8 +1617,8 @@ export default function DeepResearch() {
                     </motion.button>
                   </div>
                 </div>
-              </div>
-            </motion.div>
+                </div>
+              </motion.div>
 
             {/* Error State */}
             {status === 'failed' && error && (
@@ -1435,7 +1630,104 @@ export default function DeepResearch() {
                 <AlertCircle size={20} className="text-[#dc2626] mx-auto mb-2" />
                 <p className="text-sm text-[#dc2626]">{error}</p>
               </motion.div>
+              )}
+            {status !== 'idle' && (
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Live trail</p>
+                      <p className="text-sm text-[#0a0a0a] mt-1">Newest research events and agent transitions.</p>
+                    </div>
+                    <button
+                      onClick={() => setShowPanel(true)}
+                      className="px-3 py-1.5 rounded-lg bg-[#117dff]/10 text-[#117dff] text-xs font-medium hover:bg-[#117dff]/15 transition-colors"
+                    >
+                      Open panel
+                    </button>
+                  </div>
+                  <div className="mt-4 space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {latestEvents.length > 0 ? latestEvents.map((event, i) => (
+                      <EventCard key={`${event.type}-${i}`} event={event} index={i} />
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-[#e3e0db] px-4 py-8 text-center text-sm text-[#737373]">
+                        Events will appear here as the run progresses.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Progress</p>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">Findings</p>
+                        <p className="mt-1 text-lg font-semibold text-[#0a0a0a]">{findings.length}</p>
+                      </div>
+                      <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">Budget</p>
+                        <p className="mt-1 text-lg font-semibold text-[#0a0a0a]">
+                          {webUsage?.llm_calls?.used != null && webUsage?.llm_calls?.limit != null
+                            ? `${webUsage.llm_calls.used}/${webUsage.llm_calls.limit}`
+                            : '100 max'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Current agents</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {['Faraday', 'Feynmann', 'Turing', 'Synthesis'].map((agent) => {
+                        const color = AGENT_COLORS[agent];
+                        const latestTaskId = Object.keys(agentStates).pop();
+                        const state = latestTaskId ? agentStates[latestTaskId][agent.toLowerCase()] : 'idle';
+                        return (
+                          <div key={agent} className="flex items-center gap-2 rounded-xl border border-[#e3e0db] px-3 py-2">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color, opacity: state === 'active' ? 1 : 0.35 }} />
+                            <div>
+                              <p className="text-xs text-[#0a0a0a]">{agent}</p>
+                              <p className="text-[10px] text-[#737373] capitalize">{state || 'idle'}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {(trailDiagnostics || goldenLine) && (
+                    <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Synthesis gate</p>
+                      {trailDiagnostics && (
+                        <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                          <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-[#737373]">Trail source</p>
+                            <p className="mt-1 text-[#0a0a0a]">{trailDiagnostics.source_path || 'unknown'}</p>
+                          </div>
+                          <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-[#737373]">Steps</p>
+                            <p className="mt-1 text-[#0a0a0a]">{trailDiagnostics.total_step_count ?? trailSteps.length}</p>
+                          </div>
+                          <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-[#737373]">Trails</p>
+                            <p className="mt-1 text-[#0a0a0a]">{trailDiagnostics.trail_count ?? 0}</p>
+                          </div>
+                          <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
+                            <p className="text-[10px] uppercase tracking-wider text-[#737373]">Provenance nodes</p>
+                            <p className="mt-1 text-[#0a0a0a]">{reportProvenance?.nodeIds?.length ?? reportProvenance?.reportNodes?.length ?? 0}</p>
+                          </div>
+                        </div>
+                      )}
+                      {goldenLine && (
+                        <pre className="mt-3 max-h-56 overflow-y-auto rounded-xl bg-[#0a0a0a] text-[#e5e7eb] border border-[#1f2937] p-3 text-[10px] leading-relaxed whitespace-pre-wrap">
+                          {goldenLine}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
+            </motion.div>
           </div>
         </div>
 
@@ -1564,7 +1856,8 @@ export default function DeepResearch() {
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(AGENT_COLORS).map(([agent, color]) => {
+                          {['Faraday', 'Feynmann', 'Turing', 'Synthesis'].map((agent) => {
+                            const color = AGENT_COLORS[agent];
                             // Get latest state from any task
                             const latestTaskId = Object.keys(agentStates).pop();
                             const state = latestTaskId ? agentStates[latestTaskId][agent.toLowerCase()] : 'idle';
@@ -1589,7 +1882,7 @@ export default function DeepResearch() {
                           })}
                         </div>
                         <p className="text-[10px] text-[#a3a3a3] mt-2 leading-relaxed">
-                          Four specialized CSI agents work together: Explorer gathers sources, Analyst extracts claims, Verifier checks quality, and Synthesizer combines findings.
+                          CSI workers coordinate through shared graph traces: Faraday explores sources, Feynmann extracts claims, Turing verifies them, and Synthesis composes the report.
                         </p>
                       </div>
 
@@ -1676,13 +1969,36 @@ export default function DeepResearch() {
                               </button>
                             </div>
                           </div>
-                          <div className="p-6 max-h-96 overflow-y-auto">
-                            <div
-                              className="text-[#525252] leading-relaxed space-y-3"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdown(report) }}
-                            />
-                          </div>
+                        <div className="p-6 max-h-96 overflow-y-auto">
+                          <div
+                            className="text-[#525252] leading-relaxed space-y-3"
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(report) }}
+                          />
                         </div>
+                        {reportProvenance && (
+                          <div className="border-t border-[#e3e0db] bg-[#faf9f4] p-4">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Report provenance</p>
+                            <div className="mt-3 grid gap-2 text-xs text-[#525252] sm:grid-cols-2">
+                              <div>Claims: {reportProvenance.claimIds?.length || 0}</div>
+                              <div>Sources: {reportProvenance.sourceIds?.length || 0}</div>
+                              <div>Trail steps: {reportProvenance.trailStepIds?.length || 0}</div>
+                              <div>Recalled memories: {reportProvenance.recalledMemoryIds?.length || 0}</div>
+                            </div>
+                            {reportInfluencedByRetention && (
+                              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0f766e]/10 text-[#0f766e] text-[10px] font-medium">
+                                <Award size={10} />
+                                Report reuses retained memory
+                              </div>
+                            )}
+                            <button
+                              onClick={handlePromoteResearchToMemory}
+                              className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#16a34a]/10 text-[#16a34a] text-xs font-medium hover:bg-[#16a34a]/15 transition-colors"
+                            >
+                              Promote report to memory
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-[#525252]">
                           <Loader2 size={32} className="animate-spin text-[#117dff] mb-3" />
@@ -1753,14 +2069,23 @@ export default function DeepResearch() {
                                 <span className="hidden sm:inline">Observations</span>
                               </button>
                               <button
-                                onClick={() => setGraphLayers(prev => ({ ...prev, executionEvents: !prev.executionEvents }))}
-                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
+                              onClick={() => setGraphLayers(prev => ({ ...prev, executionEvents: !prev.executionEvents }))}
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
                                   graphLayers.executionEvents ? 'bg-[#059669]/10 text-[#059669]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
-                                }`}
-                              >
-                                <Activity size={10} />
-                                <span className="hidden sm:inline">Events</span>
-                              </button>
+                              }`}
+                            >
+                              <Activity size={10} />
+                              <span className="hidden sm:inline">Events</span>
+                            </button>
+                            <button
+                              onClick={() => setGraphLayers(prev => ({ ...prev, promoted: !prev.promoted }))}
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-all flex-shrink-0 ${
+                                graphLayers.promoted ? 'bg-[#0f766e]/10 text-[#0f766e]' : 'text-[#a3a3a3] hover:bg-[#f3f1ec]'
+                              }`}
+                            >
+                              <Award size={10} />
+                              <span className="hidden sm:inline">Promoted</span>
+                            </button>
                               </div>
                             </div>
                             <div className="flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap flex-shrink-0">
