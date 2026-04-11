@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUp, Sparkles, History,
   Loader2, Search, CheckCircle2, BookOpen, Brain,
@@ -402,9 +402,10 @@ export default function DeepResearch() {
   // Sliding panel state
   const [showPanel, setShowPanel] = useState(false);
   const [panelTab, setPanelTab] = useState('status'); // 'status' | 'report' | 'graph'
-  const [panelSize, setPanelSize] = useState('large'); // 'compact' | 'medium' | 'large'
+  const [panelWidth, setPanelWidth] = useState(420); // Custom width in px (resize handle on left)
+  const [isResizing, setIsResizing] = useState(false);
+  const [detachedWindow, setDetachedWindow] = useState(null);
   const panelRef = useRef(null);
-  const panelDragControls = useDragControls();
 
   // Graph state
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -1115,13 +1116,101 @@ export default function DeepResearch() {
     }
   }, [handleRerunFromBlueprint]);
 
-  const togglePanelSize = useCallback(() => {
-    setPanelSize(prev => prev === 'compact' ? 'medium' : prev === 'medium' ? 'large' : 'compact');
+  const handlePanelResizeStart = useCallback(() => {
+    setIsResizing(true);
   }, []);
 
+  const handlePanelResizeMove = useCallback((e) => {
+    if (!isResizing) return;
+    const newWidth = Math.max(300, Math.min(window.innerWidth - 100, window.innerWidth - e.clientX));
+    setPanelWidth(newWidth);
+  }, [isResizing]);
+
+  const handlePanelResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    document.addEventListener('mousemove', handlePanelResizeMove);
+    document.addEventListener('mouseup', handlePanelResizeEnd);
+    return () => {
+      document.removeEventListener('mousemove', handlePanelResizeMove);
+      document.removeEventListener('mouseup', handlePanelResizeEnd);
+    };
+  }, [isResizing, handlePanelResizeMove, handlePanelResizeEnd]);
+
+  const handleDetachPanel = useCallback(() => {
+    const width = 700;
+    const height = 800;
+    const left = window.screenX + window.outerWidth - width - 20;
+    const top = window.screenY + 50;
+
+    const detached = window.open(
+      '',
+      'DeepResearchPanel',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no`
+    );
+
+    if (detached) {
+      detached.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Deep Research - ${panelTab.charAt(0).toUpperCase() + panelTab.slice(1)}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              background: #faf9f4;
+              color: #0a0a0a;
+            }
+            .container { height: 100vh; display: flex; flex-direction: column; }
+            .header {
+              padding: 12px 16px;
+              border-bottom: 1px solid #e3e0db;
+              background: #faf9f4;
+              font-size: 12px;
+              font-weight: 500;
+              color: #525252;
+            }
+            .content {
+              flex: 1;
+              overflow-y: auto;
+              padding: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">Deep Research - ${panelTab.toUpperCase()} (Detached)</div>
+            <div class="content" id="content">
+              <p style="text-align: center; padding: 20px; color: #a3a3a3;">Loading...</p>
+            </div>
+          </div>
+          <script>
+            // Update content from parent
+            const updateContent = () => {
+              const content = sessionStorage.getItem('deepResearchPanelContent');
+              if (content) {
+                document.getElementById('content').innerHTML = content;
+              }
+            };
+            updateContent();
+            setInterval(updateContent, 500);
+          </script>
+        </body>
+        </html>
+      `);
+      detached.document.close();
+      setDetachedWindow(detached);
+    }
+  }, [panelTab]);
+
   /* ─── Render ───────────────────────────────────────────────────── */
-  const panelWidthClasses = { compact: 'w-full sm:w-[350px]', medium: 'w-full sm:w-[450px]', large: 'w-full sm:w-[550px]' };
-  const panelWidthValues = { compact: 350, medium: 450, large: 550 };
+  // Panel uses dynamic width from panelWidth state now (set via resize handle)
   const isResearchActive = status === 'running' || status === 'completed';
 
   // Graph shows only core research layers: sources, claims, trails, blueprints
@@ -1332,25 +1421,24 @@ export default function DeepResearch() {
               <motion.div
                 ref={panelRef}
                 initial={{ width: 0, opacity: 0 }}
-                animate={{ width: panelWidthValues[panelSize], opacity: 1 }}
+                animate={{ width: panelWidth, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-                className={`flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40 ${panelWidthClasses[panelSize]}`}
-                style={{ minWidth: 0, maxWidth: '100%' }}
-                drag="x"
-                dragControls={panelDragControls}
-                dragConstraints={{ left: -400, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(event, info) => {
-                  if (info.offset.x < -100) {
-                    setShowPanel(false);
-                  }
-                }}
+                className="flex-none bg-white border-l border-[#e3e0db] shadow-lg flex flex-col overflow-hidden relative z-40"
+                style={{ minWidth: 0, maxWidth: '100%', width: panelWidth }}
               >
+              {/* Resize Handle (Left Edge) */}
+              <div
+                onMouseDown={handlePanelResizeStart}
+                className={`absolute left-0 top-0 w-1 h-full bg-[#e3e0db] hover:bg-[#117dff] transition-colors cursor-col-resize z-50 ${
+                  isResizing ? 'bg-[#117dff]' : ''
+                }`}
+                title="Drag to resize panel"
+              />
+
               {/* Panel Header */}
               <div
-                className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4] cursor-grab active:cursor-grabbing"
-                onPointerDown={(e) => panelDragControls.start(e)}
+                className="flex-none flex items-center justify-between px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-6 rounded-full bg-[#d1cfc6] opacity-50 flex-shrink-0" />
@@ -1391,19 +1479,19 @@ export default function DeepResearch() {
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* Panel Size Toggle */}
+                  {/* Detach Button */}
                   <button
-                    onClick={togglePanelSize}
-                    className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252]"
-                    title="Resize panel"
+                    onClick={handleDetachPanel}
+                    className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252] transition-colors"
+                    title="Open panel in detached window"
                   >
-                    {panelSize === 'compact' && <ChevronUp size={14} />}
-                    {panelSize === 'medium' && <PanelTop size={14} />}
-                    {panelSize === 'large' && <ChevronDown size={14} />}
+                    <ExternalLink size={14} />
                   </button>
+                  {/* Close Button */}
                   <button
                     onClick={() => setShowPanel(false)}
-                    className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252]"
+                    className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252] transition-colors"
+                    title="Close panel"
                   >
                     <X size={16} />
                   </button>
