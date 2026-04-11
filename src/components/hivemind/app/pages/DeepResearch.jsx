@@ -9,7 +9,7 @@ import {
   Layers, Scroll, Award, Eye, Activity,
   Server, FileText, Save, RotateCcw,
   ChevronUp, ChevronDown, PanelTop,
-  ExternalLink,
+  ExternalLink, RefreshCw,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DeepResearchGraph2D from './DeepResearchGraph2D';
@@ -423,6 +423,8 @@ export default function DeepResearch() {
   const [durationMs, setDurationMs] = useState(0);
   const [confidence, setConfidence] = useState(0);
   const [fromCache, setFromCache] = useState(false);
+  const [fromBlueprint, setFromBlueprint] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [projectId, setProjectId] = useState(null);
   const [sessions, setSessions] = useState([]);
@@ -1188,6 +1190,29 @@ export default function DeepResearch() {
     } catch (e) {
       console.error('Failed to promote research to memory:', e);
       alert('Failed to promote memory: ' + (e.response?.data?.error || e.message));
+    }
+  }, [sessionId]);
+
+  // Resume: synthesize final report from blueprint recall (no new web search)
+  const handleSynthesizeFromBlueprint = useCallback(async (blueprintId) => {
+    if (!sessionId) return;
+    setIsSynthesizing(true);
+    setPanelTab('report');
+    try {
+      const { data } = await apiClient.controlPlane.post(
+        `/v1/proxy/research/${sessionId}/synthesize-from-blueprint`,
+        blueprintId ? { blueprintId } : {}
+      );
+      setReport(data.report);
+      setFindings(data.findings || []);
+      setFromBlueprint(true);
+      setFromCache(false);
+      console.log('[DeepResearch] Synthesized from blueprint:', data.findingCount, 'findings,', data.sourceCount, 'sources');
+    } catch (e) {
+      console.error('Failed to synthesize from blueprint:', e);
+      alert('Failed to synthesize from blueprint: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setIsSynthesizing(false);
     }
   }, [sessionId]);
 
@@ -1958,7 +1983,22 @@ export default function DeepResearch() {
                             {fromCache && (
                               <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-[10px] font-medium">Cached</span></>
                             )}
+                            {fromBlueprint && (
+                              <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-[10px] font-medium">From Blueprint</span></>
+                            )}
                             <div className="ml-auto flex items-center gap-2">
+                              {/* Resume: re-synthesize report from stored blueprint recall */}
+                              {(status === 'completed' || status === 'interrupted') && (
+                                <button
+                                  onClick={() => handleSynthesizeFromBlueprint()}
+                                  disabled={isSynthesizing}
+                                  className="flex items-center gap-1 px-2 py-1 rounded bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-[10px] font-medium hover:bg-[#9333ea]/20 transition-colors disabled:opacity-50"
+                                  title="Re-synthesize report from stored claims, sources and trails (no new web search)"
+                                >
+                                  {isSynthesizing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                                  {isSynthesizing ? 'Synthesizing...' : 'Resume from Blueprint'}
+                                </button>
+                              )}
                               <button
                                 onClick={handleSaveAsBlueprint}
                                 className="flex items-center gap-1 px-2 py-1 rounded bg-[#d97706]/10 border border-[#d97706]/20 text-[#d97706] text-[10px] font-medium hover:bg-[#d97706]/20 transition-colors"
@@ -2000,9 +2040,36 @@ export default function DeepResearch() {
                         )}
                       </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-[#525252]">
-                          <Loader2 size={32} className="animate-spin text-[#117dff] mb-3" />
-                          <p className="text-sm">Generating report...</p>
+                        <div className="flex flex-col items-center justify-center h-full text-[#525252] gap-4">
+                          {isSynthesizing ? (
+                            <>
+                              <Loader2 size={32} className="animate-spin text-[#9333ea]" />
+                              <p className="text-sm">Synthesizing from blueprint recall...</p>
+                              <p className="text-xs text-[#a3a3a3]">Recalling stored claims, sources and trails</p>
+                            </>
+                          ) : status === 'completed' || status === 'interrupted' ? (
+                            <>
+                              <div className="w-12 h-12 rounded-full bg-[#9333ea]/10 flex items-center justify-center">
+                                <RefreshCw size={20} className="text-[#9333ea]" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-medium">No report generated yet</p>
+                                <p className="text-xs text-[#a3a3a3] mt-1">Synthesize from stored claims and sources</p>
+                              </div>
+                              <button
+                                onClick={() => handleSynthesizeFromBlueprint()}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#9333ea] text-white text-sm font-medium hover:bg-[#7c3aed] transition-colors"
+                              >
+                                <RefreshCw size={14} />
+                                Resume from Blueprint
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <Loader2 size={32} className="animate-spin text-[#117dff]" />
+                              <p className="text-sm">Generating report...</p>
+                            </>
+                          )}
                         </div>
                       )}
                     </motion.div>
