@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Box, Grid3x3, RotateCcw, Download, Share2, Menu } from 'lucide-react';
+import { Box, Grid3x3, RotateCcw, Download, Share2 } from 'lucide-react';
+
+// Lazy load 3D graph to avoid bundling issues
+const ForceGraph3D = React.lazy(() => import('./ForceGraph3D'));
 
 const NODE_COLORS = {
   source: '#117dff',
@@ -30,6 +33,7 @@ function GraphVisualization({
   data = { nodes: [], links: [] },
   layers = {},
   csiLayers = { nodes: true, verdicts: true },
+  use3D = true,
   isLoading = false,
   selectedNode = null,
   hoveredNode = null,
@@ -45,6 +49,7 @@ function GraphVisualization({
 }) {
   const graphRef = useRef(null);
   const containerRef = useRef(null);
+  const [mode3D, setMode3D] = useState(use3D);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextPos, setContextPos] = useState({ x: 0, y: 0 });
   const [exportMenu, setExportMenu] = useState(false);
@@ -165,6 +170,16 @@ function GraphVisualization({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* 3D/2D Toggle */}
+          <button
+            onClick={() => setMode3D(!mode3D)}
+            className="p-1.5 rounded hover:bg-[#e3e0db] text-[#525252] transition-colors"
+            title={mode3D ? 'Switch to 2D' : 'Switch to 3D'}
+            style={{ color: mode3D ? '#117dff' : '#525252' }}
+          >
+            {mode3D ? <Box size={12} /> : <Grid3x3 size={12} />}
+          </button>
+
           {/* Refresh */}
           <button
             onClick={() => {
@@ -208,32 +223,48 @@ function GraphVisualization({
         </div>
       </div>
 
-      {/* Graph canvas - 2D Force Directed */}
+      {/* Graph canvas - 2D/3D Force Directed */}
       <div className="flex-1 relative">
         {data.nodes.length > 0 ? (
-          <ForceGraph2D
-            ref={graphRef}
-            graphData={data}
-            nodeLabel="title"
-            nodeColor={getCsiNodeColor}
-            nodeVal={getCsiNodeSize}
-            linkColor={(link) => link.color || '#aaa'}
-            nodeRelSize={3}
-            enableNodeDrag={false}
-            enableZoomPan={true}
-            minZoom={0.5}
-            maxZoom={3}
-            onNodeClick={onNodeClick}
-            onNodeHover={onNodeHover}
-            onNodeRightClick={handleNodeContextMenu}
-            nodeCanvasObject={nodeCanvasObject}
-            nodeCanvasObjectMode="after"
-            linkDirectionalParticles={2}
-            linkDirectionalParticleWidth={1.5}
-            linkDirectionalParticleSpeed={0.003}
-            width={containerRef.current?.clientWidth || width}
-            height={containerRef.current?.clientHeight || height}
-          />
+          mode3D ? (
+            <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin">⚙️</div></div>}>
+              <ForceGraph3D
+                ref={graphRef}
+                graphData={data}
+                getCsiNodeColor={getCsiNodeColor}
+                getCsiNodeSize={getCsiNodeSize}
+                onNodeClick={onNodeClick}
+                onNodeHover={onNodeHover}
+                onNodeContextMenu={handleNodeContextMenu}
+                width={containerRef.current?.clientWidth || width}
+                height={containerRef.current?.clientHeight || height}
+              />
+            </Suspense>
+          ) : (
+            <ForceGraph2D
+              ref={graphRef}
+              graphData={data}
+              nodeLabel="title"
+              nodeColor={getCsiNodeColor}
+              nodeVal={getCsiNodeSize}
+              linkColor={(link) => link.color || '#aaa'}
+              nodeRelSize={3}
+              enableNodeDrag={false}
+              enableZoomPan={true}
+              minZoom={0.5}
+              maxZoom={3}
+              onNodeClick={onNodeClick}
+              onNodeHover={onNodeHover}
+              onNodeRightClick={handleNodeContextMenu}
+              nodeCanvasObject={nodeCanvasObject}
+              nodeCanvasObjectMode="after"
+              linkDirectionalParticles={2}
+              linkDirectionalParticleWidth={1.5}
+              linkDirectionalParticleSpeed={0.003}
+              width={containerRef.current?.clientWidth || width}
+              height={containerRef.current?.clientHeight || height}
+            />
+          )
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-[#a3a3a3]">
             {isLoading ? (

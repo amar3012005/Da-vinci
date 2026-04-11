@@ -1677,6 +1677,7 @@ export default function DeepResearch() {
                             data={graphData}
                             layers={graphLayers}
                             csiLayers={csiLayers}
+                            use3D={true}
                             isLoading={graphLoading}
                             selectedNode={selectedNode}
                             hoveredNode={hoveredNode}
@@ -1938,6 +1939,7 @@ export default function DeepResearch() {
                   data={graphData}
                   layers={graphLayers}
                   csiLayers={csiLayers}
+                  use3D={true}
                   isLoading={graphLoading}
                   selectedNode={selectedNode}
                   onNodeClick={handleNodeClick}

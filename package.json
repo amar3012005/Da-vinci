@@ -41,7 +41,7 @@
     "sequelize-cli": "^6.6.2",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.17",
-    "three": "^0.159.0",
+    "three": "^0.180.0",
     "twilio": "^5.4.2",
     "unicornstudio-react": "^1.4.31"
   },
