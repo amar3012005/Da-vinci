@@ -168,14 +168,21 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
     const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
     const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
+    console.log('[DeepResearchGraph2D] Connecting to SSE stream:', streamUrl);
     const source = new EventSource(streamUrl, { withCredentials: true });
+
+    source.onopen = () => {
+      console.log('[DeepResearchGraph2D] SSE stream connected for session:', sessionId);
+    };
 
     source.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        console.log('[DeepResearchGraph2D] Received SSE event:', event.type);
 
         // Handle graph.node.created events
         if (event.type === 'graph.node.created') {
+          console.log('[DeepResearchGraph2D] Adding node:', event.nodeId, event.title);
           setGraphData(prev => {
             // Check if node exists
             const exists = prev.nodes.find(n => n.id === event.nodeId);
@@ -200,6 +207,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         // Handle graph.edge.created events
         if (event.type === 'graph.edge.created') {
+          console.log('[DeepResearchGraph2D] Adding edge:', event.source, '->', event.target);
           setGraphData(prev => ({
             ...prev,
             links: [...prev.links, {
@@ -213,6 +221,10 @@ export default function DeepResearchGraph2D({ sessionId }) {
       } catch (err) {
         console.error('[SSE] Parse error:', err);
       }
+    };
+
+    source.onerror = (err) => {
+      console.error('[DeepResearchGraph2D] SSE error:', err);
     };
 
     return () => source.close();
