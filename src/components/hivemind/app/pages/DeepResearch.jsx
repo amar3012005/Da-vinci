@@ -1106,10 +1106,19 @@ export default function DeepResearch() {
   const panelWidthValues = { compact: 350, medium: 450, large: 550 };
   const isResearchActive = status === 'running' || status === 'completed';
 
-  // Merge CSI verdicts into graph data for visualization
+  // Merge CSI nodes and verdicts into graph data for visualization
   const mergedGraphData = {
     nodes: [
       ...graphData.nodes,
+      ...csiNodes.map(n => ({
+        id: n.id,
+        title: n.title,
+        type: 'csi-node',
+        agent: n.agent,
+        finding: n.finding,
+        confidence: n.confidence,
+        val: 6,
+      })),
       ...csiVerdicts.map(v => ({
         id: v.id,
         title: v.title,
