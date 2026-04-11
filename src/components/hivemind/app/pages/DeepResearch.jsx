@@ -743,7 +743,13 @@ export default function DeepResearch() {
     const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
     const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
 
-    const source = new EventSource(streamUrl, { withCredentials: true });
+    let source;
+    try {
+      source = new EventSource(streamUrl, { withCredentials: true });
+    } catch (e) {
+      console.warn("EventSource creation failed (sandbox/storage issue):", e);
+      return;
+    }
 
     source.onmessage = (e) => {
       try {

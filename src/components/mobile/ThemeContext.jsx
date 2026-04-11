@@ -57,7 +57,7 @@ export const ThemeProvider = ({ children }) => {
   const [isDark, setIsDark] = useState(true);
   const [locale, setLocale] = useState(() => {
     if (typeof window === 'undefined') return 'en';
-    const stored = window.localStorage.getItem('davinci-mobile-locale');
+    let stored = null; try { stored = window.localStorage.getItem('davinci-mobile-locale'); } catch(e) {}
     if (stored === 'de' || stored === 'en') return stored;
     return 'en';
   });
@@ -71,7 +71,7 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('davinci-mobile-locale', locale);
+    try { window.localStorage.setItem('davinci-mobile-locale', locale); } catch(e) {}
   }, [locale]);
 
   return (

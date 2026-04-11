@@ -169,7 +169,14 @@ export default function DeepResearchGraph2D({ sessionId }) {
     const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
     const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
     console.log('[DeepResearchGraph2D] Connecting to SSE stream:', streamUrl);
-    const source = new EventSource(streamUrl, { withCredentials: true });
+    
+    let source;
+    try {
+      source = new EventSource(streamUrl, { withCredentials: true });
+    } catch (e) {
+      console.warn('[DeepResearchGraph2D] Failed to connect to SSE stream (sandbox/storage issue):', e);
+      return;
+    }
 
     source.onopen = () => {
       console.log('[DeepResearchGraph2D] SSE stream connected for session:', sessionId);

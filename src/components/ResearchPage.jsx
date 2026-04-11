@@ -840,7 +840,7 @@ const ResearchPage = () => {
 
   useEffect(() => {
     // Save view mode preference
-    localStorage.setItem('research-view-mode', viewMode);
+    try { localStorage.setItem('research-view-mode', viewMode); } catch (e) {}
   }, [viewMode]);
 
   const scrollTo = (id) => {

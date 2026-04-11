@@ -45,12 +45,15 @@ export default function LoginPage() {
 
   const handleCreateAccount = (provider = 'google') => {
     // Save onboarding data for post-auth pickup
-    localStorage.setItem('hivemind_onboarding', JSON.stringify({
-      type: accountType,
-      name: userName,
-      hivemind_name: hivemindName,
-      enterprise: enterpriseName || null,
-    }));
+    try {
+      localStorage.setItem('hivemind_onboarding', JSON.stringify({
+        type: accountType,
+        name: userName,
+        hivemind_name: hivemindName,
+        enterprise: enterpriseName || null,
+      }));
+    } catch (e) {}
+
     const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
