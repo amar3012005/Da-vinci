@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import ForceGraph2D from 'react-force-graph-2d';
 import {
   ArrowUp, Sparkles, History,
   Loader2, Search, CheckCircle2, BookOpen, Brain,
@@ -12,6 +11,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import GraphVisualization from '../components/GraphVisualization';
 
 /* ─── Cartesia Light Theme Constants ───────────────────────────────── */
 const ACTION_BADGES = {
@@ -415,10 +415,17 @@ export default function DeepResearch() {
     executionEvents: true,   // NEW: Execution events
     blueprints: true,
   });
+  const [csiNodes, setCsiNodes] = useState([]); // CSI analysis nodes
+  const [csiVerdicts, setCsiVerdicts] = useState([]); // CSI verdict nodes
+  const [csiLayers, setCsiLayers] = useState({
+    nodes: true,
+    verdicts: true,
+  });
   const [graphLoading, setGraphLoading] = useState(false);
   const [webUsage, setWebUsage] = useState(null);
   const [savingMemories, setSavingMemories] = useState(new Set());
   const [selectedNode, setSelectedNode] = useState(null);
+  const [hoveredNode, setHoveredNode] = useState(null);
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
 
   // Detached graph window state
@@ -762,7 +769,35 @@ export default function DeepResearch() {
           setSubgoals(prev => prev.map(g => g.id === event.taskId ? { ...g, status: 'completed', confidence: event.confidence } : g));
         }
 
-        if (showPanel && event.type?.startsWith('task.completed')) {
+        // CSI verdict events - add to graph
+        if (event.type === 'csi.verdict') {
+          setCsiVerdicts(prev => [...prev, {
+            id: `csi-verdict-${event.claimId}-${event.verdict}`,
+            type: 'csi-verdict',
+            title: `${event.verdict.toUpperCase()}: ${event.reason?.slice(0, 40) || ''}`,
+            verdict: event.verdict,
+            confidence: event.confidence,
+            claimId: event.claimId,
+            agent: event.agent,
+            createdAt: new Date().toISOString(),
+          }]);
+          setEvents(prev => [...prev, event]);
+        }
+
+        // CSI analysis events
+        if (event.type === 'csi.analysis') {
+          setCsiNodes(prev => [...prev, {
+            id: `csi-node-${event.analysisId}`,
+            type: 'csi-node',
+            title: `${event.agent}: ${event.finding?.slice(0, 40) || ''}`,
+            agent: event.agent,
+            finding: event.finding,
+            confidence: event.confidence,
+            createdAt: new Date().toISOString(),
+          }]);
+        }
+
+        if (showPanel && (event.type?.startsWith('task.completed') || event.type?.startsWith('csi.'))) {
           fetchGraphData(sessionId);
         }
       } catch (err) {
@@ -1635,72 +1670,30 @@ export default function DeepResearch() {
                           </div>
                         </div>
 
-                        {/* Graph Canvas */}
-                        <div className="flex-1 relative bg-gradient-to-b from-[#faf9f4] to-white">
-                          {graphData.nodes.length > 0 ? (
-                            <ForceGraph2D
-                              key={graphRefreshKey}
-                              graphData={graphData}
-                              width={panelContentRef.current?.clientWidth || 500}
-                              height={panelContentRef.current?.clientHeight || 400}
-                              nodeLabel="title"
-                              nodeColor={node => node.color}
-                              nodeVal={node => node.val}
-                              linkColor={link => link.color}
-                              nodeRelSize={3}
-                              enableNodeDrag={false}
-                              enableZoomPan={true}
-                              minZoom={0.5}
-                              maxZoom={3}
-                              onNodeClick={handleNodeClick}
-                              nodeCanvasObject={(node, ctx, globalScale) => {
-                                const label = node.title || '';
-                                const fontSize = 10 / globalScale;
-                                ctx.font = `${fontSize}px Sans-Serif`;
-
-                                // Draw pulse ring for live nodes (recently updated)
-                                if (node.isLive) {
-                                  const pulseSize = node.val * 1.8;
-                                  const pulseOpacity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
-                                  ctx.beginPath();
-                                  ctx.arc(node.x, node.y, pulseSize, 0, 2 * Math.PI);
-                                  ctx.fillStyle = `rgba(59, 130, 246, ${pulseOpacity})`;
-                                  ctx.fill();
-                                  ctx.strokeStyle = `rgba(59, 130, 246, ${pulseOpacity + 0.2})`;
-                                  ctx.lineWidth = 1;
-                                  ctx.stroke();
-                                }
-
-                                ctx.beginPath();
-                                ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
-                                ctx.fillStyle = node.color;
-                                ctx.fill();
-                                if (node.type === 'source' && node.runtime) {
-                                  const runtimeBadge = RUNTIME_BADGES[node.runtime] || RUNTIME_BADGES.fetch;
-                                  ctx.fillStyle = runtimeBadge.color;
-                                  ctx.beginPath();
-                                  ctx.arc(node.x + node.val - 2, node.y - node.val + 2, 4, 0, 2 * Math.PI);
-                                  ctx.fill();
-                                }
-                                ctx.fillStyle = '#0a0a0a';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'bottom';
-                                ctx.fillText(label, node.x, node.y - node.val - 2);
-                              }}
-                              nodeCanvasObjectMode="after"
-                              linkDirectionalParticles={2}
-                              linkDirectionalParticleWidth={2}
-                              linkDirectionalParticleSpeed={0.005}
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center justify-center h-full text-[#525252]">
-                              {graphLoading ? (
-                                <><Loader2 size={32} className="animate-spin text-[#117dff] mb-3" /><p className="text-sm">Loading graph...</p></>
-                              ) : (
-                                <><Layers size={48} className="text-[#e3e0db] mb-3" /><p className="text-sm">No graph data available</p></>
-                              )}
-                            </div>
-                          )}
+                        {/* Graph Canvas with CSI */}
+                        <div className="flex-1 relative">
+                          <GraphVisualization
+                            key={graphRefreshKey}
+                            data={graphData}
+                            layers={graphLayers}
+                            csiLayers={csiLayers}
+                            isLoading={graphLoading}
+                            selectedNode={selectedNode}
+                            hoveredNode={hoveredNode}
+                            onNodeClick={handleNodeClick}
+                            onNodeHover={setHoveredNode}
+                            onLayerChange={setGraphLayers}
+                            onCsiLayerChange={setCsiLayers}
+                            onNodeContextMenu={(node, action) => {
+                              if (action?.action === 'save') {
+                                handleSaveToMemory(node, node.id);
+                              }
+                            }}
+                            onExport={(format) => console.log('Export:', format)}
+                            onShare={() => console.log('Share graph')}
+                            width={panelContentRef.current?.clientWidth || 500}
+                            height={panelContentRef.current?.clientHeight || 400}
+                          />
 
                           {/* Node Detail Popup */}
                           <AnimatePresence>
@@ -1938,72 +1931,21 @@ export default function DeepResearch() {
                 </div>
               </div>
 
-              {/* Graph Canvas */}
-              <div className="flex-1 relative bg-gradient-to-b from-[#faf9f4] to-white overflow-hidden">
-                {graphData.nodes.length > 0 ? (
-                  <ForceGraph2D
-                    key={graphRefreshKey}
-                    graphData={graphData}
-                    width={detachedGraphPos.width}
-                    height={detachedGraphPos.height - 50}
-                    nodeLabel="title"
-                    nodeColor={node => node.color}
-                    nodeVal={node => node.val}
-                    linkColor={link => link.color}
-                    nodeRelSize={3}
-                    enableNodeDrag={false}
-                    enableZoomPan={true}
-                    minZoom={0.5}
-                    maxZoom={3}
-                    onNodeClick={handleNodeClick}
-                    nodeCanvasObject={(node, ctx, globalScale) => {
-                      const label = node.title || '';
-                      const fontSize = 10 / globalScale;
-                      ctx.font = `${fontSize}px Sans-Serif`;
-
-                      // Draw pulse ring for live nodes (recently updated)
-                      if (node.isLive) {
-                        const pulseSize = node.val * 1.8;
-                        const pulseOpacity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
-                        ctx.beginPath();
-                        ctx.arc(node.x, node.y, pulseSize, 0, 2 * Math.PI);
-                        ctx.fillStyle = `rgba(59, 130, 246, ${pulseOpacity})`;
-                        ctx.fill();
-                        ctx.strokeStyle = `rgba(59, 130, 246, ${pulseOpacity + 0.2})`;
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                      }
-
-                      ctx.beginPath();
-                      ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI);
-                      ctx.fillStyle = node.color;
-                      ctx.fill();
-                      if (node.type === 'source' && node.runtime) {
-                        const runtimeBadge = RUNTIME_BADGES[node.runtime] || RUNTIME_BADGES.fetch;
-                        ctx.fillStyle = runtimeBadge.color;
-                        ctx.beginPath();
-                        ctx.arc(node.x + node.val - 2, node.y - node.val + 2, 4, 0, 2 * Math.PI);
-                        ctx.fill();
-                      }
-                      ctx.fillStyle = '#0a0a0a';
-                      ctx.textAlign = 'center';
-                      ctx.textBaseline = 'bottom';
-                      ctx.fillText(label, node.x, node.y - node.val - 2);
-                    }}
-                    nodeCanvasObjectMode="after"
-                    linkDirectionalParticles={2}
-                    linkDirectionalParticleWidth={2}
-                    linkDirectionalParticleSpeed={0.005}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-[#525252]">
-                    {graphLoading ? (
-                      <><Loader2 size={32} className="animate-spin text-[#117dff] mb-3" /><p className="text-sm">Loading graph...</p></>
-                    ) : (
-                      <><Layers size={48} className="text-[#e3e0db] mb-3" /><p className="text-sm">No graph data yet — starting research...</p></>
-                    )}
-                  </div>
-                )}
+              {/* Graph Canvas - Detached Window */}
+              <div className="flex-1 relative overflow-hidden">
+                <GraphVisualization
+                  key={graphRefreshKey}
+                  data={graphData}
+                  layers={graphLayers}
+                  csiLayers={csiLayers}
+                  isLoading={graphLoading}
+                  selectedNode={selectedNode}
+                  onNodeClick={handleNodeClick}
+                  onLayerChange={setGraphLayers}
+                  onCsiLayerChange={setCsiLayers}
+                  width={detachedGraphPos.width}
+                  height={detachedGraphPos.height - 50}
+                />
               </div>
 
               {/* Resize Handles */}
