@@ -162,164 +162,143 @@ export default function DeepResearchGraph2D({ sessionId }) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
-  // SSE stream handler - adds nodes/edges in real-time
+  // Fetch graph data (primary mechanism - SSE will be added later if available)
   useEffect(() => {
     if (!sessionId) return;
 
-    const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
-    const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
-    console.log('[DeepResearchGraph2D] Connecting to SSE stream:', streamUrl);
-    console.log('[DeepResearchGraph2D] API Client baseURL:', apiClient.controlPlane.defaults?.baseURL);
-
-    let source;
-    let fallbackInterval;
-
-    try {
-      source = new EventSource(streamUrl);
-    } catch (e) {
-      console.warn('[DeepResearchGraph2D] Failed to create EventSource:', e);
-      return;
-    }
-
-    source.onopen = () => {
-      console.log('[DeepResearchGraph2D] ✓ SSE stream connected for session:', sessionId);
-    };
-
-    source.onmessage = (e) => {
+    const fetchGraphData = async () => {
       try {
-        const event = JSON.parse(e.data);
-        console.log('[DeepResearchGraph2D] Received SSE event:', event.type);
+        console.log('[DeepResearchGraph2D] Fetching graph for session:', sessionId);
+        const { data } = await apiClient.controlPlane.get(
+          `/v1/proxy/research/${sessionId}/graph`,
+          { timeout: 30000 }
+        );
 
-        // Handle graph.node.created events
-        if (event.type === 'graph.node.created') {
-          console.log('[DeepResearchGraph2D] Adding node:', event.nodeId, event.title);
-          setGraphData(prev => {
-            // Check if node exists
-            const exists = prev.nodes.find(n => n.id === event.nodeId);
-            if (exists) return prev;
+        if (!data || !data.layers) {
+          console.log('[DeepResearchGraph2D] No layers in response');
+          return;
+        }
 
-            return {
-              ...prev,
-              nodes: [...prev.nodes, {
-                id: event.nodeId,
-                title: event.title,
-                type: event.nodeType,
-                layer: event.layer,
-                content: event.content,
-                agent: event.metadata?.agentId,
-                confidence: event.metadata?.confidence,
-                val: 6,
-                createdAt: Date.now(),
-              }]
-            };
+        const layers = data.layers || {};
+        const nodes = [];
+        const links = [];
+
+        console.log('[DeepResearchGraph2D] Processing layers:', Object.keys(layers));
+
+        // Build nodes from all layers with proper IDs matching backend structure
+        if (layers.sources?.length > 0) {
+          layers.sources.forEach((s) => {
+            nodes.push({
+              id: s.id, // Use raw ID from backend
+              title: s.title || s.url || 'Source',
+              type: 'source',
+              layer: 'sources',
+              url: s.url,
+              runtime: s.runtime,
+              val: 8,
+            });
           });
         }
 
-        // Handle graph.edge.created events
-        if (event.type === 'graph.edge.created') {
-          console.log('[DeepResearchGraph2D] Adding edge:', event.source, '->', event.target);
-          setGraphData(prev => ({
-            ...prev,
-            links: [...prev.links, {
-              source: event.source,
-              target: event.target,
-              type: event.relationshipType,
-              confidence: event.confidence,
-            }]
-          }));
+        if (layers.claims?.length > 0) {
+          layers.claims.forEach((c) => {
+            nodes.push({
+              id: c.id, // Use raw ID from backend
+              title: c.content?.slice(0, 80) || 'Claim',
+              type: 'claim',
+              layer: 'claims',
+              confidence: c.confidence,
+              content: c.content,
+              agent: c.agent,
+              val: 8,
+            });
+          });
         }
-      } catch (err) {
-        console.error('[SSE] Parse error:', err);
+
+        if (layers.trails?.length > 0) {
+          layers.trails.forEach((t) => {
+            nodes.push({
+              id: t.id, // Use raw ID from backend
+              title: `${t.agent}: ${t.action}`,
+              type: 'trail',
+              layer: 'trails',
+              agent: t.agent,
+              action: t.action,
+              val: 6,
+            });
+          });
+        }
+
+        if (layers.observations?.length > 0) {
+          layers.observations.forEach((o) => {
+            nodes.push({
+              id: o.id,
+              title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
+              type: 'observation',
+              layer: 'observations',
+              agent: o.agent,
+              action: o.action,
+              confidence: o.confidence,
+              val: 6,
+            });
+          });
+        }
+
+        if (layers.executionEvents?.length > 0) {
+          layers.executionEvents.forEach((e) => {
+            nodes.push({
+              id: e.id,
+              title: `${e.agent}/${e.action}`,
+              type: 'execution-event',
+              layer: 'executionEvents',
+              agent: e.agent,
+              action: e.action,
+              success: e.success,
+              val: 5,
+            });
+          });
+        }
+
+        if (layers.blueprints?.length > 0) {
+          layers.blueprints.forEach((b) => {
+            nodes.push({
+              id: b.blueprintId,
+              title: b.name || 'Blueprint',
+              type: 'blueprint',
+              layer: 'blueprints',
+              domain: b.domain,
+              timesReused: b.timesReused,
+              val: 10,
+            });
+          });
+        }
+
+        // Build edges from weights.edges
+        if (layers.weights?.edges?.length > 0) {
+          layers.weights.edges.forEach((edge) => {
+            links.push({
+              source: edge.from,
+              target: edge.to,
+              type: edge.type || 'related',
+              confidence: edge.confidence,
+            });
+          });
+        }
+
+        console.log('[DeepResearchGraph2D] Built graph:', nodes.length, 'nodes,', links.length, 'links');
+        setGraphData({ nodes, links });
+      } catch (e) {
+        console.error('[DeepResearchGraph2D] Failed to fetch graph:', e.message);
       }
     };
 
-    source.onerror = (err) => {
-      console.error('[DeepResearchGraph2D] ✗ SSE error, falling back to polling:', err);
-      source.close();
+    // Initial fetch
+    fetchGraphData();
 
-      // Fallback polling every 3 seconds (slower to avoid overwhelming slow backends)
-      fallbackInterval = setInterval(async () => {
-        try {
-          console.log('[DeepResearchGraph2D] [Fallback polling] Fetching graph for session:', sessionId);
-          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/graph`, {
-            timeout: 30000, // 30s timeout for this specific request
-          });
-          if (!data || !data.layers) return;
-          console.log('[DeepResearchGraph2D] [Fallback polling] Got graph with', Object.keys(data.layers).length, 'layers');
+    // Poll every 3 seconds while research is running
+    const pollInterval = setInterval(fetchGraphData, 3000);
 
-          const layers = data.layers || {};
-          const nodes = [];
-          const links = [];
-
-          // Build nodes from all layers
-          if (layers.sources) {
-            layers.sources.forEach((s, idx) => {
-              nodes.push({
-                id: `source-${s.id || idx}`,
-                title: s.title || s.url || 'Source',
-                type: 'source',
-                layer: 'sources',
-                val: 8,
-              });
-            });
-          }
-
-          if (layers.claims) {
-            layers.claims.forEach((c, idx) => {
-              nodes.push({
-                id: `claim-${c.id || idx}`,
-                title: c.content?.slice(0, 80) || 'Claim',
-                type: 'claim',
-                layer: 'claims',
-                confidence: c.confidence,
-                val: 8,
-              });
-            });
-          }
-
-          if (layers.trails) {
-            layers.trails.forEach((t, idx) => {
-              nodes.push({
-                id: `trail-${t.id || idx}`,
-                title: `${t.agent}: ${t.action}`,
-                type: 'trail',
-                layer: 'trails',
-                agent: t.agent,
-                val: 6,
-              });
-            });
-          }
-
-          if (layers.blueprints) {
-            layers.blueprints.forEach((b, idx) => {
-              nodes.push({
-                id: `blueprint-${b.blueprintId || idx}`,
-                title: b.name || 'Blueprint',
-                type: 'blueprint',
-                layer: 'blueprints',
-                val: 10,
-              });
-            });
-          }
-
-          setGraphData(prev => {
-            // Only update if we got new nodes
-            if (nodes.length > prev.nodes.length) {
-              console.log('[DeepResearchGraph2D] [Fallback polling] Updated graph: ', nodes.length, 'nodes,', links.length, 'links');
-              return { nodes, links };
-            }
-            return prev;
-          });
-        } catch (e) {
-          console.error('[DeepResearchGraph2D] [Fallback polling] Error:', e.message);
-        }
-      }, 3000);
-    };
-
-    return () => {
-      source.close();
-      if (fallbackInterval) clearInterval(fallbackInterval);
-    };
+    return () => clearInterval(pollInterval);
   }, [sessionId]);
 
   // Calculate filtered nodes for search/layer filtering
