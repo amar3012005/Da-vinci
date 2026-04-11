@@ -161,7 +161,7 @@ export default function DeepResearch() {
   const [savingMemories, setSavingMemories] = useState(new Set());
   const [selectedNode, setSelectedNode] = useState(null);
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
-  const [graphRuntimeEvents, setGraphRuntimeEvents] = useState([]);
+  const [, setGraphRuntimeEvents] = useState([]);
   const [graphSearchQuery, setGraphSearchQuery] = useState('');
   const [graphFilters] = useState(null);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
