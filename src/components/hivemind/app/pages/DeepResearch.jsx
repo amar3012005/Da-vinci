@@ -656,7 +656,7 @@ export default function DeepResearch() {
       }
       return next;
     });
-  }, [showGraphWindow]);
+  }, []);
 
   const handleCloseGraphWindow = useCallback(() => {
     setShowGraphWindow(false);
