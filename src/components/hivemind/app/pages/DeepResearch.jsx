@@ -381,6 +381,20 @@ function EventCard({ event, index }) {
             <span className="text-xs text-[#9333ea]">Mined {event.count || event.blueprintCount} new blueprints</span>
           </div>
         );
+      case 'research.claims_promoted':
+        return (
+          <div className="flex items-center gap-2 text-[10px] text-[#f43f5e]">
+            <span>◈</span>
+            <span>{event.count} claim{event.count !== 1 ? 's' : ''} promoted to knowledge graph</span>
+          </div>
+        );
+      case 'research.blueprint_recall_started':
+        return (
+          <div className="flex items-center gap-2 text-[10px] text-[#f43f5e]">
+            <span>◈</span>
+            <span>Recalling prior knowledge from {event.blueprintId ? 'blueprint' : 'knowledge graph'}...</span>
+          </div>
+        );
       case 'web.read_error':
         return (
           <div className="flex items-center gap-3">

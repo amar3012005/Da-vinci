@@ -15,12 +15,14 @@ const LAYER_COLORS = {
   blueprints: '#d97706',
   observations: '#3b82f6',
   promoted: '#0f766e',
+  promotedClaims: '#f43f5e',  // rose — prior knowledge
   live: '#f59e0b',
 };
 
-const LAYER_ORDER = ['sources', 'claims', 'trails', 'observations', 'promoted', 'blueprints'];
+const LAYER_ORDER = ['promotedClaims', 'sources', 'claims', 'trails', 'observations', 'promoted', 'blueprints'];
 
 const LAYER_META = {
+  promotedClaims: { label: 'Prior Knowledge', icon: '◈', z: 5 },
   sources:      { label: 'Sources',      icon: '◉', z: 4 },
   claims:       { label: 'Claims',       icon: '◇', z: 3 },
   trails:       { label: 'Trails',       icon: '⬡', z: 2 },
@@ -190,6 +192,21 @@ function buildGraphFromLayers(layers) {
         trailIds,
       });
       trailIds.forEach((trailId) => addLink(`blueprint-${b.blueprintId}`, `trail-${trailId}`, 'used_blueprint', 0.72));
+    });
+  }
+
+  if (layers.promotedClaims?.length > 0) {
+    layers.promotedClaims.forEach((p) => {
+      nodes.push({
+        id: `promoted-${p.id}`,
+        title: p.title || p.content?.slice(0, 60) || 'Prior knowledge',
+        type: 'promoted-claim',
+        layer: 'promotedClaims',
+        content: p.content,
+        confidence: p.confidence,
+        agent: p.agent,
+        val: 7,
+      });
     });
   }
 
