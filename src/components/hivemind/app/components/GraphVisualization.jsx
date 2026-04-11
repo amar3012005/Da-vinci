@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useRef, useCallback, Suspense } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { motion } from 'framer-motion';
 import { Box, Grid3x3, RotateCcw, Download, Share2 } from 'lucide-react';

@@ -1106,6 +1106,31 @@ export default function DeepResearch() {
   const panelWidthValues = { compact: 350, medium: 450, large: 550 };
   const isResearchActive = status === 'running' || status === 'completed';
 
+  // Merge CSI verdicts into graph data for visualization
+  const mergedGraphData = {
+    nodes: [
+      ...graphData.nodes,
+      ...csiVerdicts.map(v => ({
+        id: v.id,
+        title: v.title,
+        type: 'csi-verdict',
+        verdict: v.verdict,
+        confidence: v.confidence,
+        agent: v.agent,
+        val: 8,
+      })),
+    ],
+    links: [
+      ...graphData.links,
+      ...csiVerdicts.map(v => ({
+        source: v.claimId,
+        target: v.id,
+        color: '#cccccc',
+        type: 'csi-link',
+      })),
+    ],
+  };
+
   return (
     <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col z-[100]">
       {/* Top Bar - Always visible */}
@@ -1674,7 +1699,7 @@ export default function DeepResearch() {
                         <div className="flex-1 relative">
                           <GraphVisualization
                             key={graphRefreshKey}
-                            data={graphData}
+                            data={mergedGraphData}
                             layers={graphLayers}
                             csiLayers={csiLayers}
                             use3D={true}
@@ -1936,7 +1961,7 @@ export default function DeepResearch() {
               <div className="flex-1 relative overflow-hidden">
                 <GraphVisualization
                   key={graphRefreshKey}
-                  data={graphData}
+                  data={mergedGraphData}
                   layers={graphLayers}
                   csiLayers={csiLayers}
                   use3D={true}
