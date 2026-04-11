@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import ForceGraph2D from 'react-force-graph-2d';
 import {
-  Network, X, Search, RefreshCw, Layers, GitBranch
+  Network, X, Search, RefreshCw, Layers, GitBranch, Crosshair, CheckCircle2
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -49,6 +49,15 @@ function hexToRgba(hex, alpha) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function hashCode(str = '') {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h;
 }
 
 /* ──── Shared: build nodes + links from API response ──────────── */
@@ -108,6 +117,9 @@ function buildGraphFromLayers(layers) {
         id: `blueprint-${b.blueprintId}`, title: b.name || 'Blueprint',
         type: 'blueprint', layer: 'blueprints', domain: b.domain,
         timesReused: b.timesReused, val: 10,
+        patternCount: b.patternCount || (Array.isArray(b.pattern) ? b.pattern.length : 0),
+        hasCapturedState: !!b.hasCapturedState,
+        capturedStateSummary: b.capturedStateSummary || null,
       });
     });
   }
@@ -128,7 +140,7 @@ function buildGraphFromLayers(layers) {
 }
 
 /* ──── Node Detail Sidecar ──────────────────────────────────────── */
-function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
+function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint, currentQuery }) {
   if (!node) return null;
 
   const inbound = edges.filter(e => {
@@ -183,15 +195,49 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
             <p>Type: {node.type || 'unknown'}</p>
             <p>Layer: {node.layer || 'default'}</p>
           </div>
-          {node.confidence != null && (
-            <div>
-              <p>Confidence:</p>
-              <p className="font-semibold text-[#0a0a0a]">
-                {(node.confidence * 100).toFixed(0)}%
-              </p>
+        {node.confidence != null && (
+          <div>
+            <p>Confidence:</p>
+            <p className="font-semibold text-[#0a0a0a]">
+              {(node.confidence * 100).toFixed(0)}%
+            </p>
+          </div>
+        )}
+      </div>
+
+        {node.layer === 'blueprints' && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 text-[10px] text-[#737373]">
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2">
+                <p className="uppercase tracking-wider text-[9px] mb-1">Pattern</p>
+                <p className="text-[#0a0a0a] font-medium">{node.patternCount || 0} steps</p>
+              </div>
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2">
+                <p className="uppercase tracking-wider text-[9px] mb-1">Captured State</p>
+                <p className="text-[#0a0a0a] font-medium">{node.hasCapturedState ? 'Ready' : 'Backfilling'}</p>
+              </div>
             </div>
-          )}
-        </div>
+
+            {node.capturedStateSummary && (
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3 text-[10px] text-[#525252] space-y-1">
+                <p className="font-mono uppercase tracking-wider text-[9px] text-[#737373]">Captured summary</p>
+                <p>Sources: {node.capturedStateSummary.sourceCount ?? 0}</p>
+                <p>Findings: {node.capturedStateSummary.findingCount ?? 0}</p>
+                <p>Trails: {node.capturedStateSummary.trailCount ?? 0}</p>
+              </div>
+            )}
+
+            {onReuseBlueprint && (
+              <button
+                onClick={() => onReuseBlueprint(node, currentQuery)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#d97706] text-white text-xs font-medium hover:bg-[#b86505] transition-colors"
+              >
+                <RefreshCw size={13} />
+                Reuse Blueprint
+              </button>
+            )}
+          </div>
+        )}
 
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
@@ -235,6 +281,11 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 function LayeredView({ graphData, selectedNode, onNodeClick }) {
   const containerRef = useRef(null);
   const [dims, setDims] = useState({ w: 800, h: 600 });
+  const [pov, setPov] = useState({ pitch: 55, yaw: -5, roll: 0, zoom: 1, panX: 0, panY: 0 });
+  const [focusedLayer, setFocusedLayer] = useState(null);
+  const [puckPos, setPuckPos] = useState({ x: 16, y: 138 });
+  const [isPuckDragging, setIsPuckDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startYaw: 0, startPitch: 0, startXPos: 0, startYPos: 0 });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -245,6 +296,41 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  useEffect(() => {
+    setPuckPos((prev) => {
+      const maxY = Math.max(16, dims.h - 150);
+      if (prev.y >= 32 && prev.y <= maxY) return prev;
+      return {
+        x: Math.min(prev.x, Math.max(16, dims.w - 120)),
+        y: Math.min(Math.max(16, prev.y), maxY),
+      };
+    });
+  }, [dims.w, dims.h]);
+
+  useEffect(() => {
+    if (!isPuckDragging) return undefined;
+    const handleMove = (e) => {
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      setPov(prev => ({
+        ...prev,
+        yaw: Math.max(-24, Math.min(24, dragRef.current.startYaw + dx * 0.22)),
+        pitch: Math.max(20, Math.min(78, dragRef.current.startPitch - dy * 0.18)),
+      }));
+      setPuckPos(() => ({
+        x: Math.max(8, Math.min((containerRef.current?.clientWidth || 240) - 108, dragRef.current.startXPos + dx)),
+        y: Math.max(8, Math.min((containerRef.current?.clientHeight || 240) - 96, dragRef.current.startYPos + dy)),
+      }));
+    };
+    const handleUp = () => setIsPuckDragging(false);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isPuckDragging]);
 
   // Group nodes by layer
   const layerGroups = useMemo(() => {
@@ -258,11 +344,16 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
     return groups;
   }, [graphData.nodes]);
 
+  const focusedNodes = useMemo(
+    () => (focusedLayer ? (layerGroups[focusedLayer] || []) : []),
+    [focusedLayer, layerGroups]
+  );
+
   // Assign x,y positions per layer using force-like spreading
   const nodePositions = useMemo(() => {
     const positions = {};
-    const planeW = dims.w * 0.7;
-    const planeH = dims.h * 0.35;
+    const planeW = Math.min(Math.max(dims.w - 120, 320), 680) * (focusedLayer ? 0.78 : 0.62);
+    const planeH = Math.min(Math.max(dims.h - 96, 240), 520) * (focusedLayer ? 0.34 : 0.22);
 
     LAYER_ORDER.forEach((layerKey) => {
       const layerNodes = layerGroups[layerKey] || [];
@@ -281,14 +372,14 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
         const jitterX = (Math.sin(node.id.length * 7 + i * 13) * 0.3) * cellW;
         const jitterY = (Math.cos(node.id.length * 11 + i * 17) * 0.3) * cellH;
         positions[node.id] = {
-          x: cellW * (col + 1) + jitterX,
-          y: cellH * (row + 1) + jitterY,
+          x: Math.max(24, cellW * (col + 1) + jitterX + (planeW * 0.06)),
+          y: Math.max(18, cellH * (row + 1) + jitterY + (planeH * 0.06)),
           layer: layerKey,
         };
       });
     });
     return positions;
-  }, [layerGroups, dims]);
+  }, [layerGroups, dims, focusedLayer]);
 
   // Cross-layer edges
   const crossEdges = useMemo(() => {
@@ -301,31 +392,94 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
     });
   }, [graphData.links, nodePositions]);
 
+  const focusedCrossEdges = useMemo(() => {
+    if (!focusedLayer) return [];
+    return crossEdges.filter((edge) => {
+      const sid = typeof edge.source === 'object' ? edge.source.id : edge.source;
+      const tid = typeof edge.target === 'object' ? edge.target.id : edge.target;
+      const sp = nodePositions[sid];
+      const tp = nodePositions[tid];
+      return sp && tp && (sp.layer === focusedLayer || tp.layer === focusedLayer);
+    });
+  }, [crossEdges, focusedLayer, nodePositions]);
+
   const planeSpacing = 120;
   const totalHeight = LAYER_ORDER.length * planeSpacing;
+  const isTopView = focusedLayer != null;
+  const stageW = Math.min(Math.max(dims.w - 40, 320), 820);
+  const stageH = Math.min(Math.max(dims.h - 24, 260), 560);
+  const planeW = focusedLayer ? Math.min(stageW * 0.76, 640) : Math.min(stageW * 0.58, 520);
+  const planeH = focusedLayer ? Math.min(stageH * 0.34, 220) : Math.min(stageH * 0.22, 160);
+  const miniW = 176;
+  const miniH = 116;
+  const miniScaleX = planeW > 0 ? miniW / planeW : 1;
+  const miniScaleY = planeH > 0 ? miniH / planeH : 1;
+  const containerTransform = isTopView
+    ? 'rotateX(0deg) rotateZ(0deg) scale(0.98)'
+    : `translate(${pov.panX}px, ${pov.panY}px) scale(${pov.zoom}) rotateX(${pov.pitch}deg) rotateY(${pov.yaw}deg) rotateZ(${pov.roll}deg)`;
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-hidden relative bg-gradient-to-b from-[#faf9f4] to-white"
+    <div ref={containerRef} className="w-full h-full overflow-hidden relative bg-gradient-to-b from-[#fbfaf6] via-white to-[#f6f3ed]"
       style={{ perspective: '1200px', perspectiveOrigin: '50% 40%' }}>
 
-      <div className="absolute inset-0 flex items-center justify-center"
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 18% 18%, rgba(17,125,255,0.09), transparent 22%),
+            radial-gradient(circle at 82% 10%, rgba(217,119,6,0.08), transparent 18%),
+            linear-gradient(rgba(227,224,219,0.55) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(227,224,219,0.55) 1px, transparent 1px)
+          `,
+          backgroundSize: '100% 100%, 100% 100%, 48px 48px, 48px 48px',
+          opacity: 0.7,
+        }}
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center px-3 py-3"
         style={{
           transformStyle: 'preserve-3d',
-          transform: 'rotateX(55deg) rotateZ(-5deg)',
+          transform: containerTransform,
+          transition: isPuckDragging ? 'none' : 'transform 260ms ease',
         }}>
 
+        <div
+          className="absolute inset-0 rounded-[28px] border border-[#e3e0db] bg-white/55 backdrop-blur-[2px] shadow-[0_24px_80px_rgba(15,23,42,0.08)]"
+          style={{ transform: 'translateZ(-120px)' }}
+        />
+
+        <div className="absolute left-4 top-4 z-30 max-w-[240px]">
+          <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#737373]">Layer POV</p>
+          <h3 className="mt-1 text-sm font-semibold text-[#0a0a0a]">Inspect one layer at a time</h3>
+          <p className="mt-1 text-[11px] text-[#737373] leading-snug">
+            Click a layer to flatten it into a top view with its live connections.
+          </p>
+        </div>
+
         {/* Layer labels on left */}
-        <div className="absolute left-4 top-0 h-full flex flex-col justify-around z-30"
-          style={{ transform: 'rotateZ(5deg) rotateX(-55deg)', transformStyle: 'preserve-3d' }}>
+        <div
+          className="absolute left-4 top-0 h-full flex flex-col justify-center gap-2 z-30"
+          style={{ transform: isTopView ? 'rotateZ(0deg) rotateX(0deg)' : 'rotateZ(5deg) rotateX(-55deg)', transformStyle: 'preserve-3d' }}
+        >
           {LAYER_ORDER.map((layerKey, i) => {
             const meta = LAYER_META[layerKey];
             const count = (layerGroups[layerKey] || []).length;
             return (
-              <div key={layerKey} className="flex items-center gap-2 text-xs" style={{ color: LAYER_COLORS[layerKey] }}>
-                <span className="text-lg">{meta.icon}</span>
-                <span className="font-mono uppercase text-[10px]">{meta.label}</span>
-                <span className="text-[9px] opacity-50">({count})</span>
-              </div>
+              <button
+                key={layerKey}
+                onClick={() => setFocusedLayer(prev => prev === layerKey ? null : layerKey)}
+                className="flex items-center gap-2 text-xs text-left transition-opacity px-2 py-1.5 rounded-full border backdrop-blur-sm"
+                style={{
+                  color: LAYER_COLORS[layerKey],
+                  opacity: focusedLayer && focusedLayer !== layerKey ? 0.32 : 1,
+                  background: focusedLayer === layerKey ? hexToRgba(LAYER_COLORS[layerKey], 0.08) : 'rgba(255,255,255,0.55)',
+                  borderColor: focusedLayer === layerKey ? hexToRgba(LAYER_COLORS[layerKey], 0.18) : 'rgba(227,224,219,0.9)',
+                }}
+              >
+                <span className="text-base">{meta.icon}</span>
+                <span className="font-mono uppercase text-[10px] tracking-[0.18em]">{meta.label}</span>
+                <span className="text-[9px] opacity-50 tabular-nums">({count})</span>
+              </button>
             );
           })}
         </div>
@@ -340,28 +494,37 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
           return (
             <div key={layerKey}
               className="absolute"
+              onClick={() => setFocusedLayer(prev => prev === layerKey ? null : layerKey)}
               style={{
-                width: dims.w * 0.7,
-                height: dims.h * 0.35,
+                width: focusedLayer === layerKey ? planeW * 1.06 : planeW,
+                height: focusedLayer === layerKey ? planeH * 1.12 : planeH,
                 transform: `translateZ(${zOffset}px)`,
                 transformStyle: 'preserve-3d',
-                background: hexToRgba(color, 0.03),
-                border: `1px solid ${hexToRgba(color, 0.12)}`,
-                borderRadius: '8px',
-                boxShadow: `0 0 30px ${hexToRgba(color, 0.06)}`,
+                background: `linear-gradient(180deg, ${hexToRgba(color, focusedLayer === layerKey ? 0.06 : 0.035)}, rgba(255,255,255,0.65))`,
+                border: `1px solid ${hexToRgba(color, focusedLayer === layerKey ? 0.2 : 0.1)}`,
+                borderRadius: '18px',
+                boxShadow: `0 14px 30px ${hexToRgba(color, focusedLayer === layerKey ? 0.08 : 0.045)}`,
+                opacity: focusedLayer && focusedLayer !== layerKey ? 0.22 : 1,
+                transition: 'all 220ms ease',
               }}>
+              <div className="absolute left-3 top-3 z-20 flex items-center gap-2 pointer-events-none">
+                <span className="text-[10px] font-mono uppercase tracking-[0.26em]" style={{ color }}>
+                  {meta.label}
+                </span>
+                <span className="text-[9px] text-[#737373] tabular-nums">{layerNodes.length}</span>
+              </div>
 
               {/* Nodes on this plane */}
               {layerNodes.map(node => {
                 const pos = nodePositions[node.id];
                 if (!pos) return null;
                 const isSelected = selectedNode?.id === node.id;
-                const size = Math.sqrt(node.val || 6) * 3;
+                const size = Math.sqrt(node.val || 6) * 2.35;
 
                 return (
                   <button key={node.id}
                     onClick={() => onNodeClick(node)}
-                    className="absolute rounded-full transition-all duration-200 hover:scale-150"
+                    className="absolute rounded-full transition-transform duration-200 hover:scale-[1.45]"
                     style={{
                       left: pos.x - size / 2,
                       top: pos.y - size / 2,
@@ -387,9 +550,9 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
         {/* Cross-layer connection lines (SVG overlay) */}
         <svg className="absolute pointer-events-none"
           style={{
-            width: dims.w * 0.7,
-            height: totalHeight + dims.h * 0.35,
-            transform: `translateZ(${(LAYER_ORDER.length - 1) * planeSpacing / 2}px)`,
+            width: focusedLayer ? planeW * 1.05 : planeW,
+            height: focusedLayer ? planeH * 1.35 : totalHeight + planeH,
+            transform: focusedLayer ? 'translateZ(0px)' : `translateZ(${(LAYER_ORDER.length - 1) * planeSpacing / 2}px)`,
             transformStyle: 'preserve-3d',
             overflow: 'visible',
           }}>
@@ -409,19 +572,119 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
             return (
               <line key={`cross-${i}`}
                 x1={sp.x} y1={sY} x2={tp.x} y2={tY}
-                stroke={edgeColor} strokeWidth={0.5}
-                strokeOpacity={0.3} strokeDasharray="3,3"
-              />
+                stroke={edgeColor} strokeWidth={focusedLayer ? 0.85 : 0.5}
+                strokeOpacity={focusedLayer ? 0.42 : 0.3} strokeDasharray="3,3"
+                />
             );
           })}
         </svg>
+
+        {focusedLayer && (
+          <div className="absolute right-4 top-4 z-30 w-[194px] rounded-[18px] border border-[#e3e0db] bg-white/90 backdrop-blur shadow-lg p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-[#737373]">Top view</p>
+                <p className="text-[11px] font-semibold text-[#0a0a0a]">{LAYER_META[focusedLayer]?.label}</p>
+              </div>
+              <button
+                onClick={() => setFocusedLayer(null)}
+                className="px-2 py-1 rounded-md text-[10px] border border-[#e3e0db] text-[#525252] hover:border-[#117dff]/30 hover:text-[#117dff]"
+              >
+                Reset
+              </button>
+            </div>
+            <svg className="mt-3 w-full h-[116px] overflow-visible" viewBox={`0 0 ${miniW} ${miniH}`}>
+              <rect x="0" y="0" width={miniW} height={miniH} rx="14" fill="rgba(250,249,244,0.92)" stroke="rgba(227,224,219,0.95)" />
+              {focusedCrossEdges.map((edge, i) => {
+                const sid = typeof edge.source === 'object' ? edge.source.id : edge.source;
+                const tid = typeof edge.target === 'object' ? edge.target.id : edge.target;
+                const sp = nodePositions[sid];
+                const tp = nodePositions[tid];
+                if (!sp || !tp) return null;
+                const edgeColor = EDGE_COLORS[edge.type] || '#444';
+                return (
+                  <line
+                    key={`mini-edge-${i}`}
+                    x1={sp.x * miniScaleX}
+                    y1={sp.y * miniScaleY}
+                    x2={tp.x * miniScaleX}
+                    y2={tp.y * miniScaleY}
+                    stroke={edgeColor}
+                    strokeWidth="1"
+                    strokeOpacity="0.3"
+                  />
+                );
+              })}
+              {focusedNodes.map((node) => {
+                const pos = nodePositions[node.id];
+                if (!pos) return null;
+                const isSelected = selectedNode?.id === node.id;
+                const radius = isSelected ? 4.2 : 3.2;
+                return (
+                  <circle
+                    key={`mini-${node.id}`}
+                    cx={pos.x * miniScaleX}
+                    cy={pos.y * miniScaleY}
+                    r={radius}
+                    fill={isSelected ? LAYER_COLORS[focusedLayer] : hexToRgba(LAYER_COLORS[focusedLayer], 0.72)}
+                    stroke={isSelected ? '#fff' : 'none'}
+                  />
+                );
+              })}
+              <rect x="0" y="0" width={miniW} height={miniH} rx="14" fill="none" stroke="rgba(227,224,219,0.65)" />
+            </svg>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-[#737373]">
+              <span>{focusedNodes.length} nodes</span>
+              <span>{focusedCrossEdges.length} links</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        className="absolute z-40 rounded-2xl border border-[#e3e0db] bg-white/92 backdrop-blur shadow-lg p-2"
+        style={{ left: puckPos.x, top: puckPos.y, width: 104 }}
+        data-no-drag
+      >
+        <div
+          className="h-11 rounded-xl bg-[#faf9f4] border border-[#e3e0db] cursor-move flex items-center justify-center text-[10px] font-medium tracking-[0.22em] text-[#737373]"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsPuckDragging(true);
+            dragRef.current = {
+              startX: e.clientX,
+              startY: e.clientY,
+              startYaw: pov.yaw,
+              startPitch: pov.pitch,
+              startXPos: puckPos.x,
+              startYPos: puckPos.y,
+            };
+          }}
+          title="Drag to change POV"
+        >
+          POV
+        </div>
+        <div className="mt-2 flex items-center gap-1">
+          <button
+            className="flex-1 text-[10px] px-2 py-1 rounded-md border border-[#e3e0db] bg-white text-[#525252]"
+            onClick={() => setPov({ pitch: 55, yaw: -5, roll: 0, zoom: 1, panX: 0, panY: 0 })}
+          >
+            Reset
+          </button>
+          <button
+            className="flex-1 text-[10px] px-2 py-1 rounded-md border border-[#e3e0db] bg-white text-[#525252]"
+            onClick={() => setPov({ pitch: 0, yaw: 0, roll: 0, zoom: 1.05, panX: 0, panY: 0 })}
+          >
+            Top
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 /* ──── Main Component ──────────────────────────────────────────── */
-export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
+export default function DeepResearchGraph2D({ sessionId, showChrome = true, onReuseBlueprint = null, currentQuery = '' }) {
   const graphRef = useRef(null);
   const containerRef = useRef(null);
   const [dims, setDims] = useState({ w: 800, h: 600 });
@@ -432,6 +695,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState('force'); // 'force' | 'layered'
+  const [fitRequested, setFitRequested] = useState(true);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -476,6 +740,9 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
           );
 
           if (nodesToAdd.length > 0 || linksToAdd.length > 0) {
+            if (prev.nodes.length === 0 && (nodesToAdd.length > 0 || linksToAdd.length > 0)) {
+              setFitRequested(true);
+            }
             return {
               nodes: [...prev.nodes, ...nodesToAdd],
               links: [...prev.links, ...linksToAdd],
@@ -492,6 +759,17 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
     const poll = setInterval(fetchGraphData, 3000);
     return () => clearInterval(poll);
   }, [sessionId]);
+
+  useEffect(() => {
+    if (viewMode !== 'force' || !fitRequested || !graphRef.current || graphData.nodes.length === 0) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      graphRef.current?.zoomToFit?.(400, 70);
+      setFitRequested(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [graphData.nodes.length, viewMode, fitRequested]);
 
   // Filtered nodes
   const filteredNodes = useMemo(() => {
@@ -519,7 +797,8 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
     const isDimmed = layerFilter !== 'all' && !filteredNodes.has(node.id);
     const isSelected = selectedNode?.id === node.id;
     const color = LAYER_COLORS[node.layer] || '#525252';
-    let radius = Math.sqrt(node.val || 6) * 2.5;
+    const pulse = 0.92 + (Math.abs(hashCode(node.id)) % 12) / 100;
+    let radius = Math.sqrt(node.val || 6) * 2.35 * pulse;
 
     if (node.layer === 'trails') radius = Math.max(radius * 0.8, 3);
     if (node.layer === 'blueprints') radius = radius * 1.3;
@@ -582,16 +861,32 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
   const paintLink = useCallback((link, ctx, globalScale) => {
     const color = EDGE_COLORS[link.type] || '#333';
     const opacity = 0.25 + (link.confidence || 0.5) * 0.3;
-    const width = 0.5 + (link.confidence || 0.5) * 1.5;
+    const width = 0.5 + (link.confidence || 0.5) * 1.35;
+    const sx = link.source.x;
+    const sy = link.source.y;
+    const tx = link.target.x;
+    const ty = link.target.y;
+    const dx = tx - sx;
+    const dy = ty - sy;
+    const curvature = 0.16;
+    const cx = (sx + tx) / 2 - dy * curvature;
+    const cy = (sy + ty) / 2 + dx * curvature;
 
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
+    ctx.strokeStyle = hexToRgba(color, opacity * 0.3);
+    ctx.lineWidth = width + 2.2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, tx, ty);
     ctx.strokeStyle = hexToRgba(color, opacity);
     ctx.lineWidth = width;
     if (link.type === 'contradicts' || (link.confidence || 1) < 0.5) {
       ctx.setLineDash([4, 3]);
     }
-    ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.lineTo(link.target.x, link.target.y);
     ctx.stroke();
     ctx.setLineDash([]);
   }, []);
@@ -612,6 +907,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
   const handleRefresh = useCallback(async () => {
     if (!sessionId) return;
     setIsLoading(true);
+    setFitRequested(true);
     try {
       const { data } = await apiClient.controlPlane.get(
         `/v1/proxy/research/${sessionId}/graph`, { timeout: 30000 }
@@ -636,6 +932,15 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
       if (counts[n.layer] !== undefined) counts[n.layer]++;
     });
     return counts;
+  }, [graphData.nodes]);
+
+  const blueprintReplayCounts = useMemo(() => {
+    const blueprints = graphData.nodes.filter(node => node.layer === 'blueprints');
+    const replayReady = blueprints.filter(node => node.hasCapturedState || (node.patternCount || 0) > 0);
+    return {
+      total: blueprints.length,
+      ready: replayReady.length,
+    };
   }, [graphData.nodes]);
 
   return (
@@ -681,6 +986,17 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
           </button>
 
+          <button
+            onClick={() => {
+              graphRef.current?.zoomToFit?.(400, 70);
+              setFitRequested(false);
+            }}
+            className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252] transition-colors"
+            title="Fit graph to view"
+          >
+            <Crosshair size={13} />
+          </button>
+
           {/* Layer Filters */}
           <div className="flex items-center gap-1 overflow-x-auto">
             <button onClick={() => setLayerFilter('all')}
@@ -701,6 +1017,24 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
             ))}
           </div>
 
+          {blueprintReplayCounts.total > 0 && (
+            <button
+              onClick={() => setLayerFilter('blueprints')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-colors ${
+                blueprintReplayCounts.ready > 0
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373] hover:border-[#117dff]/30 hover:text-[#117dff]'
+              }`}
+              title="Blueprints that are ready to replay were backfilled with captured state and reusable patterns"
+            >
+              <CheckCircle2 size={11} />
+              <span>Replay-ready</span>
+              <span className="font-mono opacity-80">
+                {blueprintReplayCounts.ready}/{blueprintReplayCounts.total}
+              </span>
+            </button>
+          )}
+
           {/* Stats */}
           <div className="ml-auto text-[10px] text-[#737373] font-mono">
             {stats.nodes} · {stats.edges}
@@ -717,7 +1051,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
               graphData={graphData}
               nodeLabel="title"
               nodeColor={node => LAYER_COLORS[node.layer] || '#525252'}
-              nodeRelSize={2}
+              nodeRelSize={1.45}
               nodeVal={node => node.val || 6}
               linkColor={(link) => EDGE_COLORS[link.type] || '#b7c7db'}
               linkOpacity={0.42}
@@ -729,16 +1063,16 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
               nodeCanvasObject={paintNode}
               linkCanvasObject={paintLink}
               numDimensions={2}
-              cooldownTicks={300}
-              d3AlphaDecay={0.06}
-              d3VelocityDecay={0.25}
-              linkDistance={70}
+              cooldownTicks={560}
+              d3AlphaDecay={0.03}
+              d3VelocityDecay={0.45}
+              linkDistance={224}
               d3AlphaMin={0.005}
-              warmupTicks={30}
-              linkDirectionalParticles={2}
-              linkDirectionalParticleWidth={1.2}
-              linkDirectionalParticleSpeed={0.004}
-              backgroundColor="#faf9f4"
+              warmupTicks={80}
+              linkDirectionalParticles={3}
+              linkDirectionalParticleWidth={1.1}
+              linkDirectionalParticleSpeed={0.0024}
+              backgroundColor="#fbfaf6"
               width={dims.w}
               height={dims.h}
             />
@@ -768,6 +1102,8 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
             edges={graphData.links}
             onClose={() => setSelectedNode(null)}
             onNavigate={handleNavigate}
+            onReuseBlueprint={onReuseBlueprint}
+            currentQuery={currentQuery}
           />
         )}
       </AnimatePresence>

@@ -1104,10 +1104,17 @@ export default function DeepResearch() {
     }
   }, [sessionId, query]);
 
-  const handleRerunFromBlueprint = useCallback(async (blueprintId, baseQuery) => {
+  const handleRerunFromBlueprint = useCallback(async (blueprintOrId, baseQuery) => {
     try {
+      const blueprintId = typeof blueprintOrId === 'string'
+        ? blueprintOrId
+        : blueprintOrId?.blueprintId || blueprintOrId?.id?.replace('blueprint-', '');
+      const nextBaseQuery = baseQuery || query;
+      if (!blueprintId) {
+        throw new Error('Blueprint id is required');
+      }
       const { data } = await apiClient.controlPlane.post(`/v1/proxy/research/blueprint/${blueprintId}/rerun`, {
-        baseQuery: baseQuery || query,
+        baseQuery: nextBaseQuery,
       });
       setSessionId(data.session_id);
       setStatus('running');
@@ -1813,7 +1820,11 @@ export default function DeepResearch() {
                               </div>
                             </div>
                           ) : (
-                            <DeepResearchGraph2D sessionId={sessionId} />
+                            <DeepResearchGraph2D
+                              sessionId={sessionId}
+                              currentQuery={query}
+                              onReuseBlueprint={handleRerunFromBlueprint}
+                            />
                           )}
                         </div>
                       </div>
@@ -1870,7 +1881,12 @@ export default function DeepResearch() {
               </div>
             </div>
             <div className="absolute inset-0 pt-[41px]">
-              <DeepResearchGraph2D sessionId={sessionId} showChrome={false} />
+              <DeepResearchGraph2D
+                sessionId={sessionId}
+                showChrome={false}
+                currentQuery={query}
+                onReuseBlueprint={handleRerunFromBlueprint}
+              />
             </div>
             <button
               onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
