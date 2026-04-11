@@ -155,6 +155,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 /* ──── Main Component ──────────────────────────────────────────── */
 export default function DeepResearchGraph2D({ sessionId }) {
   const graphRef = useRef(null);
+  const urlLoadedRef = useRef(false);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchInput, setSearchInput] = useState('');
@@ -164,12 +165,15 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
   // Auto-load selected node from URL on graph update
   useEffect(() => {
+    if (graphData.nodes.length === 0 || urlLoadedRef.current) return;
+
     const urlParams = new URLSearchParams(window.location.search);
     const selectedNodeId = urlParams.get('selectedNode');
-    if (selectedNodeId && graphData.nodes.length > 0) {
+    if (selectedNodeId) {
       const node = graphData.nodes.find(n => n.id === selectedNodeId);
-      if (node && !selectedNode) {
+      if (node) {
         setSelectedNode(node);
+        urlLoadedRef.current = true;
         if (graphRef.current) {
           setTimeout(() => {
             graphRef.current.centerAt(node.x, node.y, 400);
