@@ -11,7 +11,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import GraphVisualization from '../components/GraphVisualization';
+import DeepResearchGraph2D from './DeepResearchGraph2D';
 
 /* ─── Cartesia Light Theme Constants ───────────────────────────────── */
 const ACTION_BADGES = {
@@ -1674,164 +1674,9 @@ export default function DeepResearch() {
                           </div>
                         </div>
 
-                        {/* Graph Canvas with CSI */}
+                        {/* Graph Canvas - 2D with Real-Time Streaming */}
                         <div className="flex-1 relative">
-                          <GraphVisualization
-                            key={graphRefreshKey}
-                            data={graphData}
-                            layers={graphLayers}
-                            use3D={true}
-                            isLoading={graphLoading}
-                            selectedNode={selectedNode}
-                            hoveredNode={hoveredNode}
-                            onNodeClick={handleNodeClick}
-                            onNodeHover={setHoveredNode}
-                            onLayerChange={setGraphLayers}
-                            onNodeContextMenu={(node, action) => {
-                              if (action?.action === 'save') {
-                                handleSaveToMemory(node, node.id);
-                              }
-                            }}
-                            onExport={(format) => console.log('Export:', format)}
-                            onShare={() => console.log('Share graph')}
-                            width={panelContentRef.current?.clientWidth || 500}
-                            height={panelContentRef.current?.clientHeight || 400}
-                          />
-
-                          {/* Node Detail Popup */}
-                          <AnimatePresence>
-                            {selectedNode && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="absolute bottom-4 right-4 w-80 sm:w-96 max-w-[90vw] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-xl shadow-xl p-4 z-20 max-h-[80vh] overflow-y-auto"
-                              >
-                                <div className="flex items-start justify-between mb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${selectedNode.color}20` }}>
-                                      {(() => {
-                                        const Icon = NODE_ICONS[selectedNode.type] || NODE_ICONS.claim || Globe;
-                                        return <Icon size={16} style={{ color: selectedNode.color }} />;
-                                      })()}
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-semibold text-[#0a0a0a] capitalize">{selectedNode.type.replace('-', ' ')}</p>
-                                      {selectedNode.runtime && (
-                                        <div className="flex items-center gap-1">
-                                          {(() => {
-                                            const RuntimeIcon = RUNTIME_BADGES[selectedNode.runtime]?.icon || Globe;
-                                            return <RuntimeIcon size={8} className="text-[#a3a3a3]" />;
-                                          })()}
-                                          <span className="text-[9px] text-[#525252] capitalize">{RUNTIME_BADGES[selectedNode.runtime]?.label || selectedNode.runtime}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <button onClick={() => setSelectedNode(null)} className="p-1 rounded hover:bg-[#e3e0db]/40 text-[#525252]">
-                                    <X size={12} />
-                                  </button>
-                                </div>
-                                <p className="text-xs text-[#525252]/80 leading-relaxed mb-3 line-clamp-2">{selectedNode.title}</p>
-                                {selectedNode.url && (
-                                  <a href={selectedNode.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] text-[#117dff] hover:underline mb-3">
-                                    <Globe size={10} />
-                                    <span className="truncate">{selectedNode.url}</span>
-                                  </a>
-                                )}
-                                {selectedNode.confidence != null && (
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-[10px] text-[#525252]">Confidence:</span>
-                                    <span className={`text-[10px] font-semibold ${(selectedNode.confidence * 100) >= 70 ? 'text-emerald-600' : (selectedNode.confidence * 100) >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
-                                      {(selectedNode.confidence * 100).toFixed(0)}%
-                                    </span>
-                                  </div>
-                                )}
-                                {/* Structured Claim Details */}
-                                {selectedNode.structured && (
-                                  <div className="space-y-3 mb-3">
-                                    {/* Subject-Predicate-Object Breakdown */}
-                                    <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
-                                      <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Structure</p>
-                                      <div className="space-y-1.5">
-                                        {selectedNode.structured.subject && (
-                                          <div className="flex items-start gap-1.5">
-                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Subject:</span>
-                                            <span className="text-[10px] text-[#0a0a0a] font-medium">{selectedNode.structured.subject}</span>
-                                          </div>
-                                        )}
-                                        {selectedNode.structured.predicate && (
-                                          <div className="flex items-start gap-1.5">
-                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Predicate:</span>
-                                            <span className="text-[10px] text-[#0a0a0a]">{selectedNode.structured.predicate}</span>
-                                          </div>
-                                        )}
-                                        {selectedNode.structured.object && (
-                                          <div className="flex items-start gap-1.5">
-                                            <span className="text-[9px] font-medium text-[#525252] mt-0.5">Object:</span>
-                                            <span className="text-[10px] text-[#0a0a0a]">{selectedNode.structured.object}</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {/* Entity List */}
-                                    {selectedNode.structured.entities && selectedNode.structured.entities.length > 0 && (
-                                      <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
-                                        <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Entities</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          {selectedNode.structured.entities.map((entity, idx) => (
-                                            <span
-                                              key={idx}
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-white rounded border border-[#e3e0db] text-[9px] text-[#525252]"
-                                            >
-                                              <span className="font-medium text-[#0a0a0a]">{entity.name || entity}</span>
-                                              {entity.type && (
-                                                <span className="text-[8px] text-[#a3a3a3] uppercase">({entity.type})</span>
-                                              )}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                    {/* Source Links with Evidence */}
-                                    {selectedNode.structured.sourceIds && selectedNode.structured.sourceIds.length > 0 && (
-                                      <div className="bg-[#faf9f4] rounded-lg p-2.5 border border-[#e3e0db]">
-                                        <p className="text-[9px] font-semibold text-[#525252] mb-1.5 uppercase tracking-wide">Sources</p>
-                                        <div className="space-y-2">
-                                          {selectedNode.structured.sourceIds.map((sourceId, idx) => (
-                                            <div key={idx} className="space-y-1">
-                                              <div className="flex items-center gap-1.5">
-                                                <Globe size={10} className="text-[#117dff]" />
-                                                <span className="text-[10px] text-[#117dff] truncate">Source {idx + 1}</span>
-                                              </div>
-                                              {selectedNode.structured.evidenceSnippets?.[idx] && (
-                                                <p className="text-[9px] text-[#525252] italic pl-4 border-l-2 border-[#117dff]">
-                                                  "{selectedNode.structured.evidenceSnippets[idx].slice(0, 100)}{selectedNode.structured.evidenceSnippets[idx].length > 100 ? '...' : ''}"
-                                                </p>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                                {selectedNode.type === 'source' && (
-                                  <button
-                                    onClick={() => handleSaveToMemory(selectedNode, selectedNode.id)}
-                                    disabled={savingMemories.has(selectedNode.id)}
-                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium transition-all"
-                                  >
-                                    {savingMemories.has(selectedNode.id) ? (
-                                      <><Loader2 size={12} className="animate-spin" />Saving...</>
-                                    ) : (
-                                      <><Save size={12} />Save to Memory</>
-                                    )}
-                                  </button>
-                                )}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                          <DeepResearchGraph2D sessionId={sessionId} />
                         </div>
                       </div>
                     </motion.div>
