@@ -142,30 +142,30 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 
   return (
     <motion.div
-      initial={{ x: 340, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 340, opacity: 0 }}
-      className="absolute top-0 right-0 w-[340px] h-full bg-[#0a0a0a] border-l border-[#222] shadow-2xl z-20 overflow-y-auto"
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 12, scale: 0.98 }}
+      className="absolute bottom-4 right-4 w-[320px] max-w-[calc(100%-2rem)] max-h-[70%] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-2xl shadow-2xl z-20 overflow-y-auto"
     >
-      <div className="sticky top-0 bg-[#0a0a0a] border-b border-[#222] px-4 py-3 flex items-center justify-between">
-        <span className="text-xs font-mono uppercase" style={{ color: LAYER_COLORS[node.layer] || '#666' }}>
+      <div className="sticky top-0 bg-[#faf9f4]/95 backdrop-blur border-b border-[#e3e0db] px-4 py-3 flex items-center justify-between rounded-t-2xl">
+        <span className="text-xs font-mono uppercase tracking-wider" style={{ color: LAYER_COLORS[node.layer] || '#525252' }}>
           {node.layer || 'node'}
         </span>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#1a1a1a]">
-          <X size={14} className="text-[#666]" />
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#e3e0db]/50">
+          <X size={14} className="text-[#525252]" />
         </button>
       </div>
       <div className="p-4 space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-[#e0e0e0]">
+          <h3 className="text-sm font-semibold text-[#0a0a0a]">
             {node.title || 'Untitled'}
           </h3>
-          {node.agent && <p className="text-[10px] text-[#666] mt-1">Agent: {node.agent}</p>}
+          {node.agent && <p className="text-[10px] text-[#737373] mt-1">Agent: {node.agent}</p>}
         </div>
 
         {node.content && (
-          <div className="bg-[#111] border border-[#222] rounded-lg p-3">
-            <p className="text-xs text-[#aaa] whitespace-pre-wrap">
+          <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3">
+            <p className="text-xs text-[#525252] whitespace-pre-wrap">
               {truncate(node.content, 300)}
             </p>
           </div>
@@ -178,7 +178,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
           </a>
         )}
 
-        <div className="grid grid-cols-2 gap-2 text-[10px] text-[#666]">
+        <div className="grid grid-cols-2 gap-2 text-[10px] text-[#737373]">
           <div>
             <p>Type: {node.type || 'unknown'}</p>
             <p>Layer: {node.layer || 'default'}</p>
@@ -186,7 +186,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
           {node.confidence != null && (
             <div>
               <p>Confidence:</p>
-              <p className="font-semibold text-[#e0e0e0]">
+              <p className="font-semibold text-[#0a0a0a]">
                 {(node.confidence * 100).toFixed(0)}%
               </p>
             </div>
@@ -195,18 +195,18 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
-            <p className="text-[10px] font-mono text-[#666] mb-2">CONNECTIONS</p>
+            <p className="text-[10px] font-mono text-[#737373] mb-2">Connections</p>
             <div className="space-y-1.5">
               {outbound.map((e, i) => {
                 const tid = typeof e.target === 'object' ? e.target.id : e.target;
                 return (
                   <button key={`out-${i}`} onClick={() => onNavigate(tid)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#111] border border-[#222] text-left hover:border-[#117dff] transition-colors">
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-[#e3e0db] text-left hover:border-[#117dff]/30 transition-colors">
                     <span className="text-[10px] text-[#117dff]">→</span>
-                    <span className="text-[10px] flex-1 truncate text-[#aaa]">
+                    <span className="text-[10px] flex-1 truncate text-[#525252]">
                       {nodes.find(n => n.id === tid)?.title || tid}
                     </span>
-                    <span className="text-[9px] text-[#444]">{e.type}</span>
+                    <span className="text-[9px] text-[#737373]">{e.type}</span>
                   </button>
                 );
               })}
@@ -214,12 +214,12 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
                 const sid = typeof e.source === 'object' ? e.source.id : e.source;
                 return (
                   <button key={`in-${i}`} onClick={() => onNavigate(sid)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#111] border border-[#222] text-left hover:border-[#117dff] transition-colors">
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-[#e3e0db] text-left hover:border-[#117dff]/30 transition-colors">
                     <span className="text-[10px] text-[#117dff]">←</span>
-                    <span className="text-[10px] flex-1 truncate text-[#aaa]">
+                    <span className="text-[10px] flex-1 truncate text-[#525252]">
                       {nodes.find(n => n.id === sid)?.title || sid}
                     </span>
-                    <span className="text-[9px] text-[#444]">{e.type}</span>
+                    <span className="text-[9px] text-[#737373]">{e.type}</span>
                   </button>
                 );
               })}
@@ -305,7 +305,7 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
   const totalHeight = LAYER_ORDER.length * planeSpacing;
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-hidden relative"
+    <div ref={containerRef} className="w-full h-full overflow-hidden relative bg-gradient-to-b from-[#faf9f4] to-white"
       style={{ perspective: '1200px', perspectiveOrigin: '50% 40%' }}>
 
       <div className="absolute inset-0 flex items-center justify-center"
@@ -345,10 +345,10 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
                 height: dims.h * 0.35,
                 transform: `translateZ(${zOffset}px)`,
                 transformStyle: 'preserve-3d',
-                background: hexToRgba(color, 0.04),
-                border: `1px solid ${hexToRgba(color, 0.15)}`,
+                background: hexToRgba(color, 0.03),
+                border: `1px solid ${hexToRgba(color, 0.12)}`,
                 borderRadius: '8px',
-                boxShadow: `0 0 40px ${hexToRgba(color, 0.08)}`,
+                boxShadow: `0 0 30px ${hexToRgba(color, 0.06)}`,
               }}>
 
               {/* Nodes on this plane */}
@@ -421,8 +421,10 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
 }
 
 /* ──── Main Component ──────────────────────────────────────────── */
-export default function DeepResearchGraph2D({ sessionId }) {
+export default function DeepResearchGraph2D({ sessionId, showChrome = true }) {
   const graphRef = useRef(null);
+  const containerRef = useRef(null);
+  const [dims, setDims] = useState({ w: 800, h: 600 });
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchInput, setSearchInput] = useState('');
@@ -430,6 +432,19 @@ export default function DeepResearchGraph2D({ sessionId }) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState('force'); // 'force' | 'layered'
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+    const obs = new ResizeObserver(([entry]) => {
+      setDims({
+        w: entry.contentRect.width,
+        h: entry.contentRect.height,
+      });
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Fetch graph data with incremental updates
   useEffect(() => {
@@ -553,12 +568,12 @@ export default function DeepResearchGraph2D({ sessionId }) {
     ctx.stroke();
 
     // Label
-    if (globalScale > 1.5 && !isDimmed) {
+    if (globalScale > 1.2 && !isDimmed) {
       const label = truncate(node.title, 25);
       ctx.font = `${Math.max(9, 10 / globalScale)}px "Space Grotesk", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = 'rgba(220,220,220,0.85)';
+      ctx.fillStyle = '#0a0a0a';
       ctx.fillText(label, node.x, node.y + radius + 2);
     }
   }, [selectedNode, layerFilter, filteredNodes]);
@@ -624,76 +639,77 @@ export default function DeepResearchGraph2D({ sessionId }) {
   }, [graphData.nodes]);
 
   return (
-    <div className="h-screen bg-[#0a0a0a] flex flex-col overflow-hidden relative">
-      {/* Top Bar - Dark theme */}
-      <div className="shrink-0 border-b border-[#1a1a1a] bg-[#0f0f0f] px-4 py-2.5 flex items-center gap-3 z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#117dff]/15 flex items-center justify-center">
-            <Network size={14} className="text-[#117dff]" />
+    <div className="h-full bg-gradient-to-b from-[#faf9f4] to-white flex flex-col overflow-hidden relative">
+      {showChrome && (
+        <div className="shrink-0 border-b border-[#e3e0db] bg-[#faf9f4] px-4 py-2.5 flex items-center gap-3 z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#117dff]/10 flex items-center justify-center">
+              <Network size={14} className="text-[#117dff]" />
+            </div>
+            <h1 className="text-xs font-bold text-[#0a0a0a] tracking-wide">RESEARCH GRAPH</h1>
           </div>
-          <h1 className="text-xs font-bold text-[#e0e0e0] tracking-wide">RESEARCH GRAPH</h1>
-        </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-0.5 bg-[#1a1a1a] rounded-lg p-0.5">
-          <button onClick={() => setViewMode('force')}
-            className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
-              viewMode === 'force' ? 'bg-[#222] text-white' : 'text-[#666] hover:text-[#aaa]'
-            }`}>
-            <GitBranch size={11} className="inline mr-1" />Force
-          </button>
-          <button onClick={() => setViewMode('layered')}
-            className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
-              viewMode === 'layered' ? 'bg-[#222] text-white' : 'text-[#666] hover:text-[#aaa]'
-            }`}>
-            <Layers size={11} className="inline mr-1" />Layers
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#444]" />
-          <input type="text" value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search nodes..."
-            className="w-full pl-7 pr-3 py-1.5 border border-[#222] rounded-lg text-xs text-[#e0e0e0] placeholder:text-[#444] focus:outline-none focus:border-[#117dff]/40 bg-[#111]"
-          />
-        </div>
-
-        {/* Refresh */}
-        <button onClick={handleRefresh}
-          className="p-1.5 rounded hover:bg-[#1a1a1a] text-[#666] transition-colors" title="Refresh">
-          <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-        </button>
-
-        {/* Layer Filters */}
-        <div className="flex items-center gap-1 overflow-x-auto">
-          <button onClick={() => setLayerFilter('all')}
-            className={`px-2 py-1 text-[10px] rounded transition-all ${
-              layerFilter === 'all' ? 'bg-[#222] text-white' : 'text-[#555] hover:text-[#888]'
-            }`}>All</button>
-          {LAYER_ORDER.map(l => (
-            <button key={l} onClick={() => setLayerFilter(l)}
-              className="px-2 py-1 text-[10px] rounded whitespace-nowrap transition-all"
-              style={{
-                backgroundColor: layerFilter === l ? hexToRgba(LAYER_COLORS[l], 0.2) : '#111',
-                color: layerFilter === l ? LAYER_COLORS[l] : '#555',
-                border: layerFilter === l ? `1px solid ${hexToRgba(LAYER_COLORS[l], 0.4)}` : '1px solid transparent',
-              }}>
-              {LAYER_META[l]?.icon} {LAYER_META[l]?.label}
-              {layerCounts[l] > 0 && <span className="ml-1 opacity-50">({layerCounts[l]})</span>}
+          {/* View Toggle */}
+          <div className="flex items-center gap-0.5 bg-white rounded-lg p-0.5 border border-[#e3e0db]">
+            <button onClick={() => setViewMode('force')}
+              className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
+                viewMode === 'force' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              }`}>
+              <GitBranch size={11} className="inline mr-1" />Force
             </button>
-          ))}
-        </div>
+            <button onClick={() => setViewMode('layered')}
+              className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
+                viewMode === 'layered' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              }`}>
+              <Layers size={11} className="inline mr-1" />Layers
+            </button>
+          </div>
 
-        {/* Stats */}
-        <div className="ml-auto text-[10px] text-[#444] font-mono">
-          {stats.nodes} · {stats.edges}
+          {/* Search */}
+          <div className="relative flex-1 max-w-xs">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+            <input type="text" value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search nodes..."
+              className="w-full pl-7 pr-3 py-1.5 border border-[#e3e0db] rounded-lg text-xs text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-white"
+            />
+          </div>
+
+          {/* Refresh */}
+          <button onClick={handleRefresh}
+            className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252] transition-colors" title="Refresh">
+            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+
+          {/* Layer Filters */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <button onClick={() => setLayerFilter('all')}
+              className={`px-2 py-1 text-[10px] rounded transition-all ${
+                layerFilter === 'all' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              }`}>All</button>
+            {LAYER_ORDER.map(l => (
+              <button key={l} onClick={() => setLayerFilter(l)}
+                className="px-2 py-1 text-[10px] rounded whitespace-nowrap transition-all"
+                style={{
+                  backgroundColor: layerFilter === l ? hexToRgba(LAYER_COLORS[l], 0.2) : '#111',
+                  color: layerFilter === l ? LAYER_COLORS[l] : '#525252',
+                  border: layerFilter === l ? `1px solid ${hexToRgba(LAYER_COLORS[l], 0.4)}` : '1px solid #e3e0db',
+                }}>
+                {LAYER_META[l]?.icon} {LAYER_META[l]?.label}
+                {layerCounts[l] > 0 && <span className="ml-1 opacity-50">({layerCounts[l]})</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Stats */}
+          <div className="ml-auto text-[10px] text-[#737373] font-mono">
+            {stats.nodes} · {stats.edges}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Graph Area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div ref={containerRef} className="flex-1 relative overflow-hidden">
         {graphData.nodes.length > 0 ? (
           viewMode === 'force' ? (
             <ForceGraph2D
@@ -703,8 +719,8 @@ export default function DeepResearchGraph2D({ sessionId }) {
               nodeColor={node => LAYER_COLORS[node.layer] || '#525252'}
               nodeRelSize={2}
               nodeVal={node => node.val || 6}
-              linkColor={() => '#222'}
-              linkOpacity={0.3}
+              linkColor={(link) => EDGE_COLORS[link.type] || '#b7c7db'}
+              linkOpacity={0.42}
               enableNodeDrag={true}
               enableZoomPan={true}
               minZoom={0.3}
@@ -719,9 +735,12 @@ export default function DeepResearchGraph2D({ sessionId }) {
               linkDistance={70}
               d3AlphaMin={0.005}
               warmupTicks={30}
-              backgroundColor="#0a0a0a"
-              width={selectedNode ? window.innerWidth - 340 : window.innerWidth}
-              height={window.innerHeight - 48}
+              linkDirectionalParticles={2}
+              linkDirectionalParticleWidth={1.2}
+              linkDirectionalParticleSpeed={0.004}
+              backgroundColor="#faf9f4"
+              width={dims.w}
+              height={dims.h}
             />
           ) : (
             <LayeredView

@@ -648,15 +648,19 @@ export default function DeepResearch() {
   }, []);
 
   const handleToggleGraphWindow = useCallback(() => {
-    if (!showGraphWindow) {
-      setIsGraphDetached(true);
-      setPanelTab('status');
-    }
-    setShowGraphWindow(prev => !prev);
+    setShowGraphWindow((prev) => {
+      const next = !prev;
+      setIsGraphDetached(next);
+      if (next) {
+        setPanelTab('status');
+      }
+      return next;
+    });
   }, [showGraphWindow]);
 
   const handleCloseGraphWindow = useCallback(() => {
     setShowGraphWindow(false);
+    setIsGraphDetached(false);
   }, []);
 
   const handleGraphDragStart = useCallback((e) => {
@@ -1315,8 +1319,8 @@ export default function DeepResearch() {
       {/* Main Layout - Side by Side */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Chat/Content Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="w-full max-w-3xl">
+        <div className="flex-1 flex flex-col items-center justify-start pt-10 sm:pt-16 px-4 sm:px-6 pb-6 overflow-y-auto">
+          <div className="w-full max-w-2xl xl:max-w-[44rem]">
 
             {/* Welcome State - Only show when idle */}
             {status === 'idle' && (
@@ -1801,7 +1805,16 @@ export default function DeepResearch() {
 
                         {/* Graph Canvas - 2D with Real-Time Streaming */}
                         <div className="flex-1 relative">
-                          <DeepResearchGraph2D sessionId={sessionId} />
+                          {showGraphWindow ? (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#faf9f4] to-white border border-dashed border-[#e3e0db] rounded-2xl m-3">
+                              <div className="text-center px-4">
+                                <p className="text-sm font-medium text-[#0a0a0a]">Graph opened in floating window</p>
+                                <p className="text-xs text-[#737373] mt-1">Use the detach panel to inspect the growing network.</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <DeepResearchGraph2D sessionId={sessionId} />
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -1813,6 +1826,73 @@ export default function DeepResearch() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Detached Graph Window */}
+      <AnimatePresence>
+        {showGraphWindow && (
+          <motion.div
+            ref={graphWindowRef}
+            initial={{ opacity: 0, scale: 0.97, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 16 }}
+            className="fixed z-[140] overflow-hidden rounded-2xl border border-[#e3e0db] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+            style={{
+              left: detachedGraphPos.x,
+              top: detachedGraphPos.y,
+              width: detachedGraphPos.width,
+              height: detachedGraphPos.height,
+              cursor: isDraggingGraph ? 'grabbing' : 'default',
+            }}
+          >
+            <div
+              className="flex items-center justify-between gap-3 px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4] cursor-move"
+              onMouseDown={handleGraphDragStart}
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#0a0a0a]">Research Graph</p>
+                <p className="text-[10px] text-[#737373] truncate">Floating preview - drag the header to move</p>
+              </div>
+              <div className="flex items-center gap-1" data-no-drag>
+                <button
+                  onClick={handleRefreshGraph}
+                  className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252]"
+                  title="Refresh graph"
+                >
+                  <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  onClick={handleCloseGraphWindow}
+                  className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252]"
+                  title="Close graph window"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+            <div className="absolute inset-0 pt-[41px]">
+              <DeepResearchGraph2D sessionId={sessionId} showChrome={false} />
+            </div>
+            <button
+              onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
+              className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-gradient-to-tl from-[#117dff]/25 to-transparent"
+              aria-label="Resize graph window"
+              data-no-drag
+            />
+            <button
+              onMouseDown={(e) => handleResizeStart(e, 'right')}
+              className="absolute top-10 right-0 w-2 h-[calc(100%-2.5rem)] cursor-e-resize"
+              aria-label="Resize graph window horizontally"
+              data-no-drag
+            />
+            <button
+              onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+              className="absolute bottom-0 left-0 h-2 w-[calc(100%-0.5rem)] cursor-s-resize"
+              aria-label="Resize graph window vertically"
+              data-no-drag
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
