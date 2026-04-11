@@ -465,11 +465,10 @@ export default function DeepResearch() {
     const urlSessionId = urlParams.get('session');
     if (urlSessionId) {
       console.log('[DeepResearch] Auto-loading session from URL:', urlSessionId);
-      setSessionId(urlSessionId);
       setShowPanel(true);
-      setStatus('loading');
+      loadSession(urlSessionId);
     }
-  }, []); // Only on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Fetch Trail Steps ─────────────────────────────────────────── */
   const fetchTrailSteps = useCallback(async (sid) => {
