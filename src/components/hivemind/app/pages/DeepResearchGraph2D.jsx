@@ -162,6 +162,24 @@ export default function DeepResearchGraph2D({ sessionId }) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
+  // Auto-load selected node from URL on graph update
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedNodeId = urlParams.get('selectedNode');
+    if (selectedNodeId && graphData.nodes.length > 0) {
+      const node = graphData.nodes.find(n => n.id === selectedNodeId);
+      if (node && !selectedNode) {
+        setSelectedNode(node);
+        if (graphRef.current) {
+          setTimeout(() => {
+            graphRef.current.centerAt(node.x, node.y, 400);
+            graphRef.current.zoom(3, 400);
+          }, 100);
+        }
+      }
+    }
+  }, [graphData.nodes]);
+
   // Fetch graph data with incremental updates (nodes stay in place, new nodes added)
   useEffect(() => {
     if (!sessionId) return;
@@ -474,9 +492,14 @@ export default function DeepResearchGraph2D({ sessionId }) {
     }
   }, []);
 
-  // Node click handler
+  // Node click handler with URL persistence
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
+    // Persist selected node to URL for resumability
+    const url = new URL(window.location);
+    url.searchParams.set('selectedNode', node.id);
+    window.history.replaceState({}, '', url);
+
     if (graphRef.current) {
       graphRef.current.centerAt(node.x, node.y, 400);
       graphRef.current.zoom(3, 400);
@@ -715,10 +738,15 @@ export default function DeepResearchGraph2D({ sessionId }) {
             onNodeClick={handleNodeClick}
             nodeCanvasObject={paintNode}
             linkCanvasObject={paintLink}
-            cooldownTicks={200}
-            d3AlphaDecay={0.02}
-            d3VelocityDecay={0.3}
-            warmupTicks={0}
+            // Force simulation parameters for tighter layout
+            numDimensions={2}
+            cooldownTicks={300}
+            d3AlphaDecay={0.08}        // Faster convergence (0.02→0.08)
+            d3VelocityDecay={0.25}     // More viscous movement (0.3→0.25)
+            linkDistance={80}          // Closer nodes (default ~100)
+            chargeStrength={-200}      // Stronger repulsion (tighter spacing)
+            nodeStrength={-50}         // Additional node repulsion
+            warmupTicks={20}
             width={selectedNode ? window.innerWidth - 340 : window.innerWidth}
             height={window.innerHeight - 52}
           />
