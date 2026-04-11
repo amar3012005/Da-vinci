@@ -1018,8 +1018,8 @@ export default function DeepResearch() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
-          <div className="w-full max-w-3xl">
+        <div className="flex-1 flex flex-col items-center justify-start pt-12 sm:pt-20 px-4 sm:px-6 overflow-y-auto">
+          <div className="w-full max-w-2xl xl:max-w-[44rem]">
             <ResearchInput
               query={query}
               onQueryChange={setQuery}
@@ -1076,8 +1076,8 @@ export default function DeepResearch() {
       {(isResearchActive || showGraphWindow) && (
         <GraphVisualization
           {...sharedGraphProps}
-          width={0}
-          height={0}
+          width={detachedGraphPos.width}
+          height={detachedGraphPos.height}
           renderInline={false}
           showDetachedWindow={showGraphWindow}
         />

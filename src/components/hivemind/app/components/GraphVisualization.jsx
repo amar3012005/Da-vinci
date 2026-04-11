@@ -45,6 +45,10 @@ const DEFAULT_DETACHED_BOUNDS = {
   height: 500,
 };
 
+const GRAPH_CANVAS_BACKGROUND = '#faf9f4';
+const GRAPH_SURFACE_BORDER = '#dfe8f4';
+const GRAPH_SURFACE_SHADOW = '0 30px 90px rgba(15, 23, 42, 0.12)';
+
 const RUNTIME_BADGES = {
   tavily: { label: 'Tavily', color: '#0ea5e9', icon: Server },
   lightpanda: { label: 'LightPanda', color: '#8b5cf6', icon: Zap },
@@ -118,22 +122,31 @@ function resolveNodeVisualState(node) {
   const baseColor = resolveNodeColor(node);
   return {
     baseColor,
-    fillColor: graphState.isDimmed ? hexToRgba(baseColor, 0.28) : baseColor,
+    fillColor: graphState.isDimmed ? hexToRgba(baseColor, 0.22) : baseColor,
     strokeColor: graphState.isSelected
-      ? '#0a0a0a'
+      ? '#0f172a'
       : graphState.isHovered
         ? '#117dff'
         : graphState.isHighlighted
           ? '#9333ea'
           : graphState.isConnected
             ? '#0f766e'
-            : hexToRgba(baseColor, 0.28),
+            : hexToRgba(baseColor, 0.18),
     ringColor: graphState.isSelected
-      ? hexToRgba('#0a0a0a', 0.18)
+      ? hexToRgba('#0f172a', 0.14)
       : graphState.isHovered || graphState.isHighlighted
-        ? hexToRgba(baseColor, 0.18)
+        ? hexToRgba(baseColor, 0.16)
         : null,
-    opacity: graphState.isDimmed ? 0.36 : 1,
+    glowColor: graphState.isSelected
+      ? '#117dff'
+      : graphState.isHovered
+        ? baseColor
+        : graphState.isHighlighted
+          ? '#9333ea'
+          : graphState.isConnected
+            ? '#0f766e'
+            : baseColor,
+    opacity: graphState.isDimmed ? 0.42 : 1,
     lineWidth: graphState.isSelected || graphState.isHovered || graphState.isHighlighted ? 2 : 1,
   };
 }
@@ -142,11 +155,15 @@ function defaultNodeCanvasObject(node, ctx, globalScale) {
   const label = node.title || '';
   const fontSize = 10 / globalScale;
   const nodeRadius = (node.val || 4) * (node.__graphState?.isHovered ? 1.12 : 1);
-  const { fillColor, strokeColor, ringColor, opacity, lineWidth } = resolveNodeVisualState(node);
+  const { fillColor, strokeColor, ringColor, glowColor, opacity, lineWidth } = resolveNodeVisualState(node);
+  const shape = node.stage || node.type;
+  const shouldLabel = globalScale > 1.05 || node.__graphState?.isSelected || node.__graphState?.isHovered || node.__graphState?.isHighlighted;
 
   ctx.save();
   ctx.globalAlpha = opacity;
   ctx.font = `${fontSize}px Sans-Serif`;
+  ctx.shadowColor = hexToRgba(glowColor, node.__graphState?.isHovered || node.__graphState?.isHighlighted ? 0.24 : 0.14);
+  ctx.shadowBlur = node.__graphState?.isHovered || node.__graphState?.isHighlighted ? 18 : node.isLive ? 12 : 8;
 
   if (node.isLive) {
     const pulseSize = nodeRadius * 1.9;
@@ -165,7 +182,19 @@ function defaultNodeCanvasObject(node, ctx, globalScale) {
   }
 
   ctx.beginPath();
-  ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+  if (shape === 'source') {
+    drawRegularPolygon(ctx, node.x, node.y, nodeRadius, 6, Math.PI / 6);
+  } else if (shape === 'trail') {
+    drawRegularPolygon(ctx, node.x, node.y, nodeRadius, 4, Math.PI / 4);
+  } else if (shape === 'blueprint') {
+    drawRegularPolygon(ctx, node.x, node.y, nodeRadius * 1.02, 4, Math.PI / 4);
+  } else if (shape === 'observation') {
+    drawRegularPolygon(ctx, node.x, node.y, nodeRadius, 3, -Math.PI / 2);
+  } else if (shape === 'execution-event') {
+    drawStar(ctx, node.x, node.y, nodeRadius, nodeRadius * 0.45, 5);
+  } else {
+    ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+  }
   ctx.fillStyle = fillColor;
   ctx.fill();
   ctx.lineWidth = lineWidth;
@@ -187,8 +216,8 @@ function defaultNodeCanvasObject(node, ctx, globalScale) {
     ctx.fill();
   }
 
-  if (label && (!node.__graphState?.isDimmed || node.__graphState?.isSelected || node.__graphState?.isHovered)) {
-    ctx.fillStyle = '#0a0a0a';
+  if (label && shouldLabel) {
+    ctx.fillStyle = '#111827';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(label, node.x, node.y - nodeRadius - 2);
@@ -199,11 +228,75 @@ function defaultNodeCanvasObject(node, ctx, globalScale) {
 
 function defaultLinkColor(link) {
   const graphState = link.__graphState || {};
-  const baseColor = link.color || '#d4d1ca';
+  const baseColor = link.color || '#b7c7db';
   if (graphState.isHighlighted) return '#9333ea';
   if (graphState.isFocused) return '#117dff';
-  if (graphState.isDimmed) return hexToRgba(baseColor, 0.16);
+  if (graphState.isDimmed) return hexToRgba(baseColor, 0.14);
   return baseColor;
+}
+
+function drawRegularPolygon(ctx, x, y, radius, sides, rotation = 0) {
+  if (sides < 3) return;
+  ctx.beginPath();
+  for (let index = 0; index < sides; index += 1) {
+    const angle = rotation + (index * 2 * Math.PI) / sides;
+    const px = x + radius * Math.cos(angle);
+    const py = y + radius * Math.sin(angle);
+    if (index === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function drawStar(ctx, x, y, outerRadius, innerRadius, points = 5) {
+  ctx.beginPath();
+  for (let index = 0; index < points * 2; index += 1) {
+    const radius = index % 2 === 0 ? outerRadius : innerRadius;
+    const angle = -Math.PI / 2 + (index * Math.PI) / points;
+    const px = x + radius * Math.cos(angle);
+    const py = y + radius * Math.sin(angle);
+    if (index === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function drawLinkCanvasObject(link, ctx, globalScale) {
+  const graphState = link.__graphState || {};
+  const source = typeof link.source === 'object' ? link.source : null;
+  const target = typeof link.target === 'object' ? link.target : null;
+  if (!source || !target) return;
+
+  const width = Math.max(0.9, 0.9 + (link.confidence || 0) * 1.45);
+  const dashed = (link.confidence ?? 1) < 0.5;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.lineWidth = width / Math.max(globalScale, 0.9);
+  ctx.strokeStyle = defaultLinkColor(link);
+  ctx.globalAlpha = graphState.isDimmed ? 0.12 : graphState.isHighlighted || graphState.isFocused ? 0.98 : 0.78;
+  ctx.shadowColor = graphState.isHighlighted
+    ? hexToRgba('#9333ea', 0.18)
+    : graphState.isFocused
+      ? hexToRgba('#117dff', 0.18)
+      : 'transparent';
+  ctx.shadowBlur = graphState.isHighlighted || graphState.isFocused ? 10 : 0;
+  if (dashed) ctx.setLineDash([4 / Math.max(globalScale, 1), 3 / Math.max(globalScale, 1)]);
+  ctx.moveTo(source.x, source.y);
+  ctx.lineTo(target.x, target.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (graphState.isHighlighted || graphState.isFocused) {
+    ctx.beginPath();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = graphState.isHighlighted ? '#9333ea' : '#117dff';
+    ctx.lineWidth = (width + 1.2) / Math.max(globalScale, 0.9);
+    ctx.moveTo(source.x, source.y);
+    ctx.lineTo(target.x, target.y);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function readViewportSnapshot(graphRef, rendererMode, size) {
@@ -523,6 +616,8 @@ function GraphCanvas({
     height: Math.max(0, height || 0),
     nodeLabel: 'title',
     enableNodeDrag: false,
+    d3AlphaDecay: 0.022,
+    d3VelocityDecay: 0.34,
     onNodeClick,
     onNodeHover,
     onNodeRightClick: onNodeContextMenuOpen,
@@ -541,17 +636,18 @@ function GraphCanvas({
       {rendererMode === '3d' && ForceGraph3DComponent ? (
         <ForceGraph3DComponent
           {...sharedProps}
-          backgroundColor="#faf9f4"
+          backgroundColor={GRAPH_CANVAS_BACKGROUND}
           showNavInfo={false}
           controlType="orbit"
           nodeAutoColorBy={null}
           nodeColor={(node) => resolveNodeVisualState(node).fillColor}
           nodeVal={(node) => node.val}
           linkColor={(link) => defaultLinkColor(link)}
-          linkOpacity={0.4}
-          linkDirectionalParticles={1}
+          linkOpacity={0.45}
+          linkWidth={(link) => (link.__graphState?.isFocused || link.__graphState?.isHighlighted ? 1.5 : 0.9)}
+          linkDirectionalParticles={2}
           linkDirectionalParticleWidth={1.5}
-          linkDirectionalParticleSpeed={0.004}
+          linkDirectionalParticleSpeed={0.005}
           nodeResolution={10}
           onBackgroundClick={() => onNodeClick?.(null)}
           nodeThreeObject={nodeThreeObject}
@@ -560,18 +656,29 @@ function GraphCanvas({
       ) : (
         <ForceGraph2D
           {...sharedProps}
+          backgroundColor={GRAPH_CANVAS_BACKGROUND}
           nodeColor={(node) => resolveNodeVisualState(node).fillColor}
           nodeVal={(node) => node.val}
           linkColor={(link) => defaultLinkColor(link)}
-          nodeRelSize={3}
+          linkWidth={(link) => (link.__graphState?.isFocused || link.__graphState?.isHighlighted ? 1.5 : 0.9)}
+          linkCanvasObject={drawLinkCanvasObject}
+          linkCanvasObjectMode="after"
+          nodeRelSize={4}
           enableZoomPan
-          minZoom={0.5}
-          maxZoom={3}
+          minZoom={0.4}
+          maxZoom={4}
           nodeCanvasObject={nodeCanvasObject}
           nodeCanvasObjectMode="after"
-          linkDirectionalParticles={2}
-          linkDirectionalParticleWidth={2}
-          linkDirectionalParticleSpeed={0.005}
+          linkOpacity={0.55}
+          linkDirectionalArrowLength={4}
+          linkDirectionalArrowRelPos={0.95}
+          linkDirectionalParticles={3}
+          linkDirectionalParticleWidth={1.8}
+          linkDirectionalParticleSpeed={0.006}
+          cooldownTicks={80}
+          warmupTicks={35}
+          d3AlphaDecay={0.03}
+          d3VelocityDecay={0.28}
           onZoomEnd={() => onViewportInteraction?.('zoom-end')}
         />
       )}
@@ -641,6 +748,7 @@ function GraphVisualization({
   const requestedRenderer3D = renderer === '3d' || renderer === 'auto';
   const { component: ForceGraph3DComponent, status: rendererStatus } = useOptional3DRenderer(requestedRenderer3D);
   const activeRendererMode = renderer === '2d' ? '2d' : ForceGraph3DComponent ? '3d' : '2d';
+  const detachedVisible = Boolean(showDetachedWindow || isDetached);
 
   const presentedGraph = useMemo(
     () =>
@@ -712,7 +820,7 @@ function GraphVisualization({
 
   const handleToggleDetachedWindow = () => {
     if (onToggleDetachedWindow) return onToggleDetachedWindow();
-    if (showDetachedWindow && onCloseDetachedWindow) return onCloseDetachedWindow();
+    if (detachedVisible && onCloseDetachedWindow) return onCloseDetachedWindow();
     return onDetach?.();
   };
 
@@ -808,7 +916,7 @@ function GraphVisualization({
     return container?.querySelector?.('canvas') || null;
   }, []);
 
-  const exportPng = useCallback(async (surface = showDetachedWindow ? 'detached' : 'inline') => {
+  const exportPng = useCallback(async (surface = detachedVisible ? 'detached' : 'inline') => {
     const canvas = getCanvasForSurface(surface);
     if (!canvas) return;
 
@@ -844,9 +952,9 @@ function GraphVisualization({
       anchor.download = fileName;
       anchor.click();
     }
-  }, [showDetachedWindow, getCanvasForSurface, activeRendererMode, detachedGraphRef, inlineGraphRef, currentBounds.width, currentBounds.height, width, height, onExportPng]);
+  }, [detachedVisible, getCanvasForSurface, activeRendererMode, detachedGraphRef, inlineGraphRef, currentBounds.width, currentBounds.height, width, height, onExportPng]);
 
-  const exportJson = useCallback((surface = showDetachedWindow ? 'detached' : 'inline') => {
+  const exportJson = useCallback((surface = detachedVisible ? 'detached' : 'inline') => {
     const payload = createGraphExportPayload({
       data: presentedGraph.data,
       rendererMode: activeRendererMode,
@@ -863,34 +971,49 @@ function GraphVisualization({
 
     if (onExportJson) return onExportJson(payload);
     return createDownload(`research-graph-${surface}-${Date.now()}.json`, JSON.stringify(payload, null, 2), 'application/json');
-  }, [showDetachedWindow, presentedGraph.data, activeRendererMode, currentLayers, filters, searchQuery, selectedNode, detachedGraphRef, inlineGraphRef, currentBounds.width, currentBounds.height, width, height, onExportJson]);
+  }, [detachedVisible, presentedGraph.data, activeRendererMode, currentLayers, filters, searchQuery, selectedNode, detachedGraphRef, inlineGraphRef, currentBounds.width, currentBounds.height, width, height, onExportJson]);
 
   const handleContextMenuAction = useCallback((action, node) => {
-    const surface = contextMenuState?.surface || (showDetachedWindow ? 'detached' : 'inline');
+    const surface = contextMenuState?.surface || (detachedVisible ? 'detached' : 'inline');
     if (action === 'save' && node && onSaveToMemory) onSaveToMemory(node, node.id);
     if (action === 'export-png') exportPng(surface);
     if (action === 'export-json') exportJson(surface);
     if (action === 'inspect' && node) handleNodeSelection(node);
     onNodeContextMenu?.({ phase: 'action', action, node, surface });
-  }, [contextMenuState?.surface, showDetachedWindow, onSaveToMemory, exportPng, exportJson, handleNodeSelection, onNodeContextMenu]);
+  }, [contextMenuState?.surface, detachedVisible, onSaveToMemory, exportPng, exportJson, handleNodeSelection, onNodeContextMenu]);
 
   const inlineQuotaUsed = webUsage?.web_search_requests?.used || 0;
   const inlineQuotaLimit = webUsage?.web_search_requests?.limit || 50;
+  const showInlineDetailCard = !detachedVisible;
 
-  const overlay = showDetachedWindow && typeof document !== 'undefined'
+  const overlay = detachedVisible && typeof document !== 'undefined'
     ? createPortal(
         <AnimatePresence>
-          <motion.div
-            ref={graphWindowRef}
-            initial={{ opacity: 0, x: 28 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 28 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="fixed z-50"
-            style={{ left: currentBounds.x, top: currentBounds.y, width: currentBounds.width, height: currentBounds.height }}
-          >
-            <div className="w-full h-full bg-white rounded-xl shadow-2xl border border-[#e3e0db] overflow-hidden flex flex-col relative">
-              <div onMouseDown={handleGraphDragStart} className="flex items-center justify-between px-3 py-2 bg-gradient-to-b from-[#faf9f4] to-white border-b border-[#e3e0db] cursor-move select-none">
+          <motion.div className="fixed inset-0 z-[110] pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="absolute inset-0 bg-[#faf9f4]/55 backdrop-blur-[1px]"
+            />
+            <motion.div
+              ref={graphWindowRef}
+              initial={{ opacity: 0, x: 28, scale: 0.985 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 28, scale: 0.985 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="fixed pointer-events-auto"
+              style={{ left: currentBounds.x, top: currentBounds.y, width: currentBounds.width, height: currentBounds.height }}
+            >
+              <div
+                className="w-full h-full bg-white/98 backdrop-blur-xl rounded-[20px] border overflow-hidden flex flex-col relative ring-1 ring-white/70"
+                style={{ boxShadow: GRAPH_SURFACE_SHADOW, borderColor: GRAPH_SURFACE_BORDER }}
+              >
+              <div
+                onMouseDown={handleGraphDragStart}
+                className="flex items-center justify-between px-3 py-2 bg-gradient-to-b from-white to-[#faf9f4] border-b border-[#e3e0db] cursor-move select-none"
+              >
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-full bg-[#ff5f57] border border-[#e0443e]" />
@@ -909,6 +1032,10 @@ function GraphVisualization({
                   </button>
                   <button onClick={() => exportJson('detached')} className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252] hover:text-[#117dff]" title="Export graph JSON" type="button" data-no-drag>
                     <Save size={14} />
+                  </button>
+                  <button onClick={handleToggleDetachedWindow} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-[#d4d1ca] bg-white text-[10px] font-medium text-[#525252] hover:bg-[#117dff]/10 hover:border-[#117dff]/30 hover:text-[#117dff]" title="Dock graph back into the page" type="button" data-no-drag>
+                    <Layers size={12} />
+                    Dock
                   </button>
                   <button onClick={onCloseDetachedWindow} className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252] hover:text-[#117dff]" title="Close graph window" type="button" data-no-drag>
                     <X size={14} />
@@ -938,7 +1065,12 @@ function GraphVisualization({
               />
 
               <AnimatePresence>
-                <NodeDetailCard node={selectedNode} onClose={() => updateSelectedNode(null)} onSaveToMemory={onSaveToMemory} savingMemories={savingMemories} />
+                <NodeDetailCard
+                  node={selectedNode}
+                  onClose={() => updateSelectedNode(null)}
+                  onSaveToMemory={onSaveToMemory}
+                  savingMemories={savingMemories}
+                />
               </AnimatePresence>
 
               <div onMouseDown={(event) => handleResizeStart(event, 'left')} className="absolute left-0 top-0 bottom-0 w-1.5 cursor-w-resize hover:bg-[#117dff]/20" />
@@ -950,6 +1082,7 @@ function GraphVisualization({
               <div onMouseDown={(event) => handleResizeStart(event, 'top-right')} className="absolute right-0 top-0 w-4 h-4 cursor-ne-resize hover:bg-[#117dff]/20" />
               <div onMouseDown={(event) => handleResizeStart(event, 'bottom-left')} className="absolute left-0 bottom-0 w-4 h-4 cursor-sw-resize hover:bg-[#117dff]/20" />
             </div>
+            </motion.div>
           </motion.div>
         </AnimatePresence>,
         document.body
@@ -959,7 +1092,7 @@ function GraphVisualization({
   return (
     <>
       {renderInline && (
-        <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden h-full flex flex-col">
+        <div className="bg-white border rounded-xl overflow-hidden h-full flex flex-col" style={{ boxShadow: GRAPH_SURFACE_SHADOW, borderColor: GRAPH_SURFACE_BORDER }}>
           <div className="px-3 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1">
@@ -1016,9 +1149,9 @@ function GraphVisualization({
                   <button
                     onClick={handleToggleDetachedWindow}
                     className={`p-1.5 rounded border transition-colors ${
-                      showDetachedWindow ? 'border-[#117dff]/40 bg-[#117dff]/20 text-[#117dff]' : 'border-transparent text-[#525252] hover:bg-[#117dff]/10 hover:text-[#117dff]'
+                      detachedVisible ? 'border-[#117dff]/40 bg-[#117dff]/20 text-[#117dff]' : 'border-transparent text-[#525252] hover:bg-[#117dff]/10 hover:text-[#117dff]'
                     }`}
-                    title={showDetachedWindow ? 'Hide graph window' : 'Show graph window'}
+                    title={detachedVisible ? 'Dock graph back into the page' : 'Detach graph to floating window'}
                     type="button"
                   >
                     <Layers size={12} />
@@ -1029,14 +1162,14 @@ function GraphVisualization({
                   <button
                     onClick={onDetach}
                     className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded border text-[10px] font-medium transition-colors ${
-                      isDetached ? 'border-[#117dff]/50 bg-[#117dff]/20 text-[#117dff]' : 'border-[#d4d1ca] bg-white text-[#525252] hover:bg-[#117dff]/10 hover:border-[#117dff]/30 hover:text-[#117dff]'
+                      detachedVisible ? 'border-[#117dff]/50 bg-[#117dff]/20 text-[#117dff]' : 'border-[#d4d1ca] bg-white text-[#525252] hover:bg-[#117dff]/10 hover:border-[#117dff]/30 hover:text-[#117dff]'
                     }`}
-                    title={isDetached ? 'Graph is detached' : 'Detach graph to floating window'}
-                    aria-pressed={isDetached}
+                    title={detachedVisible ? 'Graph is detached' : 'Detach graph to floating window'}
+                    aria-pressed={detachedVisible}
                     type="button"
                   >
                     <ExternalLink size={12} />
-                    <span>{isDetached ? 'Detached' : 'Detach'}</span>
+                    <span>{detachedVisible ? 'Dock' : 'Detach'}</span>
                   </button>
                 )}
               </div>
@@ -1064,9 +1197,16 @@ function GraphVisualization({
               ForceGraph3DComponent={ForceGraph3DComponent}
             />
 
-            <AnimatePresence>
-              <NodeDetailCard node={selectedNode} onClose={() => updateSelectedNode(null)} onSaveToMemory={onSaveToMemory} savingMemories={savingMemories} />
-            </AnimatePresence>
+            {showInlineDetailCard && (
+              <AnimatePresence>
+                <NodeDetailCard
+                  node={selectedNode}
+                  onClose={() => updateSelectedNode(null)}
+                  onSaveToMemory={onSaveToMemory}
+                  savingMemories={savingMemories}
+                />
+              </AnimatePresence>
+            )}
           </div>
         </div>
       )}

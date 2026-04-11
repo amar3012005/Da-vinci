@@ -18,7 +18,7 @@ function GraphContextMenu({
 
   return (
     <div
-      className="fixed z-[80] min-w-52 rounded-xl border border-[#e3e0db] bg-white/98 shadow-2xl backdrop-blur p-1.5"
+      className="fixed z-[80] min-w-52 rounded-xl border border-[#dfe8f4] bg-white/98 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur p-1.5"
       style={{
         left: position.x,
         top: position.y,
