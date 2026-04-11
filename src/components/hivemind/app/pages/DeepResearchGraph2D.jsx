@@ -185,11 +185,11 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         console.log('[DeepResearchGraph2D] Processing layers:', Object.keys(layers));
 
-        // Build nodes from all layers with proper IDs matching backend structure
+        // Build nodes from all layers - use prefixed IDs to match backend edge references
         if (layers.sources?.length > 0) {
           layers.sources.forEach((s) => {
             nodes.push({
-              id: s.id, // Use raw ID from backend
+              id: `source-${s.id}`,
               title: s.title || s.url || 'Source',
               type: 'source',
               layer: 'sources',
@@ -203,7 +203,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
         if (layers.claims?.length > 0) {
           layers.claims.forEach((c) => {
             nodes.push({
-              id: c.id, // Use raw ID from backend
+              id: `claim-${c.id}`,
               title: c.content?.slice(0, 80) || 'Claim',
               type: 'claim',
               layer: 'claims',
@@ -218,7 +218,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
         if (layers.trails?.length > 0) {
           layers.trails.forEach((t) => {
             nodes.push({
-              id: t.id, // Use raw ID from backend
+              id: `trail-${t.id}`,
               title: `${t.agent}: ${t.action}`,
               type: 'trail',
               layer: 'trails',
@@ -232,7 +232,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
         if (layers.observations?.length > 0) {
           layers.observations.forEach((o) => {
             nodes.push({
-              id: o.id,
+              id: `obs-${o.id}`,
               title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
               type: 'observation',
               layer: 'observations',
@@ -247,7 +247,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
         if (layers.executionEvents?.length > 0) {
           layers.executionEvents.forEach((e) => {
             nodes.push({
-              id: e.id,
+              id: `exec-${e.id}`,
               title: `${e.agent}/${e.action}`,
               type: 'execution-event',
               layer: 'executionEvents',
@@ -262,7 +262,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
         if (layers.blueprints?.length > 0) {
           layers.blueprints.forEach((b) => {
             nodes.push({
-              id: b.blueprintId,
+              id: `blueprint-${b.blueprintId}`,
               title: b.name || 'Blueprint',
               type: 'blueprint',
               layer: 'blueprints',
@@ -273,19 +273,25 @@ export default function DeepResearchGraph2D({ sessionId }) {
           });
         }
 
-        // Build edges from weights.edges
+        // Build edges from weights.edges - validate nodes exist
+        const nodeIds = new Set(nodes.map(n => n.id));
         if (layers.weights?.edges?.length > 0) {
           layers.weights.edges.forEach((edge) => {
-            links.push({
-              source: edge.from,
-              target: edge.to,
-              type: edge.type || 'related',
-              confidence: edge.confidence,
-            });
+            // Only add edge if both source and target nodes exist
+            if (nodeIds.has(edge.from) && nodeIds.has(edge.to)) {
+              links.push({
+                source: edge.from,
+                target: edge.to,
+                type: edge.type || 'related',
+                confidence: edge.confidence,
+              });
+            } else {
+              console.warn('[DeepResearchGraph2D] Skipping invalid edge:', edge.from, '->', edge.to);
+            }
           });
         }
 
-        console.log('[DeepResearchGraph2D] Built graph:', nodes.length, 'nodes,', links.length, 'links');
+        console.log('[DeepResearchGraph2D] Built graph:', nodes.length, 'nodes,', links.length, 'valid links');
         setGraphData({ nodes, links });
       } catch (e) {
         console.error('[DeepResearchGraph2D] Failed to fetch graph:', e.message);
@@ -528,11 +534,11 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 const nodes = [];
                 const links = [];
 
-                // Process all layers
+                // Process all layers - use prefixed IDs to match backend edge references
                 if (layers.sources?.length > 0) {
                   layers.sources.forEach((s) => {
                     nodes.push({
-                      id: s.id,
+                      id: `source-${s.id}`, // Match edge prefixes from backend
                       title: s.title || s.url || 'Source',
                       type: 'source',
                       layer: 'sources',
@@ -546,7 +552,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 if (layers.claims?.length > 0) {
                   layers.claims.forEach((c) => {
                     nodes.push({
-                      id: c.id,
+                      id: `claim-${c.id}`, // Match edge prefixes from backend
                       title: c.content?.slice(0, 80) || 'Claim',
                       type: 'claim',
                       layer: 'claims',
@@ -561,7 +567,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 if (layers.trails?.length > 0) {
                   layers.trails.forEach((t) => {
                     nodes.push({
-                      id: t.id,
+                      id: `trail-${t.id}`, // Match edge prefixes from backend
                       title: `${t.agent}: ${t.action}`,
                       type: 'trail',
                       layer: 'trails',
@@ -575,7 +581,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 if (layers.observations?.length > 0) {
                   layers.observations.forEach((o) => {
                     nodes.push({
-                      id: o.id,
+                      id: `obs-${o.id}`, // Match edge prefixes from backend
                       title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
                       type: 'observation',
                       layer: 'observations',
@@ -590,7 +596,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 if (layers.executionEvents?.length > 0) {
                   layers.executionEvents.forEach((e) => {
                     nodes.push({
-                      id: e.id,
+                      id: `exec-${e.id}`, // Match edge prefixes from backend
                       title: `${e.agent}/${e.action}`,
                       type: 'execution-event',
                       layer: 'executionEvents',
@@ -605,7 +611,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
                 if (layers.blueprints?.length > 0) {
                   layers.blueprints.forEach((b) => {
                     nodes.push({
-                      id: b.blueprintId,
+                      id: `blueprint-${b.blueprintId}`, // Match edge prefixes from backend
                       title: b.name || 'Blueprint',
                       type: 'blueprint',
                       layer: 'blueprints',
@@ -616,14 +622,18 @@ export default function DeepResearchGraph2D({ sessionId }) {
                   });
                 }
 
+                // Validate edges reference existing nodes
+                const nodeIds = new Set(nodes.map(n => n.id));
                 if (layers.weights?.edges?.length > 0) {
                   layers.weights.edges.forEach((edge) => {
-                    links.push({
-                      source: edge.from,
-                      target: edge.to,
-                      type: edge.type || 'related',
-                      confidence: edge.confidence,
-                    });
+                    if (nodeIds.has(edge.from) && nodeIds.has(edge.to)) {
+                      links.push({
+                        source: edge.from,
+                        target: edge.to,
+                        type: edge.type || 'related',
+                        confidence: edge.confidence,
+                      });
+                    }
                   });
                 }
 
