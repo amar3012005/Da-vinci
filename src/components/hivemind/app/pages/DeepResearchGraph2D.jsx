@@ -237,11 +237,15 @@ export default function DeepResearchGraph2D({ sessionId }) {
       console.error('[DeepResearchGraph2D] ✗ SSE error, falling back to polling:', err);
       source.close();
 
-      // Fallback polling every 2 seconds
+      // Fallback polling every 3 seconds (slower to avoid overwhelming slow backends)
       fallbackInterval = setInterval(async () => {
         try {
-          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/graph`);
+          console.log('[DeepResearchGraph2D] [Fallback polling] Fetching graph for session:', sessionId);
+          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/graph`, {
+            timeout: 30000, // 30s timeout for this specific request
+          });
           if (!data || !data.layers) return;
+          console.log('[DeepResearchGraph2D] [Fallback polling] Got graph with', Object.keys(data.layers).length, 'layers');
 
           const layers = data.layers || {};
           const nodes = [];
@@ -301,14 +305,15 @@ export default function DeepResearchGraph2D({ sessionId }) {
           setGraphData(prev => {
             // Only update if we got new nodes
             if (nodes.length > prev.nodes.length) {
+              console.log('[DeepResearchGraph2D] [Fallback polling] Updated graph: ', nodes.length, 'nodes,', links.length, 'links');
               return { nodes, links };
             }
             return prev;
           });
         } catch (e) {
-          console.error('[Fallback] Polling error:', e.message);
+          console.error('[DeepResearchGraph2D] [Fallback polling] Error:', e.message);
         }
-      }, 2000);
+      }, 3000);
     };
 
     return () => {

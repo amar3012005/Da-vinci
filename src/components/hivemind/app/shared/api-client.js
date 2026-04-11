@@ -26,7 +26,7 @@ class HiveMindApiClient {
     this.controlPlane = axios.create({
       baseURL: API_DEFAULTS.controlPlaneBase,
       withCredentials: true,
-      timeout: 10000,
+      timeout: 60000, // Increased from 10s to 60s for long-running operations like research
       headers: { 'Content-Type': 'application/json' },
     });
 

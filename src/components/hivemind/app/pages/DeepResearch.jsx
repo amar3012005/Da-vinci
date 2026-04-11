@@ -851,7 +851,9 @@ export default function DeepResearch() {
       const fallbackInterval = setInterval(async () => {
         try {
           console.log('[DeepResearch] [Fallback polling] Fetching status for session:', sessionId);
-          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
+          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`, {
+            timeout: 30000, // 30s timeout for status checks
+          });
           console.log('[DeepResearch] [Fallback polling] Got', data.events?.length || 0, 'events, status:', data.status);
           setEvents(data.events || []);
           const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
@@ -885,8 +887,8 @@ export default function DeepResearch() {
             setError(data.error || 'Research failed');
             clearInterval(fallbackInterval);
           }
-        } catch (e) { console.error('Polling error:', e); }
-      }, 2000);
+        } catch (e) { console.error('[DeepResearch] [Fallback polling] Error:', e.message); }
+      }, 3000); // Poll every 3 seconds (reduced from 2s to ease backend load)
       // Store cleanup ref
       source._fallbackInterval = fallbackInterval;
     };
