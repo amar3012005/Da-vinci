@@ -463,7 +463,7 @@ export default function DeepResearch() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlSessionId = urlParams.get('session');
-    if (urlSessionId && !sessionId) {
+    if (urlSessionId) {
       console.log('[DeepResearch] Auto-loading session from URL:', urlSessionId);
       setSessionId(urlSessionId);
       setShowPanel(true);
