@@ -155,34 +155,12 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 /* ──── Main Component ──────────────────────────────────────────── */
 export default function DeepResearchGraph2D({ sessionId }) {
   const graphRef = useRef(null);
-  const urlLoadedRef = useRef(false);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [layerFilter, setLayerFilter] = useState('all');
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
-
-  // Auto-load selected node from URL on graph update
-  useEffect(() => {
-    if (graphData.nodes.length === 0 || urlLoadedRef.current) return;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const selectedNodeId = urlParams.get('selectedNode');
-    if (selectedNodeId) {
-      const node = graphData.nodes.find(n => n.id === selectedNodeId);
-      if (node) {
-        setSelectedNode(node);
-        urlLoadedRef.current = true;
-        if (graphRef.current) {
-          setTimeout(() => {
-            graphRef.current.centerAt(node.x, node.y, 400);
-            graphRef.current.zoom(3, 400);
-          }, 100);
-        }
-      }
-    }
-  }, [graphData.nodes]);
 
   // Fetch graph data with incremental updates (nodes stay in place, new nodes added)
   useEffect(() => {
@@ -496,14 +474,9 @@ export default function DeepResearchGraph2D({ sessionId }) {
     }
   }, []);
 
-  // Node click handler with URL persistence
+  // Node click handler - opens detail panel
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
-    // Persist selected node to URL for resumability
-    const url = new URL(window.location);
-    url.searchParams.set('selectedNode', node.id);
-    window.history.replaceState({}, '', url);
-
     if (graphRef.current) {
       graphRef.current.centerAt(node.x, node.y, 400);
       graphRef.current.zoom(3, 400);
