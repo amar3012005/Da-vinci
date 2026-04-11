@@ -12,6 +12,118 @@ const PANEL_WIDTH_VALUES = {
   large: 550,
 };
 
+function isResearchGraphEventType(type) {
+  return typeof type === 'string' && (type.startsWith('graph.') || type.startsWith('csi.'));
+}
+
+function getGraphNodeColor(node = {}) {
+  if (node.verdict === 'verified') return '#16a34a';
+  if (node.verdict === 'disputed') return '#dc2626';
+  if (node.verdict === 'uncertain') return '#d97706';
+  if (node.stage === 'faraday') return '#117dff';
+  if (node.stage === 'feynman') return '#9333ea';
+  if (node.stage === 'turing') return '#0f766e';
+  return node.color || '#64748b';
+}
+
+function normalizeGraphNode(node) {
+  if (!node) return null;
+  return {
+    ...node,
+    id: node.id,
+    val: node.val || (node.type?.startsWith('csi-') ? 10 : 7),
+    color: getGraphNodeColor(node),
+  };
+}
+
+function normalizeGraphLink(link) {
+  if (!link) return null;
+  return {
+    ...link,
+    id: link.id || `${link.source}->${link.target}:${link.type || 'related'}`,
+    source: link.source,
+    target: link.target,
+    color: link.color || 'rgba(147, 51, 234, 0.25)',
+  };
+}
+
+function upsertGraphNode(nodes, nextNode) {
+  const normalized = normalizeGraphNode(nextNode);
+  if (!normalized?.id) return nodes;
+  const index = nodes.findIndex((node) => node.id === normalized.id);
+  if (index === -1) return [...nodes, normalized];
+  return nodes.map((node, nodeIndex) => (nodeIndex === index ? { ...node, ...normalized } : node));
+}
+
+function upsertGraphLink(links, nextLink) {
+  const normalized = normalizeGraphLink(nextLink);
+  if (!normalized?.id) return links;
+  const index = links.findIndex((link) => link.id === normalized.id);
+  if (index === -1) return [...links, normalized];
+  return links.map((link, linkIndex) => (linkIndex === index ? { ...link, ...normalized } : link));
+}
+
+function applyGraphRuntimeEvent(currentGraph, event) {
+  if (!event || !event.type) return currentGraph;
+  if (event.type === 'graph.snapshot' && event.graphData) {
+    return event.graphData;
+  }
+  if (event.type === 'graph.node_upsert' && event.node) {
+    return {
+      ...currentGraph,
+      nodes: upsertGraphNode(currentGraph.nodes || [], event.node),
+      links: currentGraph.links || [],
+    };
+  }
+  if (event.type === 'graph.edge_upsert' && event.edge) {
+    return {
+      ...currentGraph,
+      nodes: currentGraph.nodes || [],
+      links: upsertGraphLink(currentGraph.links || [], event.edge),
+    };
+  }
+  if (event.type.startsWith('csi.') && event.node) {
+    const nextNode = {
+      ...event.node,
+      type: event.node.type || 'csi-observation',
+      stage: event.node.stage || event.type.split('.')[1] || null,
+      isLive: true,
+    };
+    const nextGraph = {
+      ...currentGraph,
+      nodes: upsertGraphNode(currentGraph.nodes || [], nextNode),
+      links: currentGraph.links || [],
+    };
+    const nextEdges = Array.isArray(event.edges) ? event.edges : [];
+    return nextEdges.reduce((graph, edge) => ({
+      ...graph,
+      links: upsertGraphLink(graph.links || [], edge),
+    }), nextGraph);
+  }
+  return currentGraph;
+}
+
+function getHighlightStateFromNode(graphData, nodeId) {
+  if (!nodeId) return { nodeIds: [], linkIds: [] };
+  const nodeIds = new Set([nodeId]);
+  const linkIds = new Set();
+
+  (graphData.links || []).forEach((link) => {
+    const sourceId = typeof link.source === 'object' ? link.source?.id : link.source;
+    const targetId = typeof link.target === 'object' ? link.target?.id : link.target;
+    const isRelated = sourceId === nodeId || targetId === nodeId;
+    if (!isRelated) return;
+    if (sourceId) nodeIds.add(sourceId);
+    if (targetId) nodeIds.add(targetId);
+    linkIds.add(link.id || `${sourceId}->${targetId}:${link.type || 'related'}`);
+  });
+
+  return {
+    nodeIds: [...nodeIds],
+    linkIds: [...linkIds],
+  };
+}
+
 export default function DeepResearch() {
   const [query, setQuery] = useState('');
   const [sessionId, setSessionId] = useState(null);
@@ -42,12 +154,21 @@ export default function DeepResearch() {
     observations: true,
     executionEvents: true,
     blueprints: true,
+    csi: true,
   });
   const [graphLoading, setGraphLoading] = useState(false);
   const [webUsage, setWebUsage] = useState(null);
   const [savingMemories, setSavingMemories] = useState(new Set());
   const [selectedNode, setSelectedNode] = useState(null);
   const [graphRefreshKey, setGraphRefreshKey] = useState(0);
+  const [graphRuntimeEvents, setGraphRuntimeEvents] = useState([]);
+  const [graphSearchQuery, setGraphSearchQuery] = useState('');
+  const [graphFilters] = useState(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState([]);
+  const [highlightedLinkIds, setHighlightedLinkIds] = useState([]);
+  const [graphRendererPreference, setGraphRendererPreference] = useState('auto');
+  const [graphViewport, setGraphViewport] = useState(null);
 
   const [isGraphDetached, setIsGraphDetached] = useState(false);
   const [showGraphWindow, setShowGraphWindow] = useState(false);
@@ -92,12 +213,12 @@ export default function DeepResearch() {
       try {
         const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/graph`);
         const layers = data.layers || {};
-        const nodes = [];
-        const links = [];
+        const nextNodes = [];
+        const nextLinks = [];
 
         if (graphLayers.sources && layers.sources) {
           layers.sources.forEach((source, index) => {
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `source-${source.id || index}`,
               type: 'source',
               title: source.title || source.url || 'Source',
@@ -107,14 +228,16 @@ export default function DeepResearch() {
               runtime: source.runtime || 'tavily',
               score: source.score,
               favicon: source.favicon,
-            });
+              sourceIds: source.sourceIds,
+              claimIds: source.claimIds,
+            }));
           });
         }
 
         if (graphLayers.claims && layers.claims) {
           layers.claims.forEach((claim, index) => {
             const isStructured = claim.type === 'structured-claim' || claim.structured;
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `claim-${claim.id || index}`,
               type: isStructured ? 'structured-claim' : 'plain-claim',
               title: claim.content?.slice(0, 80) || 'Finding',
@@ -124,16 +247,19 @@ export default function DeepResearch() {
               sourceId: claim.source,
               structured: claim.structured,
               source: claim.source,
-            });
+              sourceIds: claim.sourceIds || claim.structured?.sourceIds || [],
+              claimIds: claim.claimIds || [],
+              summary: claim.summary,
+            }));
 
             if (isStructured && claim.structured?.sourceIds?.length > 0) {
               claim.structured.sourceIds.forEach((sourceId) => {
-                links.push({
+                nextLinks.push(normalizeGraphLink({
                   source: `claim-${claim.id || index}`,
                   target: `source-${sourceId}`,
                   type: 'derived_from',
                   color: '#16a34a40',
-                });
+                }));
               });
             }
           });
@@ -141,7 +267,7 @@ export default function DeepResearch() {
 
         if (graphLayers.trails && layers.trails) {
           layers.trails.forEach((step, index) => {
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `trail-${step.id || index}`,
               type: 'trail',
               title: `${step.agent}: ${step.action}`,
@@ -151,21 +277,21 @@ export default function DeepResearch() {
               color: '#9333ea',
               runtime: step.runtime,
               confidence: step.confidence,
-            });
+            }));
             if (index > 0) {
-              links.push({
+              nextLinks.push(normalizeGraphLink({
                 source: `trail-${step.id || index}`,
                 target: `trail-${layers.trails[index - 1].id || index - 1}`,
                 type: 'sequence',
                 color: '#9333ea40',
-              });
+              }));
             }
           });
         }
 
         if (graphLayers.blueprints && layers.blueprints) {
           layers.blueprints.forEach((blueprint, index) => {
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `blueprint-${blueprint.blueprintId || index}`,
               type: 'blueprint',
               title: blueprint.name || 'Blueprint',
@@ -173,13 +299,13 @@ export default function DeepResearch() {
               reused: blueprint.timesReused || 0,
               val: 12,
               color: '#d97706',
-            });
+            }));
           });
         }
 
         if (graphLayers.observations && layers.observations) {
           layers.observations.forEach((observation, index) => {
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `obs-${observation.id || index}`,
               type: 'observation',
               title: `${observation.agent}/${observation.action}: ${observation.title?.slice(0, 40) || 'Observation'}`,
@@ -200,13 +326,20 @@ export default function DeepResearch() {
                       : '#8b5cf6',
               createdAt: observation.createdAt,
               isLive: Date.now() - new Date(observation.createdAt).getTime() < 5000,
-            });
+              sourceIds: observation.sourceIds || [],
+              claimIds: observation.claimIds || [],
+              wave: observation.wave,
+              taskId: observation.taskId,
+              stage: observation.stage,
+              verdict: observation.verdict,
+              summary: observation.summary,
+            }));
           });
         }
 
         if (graphLayers.executionEvents && layers.executionEvents) {
           layers.executionEvents.forEach((executionEvent, index) => {
-            nodes.push({
+            nextNodes.push(normalizeGraphNode({
               id: `exec-${executionEvent.id || index}`,
               type: 'execution-event',
               title: `${executionEvent.agent}/${executionEvent.action}`,
@@ -217,23 +350,57 @@ export default function DeepResearch() {
               color: executionEvent.success ? '#059669' : '#dc2626',
               createdAt: executionEvent.createdAt,
               isLive: Date.now() - new Date(executionEvent.createdAt).getTime() < 5000,
-            });
+              sourceIds: executionEvent.sourceIds || [],
+              claimIds: executionEvent.claimIds || [],
+              wave: executionEvent.wave,
+              taskId: executionEvent.taskId,
+              stage: executionEvent.stage,
+              verdict: executionEvent.verdict,
+              summary: executionEvent.summary,
+              confidence: executionEvent.confidence,
+            }));
+          });
+        }
+
+        if (graphLayers.csi && layers.csi) {
+          layers.csi.forEach((entry, index) => {
+            nextNodes.push(normalizeGraphNode({
+              id: entry.id || `csi-${index}`,
+              type: entry.type || 'csi-observation',
+              title: entry.title || entry.summary || entry.label || 'CSI signal',
+              summary: entry.summary,
+              agent: entry.agent,
+              action: entry.action,
+              confidence: entry.confidence,
+              createdAt: entry.createdAt,
+              sourceIds: entry.sourceIds || [],
+              claimIds: entry.claimIds || [],
+              wave: entry.wave,
+              taskId: entry.taskId,
+              stage: entry.stage,
+              verdict: entry.verdict,
+              domain: entry.domain,
+              val: entry.val || 10,
+            }));
           });
         }
 
         if (layers.weights?.edges) {
           layers.weights.edges.forEach((edge) => {
-            links.push({
+            nextLinks.push(normalizeGraphLink({
               source: edge.from,
               target: edge.to,
               type: edge.type || 'related',
               confidence: edge.confidence,
               color: `rgba(147, 51, 234, ${0.2 + (edge.confidence || 0.5) * 0.5})`,
-            });
+            }));
           });
         }
 
-        setGraphData({ nodes, links });
+        setGraphData({
+          nodes: nextNodes.filter(Boolean),
+          links: nextLinks.filter(Boolean),
+        });
       } catch (fetchError) {
         console.error('Failed to fetch graph:', fetchError);
       } finally {
@@ -271,7 +438,19 @@ export default function DeepResearch() {
     source.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setEvents((prev) => [...prev, data]);
+        if (data.type?.startsWith('graph.')) {
+          setGraphRuntimeEvents((prev) => [...prev, data]);
+          setGraphData((currentGraph) => applyGraphRuntimeEvent(currentGraph, data));
+          return;
+        }
+
+        if (data.type?.startsWith('csi.')) {
+          setEvents((prev) => [...prev, data]);
+          setGraphRuntimeEvents((prev) => [...prev, data]);
+          setGraphData((currentGraph) => applyGraphRuntimeEvent(currentGraph, data));
+        } else {
+          setEvents((prev) => [...prev, data]);
+        }
 
         if (data.type === 'agent.states' && data.states) {
           setAgentStates((prev) => ({ ...prev, [data.taskId]: data.states }));
@@ -295,9 +474,6 @@ export default function DeepResearch() {
           setSubgoals((prev) =>
             prev.map((goal) => (goal.id === data.taskId ? { ...goal, status: 'completed', confidence: data.confidence } : goal))
           );
-        }
-
-        if (showPanel && data.type === 'task.completed') {
           fetchGraphData(sessionId);
         }
       } catch (parseError) {
@@ -339,9 +515,10 @@ export default function DeepResearch() {
       const fallbackInterval = setInterval(async () => {
         try {
           const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
-          setEvents(data.events || []);
+          const nextEvents = (data.events || []).filter((entry) => !isResearchGraphEventType(entry.type));
+          setEvents(nextEvents);
 
-          const agentStateEvents = (data.events || []).filter(
+          const agentStateEvents = nextEvents.filter(
             (entry) => entry.type === 'agent.state' || entry.type === 'agent.states'
           );
 
@@ -356,9 +533,7 @@ export default function DeepResearch() {
             }
           });
 
-          if (showPanel) {
-            fetchGraphData(sessionId);
-          }
+          fetchGraphData(sessionId);
 
           if (data.status === 'completed') {
             setStatus('completed');
@@ -397,14 +572,14 @@ export default function DeepResearch() {
         clearInterval(source._fallbackInterval);
       }
     };
-  }, [fetchGraphData, fetchTrailSteps, sessionId, showPanel, status]);
+  }, [fetchGraphData, fetchTrailSteps, sessionId, status]);
 
   useEffect(() => {
-    if (panelTab === 'graph' && showPanel && sessionId) {
+    if (sessionId && (isResearchActive || showGraphWindow || showPanel)) {
       fetchGraphData(sessionId);
       fetchWebUsage();
     }
-  }, [fetchGraphData, fetchWebUsage, panelTab, sessionId, showPanel]);
+  }, [fetchGraphData, fetchWebUsage, isResearchActive, sessionId, showGraphWindow, showPanel]);
 
   useEffect(() => {
     if (status === 'running' || status === 'completed') {
@@ -471,6 +646,13 @@ export default function DeepResearch() {
     setActiveGoal(trimmedQuery);
     setTrailSteps([]);
     setSelectedNode(null);
+    setGraphData({ nodes: [], links: [] });
+    setGraphRuntimeEvents([]);
+    setGraphSearchQuery('');
+    setHoveredNodeId(null);
+    setHighlightedNodeIds([]);
+    setHighlightedLinkIds([]);
+    setGraphViewport(null);
     setShowPanel(true);
     setPanelTab('status');
 
@@ -507,18 +689,24 @@ export default function DeepResearch() {
       setSessionId(sid);
       setError(null);
       setEvents([]);
+      setGraphRuntimeEvents([]);
       setSelectedNode(null);
+      setHoveredNodeId(null);
+      setHighlightedNodeIds([]);
+      setHighlightedLinkIds([]);
 
       try {
         const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/status`);
         setStatus(data.status || 'idle');
-        setEvents(data.events || []);
+        setEvents((data.events || []).filter((entry) => !isResearchGraphEventType(entry.type)));
         if (data.query) {
           setQuery(data.query);
           setActiveGoal(data.query);
         }
         setShowPanel(true);
         setPanelTab('status');
+        fetchGraphData(sid);
+        fetchWebUsage();
 
         if (data.status === 'completed') {
           const { data: reportData } = await apiClient.controlPlane.get(`/v1/proxy/research/${sid}/report`);
@@ -537,7 +725,7 @@ export default function DeepResearch() {
         setError('Failed to load session');
       }
     },
-    [fetchTrailSteps]
+    [fetchGraphData, fetchTrailSteps, fetchWebUsage]
   );
 
   const handleKeyDown = useCallback(
@@ -570,6 +758,13 @@ export default function DeepResearch() {
     setActiveGoal('');
     setShowGraphWindow(false);
     setIsGraphDetached(false);
+    setGraphData({ nodes: [], links: [] });
+    setGraphRuntimeEvents([]);
+    setGraphSearchQuery('');
+    setHoveredNodeId(null);
+    setHighlightedNodeIds([]);
+    setHighlightedLinkIds([]);
+    setGraphViewport(null);
     textareaRef.current?.focus();
   }, []);
 
@@ -648,6 +843,11 @@ export default function DeepResearch() {
 
   const handleNodeClick = useCallback(
     (node) => {
+      if (!node) {
+        setSelectedNode(null);
+        return;
+      }
+
       if (node.type === 'blueprint') {
         const useAsBase = window.confirm(`Use "${node.title}" as a base for new research?`);
         if (useAsBase && node.id) {
@@ -665,6 +865,35 @@ export default function DeepResearch() {
     },
     [handleRerunFromBlueprint]
   );
+
+  const handleGraphNodeHover = useCallback(
+    (node) => {
+      const nodeId = node?.id || null;
+      setHoveredNodeId(nodeId);
+      if (!nodeId) {
+        setHighlightedNodeIds([]);
+        setHighlightedLinkIds([]);
+        return;
+      }
+
+      const highlightState = getHighlightStateFromNode(graphData, nodeId);
+      setHighlightedNodeIds(highlightState.nodeIds);
+      setHighlightedLinkIds(highlightState.linkIds);
+    },
+    [graphData]
+  );
+
+  const handleGraphContextMenu = useCallback(({ phase, action, node, surface }) => {
+    if (phase !== 'action') return;
+    if (action === 'flag') {
+      console.warn('[DeepResearch] Flagged graph node for manual review:', {
+        nodeId: node?.id,
+        surface,
+        sessionId,
+        viewport: graphViewport,
+      });
+    }
+  }, [graphViewport, sessionId]);
 
   const handleDetachGraph = useCallback(() => {
     setIsGraphDetached(true);
@@ -738,6 +967,15 @@ export default function DeepResearch() {
     detachedGraphRef,
     onSaveToMemory: handleSaveToMemory,
     savingMemories,
+    searchQuery: graphSearchQuery,
+    filters: graphFilters,
+    hoveredNodeId,
+    highlightedNodeIds,
+    highlightedLinkIds,
+    onNodeHover: handleGraphNodeHover,
+    onNodeContextMenu: handleGraphContextMenu,
+    onViewportChange: setGraphViewport,
+    renderer: graphRendererPreference,
   };
 
   return (
