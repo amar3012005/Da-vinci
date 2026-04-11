@@ -1106,39 +1106,9 @@ export default function DeepResearch() {
   const panelWidthValues = { compact: 350, medium: 450, large: 550 };
   const isResearchActive = status === 'running' || status === 'completed';
 
-  // Merge CSI nodes and verdicts into graph data for visualization
-  const mergedGraphData = {
-    nodes: [
-      ...graphData.nodes,
-      ...csiNodes.map(n => ({
-        id: n.id,
-        title: n.title,
-        type: 'csi-node',
-        agent: n.agent,
-        finding: n.finding,
-        confidence: n.confidence,
-        val: 6,
-      })),
-      ...csiVerdicts.map(v => ({
-        id: v.id,
-        title: v.title,
-        type: 'csi-verdict',
-        verdict: v.verdict,
-        confidence: v.confidence,
-        agent: v.agent,
-        val: 8,
-      })),
-    ],
-    links: [
-      ...graphData.links,
-      ...csiVerdicts.map(v => ({
-        source: v.claimId,
-        target: v.id,
-        color: '#cccccc',
-        type: 'csi-link',
-      })),
-    ],
-  };
+  // Graph shows only core research layers: sources, claims, trails, blueprints
+  // CSI verdicts are tracked for future analysis, not rendered in graph
+  // This keeps the 3D graph responsive with reasonable node count
 
   return (
     <div className="fixed inset-0 bg-[#faf9f4] overflow-hidden flex flex-col z-[100]">
@@ -1708,9 +1678,8 @@ export default function DeepResearch() {
                         <div className="flex-1 relative">
                           <GraphVisualization
                             key={graphRefreshKey}
-                            data={mergedGraphData}
+                            data={graphData}
                             layers={graphLayers}
-                            csiLayers={csiLayers}
                             use3D={true}
                             isLoading={graphLoading}
                             selectedNode={selectedNode}
@@ -1718,7 +1687,6 @@ export default function DeepResearch() {
                             onNodeClick={handleNodeClick}
                             onNodeHover={setHoveredNode}
                             onLayerChange={setGraphLayers}
-                            onCsiLayerChange={setCsiLayers}
                             onNodeContextMenu={(node, action) => {
                               if (action?.action === 'save') {
                                 handleSaveToMemory(node, node.id);

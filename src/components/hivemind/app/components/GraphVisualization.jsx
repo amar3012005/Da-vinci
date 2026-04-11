@@ -146,22 +146,16 @@ function GraphVisualization({
           {[
             { name: 'sources', label: 'Sources', color: '#117dff' },
             { name: 'claims', label: 'Claims', color: '#16a34a' },
-            { name: 'csi-nodes', label: 'CSI Analysis', color: '#f59e0b' },
-            { name: 'verdicts', label: 'Verdicts', color: '#8b5cf6' },
+            { name: 'trails', label: 'Trails', color: '#9333ea' },
+            { name: 'blueprints', label: 'Blueprints', color: '#d97706' },
           ].map(({ name, label, color }) => (
             <button
               key={name}
-              onClick={() => {
-                if (name.startsWith('csi')) {
-                  onCsiLayerChange({ ...csiLayers, [name.split('-')[1]]: !csiLayers[name.split('-')[1]] });
-                } else {
-                  onLayerChange({ ...layers, [name]: !layers[name] });
-                }
-              }}
+              onClick={() => onLayerChange({ ...layers, [name]: !layers[name] })}
               className="px-2 py-1 text-[10px] rounded transition-all flex-shrink-0"
               style={{
-                backgroundColor: (layers[name] || csiLayers[name.split('-')[1]]) ? `${color}20` : '#e3e0db',
-                color: (layers[name] || csiLayers[name.split('-')[1]]) ? color : '#a3a3a3',
+                backgroundColor: layers[name] ? `${color}20` : '#e3e0db',
+                color: layers[name] ? color : '#a3a3a3',
               }}
             >
               {label}
