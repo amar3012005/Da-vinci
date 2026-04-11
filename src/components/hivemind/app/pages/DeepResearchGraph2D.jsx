@@ -162,13 +162,12 @@ export default function DeepResearchGraph2D({ sessionId }) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch graph data (primary mechanism - SSE will be added later if available)
+  // Fetch graph data with incremental updates (nodes stay in place, new nodes added)
   useEffect(() => {
     if (!sessionId) return;
 
     const fetchGraphData = async () => {
       try {
-        console.log('[DeepResearchGraph2D] Fetching graph for session:', sessionId);
         const { data } = await apiClient.controlPlane.get(
           `/v1/proxy/research/${sessionId}/graph`,
           { timeout: 30000 }
@@ -180,15 +179,13 @@ export default function DeepResearchGraph2D({ sessionId }) {
         }
 
         const layers = data.layers || {};
-        const nodes = [];
-        const links = [];
+        const newNodes = [];
+        const newLinks = [];
 
-        console.log('[DeepResearchGraph2D] Processing layers:', Object.keys(layers));
-
-        // Build nodes from all layers - use prefixed IDs to match backend edge references
+        // Build new nodes from all layers
         if (layers.sources?.length > 0) {
           layers.sources.forEach((s) => {
-            nodes.push({
+            newNodes.push({
               id: `source-${s.id}`,
               title: s.title || s.url || 'Source',
               type: 'source',
@@ -202,7 +199,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         if (layers.claims?.length > 0) {
           layers.claims.forEach((c) => {
-            nodes.push({
+            newNodes.push({
               id: `claim-${c.id}`,
               title: c.content?.slice(0, 80) || 'Claim',
               type: 'claim',
@@ -217,7 +214,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         if (layers.trails?.length > 0) {
           layers.trails.forEach((t) => {
-            nodes.push({
+            newNodes.push({
               id: `trail-${t.id}`,
               title: `${t.agent}: ${t.action}`,
               type: 'trail',
@@ -231,7 +228,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         if (layers.observations?.length > 0) {
           layers.observations.forEach((o) => {
-            nodes.push({
+            newNodes.push({
               id: `obs-${o.id}`,
               title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
               type: 'observation',
@@ -246,7 +243,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         if (layers.executionEvents?.length > 0) {
           layers.executionEvents.forEach((e) => {
-            nodes.push({
+            newNodes.push({
               id: `exec-${e.id}`,
               title: `${e.agent}/${e.action}`,
               type: 'execution-event',
@@ -261,7 +258,7 @@ export default function DeepResearchGraph2D({ sessionId }) {
 
         if (layers.blueprints?.length > 0) {
           layers.blueprints.forEach((b) => {
-            nodes.push({
+            newNodes.push({
               id: `blueprint-${b.blueprintId}`,
               title: b.name || 'Blueprint',
               type: 'blueprint',
@@ -273,26 +270,42 @@ export default function DeepResearchGraph2D({ sessionId }) {
           });
         }
 
-        // Build edges from weights.edges - validate nodes exist
-        const nodeIds = new Set(nodes.map(n => n.id));
+        // Build edges from weights.edges
+        const newNodeIds = new Set(newNodes.map(n => n.id));
         if (layers.weights?.edges?.length > 0) {
           layers.weights.edges.forEach((edge) => {
-            // Only add edge if both source and target nodes exist
-            if (nodeIds.has(edge.from) && nodeIds.has(edge.to)) {
-              links.push({
+            if (newNodeIds.has(edge.from) && newNodeIds.has(edge.to)) {
+              newLinks.push({
                 source: edge.from,
                 target: edge.to,
                 type: edge.type || 'related',
                 confidence: edge.confidence,
               });
-            } else {
-              console.warn('[DeepResearchGraph2D] Skipping invalid edge:', edge.from, '->', edge.to);
             }
           });
         }
 
-        console.log('[DeepResearchGraph2D] Built graph:', nodes.length, 'nodes,', links.length, 'valid links');
-        setGraphData({ nodes, links });
+        // Incremental update: only add new nodes, keep existing ones in place
+        setGraphData((prevData) => {
+          const existingIds = new Set(prevData.nodes.map(n => n.id));
+          const nodesToAdd = newNodes.filter(n => !existingIds.has(n.id));
+
+          const existingLinkKeys = new Set(
+            prevData.links.map(l => `${l.source}|${l.target}`)
+          );
+          const linksToAdd = newLinks.filter(
+            l => !existingLinkKeys.has(`${l.source}|${l.target}`)
+          );
+
+          if (nodesToAdd.length > 0 || linksToAdd.length > 0) {
+            console.log('[DeepResearchGraph2D] Adding nodes:', nodesToAdd.length, 'links:', linksToAdd.length);
+            return {
+              nodes: [...prevData.nodes, ...nodesToAdd],
+              links: [...prevData.links, ...linksToAdd],
+            };
+          }
+          return prevData;
+        });
       } catch (e) {
         console.error('[DeepResearchGraph2D] Failed to fetch graph:', e.message);
       }
