@@ -169,17 +169,20 @@ export default function DeepResearchGraph2D({ sessionId }) {
     const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
     const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
     console.log('[DeepResearchGraph2D] Connecting to SSE stream:', streamUrl);
-    
+    console.log('[DeepResearchGraph2D] API Client baseURL:', apiClient.controlPlane.defaults?.baseURL);
+
     let source;
+    let fallbackInterval;
+
     try {
-      source = new EventSource(streamUrl, { withCredentials: true });
+      source = new EventSource(streamUrl);
     } catch (e) {
-      console.warn('[DeepResearchGraph2D] Failed to connect to SSE stream (sandbox/storage issue):', e);
+      console.warn('[DeepResearchGraph2D] Failed to create EventSource:', e);
       return;
     }
 
     source.onopen = () => {
-      console.log('[DeepResearchGraph2D] SSE stream connected for session:', sessionId);
+      console.log('[DeepResearchGraph2D] ✓ SSE stream connected for session:', sessionId);
     };
 
     source.onmessage = (e) => {
@@ -231,10 +234,87 @@ export default function DeepResearchGraph2D({ sessionId }) {
     };
 
     source.onerror = (err) => {
-      console.error('[DeepResearchGraph2D] SSE error:', err);
+      console.error('[DeepResearchGraph2D] ✗ SSE error, falling back to polling:', err);
+      source.close();
+
+      // Fallback polling every 2 seconds
+      fallbackInterval = setInterval(async () => {
+        try {
+          const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/graph`);
+          if (!data || !data.layers) return;
+
+          const layers = data.layers || {};
+          const nodes = [];
+          const links = [];
+
+          // Build nodes from all layers
+          if (layers.sources) {
+            layers.sources.forEach((s, idx) => {
+              nodes.push({
+                id: `source-${s.id || idx}`,
+                title: s.title || s.url || 'Source',
+                type: 'source',
+                layer: 'sources',
+                val: 8,
+              });
+            });
+          }
+
+          if (layers.claims) {
+            layers.claims.forEach((c, idx) => {
+              nodes.push({
+                id: `claim-${c.id || idx}`,
+                title: c.content?.slice(0, 80) || 'Claim',
+                type: 'claim',
+                layer: 'claims',
+                confidence: c.confidence,
+                val: 8,
+              });
+            });
+          }
+
+          if (layers.trails) {
+            layers.trails.forEach((t, idx) => {
+              nodes.push({
+                id: `trail-${t.id || idx}`,
+                title: `${t.agent}: ${t.action}`,
+                type: 'trail',
+                layer: 'trails',
+                agent: t.agent,
+                val: 6,
+              });
+            });
+          }
+
+          if (layers.blueprints) {
+            layers.blueprints.forEach((b, idx) => {
+              nodes.push({
+                id: `blueprint-${b.blueprintId || idx}`,
+                title: b.name || 'Blueprint',
+                type: 'blueprint',
+                layer: 'blueprints',
+                val: 10,
+              });
+            });
+          }
+
+          setGraphData(prev => {
+            // Only update if we got new nodes
+            if (nodes.length > prev.nodes.length) {
+              return { nodes, links };
+            }
+            return prev;
+          });
+        } catch (e) {
+          console.error('[Fallback] Polling error:', e.message);
+        }
+      }, 2000);
     };
 
-    return () => source.close();
+    return () => {
+      source.close();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+    };
   }, [sessionId]);
 
   // Calculate filtered nodes for search/layer filtering

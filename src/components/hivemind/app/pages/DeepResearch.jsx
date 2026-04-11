@@ -742,18 +742,25 @@ export default function DeepResearch() {
 
     const baseUrl = apiClient.controlPlane.defaults?.baseURL || '';
     const streamUrl = `${baseUrl}/v1/proxy/research/${sessionId}/stream`;
+    console.log('[DeepResearch] Connecting to SSE stream:', streamUrl, 'sessionId:', sessionId, 'status:', status);
+    console.log('[DeepResearch] API Client baseURL:', apiClient.controlPlane.defaults?.baseURL);
 
     let source;
     try {
-      source = new EventSource(streamUrl, { withCredentials: true });
+      source = new EventSource(streamUrl);
     } catch (e) {
-      console.warn("EventSource creation failed (sandbox/storage issue):", e);
+      console.warn("[DeepResearch] EventSource creation failed:", e);
       return;
     }
+
+    source.onopen = () => {
+      console.log('[DeepResearch] ✓ SSE stream connected for session:', sessionId);
+    };
 
     source.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        console.log('[DeepResearch] Received SSE event:', event.type);
         setEvents(prev => [...prev, event]);
 
         if (event.type === 'agent.states' && event.states) {
@@ -837,13 +844,15 @@ export default function DeepResearch() {
       }
     });
 
-    source.onerror = () => {
-      console.error('[SSE] Connection error, falling back to polling');
+    source.onerror = (err) => {
+      console.error('[DeepResearch] ✗ SSE error, falling back to polling:', err);
       source.close();
       // Fall back to polling if SSE fails
       const fallbackInterval = setInterval(async () => {
         try {
+          console.log('[DeepResearch] [Fallback polling] Fetching status for session:', sessionId);
           const { data } = await apiClient.controlPlane.get(`/v1/proxy/research/${sessionId}/status`);
+          console.log('[DeepResearch] [Fallback polling] Got', data.events?.length || 0, 'events, status:', data.status);
           setEvents(data.events || []);
           const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
           agentStateEvents.forEach(event => {
