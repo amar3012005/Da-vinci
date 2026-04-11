@@ -274,8 +274,14 @@ function buildGraphFromLayers(layers) {
   return { nodes, links };
 }
 
-/* ──── Node Detail Sidecar ──────────────────────────────────────── */
+/* ──── Node Detail Sidecar (MemoryGraph style) ──────────────────── */
 function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint, currentQuery }) {
+  const nodeMap = useMemo(() => {
+    const map = {};
+    nodes?.forEach(n => { map[n.id] = n; });
+    return map;
+  }, [nodes]);
+
   if (!node) return null;
 
   const inbound = edges.filter(e => {
@@ -287,126 +293,147 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
     return sid === node.id;
   });
 
+  const layerColor = LAYER_COLORS[node.layer] || '#525252';
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 12, scale: 0.98 }}
-      className="absolute bottom-4 right-4 w-[320px] max-w-[calc(100%-2rem)] max-h-[70%] bg-white/98 backdrop-blur border border-[#e3e0db] rounded-2xl shadow-2xl z-20 overflow-y-auto"
+      initial={{ x: 320, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 320, opacity: 0 }}
+      className="absolute top-0 right-0 w-[340px] h-full bg-white border-l border-[#e3e0db] shadow-[-4px_0_20px_rgba(0,0,0,0.06)] z-20 overflow-y-auto"
     >
-      <div className="sticky top-0 bg-[#faf9f4]/95 backdrop-blur border-b border-[#e3e0db] px-4 py-3 flex items-center justify-between rounded-t-2xl">
-        <span className="text-xs font-mono uppercase tracking-wider" style={{ color: LAYER_COLORS[node.layer] || '#525252' }}>
-          {node.layer || 'node'}
+      {/* Header */}
+      <div className="sticky top-0 bg-white border-b border-[#e3e0db] px-4 py-3 flex items-center justify-between">
+        <span className="text-xs font-mono text-[#a3a3a3] uppercase tracking-wider">
+          Node Detail
         </span>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#e3e0db]/50">
-          <X size={14} className="text-[#525252]" />
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#f3f1ec] transition-colors">
+          <X size={14} className="text-[#a3a3a3]" />
         </button>
       </div>
+
       <div className="p-4 space-y-4">
+        {/* Title & type */}
         <div>
-          <h3 className="text-sm font-semibold text-[#0a0a0a]">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: layerColor }} />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+              {LAYER_META[node.layer]?.label || node.layer || 'node'}
+            </span>
+          </div>
+          <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a] leading-snug">
             {node.title || 'Untitled'}
           </h3>
-          {node.agent && <p className="text-[10px] text-[#737373] mt-1">Agent: {node.agent}</p>}
+          {node.agent && <p className="text-[10px] text-[#a3a3a3] mt-1">Agent: {node.agent}</p>}
         </div>
 
+        {/* Content */}
         {node.content && (
           <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3">
-            <p className="text-xs text-[#525252] whitespace-pre-wrap">
+            <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
               {truncate(node.content, 300)}
             </p>
           </div>
         )}
 
+        {/* URL */}
         {node.url && (
           <a href={node.url} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-[#117dff] hover:underline block truncate">
+            className="text-[10px] text-[#117dff] hover:underline block truncate font-['Space_Grotesk']">
             {node.url}
           </a>
         )}
 
-        <div className="grid grid-cols-2 gap-2 text-[10px] text-[#737373]">
-          <div>
-            <p>Type: {node.type || 'unknown'}</p>
-            <p>Layer: {node.layer || 'default'}</p>
-          </div>
-        {node.confidence != null && (
-          <div>
-            <p>Confidence:</p>
-            <p className="font-semibold text-[#0a0a0a]">
-              {(node.confidence * 100).toFixed(0)}%
-            </p>
-          </div>
-        )}
-      </div>
+        {/* Scores */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: 'Confidence', value: node.confidence != null ? `${(node.confidence * 100).toFixed(0)}%` : null },
+            { label: 'Type', value: node.type },
+            { label: node.layer === 'blueprints' ? 'Reused' : 'Layer', value: node.layer === 'blueprints' ? node.timesReused ?? 0 : node.layer },
+          ].map(s => (
+            <div key={s.label} className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
+              <p className="text-[10px] text-[#a3a3a3] font-mono">{s.label}</p>
+              <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate">{s.value ?? '—'}</p>
+            </div>
+          ))}
+        </div>
 
+        {/* Blueprint extras */}
         {node.layer === 'blueprints' && (
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2 text-[10px] text-[#737373]">
-              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2">
-                <p className="uppercase tracking-wider text-[9px] mb-1">Pattern</p>
-                <p className="text-[#0a0a0a] font-medium">{node.patternCount || 0} steps</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
+                <p className="text-[10px] text-[#a3a3a3] font-mono">Pattern</p>
+                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.patternCount || 0} steps</p>
               </div>
-              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2">
-                <p className="uppercase tracking-wider text-[9px] mb-1">Captured State</p>
-                <p className="text-[#0a0a0a] font-medium">{node.hasCapturedState ? 'Ready' : 'Backfilling'}</p>
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
+                <p className="text-[10px] text-[#a3a3a3] font-mono">State</p>
+                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.hasCapturedState ? 'Ready' : 'Partial'}</p>
               </div>
             </div>
-
             {node.capturedStateSummary && (
-              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3 text-[10px] text-[#525252] space-y-1">
-                <p className="font-mono uppercase tracking-wider text-[9px] text-[#737373]">Captured summary</p>
+              <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3 text-[10px] text-[#525252] font-['Space_Grotesk'] space-y-0.5">
                 <p>Sources: {node.capturedStateSummary.sourceCount ?? 0}</p>
                 <p>Findings: {node.capturedStateSummary.findingCount ?? 0}</p>
                 <p>Trails: {node.capturedStateSummary.trailCount ?? 0}</p>
               </div>
             )}
-
             {onReuseBlueprint && (
-              <button
-                onClick={() => onReuseBlueprint(node, currentQuery)}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#d97706] text-white text-xs font-medium hover:bg-[#b86505] transition-colors"
-              >
-                <RefreshCw size={13} />
+              <button onClick={() => onReuseBlueprint(node, currentQuery)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#d97706] text-white text-xs font-['Space_Grotesk'] font-medium hover:bg-[#b86505] transition-colors">
+                <RefreshCw size={12} />
                 Reuse Blueprint
               </button>
             )}
           </div>
         )}
 
+        {/* Relationships */}
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
-            <p className="text-[10px] font-mono text-[#737373] mb-2">Connections</p>
+            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-2">Relationships</p>
             <div className="space-y-1.5">
               {outbound.map((e, i) => {
                 const tid = typeof e.target === 'object' ? e.target.id : e.target;
+                const target = nodeMap[tid];
+                const edgeColor = EDGE_COLORS[e.type] || '#a3a3a3';
                 return (
                   <button key={`out-${i}`} onClick={() => onNavigate(tid)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-[#e3e0db] text-left hover:border-[#117dff]/30 transition-colors">
-                    <span className="text-[10px] text-[#117dff]">→</span>
-                    <span className="text-[10px] flex-1 truncate text-[#525252]">
-                      {nodes.find(n => n.id === tid)?.title || tid}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/20 text-left transition-colors group">
+                    <GitBranch size={10} style={{ color: edgeColor }} />
+                    <span className="text-[10px] font-mono" style={{ color: edgeColor }}>{e.type}</span>
+                    <span className="text-[9px] font-mono text-[#a3a3a3]">({((e.confidence || 0) * 100).toFixed(0)}%)</span>
+                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#117dff]">
+                      {target?.title || truncate(tid, 20)}
                     </span>
-                    <span className="text-[9px] text-[#737373]">{e.type}</span>
                   </button>
                 );
               })}
               {inbound.map((e, i) => {
                 const sid = typeof e.source === 'object' ? e.source.id : e.source;
+                const source = nodeMap[sid];
+                const edgeColor = EDGE_COLORS[e.type] || '#a3a3a3';
                 return (
                   <button key={`in-${i}`} onClick={() => onNavigate(sid)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-[#e3e0db] text-left hover:border-[#117dff]/30 transition-colors">
-                    <span className="text-[10px] text-[#117dff]">←</span>
-                    <span className="text-[10px] flex-1 truncate text-[#525252]">
-                      {nodes.find(n => n.id === sid)?.title || sid}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/20 text-left transition-colors group">
+                    <GitBranch size={10} className="rotate-180" style={{ color: edgeColor }} />
+                    <span className="text-[10px] font-mono opacity-50" style={{ color: edgeColor }}>← {e.type}</span>
+                    <span className="text-[9px] font-mono text-[#a3a3a3]">({((e.confidence || 0) * 100).toFixed(0)}%)</span>
+                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#117dff]">
+                      {source?.title || truncate(sid, 20)}
                     </span>
-                    <span className="text-[9px] text-[#737373]">{e.type}</span>
                   </button>
                 );
               })}
             </div>
           </div>
         )}
+
+        {/* Meta */}
+        <div className="text-[10px] text-[#a3a3a3] font-mono space-y-0.5">
+          <p>ID: {node.id}</p>
+          {node.agent && <p>Agent: {node.agent}</p>}
+        </div>
       </div>
     </motion.div>
   );
@@ -940,111 +967,154 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
     return result;
   }, [graphData.nodes, layerFilter, searchInput]);
 
-  // Paint node (force view)
+  // Paint node — MemoryGraph style (light bg, temporal glow, per-shape-per-layer)
   const paintNode = useCallback((node, ctx, globalScale) => {
-    const isDimmed = layerFilter !== 'all' && !filteredNodes.has(node.id);
+    const isHighlighted = highlightNodes.size > 0 && highlightNodes.has(node.id);
+    const isDimmed = (highlightNodes.size > 0 && !highlightNodes.has(node.id)) ||
+                     (layerFilter !== 'all' && !filteredNodes.has(node.id));
     const isSelected = selectedNode?.id === node.id;
     const color = LAYER_COLORS[node.layer] || '#525252';
-    const pulse = 0.92 + (Math.abs(hashCode(node.id)) % 12) / 100;
-    let radius = Math.sqrt(node.val || 6) * 2.35 * pulse;
+    const glow = node.confidence || 0.3;
+    let radius = Math.sqrt(node.val || 4) * 2.5;
 
-    if (node.layer === 'trails') radius = Math.max(radius * 0.8, 3);
+    if (node.layer === 'trails') radius = Math.max(radius * 0.7, 3);
     if (node.layer === 'blueprints') radius = radius * 1.3;
-    if (node.layer === 'promoted') radius = radius * 1.2;
+    if (node.layer === 'promotedClaims') radius = radius * 1.2;
+    if (node.layer === 'promoted') radius = radius * 1.5;
 
-    // Glow
-    if (!isDimmed) {
+    // Temporal glow (MemoryGraph exact)
+    if (glow > 0.3 && !isDimmed) {
       ctx.beginPath();
-      ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
-      ctx.fillStyle = hexToRgba(color, 0.12);
+      ctx.arc(node.x, node.y, radius + 4 + glow * 4, 0, 2 * Math.PI);
+      ctx.fillStyle = hexToRgba(color, glow * 0.12);
       ctx.fill();
     }
 
-    // Selection ring
+    // Selection ring — #117dff (MemoryGraph exact)
     if (isSelected) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI);
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = '#117dff';
       ctx.lineWidth = 2 / globalScale;
       ctx.stroke();
     }
 
-    // Shape per layer
+    // Highlight ring — #d97706 (MemoryGraph exact)
+    if (isHighlighted) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.5 / globalScale;
+      ctx.stroke();
+    }
+
+    // Shape per layer (MemoryGraph pattern)
     if (node.layer === 'trails') {
+      // Hexagon
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i;
+        const angle = (Math.PI / 3) * i - Math.PI / 6;
         ctx.lineTo(node.x + radius * Math.cos(angle), node.y + radius * Math.sin(angle));
       }
       ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.75);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(color, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
     } else if (node.layer === 'blueprints') {
+      // Diamond
       ctx.beginPath();
       ctx.moveTo(node.x, node.y - radius);
       ctx.lineTo(node.x + radius, node.y);
       ctx.lineTo(node.x, node.y + radius);
       ctx.lineTo(node.x - radius, node.y);
       ctx.closePath();
-    } else if (node.layer === 'promoted') {
+      ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.7);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(color, 0.9);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
+    } else if (node.layer === 'promotedClaims') {
+      // 4-point star (MemoryGraph tara-insight shape)
+      const spikes = 4;
+      const outerR = radius;
+      const innerR = radius * 0.45;
       ctx.beginPath();
-      ctx.moveTo(node.x, node.y - radius);
-      ctx.lineTo(node.x + radius * 0.85, node.y);
-      ctx.lineTo(node.x, node.y + radius);
-      ctx.lineTo(node.x - radius * 0.85, node.y);
+      for (let i = 0; i < spikes * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = (Math.PI / spikes) * i - Math.PI / 2;
+        ctx.lineTo(node.x + r * Math.cos(angle), node.y + r * Math.sin(angle));
+      }
       ctx.closePath();
+      ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.8);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(color, 0.95);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+    } else if (node.layer === 'observations') {
+      // Rounded square (MemoryGraph observation shape)
+      const s = radius * 0.85;
+      ctx.beginPath();
+      ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
+      ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.6);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(color, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
     } else {
+      // Circle — sources, claims, promoted, default
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.6 + glow * 0.4);
+      ctx.fill();
+      ctx.strokeStyle = isDimmed ? hexToRgba(color, 0.1) : hexToRgba(color, 0.8);
+      ctx.lineWidth = 0.5 / globalScale;
+      ctx.stroke();
     }
 
-    ctx.fillStyle = isDimmed ? hexToRgba(color, 0.15) : hexToRgba(color, 0.7);
-    ctx.fill();
-    ctx.strokeStyle = isDimmed ? hexToRgba(color, 0.1) : hexToRgba(color, 0.9);
-    ctx.lineWidth = 0.8 / globalScale;
-    ctx.stroke();
-
-    // Label
-    if (globalScale > 1.2 && !isDimmed) {
-      const label = truncate(node.title, 25);
-      ctx.font = `${Math.max(9, 10 / globalScale)}px "Space Grotesk", sans-serif`;
+    // Label at zoom > 1.8 (MemoryGraph exact threshold)
+    if (globalScale > 1.8 && !isDimmed) {
+      const label = truncate(node.title || '', 30);
+      ctx.font = `${Math.max(10, 11 / globalScale)}px Space Grotesk, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = '#0a0a0a';
+      ctx.fillStyle = isDimmed ? 'rgba(0,0,0,0.1)' : 'rgba(10,10,10,0.8)';
       ctx.fillText(label, node.x, node.y + radius + 2);
     }
-  }, [selectedNode, layerFilter, filteredNodes]);
+  }, [highlightNodes, selectedNode, layerFilter, filteredNodes]);
 
-  // Paint edges (force view)
+  // Paint edges (MemoryGraph style — straight lines, confidence-weighted, edge label with white bg)
   const paintLink = useCallback((link, ctx, globalScale) => {
-    const color = EDGE_COLORS[link.type] || '#333';
-    const opacity = 0.25 + (link.confidence || 0.5) * 0.3;
-    const width = 0.5 + (link.confidence || 0.5) * 1.35;
-    const sx = link.source.x;
-    const sy = link.source.y;
-    const tx = link.target.x;
-    const ty = link.target.y;
-    const dx = tx - sx;
-    const dy = ty - sy;
-    const curvature = 0.16;
-    const cx = (sx + tx) / 2 - dy * curvature;
-    const cy = (sy + ty) / 2 + dx * curvature;
+    const color = EDGE_COLORS[link.type] || '#e3e0db';
+    const opacity = 0.35 + (link.confidence || 0.5) * 0.3;
+    const width = 0.5 + (link.confidence || 0.5) * 2;
 
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.quadraticCurveTo(cx, cy, tx, ty);
-    ctx.strokeStyle = hexToRgba(color, opacity * 0.3);
-    ctx.lineWidth = width + 2.2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.quadraticCurveTo(cx, cy, tx, ty);
     ctx.strokeStyle = hexToRgba(color, opacity);
     ctx.lineWidth = width;
     if (link.type === 'contradicts' || (link.confidence || 1) < 0.5) {
       ctx.setLineDash([4, 3]);
     }
+    ctx.beginPath();
+    ctx.moveTo(link.source.x, link.source.y);
+    ctx.lineTo(link.target.x, link.target.y);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Edge label at high zoom (MemoryGraph exact — with white bg rect)
+    if (globalScale > 2.5) {
+      const midX = (link.source.x + link.target.x) / 2;
+      const midY = (link.source.y + link.target.y) / 2;
+      const label = `${link.type} ${((link.confidence || 1) * 100).toFixed(0)}%`;
+      ctx.font = `${10 / globalScale}px Space Grotesk, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(midX - textWidth / 2 - 2, midY - 6, textWidth + 4, 12);
+      ctx.fillStyle = 'rgba(10,10,10,0.8)';
+      ctx.fillText(label, midX, midY);
+    }
   }, []);
 
   const handleNodeClick = useCallback((node) => {
@@ -1107,151 +1177,126 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
   }, [graphData.nodes]);
 
   return (
-    <div className="h-full bg-gradient-to-b from-[#faf9f4] to-white flex flex-col overflow-hidden relative">
+    <div className="h-full bg-[#faf9f4] flex flex-col overflow-hidden relative">
       {showChrome && (
-        <div className="shrink-0 border-b border-[#e3e0db] bg-[#faf9f4] px-4 py-2.5 flex items-center gap-3 z-10">
+        <div className="shrink-0 border-b border-[#e3e0db] bg-white px-4 py-3 flex items-center gap-3 z-10">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#117dff]/10 flex items-center justify-center">
-              <Network size={14} className="text-[#117dff]" />
+            <div className="w-8 h-8 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center">
+              <Network size={16} className="text-[#8b5cf6]" />
             </div>
-            <h1 className="text-xs font-bold text-[#0a0a0a] tracking-wide">RESEARCH GRAPH</h1>
+            <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a]">Research Graph</h1>
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center gap-0.5 bg-white rounded-lg p-0.5 border border-[#e3e0db]">
+          <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
             <button onClick={() => setViewMode('force')}
-              className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
-                viewMode === 'force' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] transition-all ${
+                viewMode === 'force' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#737373]'
               }`}>
-              <GitBranch size={11} className="inline mr-1" />Force
+              <GitBranch size={10} className="inline mr-1" />Force
             </button>
             <button onClick={() => setViewMode('layered')}
-              className={`px-2.5 py-1 text-[10px] rounded-md transition-all ${
-                viewMode === 'layered' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] transition-all ${
+                viewMode === 'layered' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#737373]'
               }`}>
-              <Layers size={11} className="inline mr-1" />Layers
+              <Layers size={10} className="inline mr-1" />Layers
             </button>
           </div>
 
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
             <input type="text" value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search nodes..."
-              className="w-full pl-7 pr-3 py-1.5 border border-[#e3e0db] rounded-lg text-xs text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-white"
+              placeholder={highlightNodes.size > 0 ? `Search... (${highlightNodes.size} matches)` : 'Search nodes...'}
+              className="w-full pl-8 pr-3 py-1.5 border border-[#e3e0db] rounded-lg text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-[#faf9f4]"
             />
           </div>
-
-          {/* Refresh */}
-          <button onClick={handleRefresh}
-            className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252] transition-colors" title="Refresh">
-            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-          </button>
-
-          <button
-            onClick={() => {
-              graphRef.current?.zoomToFit?.(400, 70);
-              setFitRequested(false);
-            }}
-            className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252] transition-colors"
-            title="Fit graph to view"
-          >
-            <Crosshair size={13} />
-          </button>
 
           {/* Layer Filters */}
           <div className="flex items-center gap-1 overflow-x-auto">
             <button onClick={() => setLayerFilter('all')}
-              className={`px-2 py-1 text-[10px] rounded transition-all ${
-                layerFilter === 'all' ? 'bg-[#117dff] text-white' : 'text-[#525252] hover:text-[#117dff]'
+              className={`px-2 py-1 rounded text-[10px] font-['Space_Grotesk'] ${
+                layerFilter === 'all' ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20' : 'text-[#525252] border border-transparent'
               }`}>All</button>
             {LAYER_ORDER.map(l => (
               <button key={l} onClick={() => setLayerFilter(l)}
-                className="px-2 py-1 text-[10px] rounded whitespace-nowrap transition-all"
-                style={{
-                  backgroundColor: layerFilter === l ? hexToRgba(LAYER_COLORS[l], 0.2) : '#111',
-                  color: layerFilter === l ? LAYER_COLORS[l] : '#525252',
-                  border: layerFilter === l ? `1px solid ${hexToRgba(LAYER_COLORS[l], 0.4)}` : '1px solid #e3e0db',
-                }}>
+                className={`px-2 py-1 rounded text-[10px] font-['Space_Grotesk'] whitespace-nowrap ${
+                  layerFilter === l ? 'border' : 'border border-transparent'
+                }`}
+                style={layerFilter === l ? {
+                  backgroundColor: hexToRgba(LAYER_COLORS[l], 0.1),
+                  color: LAYER_COLORS[l],
+                  borderColor: hexToRgba(LAYER_COLORS[l], 0.2),
+                } : { color: '#525252' }}>
                 {LAYER_META[l]?.icon} {LAYER_META[l]?.label}
-                {layerCounts[l] > 0 && <span className="ml-1 opacity-50">({layerCounts[l]})</span>}
+                {layerCounts[l] > 0 && <span className="ml-1 opacity-60">({layerCounts[l]})</span>}
               </button>
             ))}
           </div>
 
-          {blueprintReplayCounts.total > 0 && (
-            <button
-              onClick={() => setLayerFilter('blueprints')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-colors ${
-                blueprintReplayCounts.ready > 0
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                  : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373] hover:border-[#117dff]/30 hover:text-[#117dff]'
-              }`}
-              title="Blueprints that are ready to replay were backfilled with captured state and reusable patterns"
-            >
-              <CheckCircle2 size={11} />
-              <span>Replay-ready</span>
-              <span className="font-mono opacity-80">
-                {blueprintReplayCounts.ready}/{blueprintReplayCounts.total}
-              </span>
-            </button>
-          )}
-
-          {promotedCounts.total > 0 && (
-            <button
-              onClick={() => setLayerFilter('promoted')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-colors ${
-                layerFilter === 'promoted'
-                  ? 'border-teal-200 bg-teal-50 text-teal-700'
-                  : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373] hover:border-teal-300 hover:text-teal-700'
-              }`}
-              title="Promoted memories retained after synthesis"
-            >
-              <CheckCircle2 size={11} />
-              <span>Promoted</span>
-              <span className="font-mono opacity-80">{promotedCounts.total}</span>
-            </button>
-          )}
+          {/* Actions */}
+          <button onClick={handleRefresh} disabled={isLoading}
+            className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors disabled:opacity-40"
+            title="Refresh">
+            <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          <button onClick={() => { graphRef.current?.zoomToFit?.(400, 70); setFitRequested(false); }}
+            className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
+            title="Fit to view">
+            <Crosshair size={13} />
+          </button>
 
           {/* Stats */}
-          <div className="ml-auto text-[10px] text-[#737373] font-mono">
-            {stats.nodes} · {stats.edges}
+          <div className="flex items-center gap-3 ml-auto text-[10px] font-mono text-[#a3a3a3]">
+            <span>{stats.nodes} nodes</span>
+            <span>{stats.edges} edges</span>
+            {layerCounts.promotedClaims > 0 && <span className="flex items-center gap-1"><span style={{ color: LAYER_COLORS.promotedClaims }}>◈</span>{layerCounts.promotedClaims}</span>}
+            {layerCounts.blueprints > 0 && <span className="flex items-center gap-1"><span style={{ color: LAYER_COLORS.blueprints }}>◆</span>{layerCounts.blueprints}</span>}
           </div>
         </div>
       )}
 
-      {/* Graph Area */}
-      <div ref={containerRef} className="flex-1 relative overflow-hidden">
+      {/* Graph canvas */}
+      <div ref={containerRef} className="flex-1 relative">
+        {isLoading && graphData.nodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">Loading research graph...</span>
+            </div>
+          </div>
+        )}
+
         {graphData.nodes.length > 0 ? (
           viewMode === 'force' ? (
             <ForceGraph2D
               ref={graphRef}
               graphData={graphData}
-              nodeLabel="title"
-              nodeColor={node => LAYER_COLORS[node.layer] || '#525252'}
-              nodeRelSize={1.45}
-              nodeVal={node => node.val || 6}
-              linkColor={(link) => EDGE_COLORS[link.type] || '#b7c7db'}
-              linkOpacity={0.42}
+              nodeCanvasObject={paintNode}
+              linkCanvasObject={paintLink}
+              onNodeClick={handleNodeClick}
+              onNodeHover={(node) => { if (!node) return; }}
+              onBackgroundClick={() => setSelectedNode(null)}
+              nodePointerAreaPaint={(node, color, ctx) => {
+                const r = Math.sqrt(node.val || 4) * 2.5 + 2;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+              }}
               enableNodeDrag={true}
               enableZoomPan={true}
               minZoom={0.3}
               maxZoom={6}
-              onNodeClick={handleNodeClick}
-              nodeCanvasObject={paintNode}
-              linkCanvasObject={paintLink}
-              numDimensions={2}
-              cooldownTicks={560}
-              d3AlphaDecay={0.03}
-              d3VelocityDecay={0.45}
-              linkDistance={160}
-              d3AlphaMin={0.005}
-              warmupTicks={80}
-              linkDirectionalParticles={4}
-              linkDirectionalParticleWidth={1.2}
-              linkDirectionalParticleSpeed={0.0034}
-              backgroundColor="#fbfaf6"
+              linkDirectionalArrowLength={3}
+              linkDirectionalArrowRelPos={0.9}
+              linkDirectionalArrowColor={(link) => EDGE_COLORS[link.type] || '#e3e0db'}
+              cooldownTicks={100}
+              warmupTicks={50}
+              d3AlphaDecay={0.02}
+              d3VelocityDecay={0.3}
+              backgroundColor="#faf9f4"
               width={dims.w}
               height={dims.h}
             />
@@ -1263,16 +1308,56 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
             />
           )
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-[#444] gap-2">
-            <Network size={32} className="text-[#222]" />
-            <p className="text-sm text-[#555]">
-              {isLoading ? 'Loading graph...' : 'No graph data yet'}
-            </p>
+          graphData.nodes.length === 0 && !isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <Network size={32} className="text-[#e3e0db] mx-auto mb-3" />
+                <p className="text-sm text-[#a3a3a3] font-['Space_Grotesk']">
+                  No graph data yet. Start a research session to see nodes grow.
+                </p>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Legend — MemoryGraph style */}
+        {graphData.nodes.length > 0 && viewMode === 'force' && (
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-[#e3e0db] rounded-xl px-3 py-2.5 z-10 max-w-[400px]">
+            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">Relationships</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {Object.entries(EDGE_COLORS).slice(0, 4).map(([type, color]) => (
+                <div key={type} className="flex items-center gap-1.5">
+                  <div className="w-4 h-0.5 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">{type}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">Node Shapes = Layer</p>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { label: 'Sources / Claims', shape: 'circle', color: '#117dff' },
+                { label: 'Trails', shape: 'hex', color: '#9333ea' },
+                { label: 'Blueprints', shape: 'diamond', color: '#d97706' },
+                { label: 'Prior Knowledge', shape: 'star', color: '#f43f5e' },
+                { label: 'Observations', shape: 'square', color: '#3b82f6' },
+              ].map(({ label, shape, color }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 12 12">
+                    {shape === 'circle' && <circle cx="6" cy="6" r="5" fill={color} opacity="0.7" />}
+                    {shape === 'hex' && <polygon points="6,1 10.2,3.5 10.2,8.5 6,11 1.8,8.5 1.8,3.5" fill={color} opacity="0.7" />}
+                    {shape === 'diamond' && <polygon points="6,0 12,6 6,12 0,6" fill={color} opacity="0.7" />}
+                    {shape === 'star' && <polygon points="6,0 7.5,4.5 12,4.5 8.5,7.5 9.5,12 6,9 2.5,12 3.5,7.5 0,4.5 4.5,4.5" fill={color} opacity="0.7" />}
+                    {shape === 'square' && <rect x="1" y="1" width="10" height="10" rx="2" fill={color} opacity="0.7" />}
+                  </svg>
+                  <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Node Detail Panel */}
+      {/* Node Detail Panel — right side (MemoryGraph style) */}
       <AnimatePresence>
         {selectedNode && (
           <NodeDetail
