@@ -32,7 +32,6 @@ const VERDICT_COLORS = {
 function GraphVisualization({
   data = { nodes: [], links: [] },
   layers = {},
-  csiLayers = { nodes: true, verdicts: true },
   use3D = true,
   isLoading = false,
   selectedNode = null,
@@ -40,7 +39,6 @@ function GraphVisualization({
   onNodeClick = () => {},
   onNodeHover = () => {},
   onLayerChange = () => {},
-  onCsiLayerChange = () => {},
   onNodeContextMenu = () => {},
   onExport = () => {},
   onShare = () => {},
@@ -54,59 +52,33 @@ function GraphVisualization({
   const [contextPos, setContextPos] = useState({ x: 0, y: 0 });
   const [exportMenu, setExportMenu] = useState(false);
 
-  // CSI verdict node rendering
-  const getCsiNodeColor = useCallback((node) => {
-    if (node.type === 'csi-verdict') {
-      return VERDICT_COLORS[node.verdict] || VERDICT_COLORS.neutral;
-    }
+  // Node rendering - sources, claims, trails, blueprints
+  const getNodeColor = useCallback((node) => {
     return NODE_COLORS[node.type] || '#a3a3a3';
   }, []);
 
-  const getCsiNodeSize = useCallback((node) => {
-    if (node.type === 'csi-verdict') {
-      const confidenceScale = (node.confidence || 0.5) * 2;
-      return 6 + confidenceScale;
-    }
+  const getNodeSize = useCallback((node) => {
     return node.val || 8;
   }, []);
 
-  // 2D canvas rendering with CSI
+  // 2D canvas rendering for research nodes
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     const label = node.title || '';
     const fontSize = 10 / globalScale;
     ctx.font = `${fontSize}px Sans-Serif`;
 
-    // Live pulse for CSI nodes
-    if (node.type === 'csi-verdict') {
-      const pulseSize = getCsiNodeSize(node) * 1.5;
-      const pulseOpacity = 0.3 + Math.sin(Date.now() / 200) * 0.2;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, pulseSize, 0, 2 * Math.PI);
-      ctx.fillStyle = `rgba(245, 158, 11, ${pulseOpacity})`;
-      ctx.fill();
-    }
-
     // Node circle
     ctx.beginPath();
-    ctx.arc(node.x, node.y, getCsiNodeSize(node), 0, 2 * Math.PI);
-    ctx.fillStyle = getCsiNodeColor(node);
+    ctx.arc(node.x, node.y, getNodeSize(node), 0, 2 * Math.PI);
+    ctx.fillStyle = getNodeColor(node);
     ctx.fill();
-
-    // Verdict badge
-    if (node.type === 'csi-verdict' && node.verdict) {
-      const verdictColor = VERDICT_COLORS[node.verdict];
-      ctx.fillStyle = verdictColor;
-      ctx.beginPath();
-      ctx.arc(node.x + getCsiNodeSize(node) - 1, node.y - getCsiNodeSize(node) + 1, 3, 0, 2 * Math.PI);
-      ctx.fill();
-    }
 
     // Label
     ctx.fillStyle = '#0a0a0a';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(label, node.x, node.y - getCsiNodeSize(node) - 2);
-  }, [getCsiNodeColor, getCsiNodeSize]);
+    ctx.fillText(label, node.x, node.y - getNodeSize(node) - 2);
+  }, [getNodeColor, getNodeSize]);
 
   const handleNodeContextMenu = useCallback((node, event) => {
     event.preventDefault();
@@ -225,8 +197,8 @@ function GraphVisualization({
               <ForceGraph3D
                 ref={graphRef}
                 graphData={data}
-                getCsiNodeColor={getCsiNodeColor}
-                getCsiNodeSize={getCsiNodeSize}
+                getCsiNodeColor={getNodeColor}
+                getCsiNodeSize={getNodeSize}
                 onNodeClick={onNodeClick}
                 onNodeHover={onNodeHover}
                 onNodeContextMenu={handleNodeContextMenu}
@@ -239,8 +211,8 @@ function GraphVisualization({
               ref={graphRef}
               graphData={data}
               nodeLabel="title"
-              nodeColor={getCsiNodeColor}
-              nodeVal={getCsiNodeSize}
+              nodeColor={getNodeColor}
+              nodeVal={getNodeSize}
               linkColor={(link) => link.color || '#aaa'}
               nodeRelSize={3}
               enableNodeDrag={false}
