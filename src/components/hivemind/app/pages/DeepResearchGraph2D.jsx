@@ -514,6 +514,131 @@ export default function DeepResearchGraph2D({ sessionId }) {
           />
         </div>
 
+        {/* Refresh Button */}
+        <button
+          onClick={async () => {
+            setIsLoading(true);
+            try {
+              const { data } = await apiClient.controlPlane.get(
+                `/v1/proxy/research/${sessionId}/graph`,
+                { timeout: 30000 }
+              );
+              if (data?.layers) {
+                const layers = data.layers || {};
+                const nodes = [];
+                const links = [];
+
+                // Process all layers
+                if (layers.sources?.length > 0) {
+                  layers.sources.forEach((s) => {
+                    nodes.push({
+                      id: s.id,
+                      title: s.title || s.url || 'Source',
+                      type: 'source',
+                      layer: 'sources',
+                      url: s.url,
+                      runtime: s.runtime,
+                      val: 8,
+                    });
+                  });
+                }
+
+                if (layers.claims?.length > 0) {
+                  layers.claims.forEach((c) => {
+                    nodes.push({
+                      id: c.id,
+                      title: c.content?.slice(0, 80) || 'Claim',
+                      type: 'claim',
+                      layer: 'claims',
+                      confidence: c.confidence,
+                      content: c.content,
+                      agent: c.agent,
+                      val: 8,
+                    });
+                  });
+                }
+
+                if (layers.trails?.length > 0) {
+                  layers.trails.forEach((t) => {
+                    nodes.push({
+                      id: t.id,
+                      title: `${t.agent}: ${t.action}`,
+                      type: 'trail',
+                      layer: 'trails',
+                      agent: t.agent,
+                      action: t.action,
+                      val: 6,
+                    });
+                  });
+                }
+
+                if (layers.observations?.length > 0) {
+                  layers.observations.forEach((o) => {
+                    nodes.push({
+                      id: o.id,
+                      title: `${o.agent}/${o.action}: ${o.title?.slice(0, 40) || 'Obs'}`,
+                      type: 'observation',
+                      layer: 'observations',
+                      agent: o.agent,
+                      action: o.action,
+                      confidence: o.confidence,
+                      val: 6,
+                    });
+                  });
+                }
+
+                if (layers.executionEvents?.length > 0) {
+                  layers.executionEvents.forEach((e) => {
+                    nodes.push({
+                      id: e.id,
+                      title: `${e.agent}/${e.action}`,
+                      type: 'execution-event',
+                      layer: 'executionEvents',
+                      agent: e.agent,
+                      action: e.action,
+                      success: e.success,
+                      val: 5,
+                    });
+                  });
+                }
+
+                if (layers.blueprints?.length > 0) {
+                  layers.blueprints.forEach((b) => {
+                    nodes.push({
+                      id: b.blueprintId,
+                      title: b.name || 'Blueprint',
+                      type: 'blueprint',
+                      layer: 'blueprints',
+                      domain: b.domain,
+                      timesReused: b.timesReused,
+                      val: 10,
+                    });
+                  });
+                }
+
+                if (layers.weights?.edges?.length > 0) {
+                  layers.weights.edges.forEach((edge) => {
+                    links.push({
+                      source: edge.from,
+                      target: edge.to,
+                      type: edge.type || 'related',
+                      confidence: edge.confidence,
+                    });
+                  });
+                }
+
+                setGraphData({ nodes, links });
+              }
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          className="px-2 py-1.5 rounded hover:bg-[#e3e0db] text-[#525252] transition-colors"
+          title="Refresh graph"
+        >
+          <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+        </button>
+
         {/* Layer Filters */}
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {LAYER_FILTERS.map(l => (
@@ -555,8 +680,9 @@ export default function DeepResearchGraph2D({ sessionId }) {
             ref={graphRef}
             graphData={graphData}
             nodeLabel="title"
-            nodeColor={() => '#117dff'}
-            nodeRelSize={1}
+            nodeColor={node => LAYER_COLORS[node.layer] || '#525252'}
+            nodeRelSize={2}
+            nodeVal={node => node.val || 6}
             linkColor={link => EDGE_COLORS[link.type] || '#e3e0db'}
             linkOpacity={0.4}
             enableNodeDrag={true}
@@ -566,15 +692,19 @@ export default function DeepResearchGraph2D({ sessionId }) {
             onNodeClick={handleNodeClick}
             nodeCanvasObject={paintNode}
             linkCanvasObject={paintLink}
-            cooldownTicks={100}
+            cooldownTicks={200}
             d3AlphaDecay={0.02}
             d3VelocityDecay={0.3}
+            warmupTicks={0}
             width={selectedNode ? window.innerWidth - 340 : window.innerWidth}
             height={window.innerHeight - 52}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-[#a3a3a3]">
-            <p className="text-sm">No nodes yet. Agents will create nodes as they work...</p>
+          <div className="flex flex-col items-center justify-center h-full text-[#a3a3a3] gap-2">
+            <p className="text-sm">No graph data yet</p>
+            <p className="text-xs text-[#a3a3a3]/60">
+              {isLoading ? 'Fetching graph...' : 'Start a research to see the graph grow in real-time'}
+            </p>
           </div>
         )}
       </div>
