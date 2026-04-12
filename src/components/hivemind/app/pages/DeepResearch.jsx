@@ -496,6 +496,8 @@ export default function DeepResearch() {
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);
   const [totalTasks, setTotalTasks] = useState(null);
+  const [readyToSynthesize, setReadyToSynthesize] = useState(null); // {findingCount, confidence, message}
+  const [isConfirmingSynthesis, setIsConfirmingSynthesis] = useState(false);
   const [activeGoal, setActiveGoal] = useState('');
 
   const eventsEndRef = useRef(null);
@@ -891,6 +893,19 @@ export default function DeepResearch() {
         if (event.type === 'research.decomposed') {
           setTotalTasks(event.taskCount || event.dimensions?.length || null);
         }
+        if (event.type === 'research.ready_to_synthesize') {
+          setReadyToSynthesize({
+            findingCount: event.findingCount,
+            sourceCount: event.sourceCount,
+            confidence: event.confidence,
+            message: event.message,
+          });
+          setPanelTab('status');
+          setShowPanel(true);
+        }
+        if (event.type === 'research.synthesis_confirmed' || event.type === 'research.synthesizing') {
+          setReadyToSynthesize(null);
+        }
 
         if (event.type === 'task.started' && event.dimension) {
           setSubgoals(prev => {
@@ -991,6 +1006,14 @@ export default function DeepResearch() {
             // Task counter — capture from decomposed event
             if (event.type === 'research.decomposed') {
               setTotalTasks(event.taskCount || event.dimensions?.length || null);
+            }
+            if (event.type === 'research.ready_to_synthesize') {
+              setReadyToSynthesize({ findingCount: event.findingCount, sourceCount: event.sourceCount, confidence: event.confidence, message: event.message });
+              setPanelTab('status');
+              setShowPanel(true);
+            }
+            if (event.type === 'research.synthesis_confirmed' || event.type === 'research.synthesizing') {
+              setReadyToSynthesize(null);
             }
             // Subgoals — rebuild from task events
             if (event.type === 'task.started' && event.dimension) {
@@ -1202,6 +1225,20 @@ export default function DeepResearch() {
       fetchGraphData(sessionId);
     }
   }, [sessionId, fetchGraphData]);
+
+  const handleConfirmSynthesis = useCallback(async () => {
+    if (!sessionId) return;
+    setIsConfirmingSynthesis(true);
+    try {
+      await apiClient.controlPlane.post(`/v1/proxy/research/${sessionId}/synthesize`, {});
+      setReadyToSynthesize(null);
+      setPanelTab('report');
+    } catch (e) {
+      console.error('Failed to confirm synthesis:', e);
+    } finally {
+      setIsConfirmingSynthesis(false);
+    }
+  }, [sessionId]);
 
   const handleSaveAsBlueprint = useCallback(async () => {
     if (!sessionId) return;
@@ -1945,6 +1982,40 @@ export default function DeepResearch() {
                           CSI workers coordinate through shared graph traces: Faraday explores sources, Feynmann extracts claims, Turing verifies them, and Synthesis composes the report.
                         </p>
                       </div>
+
+                      {/* Generate Report Gate — shown when research is ready for synthesis */}
+                      {readyToSynthesize && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-[#16a34a]/5 border border-[#16a34a]/20 rounded-xl p-4 space-y-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#16a34a]/10 flex items-center justify-center shrink-0">
+                              <CheckCircle2 size={16} className="text-[#16a34a]" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-[#0a0a0a]">Research complete</p>
+                              <p className="text-xs text-[#525252] mt-0.5">
+                                {readyToSynthesize.findingCount} findings · {readyToSynthesize.sourceCount} sources · {((readyToSynthesize.confidence || 0) * 100).toFixed(0)}% confidence
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-[#525252]">
+                            Review the graph and findings above, then generate your report when ready.
+                          </p>
+                          <button
+                            onClick={handleConfirmSynthesis}
+                            disabled={isConfirmingSynthesis}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#16a34a] text-white text-sm font-semibold hover:bg-[#15803d] transition-colors disabled:opacity-60"
+                          >
+                            {isConfirmingSynthesis
+                              ? <><Loader2 size={14} className="animate-spin" /> Generating report...</>
+                              : <><Sparkles size={14} /> Generate Report</>
+                            }
+                          </button>
+                        </motion.div>
+                      )}
 
                       {/* Subgoals + Task Counter */}
                       {subgoals.length > 0 && (
