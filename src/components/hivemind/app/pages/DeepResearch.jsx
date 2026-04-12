@@ -495,6 +495,7 @@ export default function DeepResearch() {
   const [goldenLine, setGoldenLine] = useState('');
   const [agentStates, setAgentStates] = useState({});
   const [subgoals, setSubgoals] = useState([]);
+  const [totalTasks, setTotalTasks] = useState(null);
   const [activeGoal, setActiveGoal] = useState('');
 
   const eventsEndRef = useRef(null);
@@ -887,11 +888,15 @@ export default function DeepResearch() {
           }));
         }
 
+        if (event.type === 'research.decomposed') {
+          setTotalTasks(event.taskCount || event.dimensions?.length || null);
+        }
+
         if (event.type === 'task.started' && event.dimension) {
           setSubgoals(prev => {
             const exists = prev.find(g => g.id === event.taskId);
             if (exists) return prev;
-            return [...prev, { id: event.taskId, query: event.query, dimension: event.dimension, status: 'running' }];
+            return [...prev, { id: event.taskId, query: event.query, dimension: event.dimension, status: 'running', wave: event.wave }];
           });
         }
         if (event.type === 'task.completed') {
@@ -1925,23 +1930,42 @@ export default function DeepResearch() {
                         </p>
                       </div>
 
-                      {/* Subgoals */}
+                      {/* Subgoals + Task Counter */}
                       {subgoals.length > 0 && (
                         <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-3">
                             <ListTodo size={14} className="text-[#16a34a]" />
-                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Subgoals</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Tasks</span>
+                            {/* Task counter — shows completed / total */}
+                            <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white border border-[#e3e0db] text-[10px] font-mono">
+                              <span className="text-[#16a34a] font-semibold">
+                                {subgoals.filter(g => g.status === 'completed').length}
+                              </span>
+                              <span className="text-[#a3a3a3]">/</span>
+                              <span className="text-[#0a0a0a] font-semibold">
+                                {totalTasks ?? subgoals.length}
+                              </span>
+                              <span className="text-[#a3a3a3]">tasks</span>
+                            </span>
                           </div>
                           <div className="space-y-2">
                             {subgoals.map((goal, i) => (
                               <div key={goal.id || i} className="flex items-start gap-2">
-                                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${goal.status === 'completed' ? 'bg-[#16a34a]/10 border border-[#16a34a]/30' : 'bg-white border border-[#e3e0db]'}`}>
-                                  {goal.status === 'completed' && <CheckCircle2 size={10} className="text-[#16a34a]" />}
+                                <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${goal.status === 'completed' ? 'bg-[#16a34a]/10 border border-[#16a34a]/30' : 'bg-[#117dff]/5 border border-[#117dff]/20'}`}>
+                                  {goal.status === 'completed'
+                                    ? <CheckCircle2 size={10} className="text-[#16a34a]" />
+                                    : <div className="w-1.5 h-1.5 rounded-full bg-[#117dff] animate-pulse" />
+                                  }
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-[#0a0a0a] truncate">{goal.query}</p>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-xs text-[#0a0a0a] truncate">{goal.query}</p>
+                                    {goal.wave && (
+                                      <span className="text-[9px] text-[#a3a3a3] font-mono shrink-0">w{goal.wave}</span>
+                                    )}
+                                  </div>
                                   {goal.confidence != null && (
-                                    <p className="text-[10px] text-[#525252]/50 mt-0.5">Confidence: {(goal.confidence * 100).toFixed(0)}%</p>
+                                    <p className="text-[10px] text-[#525252]/50 mt-0.5">{(goal.confidence * 100).toFixed(0)}% confidence</p>
                                   )}
                                 </div>
                               </div>
