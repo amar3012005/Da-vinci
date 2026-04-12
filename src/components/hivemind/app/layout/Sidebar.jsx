@@ -25,7 +25,6 @@ import {
   Users,
   FolderKanban,
   Mic,
-  Search,
   MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
@@ -64,7 +63,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
       label: 'AI Features',
       items: [
         { to: '/hivemind/app/overview', icon: MessageSquare, label: 'Talk to HIVE' },
-        { to: '/hivemind/app/deep-research', icon: Search, label: 'Deep Research' },
         { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
         { to: '/hivemind/app/tara', icon: Mic, label: 'TARA × HIVE' },
       ],
