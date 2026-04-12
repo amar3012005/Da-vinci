@@ -941,42 +941,21 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
     if (viewMode !== 'force' || !graphRef.current) return;
     const fg = graphRef.current;
 
-    // Strong repulsion — prevent blob packing
+    // Strong repulsion — prevents blob packing
     const charge = fg.d3Force('charge');
-    if (charge?.strength) charge.strength(-500);
+    if (charge?.strength) charge.strength(-400);
 
     // Hard collision — nodes cannot overlap
     const collide = fg.d3Force('collide');
-    if (collide?.radius) collide.radius(n => Math.sqrt(n.val || 6) * 3 + 6).strength(0.9);
+    if (collide) collide.radius(n => Math.sqrt(n.val || 6) * 3 + 8).strength(0.85);
 
-    // Semantic layer clustering — pull nodes toward their layer's region
-    fg.d3Force('forceX', null);
-    fg.d3Force('forceY', null);
-    try {
-      // Dynamic import d3 forces used internally by react-force-graph-2d
-      const cx = dims.w / 2;
-      const cy = dims.h / 2;
-      const spread = Math.min(dims.w, dims.h) * 0.28;
-      fg.d3Force('clusterX', { initialize: () => {}, force: (alpha) => {
-        fg.graphData().nodes.forEach(n => {
-          const tx = cx + (LAYER_X[n.layer] || 0) * spread;
-          n.vx = (n.vx || 0) + (tx - n.x) * alpha * 0.06;
-        });
-      }});
-      fg.d3Force('clusterY', { initialize: () => {}, force: (alpha) => {
-        fg.graphData().nodes.forEach(n => {
-          const ty = cy + (LAYER_Y[n.layer] || 0) * spread;
-          n.vy = (n.vy || 0) + (ty - n.y) * alpha * 0.06;
-        });
-      }});
-    } catch {}
-
-    // Longer link distance — edges stretch out, nodes don't clump
+    // Longer link distance per cross-layer vs same-layer
     const link = fg.d3Force('link');
-    if (link?.distance) link.distance(n => {
-      const samLayer = n.source?.layer === n.target?.layer;
-      return samLayer ? 60 : 120;
-    }).strength(0.4);
+    if (link) link.distance(l => {
+      const sl = l.source?.layer || l.source;
+      const tl = l.target?.layer || l.target;
+      return sl === tl ? 60 : 110;
+    }).strength(0.3);
 
     fg.d3ReheatSimulation?.();
   }, [viewMode, dims.w, dims.h, graphData.nodes.length]);
@@ -1150,16 +1129,23 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
     if (link.type === 'contradicts' || (link.confidence || 1) < 0.5) {
       ctx.setLineDash([4, 3]);
     }
+    // Curved bezier edges — cross-layer links curve outward
+    const sx = link.source.x, sy = link.source.y;
+    const tx = link.target.x, ty = link.target.y;
+    const dx = tx - sx, dy = ty - sy;
+    const curvature = link.source?.layer !== link.target?.layer ? 0.2 : 0;
+    const cpX = (sx + tx) / 2 - dy * curvature;
+    const cpY = (sy + ty) / 2 + dx * curvature;
+
     ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.lineTo(link.target.x, link.target.y);
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cpX, cpY, tx, ty);
     ctx.stroke();
     ctx.setLineDash([]);
 
     // Edge label at high zoom (MemoryGraph exact — with white bg rect)
     if (globalScale > 2.5) {
-      const midX = (link.source.x + link.target.x) / 2;
-      const midY = (link.source.y + link.target.y) / 2;
+      const midX = cpX, midY = cpY;
       const label = `${link.type} ${((link.confidence || 1) * 100).toFixed(0)}%`;
       ctx.font = `${10 / globalScale}px Space Grotesk, sans-serif`;
       ctx.textAlign = 'center';
@@ -1347,7 +1333,6 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
               linkDirectionalArrowLength={4}
               linkDirectionalArrowRelPos={0.85}
               linkDirectionalArrowColor={(link) => EDGE_COLORS[link.type] || '#d0ccc7'}
-              linkCurvature={0.25}
               cooldownTicks={200}
               warmupTicks={80}
               d3AlphaDecay={0.015}
