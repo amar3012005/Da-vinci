@@ -905,6 +905,11 @@ export default function DeepResearch() {
         }
         if (event.type === 'research.synthesis_confirmed' || event.type === 'research.synthesizing') {
           setReadyToSynthesize(null);
+          setPanelTab('report');
+        }
+        // Stream report tokens as they arrive — show report being written in real time
+        if (event.type === 'research.report_chunk' && event.chunk) {
+          setReport(prev => (prev || '') + event.chunk);
         }
 
         if (event.type === 'task.started' && event.dimension) {
@@ -1014,6 +1019,10 @@ export default function DeepResearch() {
             }
             if (event.type === 'research.synthesis_confirmed' || event.type === 'research.synthesizing') {
               setReadyToSynthesize(null);
+              setPanelTab('report');
+            }
+            if (event.type === 'research.report_chunk' && event.chunk) {
+              setReport(prev => (prev || '') + event.chunk);
             }
             // Subgoals — rebuild from task events
             if (event.type === 'task.started' && event.dimension) {
