@@ -845,6 +845,10 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
   );
 }
 
+// Layer cluster offsets for semantic layout (fraction of canvas size)
+const LAYER_Y = { promotedClaims: -0.35, sources: -0.2, claims: 0, trails: 0.15, observations: 0.1, blueprints: 0.35 };
+const LAYER_X = { promotedClaims: 0, sources: -0.2, claims: 0, trails: 0.2, observations: -0.1, blueprints: 0 };
+
 /* ──── Main Component ──────────────────────────────────────────── */
 export default function DeepResearchGraph2D({ sessionId, showChrome = true, onReuseBlueprint = null, currentQuery = '' }) {
   const graphRef = useRef(null);
@@ -935,18 +939,69 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
 
   useEffect(() => {
     if (viewMode !== 'force' || !graphRef.current) return;
-    const charge = graphRef.current.d3Force('charge');
-    if (charge?.strength) charge.strength(-180);
-    const collide = graphRef.current.d3Force('collide');
-    if (collide?.radius) collide.radius((node) => Math.max(10, Math.sqrt(node.val || 6) * 2.2));
-    const center = graphRef.current.d3Force('center');
-    if (center?.x && center?.y) {
-      center.x(dims.w / 2);
-      center.y(dims.h / 2);
-    }
+    const fg = graphRef.current;
+
+    // Strong repulsion — prevent blob packing
+    const charge = fg.d3Force('charge');
+    if (charge?.strength) charge.strength(-500);
+
+    // Hard collision — nodes cannot overlap
+    const collide = fg.d3Force('collide');
+    if (collide?.radius) collide.radius(n => Math.sqrt(n.val || 6) * 3 + 6).strength(0.9);
+
+    // Semantic layer clustering — pull nodes toward their layer's region
+    fg.d3Force('forceX', null);
+    fg.d3Force('forceY', null);
+    try {
+      // Dynamic import d3 forces used internally by react-force-graph-2d
+      const cx = dims.w / 2;
+      const cy = dims.h / 2;
+      const spread = Math.min(dims.w, dims.h) * 0.28;
+      fg.d3Force('clusterX', { initialize: () => {}, force: (alpha) => {
+        fg.graphData().nodes.forEach(n => {
+          const tx = cx + (LAYER_X[n.layer] || 0) * spread;
+          n.vx = (n.vx || 0) + (tx - n.x) * alpha * 0.06;
+        });
+      }});
+      fg.d3Force('clusterY', { initialize: () => {}, force: (alpha) => {
+        fg.graphData().nodes.forEach(n => {
+          const ty = cy + (LAYER_Y[n.layer] || 0) * spread;
+          n.vy = (n.vy || 0) + (ty - n.y) * alpha * 0.06;
+        });
+      }});
+    } catch {}
+
+    // Longer link distance — edges stretch out, nodes don't clump
+    const link = fg.d3Force('link');
+    if (link?.distance) link.distance(n => {
+      const samLayer = n.source?.layer === n.target?.layer;
+      return samLayer ? 60 : 120;
+    }).strength(0.4);
+
+    fg.d3ReheatSimulation?.();
   }, [viewMode, dims.w, dims.h, graphData.nodes.length]);
 
   // Filtered nodes
+  // Cap visible nodes — too many causes blob. Keep top 80 by confidence + blueprints always
+  const displayGraphData = useMemo(() => {
+    const MAX_NODES = 80;
+    if (graphData.nodes.length <= MAX_NODES) return graphData;
+
+    // Always keep blueprints and promotedClaims; fill rest by confidence desc
+    const priority = graphData.nodes.filter(n => n.layer === 'blueprints' || n.layer === 'promotedClaims');
+    const rest = graphData.nodes
+      .filter(n => n.layer !== 'blueprints' && n.layer !== 'promotedClaims')
+      .sort((a, b) => (b.confidence || b.val || 0) - (a.confidence || a.val || 0));
+    const kept = new Set([...priority, ...rest].slice(0, MAX_NODES).map(n => n.id));
+    const nodes = graphData.nodes.filter(n => kept.has(n.id));
+    const links = graphData.links.filter(l => {
+      const s = typeof l.source === 'object' ? l.source.id : l.source;
+      const t = typeof l.target === 'object' ? l.target.id : l.target;
+      return kept.has(s) && kept.has(t);
+    });
+    return { nodes, links };
+  }, [graphData]);
+
   const filteredNodes = useMemo(() => {
     let result = new Set(graphData.nodes.map(n => n.id));
 
@@ -1272,14 +1327,14 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
           viewMode === 'force' ? (
             <ForceGraph2D
               ref={graphRef}
-              graphData={graphData}
+              graphData={displayGraphData}
               nodeCanvasObject={paintNode}
               linkCanvasObject={paintLink}
               onNodeClick={handleNodeClick}
               onNodeHover={(node) => { if (!node) return; }}
               onBackgroundClick={() => setSelectedNode(null)}
               nodePointerAreaPaint={(node, color, ctx) => {
-                const r = Math.sqrt(node.val || 4) * 2.5 + 2;
+                const r = Math.sqrt(node.val || 4) * 2.5 + 4;
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
                 ctx.fillStyle = color;
@@ -1287,15 +1342,16 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
               }}
               enableNodeDrag={true}
               enableZoomPan={true}
-              minZoom={0.3}
-              maxZoom={6}
-              linkDirectionalArrowLength={3}
-              linkDirectionalArrowRelPos={0.9}
-              linkDirectionalArrowColor={(link) => EDGE_COLORS[link.type] || '#e3e0db'}
-              cooldownTicks={100}
-              warmupTicks={50}
-              d3AlphaDecay={0.02}
-              d3VelocityDecay={0.3}
+              minZoom={0.2}
+              maxZoom={8}
+              linkDirectionalArrowLength={4}
+              linkDirectionalArrowRelPos={0.85}
+              linkDirectionalArrowColor={(link) => EDGE_COLORS[link.type] || '#d0ccc7'}
+              linkCurvature={0.25}
+              cooldownTicks={200}
+              warmupTicks={80}
+              d3AlphaDecay={0.015}
+              d3VelocityDecay={0.25}
               backgroundColor="#faf9f4"
               width={dims.w}
               height={dims.h}
