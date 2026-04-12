@@ -976,8 +976,9 @@ export default function DeepResearch() {
           });
           console.log('[DeepResearch] [Fallback polling] Got', data.events?.length || 0, 'events, status:', data.status);
           setEvents(data.events || []);
-          const agentStateEvents = (data.events || []).filter(e => e.type === 'agent.state' || e.type === 'agent.states');
-          agentStateEvents.forEach(event => {
+
+          // Replay all events from polling batch to keep derived state in sync
+          (data.events || []).forEach(event => {
             if (event.type === 'agent.states' && event.states) {
               setAgentStates(prev => ({ ...prev, [event.taskId]: normalizeAgentStateMap(event.states) }));
             } else if (event.type === 'agent.state') {
@@ -986,6 +987,21 @@ export default function DeepResearch() {
                 ...prev,
                 [event.taskId]: { ...(prev[event.taskId] || {}), [agentKey]: event.state }
               }));
+            }
+            // Task counter — capture from decomposed event
+            if (event.type === 'research.decomposed') {
+              setTotalTasks(event.taskCount || event.dimensions?.length || null);
+            }
+            // Subgoals — rebuild from task events
+            if (event.type === 'task.started' && event.dimension) {
+              setSubgoals(prev => {
+                const exists = prev.find(g => g.id === event.taskId);
+                if (exists) return prev;
+                return [...prev, { id: event.taskId, query: event.query, dimension: event.dimension, status: 'running', wave: event.wave }];
+              });
+            }
+            if (event.type === 'task.completed') {
+              setSubgoals(prev => prev.map(g => g.id === event.taskId ? { ...g, status: 'completed', confidence: event.confidence } : g));
             }
           });
           if (showPanel) fetchGraphData(sessionId);
