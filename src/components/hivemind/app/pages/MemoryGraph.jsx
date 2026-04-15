@@ -313,6 +313,16 @@ export default function MemoryGraph() {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
+  const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
+
+  const pageIndexRootPath = useMemo(() => {
+    if (!projectFilter) return "/hivemind";
+    const slug = projectFilter
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug ? `/hivemind/projects/${slug}` : "/hivemind";
+  }, [projectFilter]);
 
   // Fetch graph data
   const fetchGraph = useCallback(async () => {
@@ -797,7 +807,10 @@ export default function MemoryGraph() {
 
         {/* Memory Map button */}
         <button
-          onClick={() => setPageIndexModalOpen(true)}
+          onClick={() => {
+            setPageIndexRefreshKey((k) => k + 1);
+            setPageIndexModalOpen(true);
+          }}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
           title="View memory hierarchy map"
         >
@@ -1220,13 +1233,22 @@ export default function MemoryGraph() {
                     <p className="text-xs text-[#666]">Hierarchical organization of your memories</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setPageIndexModalOpen(false)}
-                  className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
-                  title="Close"
-                >
-                  <X size={18} className="text-[#525252]" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPageIndexRefreshKey((k) => k + 1)}
+                    className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
+                    title="Refresh map"
+                  >
+                    <RefreshCw size={18} className="text-[#525252]" />
+                  </button>
+                  <button
+                    onClick={() => setPageIndexModalOpen(false)}
+                    className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
+                    title="Close"
+                  >
+                    <X size={18} className="text-[#525252]" />
+                  </button>
+                </div>
               </div>
 
               {/* Content */}
@@ -1237,7 +1259,8 @@ export default function MemoryGraph() {
                     console.log('Selected node:', node);
                   }}
                   selectedNodeId={null}
-                  initialPath="/hivemind"
+                  initialPath={pageIndexRootPath}
+                  refreshKey={pageIndexRefreshKey}
                 />
               </div>
             </motion.div>

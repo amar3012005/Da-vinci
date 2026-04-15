@@ -24,10 +24,14 @@ export function PageIndexMindMap({
   userId,
   onSelectNode,
   selectedNodeId,
+  rootPath = '/hivemind',
+  refreshKey,
 }: {
   userId: string;
   onSelectNode?: (node: any) => void;
   selectedNodeId?: string | null;
+  rootPath?: string;
+  refreshKey?: number;
 }) {
   const [tree, setTree] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +46,12 @@ export function PageIndexMindMap({
   // Fetch tree on mount
   useEffect(() => {
     fetchTree();
-  }, [userId]);
+  }, [userId, rootPath, refreshKey]);
 
   const fetchTree = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getPageIndexTree({ depth: 4 });
+      const data = await apiClient.getPageIndexTree({ depth: 4, rootPath });
       setTree(data || []);
       // Auto-expand root
       if (data?.[0]?.path) {

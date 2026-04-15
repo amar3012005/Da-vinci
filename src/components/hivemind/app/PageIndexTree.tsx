@@ -26,11 +26,13 @@ export function PageIndexTree({
   onSelectNode,
   selectedNodeId,
   initialPath = '/hivemind',
+  refreshKey,
 }: {
   userId: string;
   onSelectNode: (nodeId: string) => void;
   selectedNodeId: string | null;
   initialPath?: string;
+  refreshKey?: number;
 }) {
   const [tree, setTree] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +41,14 @@ export function PageIndexTree({
   // Fetch tree on mount
   useEffect(() => {
     fetchTree();
-  }, [userId]);
+    // Keep the initial path expanded when scope changes.
+    setExpandedNodes(new Set([initialPath]));
+  }, [userId, initialPath, refreshKey]);
 
   const fetchTree = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.getPageIndexTree();
+      const data = await apiClient.getPageIndexTree({ depth: 4, rootPath: initialPath });
       setTree(data || []);
     } catch (err) {
       console.error('[PageIndexTree] Failed to fetch tree:', err);

@@ -15,11 +15,13 @@ export function PageIndexViewer({
   onSelectNode,
   selectedNodeId,
   initialPath = '/hivemind',
+  refreshKey,
 }: {
   userId: string;
   onSelectNode?: (node: any) => void;
   selectedNodeId?: string | null;
   initialPath?: string;
+  refreshKey?: number;
 }) {
   const [viewMode, setViewMode] = useState<'tree' | 'map'>('map');
 
@@ -73,6 +75,7 @@ export function PageIndexViewer({
               onSelectNode={onSelectNode}
               selectedNodeId={selectedNodeId || null}
               initialPath={initialPath}
+              refreshKey={refreshKey}
             />
           </motion.div>
         ) : (
@@ -88,6 +91,8 @@ export function PageIndexViewer({
               userId={userId}
               onSelectNode={onSelectNode}
               selectedNodeId={selectedNodeId || null}
+              rootPath={initialPath}
+              refreshKey={refreshKey}
             />
           </motion.div>
         )}
