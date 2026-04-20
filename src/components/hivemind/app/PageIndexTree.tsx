@@ -38,14 +38,7 @@ export function PageIndexTree({
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState(new Set([initialPath]));
 
-  // Fetch tree on mount
-  useEffect(() => {
-    fetchTree();
-    // Keep the initial path expanded when scope changes.
-    setExpandedNodes(new Set([initialPath]));
-  }, [userId, initialPath, refreshKey]);
-
-  const fetchTree = async () => {
+  const fetchTree = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiClient.getPageIndexTree({ depth: 4, rootPath: initialPath });
@@ -56,7 +49,14 @@ export function PageIndexTree({
     } finally {
       setLoading(false);
     }
-  };
+  }, [initialPath]);
+
+  // Fetch tree on mount
+  useEffect(() => {
+    fetchTree();
+    // Keep the initial path expanded when scope changes.
+    setExpandedNodes(new Set([initialPath]));
+  }, [userId, initialPath, refreshKey, fetchTree]);
 
   const toggleNode = useCallback((path: string) => {
     setExpandedNodes(prev => {

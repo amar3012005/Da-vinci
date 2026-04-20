@@ -43,12 +43,7 @@ export function PageIndexMindMap({
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
 
-  // Fetch tree on mount
-  useEffect(() => {
-    fetchTree();
-  }, [userId, rootPath, refreshKey]);
-
-  const fetchTree = async () => {
+  const fetchTree = useCallback(async () => {
     try {
       setLoading(true);
       const data = await apiClient.getPageIndexTree({ depth: 4, rootPath });
@@ -63,7 +58,12 @@ export function PageIndexMindMap({
     } finally {
       setLoading(false);
     }
-  };
+  }, [rootPath]);
+
+  // Fetch tree on mount
+  useEffect(() => {
+    fetchTree();
+  }, [userId, rootPath, refreshKey, fetchTree]);
 
   const toggleNode = useCallback((path: string) => {
     setExpandedNodes(prev => {
