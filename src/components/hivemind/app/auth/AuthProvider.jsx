@@ -8,8 +8,8 @@ const AuthContext = createContext(undefined);
  * Four auth states — not one generic "unavailable":
  *
  *   loading                   → checking session / bootstrap in flight
- *   signed_out                → 401 from bootstrap — control plane is reachable, user not authenticated
- *   signed_in                 → 200 from bootstrap — render dashboard from bootstrap payload
+  *   signed_out                → control plane is reachable, user not authenticated
+  *   signed_in                 → bootstrap returned authenticated user context
  *   control_plane_unreachable → network failure or timeout — the only state that says "unavailable"
  */
 export function AuthProvider({ children }) {
@@ -27,28 +27,34 @@ export function AuthProvider({ children }) {
 
     try {
       const data = await apiClient.bootstrap();
-
-      // 200 — signed in
-      setUser(data.user || null);
-      setOrg(data.organization || null);
-      setOnboarding(data.onboarding || null);
       setConnectivity(data.connectivity || null);
       setClientSupport(data.client_support || []);
-      setAuthState('signed_in');
-    } catch (err) {
-      if (err.response?.status === 401) {
-        // 401 — control plane is reachable, user is not authenticated
+
+      if (data.authenticated === false || !data.user) {
         setUser(null);
         setOrg(null);
         setOnboarding(null);
-        setConnectivity(null);
         setAuthState('signed_out');
       } else {
-        // Network failure, timeout, 503, or any other error
+        setUser(data.user || null);
+        setOrg(data.organization || null);
+        setOnboarding(data.onboarding || null);
+        setAuthState('signed_in');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
         setUser(null);
         setOrg(null);
         setOnboarding(null);
         setConnectivity(null);
+        setClientSupport([]);
+        setAuthState('signed_out');
+      } else {
+        setUser(null);
+        setOrg(null);
+        setOnboarding(null);
+        setConnectivity(null);
+        setClientSupport([]);
         setAuthState('control_plane_unreachable');
       }
     } finally {
