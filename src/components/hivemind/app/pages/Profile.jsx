@@ -1000,7 +1000,7 @@ function DataPrivacySection() {
     setExportLoading(true);
     setExportMsg(null);
     try {
-      await apiClient.controlPlane.post('/api/user/export');
+      await apiClient.controlPlane.post('/v1/account/export');
       setExportMsg({ type: 'success', text: 'Export request received. You will receive an email when ready.' });
     } catch (err) {
       if (err.response?.status === 404 || err.response?.status === 405) {
@@ -1017,7 +1017,7 @@ function DataPrivacySection() {
     setDeleteLoading(true);
     setDeleteMsg(null);
     try {
-      await apiClient.deleteAccount(deleteConfirm);
+      await apiClient.deleteAccount('DELETE');
       apiClient.clearApiKey();
       setShowDeleteDialog(false);
       await logout();
