@@ -995,6 +995,8 @@ function DataPrivacySection() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteProgress, setDeleteProgress] = useState(0);
+  const [deleteStep, setDeleteStep] = useState('');
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -1016,13 +1018,24 @@ function DataPrivacySection() {
   const handleDeleteConfirm = async () => {
     setDeleteLoading(true);
     setDeleteMsg(null);
+    setDeleteProgress(0);
+    setDeleteStep('Initiating deletion...');
     try {
-      await apiClient.deleteAccount('DELETE');
+      await apiClient.deleteAccountStreaming((progress, step) => {
+        if (progress >= 0) setDeleteProgress(progress);
+        if (step) setDeleteStep(step);
+      });
       apiClient.clearApiKey();
-      setShowDeleteDialog(false);
-      await logout();
+      setDeleteProgress(100);
+      setDeleteStep('Account deleted. Redirecting...');
+      setTimeout(async () => {
+        setShowDeleteDialog(false);
+        await logout();
+      }, 1500);
     } catch (err) {
-      setDeleteMsg(err.response?.data?.error || err.message);
+      setDeleteMsg(err.message || 'Deletion failed');
+      setDeleteProgress(0);
+      setDeleteStep('');
     } finally {
       setDeleteLoading(false);
     }
@@ -1128,29 +1141,57 @@ function DataPrivacySection() {
       {showDeleteDialog && (
         <ConfirmDialog
           title="Delete Account"
-          message="This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue."
+          message={deleteLoading ? '' : 'This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue.'}
           confirmLabel="Delete Account"
           confirmVariant="red"
-          confirmDisabled={deleteConfirm.trim().toUpperCase() !== 'DELETE'}
+          confirmDisabled={deleteConfirm.trim().toUpperCase() !== 'DELETE' || deleteLoading}
           confirmLoading={deleteLoading}
           onConfirm={handleDeleteConfirm}
           onCancel={() => {
             if (!deleteLoading) {
               setShowDeleteDialog(false);
               setDeleteMsg(null);
+              setDeleteProgress(0);
+              setDeleteStep('');
             }
           }}
         >
-          <input
-            value={deleteConfirm}
-            onChange={(e) => setDeleteConfirm(e.target.value)}
-            placeholder="Type DELETE"
-            className="w-full rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-sm font-mono text-[#0a0a0a] outline-none focus:border-[#dc2626]"
-            autoFocus
-          />
-          {deleteMsg ? (
-            <p className="mt-2 text-[#dc2626] text-xs font-mono">{deleteMsg}</p>
-          ) : null}
+          {deleteLoading ? (
+            <div className="space-y-3">
+              {/* Progress bar */}
+              <div className="w-full h-3 rounded-full bg-[#f3f1ec] overflow-hidden border border-[#e3e0db]">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{
+                    background: deleteProgress >= 100
+                      ? 'linear-gradient(90deg, #059669, #34d399)'
+                      : 'linear-gradient(90deg, #dc2626, #f87171)',
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${deleteProgress}%` }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                />
+              </div>
+              {/* Percentage + step */}
+              <div className="flex items-center justify-between">
+                <span className="text-[#525252] text-xs font-['Space_Grotesk']">{deleteStep}</span>
+                <span className="text-[#0a0a0a] text-sm font-mono font-bold">{deleteProgress}%</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="Type DELETE"
+                className="w-full rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-sm font-mono text-[#0a0a0a] outline-none focus:border-[#dc2626]"
+                autoFocus
+              />
+              {deleteMsg ? (
+                <p className="mt-2 text-[#dc2626] text-xs font-mono">{deleteMsg}</p>
+              ) : null}
+            </>
+          )}
         </ConfirmDialog>
       )}
     </>
