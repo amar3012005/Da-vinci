@@ -1210,12 +1210,28 @@ export default function Connectors() {
   const jobList = Array.isArray(jobs) ? jobs : jobs?.jobs || [];
   const oauthList = oauthConnectors?.connectors || [];
 
+  // Required scopes per provider — when a connected token is missing any of
+  // these, surface as needs_reauth so the user can reconnect to unlock the
+  // newer features (e.g. Slack live search + posting).
+  const REQUIRED_SCOPES = {
+    slack: ['search:read', 'chat:write'],
+  };
+
   // Merge static CONNECTORS with live OAuth status
   const mergedConnectors = CONNECTORS.map((c) => {
     if (c.oauthProvider) {
       const live = oauthList.find((o) => o.provider === c.oauthProvider);
       if (live) {
-        const derivedStatus = live.status === 'connected'
+        const liveScopes = Array.isArray(live.scopes)
+          ? live.scopes
+          : typeof live.scopes === 'string'
+            ? live.scopes.split(/[\s,]+/).filter(Boolean)
+            : [];
+        const required = REQUIRED_SCOPES[c.oauthProvider] || [];
+        const missingScopes = required.filter((s) => !liveScopes.includes(s));
+        const scopesOutdated = missingScopes.length > 0;
+
+        let derivedStatus = live.status === 'connected'
           ? 'connected'
           : live.status === 'syncing'
             ? 'syncing'
@@ -1228,6 +1244,16 @@ export default function Connectors() {
                   : live.status === 'not_configured'
                     ? 'coming_soon'
                     : c.status;
+
+        // Promote to needs_reauth when connected token lacks new scopes
+        if (derivedStatus === 'connected' && scopesOutdated) {
+          derivedStatus = 'needs_reauth';
+        }
+
+        const reauthHint = scopesOutdated
+          ? `Reconnect to enable live search (${missingScopes.join(', ')})`
+          : null;
+
         return {
           ...c,
           status: derivedStatus,
@@ -1235,9 +1261,13 @@ export default function Connectors() {
           accountRef: live.account_ref,
           lastSyncAt: live.last_sync_at,
           lastError: live.last_error,
-          description: live.configured === false && live.disabled_reason
-            ? `${c.description} (${live.disabled_reason})`
-            : c.description,
+          scopesOutdated,
+          missingScopes,
+          description: reauthHint
+            ? `${c.description} — ${reauthHint}`
+            : live.configured === false && live.disabled_reason
+              ? `${c.description} (${live.disabled_reason})`
+              : c.description,
         };
       }
     } else if (c.mcpEndpointName) {
