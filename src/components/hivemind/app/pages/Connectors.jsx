@@ -60,9 +60,34 @@ const CONNECTOR_CATEGORIES = [
 const CONNECTORS = [
   // MCP Clients (already working)
   {
+    id: 'claude-code',
+    name: 'Claude Code',
+    description: 'One-click install via official plugin marketplace + browser OAuth',
+    icon: Terminal,
+    category: 'mcp_clients',
+    status: 'available',
+    color: '#117dff',
+    configKey: 'claude-code',
+    mcpEndpointName: 'claude-code',
+    isMcpClient: true,
+    isPluginInstall: true,
+    setupTitle: 'Install the Claude Code plugin',
+    setupSteps: [
+      'Run the three commands below inside any Claude Code session',
+      'A browser tab opens for sign-in (Zitadel SSO or Google)',
+      'Plugin auto-loads HIVEMIND MCP — all 22 tools become available',
+    ],
+    pluginCommands: [
+      '/plugin marketplace add amar3012005/claude-hivemind',
+      '/plugin install claude-hivemind',
+      '/hivemind:connect',
+    ],
+    configPath: '~/.hivemind-claude/credentials.json (auto-managed by plugin)',
+  },
+  {
     id: 'claude',
     name: 'Claude Desktop',
-    description: 'Anthropic Claude via MCP stdio bridge',
+    description: 'Anthropic Claude via MCP stdio bridge (manual JSON config)',
     icon: Terminal,
     category: 'mcp_clients',
     status: 'available',
@@ -835,7 +860,12 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
   const userId = user?.id || user?.userId || 'YOUR_USER_ID';
   const apiKey = apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
 
-  const config = JSON.stringify({
+  const isPluginInstall = connector?.isPluginInstall;
+  const pluginBlock = isPluginInstall && Array.isArray(connector.pluginCommands)
+    ? connector.pluginCommands.join('\n')
+    : null;
+
+  const jsonConfig = JSON.stringify({
     mcpServers: {
       hivemind: {
         command: 'npx',
@@ -844,6 +874,10 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
       },
     },
   }, null, 2);
+
+  // For Claude Code plugin tile, primary block is the 3 commands. JSON config is shown
+  // as fallback for users who prefer manual MCP config.
+  const config = pluginBlock || jsonConfig;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(config).then(() => {
@@ -898,7 +932,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
             </div>
           )}
 
-          {/* Config block */}
+          {/* Config / commands block */}
           <div className="relative">
             <div className="absolute top-2 right-2 z-10">
               <button
@@ -910,7 +944,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
                 }`}
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied!' : 'Copy Config'}
+                {copied ? 'Copied!' : isPluginInstall ? 'Copy Commands' : 'Copy Config'}
               </button>
             </div>
             <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre">
@@ -918,8 +952,18 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
             </pre>
           </div>
 
-          {/* API Key warning */}
-          {apiKey === 'YOUR_API_KEY' && (
+          {/* Plugin install — friendly note on what happens */}
+          {isPluginInstall && (
+            <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
+              <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-emerald-700 font-['Space_Grotesk'] leading-relaxed">
+                <strong>One-click install.</strong> The plugin bundles the MCP config + a /hivemind:connect command that opens your browser for OAuth (Zitadel SSO or Google). No manual JSON editing, no API key copy-paste.
+              </p>
+            </div>
+          )}
+
+          {/* API Key warning — only for manual JSON paths */}
+          {!isPluginInstall && apiKey === 'YOUR_API_KEY' && (
             <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
               <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 font-['Space_Grotesk']">
