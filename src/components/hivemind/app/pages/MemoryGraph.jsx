@@ -314,6 +314,19 @@ export default function MemoryGraph() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
+  // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
+  // returning users keep their preferred density without re-selecting.
+  const [nodeLimit, setNodeLimit] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const stored = window.localStorage.getItem('hm-graph-limit');
+    if (stored === null) return 0; // default: show everything
+    const parsed = parseInt(stored, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('hm-graph-limit', String(nodeLimit));
+  }, [nodeLimit]);
 
   const pageIndexRootPath = useMemo(() => {
     if (!projectFilter) return "/hivemind";
@@ -331,7 +344,8 @@ export default function MemoryGraph() {
     try {
       const data = await apiClient.getGraph({
         project: projectFilter || undefined,
-        limit: 300,
+        // 0 → unbounded (server caps at 50k). >0 → exact node budget.
+        limit: nodeLimit,
         scope,
       });
       const nodes = (data.nodes || []).map((n) => ({
@@ -356,7 +370,7 @@ export default function MemoryGraph() {
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope]);
+  }, [projectFilter, scope, nodeLimit]);
 
   const userColorMap = useMemo(() => {
     const ids = [
@@ -417,6 +431,31 @@ export default function MemoryGraph() {
       }
     }
   }, [searchQuery, graphData.nodes]);
+
+  // Tune force-graph physics so the layout spreads instead of bunching when the
+  // node count grows. Scales repulsion and link distance with sqrt(nodeCount).
+  useEffect(() => {
+    if (!graphRef.current) return;
+    const n = graphData.nodes.length;
+    if (n === 0) return;
+    try {
+      const charge = graphRef.current.d3Force?.('charge');
+      const link = graphRef.current.d3Force?.('link');
+      if (charge?.strength) {
+        // Bigger graph → stronger repulsion. Cap at -300 to avoid blowing up.
+        const strength = Math.max(-300, Math.min(-30, -30 - Math.sqrt(n) * 4));
+        charge.strength(strength);
+      }
+      if (link?.distance) {
+        // Bigger graph → longer links so clusters separate.
+        const distance = Math.max(30, Math.min(180, 30 + Math.sqrt(n) * 1.5));
+        link.distance(distance);
+      }
+      graphRef.current.d3ReheatSimulation?.();
+    } catch (_e) {
+      // d3Force may not exist yet on first render — re-run when nodes arrive.
+    }
+  }, [graphData.nodes.length]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
@@ -805,6 +844,29 @@ export default function MemoryGraph() {
           ))}
         </div>
 
+        {/* Node density selector — controls how many memories the server returns */}
+        <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1" title="How many memory nodes to load">
+          {[
+            { key: 300, label: '300' },
+            { key: 1000, label: '1K' },
+            { key: 5000, label: '5K' },
+            { key: 0, label: 'All' },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setNodeLimit(option.key)}
+              className={`rounded-md px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                nodeLimit === option.key
+                  ? 'bg-[#117dff]/10 text-[#117dff]'
+                  : 'text-[#737373] hover:text-[#525252]'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         {/* Memory Map button */}
         <button
           onClick={() => {
@@ -909,9 +971,9 @@ export default function MemoryGraph() {
             linkDirectionalArrowColor={(link) =>
               EDGE_COLORS[link.type] || "#e3e0db"
             }
-            cooldownTicks={100}
-            warmupTicks={50}
-            d3AlphaDecay={0.02}
+            cooldownTicks={Math.min(400, Math.max(100, Math.round(Math.sqrt(graphData.nodes.length) * 20)))}
+            warmupTicks={Math.min(150, 50 + Math.round(Math.sqrt(graphData.nodes.length) * 3))}
+            d3AlphaDecay={graphData.nodes.length > 1000 ? 0.012 : 0.02}
             d3VelocityDecay={0.3}
             backgroundColor="#faf9f4"
             width={

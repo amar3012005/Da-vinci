@@ -631,10 +631,14 @@ class HiveMindApiClient {
 
   // ─── Core: Memory Graph ─────────────────────────────────────
 
-  async getGraph({ project, limit = 200, scope } = {}) {
+  async getGraph({ project, limit, scope } = {}) {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
-    if (limit) params.set('limit', String(limit));
+    // limit semantics:
+    //   undefined → omit param, server applies its default (large)
+    //   0         → explicit "no cap" — server clamps to its 50k hard ceiling
+    //   >0        → exact node budget
+    if (typeof limit === 'number') params.set('limit', String(limit));
     if (scope) params.set('scope', scope);
     const qs = params.toString();
     const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
