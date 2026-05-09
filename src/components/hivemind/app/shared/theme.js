@@ -60,7 +60,21 @@ export const shadows = {
 };
 
 // API endpoints resolved from bootstrap
+//
+// Default to same-origin ('') so calls go to https://<frontend-host>/v1/* and
+// hit the Caddy reverse proxy in front of the control-plane. This avoids three
+// failure modes that produced false "Control plane unavailable" banners:
+//   1. Browsers / corporate networks / ad-blockers blocking the :8040 port
+//   2. Cross-origin cookie issues for first-party session cookies
+//   3. Wrong/empty REACT_APP_CONTROL_PLANE_URL baked into a Vercel build
+// Override via env var only when running the frontend off-domain (local dev,
+// preview deploys, etc).
 export const API_DEFAULTS = {
-  controlPlaneBase: process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.hivemind.davinciai.eu:8040',
-  coreApiBase: process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
+  controlPlaneBase:
+    process.env.REACT_APP_CONTROL_PLANE_URL ||
+    (typeof window !== 'undefined' && window.location.hostname.endsWith('davinciai.eu')
+      ? '' // same-origin in production — Caddy proxies /v1 → control-plane
+      : 'https://api.hivemind.davinciai.eu:8040'),
+  coreApiBase:
+    process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
 };
