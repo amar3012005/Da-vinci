@@ -518,42 +518,59 @@ export default function KnowledgeBase() {
   const fileInputRef = useRef(null);
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
-    try {
-      // Fetch uploaded documents by listing memories with document-summary or schema-record tag
-      const [summaryResult, schemaResult] = await Promise.all([
-        apiClient.listMemories({ tags: 'document-summary', limit: 100 }),
-        apiClient.listMemories({ tags: 'schema-record', limit: 100 }).catch(() => ({ memories: [] })),
-      ]);
-      const summaryMems = summaryResult?.memories || [];
-      const schemaMems = schemaResult?.memories || [];
-      // Merge and deduplicate by id
-      const seenIds = new Set();
-      const allMems = [];
-      for (const m of [...summaryMems, ...schemaMems]) {
-        if (!seenIds.has(m.id)) {
+    // Fetch from THREE tag families in parallel — covers regular uploads, enterprise
+    // schema records, and the broader 'knowledge-base' bucket. Trust the backend tag:
+    // never filter out a document just because its metadata fields are missing
+    // (Smart Ingest UPDATE relationships sometimes strip metadata into a new version).
+    const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
+    const settled = await Promise.allSettled(
+      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 100 }))
+    );
+
+    const seenIds = new Set();
+    const docs = [];
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+      const memories = result.value?.memories || [];
+      for (const m of memories) {
+        if (seenIds.has(m.id)) continue;
+        const tags = m.tags || [];
+        const title = m.title || '';
+        const meta = m.metadata || {};
+        const srcMeta = m.source_metadata || {};
+        const isDoc =
+          tags.includes('document-summary') ||
+          tags.includes('schema-record') ||
+          title.startsWith('Document:') ||
+          srcMeta.source_type === 'document-upload' ||
+          !!meta.document_title ||
+          !!meta.total_chunks;
+        const isChunk = tags.some(t => t.startsWith('section:') || t.startsWith('page:') || t.startsWith('chunk:'));
+        if (isDoc && !isChunk) {
           seenIds.add(m.id);
-          allMems.push(m);
+          docs.push(m);
         }
       }
-      // Filter to actual document summaries (have metadata.total_chunks or title starts with "Document:")
-      const docs = allMems.filter((m) => {
-        const meta = m.metadata || {};
-        const title = m.title || '';
-        return meta.total_chunks || meta.document_title || meta.document_type || title.startsWith('Document:');
-      });
-      // Sort by date descending (newest first)
-      return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    } catch {
-      // Fallback to search
+    }
+
+    // Last-ditch fallback: if all three queries returned nothing, try semantic search.
+    if (docs.length === 0) {
       try {
         const result = await apiClient.quickSearch('knowledge-base document-summary');
-        return (result?.results || result?.memories || []).filter((m) =>
-          (m.tags || []).includes('document-summary') || (m.tags || []).includes('schema-record')
-        );
-      } catch {
-        return [];
-      }
+        const fallback = (result?.results || result?.memories || []).filter((m) => {
+          const tags = m.tags || [];
+          return tags.includes('document-summary') || tags.includes('schema-record');
+        });
+        for (const m of fallback) {
+          if (!seenIds.has(m.id)) {
+            seenIds.add(m.id);
+            docs.push(m);
+          }
+        }
+      } catch { /* swallow — empty list is acceptable here */ }
     }
+
+    return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   }, []);
 
   // Combine fetched documents with just-uploaded ones for immediate display
@@ -597,13 +614,28 @@ export default function KnowledgeBase() {
   const handleDeleteDocument = useCallback(async (docId) => {
     setDeletingDocId(docId);
     try {
-      await apiClient.deleteDocument(docId);
-      // Remove from local state immediately
+      const result = await apiClient.deleteDocument(docId);
+      const deletedCount = result?.deleted || result?.deleted_count || result?.memory_ids?.length || null;
+      // Optimistic local removal — refetch confirms.
       setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
       setDeleteConfirmId(null);
+      // Surface count via temporary upload-status row so the user sees what happened.
+      if (deletedCount) {
+        setUploads(prev => [...prev, {
+          id: `del-${Date.now()}-${Math.random()}`,
+          filename: `Deleted ${deletedCount} memor${deletedCount === 1 ? 'y' : 'ies'} (document + chunks + facts)`,
+          status: 'success',
+        }]);
+      }
       refetchKb();
     } catch (err) {
       console.error('Delete failed:', err);
+      setUploads(prev => [...prev, {
+        id: `del-err-${Date.now()}`,
+        filename: 'Delete failed',
+        status: 'error',
+        error: err?.message || 'Unknown error',
+      }]);
     } finally {
       setDeletingDocId(null);
     }
@@ -1049,8 +1081,11 @@ export default function KnowledgeBase() {
                           onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id); }}
                           disabled={deletingDocId === doc.id}
                           className="text-[10px] font-mono px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                          title="This cascades — removes the document, every chunk, every extracted fact, and Qdrant vectors"
                         >
-                          {deletingDocId === doc.id ? 'Deleting...' : 'Confirm'}
+                          {deletingDocId === doc.id
+                            ? 'Deleting...'
+                            : `Delete all${meta.total_chunks ? ` (~${meta.total_chunks + 1} memories)` : ''}`}
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(null); }}
@@ -1063,7 +1098,7 @@ export default function KnowledgeBase() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
                         className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete document and all chunks"
+                        title="Delete document + every chunk + every fact + Qdrant vectors"
                       >
                         <Trash2 size={14} />
                       </button>
