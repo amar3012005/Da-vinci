@@ -6,6 +6,7 @@ import {
   Brain, Search, Globe, Trash2, RefreshCw, BookOpen,
   Zap, Link2, MessageSquare, FileText, Network,
   HelpCircle, Terminal, Clipboard,
+  Code, Bug, GitBranch, FlaskConical, History, Clock, GitCommit, HelpingHand,
 } from 'lucide-react';
 
 /* ─── Animation ──────────────────────────────────────────────────── */
@@ -301,8 +302,199 @@ hivemind_web_job_status({ job_id: job.job_id })
   },
 ];
 
+/* ─── Coding Intelligence Tools (auto-granted to coding platforms) ─ */
+const CODING_TOOLS = [
+  {
+    name: 'hivemind_ingest_code',
+    icon: Code,
+    colorClass: 'bg-[#117dff]/10 text-[#117dff]',
+    badge: 'auto-dedup',
+    badgeClass: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20',
+    summary: 'Save a code file/snippet — auto-links to prior version',
+    description: 'Call after writing or significantly modifying a file. Auto-detects language, adds file:<path> tag, and queries existing memories tagged file:<path> to set an UPDATE relationship — re-ingesting the same file builds a proper version chain via the MemoryVersion ledger instead of duplicates.',
+    params: [
+      { name: 'file_path', required: true, desc: 'Path to the file (e.g. src/auth/middleware.ts)' },
+      { name: 'content', required: true, desc: 'Full file content or relevant snippet' },
+      { name: 'summary', required: false, desc: 'Human-readable summary (1-3 sentences)' },
+      { name: 'project', required: false, desc: 'Project this file belongs to' },
+      { name: 'tags', required: false, desc: 'Additional tags (e.g. ["auth", "middleware"])' },
+      { name: 'related_to', required: false, desc: 'Memory ID of prior version — overrides auto-dedup' },
+    ],
+    example: `hivemind_ingest_code({
+  file_path: "src/auth/middleware.ts",
+  content: "export function authMiddleware(...) { ... }",
+  summary: "JWT validation middleware — checks Authorization header",
+  tags: ["auth", "middleware", "jwt"]
+})`,
+  },
+  {
+    name: 'hivemind_recall_bugs',
+    icon: Bug,
+    colorClass: 'bg-[#dc2626]/10 text-[#dc2626]',
+    summary: 'Recall past bugs/fixes/gotchas BEFORE writing code',
+    description: 'Call before writing code in an area to avoid repeating known bugs. Filters memory recall to entries tagged bug, fix, or gotcha. Optionally narrowed by file_path.',
+    params: [
+      { name: 'context', required: true, desc: 'What you are about to implement or the error you are seeing' },
+      { name: 'file_path', required: false, desc: 'File currently being edited' },
+      { name: 'project', required: false, desc: 'Project filter' },
+      { name: 'limit', required: false, desc: 'Max results (1-20, default 5)' },
+    ],
+    example: `hivemind_recall_bugs({
+  context: "Prisma deleteMany with large IN array",
+  file_path: "core/src/control-plane-server.js"
+})`,
+  },
+  {
+    name: 'hivemind_log_decision',
+    icon: HelpingHand,
+    colorClass: 'bg-[#d97706]/10 text-[#d97706]',
+    summary: 'Save an architectural/technical decision permanently',
+    description: 'Call when choosing between options (library, algorithm, API design). Stores as memory_type=decision with structured alternatives + affected_files. Future sessions recall via hivemind_why_code.',
+    params: [
+      { name: 'title', required: true, desc: 'Short decision title' },
+      { name: 'decision', required: true, desc: 'What was decided' },
+      { name: 'rationale', required: true, desc: 'Why this decision' },
+      { name: 'alternatives', required: false, desc: 'Options considered but rejected' },
+      { name: 'affected_files', required: false, desc: 'Files impacted' },
+      { name: 'project', required: false, desc: 'Project this decision belongs to' },
+      { name: 'tags', required: false, desc: 'Categorising tags' },
+      { name: 'related_to', required: false, desc: 'Memory ID of earlier related decision' },
+    ],
+    example: `hivemind_log_decision({
+  title: "Use SSE not WebSocket for delete progress",
+  decision: "Server-Sent Events streaming progress 0-100% via /v1/account/delete",
+  rationale: "One-way server→client, simpler than WS, works through CDN",
+  alternatives: ["WebSocket", "Long polling", "Fire-and-forget + status endpoint"],
+  affected_files: ["core/src/control-plane-server.js"]
+})`,
+  },
+  {
+    name: 'hivemind_track_refactor',
+    icon: GitBranch,
+    colorClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6]',
+    summary: 'Record a rename / move / split / merge / extract',
+    description: 'Call after significant restructuring so future sessions understand how code evolved. Creates a DERIVE relationship between old and new versions.',
+    params: [
+      { name: 'refactor_type', required: true, desc: 'rename | move | split | merge | restructure | extract' },
+      { name: 'old_name', required: true, desc: 'Original name/path/identifier' },
+      { name: 'new_name', required: true, desc: 'New name/path/identifier' },
+      { name: 'reason', required: true, desc: 'Why this refactoring was done' },
+      { name: 'affected_files', required: false, desc: 'Files changed' },
+      { name: 'project', required: false, desc: 'Project filter' },
+      { name: 'related_to', required: false, desc: 'Memory ID of original code memory' },
+    ],
+    example: `hivemind_track_refactor({
+  refactor_type: "extract",
+  old_name: "hivemind_save_memory (used for code/decisions/refactors)",
+  new_name: "hivemind_ingest_code, hivemind_log_decision, hivemind_track_refactor",
+  reason: "Better tool discoverability for AI coding assistants",
+  affected_files: ["core/src/mcp/hosted-service.js"]
+})`,
+  },
+  {
+    name: 'hivemind_test_coverage',
+    icon: FlaskConical,
+    colorClass: 'bg-[#16a34a]/10 text-[#16a34a]',
+    summary: 'Save / recall test coverage for a function or module',
+    description: 'action=save records which functions have tests (and what those tests cover). action=recall retrieves coverage before modifying code so you know what tests must still pass.',
+    params: [
+      { name: 'action', required: true, desc: 'save | recall' },
+      { name: 'function_name', required: true, desc: 'Function, class, or module name' },
+      { name: 'file_path', required: false, desc: 'File path containing the function' },
+      { name: 'test_file', required: false, desc: 'Path to test file (save action)' },
+      { name: 'test_cases', required: false, desc: 'List of test case descriptions' },
+      { name: 'coverage_pct', required: false, desc: 'Coverage % if known' },
+      { name: 'project', required: false, desc: 'Project filter' },
+    ],
+    example: `hivemind_test_coverage({
+  action: "save",
+  function_name: "performAccountDeletion",
+  file_path: "core/src/control-plane-server.js",
+  test_cases: ["batches at 5000 ids", "emits SSE progress", "returns 200 on success"]
+})`,
+  },
+  {
+    name: 'hivemind_why_code',
+    icon: HelpCircle,
+    colorClass: 'bg-[#0ea5e9]/10 text-[#0ea5e9]',
+    summary: 'Why does this code exist / work this way?',
+    description: 'Call before modifying code you did not write or do not remember the context for. Returns relevant decisions, refactors, bug fixes, and code references categorised into buckets.',
+    params: [
+      { name: 'query', required: true, desc: 'What you want to understand' },
+      { name: 'file_path', required: false, desc: 'File path for narrowing context' },
+      { name: 'function_name', required: false, desc: 'Function or class name' },
+      { name: 'project', required: false, desc: 'Project filter' },
+      { name: 'limit', required: false, desc: 'Max context memories (1-20, default 8)' },
+    ],
+    example: `hivemind_why_code({
+  query: "why is batch size 5000 in delete account",
+  file_path: "core/src/control-plane-server.js",
+  function_name: "performAccountDeletion"
+})`,
+  },
+];
+
+/* ─── Time Travel Tools (bi-temporal — coding-scope gated) ─────────── */
+const TEMPORAL_TOOLS = [
+  {
+    name: 'hivemind_code_at',
+    icon: Clock,
+    colorClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6]',
+    badge: 'bi-temporal',
+    badgeClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/20',
+    summary: 'What did the codebase look like on date X?',
+    description: 'Bi-temporal as-of snapshot. transaction_time = when system learned the fact. valid_time = when fact was true in the world. Pass either or both.',
+    params: [
+      { name: 'transaction_time', required: false, desc: 'ISO timestamp — when system learned (required if valid_time omitted)' },
+      { name: 'valid_time', required: false, desc: 'ISO timestamp — when fact was true (required if transaction_time omitted)' },
+      { name: 'file_path', required: false, desc: 'Optional file path filter' },
+      { name: 'project', required: false, desc: 'Optional project filter' },
+    ],
+    example: `hivemind_code_at({
+  transaction_time: "2026-05-01T00:00:00Z",
+  file_path: "core/src/mcp/hosted-service.js"
+})`,
+  },
+  {
+    name: 'hivemind_code_diff',
+    icon: GitCommit,
+    colorClass: 'bg-[#16a34a]/10 text-[#16a34a]',
+    badge: 'bi-temporal',
+    badgeClass: 'bg-[#16a34a]/10 text-[#16a34a] border-[#16a34a]/20',
+    summary: 'What changed between two timestamps?',
+    description: 'Returns added / removed / modified memories between time_a and time_b, each with tags + documentDate. AND-intersect with file_path tag and any extra tags.',
+    params: [
+      { name: 'time_a', required: true, desc: 'Earlier ISO timestamp' },
+      { name: 'time_b', required: true, desc: 'Later ISO timestamp' },
+      { name: 'file_path', required: false, desc: 'Filter — translated to tag file:<path>' },
+      { name: 'tags', required: false, desc: 'Additional AND-intersected tags (e.g. ["fn:foo", "decision"])' },
+    ],
+    example: `hivemind_code_diff({
+  time_a: "2026-05-08T00:00:00Z",
+  time_b: "2026-05-09T00:00:00Z",
+  file_path: "core/src/mcp/hosted-service.js"
+})`,
+  },
+  {
+    name: 'hivemind_code_timeline',
+    icon: History,
+    colorClass: 'bg-[#d97706]/10 text-[#d97706]',
+    badge: 'version chain',
+    badgeClass: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
+    summary: 'Full version chain for a file or memory',
+    description: 'Walks the MemoryVersion ledger — every revision, supersession, and reason. Resolve by memory_id (preferred) or by file_path (resolves to latest memory tagged file:<path>).',
+    params: [
+      { name: 'memory_id', required: false, desc: 'Memory UUID to fetch timeline for' },
+      { name: 'file_path', required: false, desc: 'Alternative — resolves to latest memory tagged file:<path>' },
+    ],
+    example: `hivemind_code_timeline({
+  file_path: "core/src/mcp/hosted-service.js"
+})`,
+  },
+];
+
 /* ─── System prompt text ─────────────────────────────────────────── */
-const SYSTEM_PROMPT = `You are connected to HIVEMIND — a persistent memory engine for AI agents.
+const SYSTEM_PROMPT_AGENT = `You are connected to HIVEMIND — a persistent memory engine for AI agents.
 HIVEMIND gives you long-term memory, semantic search, knowledge-graph traversal,
 and live web intelligence. Use the tools below proactively to give the user
 a personalised, context-aware experience.
@@ -347,9 +539,140 @@ BEST PRACTICES:
 - After web search/crawl, offer to save useful results to memory
 - Prefer "quick" recall for simple lookups; use "insight" for synthesis`;
 
+const SYSTEM_PROMPT_CODING = `You are an AI coding assistant connected to HIVEMIND — a persistent, bi-temporal memory engine designed to give you long-term project context across every session, every machine, and every editor.
+
+HIVEMIND remembers everything you learn about this codebase: file contents, design decisions, refactors, bugs, test coverage, and the reasoning behind each change. Use it aggressively — every tool call you make compounds into a richer context for your future self.
+
+═══════════════════════════════════════════════════════════════════
+CORE LOOP — RUN THIS LOOP ON EVERY TASK
+═══════════════════════════════════════════════════════════════════
+
+BEFORE you write any code:
+  1. hivemind_recall({ query: <task description>, source_type: "code" })
+     → Pull existing context for the area you're touching.
+  2. hivemind_recall_bugs({ context: <what you're about to do>, file_path: <if known> })
+     → Avoid repeating known bugs/gotchas.
+  3. hivemind_why_code({ query: <area>, file_path: <if known> })
+     → Surface decisions + refactor history + prior fixes around the code path.
+     Skip step 1 if step 3 is sufficient.
+
+WHILE you work:
+  4. After every Write or Edit on a real file:
+     → hivemind_ingest_code({ file_path, content, summary })
+     The tool auto-dedups: re-ingesting the same file links it as an UPDATE to
+     the previous version, building a proper version chain. Do NOT pass
+     related_to manually unless you want to override auto-dedup.
+  5. When you choose between options (library, algorithm, API shape, naming,
+     trade-offs):
+     → hivemind_log_decision({ title, decision, rationale, alternatives, affected_files })
+     This is non-negotiable. Decisions disappear in the next session unless logged.
+  6. When you rename / move / split / merge / extract code:
+     → hivemind_track_refactor({ refactor_type, old_name, new_name, reason, affected_files })
+     Always log refactors — they create DERIVE relationships so future grep-equivalent
+     queries can follow the chain.
+  7. When you write or update tests:
+     → hivemind_test_coverage({ action: "save", function_name, file_path, test_file, test_cases })
+
+AFTER you finish a task or context switch:
+  8. hivemind_save_conversation({ title, messages, tags: ["coding", <project>] , platform: "claude" })
+     → Snapshots the reasoning trail.
+
+═══════════════════════════════════════════════════════════════════
+TIME-TRAVEL TOOLS — USE FOR ARCHEOLOGY
+═══════════════════════════════════════════════════════════════════
+
+When the user (or you) need to understand evolution:
+  • hivemind_code_at({ transaction_time, file_path })
+    → "What did this file look like on May 1?"
+  • hivemind_code_diff({ time_a, time_b, file_path })
+    → "What changed in this file between yesterday and today?"
+  • hivemind_code_timeline({ file_path })
+    → "Show me every revision of this file with reasons."
+
+These wrap the bi-temporal engine and read the MemoryVersion ledger directly —
+they are authoritative for code history regardless of git state.
+
+═══════════════════════════════════════════════════════════════════
+TAGGING DISCIPLINE — REQUIRED FOR PRECISE RECALL
+═══════════════════════════════════════════════════════════════════
+
+Every save_memory / ingest_code / log_decision / track_refactor MUST include
+structured tags so future recalls hit precisely:
+  • file:<path>           — every code-related memory
+  • fn:<name>             — when the memory pertains to one function/class
+  • <project-name>        — every memory in a project
+  • bug | fix | gotcha    — for failure-mode memories (drives recall_bugs)
+  • decision              — auto-added by log_decision
+  • refactor              — auto-added by track_refactor
+  • test-coverage         — auto-added by test_coverage
+
+═══════════════════════════════════════════════════════════════════
+DECISION LADDER (in order, top-down)
+═══════════════════════════════════════════════════════════════════
+
+User asks "how does X work?"
+  → hivemind_why_code({ query: X }) FIRST. Then read code if needed.
+
+User asks "what's broken?"
+  → hivemind_recall_bugs({ context: <symptom> }) → then investigate.
+
+User asks "what did this look like before?"
+  → hivemind_code_timeline OR hivemind_code_at.
+
+User asks "what changed?"
+  → hivemind_code_diff({ time_a, time_b, file_path }).
+
+User shares an error or stack trace
+  → hivemind_recall_bugs first → if no match, fix → log it as a memory tagged
+    bug + fix + the relevant file:<path>.
+
+User makes an architectural choice
+  → hivemind_log_decision IMMEDIATELY. Do not wait until the task is done.
+
+═══════════════════════════════════════════════════════════════════
+HARD RULES
+═══════════════════════════════════════════════════════════════════
+
+• Never suggest deleting code that has decisions logged against it without
+  first calling hivemind_why_code on it.
+• Never write tests without first checking hivemind_test_coverage —
+  duplication wastes tokens and money.
+• Never invent file paths — always verify against ingest_code memories or by
+  reading the actual file.
+• Never save secrets, tokens, .env contents, or API keys to memory.
+• Never spam memory with trivial state ("user clicked button"). Save facts,
+  decisions, lessons — not telemetry.
+• When in doubt about whether to save: save it with good tags. Storage is
+  cheap; missing context is expensive.
+
+═══════════════════════════════════════════════════════════════════
+EVOLUTION — HIVEMIND GETS SMARTER WITH USE
+═══════════════════════════════════════════════════════════════════
+
+Every memory you save triggers automatic fact extraction (≤5 atomic claims)
+and graph relationship inference (Updates / Extends / Derives). Re-ingesting
+the same file builds a version chain. Decisions referencing earlier decisions
+form decision chains. The more you use it, the better recall_bugs and
+why_code become.
+
+This is the system. Use it like your career depends on it — because the
+context you save now is the context you (or the next agent) will rely on
+when this conversation is gone.`;
+
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function McpServer() {
   const [activeTab, setActiveTab] = useState('tools');
+  const [promptVariant, setPromptVariant] = useState('coding');
+
+  const TOTAL_TOOLS = MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length;
+  const activePrompt = promptVariant === 'coding' ? SYSTEM_PROMPT_CODING : SYSTEM_PROMPT_AGENT;
+
+  const TAB_DATA = {
+    tools: MEMORY_TOOLS,
+    web: WEB_TOOLS,
+    coding: CODING_TOOLS,
+    temporal: TEMPORAL_TOOLS,
+  };
 
   return (
     <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
@@ -365,7 +688,7 @@ export default function McpServer() {
             <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">MCP Server</h1>
           </div>
           <p className="text-[#525252] text-sm font-['Space_Grotesk'] ml-[52px]">
-            HIVEMIND exposes 13 MCP tools that give AI platforms persistent memory, semantic search, knowledge-graph traversal, and live web intelligence.
+            HIVEMIND exposes {TOTAL_TOOLS} MCP tools — persistent memory, semantic search, knowledge-graph traversal, live web intelligence, coding intelligence, and bi-temporal time-travel queries.
           </p>
         </motion.div>
 
@@ -382,10 +705,34 @@ export default function McpServer() {
                   <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Copy and paste into your AI platform's system instructions</p>
                 </div>
               </div>
-              <CopyButton text={SYSTEM_PROMPT} label="Copy Prompt" />
+              <CopyButton text={activePrompt} label="Copy Prompt" />
             </div>
-            <div className="relative max-h-[300px] overflow-y-auto">
-              <pre className="px-5 py-4 text-[11px] font-mono text-[#525252] leading-relaxed whitespace-pre-wrap">{SYSTEM_PROMPT}</pre>
+
+            {/* Variant selector */}
+            <div className="px-5 pt-3 pb-2 border-b border-[#e3e0db]/50 flex gap-1.5">
+              {[
+                { id: 'coding', label: 'AI Coding Assistant', desc: 'Cursor / Claude Code / Copilot' },
+                { id: 'agent', label: 'AI Agent', desc: 'Claude / ChatGPT / general agents' },
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setPromptVariant(opt.id)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-left transition-all border ${
+                    promptVariant === opt.id
+                      ? 'bg-[#117dff]/5 border-[#117dff]/30'
+                      : 'bg-white border-[#e3e0db] hover:border-[#117dff]/20'
+                  }`}
+                >
+                  <p className={`text-xs font-semibold font-['Space_Grotesk'] ${promptVariant === opt.id ? 'text-[#117dff]' : 'text-[#0a0a0a]'}`}>
+                    {opt.label}
+                  </p>
+                  <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk']">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="relative max-h-[360px] overflow-y-auto">
+              <pre className="px-5 py-4 text-[11px] font-mono text-[#525252] leading-relaxed whitespace-pre-wrap">{activePrompt}</pre>
             </div>
           </div>
         </motion.div>
@@ -476,10 +823,12 @@ Body:
         </motion.div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 mb-4 bg-white border border-[#e3e0db] rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-4 bg-white border border-[#e3e0db] rounded-xl p-1 w-fit flex-wrap">
           {[
-            { id: 'tools', label: 'Memory Tools', count: MEMORY_TOOLS.length },
+            { id: 'tools', label: 'Memory', count: MEMORY_TOOLS.length },
             { id: 'web', label: 'Web Intelligence', count: WEB_TOOLS.length },
+            { id: 'coding', label: 'Coding Intelligence', count: CODING_TOOLS.length },
+            { id: 'temporal', label: 'Time Travel', count: TEMPORAL_TOOLS.length },
           ].map(tab => (
             <button
               key={tab.id}
@@ -496,8 +845,8 @@ Body:
         </div>
 
         {/* Tool cards */}
-        <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-2">
-          {(activeTab === 'tools' ? MEMORY_TOOLS : WEB_TOOLS).map(tool => (
+        <motion.div variants={stagger} initial="initial" animate="animate" key={activeTab} className="space-y-2">
+          {(TAB_DATA[activeTab] || MEMORY_TOOLS).map(tool => (
             <ToolCard key={tool.name} tool={tool} />
           ))}
         </motion.div>
