@@ -1326,6 +1326,20 @@ export default function Connectors() {
             onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
             allowTeamScope={org?.plan === 'enterprise'}
             onConnect={() => {
+              // One-click OAuth path: Claude Code (and other plugin-install-style
+              // tiles flagged isPluginInstall) launch the browser-based /auth/cli
+              // flow. Backend redirects back to /hivemind/app/connect/claude-code/callback
+              // with apikey + user_id, where the user copies a single
+              // `claude mcp add` command into their terminal.
+              if (connector.isPluginInstall && connector.id === 'claude-code') {
+                const callback = `${window.location.origin}/hivemind/app/connect/claude-code/callback`;
+                const controlPlane =
+                  process.env.REACT_APP_CONTROL_PLANE_URL ||
+                  'https://api.hivemind.davinciai.eu:8040';
+                const target = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=claude_code_web`;
+                window.location.href = target;
+                return;
+              }
               if (connector.isMcpClient) {
                 setMcpSetupConnector(connector);
               } else if (connector.oauthProvider) {
