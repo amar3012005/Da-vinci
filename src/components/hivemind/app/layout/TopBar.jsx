@@ -32,7 +32,7 @@ const pageDescriptions = {
   '/hivemind/app/billing': 'Manage your plan and usage',
   '/hivemind/app/web': 'Search and crawl the web as async jobs',
   '/hivemind/app/web-admin': 'Operational metrics, success rates, and runtime health',
-  '/hivemind/app/mcp': '13 MCP tools for memory, search, and web intelligence — with setup guides',
+  '/hivemind/app/mcp': '22 MCP tools — memory, web intelligence, coding intelligence, and bi-temporal time travel — with setup guides',
   '/hivemind/app/graph': 'Explore connections between memories — semantic clusters, temporal decay, and relationship traversal',
   '/hivemind/app/engine': 'SOTA memory engine — cognitive framing, temporal queries, swarm reasoning, and Byzantine consensus',
   '/hivemind/app/team/members': 'Invite, review, and manage enterprise workspace members',
