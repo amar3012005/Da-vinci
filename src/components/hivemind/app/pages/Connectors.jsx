@@ -87,7 +87,7 @@ const CONNECTORS = [
   {
     id: 'claude',
     name: 'Claude Desktop',
-    description: 'Anthropic Claude via MCP stdio bridge (manual JSON config)',
+    description: 'Anthropic Claude — one-click OAuth, paste pre-filled JSON config',
     icon: Terminal,
     category: 'mcp_clients',
     status: 'available',
@@ -95,18 +95,27 @@ const CONNECTORS = [
     configKey: 'claude',
     mcpEndpointName: 'claude',
     isMcpClient: true,
-    setupTitle: 'Connect Claude Desktop',
-    setupSteps: [
-      'Open Claude Desktop → Settings → Developer → Edit Config',
-      'Paste the JSON config below into claude_desktop_config.json',
-      'Restart Claude Desktop',
-    ],
-    configPath: '~/Library/Application Support/Claude/claude_desktop_config.json',
+    isOauthConnect: true,
+    oauthClientId: 'claude-desktop',
+  },
+  {
+    id: 'cursor',
+    name: 'Cursor',
+    description: 'Cursor IDE — one-click OAuth, paste pre-filled mcp.json',
+    icon: Code2,
+    category: 'mcp_clients',
+    status: 'available',
+    color: '#7c3aed',
+    configKey: 'cursor',
+    mcpEndpointName: 'cursor',
+    isMcpClient: true,
+    isOauthConnect: true,
+    oauthClientId: 'cursor',
   },
   {
     id: 'vscode',
     name: 'VS Code',
-    description: 'Visual Studio Code MCP extension',
+    description: 'Visual Studio Code — one-click OAuth, paste pre-filled settings.json',
     icon: Code2,
     category: 'mcp_clients',
     status: 'available',
@@ -114,19 +123,13 @@ const CONNECTORS = [
     configKey: 'vscode',
     mcpEndpointName: 'vscode',
     isMcpClient: true,
-    setupTitle: 'Connect VS Code',
-    setupSteps: [
-      'Open VS Code → Settings (Ctrl+,) → Search "mcp"',
-      'Click "Edit in settings.json"',
-      'Add the config below under "mcp.servers"',
-      'Restart VS Code',
-    ],
-    configPath: '.vscode/settings.json',
+    isOauthConnect: true,
+    oauthClientId: 'vscode',
   },
   {
     id: 'antigravity',
     name: 'Antigravity',
-    description: 'Google Antigravity MCP integration',
+    description: 'Google Antigravity — one-click OAuth, paste pre-filled MCP server config',
     icon: Cable,
     category: 'mcp_clients',
     status: 'available',
@@ -134,13 +137,8 @@ const CONNECTORS = [
     configKey: 'antigravity',
     mcpEndpointName: 'antigravity',
     isMcpClient: true,
-    setupTitle: 'Connect Antigravity',
-    setupSteps: [
-      'Open Antigravity settings',
-      'Go to Integrations → MCP Servers',
-      'Add new server with the config below',
-    ],
-    configPath: 'Antigravity MCP Settings',
+    isOauthConnect: true,
+    oauthClientId: 'antigravity',
   },
   {
     id: 'remote',
@@ -162,6 +160,43 @@ const CONNECTORS = [
     color: '#117dff',
     configKey: 'notebooklm',
     setupOnly: true,
+  },
+  // Enterprise stack (Microsoft + Atlassian + Salesforce — top-of-stack ARR)
+  {
+    id: 'outlook',
+    name: 'Microsoft Outlook',
+    description: 'Outlook mail + Calendar + Teams chat + SharePoint via single Azure AD OAuth',
+    icon: Mail,
+    category: 'workspace',
+    status: 'needs_oauth_setup',
+    color: '#0078d4',
+    priority: 1,
+    oauthProvider: 'outlook',
+    setupHint: 'Set MICROSOFT_CLIENT_ID + MICROSOFT_CLIENT_SECRET on the control plane',
+  },
+  {
+    id: 'atlassian',
+    name: 'Atlassian (Jira + Confluence)',
+    description: 'Jira issues + Confluence pages via single Atlassian OAuth 2.0 (3LO)',
+    icon: BookOpen,
+    category: 'knowledge',
+    status: 'needs_oauth_setup',
+    color: '#0052cc',
+    priority: 1,
+    oauthProvider: 'atlassian',
+    setupHint: 'Set ATLASSIAN_CLIENT_ID + ATLASSIAN_CLIENT_SECRET on the control plane',
+  },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    description: 'Accounts, Opportunities, Cases, Contacts via Salesforce Connected App',
+    icon: Cable,
+    category: 'workspace',
+    status: 'needs_oauth_setup',
+    color: '#00a1e0',
+    priority: 1,
+    oauthProvider: 'salesforce',
+    setupHint: 'Set SALESFORCE_CLIENT_ID + SALESFORCE_CLIENT_SECRET on the control plane',
   },
   // Workspace (coming soon)
   {
@@ -298,6 +333,13 @@ function ConnectorStatusBadge({ status }) {
       border: 'border-amber-500/20',
       label: 'Needs Reauth',
       dot: 'bg-amber-400',
+    },
+    needs_oauth_setup: {
+      bg: 'bg-amber-50',
+      text: 'text-amber-600',
+      border: 'border-amber-200',
+      label: 'Needs OAuth Setup',
+      dot: 'bg-amber-500',
     },
   };
 
@@ -1326,18 +1368,23 @@ export default function Connectors() {
             onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
             allowTeamScope={org?.plan === 'enterprise'}
             onConnect={() => {
-              // One-click OAuth path: Claude Code (and other plugin-install-style
-              // tiles flagged isPluginInstall) launch the browser-based /auth/cli
-              // flow. Backend redirects back to /hivemind/app/connect/claude-code/callback
-              // with apikey + user_id, where the user copies a single
-              // `claude mcp add` command into their terminal.
+              // One-click OAuth path for any MCP-client tile flagged with
+              // isPluginInstall (Claude Code → claude mcp add CLI) or
+              // isOauthConnect (Claude Desktop / Cursor / VS Code / Antigravity
+              // → pre-filled JSON config). Both go through /auth/cli; the
+              // callback page renders platform-specific output.
+              const controlPlane =
+                process.env.REACT_APP_CONTROL_PLANE_URL ||
+                'https://api.hivemind.davinciai.eu:8040';
               if (connector.isPluginInstall && connector.id === 'claude-code') {
                 const callback = `${window.location.origin}/hivemind/app/connect/claude-code/callback`;
-                const controlPlane =
-                  process.env.REACT_APP_CONTROL_PLANE_URL ||
-                  'https://api.hivemind.davinciai.eu:8040';
-                const target = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=claude_code_web`;
-                window.location.href = target;
+                window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=claude_code_web`;
+                return;
+              }
+              if (connector.isOauthConnect) {
+                const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
+                const clientId = connector.oauthClientId || connector.id;
+                window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
                 return;
               }
               if (connector.isMcpClient) {
