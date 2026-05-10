@@ -2,6 +2,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
 import { Search, BookOpen } from 'lucide-react';
+import TeamSwitcher from './TeamSwitcher';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -49,8 +50,8 @@ export default function TopBar() {
 
   return (
     <header className="h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-6 sticky top-0 z-30">
-      {/* Left: Title + Description */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Left: Title + Description + Team switcher */}
+      <div className="flex items-center gap-4 min-w-0">
         <div>
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {title}
@@ -61,6 +62,7 @@ export default function TopBar() {
             </p>
           )}
         </div>
+        <TeamSwitcher />
       </div>
 
       {/* Right: Actions */}

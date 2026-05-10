@@ -293,6 +293,93 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Control Plane: Teams + Projects (V2) ────────────────────
+
+  async listTeams() {
+    const { data } = await this.controlPlane.get('/v1/teams');
+    return data;
+  }
+
+  async createTeam(payload) {
+    const { data } = await this.controlPlane.post('/v1/teams', payload);
+    return data;
+  }
+
+  async getTeam(teamId) {
+    const { data } = await this.controlPlane.get(`/v1/teams/${teamId}`);
+    return data;
+  }
+
+  async updateTeam(teamId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/teams/${teamId}`, payload);
+    return data;
+  }
+
+  async archiveTeam(teamId) {
+    const { data } = await this.controlPlane.delete(`/v1/teams/${teamId}`);
+    return data;
+  }
+
+  async listTeamMembers(teamId) {
+    const { data } = await this.controlPlane.get(`/v1/teams/${teamId}/members`);
+    return data;
+  }
+
+  async addTeamMember(teamId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/teams/${teamId}/members`, payload);
+    return data;
+  }
+
+  async removeTeamMember(teamId, userId) {
+    const { data } = await this.controlPlane.delete(`/v1/teams/${teamId}/members/${userId}`);
+    return data;
+  }
+
+  async listTeamProjects(teamId) {
+    const { data } = await this.controlPlane.get(`/v1/teams/${teamId}/projects`);
+    return data;
+  }
+
+  async createTeamProject(teamId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/teams/${teamId}/projects`, payload);
+    return data;
+  }
+
+  async listAccessibleProjects() {
+    const { data } = await this.controlPlane.get('/v1/projects');
+    return data;
+  }
+
+  async getProjectV2(projectId) {
+    const { data } = await this.controlPlane.get(`/v1/projects/${projectId}`);
+    return data;
+  }
+
+  async updateProjectV2(projectId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/projects/${projectId}`, payload);
+    return data;
+  }
+
+  async archiveProjectV2(projectId) {
+    const { data } = await this.controlPlane.delete(`/v1/projects/${projectId}`);
+    return data;
+  }
+
+  async addProjectMember(projectId, payload) {
+    const { data } = await this.controlPlane.post(`/v1/projects/${projectId}/members`, payload);
+    return data;
+  }
+
+  async removeProjectMember(projectId, userId) {
+    const { data } = await this.controlPlane.delete(`/v1/projects/${projectId}/members/${userId}`);
+    return data;
+  }
+
+  async setMemoryScope(memoryId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/memories/${memoryId}/scope`, payload);
+    return data;
+  }
+
   // ─── Control Plane: API Keys ─────────────────────────────────
 
   /**
