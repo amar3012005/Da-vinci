@@ -243,8 +243,29 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Alias used by AdminUsers page (P0-4)
+  async listOrgMembers(orgId) {
+    return this.listMembers(orgId);
+  }
+
   async updateMemberRole(orgId, userId, role) {
     const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/members/${userId}`, { role });
+    return data;
+  }
+
+  // P0-4: set full roles[] array (multi-role RBAC)
+  async updateMemberRoles(orgId, userId, roles) {
+    const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/members/${userId}/roles`, { roles });
+    return data;
+  }
+
+  async deactivateMember(orgId, userId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/members/${userId}/deactivate`, {});
+    return data;
+  }
+
+  async reactivateMember(orgId, userId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/members/${userId}/reactivate`, {});
     return data;
   }
 
@@ -541,11 +562,36 @@ class HiveMindApiClient {
     return data;
   }
 
-  async startConnectorOAuth(provider, returnTo, targetScope = 'personal') {
+  /**
+   * Begin OAuth flow for a connector.
+   * @param {string} provider - Provider id (e.g. 'slack', 'gmail')
+   * @param {string} returnTo - Redirect path after OAuth completes
+   * @param {Object} [options]
+   * @param {string} [options.target_scope='personal'] - 'personal' | 'team' | 'organization'
+   * @param {string} [options.team_id] - Required when target_scope is 'team'
+   */
+  async startConnectorOAuth(provider, returnTo, { target_scope = 'personal', team_id } = {}) {
     const { data } = await this.controlPlane.post(`/v1/connectors/${provider}/start`, {
       return_to: returnTo,
-      target_scope: targetScope,
+      target_scope,
+      ...(team_id ? { team_id } : {}),
     });
+    return data;
+  }
+
+  /**
+   * Change the memory scope of an already-connected connector.
+   * Proxied through control plane → core /api/connectors/:provider/scope.
+   * @param {string} provider
+   * @param {Object} options
+   * @param {string} options.target_scope - 'personal' | 'team' | 'organization'
+   * @param {string} [options.team_id] - Required when target_scope is 'team'
+   */
+  async changeConnectorScope(provider, { target_scope, team_id } = {}) {
+    const { data } = await this.controlPlane.patch(
+      `/v1/proxy/connectors/${provider}/scope`,
+      { target_scope, ...(team_id ? { team_id } : {}) },
+    );
     return data;
   }
 
@@ -915,6 +961,28 @@ class HiveMindApiClient {
       reassign_memories: reassignMemories,
       target_node_id: targetNodeId,
     });
+    return data;
+  }
+
+  // ─── SSO Config (P0-5) ───────────────────────────────────────
+
+  async getSsoConfig(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/sso`);
+    return data;
+  }
+
+  async updateSsoConfig(orgId, payload) {
+    const { data } = await this.controlPlane.put(`/v1/orgs/${orgId}/sso`, payload);
+    return data;
+  }
+
+  async generateScimToken(orgId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/sso/scim-token`);
+    return data;
+  }
+
+  async revokeScimToken(orgId) {
+    const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/sso/scim-token`);
     return data;
   }
 }

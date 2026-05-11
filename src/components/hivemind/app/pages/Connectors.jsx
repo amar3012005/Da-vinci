@@ -31,6 +31,7 @@ import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
+import { useTeamContext } from '../shared/team-context';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -438,8 +439,12 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // ─── Connector Card (Supermemory-style) ──────────────────────────────────────
 
-function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, connecting, targetScope, onTargetScopeChange, allowTeamScope }) {
+function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, onChangeScope, connecting, targetScope, selectedTeamId, onTargetScopeChange, onTeamChange, allowTeamScope, teams }) {
   const [expanded, setExpanded] = useState(false);
+  const [changeScopeOpen, setChangeScopeOpen] = useState(false);
+  const [pendingScope, setPendingScope] = useState(targetScope);
+  const [pendingTeamId, setPendingTeamId] = useState(selectedTeamId || null);
+  const [scopeSaving, setScopeSaving] = useState(false);
   const Icon = connector.icon;
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
   const isComingSoon = connector.status === 'coming_soon';
@@ -447,6 +452,16 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
   const isSetupOnly = connector.setupOnly === true;
   const canShowConfig = hasConfig && (isActive || isSetupOnly);
   const configStr = hasConfig ? JSON.stringify(config, null, 2) : null;
+
+  const handleScopeChange = async () => {
+    setScopeSaving(true);
+    try {
+      await onChangeScope(pendingScope, pendingTeamId);
+      setChangeScopeOpen(false);
+    } finally {
+      setScopeSaving(false);
+    }
+  };
 
   return (
     <motion.div
@@ -495,26 +510,114 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, c
         </div>
 
         {connector.oauthProvider && (
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Sync to</span>
-            {[
-              { key: 'personal', label: 'My Space', disabled: false },
-              { key: 'organization', label: 'Team Workspace', disabled: !allowTeamScope },
-            ].map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                disabled={option.disabled}
-                onClick={() => !option.disabled && onTargetScopeChange?.(option.key)}
-                className={`rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
-                  targetScope === option.key
-                    ? 'border-[#117dff]/30 bg-[#117dff]/10 text-[#117dff]'
-                    : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'
-                } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Sync to</span>
+              {[
+                { key: 'personal', label: 'My Space', disabled: false },
+                { key: 'team', label: 'Team', disabled: !allowTeamScope || !teams?.length },
+                { key: 'organization', label: 'Org-wide', disabled: !allowTeamScope },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  disabled={option.disabled}
+                  onClick={() => !option.disabled && onTargetScopeChange?.(option.key)}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                    targetScope === option.key
+                      ? 'border-[#117dff]/30 bg-[#117dff]/10 text-[#117dff]'
+                      : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'
+                  } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {/* Show current scope badge for connected connectors + change link */}
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={() => { setPendingScope(targetScope); setPendingTeamId(selectedTeamId || null); setChangeScopeOpen(true); }}
+                  className="ml-auto text-[10px] font-mono text-[#117dff] hover:underline"
+                >
+                  Change scope
+                </button>
+              )}
+            </div>
+            {/* Team picker shown when scope=team and not yet connected */}
+            {targetScope === 'team' && !isActive && teams && teams.length > 0 && (
+              <div className="mt-2">
+                <select
+                  value={selectedTeamId || ''}
+                  onChange={e => onTeamChange?.(e.target.value || null)}
+                  className="w-full text-[11px] font-mono border border-[#e3e0db] rounded-lg px-2.5 py-1.5 bg-[#faf9f4] text-[#525252] focus:outline-none focus:border-[#117dff]"
+                >
+                  <option value="">Select team...</option>
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Change Scope Modal */}
+        {changeScopeOpen && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setChangeScopeOpen(false)}>
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] mb-4">Change sync scope</h3>
+              <div className="space-y-2 mb-4">
+                {[
+                  { key: 'personal', label: 'My Space', desc: 'Only you can access these memories' },
+                  { key: 'team', label: 'Team', desc: 'All members of the selected team', disabled: !allowTeamScope || !teams?.length },
+                  { key: 'organization', label: 'Org-wide', desc: 'Every org member can recall these memories', disabled: !allowTeamScope },
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    disabled={opt.disabled}
+                    onClick={() => !opt.disabled && setPendingScope(opt.key)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-[12px] font-['Space_Grotesk'] transition-all ${
+                      pendingScope === opt.key
+                        ? 'border-[#117dff]/40 bg-[#117dff]/8 text-[#117dff]'
+                        : 'border-[#e3e0db] text-[#525252]'
+                    } ${opt.disabled ? 'opacity-40 cursor-not-allowed' : 'hover:border-[#117dff]/20'}`}
+                  >
+                    <div className="font-semibold">{opt.label}</div>
+                    <div className="text-[10px] opacity-70 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+              {pendingScope === 'team' && teams && teams.length > 0 && (
+                <div className="mb-4">
+                  <select
+                    value={pendingTeamId || ''}
+                    onChange={e => setPendingTeamId(e.target.value || null)}
+                    className="w-full text-[11px] font-mono border border-[#e3e0db] rounded-lg px-2.5 py-1.5 bg-[#faf9f4] text-[#525252] focus:outline-none focus:border-[#117dff]"
+                  >
+                    <option value="">Select team...</option>
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setChangeScopeOpen(false)}
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScopeChange}
+                  disabled={scopeSaving || (pendingScope === 'team' && !pendingTeamId)}
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
+                >
+                  {scopeSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1040,6 +1143,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
 
 export default function Connectors() {
   const { org, user } = useAuth();
+  const { teams } = useTeamContext();
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
@@ -1047,7 +1151,16 @@ export default function Connectors() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
   const [targetScopes, setTargetScopes] = useState({});
+  // Per-provider selected team ID (only relevant when targetScope='team')
+  const [selectedTeamIds, setSelectedTeamIds] = useState({});
   const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
+
+  // Detect org admin: user is org admin if their role is 'owner' or 'admin'
+  // The bootstrap / AuthProvider exposes org membership role via `org.role` or `user.orgRole`.
+  const userOrgRole = org?.role || user?.orgRole || 'member';
+  const isOrgAdmin = userOrgRole === 'owner' || userOrgRole === 'admin';
+  // Allow scope selection if user is org admin OR a team lead (has teams)
+  const allowTeamScope = isOrgAdmin || (Array.isArray(teams) && teams.length > 0);
 
   // Fetch API keys for MCP config auto-fill
   const { data: apiKeysData } = useApiQuery(() => apiClient.listApiKeys().catch(() => null), []);
@@ -1139,6 +1252,8 @@ export default function Connectors() {
     setConnectingProvider(provider);
     try {
       const targetScope = targetScopes[provider] || 'personal';
+      const teamId = targetScope === 'team' ? (selectedTeamIds[provider] || null) : null;
+
       // Use direct Gmail API for Gmail, control plane for others
       if (provider === 'gmail') {
         const data = await apiClient.gmailConnect(targetScope);
@@ -1153,7 +1268,7 @@ export default function Connectors() {
       const { auth_url } = await apiClient.startConnectorOAuth(
         provider,
         window.location.pathname,
-        targetScope,
+        { target_scope: targetScope, team_id: teamId },
       );
       if (auth_url) {
         window.location.href = auth_url;
@@ -1164,7 +1279,7 @@ export default function Connectors() {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
       setConnectingProvider(null);
     }
-  }, [targetScopes]);
+  }, [targetScopes, selectedTeamIds]);
 
   const handleDisconnect = useCallback(async (provider) => {
     try {
@@ -1193,6 +1308,18 @@ export default function Connectors() {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
   }, [refetchOAuth, targetScopes]);
+
+  const handleChangeScope = useCallback(async (provider, newScope, teamId) => {
+    try {
+      await apiClient.changeConnectorScope(provider, { target_scope: newScope, team_id: teamId });
+      setTargetScopes(prev => ({ ...prev, [provider]: newScope }));
+      if (teamId) setSelectedTeamIds(prev => ({ ...prev, [provider]: teamId }));
+      setToastMessage({ type: 'success', text: `${provider} scope updated to ${newScope}` });
+      refetchOAuth();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    }
+  }, [refetchOAuth]);
 
   const handleGmailSync = useCallback(async (settings) => {
     try {
@@ -1395,8 +1522,12 @@ export default function Connectors() {
             connector={connector}
             config={descriptors?.[connector.configKey]}
             targetScope={targetScopes[connector.oauthProvider] || connector.target_scope || 'personal'}
+            selectedTeamId={selectedTeamIds[connector.oauthProvider] || null}
             onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
-            allowTeamScope={org?.plan === 'enterprise'}
+            onTeamChange={(teamId) => connector.oauthProvider && setSelectedTeamIds((prev) => ({ ...prev, [connector.oauthProvider]: teamId }))}
+            onChangeScope={(newScope, teamId) => connector.oauthProvider && handleChangeScope(connector.oauthProvider, newScope, teamId)}
+            allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
+            teams={teams}
             onConnect={() => {
               // One-click OAuth path for any MCP-client tile flagged with
               // isPluginInstall (Claude Code → claude mcp add CLI) or
