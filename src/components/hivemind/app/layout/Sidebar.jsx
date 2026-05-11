@@ -43,6 +43,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
   if (showWebAdmin) {
     advancedItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
     advancedItems.push({ to: '/hivemind/app/audit', icon: ScrollText, label: 'Audit Log' });
+    advancedItems.push({ to: '/hivemind/app/admin/users', icon: Users, label: 'Admin Users' });
   }
   const sections = [
     {
