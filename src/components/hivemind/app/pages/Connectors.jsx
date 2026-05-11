@@ -686,24 +686,47 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
             </span>
           )}
 
-          {connector.status === 'needs_reauth' && (
-            <button
-              onClick={onConnect}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
-            >
-              <RefreshCw size={12} />
-              Reconnect
-            </button>
+          {connector.status === 'needs_reauth' && connector.oauthProvider && (
+            <>
+              <button
+                onClick={onConnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition-all"
+              >
+                <RefreshCw size={12} />
+                Reconnect
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
+              >
+                Disconnect
+              </button>
+            </>
           )}
 
-          {connector.status === 'error' && (
-            <button
-              onClick={onResync}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20 transition-all"
-            >
-              <RefreshCw size={12} />
-              Retry
-            </button>
+          {connector.status === 'error' && connector.oauthProvider && (
+            <>
+              <button
+                onClick={onResync}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20 transition-all"
+              >
+                <RefreshCw size={12} />
+                Retry
+              </button>
+              <button
+                onClick={onConnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
+              >
+                <RefreshCw size={12} />
+                Reconnect
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
+              >
+                Disconnect
+              </button>
+            </>
           )}
         </div>
       </div>
