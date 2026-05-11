@@ -401,6 +401,48 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Control Plane: Digital Employees ───────────────────────
+
+  async listEmployees() {
+    const { data } = await this.controlPlane.get('/v1/employees');
+    return data;
+  }
+
+  async createEmployee(payload) {
+    const { data } = await this.controlPlane.post('/v1/employees', payload);
+    return data;
+  }
+
+  async getEmployee(id) {
+    const { data } = await this.controlPlane.get(`/v1/employees/${id}`);
+    return data;
+  }
+
+  async updateEmployee(id, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/employees/${id}`, payload);
+    return data;
+  }
+
+  async pauseEmployee(id) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${id}/pause`);
+    return data;
+  }
+
+  async resumeEmployee(id) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${id}/resume`);
+    return data;
+  }
+
+  async archiveEmployee(id) {
+    const { data } = await this.controlPlane.delete(`/v1/employees/${id}`);
+    return data;
+  }
+
+  async pauseAllEmployees(orgId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/employees/pause-all`);
+    return data;
+  }
+
   // ─── Control Plane: API Keys ─────────────────────────────────
 
   /**

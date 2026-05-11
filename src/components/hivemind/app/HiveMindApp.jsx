@@ -32,6 +32,7 @@ const McpConnectCallback = React.lazy(() => import('./pages/McpConnectCallback')
 const AuditLog = React.lazy(() => import('./pages/AuditLog'));
 const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
+const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 
 function PageSuspense({ children }) {
   return (
@@ -98,6 +99,7 @@ export default function HiveMindApp() {
           <Route path="team/projects" element={<PageSuspense><TeamProjects /></PageSuspense>} />
           <Route path="admin/users" element={<PageSuspense><AdminUsers /></PageSuspense>} />
           <Route path="admin/sso" element={<PageSuspense><AdminSso /></PageSuspense>} />
+          <Route path="employees" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />
           <Route path="connect/claude-code/callback" element={<PageSuspense><ClaudeCodeConnectCallback /></PageSuspense>} />
           <Route path="connect/mcp/callback" element={<PageSuspense><McpConnectCallback /></PageSuspense>} />
         </Route>

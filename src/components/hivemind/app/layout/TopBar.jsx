@@ -23,6 +23,7 @@ const pageTitles = {
   '/hivemind/app/audit': 'Audit Log',
   '/hivemind/app/admin/users': 'Org Members',
   '/hivemind/app/admin/sso': 'SSO Configuration',
+  '/hivemind/app/employees': 'Digital Employees',
 };
 
 const pageDescriptions = {
@@ -44,6 +45,7 @@ const pageDescriptions = {
   '/hivemind/app/audit': 'Immutable trail of every mutating action — SOC2 + GDPR ready',
   '/hivemind/app/admin/users': 'Org-wide roles, deactivation, and invite management',
   '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
+  '/hivemind/app/employees': 'Autonomous AI agents — Hermes-style brains with HIVEMIND memory + Slack access',
 };
 
 export default function TopBar() {
