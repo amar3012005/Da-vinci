@@ -1,249 +1,178 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FolderKanban, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
-import { useAuth } from '../auth/AuthProvider';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder } from 'lucide-react';
+import { useTeamContext } from '../shared/team-context';
 import apiClient from '../shared/api-client';
 
-function deriveSlug(name) {
-  return `${name || ''}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-}
-
+/**
+ * TeamProjects — manage projects under the currently-active team.
+ * Uses P0-1 endpoints under /v1/teams/:id/projects and /v1/projects/:id.
+ */
 export default function TeamProjects() {
-  const { org } = useAuth();
+  const { activeTeam, activeTeamId, refresh: refreshTeams } = useTeamContext();
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [editingProjectId, setEditingProjectId] = useState(null);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    slug: '',
-    description: '',
-  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
 
-  const canUseProjects = org?.plan === 'enterprise';
-  const suggestedSlug = useMemo(() => deriveSlug(form.slug || form.name), [form.slug, form.name]);
-
-  const loadProjects = useCallback(async () => {
-    if (!org?.id || !canUseProjects) return;
+  const fetchProjects = useCallback(async () => {
+    if (!activeTeamId) return;
     setLoading(true);
-    setError('');
+    setError(null);
     try {
-      const data = await apiClient.listProjects(org.id);
-      setProjects(data.projects || []);
+      const resp = await apiClient.listTeamProjects(activeTeamId);
+      setProjects(resp.projects || []);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
-  }, [org?.id, canUseProjects]);
+  }, [activeTeamId]);
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
-  const resetForm = () => {
-    setForm({ name: '', slug: '', description: '' });
-    setEditingProjectId(null);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!org?.id || !form.name.trim()) return;
-
-    setSubmitting(true);
-    setError('');
-    const payload = {
-      name: form.name.trim(),
-      slug: suggestedSlug,
-      description: form.description.trim(),
-    };
-
+  async function handleCreate() {
+    if (!newName.trim() || !activeTeamId) return;
+    setError(null);
     try {
-      if (editingProjectId) {
-        await apiClient.updateProject(org.id, editingProjectId, payload);
-      } else {
-        await apiClient.createProject(org.id, payload);
-      }
-      resetForm();
-      await loadProjects();
-    } catch (err) {
-      setError(err.response?.data?.error || err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (projectId) => {
-    if (!org?.id) return;
-    try {
-      await apiClient.deleteProject(org.id, projectId);
-      if (editingProjectId === projectId) resetForm();
-      await loadProjects();
+      await apiClient.createTeamProject(activeTeamId, {
+        name: newName.trim(),
+        description: newDescription.trim() || null,
+      });
+      setCreateOpen(false);
+      setNewName('');
+      setNewDescription('');
+      await fetchProjects();
+      await refreshTeams();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     }
-  };
+  }
 
-  const startEdit = (project) => {
-    setEditingProjectId(project.id);
-    setForm({
-      name: project.name || '',
-      slug: project.slug || '',
-      description: project.description || '',
-    });
-  };
+  async function handleArchive(projectId) {
+    if (!window.confirm('Archive this project? Memories stay; project becomes read-only.')) return;
+    setError(null);
+    try {
+      await apiClient.archiveProjectV2(projectId);
+      await fetchProjects();
+      await refreshTeams();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }
 
-  if (!canUseProjects) {
+  if (!activeTeamId) {
     return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <p className="text-[#0a0a0a] font-semibold font-['Space_Grotesk'] mb-2">Enterprise workspace required</p>
-          <p className="text-sm text-[#525252]">Projects are available only on enterprise orgs.</p>
-        </div>
+      <div className="max-w-3xl mx-auto p-6 bg-white border border-[#e3e0db] rounded-[8px] text-center">
+        <FolderKanban size={32} className="text-[#a3a3a3] mx-auto mb-3" />
+        <h2 className="text-[#0a0a0a] font-semibold mb-1">No team selected</h2>
+        <p className="text-[12px] text-[#a3a3a3]">Pick a team from the top-bar switcher.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-        <section className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-11 h-11 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-              <FolderKanban size={20} className="text-[#117dff]" />
-            </div>
-            <div>
-              <h2 className="text-[#0a0a0a] text-xl font-semibold font-['Space_Grotesk']">Team projects</h2>
-              <p className="text-sm text-[#525252]">Create shared project buckets for enterprise memory, graph filtering, and connector routing.</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Project name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g. CSI-ARC"
-                className="w-full rounded-[8px] border border-[#e3e0db] px-4 py-3 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Slug</label>
-              <input
-                type="text"
-                value={form.slug}
-                onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))}
-                placeholder="Auto-generated from name"
-                className="w-full rounded-[8px] border border-[#e3e0db] px-4 py-3 text-sm font-mono text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
-              />
-              <p className="mt-2 text-[11px] font-mono text-[#a3a3a3]">Effective slug: {suggestedSlug || 'project-slug'}</p>
-            </div>
-
-            <div>
-              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Description</label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="What this project is for, which team owns it, and how memories should land here."
-                rows={4}
-                className="w-full rounded-[8px] border border-[#e3e0db] px-4 py-3 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40 resize-none"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={submitting || !form.name.trim()}
-                className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
-              >
-                {editingProjectId ? <Save size={16} /> : <Plus size={16} />}
-                {editingProjectId ? 'Update project' : 'Create project'}
-              </button>
-              {editingProjectId && (
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-[8px] border border-[#e3e0db] px-4 py-2.5 text-sm font-semibold text-[#525252]"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-        </section>
-
-        <section className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-[#0a0a0a] font-semibold font-['Space_Grotesk']">Existing projects</h2>
-              <p className="text-sm text-[#525252]">These are the canonical project records for this enterprise org.</p>
-            </div>
-            <button
-              type="button"
-              onClick={loadProjects}
-              className="inline-flex items-center gap-2 rounded-[8px] border border-[#e3e0db] px-3 py-2 text-xs font-semibold text-[#525252]"
-            >
-              <RefreshCw size={14} />
-              Refresh
-            </button>
-          </div>
-
-          {loading ? (
-            <p className="text-sm text-[#525252]">Loading projects…</p>
-          ) : projects.length === 0 ? (
-            <p className="text-sm text-[#525252]">No projects yet. Create the first shared project from the form.</p>
-          ) : (
-            <div className="space-y-3">
-              {projects.map((project) => (
-                <div key={project.id} className="rounded-xl border border-[#ece8de] p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm font-medium text-[#0a0a0a]">{project.name}</p>
-                        <span className="rounded-full border border-[#d8e6ff] bg-[#117dff]/10 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] text-[#117dff]">
-                          {project.slug}
-                        </span>
-                      </div>
-                      <p className="text-sm text-[#525252]">{project.description || 'No description yet.'}</p>
-                      <p className="mt-2 text-[11px] font-mono text-[#a3a3a3]">
-                        Updated {new Date(project.updated_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(project)}
-                        className="rounded-[8px] border border-[#e3e0db] px-3 py-2 text-xs font-semibold text-[#525252]"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(project.id)}
-                        className="inline-flex items-center gap-2 rounded-[8px] border border-[#f8d7da] px-3 py-2 text-xs font-semibold text-[#b91c1c]"
-                      >
-                        <Trash2 size={14} />
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+    <div className="max-w-5xl mx-auto space-y-4">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+            Projects
+          </h1>
+          <p className="text-[12px] text-[#a3a3a3] mt-1">
+            {activeTeam?.name || 'Active team'} — {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchProjects}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+          >
+            <Plus size={13} />
+            New Project
+          </button>
+        </div>
+      </header>
 
       {error && (
-        <div className="rounded-xl border border-[#f8d7da] bg-[#fff5f5] px-4 py-3 text-xs font-mono text-[#b91c1c]">
-          {error}
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-[8px] text-[12px] text-[#dc2626]">
+          <AlertCircle size={13} /> {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {projects.length === 0 && !loading && (
+          <div className="col-span-full text-center py-8 text-[#a3a3a3] bg-white border border-[#e3e0db] rounded-[8px]">
+            No projects yet — click "New Project" to create one.
+          </div>
+        )}
+        {projects.map(p => (
+          <div key={p.id} className="bg-white border border-[#e3e0db] rounded-[8px] p-4 hover:border-[#d4d0ca] transition-colors">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Folder size={16} className="text-[#117dff]" />
+                <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{p.name}</h3>
+              </div>
+              <button
+                onClick={() => handleArchive(p.id)}
+                className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors"
+                title="Archive"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+            {p.description && (
+              <p className="text-[12px] text-[#525252] mb-3 line-clamp-2">{p.description}</p>
+            )}
+            <div className="flex items-center justify-between text-[10px] text-[#a3a3a3] font-mono">
+              <span>{p._count?.members ?? 0} members</span>
+              <span>{p._count?.memories ?? 0} memories</span>
+            </div>
+            <div className="text-[10px] text-[#a3a3a3] mt-1">
+              Created {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {createOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setCreateOpen(false)}>
+          <div className="bg-white rounded-[8px] p-5 w-[440px] shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[15px] font-semibold mb-3">New Project in {activeTeam?.name}</h2>
+            <label className="block text-[11px] text-[#525252] mb-1">Name</label>
+            <input
+              autoFocus
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="Q1 OKRs"
+              className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3"
+            />
+            <label className="block text-[11px] text-[#525252] mb-1">Description (optional)</label>
+            <textarea
+              value={newDescription}
+              onChange={e => setNewDescription(e.target.value)}
+              rows={3}
+              className="w-full px-2 py-1.5 text-[13px] border border-[#e3e0db] rounded-[4px] mb-4 resize-y"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setCreateOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">Cancel</button>
+              <button
+                onClick={handleCreate}
+                disabled={!newName.trim()}
+                className="px-3 py-2 text-[12px] bg-[#117dff] text-white rounded-[4px] hover:bg-[#0066e0] disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

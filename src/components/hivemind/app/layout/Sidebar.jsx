@@ -28,6 +28,7 @@ import {
   MessageSquare,
   ScrollText,
   KeyRound,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -41,12 +42,21 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
     { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
   ];
+
+  // Unified Admin section — all workspace + RBAC + compliance under one roof.
+  // Admin pages are gated by the same showWebAdmin probe (org_owner|admin).
+  // Team Members + Projects always visible (work on active team via TeamContext).
+  const adminItems = [
+    { to: '/hivemind/app/team/members', icon: Users, label: 'Team Members' },
+    { to: '/hivemind/app/team/projects', icon: FolderKanban, label: 'Projects' },
+  ];
   if (showWebAdmin) {
-    advancedItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
-    advancedItems.push({ to: '/hivemind/app/audit', icon: ScrollText, label: 'Audit Log' });
-    advancedItems.push({ to: '/hivemind/app/admin/users', icon: Users, label: 'Admin Users' });
-    advancedItems.push({ to: '/hivemind/app/admin/sso', icon: KeyRound, label: 'SSO Config' });
+    adminItems.push({ to: '/hivemind/app/admin/users', icon: UserCog, label: 'Org Members' });
+    adminItems.push({ to: '/hivemind/app/audit', icon: ScrollText, label: 'Audit Log' });
+    adminItems.push({ to: '/hivemind/app/admin/sso', icon: KeyRound, label: 'SSO Config' });
+    adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
   }
+
   const sections = [
     {
       label: null,
@@ -77,6 +87,10 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
       items: advancedItems,
     },
     {
+      label: 'Workspace Admin',
+      items: adminItems,
+    },
+    {
       label: 'Account',
       items: [
         { to: '/hivemind/app/billing', icon: CreditCard, label: 'Billing' },
@@ -84,16 +98,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
       ],
     },
   ];
-
-  if (showEnterpriseTeam) {
-    sections.splice(4, 0, {
-      label: 'Team',
-      items: [
-        { to: '/hivemind/app/team/members', icon: Users, label: 'Members' },
-        { to: '/hivemind/app/team/projects', icon: FolderKanban, label: 'Projects' },
-      ],
-    });
-  }
 
   return sections;
 }

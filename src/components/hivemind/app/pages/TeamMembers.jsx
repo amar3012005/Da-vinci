@@ -1,254 +1,252 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, MailPlus, Trash2, Users } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown } from 'lucide-react';
+import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 
-const ROLE_OPTIONS = ['member', 'viewer', 'developer', 'admin'];
+const ROLE_BADGES = {
+  lead: 'bg-amber-500/10 text-amber-700 border-amber-500/30',
+  member: 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]',
+};
 
-function RolePill({ role }) {
-  const tone = {
-    owner: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20',
-    admin: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20',
-    developer: 'bg-[#f59e0b]/10 text-[#b45309] border-[#f59e0b]/20',
-    viewer: 'bg-[#737373]/10 text-[#525252] border-[#737373]/20',
-    member: 'bg-[#16a34a]/10 text-[#15803d] border-[#16a34a]/20',
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-mono uppercase tracking-[0.08em] ${tone[role] || tone.member}`}>
-      {role}
-    </span>
-  );
-}
-
+/**
+ * TeamMembers — manage membership of the currently-active team.
+ * Uses P0-1 endpoints under /v1/teams/:id/members.
+ */
 export default function TeamMembers() {
-  const { org, user } = useAuth();
+  const { activeTeam, activeTeamId } = useTeamContext();
+  const { user } = useAuth();
   const [members, setMembers] = useState([]);
-  const [invites, setInvites] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('member');
-  const [inviteLink, setInviteLink] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [orgMembers, setOrgMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addingUserId, setAddingUserId] = useState('');
+  const [addingRole, setAddingRole] = useState('member');
 
-  const load = useCallback(async () => {
-    if (!org?.id) return;
+  const fetchMembers = useCallback(async () => {
+    if (!activeTeamId) return;
     setLoading(true);
-    setError('');
+    setError(null);
     try {
-      const [membersResp, invitesResp] = await Promise.all([
-        apiClient.listMembers(org.id),
-        apiClient.listInvites(org.id),
-      ]);
-      setMembers(membersResp.members || []);
-      setInvites(invitesResp.invites || []);
+      const resp = await apiClient.listTeamMembers(activeTeamId);
+      setMembers(resp.members || []);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
-  }, [org?.id]);
+  }, [activeTeamId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    if (!org?.id) return;
-    setSubmitting(true);
-    setError('');
+  const fetchOrgMembers = useCallback(async () => {
     try {
-      const resp = await apiClient.createInvite(org.id, {
-        email: inviteEmail.trim() || undefined,
-        role: inviteRole,
-      });
-      setInviteLink(resp.invite?.join_url || '');
-      setInviteEmail('');
-      await load();
+      const resp = await apiClient.listOrgMembers?.();
+      const list = resp?.members || resp || [];
+      setOrgMembers(Array.isArray(list) ? list : []);
+    } catch {
+      setOrgMembers([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+  useEffect(() => { fetchOrgMembers(); }, [fetchOrgMembers]);
+
+  async function handleAdd() {
+    if (!addingUserId || !activeTeamId) return;
+    setError(null);
+    try {
+      await apiClient.addTeamMember(activeTeamId, { user_id: addingUserId, role: addingRole });
+      setAddOpen(false);
+      setAddingUserId('');
+      setAddingRole('member');
+      await fetchMembers();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
-    } finally {
-      setSubmitting(false);
     }
-  };
+  }
 
-  const copyInviteLink = async (value) => {
-    if (!value) return;
-    await navigator.clipboard.writeText(value);
-    setInviteLink(value);
-  };
+  async function handleRemove(memberUserId) {
+    if (!activeTeamId) return;
+    if (!window.confirm('Remove this member from the team?')) return;
+    setError(null);
+    try {
+      await apiClient.removeTeamMember(activeTeamId, memberUserId);
+      await fetchMembers();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }
 
-  const revokeInvite = async (inviteId) => {
-    if (!org?.id) return;
-    await apiClient.revokeInvite(org.id, inviteId);
-    await load();
-  };
+  async function handlePromote(m) {
+    if (!activeTeamId) return;
+    const newRole = m.role === 'lead' ? 'member' : 'lead';
+    setError(null);
+    try {
+      await apiClient.addTeamMember(activeTeamId, { user_id: m.userId, role: newRole });
+      await fetchMembers();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }
 
-  const updateRole = async (memberUserId, role) => {
-    if (!org?.id) return;
-    await apiClient.updateMemberRole(org.id, memberUserId, role);
-    await load();
-  };
+  const availableToAdd = orgMembers.filter(om =>
+    !members.find(tm => tm.userId === (om.user_id || om.userId || om.id))
+  );
 
-  const removeMember = async (memberUserId) => {
-    if (!org?.id) return;
-    await apiClient.removeMember(org.id, memberUserId);
-    await load();
-  };
-
-  if (org?.plan !== 'enterprise') {
+  if (!activeTeamId) {
     return (
-      <div className="p-6">
-        <div className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <p className="text-[#0a0a0a] font-semibold font-['Space_Grotesk'] mb-2">Enterprise workspace required</p>
-          <p className="text-sm text-[#525252]">Team members are available only on enterprise orgs.</p>
-        </div>
+      <div className="max-w-3xl mx-auto p-6 bg-white border border-[#e3e0db] rounded-[8px] text-center">
+        <Users size={32} className="text-[#a3a3a3] mx-auto mb-3" />
+        <h2 className="text-[#0a0a0a] font-semibold mb-1">No team selected</h2>
+        <p className="text-[12px] text-[#a3a3a3]">Pick a team from the top-bar switcher.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-              <Users size={18} className="text-[#117dff]" />
-            </div>
-            <div>
-              <h2 className="text-[#0a0a0a] font-semibold font-['Space_Grotesk']">Invite team members</h2>
-              <p className="text-sm text-[#525252]">Generate an invite link with an optional email restriction.</p>
-            </div>
-          </div>
+    <div className="max-w-5xl mx-auto space-y-4">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+            Team Members
+          </h1>
+          <p className="text-[12px] text-[#a3a3a3] mt-1">
+            {activeTeam?.name || 'Active team'} — {members.length} {members.length === 1 ? 'member' : 'members'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchMembers}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+          >
+            <UserPlus size={13} />
+            Add Member
+          </button>
+        </div>
+      </header>
 
-          <form onSubmit={handleInvite} className="space-y-4">
-            <div>
-              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Email</label>
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="Optional. Restrict invite to one email."
-                className="w-full rounded-[8px] border border-[#e3e0db] px-4 py-3 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
-              />
-            </div>
-            <div>
-              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Role</label>
-              <select
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full rounded-[8px] border border-[#e3e0db] px-4 py-3 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
-              >
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role} value={role}>{role}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
-            >
-              <MailPlus size={16} />
-              Create invite
-            </button>
-          </form>
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-[8px] text-[12px] text-[#dc2626]">
+          <AlertCircle size={13} /> {error}
+        </div>
+      )}
 
-          {inviteLink && (
-            <div className="mt-5 rounded-xl border border-[#d8e6ff] bg-[#117dff]/[0.04] p-4">
-              <p className="text-xs font-mono uppercase tracking-[0.08em] text-[#117dff] mb-2">Latest invite</p>
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={inviteLink}
-                  className="flex-1 rounded-[8px] border border-[#cfe0ff] bg-white px-3 py-2 text-xs text-[#0a0a0a] font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyInviteLink(inviteLink)}
-                  className="inline-flex items-center gap-2 rounded-[8px] border border-[#cfe0ff] bg-white px-3 py-2 text-xs font-semibold text-[#117dff]"
-                >
-                  <Copy size={14} />
-                  Copy
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-          <h2 className="text-[#0a0a0a] font-semibold font-['Space_Grotesk'] mb-4">Pending invites</h2>
-          <div className="space-y-3">
-            {invites.length === 0 && (
-              <p className="text-sm text-[#525252]">No pending invites.</p>
+      <div className="bg-white border border-[#e3e0db] rounded-[8px] overflow-hidden">
+        <table className="w-full text-[13px]">
+          <thead className="bg-[#faf9f4] border-b border-[#e3e0db]">
+            <tr>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">User</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">Role</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">Joined</th>
+              <th className="text-right px-3 py-2 font-medium text-[#525252]">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.length === 0 && !loading && (
+              <tr>
+                <td colSpan={4} className="text-center py-8 text-[#a3a3a3]">No members yet</td>
+              </tr>
             )}
-            {invites.map((invite) => (
-              <div key={invite.id} className="rounded-xl border border-[#ece8de] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-[#0a0a0a]">{invite.email || 'Shareable invite link'}</p>
-                    <p className="text-xs text-[#737373] font-mono mt-1">Expires {new Date(invite.expires_at).toLocaleString()}</p>
-                  </div>
-                  <RolePill role={invite.role} />
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button type="button" onClick={() => copyInviteLink(invite.join_url)} className="rounded-[8px] border border-[#e3e0db] px-3 py-2 text-xs font-semibold text-[#525252]">
-                    Copy link
-                  </button>
-                  <button type="button" onClick={() => revokeInvite(invite.id)} className="rounded-[8px] border border-[#f8d7da] px-3 py-2 text-xs font-semibold text-[#b91c1c]">
-                    Revoke
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+            {members.map(m => {
+              const u = m.user || {};
+              const cls = ROLE_BADGES[m.role] || ROLE_BADGES.member;
+              const isSelf = (u.id || m.userId) === user?.id;
+              return (
+                <tr key={m.userId || m.user_id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]">
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-[#0a0a0a]">{u.displayName || u.email || (m.userId || '').slice(0, 8)}</div>
+                    {u.email && <div className="text-[11px] text-[#a3a3a3]">{u.email}</div>}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>
+                      {m.role === 'lead' && <Crown size={9} />}
+                      {m.role}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-[#a3a3a3] text-[11px]">
+                    {m.addedAt ? new Date(m.addedAt).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="flex justify-end gap-2">
+                      {!isSelf && (
+                        <button
+                          onClick={() => handlePromote(m)}
+                          className="text-[11px] text-[#525252] hover:text-[#117dff]"
+                        >
+                          {m.role === 'lead' ? 'Demote' : 'Promote to lead'}
+                        </button>
+                      )}
+                      {!isSelf && (
+                        <button
+                          onClick={() => handleRemove(m.userId || m.user_id)}
+                          className="text-[#dc2626]/60 hover:text-[#dc2626]"
+                          title="Remove from team"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      <section className="rounded-2xl border border-[#e3e0db] bg-white p-6">
-        <h2 className="text-[#0a0a0a] font-semibold font-['Space_Grotesk'] mb-4">Current members</h2>
-        {loading ? (
-          <p className="text-sm text-[#525252]">Loading members…</p>
-        ) : (
-          <div className="space-y-3">
-            {members.map((member) => (
-              <div key={member.user_id} className="flex flex-col gap-3 rounded-xl border border-[#ece8de] p-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[#0a0a0a]">{member.display_name || member.email || member.user_id}</p>
-                  <p className="text-xs text-[#737373] font-mono mt-1">{member.email || member.user_id}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {member.role === 'owner' ? (
-                    <RolePill role="owner" />
-                  ) : (
-                    <select
-                      value={member.role}
-                      onChange={(e) => updateRole(member.user_id, e.target.value)}
-                      className="rounded-[8px] border border-[#e3e0db] px-3 py-2 text-xs font-mono"
-                    >
-                      {ROLE_OPTIONS.map((role) => (
-                        <option key={role} value={role}>{role}</option>
-                      ))}
-                    </select>
-                  )}
-                  {member.user_id !== user?.id && member.role !== 'owner' && (
-                    <button
-                      type="button"
-                      onClick={() => removeMember(member.user_id)}
-                      className="inline-flex items-center gap-2 rounded-[8px] border border-[#f8d7da] px-3 py-2 text-xs font-semibold text-[#b91c1c]"
-                    >
-                      <Trash2 size={14} />
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+      {addOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setAddOpen(false)}>
+          <div className="bg-white rounded-[8px] p-5 w-[420px] shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[15px] font-semibold mb-3">Add Team Member</h2>
+            {availableToAdd.length === 0 ? (
+              <p className="text-[12px] text-[#a3a3a3]">All org members are already in this team.</p>
+            ) : (
+              <>
+                <label className="block text-[11px] text-[#525252] mb-1">User</label>
+                <select
+                  value={addingUserId}
+                  onChange={e => setAddingUserId(e.target.value)}
+                  className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3"
+                >
+                  <option value="">— select org member —</option>
+                  {availableToAdd.map(u => (
+                    <option key={u.user_id || u.userId || u.id} value={u.user_id || u.userId || u.id}>
+                      {u.email || u.displayName || u.user_id}
+                    </option>
+                  ))}
+                </select>
+                <label className="block text-[11px] text-[#525252] mb-1">Role</label>
+                <select
+                  value={addingRole}
+                  onChange={e => setAddingRole(e.target.value)}
+                  className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-4"
+                >
+                  <option value="member">Member</option>
+                  <option value="lead">Lead</option>
+                </select>
+              </>
+            )}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setAddOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">Cancel</button>
+              <button
+                onClick={handleAdd}
+                disabled={!addingUserId}
+                className="px-3 py-2 text-[12px] bg-[#117dff] text-white rounded-[4px] hover:bg-[#0066e0] disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
           </div>
-        )}
-        {error && <p className="mt-4 text-xs font-mono text-[#dc2626]">{error}</p>}
-      </section>
+        </div>
+      )}
     </div>
   );
 }

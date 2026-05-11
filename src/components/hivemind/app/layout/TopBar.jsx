@@ -20,6 +20,9 @@ const pageTitles = {
   '/hivemind/app/engine': 'Engine Intelligence',
   '/hivemind/app/team/members': 'Team Members',
   '/hivemind/app/team/projects': 'Team Projects',
+  '/hivemind/app/audit': 'Audit Log',
+  '/hivemind/app/admin/users': 'Org Members',
+  '/hivemind/app/admin/sso': 'SSO Configuration',
 };
 
 const pageDescriptions = {
@@ -36,8 +39,11 @@ const pageDescriptions = {
   '/hivemind/app/mcp': '22 MCP tools — memory, web intelligence, coding intelligence, and bi-temporal time travel — with setup guides',
   '/hivemind/app/graph': 'Explore connections between memories — semantic clusters, temporal decay, and relationship traversal',
   '/hivemind/app/engine': 'SOTA memory engine — cognitive framing, temporal queries, swarm reasoning, and Byzantine consensus',
-  '/hivemind/app/team/members': 'Invite, review, and manage enterprise workspace members',
-  '/hivemind/app/team/projects': 'Organize shared memory streams into enterprise projects',
+  '/hivemind/app/team/members': 'Invite, review, and manage members of the active team',
+  '/hivemind/app/team/projects': 'Organize shared memory streams into projects within the active team',
+  '/hivemind/app/audit': 'Immutable trail of every mutating action — SOC2 + GDPR ready',
+  '/hivemind/app/admin/users': 'Org-wide roles, deactivation, and invite management',
+  '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
 };
 
 export default function TopBar() {
