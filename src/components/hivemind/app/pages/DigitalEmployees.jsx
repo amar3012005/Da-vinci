@@ -8,8 +8,6 @@ import {
   Trash2,
   AlertCircle,
   Activity,
-  Power,
-  Hash,
   Sparkles,
   ChevronRight,
   X,
@@ -325,7 +323,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
 }
 
 export default function DigitalEmployees() {
-  const { teams, activeTeam } = useTeamContext();
+  const { teams } = useTeamContext();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
