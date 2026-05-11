@@ -26,6 +26,7 @@ import {
   FolderKanban,
   Mic,
   MessageSquare,
+  ScrollText,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -41,6 +42,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
   ];
   if (showWebAdmin) {
     advancedItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
+    advancedItems.push({ to: '/hivemind/app/audit', icon: ScrollText, label: 'Audit Log' });
   }
   const sections = [
     {
