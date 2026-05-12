@@ -35,7 +35,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
 
   async function startPairing() {
     setStatus('loading');
-    setError(null);
+    setErrorMessage(null);
     setQr(null);
     setElapsed(0);
 
