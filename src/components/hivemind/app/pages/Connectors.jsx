@@ -26,7 +26,6 @@ import {
   Clock,
   Zap,
   Plus,
-  MessageSquare,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
