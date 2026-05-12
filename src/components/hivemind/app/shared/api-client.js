@@ -443,6 +443,56 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Team Tasks (Playground — multi-employee runs) ────────────
+
+  /**
+   * Kick off a multi-employee team task. Returns immediately with
+   *   { task_id, status: "running", roster }
+   * Poll getTeamTask + getTeamTaskTranscript for live progress.
+   *
+   * payload: {
+   *   brief, roster_slugs[], max_rounds?,
+   *   slack_channel?, slack_thread_ts?, slack_api_key?
+   * }
+   * org_id + requested_by are attached server-side from the session.
+   */
+  async createTeamTask(payload) {
+    const { data } = await this.controlPlane.post('/v1/team-tasks', payload);
+    return data;
+  }
+
+  async getTeamTask(taskId) {
+    const { data } = await this.controlPlane.get(`/v1/team-tasks/${taskId}`);
+    return data;
+  }
+
+  /**
+   * @param {string} taskId
+   * @param {{ limit?: number, afterTs?: string }} [opts]
+   */
+  async getTeamTaskTranscript(taskId, opts = {}) {
+    const params = {};
+    if (opts.limit) params.limit = opts.limit;
+    if (opts.afterTs) params.after_ts = opts.afterTs;
+    const { data } = await this.controlPlane.get(`/v1/team-tasks/${taskId}/transcript`, { params });
+    return data;
+  }
+
+  // ─── Per-employee 1-on-1 chat (Playground DM panel) ───────────
+
+  /**
+   * One ReAct turn against a single employee. conversation_id keeps
+   * agent memory across multiple calls; omit to start fresh.
+   * Returns { employee_slug, conversation_id, reply }
+   */
+  async chatWithEmployee(slug, text, conversationId = null) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${slug}/chat`, {
+      text,
+      conversation_id: conversationId,
+    });
+    return data;
+  }
+
   // ─── Control Plane: API Keys ─────────────────────────────────
 
   /**

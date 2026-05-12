@@ -50,6 +50,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
     { to: '/hivemind/app/team/members', icon: Users, label: 'Team Members' },
     { to: '/hivemind/app/team/projects', icon: FolderKanban, label: 'Projects' },
     { to: '/hivemind/app/employees', icon: Bot, label: 'Digital Employees' },
+    { to: '/hivemind/app/employees/playground', icon: MessageSquare, label: 'Playground' },
   ];
   if (showWebAdmin) {
     adminItems.push({ to: '/hivemind/app/admin/users', icon: UserCog, label: 'Org Members' });
