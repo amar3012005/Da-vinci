@@ -103,6 +103,12 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
     team_id: '',
     slack_team_id: '',
     slack_channels_allowed: '',
+    // Per-message Slack identity (one-app, many-personas pattern).
+    slack_display_name: '',
+    slack_avatar_emoji: ':robot_face:',
+    // Multi-employee team-task collaboration metadata.
+    role_archetype: '',
+    peer_review_targets: [],
     tools: ['hivemind_recall', 'hivemind_save_memory', 'hivemind_slack_post', 'hivemind_slack_search'],
     rate_limit_per_min: 30,
   });
@@ -124,6 +130,25 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
     tools: f.tools.includes(t) ? f.tools.filter(x => x !== t) : [...f.tools, t],
   }));
 
+  const togglePeerReviewTarget = (role) => setForm(f => ({
+    ...f,
+    peer_review_targets: f.peer_review_targets.includes(role)
+      ? f.peer_review_targets.filter(x => x !== role)
+      : [...f.peer_review_targets, role],
+  }));
+
+  // Archetype options shared between the role dropdown and the
+  // peer-review-targets multi-select on the Collaboration step.
+  const ROLE_ARCHETYPES = [
+    { id: '',             label: 'Generalist (no specialty)' },
+    { id: 'explorer',     label: 'Explorer — gathers + proposes' },
+    { id: 'advocate',     label: 'Advocate — argues a position' },
+    { id: 'fact_checker', label: 'Fact-checker — verifies evidence' },
+    { id: 'legal',        label: 'Legal/Compliance — risk + policy' },
+    { id: 'challenger',   label: 'Challenger — adversarial reviewer' },
+    { id: 'synthesizer',  label: 'Synthesizer — consolidates team output' },
+  ];
+
   async function submit() {
     setError(null);
     setSubmitting(true);
@@ -139,6 +164,10 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         slack_channels_allowed: form.slack_channels_allowed
           ? form.slack_channels_allowed.split(',').map(s => s.trim()).filter(Boolean)
           : [],
+        slack_display_name: form.slack_display_name?.trim() || null,
+        slack_avatar_emoji: form.slack_avatar_emoji?.trim() || null,
+        role_archetype: form.role_archetype || null,
+        peer_review_targets: form.peer_review_targets,
         tools: form.tools,
         policy_rules: {
           rate_limit_per_min: Number(form.rate_limit_per_min) || 30,
@@ -161,7 +190,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         <div className="p-5 border-b border-[#eae7e1] flex items-start justify-between">
           <div>
             <h2 className="text-[16px] font-semibold text-[#0a0a0a]">Create Digital Employee</h2>
-            <p className="text-[11px] text-[#a3a3a3] mt-0.5">Step {step} of 5</p>
+            <p className="text-[11px] text-[#a3a3a3] mt-0.5">Step {step} of 6</p>
           </div>
           <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#525252]"><X size={16} /></button>
         </div>
@@ -221,6 +250,26 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
                   className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] font-mono" />
                 <span className="text-[10px] text-[#a3a3a3]">Empty = all channels owner can access</span>
               </label>
+              {/* Per-message Slack identity. One DAVINCI AI app posts as N
+                  personas via chat:write.customize — this controls how
+                  THIS employee shows up inside that one app. */}
+              <div className="grid grid-cols-[1fr_120px] gap-2">
+                <label className="block">
+                  <span className="text-[11px] text-[#525252] font-medium">Slack display name</span>
+                  <input value={form.slack_display_name}
+                    onChange={e => setForm({ ...form, slack_display_name: e.target.value })}
+                    placeholder={form.name || 'Helpdesk Bot'}
+                    className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
+                  <span className="text-[10px] text-[#a3a3a3]">Falls back to employee name if blank</span>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-[#525252] font-medium">Avatar emoji</span>
+                  <input value={form.slack_avatar_emoji}
+                    onChange={e => setForm({ ...form, slack_avatar_emoji: e.target.value })}
+                    placeholder=":robot_face:"
+                    className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] font-mono" />
+                </label>
+              </div>
             </>
           )}
           {step === 4 && (
@@ -254,6 +303,45 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
             </>
           )}
           {step === 5 && (
+            <>
+              {/* Collaboration: role archetype + adversarial review targets.
+                  Drives reviewer / synthesizer selection in the multi-agent
+                  TeamRoom (Python sidecar, AgentScope-backed). */}
+              <label className="block">
+                <span className="text-[11px] text-[#525252] font-medium">Role archetype</span>
+                <select value={form.role_archetype}
+                  onChange={e => setForm({ ...form, role_archetype: e.target.value })}
+                  className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
+                  {ROLE_ARCHETYPES.map(r => (
+                    <option key={r.id || 'generalist'} value={r.id}>{r.label}</option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-[#a3a3a3]">
+                  Decides how this employee is picked as proposer / reviewer / synthesizer in team tasks.
+                </span>
+              </label>
+              <div>
+                <span className="text-[11px] text-[#525252] font-medium block mb-1">
+                  Likes to challenge (adversarial reviewer)
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ROLE_ARCHETYPES.filter(r => r.id).map(r => (
+                    <label key={r.id}
+                      className="flex items-center gap-2 p-1.5 hover:bg-[#f3f1ec] rounded cursor-pointer">
+                      <input type="checkbox"
+                        checked={form.peer_review_targets.includes(r.id)}
+                        onChange={() => togglePeerReviewTarget(r.id)} />
+                      <span className="text-[12px] text-[#525252]">{r.label.split(' — ')[0]}</span>
+                    </label>
+                  ))}
+                </div>
+                <span className="text-[10px] text-[#a3a3a3] block mt-1">
+                  When another team-mate with one of these roles proposes a claim, this employee gets picked as a reviewer.
+                </span>
+              </div>
+            </>
+          )}
+          {step === 6 && (
             <>
               <span className="text-[11px] text-[#525252] font-medium block mb-2">Enabled MCP Tools</span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -302,7 +390,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded">
               Cancel
             </button>
-            {step < 5 ? (
+            {step < 6 ? (
               <button onClick={() => setStep(step + 1)}
                 disabled={step === 1 && !form.name.trim()}
                 className="px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
