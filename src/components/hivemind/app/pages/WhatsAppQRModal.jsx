@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { MessageSquare, RefreshCw, X, Check, WifiOff, Smartphone } from 'lucide-react';
+import { MessageSquare, RefreshCw, X, Check, WifiOff, Smartphone, AlertTriangle } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 /**
@@ -150,6 +150,28 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
 
         {/* Content */}
         <div className="flex flex-col items-center">
+          {status !== 'paired' && (
+            <div className="w-full mb-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-left">
+              <p className="text-[#0a0a0a] text-[11px] font-semibold font-['Space_Grotesk']">
+                WhatsApp setup for HIVEMIND
+              </p>
+              <p className="mt-1 text-[#525252] text-[11px] font-['Space_Grotesk'] leading-5">
+                This pairs a real WhatsApp account through WhatsApp Web. No Meta Business API account is required.
+              </p>
+              <div className="mt-3 grid gap-2 text-[11px] text-[#525252] font-['Space_Grotesk']">
+                <div>
+                  <span className="font-semibold text-[#0a0a0a]">Recommended:</span> use a dedicated number for the bot.
+                </div>
+                <div>
+                  <span className="font-semibold text-[#0a0a0a]">Testing:</span> pair your own account and message yourself.
+                </div>
+                <div>
+                  <span className="font-semibold text-[#0a0a0a]">Usage:</span> keep it conversational and avoid bulk outbound messaging.
+                </div>
+              </div>
+            </div>
+          )}
+
           {status === 'loading' && (
             <div className="w-56 h-56 bg-[#f3f1ec] rounded-xl flex items-center justify-center">
               <RefreshCw size={32} className="text-[#a3a3a3] animate-spin" />
@@ -174,6 +196,14 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
               <p className="text-[#a3a3a3] text-[10px] font-mono mt-1">
                 Expires in {TIMEOUT_S - elapsed}s
               </p>
+              <div className="mt-4 w-full rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-600 mt-0.5" />
+                  <p className="text-[10px] leading-5 text-amber-800 font-['Space_Grotesk']">
+                    This uses an unofficial WhatsApp Web integration. For lower risk, use a dedicated phone number and avoid spammy or unsolicited outbound messaging.
+                  </p>
+                </div>
+              </div>
             </>
           )}
 

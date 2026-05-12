@@ -247,7 +247,7 @@ const CONNECTORS = [
   {
     id: 'whatsapp',
     name: 'WhatsApp',
-    description: 'Chat on WhatsApp via QR code pairing — scan once, reply forever',
+    description: 'Pair a WhatsApp account with QR code for dedicated bot or personal testing use',
     icon: MessageSquare,
     category: 'workspace',
     status: 'available',
@@ -258,9 +258,10 @@ const CONNECTORS = [
     setupTitle: 'Pair WhatsApp with QR Code',
     setupSteps: [
       'Click "Connect WhatsApp"',
-      'Scan the QR code with your phone camera',
-      'WhatsApp opens → Linked Devices → confirm',
-      'Agent is ready to chat on WhatsApp',
+      'Use a dedicated bot number for production, or your own account for testing',
+      'Open WhatsApp → Linked Devices → Link a device',
+      'Scan the QR code and confirm pairing on your phone',
+      'HIVEMIND can then reply on WhatsApp as that paired account',
     ],
     estimatedTime: '30 seconds',
   },
