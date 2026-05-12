@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MessageSquare, RefreshCw, X, Check, WifiOff, Smartphone } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -21,23 +21,68 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
   const [elapsed, setElapsed] = useState(0);
   const pollRef = useRef(null);
   const mountedRef = useRef(true);
+  const elapsedRef = useRef(0);
 
   const TIMEOUT_S = 120;
 
-  useEffect(() => {
-    mountedRef.current = true;
-    startPairing();
-    return () => {
-      mountedRef.current = false;
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+  const pollStatus = useCallback(async () => {
+    setElapsed(prev => {
+      const next = prev + 2;
+      elapsedRef.current = next;
+      return next;
+    });
 
-  async function startPairing() {
+    try {
+      const data = await apiClient.whatsappStatus();
+      if (!mountedRef.current) return;
+
+      if (data.paired) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStatus('paired');
+        setPhoneNumber(data.phoneNumber);
+        if (onSuccess) onSuccess({ phoneNumber: data.phoneNumber });
+      } else if (elapsedRef.current >= TIMEOUT_S) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStatus('timeout');
+      }
+    } catch (e) {
+      // Ignore polling errors — keep trying
+    }
+  }, [onSuccess]);
+
+  const startPolling = useCallback(() => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => {
+      pollStatus();
+    }, 2000);
+  }, [pollStatus]);
+
+  const fetchQr = useCallback(async () => {
+    try {
+      const data = await apiClient.whatsappQr();
+      if (!mountedRef.current) return;
+      if (data.qr) {
+        setQr(data.qr);
+        setStatus('qr_ready');
+        startPolling();
+      } else {
+        setStatus('error');
+        setErrorMessage('Failed to generate QR code');
+      }
+    } catch (e) {
+      if (mountedRef.current) {
+        setStatus('error');
+        setErrorMessage(e.response?.data?.error || e.message);
+      }
+    }
+  }, [startPolling]);
+
+  const startPairing = useCallback(async () => {
     setStatus('loading');
     setErrorMessage(null);
     setQr(null);
     setElapsed(0);
+    elapsedRef.current = 0;
 
     try {
       const data = await apiClient.whatsappQr();
@@ -59,53 +104,16 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setErrorMessage(e.response?.data?.error || e.message);
       }
     }
-  }
+  }, [fetchQr, startPolling]);
 
-  async function fetchQr() {
-    try {
-      const data = await apiClient.whatsappQr();
-      if (!mountedRef.current) return;
-      if (data.qr) {
-        setQr(data.qr);
-        setStatus('qr_ready');
-        startPolling();
-      } else {
-        setStatus('error');
-        setErrorMessage('Failed to generate QR code');
-      }
-    } catch (e) {
-      if (mountedRef.current) {
-        setStatus('error');
-        setErrorMessage(e.response?.data?.error || e.message);
-      }
-    }
-  }
-
-  function startPolling() {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(pollStatus, 2000);
-  }
-
-  async function pollStatus() {
-    setElapsed(prev => prev + 2);
-
-    try {
-      const data = await apiClient.whatsappStatus();
-      if (!mountedRef.current) return;
-
-      if (data.paired) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setStatus('paired');
-        setPhoneNumber(data.phoneNumber);
-        if (onSuccess) onSuccess({ phoneNumber: data.phoneNumber });
-      } else if (elapsed >= TIMEOUT_S) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        setStatus('timeout');
-      }
-    } catch (e) {
-      // Ignore polling errors — keep trying
-    }
-  }
+  useEffect(() => {
+    mountedRef.current = true;
+    startPairing();
+    return () => {
+      mountedRef.current = false;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [startPairing]);
 
   function handleRegenerate() {
     if (pollRef.current) clearInterval(pollRef.current);
