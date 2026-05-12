@@ -26,12 +26,14 @@ import {
   Clock,
   Zap,
   Plus,
+  MessageSquare,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
+import WhatsAppQRModal from './WhatsAppQRModal';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -242,6 +244,26 @@ const CONNECTORS = [
     color: '#e11d48',
     priority: 2,
     oauthProvider: 'slack',
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    description: 'Chat on WhatsApp via QR code pairing — scan once, reply forever',
+    icon: MessageSquare,
+    category: 'workspace',
+    status: 'available',
+    color: '#25d366',
+    priority: 2,
+    isQrSetup: true,
+    qrProvider: 'whatsapp',
+    setupTitle: 'Pair WhatsApp with QR Code',
+    setupSteps: [
+      'Click "Connect WhatsApp"',
+      'Scan the QR code with your phone camera',
+      'WhatsApp opens → Linked Devices → confirm',
+      'Agent is ready to chat on WhatsApp',
+    ],
+    estimatedTime: '30 seconds',
   },
   // Knowledge
   {
@@ -1177,6 +1199,7 @@ export default function Connectors() {
   // Per-provider selected team ID (only relevant when targetScope='team')
   const [selectedTeamIds, setSelectedTeamIds] = useState({});
   const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
+  const [whatsappQRConnector, setWhatsappQRConnector] = useState(false);
 
   // Detect org admin: user is org admin if their role is 'owner' or 'admin'
   // The bootstrap / AuthProvider exposes org membership role via `org.role` or `user.orgRole`.
@@ -1354,6 +1377,16 @@ export default function Connectors() {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
   }, [refetchOAuth, targetScopes.gmail]);
+
+  const handleWhatsAppDisconnect = useCallback(async () => {
+    try {
+      await apiClient.whatsappDisconnect();
+      setToastMessage({ type: 'success', text: 'WhatsApp disconnected' });
+      refetchOAuth();
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+    }
+  }, [refetchOAuth]);
 
   const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
   const endpoints = connectorStatus?.statuses || [];
@@ -1565,6 +1598,10 @@ export default function Connectors() {
                 window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=claude_code_web`;
                 return;
               }
+              if (connector.isQrSetup) {
+                setWhatsappQRConnector(true);
+                return;
+              }
               if (connector.isOauthConnect) {
                 const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
                 const clientId = connector.oauthClientId || connector.id;
@@ -1578,7 +1615,9 @@ export default function Connectors() {
               }
             }}
             onDisconnect={() => {
-              if (connector.oauthProvider) {
+              if (connector.isQrSetup) {
+                handleWhatsAppDisconnect();
+              } else if (connector.oauthProvider) {
                 handleDisconnect(connector.oauthProvider);
               }
             }}
@@ -1692,6 +1731,20 @@ export default function Connectors() {
             onClose={() => setMcpSetupConnector(null)}
             user={user}
             apiKeys={apiKeysData?.keys || []}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* WhatsApp QR Modal */}
+      <AnimatePresence>
+        {whatsappQRConnector && (
+          <WhatsAppQRModal
+            onClose={() => setWhatsappQRConnector(false)}
+            onSuccess={(info) => {
+              setWhatsappQRConnector(false);
+              setToastMessage({ type: 'success', text: `WhatsApp paired — +${info.phoneNumber}` });
+              refetchOAuth();
+            }}
           />
         )}
       </AnimatePresence>

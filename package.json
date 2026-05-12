@@ -29,6 +29,7 @@
     "mysql2": "^3.12.0",
     "nodemailer": "^6.9.16",
     "papaparse": "^5.5.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-force-graph-2d": "^1.29.1",

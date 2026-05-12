@@ -1027,6 +1027,32 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/sso/scim-token`);
     return data;
   }
+
+  // ─── WhatsApp QR Connector ──────────────────────────────────
+
+  async whatsappQr() {
+    const { data } = await this.controlPlane.post('/api/connectors/whatsapp/qr');
+    return data;
+  }
+
+  async whatsappStatus() {
+    const { data } = await this.controlPlane.get('/api/connectors/whatsapp/status');
+    return data;
+  }
+
+  async whatsappDisconnect() {
+    const { data } = await this.controlPlane.post('/api/connectors/whatsapp/disconnect');
+    return data;
+  }
+
+  /**
+   * List all connectors including WhatsApp pairing state.
+   * Uses the same /v1/connectors endpoint; WhatsApp entries now include qr_setup: true.
+   */
+  async listOAuthConnectors() {
+    const { data } = await this.controlPlane.get('/v1/connectors');
+    return data;
+  }
 }
 
 const apiClient = new HiveMindApiClient();
