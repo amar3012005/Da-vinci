@@ -665,6 +665,14 @@ export default function McpServer() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('tools');
   const [promptVariant, setPromptVariant] = useState('coding');
+  const [promptCopied, setPromptCopied] = useState(false);
+
+  const source = searchParams.get('source');
+  const connector = searchParams.get('connector');
+  const isGuidedWalkthrough = source === 'connectors';
+  const recommendedPrompt = connector === 'claude-code' || connector === 'cursor' || connector === 'vscode'
+    ? 'coding'
+    : 'agent';
 
   useEffect(() => {
     const requestedPrompt = searchParams.get('prompt');
@@ -672,6 +680,12 @@ export default function McpServer() {
       setPromptVariant(requestedPrompt);
     }
   }, [searchParams]);
+
+  const handleCopyPrompt = async () => {
+    await navigator.clipboard.writeText(activePrompt);
+    setPromptCopied(true);
+    setTimeout(() => setPromptCopied(false), 4000);
+  };
 
   const TOTAL_TOOLS = MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length;
   const activePrompt = promptVariant === 'coding' ? SYSTEM_PROMPT_CODING : SYSTEM_PROMPT_AGENT;
@@ -687,6 +701,20 @@ export default function McpServer() {
     <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
       <div className="max-w-4xl mx-auto">
         <ApiKeyPrompt feature="MCP server connections" />
+
+        {isGuidedWalkthrough && (
+          <motion.div {...fadeUp} className="mb-6 rounded-2xl border border-[#117dff]/20 bg-[#f7fbff] p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="rounded-full bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">Step 2 of 2</span>
+              <span className="text-xs text-[#525252] font-['Space_Grotesk']">Pick the recommended prompt, copy it, then paste it into your client instructions.</span>
+            </div>
+            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed">
+              {connector === 'claude-code'
+                ? 'For Claude Code, use the AI Coding Assistant prompt below. After copying it, paste it into your Claude Code session instructions so HIVEMIND is used by default.'
+                : 'Choose the prompt that matches your client, copy it, then paste it into the client instructions before you return to verify the connection.'}
+            </p>
+          </motion.div>
+        )}
 
         {/* Header */}
         <motion.div {...fadeUp} className="mb-8">
@@ -714,7 +742,12 @@ export default function McpServer() {
                   <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Copy and paste into your AI platform's system instructions</p>
                 </div>
               </div>
-              <CopyButton text={activePrompt} label="Copy Prompt" />
+              <button
+                onClick={handleCopyPrompt}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] font-medium transition-all border border-[#e3e0db] hover:border-[#117dff]/30 bg-white text-[#525252] hover:text-[#117dff]"
+              >
+                {promptCopied ? <><Check size={12} className="text-[#16a34a]" /> Copied</> : <><Copy size={12} /> Copy Prompt</>}
+              </button>
             </div>
 
             {/* Variant selector */}
@@ -736,9 +769,22 @@ export default function McpServer() {
                     {opt.label}
                   </p>
                   <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk']">{opt.desc}</p>
+                  {isGuidedWalkthrough && recommendedPrompt === opt.id && (
+                    <span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">
+                      Recommended
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
+
+            {promptCopied && isGuidedWalkthrough && (
+              <div className="mx-5 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-sm text-emerald-700 font-['Space_Grotesk'] leading-relaxed">
+                  Prompt copied. Paste it into your {connector === 'claude-code' ? 'Claude Code session instructions' : 'AI client instructions'} now, then return to the Connectors page and run Verify Connection.
+                </p>
+              </div>
+            )}
 
             <div className="relative max-h-[360px] overflow-y-auto">
               <pre className="px-5 py-4 text-[11px] font-mono text-[#525252] leading-relaxed whitespace-pre-wrap">{activePrompt}</pre>

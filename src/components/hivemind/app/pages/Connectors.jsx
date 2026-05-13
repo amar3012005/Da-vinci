@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -65,7 +65,7 @@ const CONNECTORS = [
   {
     id: 'claude-code',
     name: 'Claude Code',
-    description: 'One-click install via official plugin marketplace + browser OAuth',
+    description: 'Paste a pre-filled MCP config into Claude Code and keep HIVEMIND enabled by default',
     icon: Terminal,
     category: 'mcp_clients',
     status: 'available',
@@ -73,19 +73,13 @@ const CONNECTORS = [
     configKey: 'claude-code',
     mcpEndpointName: 'claude-code',
     isMcpClient: true,
-    isPluginInstall: true,
-    setupTitle: 'Install the Claude Code plugin',
+    setupTitle: 'Set up Claude Code MCP',
     setupSteps: [
-      'Run the three commands below inside any Claude Code session',
-      'A browser tab opens for sign-in (Zitadel SSO or Google)',
-      'Plugin auto-loads HIVEMIND MCP — all 22 tools become available',
+      'Copy the AI instruction and config below into Claude Code MCP settings',
+      'Enable HIVEMIND as a default MCP server for your sessions',
+      'Run the verify step here after saving the config to confirm the hosted endpoint is reachable',
     ],
-    pluginCommands: [
-      '/plugin marketplace add amar3012005/claude-hivemind',
-      '/plugin install claude-hivemind',
-      '/hivemind:connect',
-    ],
-    configPath: '~/.hivemind-claude/credentials.json (auto-managed by plugin)',
+    configPath: 'Claude Code MCP settings.json',
   },
   {
     id: 'claude',
@@ -1046,18 +1040,16 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 
 // ─── MCP Setup Modal ─────────────────────────────────────────────────────────
 
-function McpSetupModal({ connector, onClose, user, apiKeys }) {
+function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existingEndpointStatus }) {
   const [copied, setCopied] = useState(false);
+  const [copiedInstruction, setCopiedInstruction] = useState(false);
   const [generatedKey, setGeneratedKey] = useState('');
   const [generatingKey, setGeneratingKey] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationState, setVerificationState] = useState(existingEndpointStatus || null);
   const navigate = useNavigate();
   const userId = user?.id || user?.userId || 'YOUR_USER_ID';
   const apiKey = generatedKey || apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
-
-  const isPluginInstall = connector?.isPluginInstall;
-  const pluginBlock = isPluginInstall && Array.isArray(connector.pluginCommands)
-    ? connector.pluginCommands.join('\n')
-    : null;
 
   useEffect(() => {
     let active = true;
@@ -1102,12 +1094,24 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
 
   const cliConfig = `npx -y @amar_528/mcp-bridge hosted --url "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}"`;
 
-  const config = pluginBlock || jsonConfig;
+  const config = jsonConfig;
+
+  const aiSetupPrompt = [
+    'Set up the HIVEMIND MCP server using the provided config.',
+    'Keep HIVEMIND enabled by default for this client and use it proactively in every session.',
+    'Prefer HIVEMIND tools for memory recall, search, graph exploration, coding context, and web research whenever they are relevant.',
+  ].join(' ');
 
   const promptVariant = ['cursor', 'vscode', 'claude-code'].includes(connector?.id) ? 'coding' : 'agent';
 
+  const endpointName = `${connector?.mcpEndpointName || connector?.id || 'hivemind'}-${userId}`;
+
+  useEffect(() => {
+    setVerificationState(existingEndpointStatus || null);
+  }, [existingEndpointStatus]);
+
   const goToPrompt = () => {
-    navigate(`/hivemind/app/mcp?prompt=${promptVariant}`);
+    navigate(`/hivemind/app/mcp?prompt=${promptVariant}&source=connectors&connector=${encodeURIComponent(connector?.id || 'mcp')}`);
     onClose();
   };
 
@@ -1116,6 +1120,43 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleCopyInstruction = () => {
+    navigator.clipboard.writeText(aiSetupPrompt).then(() => {
+      setCopiedInstruction(true);
+      setTimeout(() => setCopiedInstruction(false), 2000);
+    });
+  };
+
+  const handleVerify = async () => {
+    if (!connector || apiKey === 'YOUR_API_KEY') return;
+    setVerifying(true);
+    try {
+      await apiClient.registerMcpEndpoint({
+        name: endpointName,
+        transport: 'streamable-http',
+        url: `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}/rpc`,
+        bearer_token: apiKey,
+        headers: {
+          'X-User-Id': userId,
+        },
+        adapter_type: connector.id,
+        default_tags: ['hivemind', connector.id],
+      });
+      const status = await apiClient.getConnectorStatus();
+      const next = (status?.statuses || []).find((item) => item.name === endpointName || item.adapter_type === connector.id) || null;
+      setVerificationState(next);
+      onVerified?.(next);
+    } catch (error) {
+      setVerificationState({
+        healthy: false,
+        error: error?.response?.data?.error || error.message || 'Verification failed',
+        name: endpointName,
+      });
+    } finally {
+      setVerifying(false);
+    }
   };
 
   if (!connector) return null;
@@ -1162,12 +1203,27 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
                 <p className="text-[12px] font-mono text-[#117dff] break-all">{generatingKey ? 'Generating API key...' : apiKey}</p>
               </div>
             </div>
-            {!isPluginInstall && (
-              <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">CLI</p>
-                <p className="text-[12px] font-mono text-[#525252] break-all">{cliConfig}</p>
+            <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">Instruction For AI</p>
+                <button
+                  onClick={handleCopyInstruction}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold font-['Space_Grotesk'] border ${
+                    copiedInstruction
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      : 'bg-[#f8fafc] text-[#525252] border-[#e3e0db] hover:bg-[#f3f1ec]'
+                  }`}
+                >
+                  {copiedInstruction ? <Check size={11} /> : <Copy size={11} />}
+                  {copiedInstruction ? 'Copied' : 'Copy Prompt'}
+                </button>
               </div>
-            )}
+              <p className="text-[12px] text-[#525252] leading-relaxed">{aiSetupPrompt}</p>
+            </div>
+            <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">CLI</p>
+              <p className="text-[12px] font-mono text-[#525252] break-all">{cliConfig}</p>
+            </div>
           </div>
 
           <div className="space-y-3 mb-5">
@@ -1199,7 +1255,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
                 }`}
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied!' : isPluginInstall ? 'Copy Commands' : 'Copy Config'}
+                {copied ? 'Copied!' : 'Copy Config'}
               </button>
             </div>
             <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre">
@@ -1207,18 +1263,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
             </pre>
           </div>
 
-          {/* Plugin install — friendly note on what happens */}
-          {isPluginInstall && (
-            <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
-              <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-emerald-700 font-['Space_Grotesk'] leading-relaxed">
-                <strong>One-click install.</strong> The plugin bundles the MCP config + a /hivemind:connect command that opens your browser for OAuth (Zitadel SSO or Google). No manual JSON editing, no API key copy-paste.
-              </p>
-            </div>
-          )}
-
-          {/* API Key warning — only for manual JSON paths */}
-          {!isPluginInstall && apiKey === 'YOUR_API_KEY' && (
+          {apiKey === 'YOUR_API_KEY' && (
             <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
               <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 font-['Space_Grotesk']">
@@ -1226,6 +1271,39 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
               </p>
             </div>
           )}
+
+          <div className="mt-3 rounded-lg border border-[#e3e0db] bg-white p-3">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">Verify Connection</p>
+              {verificationState?.healthy ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                  <Check size={10} />
+                  Connected
+                </span>
+              ) : verificationState?.error ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-600">
+                  <AlertCircle size={10} />
+                  Needs attention
+                </span>
+              ) : null}
+            </div>
+            <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+              After saving the config in your client, run verification here. We will inspect the hosted HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.
+            </p>
+            {verificationState?.error && (
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 font-['Space_Grotesk']">
+                {verificationState.error}
+              </p>
+            )}
+            <button
+              onClick={handleVerify}
+              disabled={verifying || apiKey === 'YOUR_API_KEY'}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#117dff]/20 bg-[#117dff]/10 px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-[#117dff] hover:bg-[#117dff]/15 disabled:opacity-50"
+            >
+              {verifying ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+              {verificationState?.healthy ? 'Re-check Connection' : 'Verify Connection'}
+            </button>
+          </div>
 
           <div className="mt-4 rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4">
             <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
@@ -1279,6 +1357,7 @@ export default function Connectors() {
   const [selectedTeamIds, setSelectedTeamIds] = useState({});
   const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
   const [whatsappQRConnector, setWhatsappQRConnector] = useState(false);
+  const [verifiedMcpEndpoints, setVerifiedMcpEndpoints] = useState({});
 
   // Detect org admin: user is org admin if their role is 'owner' or 'admin'
   // The bootstrap / AuthProvider exposes org membership role via `org.role` or `user.orgRole`.
@@ -1318,6 +1397,10 @@ export default function Connectors() {
     data: oauthConnectors,
     refetch: refetchOAuth,
   } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
+
+  const endpoints = useMemo(() => connectorStatus?.statuses || [], [connectorStatus]);
+  const jobList = useMemo(() => (Array.isArray(jobs) ? jobs : jobs?.jobs || []), [jobs]);
+  const oauthList = useMemo(() => oauthConnectors?.connectors || [], [oauthConnectors]);
 
   // Check for OAuth callback params
   useEffect(() => {
@@ -1372,6 +1455,16 @@ export default function Connectors() {
       return next;
     });
   }, [oauthConnectors]);
+
+  useEffect(() => {
+    const mapped = {};
+    for (const endpoint of endpoints) {
+      if (endpoint?.adapter_type) {
+        mapped[endpoint.adapter_type] = endpoint;
+      }
+    }
+    setVerifiedMcpEndpoints(mapped);
+  }, [endpoints]);
 
   const handleOAuthConnect = useCallback(async (provider) => {
     setConnectingProvider(provider);
@@ -1468,9 +1561,6 @@ export default function Connectors() {
   }, [refetchOAuth]);
 
   const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
-  const endpoints = connectorStatus?.statuses || [];
-  const jobList = Array.isArray(jobs) ? jobs : jobs?.jobs || [];
-  const oauthList = oauthConnectors?.connectors || [];
 
   // Required scopes per provider — when a connected token is missing any of
   // these, surface as needs_reauth so the user can reconnect to unlock the
@@ -1536,26 +1626,16 @@ export default function Connectors() {
       // MCP Client connectors (Claude, VS Code, Antigravity)
       // These are client-side configs - show as connected if user has the config
       // Check both endpoints list and oauth connectors for hivemind connection
-      const live = endpoints.find((ep) => ep.name === c.mcpEndpointName);
-      const isMcpClientConnected = oauthList.some((o) =>
-        o.provider === 'hivemind' && o.status === 'connected'
-      );
+      const live = verifiedMcpEndpoints[c.id]
+        || endpoints.find((ep) => ep.name === c.mcpEndpointName || ep.name === `${c.mcpEndpointName}-${user?.id || user?.userId}`);
 
       if (live) {
         return {
           ...c,
-          status: live.healthy ? 'connected' : 'needs_attention',
-          accountRef: live.url || 'Local MCP bridge',
+          status: live.healthy ? 'connected' : 'error',
+          accountRef: live.url || 'Hosted HIVEMIND MCP',
           lastSyncAt: live.updated_at,
           lastError: live.error,
-        };
-      } else if (isMcpClientConnected) {
-        // User has hivemind MCP connected via any client
-        return {
-          ...c,
-          status: 'connected',
-          accountRef: 'MCP Client configured',
-          description: `${c.description} — HIVE MCP connected`,
         };
       }
     }
@@ -1668,23 +1748,13 @@ export default function Connectors() {
                 setMcpSetupConnector(connector);
                 return;
               }
-              // One-click OAuth path for any MCP-client tile flagged with
-              // isPluginInstall (Claude Code → claude mcp add CLI) or
-              // isOauthConnect (Claude Desktop / Cursor / VS Code / Antigravity
-              // → pre-filled JSON config). Both go through /auth/cli; the
-              // callback page renders platform-specific output.
-              const controlPlane =
-                process.env.REACT_APP_CONTROL_PLANE_URL ||
-                'https://api.hivemind.davinciai.eu:8040';
-              if (connector.isPluginInstall && connector.id === 'claude-code') {
-                const callback = `${window.location.origin}/hivemind/app/connect/claude-code/callback`;
-                window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=claude_code_web`;
-                return;
-              }
               if (connector.isQrSetup) {
                 setWhatsappQRConnector(true);
                 return;
               }
+              const controlPlane =
+                process.env.REACT_APP_CONTROL_PLANE_URL ||
+                'https://api.hivemind.davinciai.eu:8040';
               if (connector.isOauthConnect) {
                 const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
                 const clientId = connector.oauthClientId || connector.id;
@@ -1812,6 +1882,15 @@ export default function Connectors() {
             onClose={() => setMcpSetupConnector(null)}
             user={user}
             apiKeys={apiKeysData?.keys || []}
+            existingEndpointStatus={verifiedMcpEndpoints[mcpSetupConnector.id] || null}
+            onVerified={(status) => {
+              if (status?.healthy) {
+                setToastMessage({ type: 'success', text: `${mcpSetupConnector.name} verified and marked connected` });
+              } else if (status?.error) {
+                setToastMessage({ type: 'error', text: status.error });
+              }
+              refetchStatus();
+            }}
           />
         )}
       </AnimatePresence>
