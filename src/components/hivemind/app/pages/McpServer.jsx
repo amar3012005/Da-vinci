@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
@@ -666,6 +666,8 @@ export default function McpServer() {
   const [activeTab, setActiveTab] = useState('tools');
   const [promptVariant, setPromptVariant] = useState('coding');
   const [promptCopied, setPromptCopied] = useState(false);
+  const copyButtonRef = useRef(null);
+  const pasteBannerRef = useRef(null);
 
   const source = searchParams.get('source');
   const connector = searchParams.get('connector');
@@ -680,6 +682,12 @@ export default function McpServer() {
       setPromptVariant(requestedPrompt);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isGuidedWalkthrough) return;
+    const target = promptCopied ? pasteBannerRef.current : copyButtonRef.current;
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [isGuidedWalkthrough, promptCopied]);
 
   const handleCopyPrompt = async () => {
     await navigator.clipboard.writeText(activePrompt);
@@ -699,11 +707,14 @@ export default function McpServer() {
 
   return (
     <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
+      {isGuidedWalkthrough && (
+        <div className="fixed inset-0 z-10 bg-[#0a0a0a]/35 backdrop-blur-[2px] pointer-events-none" />
+      )}
       <div className="max-w-4xl mx-auto">
         <ApiKeyPrompt feature="MCP server connections" />
 
         {isGuidedWalkthrough && (
-          <motion.div {...fadeUp} className="mb-6 rounded-2xl border border-[#117dff]/20 bg-[#f7fbff] p-5">
+          <motion.div {...fadeUp} className="relative z-20 mb-6 rounded-2xl border border-[#117dff]/20 bg-[#f7fbff] p-5 shadow-[0_10px_30px_rgba(17,125,255,0.12)]">
             <div className="flex items-center gap-3 mb-2">
               <span className="rounded-full bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">Step 2 of 2</span>
               <span className="text-xs text-[#525252] font-['Space_Grotesk']">Pick the recommended prompt, copy it, then paste it into your client instructions.</span>
@@ -731,7 +742,7 @@ export default function McpServer() {
 
         {/* System Prompt Card */}
         <motion.div {...fadeUp} transition={{ delay: 0.05 }} className="mb-8">
-          <div className="bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+          <div className={`bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden ${isGuidedWalkthrough ? 'relative z-20' : ''}`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#e3e0db]/50">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#d97706]/10 flex items-center justify-center">
@@ -742,12 +753,25 @@ export default function McpServer() {
                   <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Copy and paste into your AI platform's system instructions</p>
                 </div>
               </div>
-              <button
-                onClick={handleCopyPrompt}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] font-medium transition-all border border-[#e3e0db] hover:border-[#117dff]/30 bg-white text-[#525252] hover:text-[#117dff]"
-              >
-                {promptCopied ? <><Check size={12} className="text-[#16a34a]" /> Copied</> : <><Copy size={12} /> Copy Prompt</>}
-              </button>
+              <div className="relative">
+                <button
+                  ref={copyButtonRef}
+                  onClick={handleCopyPrompt}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] font-medium transition-all border bg-white text-[#525252] hover:text-[#117dff] ${
+                    isGuidedWalkthrough && !promptCopied
+                      ? 'relative z-30 border-[#117dff] ring-4 ring-[#117dff]/20 shadow-[0_12px_30px_rgba(17,125,255,0.18)]'
+                      : 'border-[#e3e0db] hover:border-[#117dff]/30'
+                  }`}
+                >
+                  {promptCopied ? <><Check size={12} className="text-[#16a34a]" /> Copied</> : <><Copy size={12} /> Copy Prompt</>}
+                </button>
+                {isGuidedWalkthrough && !promptCopied && (
+                  <div className="absolute left-1/2 top-[calc(100%+12px)] z-30 w-56 -translate-x-1/2 rounded-2xl border border-[#117dff]/20 bg-[#117dff] px-3 py-2 text-xs font-semibold text-white shadow-[0_16px_36px_rgba(17,125,255,0.28)]">
+                    <div className="absolute left-1/2 top-[-6px] h-3 w-3 -translate-x-1/2 rotate-45 bg-[#117dff]" />
+                    Copy this prompt first.
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Variant selector */}
@@ -763,7 +787,7 @@ export default function McpServer() {
                     promptVariant === opt.id
                       ? 'bg-[#117dff]/5 border-[#117dff]/30'
                       : 'bg-white border-[#e3e0db] hover:border-[#117dff]/20'
-                  }`}
+                  } ${isGuidedWalkthrough && recommendedPrompt === opt.id ? 'relative z-20 ring-2 ring-[#117dff]/20' : ''}`}
                 >
                   <p className={`text-xs font-semibold font-['Space_Grotesk'] ${promptVariant === opt.id ? 'text-[#117dff]' : 'text-[#0a0a0a]'}`}>
                     {opt.label}
@@ -779,9 +803,12 @@ export default function McpServer() {
             </div>
 
             {promptCopied && isGuidedWalkthrough && (
-              <div className="mx-5 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div ref={pasteBannerRef} className="relative z-30 mx-5 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-[0_14px_32px_rgba(22,163,74,0.16)] ring-4 ring-emerald-200/60">
+                <div className="absolute -left-3 top-4 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-lg">
+                  Next
+                </div>
                 <p className="text-sm text-emerald-700 font-['Space_Grotesk'] leading-relaxed">
-                  Prompt copied. Paste it into your {connector === 'claude-code' ? 'Claude Code session instructions' : 'AI client instructions'} now, then return to the Connectors page and run Verify Connection.
+                  Prompt copied. Now paste it into your {connector === 'claude-code' ? 'Claude Code session instructions' : 'Claude Code or co-worker AI instructions'} and keep HIVEMIND on by default. Then return to the Connectors page and run Verify Connection.
                 </p>
               </div>
             )}
