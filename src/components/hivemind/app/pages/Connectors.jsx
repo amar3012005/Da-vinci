@@ -84,7 +84,7 @@ const CONNECTORS = [
   {
     id: 'claude',
     name: 'Claude Desktop',
-    description: 'Anthropic Claude — one-click OAuth, paste pre-filled JSON config',
+    description: 'Run one terminal setup command, restart Claude Desktop, then paste the HIVEMIND AI prompt',
     icon: Terminal,
     category: 'mcp_clients',
     status: 'available',
@@ -92,8 +92,13 @@ const CONNECTORS = [
     configKey: 'claude',
     mcpEndpointName: 'claude',
     isMcpClient: true,
-    isOauthConnect: true,
-    oauthClientId: 'claude-desktop',
+    setupTitle: 'Set up Claude Desktop MCP',
+    setupSteps: [
+      'Open Terminal with the shortcut shown for your OS',
+      'Run one setup command to install Claude if needed and add HIVEMIND MCP',
+      'Quit and reopen Claude Desktop before you continue to the AI prompt step',
+    ],
+    configPath: 'Claude Desktop terminal setup',
   },
   {
     id: 'cursor',
@@ -307,6 +312,41 @@ const CONNECTORS = [
 ];
 
 const DIRECT_MCP_ENDPOINT = 'https://core.hivemind.davinciai.eu:8050/api/mcp';
+
+const CLAUDE_TERMINAL_OS = {
+  macos: {
+    label: 'macOS',
+    shortcut: 'Cmd + Space',
+    followup: 'Type Terminal, then press Enter.',
+  },
+  windows: {
+    label: 'Windows',
+    shortcut: 'Win + R',
+    followup: 'Type powershell, then press Enter.',
+  },
+  linux: {
+    label: 'Linux',
+    shortcut: 'Ctrl + Alt + T',
+    followup: 'If that does not work, open Terminal from your app menu.',
+  },
+};
+
+function detectTerminalOs() {
+  if (typeof navigator === 'undefined') return 'macos';
+  const value = `${navigator.platform || ''} ${navigator.userAgent || ''}`.toLowerCase();
+  if (value.includes('win')) return 'windows';
+  if (value.includes('linux') || value.includes('x11')) return 'linux';
+  return 'macos';
+}
+
+function buildClaudeSetupCommand(os, apiKey) {
+  const safeApiKey = apiKey || 'YOUR_API_KEY';
+  if (os === 'windows') {
+    return `if (-not (Get-Command claude -ErrorAction SilentlyContinue)) { irm https://claude.ai/install.ps1 | iex }; try { claude mcp remove hivemind | Out-Null } catch {}; claude mcp add --scope user --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${safeApiKey}"; Write-Host ""; Write-Host "Now quit and reopen Claude Desktop, then continue to Step 2."`;
+  }
+
+  return `(command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash) && (claude mcp remove hivemind >/dev/null 2>&1 || true) && claude mcp add --scope user --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${safeApiKey}" && printf '\nNow quit and reopen Claude Desktop, then continue to Step 2.\n'`;
+}
 
 function isLegacyMcpEndpointUrl(url) {
   return typeof url === 'string' && (url.includes('/api/mcp/servers/') || url.includes('/api/mcp/rpc'));
@@ -1082,9 +1122,11 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
   const [generatingKey, setGeneratingKey] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verificationState, setVerificationState] = useState(existingEndpointStatus || null);
+  const [terminalOs, setTerminalOs] = useState(detectTerminalOs());
   const navigate = useNavigate();
   const userId = user?.id || user?.userId || 'YOUR_USER_ID';
   const apiKey = generatedKey || apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
+  const isClaudeTerminalSetup = ['claude', 'claude-code'].includes(connector?.id);
 
   useEffect(() => {
     let active = true;
@@ -1129,9 +1171,10 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
     },
   }, null, 2);
 
-  const cliConfig = `claude mcp add --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${apiKey}"`;
+  const cliConfig = `claude mcp add --scope user --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${apiKey}"`;
+  const claudeSetupCommand = buildClaudeSetupCommand(terminalOs, apiKey);
 
-  const config = connector?.id === 'claude-code' ? cliConfig : jsonConfig;
+  const config = isClaudeTerminalSetup ? claudeSetupCommand : jsonConfig;
 
   const aiSetupPrompt = [
     'Set up the HIVEMIND MCP server using the provided direct HTTP config.',
@@ -1218,7 +1261,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
             </div>
             <div>
               <h2 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">{connector.setupTitle || `Connect ${connector.name}`}</h2>
-              <p className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">One-time setup — paste config into your tool</p>
+              <p className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">
+                {isClaudeTerminalSetup ? 'One-time setup — run a terminal command, restart Claude, then paste the AI prompt' : 'One-time setup — paste config into your tool'}
+              </p>
             </div>
           </div>
         </div>
@@ -1228,7 +1273,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
           <div className="mb-5 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-4">
             <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">Step 1</p>
             <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              Copy this schema into your AI client's MCP/server setup so it can connect immediately.
+              {isClaudeTerminalSetup
+                ? 'Open Terminal with the shortcut for your OS, run one setup command, then fully quit and reopen Claude before moving to Step 2.'
+                : 'Copy this schema into your AI client\'s MCP/server setup so it can connect immediately.'}
             </p>
             <div className="grid gap-2 md:grid-cols-2 mb-3">
               <div className="rounded-lg border border-[#e3e0db] bg-white p-3">
@@ -1240,9 +1287,50 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 <p className="text-[12px] font-mono text-[#117dff] break-all">{generatingKey ? 'Generating API key...' : apiKey}</p>
               </div>
             </div>
+            {isClaudeTerminalSetup && (
+              <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {Object.entries(CLAUDE_TERMINAL_OS).map(([key, value]) => (
+                    <button
+                      key={key}
+                      onClick={() => setTerminalOs(key)}
+                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                        terminalOs === key
+                          ? 'border-[#117dff]/40 bg-[#117dff]/8 text-[#117dff]'
+                          : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#117dff]/20'
+                      }`}
+                    >
+                      {value.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-3">
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">Open Terminal</p>
+                  <p className="text-[12px] font-semibold text-[#117dff] mb-1">{CLAUDE_TERMINAL_OS[terminalOs].shortcut}</p>
+                  <p className="text-[12px] text-[#525252] leading-relaxed">{CLAUDE_TERMINAL_OS[terminalOs].followup}</p>
+                </div>
+              </div>
+            )}
+            <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">{isClaudeTerminalSetup ? 'Single Setup Command' : 'CLI'}</p>
+              <p className="text-[12px] font-mono text-[#525252] break-all">{isClaudeTerminalSetup ? claudeSetupCommand : cliConfig}</p>
+            </div>
+            {isClaudeTerminalSetup && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-amber-700 mb-1">Restart Claude</p>
+                <p className="text-[12px] text-amber-800 leading-relaxed">After the command finishes, fully quit Claude Desktop or Claude Code and open it again before you move to Step 2.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4">
+            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
+            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+              Copy the HIVEMIND AI prompt and paste it into your client instructions so Claude uses this MCP server by default.
+            </p>
             <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
               <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">Instruction For AI</p>
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">AI Prompt</p>
                 <button
                   onClick={handleCopyInstruction}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold font-['Space_Grotesk'] border ${
@@ -1256,10 +1344,6 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 </button>
               </div>
               <p className="text-[12px] text-[#525252] leading-relaxed">{aiSetupPrompt}</p>
-            </div>
-            <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
-              <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">CLI</p>
-              <p className="text-[12px] font-mono text-[#525252] break-all">{cliConfig}</p>
             </div>
           </div>
 
@@ -1292,7 +1376,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 }`}
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied!' : connector?.id === 'claude-code' ? 'Copy Command' : 'Copy Config'}
+                {copied ? 'Copied!' : isClaudeTerminalSetup ? 'Copy Command' : 'Copy Config'}
               </button>
             </div>
             <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre-wrap break-words">
@@ -1343,9 +1427,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
           </div>
 
           <div className="mt-4 rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4">
-            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
+            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Prompt Library</p>
             <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              Open the MCP Server page and copy the relevant system prompt into your AI platform's system instructions.
+              Open the MCP Server page if you want the full prompt library and longer system prompt variants for coding or agent workflows.
             </p>
             <button
               onClick={goToPrompt}

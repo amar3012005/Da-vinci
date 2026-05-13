@@ -829,6 +829,7 @@ export default function McpServer() {
                 icon: Terminal,
                 config: `claude mcp add --transport http hivemind \
   "https://core.hivemind.davinciai.eu:8050/api/mcp" \
+  --scope user \
   --header "Authorization: Bearer YOUR_API_KEY"`,
               },
               {
