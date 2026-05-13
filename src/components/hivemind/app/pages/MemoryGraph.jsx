@@ -443,15 +443,17 @@ export default function MemoryGraph() {
     const realClusters = clusters.filter((c) => c.id !== "_orphan");
     const K = realClusters.length || 1;
     // Spread radius scales with node count — bigger brain, bigger spread.
-    const R = K <= 1 ? 0 : Math.max(250, 55 * Math.sqrt(graphData.nodes.length));
+    // Minimum radius proportional to cluster count: K clusters need 2*K*minSep room.
+    const minSep = 220;
+    const R = K <= 1 ? 0 : Math.max(K * minSep * 0.7, 80 * Math.sqrt(graphData.nodes.length));
     const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5°
     realClusters
-      .sort((a, b) => (b.size || 0) - (a.size || 0)) // biggest clusters closer to center
+      .sort((a, b) => (b.size || 0) - (a.size || 0))
       .forEach((c, i) => {
         // Sunflower spiral: angle = i * golden_angle, r = R * sqrt(i/K)
-        // Gives organic non-overlapping spread — no two clusters at same angle.
         const angle = i * goldenAngle;
-        const r = R * Math.sqrt((i + 1) / (K + 1));
+        // Shift everything outward: smallest cluster still gets r >= 0.4*R
+        const r = R * (0.4 + 0.6 * Math.sqrt((i + 1) / (K + 1)));
         out[c.id] = { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
       });
     // Orphans: no fixed centroid, just gentle push outward
@@ -548,32 +550,34 @@ export default function MemoryGraph() {
       // ★ KILL the default center force — this is what pulls everything to (0,0)
       try { fg.d3Force('center', null); } catch (_e) { /* noop */ }
 
-      // 1. Charge: stronger, cluster-aware
+      // 1. Charge: hubs push very hard so spokes have room to spread 360°
       const charge = fg.d3Force?.('charge');
       if (charge?.strength) {
         charge.strength((node) => {
           if (node.clusterId === '_orphan') return -8;
-          if (node.clusterRole === 'hub') return -200; // hubs REALLY push to make space for dendrites
-          return -60;
+          if (node.clusterRole === 'hub') return -350; // 75% stronger (was -200)
+          return -80; // moderate inter-spoke repel
         });
         // Increase theta for performance with many nodes
         if (charge.theta) charge.theta(0.9);
       }
 
-      // 2. Links: tight within cluster, long across
+      // 2. Links: tight within cluster, long across. Weak strength lets
+      //    radial spread force win — links pull children to hub but don't
+      //    constrain their angle.
       const link = fg.d3Force?.('link');
       if (link?.distance) {
         link.distance((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 35 : 120 + Math.sqrt(n);
+          return sameCluster ? 45 : 150 + Math.sqrt(n);
         });
         link.strength((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 0.6 : 0.08;
+          return sameCluster ? 0.25 : 0.05; // weaker so radial spread dominates angle
         });
       }
 
@@ -604,20 +608,19 @@ export default function MemoryGraph() {
           }
         });
 
-        // 4. Radial child spread — the key to "dendrites in all directions".
-        //    For each hub, spread its children evenly around 360° at a fixed
-        //    radius from the hub. This prevents the one-direction fan pattern.
+        // 4. Radial child spread — THE force that makes hubs radiate in 360°.
+        //    For each hub, assign each child an evenly-spaced angle slot and
+        //    pull it to (hub + r*cos(θ), hub + r*sin(θ)). Strong enough to
+        //    overcome link pull, which only enforces distance, not angle.
         fg.d3Force('radialSpread', (alpha) => {
-          const spreadStrength = 0.12;
-          const childRadius = 40 + Math.sqrt(n) * 0.8;
+          const spreadStrength = 0.35; // 3x stronger than before (was 0.12)
+          const childRadius = 55 + Math.sqrt(n) * 1.2;
           for (const [hubId, children] of hubChildIndex) {
             const hub = graphData.nodes.find((nd) => nd.id === hubId);
             if (!hub || hub.x == null) continue;
             const count = children.length;
             if (count === 0) continue;
-            // Assign each child an angle slot: evenly spaced around the hub
             const angleStep = (2 * Math.PI) / count;
-            // Use golden angle offset so sub-clusters of sub-clusters don't align
             const baseAngle = (hub._radialSeed != null) ? hub._radialSeed : (hub._radialSeed = Math.random() * Math.PI * 2);
             children.forEach((child, idx) => {
               if (child.x == null) return;
@@ -630,9 +633,9 @@ export default function MemoryGraph() {
           }
         });
 
-        // 5. Cluster-vs-cluster repulsion — push lobes apart
+        // 5. Cluster-vs-cluster repulsion — push lobes apart hard
         fg.d3Force('clusterRepel', (alpha) => {
-          const minDist = 150 + Math.sqrt(n) * 4;
+          const minDist = 280 + Math.sqrt(n) * 6; // much bigger min separation
           const ids = Object.keys(clusterCentroids).filter((id) => id !== '_orphan');
           const liveCentroids = {};
           const counts = {};
@@ -661,7 +664,7 @@ export default function MemoryGraph() {
               const dy = (a.y || 0) - (b.y || 0);
               const dist = Math.sqrt(dx * dx + dy * dy) || 1;
               if (dist < minDist) {
-                const push = (minDist - dist) * 0.04 * alpha; // doubled from 0.02
+                const push = (minDist - dist) * 0.08 * alpha; // 4x original strength
                 const ux = (dx / dist) * push;
                 const uy = (dy / dist) * push;
                 for (const node of graphData.nodes) {
@@ -735,13 +738,13 @@ export default function MemoryGraph() {
         TYPE_COLORS.default;
 
       const glow = node.temporalWeight || 0.3;
-      let radius = Math.sqrt(node.val || 4) * 2.5;
+      // Smaller base — was 2.5, now 1.4. Caps prevent monster hubs.
+      let radius = Math.min(8, Math.sqrt(node.val || 4) * 1.4);
 
-      // Cluster role bumps — hubs anchor a group visually, bridges stay small
-      // so they read as connectors, not group members.
-      if (isOrphan) radius = Math.max(radius * 0.5, 1.5); // Orphans tiny
-      else if (node.clusterRole === "hub") radius = radius * 1.6;
-      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.5);
+      // Cluster role bumps — gentle, not dominant.
+      if (isOrphan) radius = Math.max(radius * 0.5, 1.2);
+      else if (node.clusterRole === "hub") radius = Math.min(9, radius * 1.25);
+      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.9, 2);
 
       // Size adjustments per layer (overrides cluster sizing for special types)
       if (node.nodeLayer === "fact") radius = Math.max(radius * 0.7, 3);
