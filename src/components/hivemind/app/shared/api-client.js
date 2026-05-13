@@ -485,11 +485,11 @@ class HiveMindApiClient {
    * agent memory across multiple calls; omit to start fresh.
    * Returns { employee_slug, conversation_id, reply }
    */
-  async chatWithEmployee(slug, text, conversationId = null) {
-    const { data } = await this.controlPlane.post(`/v1/employees/${slug}/chat`, {
-      text,
-      conversation_id: conversationId,
-    });
+  async chatWithEmployee(slug, textOrPayload, conversationId = null) {
+    const payload = typeof textOrPayload === 'string'
+      ? { text: textOrPayload, conversation_id: conversationId }
+      : textOrPayload;
+    const { data } = await this.controlPlane.post(`/v1/employees/${slug}/chat`, payload);
     return data;
   }
 
