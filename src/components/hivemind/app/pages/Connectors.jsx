@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cable,
@@ -26,6 +26,7 @@ import {
   Clock,
   Zap,
   Plus,
+  ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -1047,27 +1048,68 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 
 function McpSetupModal({ connector, onClose, user, apiKeys }) {
   const [copied, setCopied] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const navigate = useNavigate();
   const userId = user?.id || user?.userId || 'YOUR_USER_ID';
-  const apiKey = apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
+  const apiKey = generatedKey || apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
 
   const isPluginInstall = connector?.isPluginInstall;
   const pluginBlock = isPluginInstall && Array.isArray(connector.pluginCommands)
     ? connector.pluginCommands.join('\n')
     : null;
 
+  useEffect(() => {
+    let active = true;
+    const ensureKey = async () => {
+      if (generatedKey || apiKeys?.[0]?.key || apiKeys?.[0]?.api_key) return;
+      if (!user?.id && !user?.userId) return;
+      setGeneratingKey(true);
+      try {
+        const created = await apiClient.createApiKey(`mcp-${connector?.id || 'client'}-${new Date().toISOString().slice(0, 10)}`, {
+          description: `Generated from connector setup for ${connector?.name || 'MCP client'}`,
+          scopes: ['memory:read', 'memory:write', 'mcp', 'coding', 'web_search', 'web_crawl'],
+          rate_limit_per_minute: 120,
+        });
+        if (active) {
+          setGeneratedKey(created.api_key || '');
+        }
+      } catch {
+        if (active) {
+          setGeneratedKey('');
+        }
+      } finally {
+        if (active) {
+          setGeneratingKey(false);
+        }
+      }
+    };
+    ensureKey();
+    return () => {
+      active = false;
+    };
+  }, [apiKeys, connector?.id, connector?.name, generatedKey, user?.id, user?.userId]);
+
   const jsonConfig = JSON.stringify({
     mcpServers: {
       hivemind: {
         command: 'npx',
         args: ['-y', '@amar_528/mcp-bridge', 'hosted', '--url', `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}`],
-        env: { HIVEMIND_API_KEY: apiKey },
+        env: { HIVEMIND_API_KEY: apiKey, HIVEMIND_USER_ID: userId },
       },
     },
   }, null, 2);
 
-  // For Claude Code plugin tile, primary block is the 3 commands. JSON config is shown
-  // as fallback for users who prefer manual MCP config.
+  const cliConfig = `npx -y @amar_528/mcp-bridge hosted --url "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}"`;
+
   const config = pluginBlock || jsonConfig;
+
+  const promptVariant = ['cursor', 'vscode', 'claude-code'].includes(connector?.id) ? 'coding' : 'agent';
+
+  const goToPrompt = () => {
+    navigate(`/hivemind/app/mcp?prompt=${promptVariant}`);
+    onClose();
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(config).then(() => {
@@ -1105,6 +1147,29 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
 
         {/* Steps */}
         <div className="px-6 py-4">
+          <div className="mb-5 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-4">
+            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">Step 1</p>
+            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+              Copy this schema into your AI client's MCP/server setup so it can connect immediately.
+            </p>
+            <div className="grid gap-2 md:grid-cols-2 mb-3">
+              <div className="rounded-lg border border-[#e3e0db] bg-white p-3">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">User ID</p>
+                <p className="text-[12px] font-mono text-[#117dff] break-all">{userId}</p>
+              </div>
+              <div className="rounded-lg border border-[#e3e0db] bg-white p-3">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">API Key</p>
+                <p className="text-[12px] font-mono text-[#117dff] break-all">{generatingKey ? 'Generating API key...' : apiKey}</p>
+              </div>
+            </div>
+            {!isPluginInstall && (
+              <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">CLI</p>
+                <p className="text-[12px] font-mono text-[#525252] break-all">{cliConfig}</p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-3 mb-5">
             {(connector.setupSteps || []).map((step, i) => (
               <div key={i} className="flex gap-3">
@@ -1161,6 +1226,20 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
               </p>
             </div>
           )}
+
+          <div className="mt-4 rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4">
+            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
+            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+              Open the MCP Server page and copy the relevant system prompt into your AI platform's system instructions.
+            </p>
+            <button
+              onClick={goToPrompt}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#117dff] px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-all"
+            >
+              <ExternalLink size={14} />
+              Open MCP Server Prompt
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
@@ -1176,7 +1255,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys }) {
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] transition-all flex items-center justify-center gap-2"
           >
             <Copy size={14} />
-            {copied ? 'Copied!' : 'Copy & Close'}
+            {copied ? 'Copied!' : 'Copy Setup'}
           </button>
         </div>
       </motion.div>
@@ -1585,6 +1664,10 @@ export default function Connectors() {
             allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
             teams={teams}
             onConnect={() => {
+              if (connector.isMcpClient) {
+                setMcpSetupConnector(connector);
+                return;
+              }
               // One-click OAuth path for any MCP-client tile flagged with
               // isPluginInstall (Claude Code → claude mcp add CLI) or
               // isOauthConnect (Claude Desktop / Cursor / VS Code / Antigravity
@@ -1608,9 +1691,7 @@ export default function Connectors() {
                 window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
                 return;
               }
-              if (connector.isMcpClient) {
-                setMcpSetupConnector(connector);
-              } else if (connector.oauthProvider) {
+              if (connector.oauthProvider) {
                 handleOAuthConnect(connector.oauthProvider);
               }
             }}

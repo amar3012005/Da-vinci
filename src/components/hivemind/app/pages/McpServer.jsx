@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import {
@@ -661,8 +662,16 @@ when this conversation is gone.`;
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function McpServer() {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('tools');
   const [promptVariant, setPromptVariant] = useState('coding');
+
+  useEffect(() => {
+    const requestedPrompt = searchParams.get('prompt');
+    if (requestedPrompt === 'coding' || requestedPrompt === 'agent') {
+      setPromptVariant(requestedPrompt);
+    }
+  }, [searchParams]);
 
   const TOTAL_TOOLS = MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length;
   const activePrompt = promptVariant === 'coding' ? SYSTEM_PROMPT_CODING : SYSTEM_PROMPT_AGENT;
