@@ -65,7 +65,7 @@ const CONNECTORS = [
   {
     id: 'claude-code',
     name: 'Claude Code',
-    description: 'Paste a pre-filled MCP config into Claude Code and keep HIVEMIND enabled by default',
+    description: 'Add HIVEMIND with the direct one-line HTTP MCP setup and keep it enabled by default',
     icon: Terminal,
     category: 'mcp_clients',
     status: 'available',
@@ -75,11 +75,11 @@ const CONNECTORS = [
     isMcpClient: true,
     setupTitle: 'Set up Claude Code MCP',
     setupSteps: [
-      'Copy the AI instruction and config below into Claude Code MCP settings',
+      'Copy the direct HTTP MCP setup below into Claude Code',
       'Enable HIVEMIND as a default MCP server for your sessions',
-      'Run the verify step here after saving the config to confirm the hosted endpoint is reachable',
+      'Run the verify step here after saving the config to confirm the direct endpoint is reachable',
     ],
-    configPath: 'Claude Code MCP settings.json',
+    configPath: 'Claude Code MCP setup',
   },
   {
     id: 'claude',
@@ -305,6 +305,41 @@ const CONNECTORS = [
     priority: 4,
   },
 ];
+
+const DIRECT_MCP_ENDPOINT = 'https://core.hivemind.davinciai.eu:8050/api/mcp';
+
+function isLegacyMcpEndpointUrl(url) {
+  return typeof url === 'string' && (url.includes('/api/mcp/servers/') || url.includes('/api/mcp/rpc'));
+}
+
+function isDirectMcpEndpointUrl(url) {
+  return typeof url === 'string' && (url === DIRECT_MCP_ENDPOINT || url.startsWith(`${DIRECT_MCP_ENDPOINT}?`));
+}
+
+function getEndpointUpdatedAt(endpoint) {
+  const value = endpoint?.updated_at || endpoint?.last_seen_at || endpoint?.created_at || 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function pickPreferredMcpEndpoint(endpointList, preferredName) {
+  if (!Array.isArray(endpointList) || endpointList.length === 0) return null;
+
+  const score = (endpoint) => {
+    let total = 0;
+    if (endpoint?.name === preferredName) total += 40;
+    if (isDirectMcpEndpointUrl(endpoint?.url)) total += 30;
+    if (endpoint?.healthy) total += 20;
+    if (isLegacyMcpEndpointUrl(endpoint?.url)) total -= 10;
+    return total;
+  };
+
+  return [...endpointList].sort((left, right) => {
+    const scoreDelta = score(right) - score(left);
+    if (scoreDelta !== 0) return scoreDelta;
+    return getEndpointUpdatedAt(right) - getEndpointUpdatedAt(left);
+  })[0] || null;
+}
 
 // ─── Status Components ──────────────────────────────────────────────────────
 
@@ -1085,19 +1120,21 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
   const jsonConfig = JSON.stringify({
     mcpServers: {
       hivemind: {
-        command: 'npx',
-        args: ['-y', '@amar_528/mcp-bridge', 'hosted', '--url', `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}`],
-        env: { HIVEMIND_API_KEY: apiKey, HIVEMIND_USER_ID: userId },
+        transport: 'http',
+        url: DIRECT_MCP_ENDPOINT,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
       },
     },
   }, null, 2);
 
-  const cliConfig = `npx -y @amar_528/mcp-bridge hosted --url "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}"`;
+  const cliConfig = `claude mcp add --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${apiKey}"`;
 
-  const config = jsonConfig;
+  const config = connector?.id === 'claude-code' ? cliConfig : jsonConfig;
 
   const aiSetupPrompt = [
-    'Set up the HIVEMIND MCP server using the provided config.',
+    'Set up the HIVEMIND MCP server using the provided direct HTTP config.',
     'Keep HIVEMIND enabled by default for this client and use it proactively in every session.',
     'Prefer HIVEMIND tools for memory recall, search, graph exploration, coding context, and web research whenever they are relevant.',
   ].join(' ');
@@ -1136,16 +1173,16 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
       await apiClient.registerMcpEndpoint({
         name: endpointName,
         transport: 'streamable-http',
-        url: `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}/rpc`,
+        url: DIRECT_MCP_ENDPOINT,
         bearer_token: apiKey,
-        headers: {
-          'X-User-Id': userId,
-        },
         adapter_type: connector.id,
         default_tags: ['hivemind', connector.id],
       });
       const status = await apiClient.getConnectorStatus();
-      const next = (status?.statuses || []).find((item) => item.name === endpointName || item.adapter_type === connector.id) || null;
+      const next = pickPreferredMcpEndpoint(
+        (status?.statuses || []).filter((item) => item.name === endpointName || item.adapter_type === connector.id),
+        endpointName,
+      );
       setVerificationState(next);
       onVerified?.(next);
     } catch (error) {
@@ -1255,10 +1292,10 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 }`}
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied!' : 'Copy Config'}
+                {copied ? 'Copied!' : connector?.id === 'claude-code' ? 'Copy Command' : 'Copy Config'}
               </button>
             </div>
-            <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre">
+            <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre-wrap break-words">
               {config}
             </pre>
           </div>
@@ -1288,7 +1325,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
               ) : null}
             </div>
             <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              After saving the config in your client, run verification here. We will inspect the hosted HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.
+              After saving the config in your client, run verification here. We will inspect the direct HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.
             </p>
             {verificationState?.error && (
               <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 font-['Space_Grotesk']">
@@ -1458,13 +1495,20 @@ export default function Connectors() {
 
   useEffect(() => {
     const mapped = {};
-    for (const endpoint of endpoints) {
-      if (endpoint?.adapter_type) {
-        mapped[endpoint.adapter_type] = endpoint;
+    for (const connector of CONNECTORS.filter((item) => item.mcpEndpointName)) {
+      const preferredName = `${connector.mcpEndpointName}-${user?.id || user?.userId}`;
+      const matches = endpoints.filter((endpoint) => (
+        endpoint?.adapter_type === connector.id
+        || endpoint?.name === connector.mcpEndpointName
+        || endpoint?.name === preferredName
+      ));
+      const bestMatch = pickPreferredMcpEndpoint(matches, preferredName);
+      if (bestMatch) {
+        mapped[connector.id] = bestMatch;
       }
     }
     setVerifiedMcpEndpoints(mapped);
-  }, [endpoints]);
+  }, [endpoints, user?.id, user?.userId]);
 
   const handleOAuthConnect = useCallback(async (provider) => {
     setConnectingProvider(provider);
@@ -1560,7 +1604,7 @@ export default function Connectors() {
     }
   }, [refetchOAuth]);
 
-  const npxCommand = 'npx -y @amar_528/mcp-bridge hosted';
+  const npxCommand = 'claude mcp add --transport http hivemind "https://core.hivemind.davinciai.eu:8050/api/mcp" --header "Authorization: Bearer YOUR_API_KEY"';
 
   // Required scopes per provider — when a connected token is missing any of
   // these, surface as needs_reauth so the user can reconnect to unlock the
@@ -1624,18 +1668,19 @@ export default function Connectors() {
       }
     } else if (c.mcpEndpointName) {
       // MCP Client connectors (Claude, VS Code, Antigravity)
-      // These are client-side configs - show as connected if user has the config
-      // Check both endpoints list and oauth connectors for hivemind connection
-      const live = verifiedMcpEndpoints[c.id]
-        || endpoints.find((ep) => ep.name === c.mcpEndpointName || ep.name === `${c.mcpEndpointName}-${user?.id || user?.userId}`);
+      const live = verifiedMcpEndpoints[c.id];
 
       if (live) {
+        const legacyNeedsRefresh = !live.healthy && isLegacyMcpEndpointUrl(live.url);
         return {
           ...c,
-          status: live.healthy ? 'connected' : 'error',
-          accountRef: live.url || 'Hosted HIVEMIND MCP',
+          status: legacyNeedsRefresh ? 'available' : live.healthy ? 'connected' : 'error',
+          accountRef: isDirectMcpEndpointUrl(live.url) ? 'Direct HTTP MCP' : (live.url || 'Hosted HIVEMIND MCP'),
           lastSyncAt: live.updated_at,
-          lastError: live.error,
+          lastError: legacyNeedsRefresh ? null : live.error,
+          description: legacyNeedsRefresh
+            ? `${c.description} — rerun setup to switch this client to the direct HTTP MCP endpoint.`
+            : c.description,
         };
       }
     }
@@ -1687,7 +1732,7 @@ export default function Connectors() {
               Quick Install
             </h2>
             <p className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk']">
-              Start the MCP bridge in one command
+              Add the direct HIVEMIND HTTP MCP server in one command
             </p>
           </div>
         </div>

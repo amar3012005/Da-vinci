@@ -827,23 +827,9 @@ export default function McpServer() {
               {
                 title: 'Claude Desktop / Claude Code',
                 icon: Terminal,
-                config: `{
-  "mcpServers": {
-    "hivemind": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@amar_528/mcp-bridge",
-        "hosted",
-        "--url",
-        "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/YOUR_USER_ID"
-      ],
-      "env": {
-        "HIVEMIND_API_KEY": "YOUR_API_KEY"
-      }
-    }
-  }
-}`,
+                config: `claude mcp add --transport http hivemind \
+  "https://core.hivemind.davinciai.eu:8050/api/mcp" \
+  --header "Authorization: Bearer YOUR_API_KEY"`,
               },
               {
                 title: 'Cursor / VS Code',
@@ -851,16 +837,10 @@ export default function McpServer() {
                 config: `{
   "mcpServers": {
     "hivemind": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@amar_528/mcp-bridge",
-        "hosted",
-        "--url",
-        "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/YOUR_USER_ID"
-      ],
-      "env": {
-        "HIVEMIND_API_KEY": "YOUR_API_KEY"
+      "transport": "http",
+      "url": "https://core.hivemind.davinciai.eu:8050/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -869,19 +849,17 @@ export default function McpServer() {
               {
                 title: 'REST API (Direct)',
                 icon: Globe,
-                config: `curl -X POST https://core.hivemind.davinciai.eu:8050/api/mcp/rpc \\
+                config: `curl -X POST https://core.hivemind.davinciai.eu:8050/api/mcp \
   -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "X-User-Id: YOUR_USER_ID" \\
   -H "Content-Type: application/json" \\
   -d '{"method":"tools/list","params":{},"id":1}'`,
               },
               {
                 title: 'HTTP (Any Client)',
                 icon: Link2,
-                config: `Endpoint: POST /api/mcp/rpc
+                config: `Endpoint: POST /api/mcp
 Headers:
   Authorization: Bearer YOUR_API_KEY
-  X-User-Id: YOUR_USER_ID
   Content-Type: application/json
 Body:
   {"method":"tools/call","params":{"name":"hivemind_recall","arguments":{"query":"..."}},"id":1}`,
