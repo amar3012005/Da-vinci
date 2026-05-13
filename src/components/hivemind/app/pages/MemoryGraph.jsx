@@ -437,18 +437,21 @@ export default function MemoryGraph() {
   // total node count so dense graphs don't overlap.
   const clusterCentroids = useMemo(() => {
     const out = {};
-    const K = clusters.length || 1;
-    // Radius: ~50 per cluster at 5+ clusters, smaller at low counts.
-    const R = K <= 1 ? 0 : Math.max(120, 40 * Math.sqrt(graphData.nodes.length));
-    clusters.forEach((c, i) => {
-      if (c.id === "_orphan") {
-        // Park orphans below the main constellation so they don't dilute groups.
-        out[c.id] = { x: 0, y: R * 1.4 };
-      } else {
-        const angle = (2 * Math.PI * i) / Math.max(K - (clusters.find(x => x.id === "_orphan") ? 1 : 0), 1);
-        out[c.id] = { x: Math.cos(angle) * R, y: Math.sin(angle) * R };
-      }
+    const realClusters = clusters.filter((c) => c.id !== "_orphan");
+    const K = realClusters.length || 1;
+    // Radius scales with cluster count + node volume so groups don't overlap.
+    // Bigger multiplier (60) spreads clusters across viewport instead of clumping.
+    const R = K <= 1 ? 0 : Math.max(200, 60 * Math.sqrt(graphData.nodes.length));
+    realClusters.forEach((c, i) => {
+      // Stagger start angle by -π/2 so first cluster sits at top, not 3 o'clock.
+      const angle = (-Math.PI / 2) + (2 * Math.PI * i) / Math.max(K, 1);
+      out[c.id] = { x: Math.cos(angle) * R, y: Math.sin(angle) * R };
     });
+    // Orphans get a much smaller radius — tucked inside the cluster ring, not outside.
+    const orphan = clusters.find((c) => c.id === "_orphan");
+    if (orphan) {
+      out["_orphan"] = { x: 0, y: 0 }; // center, weak force → they scatter loosely
+    }
     return out;
   }, [clusters, graphData.nodes.length]);
 
@@ -537,8 +540,10 @@ export default function MemoryGraph() {
           for (const node of graphData.nodes) {
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
-            const w =
-              node.clusterRole === 'hub' ? 1.4
+            // Orphans get very weak pull so they scatter loosely in center
+            const isOrphan = node.clusterId === '_orphan';
+            const w = isOrphan ? 0.05
+              : node.clusterRole === 'hub' ? 1.4
                 : node.clusterRole === 'bridge' ? 0.4
                 : 1.0;
             node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * baseStrength * w * alpha;
@@ -548,8 +553,9 @@ export default function MemoryGraph() {
           for (const node of graphData.nodes) {
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
-            const w =
-              node.clusterRole === 'hub' ? 1.4
+            const isOrphan = node.clusterId === '_orphan';
+            const w = isOrphan ? 0.05
+              : node.clusterRole === 'hub' ? 1.4
                 : node.clusterRole === 'bridge' ? 0.4
                 : 1.0;
             node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * baseStrength * w * alpha;
@@ -592,10 +598,12 @@ export default function MemoryGraph() {
     (node, ctx, globalScale) => {
       const isHighlighted =
         highlightNodes.size > 0 && highlightNodes.has(node.id);
+      const isOrphan = node.clusterId === "_orphan";
       const isDimmed =
         (highlightNodes.size > 0 && !highlightNodes.has(node.id)) ||
         (layerFilter !== "all" && !filteredNodes.has(node.id)) ||
-        (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge");
+        (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge") ||
+        isOrphan; // Orphans always dimmed so clusters dominate visually
       const isSelected = selectedNode?.id === node.id;
 
       // Color: cluster-first (Phase 3 — gives the mind-group identity), then
@@ -618,7 +626,8 @@ export default function MemoryGraph() {
 
       // Cluster role bumps — hubs anchor a group visually, bridges stay small
       // so they read as connectors, not group members.
-      if (node.clusterRole === "hub") radius = radius * 1.6;
+      if (isOrphan) radius = Math.max(radius * 0.5, 1.5); // Orphans tiny
+      else if (node.clusterRole === "hub") radius = radius * 1.6;
       else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.5);
 
       // Size adjustments per layer (overrides cluster sizing for special types)
