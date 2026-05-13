@@ -15,6 +15,15 @@ import {
   Users,
   GripHorizontal,
   CheckCircle2,
+  MessageCircle,
+  ArrowRight,
+  Zap,
+  Phone,
+  Video,
+  MoreHorizontal,
+  Smile,
+  Paperclip,
+  Mic,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -112,17 +121,35 @@ function StatusBadge({ status }) {
   );
 }
 
-function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen }) {
+function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectable, selected, onToggleSelect }) {
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const msgs = employee.metricsLast24h?.messages || 0;
   const tokens = employee.metricsLast24h?.tokens || 0;
+
+  const handleClick = () => {
+    if (selectable && onToggleSelect) {
+      onToggleSelect(employee);
+    } else if (onOpen) {
+      onOpen(employee);
+    }
+  };
+
   return (
-    <div className="bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#d4d0ca] transition-all cursor-pointer flex flex-col">
+    <div
+      onClick={handleClick}
+      className={`bg-white border rounded-[10px] p-4 transition-all cursor-pointer flex flex-col ${
+        selected
+          ? 'border-[#117dff] ring-2 ring-[#117dff]/20 shadow-[0_0_0_4px_rgba(17,125,255,0.08)]'
+          : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+      }`}
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center flex-shrink-0">
-            <Bot size={16} className="text-[#117dff]" />
+          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+            selected ? 'bg-[#117dff] border-[#117dff]' : 'bg-[#117dff]/10 border-[#117dff]/20'
+          }`}>
+            <Bot size={16} className={selected ? 'text-white' : 'text-[#117dff]'} />
           </div>
           <div className="min-w-0">
             <h3 className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</h3>
@@ -144,29 +171,31 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen }) {
         <span>{employee.model.split('-').slice(0, 2).join('-')}</span>
       </div>
 
-      <div className="flex items-center gap-1 mt-3">
-        {isRunning && (
-          <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-amber-700 hover:bg-amber-500/10">
-            <Pause size={11} /> Pause
+      {!selectable && (
+        <div className="flex items-center gap-1 mt-3">
+          {isRunning && (
+            <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
+              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-amber-700 hover:bg-amber-500/10">
+              <Pause size={11} /> Pause
+            </button>
+          )}
+          {isPaused && (
+            <button onClick={(e) => { e.stopPropagation(); onResume(employee); }}
+              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#16a34a] hover:bg-emerald-500/10">
+              <Play size={11} /> Resume
+            </button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
+            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#525252] hover:bg-[#f3f1ec] ml-auto">
+            Details <ChevronRight size={11} />
           </button>
-        )}
-        {isPaused && (
-          <button onClick={(e) => { e.stopPropagation(); onResume(employee); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#16a34a] hover:bg-emerald-500/10">
-            <Play size={11} /> Resume
+          <button onClick={(e) => { e.stopPropagation(); onArchive(employee); }}
+            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50"
+            title="Archive">
+            <Trash2 size={11} />
           </button>
-        )}
-        <button onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
-          className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#525252] hover:bg-[#f3f1ec] ml-auto">
-          Details <ChevronRight size={11} />
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onArchive(employee); }}
-          className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50"
-          title="Archive">
-          <Trash2 size={11} />
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -324,31 +353,37 @@ function EmployeeChatPreview({ employee, onClose }) {
   );
 }
 
-function WorkspacePreview({ employees, onClose }) {
-  const runningEmployees = employees.filter(emp => emp.status === 'running');
+function WorkspaceSlidePanel({ employees, onClose }) {
+  const runningEmployees = useMemo(() => employees.filter(emp => emp.status === 'running'), [employees]);
   const preferredRoster = useMemo(() => {
     const seeded = runningEmployees.filter((emp) => SEEDED_PERSONA_SLUGS.includes(emp.slug));
     return (seeded.length >= 2 ? seeded : runningEmployees).slice(0, 4);
   }, [runningEmployees]);
+
+  // ── Phase 1: Agent Picker ──────────────────────────────────
+  const [phase, setPhase] = useState('picker'); // 'picker' | 'chat'
   const [selectedSlugs, setSelectedSlugs] = useState(() => preferredRoster.slice(0, 2).map(emp => emp.slug));
   const [brief, setBrief] = useState('');
+
+  // ── Phase 2: WhatsApp Chat ─────────────────────────────────
   const [taskId, setTaskId] = useState(null);
   const [taskStatus, setTaskStatus] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     setSelectedSlugs((prev) => {
       const available = new Set(runningEmployees.map((emp) => emp.slug));
       const kept = prev.filter((slug) => available.has(slug));
-      if (kept.length >= 2) {
-        return kept;
-      }
+      if (kept.length >= 2) return kept;
       const fallback = preferredRoster.slice(0, 2).map((emp) => emp.slug);
       return fallback.length >= 2 ? fallback : kept;
     });
   }, [preferredRoster, runningEmployees]);
 
+  // Poll transcript when task is running
   useEffect(() => {
     if (!taskId) return;
     let active = true;
@@ -356,7 +391,7 @@ function WorkspacePreview({ employees, onClose }) {
       try {
         const [statusData, transcriptData] = await Promise.all([
           apiClient.getTeamTask(taskId),
-          apiClient.getTeamTaskTranscript(taskId, { limit: 100 }),
+          apiClient.getTeamTaskTranscript(taskId, { limit: 200 }),
         ]);
         if (!active) return;
         setTaskStatus(statusData);
@@ -371,10 +406,13 @@ function WorkspacePreview({ employees, onClose }) {
       }
     };
     poll();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [taskId]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const toggleSlug = (slug) => {
     setSelectedSlugs(prev => prev.includes(slug) ? prev.filter(item => item !== slug) : [...prev, slug]);
@@ -394,6 +432,7 @@ function WorkspacePreview({ employees, onClose }) {
       });
       setTaskId(data.task_id);
       setTaskStatus({ status: data.status, roster: data.roster });
+      setPhase('chat');
     } catch (e) {
       setTaskStatus({ status: 'failed', error: e.response?.data?.error || e.message });
     } finally {
@@ -401,108 +440,269 @@ function WorkspacePreview({ employees, onClose }) {
     }
   };
 
-  return (
-    <PreviewWindow title="Workspace Preview" subtitle="Group session and team transcript" onClose={onClose}>
-      <div className="space-y-4 p-4">
-        <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-[11px] text-[#525252]">
-          Pick 2 or more running employees, write a brief, and watch the workspace transcript stream in here. Simulation actions like posting updates, reading context, and reacting with emoji are part of the same workspace behavior, not a separate Slack-only mode.
-        </div>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3]">Simulation Task Ideas</p>
-          <div className="flex flex-wrap gap-2">
-            {TASK_TEMPLATES.map((template) => (
-              <button
-                key={template}
-                onClick={() => setBrief(template)}
-                className="rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-left text-[11px] text-[#525252] hover:border-[#117dff] hover:text-[#117dff]"
-              >
-                {template}
-              </button>
-            ))}
+  const selectedEmployees = useMemo(
+    () => runningEmployees.filter(emp => selectedSlugs.includes(emp.slug)),
+    [runningEmployees, selectedSlugs],
+  );
+
+  const isRunning = taskStatus?.status === 'running';
+  const isCompleted = taskStatus?.status === 'completed';
+
+  // ── Render: Agent Picker Phase ─────────────────────────────
+  if (phase === 'picker') {
+    return (
+      <div className="fixed inset-y-0 right-0 z-[120] w-[420px] bg-white border-l border-[#e3e0db] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#eae7e1] bg-[#faf9f4]">
+          <div>
+            <p className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">New Workspace Run</p>
+            <p className="text-[11px] text-[#737373]">Select agents and describe the task</p>
           </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-[#525252] hover:bg-[#e3e0db]/60">
+            <X size={16} />
+          </button>
         </div>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3]">Roster</p>
-          <div className="flex flex-wrap gap-2">
-            {runningEmployees.map(emp => (
-              <button
-                key={emp.id}
-                onClick={() => toggleSlug(emp.slug)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${selectedSlugs.includes(emp.slug) ? 'border-[#117dff] bg-[#117dff] text-white' : 'border-[#e3e0db] bg-white text-[#525252]'}`}
-              >
-                <span>{emp.name}</span>
-                {SEEDED_PERSONA_SLUGS.includes(emp.slug) && <span className="ml-1 opacity-80">human</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[#e3e0db] bg-white p-3">
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            rows={4}
-            placeholder="Ask the team to investigate, debate, and synthesize..."
-            className="w-full resize-none bg-transparent text-[12px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
-          />
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-[10px] text-[#a3a3a3]">Minimum 2 running employees required.</p>
-            <button onClick={runTask} disabled={loading || selectedSlugs.length < 2 || !brief.trim()} className="rounded-xl bg-[#117dff] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#0066e0] disabled:opacity-50">
-              {loading ? 'Starting...' : 'Run workspace'}
-            </button>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold text-[#0a0a0a]">Transcript</p>
-              <p className="text-[10px] text-[#a3a3a3]">Live workspace phase stream</p>
+
+        {/* Agent Selection */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">
+              Select Agents <span className="text-[#117dff]">({selectedSlugs.length} selected)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {runningEmployees.map(emp => (
+                <button
+                  key={emp.id}
+                  onClick={() => toggleSlug(emp.slug)}
+                  className={`text-left rounded-[10px] border p-3 transition-all ${
+                    selectedSlugs.includes(emp.slug)
+                      ? 'border-[#117dff] ring-2 ring-[#117dff]/20 bg-[#f5f9ff]'
+                      : 'border-[#e3e0db] bg-white hover:border-[#d4d0ca]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      selectedSlugs.includes(emp.slug) ? 'bg-[#117dff]' : 'bg-[#117dff]/10'
+                    }`}>
+                      <Bot size={13} className={selectedSlugs.includes(emp.slug) ? 'text-white' : 'text-[#117dff]'} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold text-[#0a0a0a] truncate">{emp.name}</p>
+                      <p className="text-[10px] text-[#a3a3a3]">{emp.role_archetype || 'generalist'}</p>
+                    </div>
+                  </div>
+                  {SEEDED_PERSONA_SLUGS.includes(emp.slug) && (
+                    <span className="inline-block mt-1 rounded-full bg-[#f0eadc] px-2 py-0.5 text-[9px] text-[#8a6b2f]">human</span>
+                  )}
+                </button>
+              ))}
             </div>
-            {taskStatus?.status && (
-              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${taskStatus.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : taskStatus.status === 'failed' ? 'bg-red-100 text-[#dc2626]' : 'bg-blue-100 text-blue-700'}`}>
-                {taskStatus.status}
-              </span>
+          </div>
+
+          {/* Task Brief */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">Task Brief</p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {TASK_TEMPLATES.map((template, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBrief(template)}
+                  className="rounded-full border border-[#e3e0db] bg-white px-2.5 py-1 text-left text-[10px] text-[#525252] hover:border-[#117dff] hover:text-[#117dff]"
+                >
+                  {template.slice(0, 70)}...
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              rows={4}
+              placeholder="Describe what the team should investigate, debate, and decide..."
+              className="w-full resize-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-[12px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff]"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[#eae7e1] px-5 py-4 bg-[#faf9f4]">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] text-[#a3a3a3]">
+              {selectedSlugs.length < 2 ? 'Select at least 2 agents' : `${selectedSlugs.length} agents ready`}
+            </p>
+            {selectedSlugs.length >= 2 && (
+              <p className="text-[10px] text-[#737373]">
+                {selectedEmployees.map(e => e.name).join(', ')}
+              </p>
             )}
           </div>
-          {taskStatus?.error && (
-            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-[11px] text-[#dc2626]">{taskStatus.error}</div>
-          )}
-          <div className="max-h-[320px] space-y-2 overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[#e3e0db] bg-white px-4 py-8 text-center text-[12px] text-[#a3a3a3]">
-                No transcript yet. Start a workspace run to stream the team conversation.
-              </div>
-            ) : messages.map((msg) => {
-              const isAction = msg.kind === 'action';
-              const isSystem = msg.kind === 'system';
-              const cardClass = isAction
-                ? 'border-[#d7e7ff] bg-[#f5f9ff]'
-                : isSystem
-                  ? 'border-[#ece7da] bg-[#faf9f4]'
-                  : 'border-[#e3e0db] bg-white';
-              const bodyClass = isAction ? 'text-[#2457a6]' : 'text-[#525252]';
-              return (
-              <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className={`rounded-xl border px-3 py-2 ${cardClass}`}>
-                <div className="mb-1 flex items-center gap-2 text-[10px] text-[#a3a3a3]">
-                  <span className="font-semibold text-[#0a0a0a]">{msg.sender_name || 'TeamRoom'}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 ${isAction ? 'bg-[#dbeafe] text-[#2457a6]' : isSystem ? 'bg-[#f0eadc] text-[#8a6b2f]' : 'bg-[#f3f1ec] text-[#737373]'}`}>{msg.kind}</span>
-                  <span>{msg.round_num ? `r${msg.round_num}` : ''}</span>
-                </div>
-                <div className={`text-[12px] leading-relaxed ${bodyClass}`}>{msg.content}</div>
-              </div>
-            )})}
-          </div>
-          {taskStatus?.final_answer && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800">
-              <CheckCircle2 size={14} className="mt-0.5" />
-              <div>
-                <p className="font-semibold">Final team answer</p>
-                <p className="mt-1 leading-relaxed">{taskStatus.final_answer}</p>
-              </div>
-            </div>
-          )}
+          <button
+            onClick={runTask}
+            disabled={loading || selectedSlugs.length < 2 || !brief.trim()}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#117dff] px-4 py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
+          >
+            {loading ? (
+              <><RefreshCw size={14} className="animate-spin" /> Starting...</>
+            ) : (
+              <><Zap size={14} /> Run Task</>
+            )}
+          </button>
         </div>
       </div>
-    </PreviewWindow>
+    );
+  }
+
+  // ── Render: WhatsApp Chat Phase ────────────────────────────
+  const groupName = selectedEmployees.map(e => e.name).join(', ');
+  const groupAvatars = selectedEmployees.slice(0, 4);
+
+  return (
+    <div className="fixed inset-y-0 right-0 z-[120] w-[420px] bg-[#efeae2] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight">
+      {/* WhatsApp-style header */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-[#f0f2f5] border-b border-[#e2e2e2]">
+        <button onClick={() => setPhase('picker')} className="rounded-lg p-1.5 text-[#54656f] hover:bg-[#e2e2e2]">
+          <ArrowRight size={18} className="rotate-180" />
+        </button>
+        <div className="flex -space-x-2">
+          {groupAvatars.map((emp, i) => (
+            <div key={emp.id} className="w-8 h-8 rounded-full bg-[#117dff] border-2 border-[#f0f2f5] flex items-center justify-center" style={{ zIndex: 4 - i }}>
+              <Bot size={13} className="text-white" />
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-[#111b21] truncate">{groupName}</p>
+          <p className="text-[11px] text-[#667781]">
+            {isRunning ? `${selectedSlugs.length} agents collaborating...` : isCompleted ? 'Task completed' : taskStatus?.status || 'preparing...'}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Phone size={17} /></button>
+          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Video size={17} /></button>
+          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><MoreHorizontal size={17} /></button>
+        </div>
+      </div>
+
+      {/* Chat messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d0ca\' fill-opacity=\'0.15\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
+        {taskStatus?.error && (
+          <div className="rounded-xl bg-[#fce4e4] px-4 py-3 text-[12px] text-[#dc2626] text-center">{taskStatus.error}</div>
+        )}
+
+        {messages.length === 0 && !isRunning && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center px-6">
+              <div className="w-16 h-16 rounded-full bg-[#d9fdd3] mx-auto mb-3 flex items-center justify-center">
+                <MessageCircle size={28} className="text-[#005c4b]" />
+              </div>
+              <p className="text-[13px] text-[#667781]">Task is starting. Messages will appear here as agents collaborate.</p>
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg) => {
+          const isAction = msg.kind === 'action';
+          const isSystem = msg.kind === 'system';
+          const senderName = msg.sender_name || 'TeamRoom';
+          const senderInitial = senderName.charAt(0).toUpperCase();
+
+          if (isSystem) {
+            return (
+              <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex justify-center">
+                <span className="rounded-lg bg-[#e2f3fb] px-3 py-1 text-[10px] text-[#3b4a54] shadow-sm">{msg.content}</span>
+              </div>
+            );
+          }
+
+          if (isAction) {
+            return (
+              <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex justify-center">
+                <span className="rounded-full bg-[#dbeafe] px-3 py-1 text-[10px] text-[#2457a6] italic">{msg.content}</span>
+              </div>
+            );
+          }
+
+          return (
+            <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex items-end gap-2">
+              <div className="w-7 h-7 rounded-full bg-[#117dff] flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] font-bold text-white">{senderInitial}</span>
+              </div>
+              <div className="max-w-[78%]">
+                <p className="text-[11px] font-semibold text-[#06cf9c] mb-0.5">{senderName}</p>
+                <div className="rounded-lg rounded-tl-none bg-white px-3 py-2 shadow-sm">
+                  <p className="text-[12px] leading-relaxed text-[#303030] whitespace-pre-wrap">{msg.content}</p>
+                  <span className="block text-right text-[9px] text-[#667781] mt-1">
+                    {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {isRunning && (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#e2e2e2] flex items-center justify-center">
+              <span className="text-[10px] text-[#667781]">...</span>
+            </div>
+            <span className="text-[11px] text-[#667781] italic">agents are working...</span>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Final answer banner */}
+      {taskStatus?.final_answer && (
+        <div className="mx-4 mb-2 rounded-xl bg-[#d9fdd3] px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 size={14} className="text-[#005c4b]" />
+            <span className="text-[11px] font-semibold text-[#005c4b]">Team Decision</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-[#025c4b]">{taskStatus.final_answer}</p>
+        </div>
+      )}
+
+      {/* WhatsApp-style input bar */}
+      <div className="flex items-end gap-2 px-3 py-2 bg-[#f0f2f5] border-t border-[#e2e2e2]">
+        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Smile size={20} /></button>
+        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Paperclip size={20} /></button>
+        <div className="flex-1 rounded-2xl bg-white px-4 py-2">
+          <textarea
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (chatInput.trim() && !isRunning) {
+                  // Re-run with new brief
+                  setBrief(chatInput.trim());
+                  setChatInput('');
+                  runTask();
+                }
+              }
+            }}
+            rows={1}
+            placeholder={isRunning ? 'Agents are working...' : isCompleted ? 'Type a new task to re-run...' : 'Type a message'}
+            disabled={isRunning}
+            className="w-full resize-none bg-transparent text-[13px] text-[#111b21] outline-none placeholder:text-[#667781] disabled:opacity-50"
+          />
+        </div>
+        <button
+          onClick={() => {
+            if (chatInput.trim() && !isRunning) {
+              setBrief(chatInput.trim());
+              setChatInput('');
+              runTask();
+            }
+          }}
+          disabled={isRunning || !chatInput.trim()}
+          className="rounded-full p-2.5 text-white bg-[#00a884] hover:bg-[#06cf9c] disabled:opacity-40"
+        >
+          <Send size={18} />
+        </button>
+        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Mic size={20} /></button>
+      </div>
+    </div>
   );
 }
 
@@ -880,7 +1080,8 @@ export default function DigitalEmployees() {
   const [createOpen, setCreateOpen] = useState(false);
   const [surface, setSurface] = useState('employee');
   const [chatEmployee, setChatEmployee] = useState(null);
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [slidePanelOpen, setSlidePanelOpen] = useState(false);
+  const [workspaceSelectedSlugs, setWorkspaceSelectedSlugs] = useState([]);
   const [seeding, setSeeding] = useState(false);
 
   const fetch = useCallback(async () => {
@@ -937,7 +1138,7 @@ export default function DigitalEmployees() {
       }
       await fetch();
       setSurface('workspace');
-      setWorkspaceOpen(true);
+      setSlidePanelOpen(true);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
@@ -949,11 +1150,18 @@ export default function DigitalEmployees() {
     setChatEmployee(emp);
   }
 
+  function handleToggleWorkspaceSelect(emp) {
+    setWorkspaceSelectedSlugs(prev =>
+      prev.includes(emp.slug) ? prev.filter(s => s !== emp.slug) : [...prev, emp.slug]
+    );
+  }
+
   const running = employees.filter(e => e.status === 'running').length;
   const paused = employees.filter(e => e.status === 'paused').length;
   const draft = employees.filter(e => e.status === 'draft').length;
 
   const runningEmployees = useMemo(() => employees.filter(e => e.status === 'running'), [employees]);
+  const isWorkspaceMode = surface === 'workspace';
 
   return (
     <div className="max-w-7xl mx-auto space-y-4">
@@ -970,14 +1178,17 @@ export default function DigitalEmployees() {
           <WorkspaceToggle value={surface} onChange={(next) => {
             setSurface(next);
             if (next === 'workspace') {
-              setWorkspaceOpen(true);
+              setSlidePanelOpen(true);
               setChatEmployee(null);
+            } else {
+              setSlidePanelOpen(false);
+              setWorkspaceSelectedSlugs([]);
             }
           }} />
         </div>
         <div className="flex justify-end gap-2">
-          {surface === 'workspace' && (
-            <button onClick={() => setWorkspaceOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
+          {isWorkspaceMode && (
+            <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
               <Users size={13} />
               Workspace panel
             </button>
@@ -992,11 +1203,22 @@ export default function DigitalEmployees() {
             <Users size={13} />
             {seeding ? 'Seeding...' : 'Seed Human Team'}
           </button>
-          <button onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]">
-            <Plus size={13} />
-            New Employee
-          </button>
+          {isWorkspaceMode ? (
+            <button
+              onClick={() => setSlidePanelOpen(true)}
+              disabled={workspaceSelectedSlugs.length < 2}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0] disabled:opacity-50"
+            >
+              <Zap size={13} />
+              Run Task{workspaceSelectedSlugs.length >= 2 ? ` (${workspaceSelectedSlugs.length})` : ''}
+            </button>
+          ) : (
+            <button onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]">
+              <Plus size={13} />
+              New Employee
+            </button>
+          )}
         </div>
       </header>
 
@@ -1020,20 +1242,28 @@ export default function DigitalEmployees() {
         </div>
       ) : (
         <>
-          {surface === 'workspace' && (
+          {isWorkspaceMode && (
             <div className="rounded-[10px] border border-[#e3e0db] bg-white p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Workspace mode</h2>
-                  <p className="mt-1 text-[12px] text-[#737373]">Use the right-side preview window to run a team task across 2 or more running employees and watch the transcript stream in place.</p>
+                  <p className="mt-1 text-[12px] text-[#737373]">
+                    Click agent cards to select them, then open the slide panel or hit Run Task. Selected agents get a blue border.
+                  </p>
                 </div>
-                <button onClick={() => setWorkspaceOpen(true)} className="rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] text-white hover:bg-[#0066e0]">
+                <button onClick={() => setSlidePanelOpen(true)} className="rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] text-white hover:bg-[#0066e0]">
                   Open workspace
                 </button>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {runningEmployees.map(emp => (
-                  <span key={emp.id} className="rounded-full border border-[#e3e0db] bg-[#faf9f4] px-3 py-1.5 text-[11px] text-[#525252]">
+                  <span key={emp.id} className={`rounded-full border px-3 py-1.5 text-[11px] cursor-pointer transition-all ${
+                    workspaceSelectedSlugs.includes(emp.slug)
+                      ? 'border-[#117dff] bg-[#f5f9ff] text-[#117dff] font-semibold'
+                      : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252]'
+                  }`}
+                    onClick={() => handleToggleWorkspaceSelect(emp)}
+                  >
                     {emp.name}
                   </span>
                 ))}
@@ -1050,6 +1280,9 @@ export default function DigitalEmployees() {
                 onResume={handleResume}
                 onArchive={handleArchive}
                 onOpen={handleOpen}
+                selectable={isWorkspaceMode}
+                selected={workspaceSelectedSlugs.includes(emp.slug)}
+                onToggleSelect={handleToggleWorkspaceSelect}
               />
             ))}
           </div>
@@ -1067,8 +1300,8 @@ export default function DigitalEmployees() {
         <EmployeeChatPreview employee={chatEmployee} onClose={() => setChatEmployee(null)} />
       )}
 
-      {workspaceOpen && (
-        <WorkspacePreview employees={employees} onClose={() => setWorkspaceOpen(false)} />
+      {slidePanelOpen && (
+        <WorkspaceSlidePanel employees={employees} onClose={() => setSlidePanelOpen(false)} />
       )}
     </div>
   );
