@@ -721,14 +721,12 @@ export default function MemoryGraph() {
         isOrphan; // Orphans always dimmed so clusters dominate visually
       const isSelected = selectedNode?.id === node.id;
 
-      // Color: cluster-first (Phase 3 — gives the mind-group identity), then
-      // layer-specific for the special node types we still want to call out
-      // (TARA insights, promoted risks, etc.), then user-specific for team
-      // scope, finally fall through to the legacy type colour.
-      const clusterColor = clusterColorMap[node.clusterId];
+      // Color: type/layer-first (preserves semantic meaning of colors).
+      // Cluster identity shown through position + hub ring color, NOT node fill.
+      // This way: blue = fact, red = decision, violet = goal, etc. — always.
       const layerColor = LAYER_COLORS[node.nodeLayer];
+      const clusterColor = clusterColorMap[node.clusterId]; // used for hub rings only
       const baseColor =
-        clusterColor ||
         layerColor ||
         (scope === "team" || scope === "all"
           ? userColorMap[node.userId] || TYPE_COLORS.default
@@ -809,21 +807,22 @@ export default function MemoryGraph() {
         ctx.stroke();
       }
 
-      // Hub-role ring — make cluster anchors readable at thumbnail scale.
+      // Hub-role ring — uses CLUSTER color so you can see which lobe it anchors
+      // while the node fill stays type-colored for semantic meaning.
       if (node.clusterRole === "hub" && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
-        ctx.strokeStyle = hexToRgba(baseColor, 0.7);
-        ctx.lineWidth = 1.5 / globalScale;
+        ctx.arc(node.x, node.y, radius + 2.5, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(clusterColor || baseColor, 0.8);
+        ctx.lineWidth = 2.5 / globalScale;
         ctx.stroke();
       }
-      // Bridge nodes — small dashed outline so reviewers spot inter-cluster links.
+      // Bridge nodes — dashed cluster-colored outline.
       if (node.clusterRole === "bridge" && !isDimmed) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius + 1.5, 0, 2 * Math.PI);
-        ctx.strokeStyle = hexToRgba(baseColor, 0.5);
-        ctx.lineWidth = 1 / globalScale;
-        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = hexToRgba(clusterColor || baseColor, 0.6);
+        ctx.lineWidth = 1.2 / globalScale;
+        ctx.setLineDash([3, 2]);
         ctx.stroke();
         ctx.setLineDash([]);
       }
