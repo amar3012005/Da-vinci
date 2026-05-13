@@ -122,7 +122,7 @@ const PLATFORMS = {
         `Endpoint: POST https://core.hivemind.davinciai.eu:8050/api/mcp/rpc`,
         `Headers:`,
         `  Authorization: Bearer ${apiKey}`,
-        `  X-HM-User-Id: ${userId}`,
+        `  X-User-Id: ${userId}`,
         `  Content-Type: application/json`,
         ``,
         `Sample body:`,

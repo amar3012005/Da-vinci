@@ -789,6 +789,7 @@ export default function McpServer() {
                 icon: Globe,
                 config: `curl -X POST https://core.hivemind.davinciai.eu:8050/api/mcp/rpc \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "X-User-Id: YOUR_USER_ID" \\
   -H "Content-Type: application/json" \\
   -d '{"method":"tools/list","params":{},"id":1}'`,
               },
@@ -798,6 +799,7 @@ export default function McpServer() {
                 config: `Endpoint: POST /api/mcp/rpc
 Headers:
   Authorization: Bearer YOUR_API_KEY
+  X-User-Id: YOUR_USER_ID
   Content-Type: application/json
 Body:
   {"method":"tools/call","params":{"name":"hivemind_recall","arguments":{"query":"..."}},"id":1}`,
