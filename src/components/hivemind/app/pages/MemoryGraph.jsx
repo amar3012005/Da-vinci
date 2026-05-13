@@ -435,22 +435,28 @@ export default function MemoryGraph() {
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
   // total node count so dense graphs don't overlap.
+  // Brain-like layout: clusters get organic initial positions seeded by a
+  // golden-angle spiral (like sunflower seeds). This avoids the rigid ring
+  // that made everything arc-shaped. Orphans get random scatter seeds.
   const clusterCentroids = useMemo(() => {
     const out = {};
     const realClusters = clusters.filter((c) => c.id !== "_orphan");
     const K = realClusters.length || 1;
-    // Radius scales with cluster count + node volume so groups don't overlap.
-    // Bigger multiplier (60) spreads clusters across viewport instead of clumping.
-    const R = K <= 1 ? 0 : Math.max(200, 60 * Math.sqrt(graphData.nodes.length));
-    realClusters.forEach((c, i) => {
-      // Stagger start angle by -π/2 so first cluster sits at top, not 3 o'clock.
-      const angle = (-Math.PI / 2) + (2 * Math.PI * i) / Math.max(K, 1);
-      out[c.id] = { x: Math.cos(angle) * R, y: Math.sin(angle) * R };
-    });
-    // Orphans get a much smaller radius — tucked inside the cluster ring, not outside.
-    const orphan = clusters.find((c) => c.id === "_orphan");
-    if (orphan) {
-      out["_orphan"] = { x: 0, y: 0 }; // center, weak force → they scatter loosely
+    // Spread radius scales with node count — bigger brain, bigger spread.
+    const R = K <= 1 ? 0 : Math.max(250, 55 * Math.sqrt(graphData.nodes.length));
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5°
+    realClusters
+      .sort((a, b) => (b.size || 0) - (a.size || 0)) // biggest clusters closer to center
+      .forEach((c, i) => {
+        // Sunflower spiral: angle = i * golden_angle, r = R * sqrt(i/K)
+        // Gives organic non-overlapping spread — no two clusters at same angle.
+        const angle = i * goldenAngle;
+        const r = R * Math.sqrt((i + 1) / (K + 1));
+        out[c.id] = { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
+      });
+    // Orphans: no fixed centroid, just gentle push outward
+    if (clusters.find((c) => c.id === "_orphan")) {
+      out["_orphan"] = { x: 0, y: 0 };
     }
     return out;
   }, [clusters, graphData.nodes.length]);
@@ -505,71 +511,144 @@ export default function MemoryGraph() {
     }
   }, [searchQuery, graphData.nodes]);
 
-  // Tune force-graph physics so the layout spreads instead of bunching when the
-  // node count grows. Scales repulsion and link distance with sqrt(nodeCount).
-  // Additionally installs custom forceX/forceY anchored to each node's cluster
-  // centroid (Phase 3 of GRAPH_MEMORY_UPGRADE) — this is what turns the
-  // hairball into mind-group constellations.
+  // ── Brain-like force physics ──
+  // Goal: clusters spread organically like brain lobes, each hub radiates
+  // children in all directions (dendrites), bridges stretch between lobes,
+  // orphans float as faint background dust.
   useEffect(() => {
     if (!graphRef.current) return;
     const n = graphData.nodes.length;
     if (n === 0) return;
     try {
-      const charge = graphRef.current.d3Force?.('charge');
-      const link = graphRef.current.d3Force?.('link');
+      const fg = graphRef.current;
+
+      // 1. Charge: strong repulsion to push clusters apart. Use cluster-aware
+      //    strength — nodes in SAME cluster repel less (so they stay grouped)
+      //    while nodes in DIFFERENT clusters repel more (so lobes separate).
+      const charge = fg.d3Force?.('charge');
       if (charge?.strength) {
-        // Bigger graph → stronger repulsion. Cap at -300 to avoid blowing up.
-        const strength = Math.max(-300, Math.min(-30, -30 - Math.sqrt(n) * 4));
-        charge.strength(strength);
-      }
-      if (link?.distance) {
-        // Bigger graph → longer links so clusters separate.
-        const distance = Math.max(30, Math.min(180, 30 + Math.sqrt(n) * 1.5));
-        link.distance(distance);
+        charge.strength((node) => {
+          if (node.clusterId === '_orphan') return -5; // orphans: barely repel
+          if (node.clusterRole === 'hub') return -120; // hubs push hard to make space
+          return -50; // spokes: moderate repulsion
+        });
       }
 
-      // ── ForceCluster — pull each node toward its cluster centroid ──
-      // Strength scales with (1 - bridgeScore) so bridge nodes float between
-      // groups; hub nodes get a stronger pull so they anchor their cluster.
-      if (clusters.length > 1 && graphRef.current.d3Force) {
-        const baseStrength = 0.18;
-        // Install custom forceX/forceY referencing centroid coords. Each tick the
-        // closures read the node's clusterId — works because the node objects
-        // are the same instances d3 mutates.
-        graphRef.current.d3Force('clusterX', (alpha) => {
+      // 2. Links: shorter within cluster, longer across clusters
+      const link = fg.d3Force?.('link');
+      if (link?.distance) {
+        link.distance((edge) => {
+          const src = edge.source;
+          const tgt = edge.target;
+          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
+          if (sameCluster) return 25 + Math.sqrt(n) * 0.5; // tight within lobe
+          return 80 + Math.sqrt(n) * 2; // long bridge between lobes
+        });
+        link.strength((edge) => {
+          const src = edge.source;
+          const tgt = edge.target;
+          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
+          return sameCluster ? 0.7 : 0.15; // strong intra-cluster, weak inter
+        });
+      }
+
+      // 3. Cluster centroid pull — gentle, organic. Lower than before so
+      //    d3 charge/link forces dominate the micro-layout while centroids
+      //    only set the macro-layout (which lobe goes where).
+      if (clusters.length > 1 && fg.d3Force) {
+        fg.d3Force('clusterX', (alpha) => {
+          const pull = 0.08; // gentler than before (was 0.18)
           for (const node of graphData.nodes) {
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
-            // Orphans get very weak pull so they scatter loosely in center
             const isOrphan = node.clusterId === '_orphan';
-            const w = isOrphan ? 0.05
-              : node.clusterRole === 'hub' ? 1.4
-                : node.clusterRole === 'bridge' ? 0.4
-                : 1.0;
-            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * baseStrength * w * alpha;
+            // Orphans: random jitter outward instead of ring formation
+            if (isOrphan) {
+              node.vx = (node.vx || 0) + (Math.random() - 0.5) * 0.3 * alpha;
+              continue;
+            }
+            const w = node.clusterRole === 'hub' ? 1.2
+              : node.clusterRole === 'bridge' ? 0.3
+              : 0.8;
+            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * w * alpha;
           }
         });
-        graphRef.current.d3Force('clusterY', (alpha) => {
+        fg.d3Force('clusterY', (alpha) => {
+          const pull = 0.08;
           for (const node of graphData.nodes) {
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
             const isOrphan = node.clusterId === '_orphan';
-            const w = isOrphan ? 0.05
-              : node.clusterRole === 'hub' ? 1.4
-                : node.clusterRole === 'bridge' ? 0.4
-                : 1.0;
-            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * baseStrength * w * alpha;
+            if (isOrphan) {
+              node.vy = (node.vy || 0) + (Math.random() - 0.5) * 0.3 * alpha;
+              continue;
+            }
+            const w = node.clusterRole === 'hub' ? 1.2
+              : node.clusterRole === 'bridge' ? 0.3
+              : 0.8;
+            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * w * alpha;
+          }
+        });
+
+        // 4. Anti-collapse: push clusters apart if their centroids get too close.
+        //    This prevents lobes from merging into one blob.
+        fg.d3Force('clusterRepel', (alpha) => {
+          const minDist = 100 + Math.sqrt(n) * 3;
+          const ids = Object.keys(clusterCentroids).filter((id) => id !== '_orphan');
+          // Build live centroid from actual node positions
+          const liveCentroids = {};
+          const counts = {};
+          for (const node of graphData.nodes) {
+            if (!node.clusterId || node.clusterId === '_orphan') continue;
+            if (!liveCentroids[node.clusterId]) {
+              liveCentroids[node.clusterId] = { x: 0, y: 0 };
+              counts[node.clusterId] = 0;
+            }
+            liveCentroids[node.clusterId].x += node.x || 0;
+            liveCentroids[node.clusterId].y += node.y || 0;
+            counts[node.clusterId]++;
+          }
+          for (const id of ids) {
+            if (counts[id]) {
+              liveCentroids[id].x /= counts[id];
+              liveCentroids[id].y /= counts[id];
+            }
+          }
+          // Push apart any two clusters whose live centroids are too close
+          for (let i = 0; i < ids.length; i++) {
+            for (let j = i + 1; j < ids.length; j++) {
+              const a = liveCentroids[ids[i]];
+              const b = liveCentroids[ids[j]];
+              if (!a || !b) continue;
+              const dx = (a.x || 0) - (b.x || 0);
+              const dy = (a.y || 0) - (b.y || 0);
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              if (dist < minDist) {
+                const push = (minDist - dist) * 0.02 * alpha;
+                const ux = (dx / dist) * push;
+                const uy = (dy / dist) * push;
+                // Apply to all nodes in each cluster
+                for (const node of graphData.nodes) {
+                  if (node.clusterId === ids[i]) {
+                    node.vx = (node.vx || 0) + ux;
+                    node.vy = (node.vy || 0) + uy;
+                  } else if (node.clusterId === ids[j]) {
+                    node.vx = (node.vx || 0) - ux;
+                    node.vy = (node.vy || 0) - uy;
+                  }
+                }
+              }
+            }
           }
         });
       } else {
-        // Strip cluster forces when only one or zero clusters present (else they
-        // pin everything to origin and the layout collapses).
-        if (graphRef.current.d3Force) {
-          try { graphRef.current.d3Force('clusterX', null); } catch (_e) { /* noop */ }
-          try { graphRef.current.d3Force('clusterY', null); } catch (_e) { /* noop */ }
+        if (fg.d3Force) {
+          try { fg.d3Force('clusterX', null); } catch (_e) { /* noop */ }
+          try { fg.d3Force('clusterY', null); } catch (_e) { /* noop */ }
+          try { fg.d3Force('clusterRepel', null); } catch (_e) { /* noop */ }
         }
       }
-      graphRef.current.d3ReheatSimulation?.();
+      fg.d3ReheatSimulation?.();
     } catch (_e) {
       // d3Force may not exist yet on first render — re-run when nodes arrive.
     }
