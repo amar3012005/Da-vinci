@@ -83,6 +83,25 @@ const USER_COLORS = [
   "#525252",
 ];
 
+// Cluster palette — distinct enough to read at thumbnail scale.
+// Keeps the existing light-theme aesthetic; no neon, no dark mode.
+const CLUSTER_COLORS = [
+  "#117dff", // blue
+  "#16a34a", // green
+  "#d97706", // amber
+  "#8b5cf6", // violet
+  "#dc2626", // red
+  "#0891b2", // cyan
+  "#db2777", // pink
+  "#65a30d", // lime
+  "#7c3aed", // purple
+  "#ea580c", // orange
+  "#0d9488", // teal
+  "#9333ea", // magenta
+];
+
+const ORPHAN_COLOR = "#a3a3a3"; // for `_orphan` bucket (no edges)
+
 /* ─── Helpers ────────────────────────────────────────────────────── */
 function truncate(str, len = 80) {
   if (!str) return "";
@@ -312,6 +331,7 @@ export default function MemoryGraph() {
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
@@ -382,6 +402,54 @@ export default function MemoryGraph() {
     }, {});
   }, [graphData.nodes]);
 
+  // ── Cluster bookkeeping (Phase 2 of GRAPH_MEMORY_UPGRADE) ──
+  // The backend now stamps each node with clusterId/clusterRole/hubScore.
+  // We need: (a) stable color per cluster (b) per-cluster centroid coords
+  // for the forceCluster pull (c) a sorted cluster list for the sidebar/filter.
+  const clusters = useMemo(() => {
+    const fromMeta = meta?.clusters;
+    if (Array.isArray(fromMeta) && fromMeta.length > 0) return fromMeta;
+    // Fallback: derive from nodes if /api/graph didn't supply meta yet.
+    const sizes = new Map();
+    for (const n of graphData.nodes) {
+      if (!n.clusterId) continue;
+      sizes.set(n.clusterId, (sizes.get(n.clusterId) || 0) + 1);
+    }
+    return [...sizes.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, size]) => ({ id, size, label: null, topTags: [], hubNodeId: null }));
+  }, [meta, graphData.nodes]);
+
+  const clusterColorMap = useMemo(() => {
+    const out = {};
+    clusters.forEach((c, i) => {
+      out[c.id] = c.id === "_orphan"
+        ? ORPHAN_COLOR
+        : CLUSTER_COLORS[i % CLUSTER_COLORS.length];
+    });
+    return out;
+  }, [clusters]);
+
+  // Per-cluster centroid layout — arrange cluster anchors on a circle so
+  // forceCluster pulls each node toward its group. Radius scales with the
+  // total node count so dense graphs don't overlap.
+  const clusterCentroids = useMemo(() => {
+    const out = {};
+    const K = clusters.length || 1;
+    // Radius: ~50 per cluster at 5+ clusters, smaller at low counts.
+    const R = K <= 1 ? 0 : Math.max(120, 40 * Math.sqrt(graphData.nodes.length));
+    clusters.forEach((c, i) => {
+      if (c.id === "_orphan") {
+        // Park orphans below the main constellation so they don't dilute groups.
+        out[c.id] = { x: 0, y: R * 1.4 };
+      } else {
+        const angle = (2 * Math.PI * i) / Math.max(K - (clusters.find(x => x.id === "_orphan") ? 1 : 0), 1);
+        out[c.id] = { x: Math.cos(angle) * R, y: Math.sin(angle) * R };
+      }
+    });
+    return out;
+  }, [clusters, graphData.nodes.length]);
+
   // Filtered nodes based on layer filter
   const filteredNodes = useMemo(() => {
     if (layerFilter === "all") return new Set(graphData.nodes.map((n) => n.id));
@@ -434,6 +502,9 @@ export default function MemoryGraph() {
 
   // Tune force-graph physics so the layout spreads instead of bunching when the
   // node count grows. Scales repulsion and link distance with sqrt(nodeCount).
+  // Additionally installs custom forceX/forceY anchored to each node's cluster
+  // centroid (Phase 3 of GRAPH_MEMORY_UPGRADE) — this is what turns the
+  // hairball into mind-group constellations.
   useEffect(() => {
     if (!graphRef.current) return;
     const n = graphData.nodes.length;
@@ -451,11 +522,50 @@ export default function MemoryGraph() {
         const distance = Math.max(30, Math.min(180, 30 + Math.sqrt(n) * 1.5));
         link.distance(distance);
       }
+
+      // ── ForceCluster — pull each node toward its cluster centroid ──
+      // Strength scales with (1 - bridgeScore) so bridge nodes float between
+      // groups; hub nodes get a stronger pull so they anchor their cluster.
+      if (clusters.length > 1 && graphRef.current.d3Force) {
+        const baseStrength = 0.18;
+        // Install custom forceX/forceY referencing centroid coords. Each tick the
+        // closures read the node's clusterId — works because the node objects
+        // are the same instances d3 mutates.
+        graphRef.current.d3Force('clusterX', (alpha) => {
+          for (const node of graphData.nodes) {
+            const centroid = clusterCentroids[node.clusterId];
+            if (!centroid) continue;
+            const w =
+              node.clusterRole === 'hub' ? 1.4
+                : node.clusterRole === 'bridge' ? 0.4
+                : 1.0;
+            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * baseStrength * w * alpha;
+          }
+        });
+        graphRef.current.d3Force('clusterY', (alpha) => {
+          for (const node of graphData.nodes) {
+            const centroid = clusterCentroids[node.clusterId];
+            if (!centroid) continue;
+            const w =
+              node.clusterRole === 'hub' ? 1.4
+                : node.clusterRole === 'bridge' ? 0.4
+                : 1.0;
+            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * baseStrength * w * alpha;
+          }
+        });
+      } else {
+        // Strip cluster forces when only one or zero clusters present (else they
+        // pin everything to origin and the layout collapses).
+        if (graphRef.current.d3Force) {
+          try { graphRef.current.d3Force('clusterX', null); } catch (_e) { /* noop */ }
+          try { graphRef.current.d3Force('clusterY', null); } catch (_e) { /* noop */ }
+        }
+      }
       graphRef.current.d3ReheatSimulation?.();
     } catch (_e) {
       // d3Force may not exist yet on first render — re-run when nodes arrive.
     }
-  }, [graphData.nodes.length]);
+  }, [graphData.nodes, clusters.length, clusterCentroids]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
@@ -482,12 +592,18 @@ export default function MemoryGraph() {
         highlightNodes.size > 0 && highlightNodes.has(node.id);
       const isDimmed =
         (highlightNodes.size > 0 && !highlightNodes.has(node.id)) ||
-        (layerFilter !== "all" && !filteredNodes.has(node.id));
+        (layerFilter !== "all" && !filteredNodes.has(node.id)) ||
+        (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge");
       const isSelected = selectedNode?.id === node.id;
 
-      // Color: layer-specific > user-specific (team scope) > type-specific
+      // Color: cluster-first (Phase 3 — gives the mind-group identity), then
+      // layer-specific for the special node types we still want to call out
+      // (TARA insights, promoted risks, etc.), then user-specific for team
+      // scope, finally fall through to the legacy type colour.
+      const clusterColor = clusterColorMap[node.clusterId];
       const layerColor = LAYER_COLORS[node.nodeLayer];
       const baseColor =
+        clusterColor ||
         layerColor ||
         (scope === "team" || scope === "all"
           ? userColorMap[node.userId] || TYPE_COLORS.default
@@ -498,7 +614,12 @@ export default function MemoryGraph() {
       const glow = node.temporalWeight || 0.3;
       let radius = Math.sqrt(node.val || 4) * 2.5;
 
-      // Size adjustments per layer
+      // Cluster role bumps — hubs anchor a group visually, bridges stay small
+      // so they read as connectors, not group members.
+      if (node.clusterRole === "hub") radius = radius * 1.6;
+      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.5);
+
+      // Size adjustments per layer (overrides cluster sizing for special types)
       if (node.nodeLayer === "fact") radius = Math.max(radius * 0.7, 3);
       if (node.nodeLayer === "promoted") radius = radius * 1.5;
       if (node.nodeLayer === "tara") radius = radius * 1.2;
@@ -560,6 +681,25 @@ export default function MemoryGraph() {
         ctx.strokeStyle = "#d97706";
         ctx.lineWidth = 1.5 / globalScale;
         ctx.stroke();
+      }
+
+      // Hub-role ring — make cluster anchors readable at thumbnail scale.
+      if (node.clusterRole === "hub" && !isDimmed) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(baseColor, 0.7);
+        ctx.lineWidth = 1.5 / globalScale;
+        ctx.stroke();
+      }
+      // Bridge nodes — small dashed outline so reviewers spot inter-cluster links.
+      if (node.clusterRole === "bridge" && !isDimmed) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius + 1.5, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(baseColor, 0.5);
+        ctx.lineWidth = 1 / globalScale;
+        ctx.setLineDash([2, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // ── Node body — shape per layer type ──
@@ -656,7 +796,7 @@ export default function MemoryGraph() {
         ctx.fillText(label, node.x, node.y + radius + 2);
       }
     },
-    [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes],
+    [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes, clusterColorMap, clusterFilter],
   );
 
   // Custom link painting
@@ -798,6 +938,42 @@ export default function MemoryGraph() {
           </AnimatePresence>
         </div>
 
+        {/* Cluster filter — surfaces the mind-groups derived server-side. */}
+        {clusters.length > 1 && (
+          <div className="relative group">
+            <select
+              value={clusterFilter || ""}
+              onChange={(e) => setClusterFilter(e.target.value || null)}
+              className="appearance-none rounded-lg border border-[#e3e0db] bg-white pl-7 pr-7 py-1.5 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#117dff]/20 transition-colors focus:outline-none cursor-pointer"
+              title="Filter to a single mind-group"
+            >
+              <option value="">All Clusters</option>
+              {clusters
+                .filter((c) => c.id !== "_orphan")
+                .map((c) => {
+                  // Build a label from top tags or fall back to id.
+                  const lbl = c.label
+                    || (c.topTags?.length ? c.topTags.slice(0, 2).join(", ") : c.id);
+                  return (
+                    <option key={c.id} value={c.id}>
+                      ● {lbl} ({c.size})
+                    </option>
+                  );
+                })}
+            </select>
+            {clusterFilter && (
+              <span
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                style={{ backgroundColor: clusterColorMap[clusterFilter] || "#117dff" }}
+              />
+            )}
+            {!clusterFilter && (
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a3a3a3]">●</span>
+            )}
+            <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+          </div>
+        )}
+
         <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
           {[
             { key: "personal", label: "My" },
@@ -903,6 +1079,11 @@ export default function MemoryGraph() {
             <span>{stats.nodes} nodes</span>
             <span>{stats.edges} edges</span>
             <span>{stats.projects} projects</span>
+            {clusters.length > 0 && (
+              <span title="Mind-groups derived from edge structure (Louvain)">
+                <span className="text-[#117dff]">●</span> {clusters.length} clusters
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <span className="text-[#10b981]">◆</span> {layerCounts.fact}
             </span>
