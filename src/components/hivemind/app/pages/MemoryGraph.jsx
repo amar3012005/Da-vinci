@@ -511,10 +511,33 @@ export default function MemoryGraph() {
     }
   }, [searchQuery, graphData.nodes]);
 
-  // ── Brain-like force physics ──
-  // Goal: clusters spread organically like brain lobes, each hub radiates
-  // children in all directions (dendrites), bridges stretch between lobes,
-  // orphans float as faint background dust.
+  // ── Brain-like force physics v3 ──
+  // Key insight: d3 default forceCenter(0,0) pulls everything to origin.
+  // Must KILL it. Then use strong centroid pull + radial child spread to
+  // make each cluster a neuron with dendrites radiating in all directions.
+  //
+  // Build a hub→children adjacency index so we can spread children evenly.
+  const hubChildIndex = useMemo(() => {
+    const index = new Map(); // hubNodeId -> [childNode, ...]
+    const nodeMap = new Map();
+    for (const node of graphData.nodes) nodeMap.set(node.id, node);
+    for (const edge of rawEdges) {
+      const src = typeof edge.source === 'object' ? edge.source : nodeMap.get(edge.source);
+      const tgt = typeof edge.target === 'object' ? edge.target : nodeMap.get(edge.target);
+      if (!src || !tgt) continue;
+      // Hub parent → child spoke
+      if (src.clusterRole === 'hub' && tgt.clusterRole !== 'hub' && src.clusterId === tgt.clusterId) {
+        if (!index.has(src.id)) index.set(src.id, []);
+        index.get(src.id).push(tgt);
+      }
+      if (tgt.clusterRole === 'hub' && src.clusterRole !== 'hub' && tgt.clusterId === src.clusterId) {
+        if (!index.has(tgt.id)) index.set(tgt.id, []);
+        index.get(tgt.id).push(src);
+      }
+    }
+    return index;
+  }, [graphData.nodes, rawEdges]);
+
   useEffect(() => {
     if (!graphRef.current) return;
     const n = graphData.nodes.length;
@@ -522,80 +545,95 @@ export default function MemoryGraph() {
     try {
       const fg = graphRef.current;
 
-      // 1. Charge: strong repulsion to push clusters apart. Use cluster-aware
-      //    strength — nodes in SAME cluster repel less (so they stay grouped)
-      //    while nodes in DIFFERENT clusters repel more (so lobes separate).
+      // ★ KILL the default center force — this is what pulls everything to (0,0)
+      try { fg.d3Force('center', null); } catch (_e) { /* noop */ }
+
+      // 1. Charge: stronger, cluster-aware
       const charge = fg.d3Force?.('charge');
       if (charge?.strength) {
         charge.strength((node) => {
-          if (node.clusterId === '_orphan') return -5; // orphans: barely repel
-          if (node.clusterRole === 'hub') return -120; // hubs push hard to make space
-          return -50; // spokes: moderate repulsion
+          if (node.clusterId === '_orphan') return -8;
+          if (node.clusterRole === 'hub') return -200; // hubs REALLY push to make space for dendrites
+          return -60;
         });
+        // Increase theta for performance with many nodes
+        if (charge.theta) charge.theta(0.9);
       }
 
-      // 2. Links: shorter within cluster, longer across clusters
+      // 2. Links: tight within cluster, long across
       const link = fg.d3Force?.('link');
       if (link?.distance) {
         link.distance((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          if (sameCluster) return 25 + Math.sqrt(n) * 0.5; // tight within lobe
-          return 80 + Math.sqrt(n) * 2; // long bridge between lobes
+          return sameCluster ? 35 : 120 + Math.sqrt(n);
         });
         link.strength((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 0.7 : 0.15; // strong intra-cluster, weak inter
+          return sameCluster ? 0.6 : 0.08;
         });
       }
 
-      // 3. Cluster centroid pull — gentle, organic. Lower than before so
-      //    d3 charge/link forces dominate the micro-layout while centroids
-      //    only set the macro-layout (which lobe goes where).
       if (clusters.length > 1 && fg.d3Force) {
-        fg.d3Force('clusterX', (alpha) => {
-          const pull = 0.08; // gentler than before (was 0.18)
+        // 3. Centroid pull — STRONGER now that forceCenter is gone.
+        //    This is the main macro-layout driver.
+        fg.d3Force('clusterPull', (alpha) => {
+          const pull = 0.15;
           for (const node of graphData.nodes) {
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
-            const isOrphan = node.clusterId === '_orphan';
-            // Orphans: random jitter outward instead of ring formation
-            if (isOrphan) {
-              node.vx = (node.vx || 0) + (Math.random() - 0.5) * 0.3 * alpha;
+            if (node.clusterId === '_orphan') {
+              // Orphans: gentle random drift outward from center
+              const dist = Math.sqrt((node.x || 0) ** 2 + (node.y || 0) ** 2) || 1;
+              const targetDist = 400 + Math.random() * 200;
+              if (dist < targetDist) {
+                const pushOut = 0.01 * alpha;
+                node.vx = (node.vx || 0) + ((node.x || 0.1) / dist) * pushOut * targetDist;
+                node.vy = (node.vy || 0) + ((node.y || 0.1) / dist) * pushOut * targetDist;
+              }
               continue;
             }
-            const w = node.clusterRole === 'hub' ? 1.2
+            const w = node.clusterRole === 'hub' ? 1.5
               : node.clusterRole === 'bridge' ? 0.3
-              : 0.8;
+              : 1.0;
             node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * w * alpha;
-          }
-        });
-        fg.d3Force('clusterY', (alpha) => {
-          const pull = 0.08;
-          for (const node of graphData.nodes) {
-            const centroid = clusterCentroids[node.clusterId];
-            if (!centroid) continue;
-            const isOrphan = node.clusterId === '_orphan';
-            if (isOrphan) {
-              node.vy = (node.vy || 0) + (Math.random() - 0.5) * 0.3 * alpha;
-              continue;
-            }
-            const w = node.clusterRole === 'hub' ? 1.2
-              : node.clusterRole === 'bridge' ? 0.3
-              : 0.8;
             node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * w * alpha;
           }
         });
 
-        // 4. Anti-collapse: push clusters apart if their centroids get too close.
-        //    This prevents lobes from merging into one blob.
+        // 4. Radial child spread — the key to "dendrites in all directions".
+        //    For each hub, spread its children evenly around 360° at a fixed
+        //    radius from the hub. This prevents the one-direction fan pattern.
+        fg.d3Force('radialSpread', (alpha) => {
+          const spreadStrength = 0.12;
+          const childRadius = 40 + Math.sqrt(n) * 0.8;
+          for (const [hubId, children] of hubChildIndex) {
+            const hub = graphData.nodes.find((nd) => nd.id === hubId);
+            if (!hub || hub.x == null) continue;
+            const count = children.length;
+            if (count === 0) continue;
+            // Assign each child an angle slot: evenly spaced around the hub
+            const angleStep = (2 * Math.PI) / count;
+            // Use golden angle offset so sub-clusters of sub-clusters don't align
+            const baseAngle = (hub._radialSeed != null) ? hub._radialSeed : (hub._radialSeed = Math.random() * Math.PI * 2);
+            children.forEach((child, idx) => {
+              if (child.x == null) return;
+              const targetAngle = baseAngle + idx * angleStep;
+              const tx = hub.x + Math.cos(targetAngle) * childRadius;
+              const ty = hub.y + Math.sin(targetAngle) * childRadius;
+              child.vx = (child.vx || 0) + (tx - child.x) * spreadStrength * alpha;
+              child.vy = (child.vy || 0) + (ty - child.y) * spreadStrength * alpha;
+            });
+          }
+        });
+
+        // 5. Cluster-vs-cluster repulsion — push lobes apart
         fg.d3Force('clusterRepel', (alpha) => {
-          const minDist = 100 + Math.sqrt(n) * 3;
+          const minDist = 150 + Math.sqrt(n) * 4;
           const ids = Object.keys(clusterCentroids).filter((id) => id !== '_orphan');
-          // Build live centroid from actual node positions
           const liveCentroids = {};
           const counts = {};
           for (const node of graphData.nodes) {
@@ -614,7 +652,6 @@ export default function MemoryGraph() {
               liveCentroids[id].y /= counts[id];
             }
           }
-          // Push apart any two clusters whose live centroids are too close
           for (let i = 0; i < ids.length; i++) {
             for (let j = i + 1; j < ids.length; j++) {
               const a = liveCentroids[ids[i]];
@@ -624,10 +661,9 @@ export default function MemoryGraph() {
               const dy = (a.y || 0) - (b.y || 0);
               const dist = Math.sqrt(dx * dx + dy * dy) || 1;
               if (dist < minDist) {
-                const push = (minDist - dist) * 0.02 * alpha;
+                const push = (minDist - dist) * 0.04 * alpha; // doubled from 0.02
                 const ux = (dx / dist) * push;
                 const uy = (dy / dist) * push;
-                // Apply to all nodes in each cluster
                 for (const node of graphData.nodes) {
                   if (node.clusterId === ids[i]) {
                     node.vx = (node.vx || 0) + ux;
@@ -643,8 +679,8 @@ export default function MemoryGraph() {
         });
       } else {
         if (fg.d3Force) {
-          try { fg.d3Force('clusterX', null); } catch (_e) { /* noop */ }
-          try { fg.d3Force('clusterY', null); } catch (_e) { /* noop */ }
+          try { fg.d3Force('clusterPull', null); } catch (_e) { /* noop */ }
+          try { fg.d3Force('radialSpread', null); } catch (_e) { /* noop */ }
           try { fg.d3Force('clusterRepel', null); } catch (_e) { /* noop */ }
         }
       }
@@ -652,7 +688,7 @@ export default function MemoryGraph() {
     } catch (_e) {
       // d3Force may not exist yet on first render — re-run when nodes arrive.
     }
-  }, [graphData.nodes, clusters.length, clusterCentroids]);
+  }, [graphData.nodes, clusters.length, clusterCentroids, hubChildIndex]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
