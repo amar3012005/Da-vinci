@@ -25,6 +25,7 @@ import {
   Star,
   Hexagon,
   Map as MapIcon,
+  Layers,
 } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
@@ -332,6 +333,7 @@ export default function MemoryGraph() {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
+  const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
@@ -1363,8 +1365,22 @@ export default function MemoryGraph() {
             )}
         </div>
 
-        {/* Zoom controls */}
+        {/* Zoom + cluster panel controls */}
         <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-10">
+          {/* Cluster sidebar toggle */}
+          {clusters.length > 1 && (
+            <button
+              onClick={() => setShowClusterPanel((v) => !v)}
+              className={`w-8 h-8 rounded-lg backdrop-blur border flex items-center justify-center transition-colors mb-1 ${
+                showClusterPanel
+                  ? "bg-[#117dff]/10 border-[#117dff]/30 text-[#117dff]"
+                  : "bg-white/90 border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252]"
+              }`}
+              title="Toggle mind groups panel"
+            >
+              <Layers size={14} />
+            </button>
+          )}
           {[
             {
               icon: ZoomIn,
@@ -1401,6 +1417,102 @@ export default function MemoryGraph() {
               onClose={() => setSelectedNode(null)}
               onNavigate={handleNavigate}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Phase 8: Cluster sidebar — list + fly-to + top memories */}
+        <AnimatePresence>
+          {showClusterPanel && clusters.length > 1 && (
+            <motion.div
+              initial={{ x: -260, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -260, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="absolute left-3 top-14 bottom-3 w-[240px] z-40 bg-white/95 backdrop-blur border border-[#e3e0db] rounded-xl shadow-lg overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[#e3e0db]">
+                <span className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] tracking-wide uppercase">
+                  Mind Groups
+                </span>
+                <button onClick={() => setShowClusterPanel(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
+                {clusters
+                  .filter((c) => c.id !== "_orphan")
+                  .sort((a, b) => (b.size || 0) - (a.size || 0))
+                  .map((c) => {
+                    const color = clusterColorMap[c.id] || "#a3a3a3";
+                    const label = c.label || (c.topTags?.length ? c.topTags.slice(0, 2).join(", ") : c.id);
+                    const isActive = clusterFilter === c.id;
+                    const topNodes = graphData.nodes
+                      .filter((n) => n.clusterId === c.id)
+                      .sort((a, b) => (b.hubScore || 0) - (a.hubScore || 0))
+                      .slice(0, 3);
+                    return (
+                      <div
+                        key={c.id}
+                        className={`rounded-lg px-2.5 py-2 cursor-pointer transition-all border ${
+                          isActive
+                            ? "border-[#117dff]/30 bg-[#117dff]/5"
+                            : "border-transparent hover:bg-[#f5f4f0]"
+                        }`}
+                        onClick={() => {
+                          setClusterFilter(isActive ? null : c.id);
+                          // Fly camera to cluster centroid
+                          const centroid = clusterCentroids[c.id];
+                          if (centroid && graphRef.current) {
+                            graphRef.current.centerAt(centroid.x, centroid.y, 800);
+                            graphRef.current.zoom(2.5, 800);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="text-[11px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate flex-1">
+                            {label}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#a3a3a3]">{c.size}</span>
+                        </div>
+                        {isActive && topNodes.length > 0 && (
+                          <div className="ml-4 mt-1 space-y-0.5">
+                            {topNodes.map((n) => (
+                              <div
+                                key={n.id}
+                                className="text-[10px] text-[#525252] truncate cursor-pointer hover:text-[#117dff] transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNode(n);
+                                  if (graphRef.current && n.x != null) {
+                                    graphRef.current.centerAt(n.x, n.y, 600);
+                                    graphRef.current.zoom(4, 600);
+                                  }
+                                }}
+                              >
+                                {n.clusterRole === "hub" ? "★ " : n.clusterRole === "bridge" ? "◇ " : ""}
+                                {n.title || n.content?.slice(0, 40) || "Untitled"}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                {/* Orphan bucket */}
+                {clusters.find((c) => c.id === "_orphan") && (
+                  <div className="rounded-lg px-2.5 py-1.5 text-[10px] text-[#a3a3a3] italic">
+                    + {clusters.find((c) => c.id === "_orphan")?.size || 0} unlinked nodes
+                  </div>
+                )}
+              </div>
+              <div className="px-3 py-2 border-t border-[#e3e0db] text-[10px] text-[#a3a3a3] font-mono">
+                {clusters.filter((c) => c.id !== "_orphan").length} clusters · {graphData.nodes.length} nodes
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
