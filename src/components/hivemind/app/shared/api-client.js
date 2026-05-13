@@ -758,9 +758,23 @@ class HiveMindApiClient {
 
   // ─── Core: Knowledge Base ────────────────────────────────────
 
-  async deleteDocument(memoryId) {
+  // Accepts either a raw id string OR an object { memoryId?, uploadId? }.
+  // Just-uploaded docs carry an upload_id (not a memory_id UUID), so we
+  // forward whichever fields the caller has — the core endpoint resolves
+  // them server-side.
+  async deleteDocument(idOrPayload) {
+    let payload;
+    if (idOrPayload && typeof idOrPayload === 'object') {
+      payload = {};
+      if (idOrPayload.memoryId || idOrPayload.memory_id) payload.memory_id = idOrPayload.memoryId || idOrPayload.memory_id;
+      if (idOrPayload.uploadId || idOrPayload.upload_id) payload.upload_id = idOrPayload.uploadId || idOrPayload.upload_id;
+    } else {
+      // Send the same value in BOTH slots so the server tries memory_id
+      // first and falls back to upload_id without a second round-trip.
+      payload = { memory_id: idOrPayload, upload_id: idOrPayload };
+    }
     const { data } = await this.controlPlane.delete('/v1/proxy/knowledge/document', {
-      data: { memory_id: memoryId },
+      data: payload,
     });
     return data;
   }

@@ -611,10 +611,25 @@ export default function KnowledgeBase() {
     }
   }, [kbMemories, justUploadedDocs]);
 
-  const handleDeleteDocument = useCallback(async (docId) => {
+  const handleDeleteDocument = useCallback(async (docOrId) => {
+    // Accept either a raw id (legacy) or the full doc object so we can
+    // forward BOTH memory_id and upload_id. Just-uploaded docs carry an
+    // upload_id in their id slot; persisted docs have a real memory
+    // UUID. The api-client + core handler resolve whichever fits.
+    const doc = (docOrId && typeof docOrId === 'object') ? docOrId : null;
+    const docId = doc ? doc.id : docOrId;
+    const uploadId = doc?.metadata?.upload_id
+      || doc?.metadata?.source_upload_id
+      || doc?.source_metadata?.metadata?.source_upload_id
+      || null;
     setDeletingDocId(docId);
     try {
-      const result = await apiClient.deleteDocument(docId);
+      const result = await apiClient.deleteDocument({
+        memoryId: docId,
+        // Fall back to docId — if it's an upload_id rather than a UUID
+        // the server uses this as the upload_id key.
+        uploadId: uploadId || docId,
+      });
       const deletedCount = result?.deleted || result?.deleted_count || result?.memory_ids?.length || null;
       // Optimistic local removal — refetch confirms.
       setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
@@ -630,11 +645,12 @@ export default function KnowledgeBase() {
       refetchKb();
     } catch (err) {
       console.error('Delete failed:', err);
+      const serverMsg = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'Unknown error';
       setUploads(prev => [...prev, {
         id: `del-err-${Date.now()}`,
         filename: 'Delete failed',
         status: 'error',
-        error: err?.message || 'Unknown error',
+        error: serverMsg,
       }]);
     } finally {
       setDeletingDocId(null);
@@ -1078,7 +1094,7 @@ export default function KnowledgeBase() {
                     {deleteConfirmId === doc.id ? (
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id); }}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc); }}
                           disabled={deletingDocId === doc.id}
                           className="text-[10px] font-mono px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50"
                           title="This cascades — removes the document, every chunk, every extracted fact, and Qdrant vectors"
