@@ -790,6 +790,9 @@ class HiveMindApiClient {
       timeout: 300000, // 5 minutes for large file uploads
       maxBodyLength: 110 * 1024 * 1024, // 110MB
       maxContentLength: 110 * 1024 * 1024,
+      // Parallel upload pool support — caller can pass progress + cancel signal
+      onUploadProgress: options.onUploadProgress,
+      signal: options.signal,
     });
     return data;
   }

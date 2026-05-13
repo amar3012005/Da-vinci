@@ -685,51 +685,96 @@ export default function KnowledgeBase() {
     };
   }, [org?.id, org?.plan]);
 
+  // Adaptive concurrency: many small files = 10 parallel, few big files = 2.
+  // Computed per-batch from median file size.
+  const pickConcurrency = useCallback((files) => {
+    if (!files?.length) return 1;
+    const sizes = files.map((f) => f.size || 0).sort((a, b) => a - b);
+    const median = sizes[Math.floor(sizes.length / 2)];
+    if (median < 5 * 1024 * 1024) return Math.min(10, files.length); // <5MB → up to 10
+    if (median < 30 * 1024 * 1024) return Math.min(5, files.length); // 5-30MB → 5
+    return Math.min(2, files.length); // >30MB → 2 (bandwidth bound)
+  }, []);
+
   const handleFiles = useCallback(async (files, { targetScope = 'personal', project = null } = {}) => {
-    for (const file of files) {
+    // ── Step 1: validate + queue all entries up-front (optimistic UI) ──
+    const validQueue = []; // { uploadEntry, file, controller }
+    const nowBase = Date.now();
+    files.forEach((file, idx) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (!ACCEPTED_EXTS.includes(ext)) {
         setUploads((prev) => [...prev, {
-          id: Date.now() + Math.random(),
+          id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
           error: `Unsupported file type: .${ext}`,
         }]);
-        continue;
+        return;
       }
-
       if (file.size > 100 * 1024 * 1024) {
         setUploads((prev) => [...prev, {
-          id: Date.now() + Math.random(),
+          id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
           error: 'File too large (max 100MB)',
         }]);
-        continue;
+        return;
       }
-
+      const controller = new AbortController();
       const uploadEntry = {
-        id: Date.now() + Math.random(),
+        id: nowBase + idx + Math.random(),
         filename: file.name,
         size: file.size,
-        status: 'uploading',
+        status: 'queued', // queued | uploading | success | error
         chunks: null,
+        progress: 0,
+        controller,
       };
+      validQueue.push({ uploadEntry, file });
+    });
 
-      setUploads((prev) => [...prev, uploadEntry]);
+    if (validQueue.length === 0) return;
 
+    // Push all entries at once so user sees the full queue immediately
+    setUploads((prev) => [...prev, ...validQueue.map(({ uploadEntry }) => uploadEntry)]);
+
+    // ── Step 2: parallel pool — N workers drain the queue ──
+    const concurrency = pickConcurrency(validQueue.map(({ file }) => file));
+    let cursor = 0;
+    const queueRefetch = (() => {
+      // Debounce refetch — coalesces N parallel success callbacks into 1 fetch
+      let pending = false;
+      return () => {
+        if (pending) return;
+        pending = true;
+        setTimeout(() => { pending = false; refetchKb(); }, 800);
+      };
+    })();
+
+    const uploadOne = async ({ uploadEntry, file }) => {
+      // Move queued → uploading
+      setUploads((prev) => prev.map((u) =>
+        u.id === uploadEntry.id ? { ...u, status: 'uploading' } : u
+      ));
       try {
         const result = await apiClient.uploadDocument(file, {
           tags: customTags || undefined,
           targetScope,
           containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
+          signal: uploadEntry.controller.signal,
+          onUploadProgress: (e) => {
+            if (!e.total) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setUploads((prev) => prev.map((u) =>
+              u.id === uploadEntry.id ? { ...u, progress: pct } : u
+            ));
+          },
         });
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
-            ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id }
+            ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id, progress: 100 }
             : u
         ));
-        // Add to just-uploaded docs for immediate display
         setJustUploadedDocs((prev) => [{
           id: result.upload_id || `pending-${uploadEntry.id}`,
           title: result.filename || file.name,
@@ -741,17 +786,54 @@ export default function KnowledgeBase() {
           tags: customTags ? customTags.split(',').map((t) => t.trim()) : [],
           created_at: new Date().toISOString(),
         }, ...prev]);
-        // Refetch to sync with server state
-        refetchKb();
+        queueRefetch();
       } catch (err) {
+        const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
-            ? { ...u, status: 'error', error: err.response?.data?.error || err.message }
+            ? {
+                ...u,
+                status: isCancelled ? 'cancelled' : 'error',
+                error: isCancelled ? 'Cancelled by user' : (err.response?.data?.error || err.message),
+              }
             : u
         ));
       }
-    }
-  }, [customTags, refetchKb]);
+    };
+
+    // Worker loop: each worker pulls the next index until cursor exhausts queue.
+    const workers = Array.from({ length: concurrency }, async () => {
+      while (cursor < validQueue.length) {
+        const myIdx = cursor++;
+        if (myIdx >= validQueue.length) break;
+        await uploadOne(validQueue[myIdx]);
+      }
+    });
+    await Promise.all(workers);
+  }, [customTags, refetchKb, pickConcurrency]);
+
+  // Cancel a queued/uploading entry
+  const handleCancelUpload = useCallback((entryId) => {
+    setUploads((prev) => {
+      const entry = prev.find((u) => u.id === entryId);
+      if (entry?.controller) {
+        try { entry.controller.abort(); } catch (_e) { /* noop */ }
+      }
+      return prev;
+    });
+  }, []);
+
+  // Cancel everything still in-flight
+  const handleCancelAll = useCallback(() => {
+    setUploads((prev) => {
+      for (const u of prev) {
+        if ((u.status === 'uploading' || u.status === 'queued') && u.controller) {
+          try { u.controller.abort(); } catch (_e) { /* noop */ }
+        }
+      }
+      return prev;
+    });
+  }, []);
 
   const queueFilesForUpload = useCallback((files) => {
     if (!files?.length) return;
@@ -992,31 +1074,93 @@ export default function KnowledgeBase() {
             exit={{ opacity: 0, height: 0 }}
             className="mb-8 space-y-2"
           >
+            {/* Queue stats header */}
+            {uploads.length > 1 && (() => {
+              const queued = uploads.filter((u) => u.status === 'queued').length;
+              const uploading = uploads.filter((u) => u.status === 'uploading').length;
+              const done = uploads.filter((u) => u.status === 'success').length;
+              const failed = uploads.filter((u) => u.status === 'error' || u.status === 'cancelled').length;
+              const inFlight = queued + uploading;
+              const totalProgress = uploads.length > 0
+                ? Math.round(uploads.reduce((s, u) => s + (u.status === 'success' ? 100 : (u.progress || 0)), 0) / uploads.length)
+                : 0;
+              return (
+                <div className="flex items-center gap-4 px-4 py-2 rounded-xl bg-[#faf9f4] border border-[#ece8de] text-[11px] font-mono">
+                  <span className="text-[#525252]">
+                    <span className="font-semibold text-[#0a0a0a]">{totalProgress}%</span> overall
+                  </span>
+                  {queued > 0 && <span className="text-[#a3a3a3]">{queued} queued</span>}
+                  {uploading > 0 && <span className="text-[#117dff]">{uploading} uploading</span>}
+                  {done > 0 && <span className="text-[#16a34a]">{done} done</span>}
+                  {failed > 0 && <span className="text-[#dc2626]">{failed} failed</span>}
+                  <div className="flex-1 h-1 rounded-full bg-[#e3e0db] overflow-hidden">
+                    <div
+                      className="h-full bg-[#117dff] transition-all duration-300"
+                      style={{ width: `${totalProgress}%` }}
+                    />
+                  </div>
+                  {inFlight > 0 && (
+                    <button
+                      onClick={handleCancelAll}
+                      className="text-[#dc2626] hover:text-[#b91c1c] transition-colors"
+                    >
+                      Cancel all
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {uploads.map((u) => (
               <div
                 key={u.id}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-mono ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-mono relative overflow-hidden ${
                   u.status === 'success' ? 'bg-[#f0fdf4] border border-[#bbf7d0]' :
                   u.status === 'error' ? 'bg-[#fef2f2] border border-[#fecaca]' :
-                  'bg-white border border-[#e3e0db]'
+                  u.status === 'cancelled' ? 'bg-[#faf9f4] border border-[#e3e0db]' :
+                  u.status === 'queued' ? 'bg-[#fafafa] border border-[#e3e0db]' :
+                  'bg-white border border-[#117dff]/20'
                 }`}
               >
-                {u.status === 'uploading' && <Loader2 size={14} className="text-[#117dff] animate-spin" />}
-                {u.status === 'success' && <CheckCircle size={14} className="text-[#16a34a]" />}
-                {u.status === 'error' && <XCircle size={14} className="text-[#dc2626]" />}
-                <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
-                {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
-                {u.chunks && <span className="text-[#16a34a]">{u.chunks} chunks</span>}
-                {u.error && <span className="text-[#dc2626]">{u.error}</span>}
-                {u.status === 'uploading' && <span className="text-[#117dff]">Processing...</span>}
+                {/* Per-file progress bar (background fill) */}
+                {u.status === 'uploading' && (u.progress || 0) > 0 && (
+                  <div
+                    className="absolute inset-y-0 left-0 bg-[#117dff]/8 transition-all duration-200 pointer-events-none"
+                    style={{ width: `${u.progress}%` }}
+                  />
+                )}
+                <div className="relative flex items-center gap-3 flex-1 min-w-0">
+                  {u.status === 'queued' && <Clock size={14} className="text-[#a3a3a3]" />}
+                  {u.status === 'uploading' && <Loader2 size={14} className="text-[#117dff] animate-spin" />}
+                  {u.status === 'success' && <CheckCircle size={14} className="text-[#16a34a]" />}
+                  {u.status === 'error' && <XCircle size={14} className="text-[#dc2626]" />}
+                  {u.status === 'cancelled' && <XCircle size={14} className="text-[#a3a3a3]" />}
+                  <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
+                  {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
+                  {u.status === 'uploading' && (u.progress || 0) > 0 && (
+                    <span className="text-[#117dff] font-semibold">{u.progress}%</span>
+                  )}
+                  {u.chunks && <span className="text-[#16a34a]">{u.chunks} chunks</span>}
+                  {u.error && <span className="text-[#dc2626] truncate max-w-[200px]">{u.error}</span>}
+                  {u.status === 'queued' && <span className="text-[#a3a3a3]">Waiting...</span>}
+                  {(u.status === 'queued' || u.status === 'uploading') && u.controller && (
+                    <button
+                      onClick={() => handleCancelUpload(u.id)}
+                      className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors"
+                      title="Cancel this upload"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
-            {uploads.some((u) => u.status !== 'uploading') && (
+            {uploads.some((u) => u.status !== 'uploading' && u.status !== 'queued') && (
               <button
-                onClick={() => setUploads([])}
+                onClick={() => setUploads((prev) => prev.filter((u) => u.status === 'uploading' || u.status === 'queued'))}
                 className="text-[#a3a3a3] text-[10px] font-mono hover:text-[#525252] transition-colors"
               >
-                Clear upload history
+                Clear completed
               </button>
             )}
           </motion.div>
