@@ -498,6 +498,55 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Billing (Stripe-backed) ──────────────────────────────────
+
+  /**
+   * Current plan + usage + limits + subscription state.
+   * Returns:
+   *   {
+   *     plan: { id, name, price, currency, limits, features, support, sla },
+   *     subscription: { status, stripe_customer_id, stripe_subscription_id,
+   *                     current_period_end, trial_ends_at },
+   *     usage,
+   *     warnings, exceeded,
+   *     stripe_enabled,
+   *     all_plans: [{ id, name, price, ..., available_self_serve }]
+   *   }
+   */
+  async getBillingPlan() {
+    const { data } = await this.controlPlane.get('/v1/billing/plan');
+    return data;
+  }
+
+  /**
+   * Start a Stripe Checkout session for a plan upgrade. Returns
+   *   { checkout_url, session_id }
+   * Caller redirects window.location to checkout_url.
+   */
+  async createBillingCheckout(planId) {
+    const { data } = await this.controlPlane.post('/v1/billing/checkout', { plan: planId });
+    return data;
+  }
+
+  /**
+   * Open Stripe Customer Portal. Returns { portal_url } — redirect there.
+   */
+  async createBillingPortal() {
+    const { data } = await this.controlPlane.post('/v1/billing/portal', {});
+    return data;
+  }
+
+  /** List recent invoices from Stripe. */
+  async listInvoices() {
+    const { data } = await this.controlPlane.get('/v1/billing/invoices');
+    return data;
+  }
+
+  /** Returns a direct URL to the CSV invoice export endpoint. */
+  invoiceCsvUrl() {
+    return `${this.controlPlane.defaults.baseURL}/v1/billing/invoices.csv`;
+  }
+
   // ─── Control Plane: API Keys ─────────────────────────────────
 
   /**

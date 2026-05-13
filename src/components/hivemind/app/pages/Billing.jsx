@@ -346,12 +346,36 @@ export default function Billing() {
     [],
   );
 
-  const { data: usage } = useApiQuery(
-    () => apiClient.core.get('/api/billing/usage').catch(() => null),
+  // Pulls from control-plane /v1/billing/plan — single source of truth for
+  // plan + usage + Stripe subscription state.
+  const { data: billing, refetch: refetchBilling } = useApiQuery(
+    () => apiClient.getBillingPlan().catch(() => null),
+    [],
+  );
+  const { data: invoiceList } = useApiQuery(
+    () => apiClient.listInvoices().catch(() => null),
     [],
   );
 
-  const currentPlan = profile?.plan || org?.plan || usage?.plan || 'free';
+  // Legacy /api/billing/usage shim kept so the meter sub-component (which
+  // still reads from `usage`) renders without a rewrite below.
+  const usage = billing
+    ? {
+        plan: billing.plan?.id,
+        tokens:        { used: billing.usage?.tokensProcessed || 0 },
+        memories:      { used: billing.usage?.memoriesIngested || 0 },
+        deepResearch:  { used: billing.usage?.deepResearchJobs || 0 },
+        webIntel:      { used: billing.usage?.webIntelJobs || 0 },
+        searches:      { used: billing.usage?.searchQueries || 0 },
+        uploads:       { used: billing.usage?.knowledgeBaseUploads || 0 },
+        graphQueries:  { used: billing.usage?.graphQueries || 0 },
+      }
+    : null;
+
+  const subscription = billing?.subscription || {};
+  const stripeEnabled = Boolean(billing?.stripe_enabled);
+
+  const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
@@ -371,16 +395,37 @@ export default function Billing() {
   const handleUpgrade = async (planId) => {
     setUpgrading(true);
     try {
+      // Self-serve checkout — opens Stripe-hosted checkout in same tab.
+      // Stripe webhook flips plan + subscription_status on success.
+      if (stripeEnabled) {
+        const res = await apiClient.createBillingCheckout(planId);
+        if (res?.checkout_url) {
+          window.location.href = res.checkout_url;
+          return;
+        }
+      }
+      // Legacy fallback: direct plan flip on deployments without Stripe.
       await apiClient.core.post('/api/billing/upgrade', { plan: planId });
       setUpgraded(true);
       setUpgradeModal(null);
-      // Refetch profile so the new plan reflects immediately without a page reload
       await refetchProfile();
+      await refetchBilling();
     } catch (e) {
       console.error('Upgrade failed:', e);
-      alert('Upgrade failed. Please try again.');
+      const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
+      alert(`Upgrade failed: ${msg}`);
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await apiClient.createBillingPortal();
+      if (res?.portal_url) window.location.href = res.portal_url;
+    } catch (e) {
+      const msg = e?.response?.data?.error || e.message;
+      alert(`Could not open billing portal: ${msg}`);
     }
   };
 
@@ -406,13 +451,44 @@ export default function Billing() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
-              {currentPlanDef?.name}
-            </span>
-            <span className="text-[10px] font-mono bg-[#f3f1ec] text-[#525252] px-2 py-0.5 rounded uppercase">
-              {currentPlan}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="flex items-center gap-2">
+                <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
+                  {currentPlanDef?.name}
+                </span>
+                <span className="text-[10px] font-mono bg-[#f3f1ec] text-[#525252] px-2 py-0.5 rounded uppercase">
+                  {currentPlan}
+                </span>
+              </div>
+              {subscription?.status && (
+                <div className="mt-1 flex items-center gap-2 justify-end text-[10px] font-['Space_Grotesk']">
+                  <span className={`px-1.5 py-0.5 rounded font-mono uppercase ${
+                    subscription.status === 'active' || subscription.status === 'trialing'
+                      ? 'bg-[#dcfce7] text-[#15803d]'
+                      : subscription.status === 'past_due' || subscription.status === 'unpaid'
+                      ? 'bg-[#fef2f2] text-[#b91c1c]'
+                      : 'bg-[#f3f1ec] text-[#525252]'
+                  }`}>
+                    {subscription.status}
+                  </span>
+                  {subscription.current_period_end && (
+                    <span className="text-[#a3a3a3]">
+                      renews {new Date(subscription.current_period_end).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {subscription?.stripe_customer_id && (
+              <button
+                onClick={handleManageSubscription}
+                className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
+                title="Open Stripe Customer Portal"
+              >
+                Manage
+              </button>
+            )}
           </div>
         </div>
 
@@ -468,6 +544,69 @@ export default function Billing() {
           />
         </div>
       </motion.div>
+
+      {/* Invoices */}
+      {invoiceList?.invoices?.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[#0a0a0a] text-[14px] font-semibold font-['Space_Grotesk']">
+              Invoices
+            </h3>
+            <a
+              href={apiClient.invoiceCsvUrl()}
+              className="text-[#117dff] text-[11px] font-medium font-['Space_Grotesk'] hover:underline"
+            >
+              Download CSV
+            </a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px] font-['Space_Grotesk']">
+              <thead>
+                <tr className="text-left text-[#a3a3a3] border-b border-[#eae7e1]">
+                  <th className="py-2 pr-3 font-medium">Invoice</th>
+                  <th className="py-2 pr-3 font-medium">Period</th>
+                  <th className="py-2 pr-3 font-medium">Amount</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceList.invoices.slice(0, 12).map(inv => (
+                  <tr key={inv.id} className="border-b border-[#f3f1ec] last:border-0">
+                    <td className="py-2 pr-3 font-mono text-[#525252]">{inv.number || inv.id.slice(-8)}</td>
+                    <td className="py-2 pr-3 text-[#525252]">
+                      {inv.period_start ? new Date(inv.period_start).toLocaleDateString() : '-'} →{' '}
+                      {inv.period_end ? new Date(inv.period_end).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="py-2 pr-3 text-[#0a0a0a]">
+                      {(inv.amount_paid / 100).toFixed(2)} {inv.currency}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className={`px-1.5 py-0.5 rounded font-mono uppercase text-[10px] ${
+                        inv.status === 'paid' ? 'bg-[#dcfce7] text-[#15803d]'
+                        : inv.status === 'open' ? 'bg-[#fef3c7] text-[#a16207]'
+                        : 'bg-[#f3f1ec] text-[#525252]'
+                      }`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      {inv.invoice_pdf && (
+                        <a href={inv.invoice_pdf} target="_blank" rel="noreferrer"
+                           className="text-[#117dff] text-[11px] hover:underline">PDF</a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
 
       {/* Billing Cycle Toggle */}
       <div className="flex items-center justify-center gap-1 bg-white border border-[#e3e0db] rounded-lg p-1 w-fit mx-auto">
