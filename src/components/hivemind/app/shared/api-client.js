@@ -461,6 +461,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listTeamTasks(limit = 12) {
+    const { data } = await this.controlPlane.get('/v1/team-tasks', { params: { limit } });
+    return data;
+  }
+
   async getTeamTask(taskId) {
     const { data } = await this.controlPlane.get(`/v1/team-tasks/${taskId}`);
     return data;

@@ -18,12 +18,6 @@ import {
   MessageCircle,
   ArrowRight,
   Zap,
-  Phone,
-  Video,
-  MoreHorizontal,
-  Smile,
-  Paperclip,
-  Mic,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -96,11 +90,117 @@ const TOOL_COPY = {
   hivemind_web_crawl: 'Crawl and summarize web pages',
 };
 
+const ROLE_EMOJI = {
+  coordinator: '🧭',
+  skeptic: '🧐',
+  investigator: '🔎',
+  generalist: '🛠️',
+  synthesizer: '✨',
+  system: '🧠',
+};
+
+const REACTION_EMOJI = {
+  eyes: '👀',
+  thumbs_up: '👍',
+  thumbsup: '👍',
+  warning: '⚠️',
+  white_check_mark: '✅',
+  check: '✅',
+  fire: '🔥',
+  rocket: '🚀',
+  thinking_face: '🤔',
+  question: '❓',
+  x: '❌',
+};
+
 function slugifyName(value) {
   return (value || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function normalizeMetadata(metadata) {
+  if (!metadata) return {};
+  if (typeof metadata === 'object') return metadata;
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function formatReactionEmoji(value) {
+  if (!value) return '✨';
+  const normalized = String(value).replace(/^:+|:+$/g, '');
+  return REACTION_EMOJI[normalized] || normalized;
+}
+
+function cleanPreviewText(content) {
+  return String(content || '')
+    .replace(/\*\*/g, '')
+    .replace(/^[-*]\s+/gm, '• ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractMessagePresentation(msg) {
+  const raw = String(msg?.content || '').trim();
+  if (!raw) {
+    return { preview: '', detail: '', thoughtLabel: null };
+  }
+
+  const claimMatch = raw.match(/(?:REVISED_)?CLAIM:\s*([\s\S]*?)(?:\n[A-Z_]+:|$)/);
+  if (claimMatch) {
+    return {
+      preview: cleanPreviewText(claimMatch[1]),
+      detail: raw,
+      thoughtLabel: raw.startsWith('REVISED_CLAIM:') ? 'Revision notes' : 'Claim details',
+    };
+  }
+
+  const critiqueMatch = raw.match(/CRITIQUE:\s*([\s\S]*?)(?:\n[A-Z_]+:|$)/);
+  if (critiqueMatch) {
+    return {
+      preview: cleanPreviewText(critiqueMatch[1].split(/\n\n|\n-/)[0]),
+      detail: raw,
+      thoughtLabel: 'Review notes',
+    };
+  }
+
+  const changesMatch = raw.match(/CHANGES:\s*([\s\S]*?)(?:\n[A-Z_]+:|$)/);
+  if (changesMatch) {
+    return {
+      preview: cleanPreviewText(changesMatch[1].split(/\n\n|\n-/)[0]),
+      detail: raw,
+      thoughtLabel: 'Revision notes',
+    };
+  }
+
+  const trimmed = raw.split(/\n\nReferences:/i)[0].trim();
+  const preview = cleanPreviewText(trimmed).split('\n\n')[0];
+  const condensed = preview.length > 220 ? `${preview.slice(0, 217).trim()}...` : preview;
+  const detail = cleanPreviewText(raw);
+  const thoughtLabel = detail !== condensed || /References:|Source:|\*\*/.test(raw) ? 'Thinking trace' : null;
+
+  return { preview: condensed, detail, thoughtLabel };
+}
+
+function formatTaskTime(value) {
+  if (!value) return '';
+  try {
+    return new Date(value).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return value;
+  }
 }
 
 const STATUS_STYLES = {
@@ -353,7 +453,7 @@ function EmployeeChatPreview({ employee, onClose }) {
   );
 }
 
-function WorkspaceSlidePanel({ employees, onClose }) {
+function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity }) {
   const runningEmployees = useMemo(() => employees.filter(emp => emp.status === 'running'), [employees]);
   const preferredRoster = useMemo(() => {
     const seeded = runningEmployees.filter((emp) => SEEDED_PERSONA_SLUGS.includes(emp.slug));
@@ -371,7 +471,14 @@ function WorkspaceSlidePanel({ employees, onClose }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [chatInput, setChatInput] = useState('');
+  const [thinkingMessage, setThinkingMessage] = useState(null);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!initialTaskId) return;
+    setPhase('chat');
+    setTaskId(initialTaskId);
+  }, [initialTaskId]);
 
   useEffect(() => {
     setSelectedSlugs((prev) => {
@@ -396,6 +503,7 @@ function WorkspaceSlidePanel({ employees, onClose }) {
         if (!active) return;
         setTaskStatus(statusData);
         setMessages(transcriptData.messages || []);
+        onTaskActivity?.();
         if (statusData.status === 'running') {
           window.setTimeout(poll, 2500);
         }
@@ -407,7 +515,7 @@ function WorkspaceSlidePanel({ employees, onClose }) {
     };
     poll();
     return () => { active = false; };
-  }, [taskId]);
+  }, [onTaskActivity, taskId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -433,6 +541,7 @@ function WorkspaceSlidePanel({ employees, onClose }) {
       setTaskId(data.task_id);
       setTaskStatus({ status: data.status, roster: data.roster });
       setPhase('chat');
+      onTaskActivity?.();
     } catch (e) {
       setTaskStatus({ status: 'failed', error: e.response?.data?.error || e.message });
     } finally {
@@ -445,13 +554,29 @@ function WorkspaceSlidePanel({ employees, onClose }) {
     [runningEmployees, selectedSlugs],
   );
 
+  const reactionMap = useMemo(() => {
+    const map = new Map();
+    messages.forEach((msg) => {
+      if (msg.kind !== 'action') return;
+      const metadata = normalizeMetadata(msg.metadata);
+      if (metadata.action_label !== 'react' || !metadata.target_message_id) return;
+      const bucket = map.get(metadata.target_message_id) || [];
+      bucket.push({
+        emoji: formatReactionEmoji(metadata.emoji),
+        sender: msg.sender_name,
+      });
+      map.set(metadata.target_message_id, bucket);
+    });
+    return map;
+  }, [messages]);
+
   const isRunning = taskStatus?.status === 'running';
   const isCompleted = taskStatus?.status === 'completed';
 
   // ── Render: Agent Picker Phase ─────────────────────────────
   if (phase === 'picker') {
     return (
-      <div className="fixed inset-y-0 right-0 z-[120] w-[420px] bg-white border-l border-[#e3e0db] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight">
+      <div className="fixed inset-y-0 right-0 z-[120] w-[min(50vw,720px)] min-w-[420px] bg-white border-l border-[#e3e0db] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#eae7e1] bg-[#faf9f4]">
           <div>
@@ -551,39 +676,37 @@ function WorkspaceSlidePanel({ employees, onClose }) {
     );
   }
 
-  // ── Render: WhatsApp Chat Phase ────────────────────────────
+  // ── Render: Themed Group Chat Phase ───────────────────────
   const groupName = selectedEmployees.map(e => e.name).join(', ');
   const groupAvatars = selectedEmployees.slice(0, 4);
+  const headerTitle = groupName || taskStatus?.brief || 'Workspace session';
 
   return (
-    <div className="fixed inset-y-0 right-0 z-[120] w-[420px] bg-[#efeae2] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight">
-      {/* WhatsApp-style header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-[#f0f2f5] border-b border-[#e2e2e2]">
+    <>
+      <div className="fixed inset-y-0 right-0 z-[120] w-[min(50vw,720px)] min-w-[420px] bg-[#fbfaf7] shadow-[-16px_0_48px_rgba(15,23,42,0.08)] flex flex-col animate-slideInRight border-l border-[#e3e0db]">
+      <div className="flex items-center gap-3 px-5 py-4 bg-white/92 border-b border-[#e7e2d8] backdrop-blur-sm">
         <button onClick={() => setPhase('picker')} className="rounded-lg p-1.5 text-[#54656f] hover:bg-[#e2e2e2]">
           <ArrowRight size={18} className="rotate-180" />
         </button>
         <div className="flex -space-x-2">
           {groupAvatars.map((emp, i) => (
-            <div key={emp.id} className="w-8 h-8 rounded-full bg-[#117dff] border-2 border-[#f0f2f5] flex items-center justify-center" style={{ zIndex: 4 - i }}>
-              <Bot size={13} className="text-white" />
+            <div key={emp.id} className="w-8 h-8 rounded-full bg-[#117dff] border-2 border-white flex items-center justify-center text-[15px]" style={{ zIndex: 4 - i }}>
+              <span>{ROLE_EMOJI[emp.role_archetype] || '🤖'}</span>
             </div>
           ))}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-[#111b21] truncate">{groupName}</p>
+          <p className="text-[14px] font-semibold text-[#111b21] truncate font-['Space_Grotesk']">{headerTitle}</p>
           <p className="text-[11px] text-[#667781]">
             {isRunning ? `${selectedSlugs.length} agents collaborating...` : isCompleted ? 'Task completed' : taskStatus?.status || 'preparing...'}
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Phone size={17} /></button>
-          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Video size={17} /></button>
-          <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><MoreHorizontal size={17} /></button>
-        </div>
+        <button onClick={onClose} className="rounded-lg p-2 text-[#525252] hover:bg-[#f3f1ec]">
+          <X size={16} />
+        </button>
       </div>
 
-      {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d0ca\' fill-opacity=\'0.15\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-[radial-gradient(circle_at_top,_rgba(17,125,255,0.07),_transparent_35%),linear-gradient(180deg,_#fbfaf7_0%,_#f5f2ea_100%)]">
         {taskStatus?.error && (
           <div className="rounded-xl bg-[#fce4e4] px-4 py-3 text-[12px] text-[#dc2626] text-center">{taskStatus.error}</div>
         )}
@@ -591,10 +714,10 @@ function WorkspaceSlidePanel({ employees, onClose }) {
         {messages.length === 0 && !isRunning && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center px-6">
-              <div className="w-16 h-16 rounded-full bg-[#d9fdd3] mx-auto mb-3 flex items-center justify-center">
-                <MessageCircle size={28} className="text-[#005c4b]" />
+              <div className="w-16 h-16 rounded-full bg-[#117dff]/10 mx-auto mb-3 flex items-center justify-center">
+                <MessageCircle size={28} className="text-[#117dff]" />
               </div>
-              <p className="text-[13px] text-[#667781]">Task is starting. Messages will appear here as agents collaborate.</p>
+              <p className="text-[13px] text-[#667781]">Task is starting. Messages will appear here as the team works through it.</p>
             </div>
           </div>
         )}
@@ -603,70 +726,113 @@ function WorkspaceSlidePanel({ employees, onClose }) {
           const isAction = msg.kind === 'action';
           const isSystem = msg.kind === 'system';
           const senderName = msg.sender_name || 'TeamRoom';
-          const senderInitial = senderName.charAt(0).toUpperCase();
+          const senderRole = msg.sender_role || 'generalist';
+          const senderEmoji = ROLE_EMOJI[senderRole] || '🤖';
+          const metadata = normalizeMetadata(msg.metadata);
+          const presentation = extractMessagePresentation(msg);
+          const bubbleReactions = reactionMap.get(msg.msg_id) || [];
+          const alignRight = senderRole === 'coordinator' || senderRole === 'synthesizer';
 
           if (isSystem) {
             return (
               <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex justify-center">
-                <span className="rounded-lg bg-[#e2f3fb] px-3 py-1 text-[10px] text-[#3b4a54] shadow-sm">{msg.content}</span>
+                <span className="rounded-full border border-[#dbe8ff] bg-white/90 px-3 py-1 text-[10px] text-[#4f5f79] shadow-sm">{msg.content}</span>
               </div>
             );
           }
 
           if (isAction) {
+            if (metadata.action_label === 'react') {
+              return null;
+            }
+            const actionLabel = {
+              read_memory: 'Checked memory',
+              search_context: 'Searched context',
+              read_history: 'Read transcript',
+              post_update: 'Shared update',
+              write_memory: 'Saved memory',
+            }[metadata.action_label] || msg.content;
             return (
               <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex justify-center">
-                <span className="rounded-full bg-[#dbeafe] px-3 py-1 text-[10px] text-[#2457a6] italic">{msg.content}</span>
+                <button
+                  type="button"
+                  onClick={() => setThinkingMessage({ senderName, label: 'Tool activity', detail: msg.content })}
+                  className="rounded-full border border-[#d6e3ff] bg-white/90 px-3 py-1 text-[10px] text-[#2457a6] italic hover:border-[#117dff]"
+                >
+                  {senderEmoji} {actionLabel}
+                </button>
               </div>
             );
           }
 
           return (
-            <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex items-end gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#117dff] flex items-center justify-center flex-shrink-0">
-                <span className="text-[10px] font-bold text-white">{senderInitial}</span>
-              </div>
-              <div className="max-w-[78%]">
-                <p className="text-[11px] font-semibold text-[#06cf9c] mb-0.5">{senderName}</p>
-                <div className="rounded-lg rounded-tl-none bg-white px-3 py-2 shadow-sm">
-                  <p className="text-[12px] leading-relaxed text-[#303030] whitespace-pre-wrap">{msg.content}</p>
-                  <span className="block text-right text-[9px] text-[#667781] mt-1">
+            <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className={`flex items-end gap-2 ${alignRight ? 'justify-end' : 'justify-start'}`}>
+              {!alignRight && (
+                <div className="w-8 h-8 rounded-full bg-white border border-[#d8d2c7] flex items-center justify-center flex-shrink-0 text-[15px] shadow-sm">
+                  <span>{senderEmoji}</span>
+                </div>
+              )}
+              <div className={`max-w-[78%] ${alignRight ? 'items-end' : 'items-start'} flex flex-col`}>
+                <p className={`text-[11px] font-semibold mb-1 ${alignRight ? 'text-[#117dff]' : 'text-[#5b6472]'}`}>{senderName}</p>
+                <div className={`rounded-[20px] px-3.5 py-2.5 shadow-sm border ${alignRight ? 'rounded-br-[6px] bg-[#117dff] text-white border-[#117dff]' : 'rounded-bl-[6px] bg-white text-[#1f2937] border-[#e4ddd0]'}`}>
+                  <p className="text-[12px] leading-relaxed whitespace-pre-wrap">{presentation.preview}</p>
+                  {presentation.thoughtLabel && (
+                    <button
+                      type="button"
+                      onClick={() => setThinkingMessage({ senderName, label: presentation.thoughtLabel, detail: presentation.detail })}
+                      className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] ${alignRight ? 'bg-white/18 text-white hover:bg-white/24' : 'bg-[#f3f1ec] text-[#556070] hover:bg-[#ebe7df]'}`}
+                    >
+                      <Sparkles size={11} /> {presentation.thoughtLabel}
+                    </button>
+                  )}
+                  <span className={`mt-1 block text-right text-[9px] ${alignRight ? 'text-white/70' : 'text-[#8b95a5]'}`}>
                     {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
+                {bubbleReactions.length > 0 && (
+                  <div className={`mt-1 flex flex-wrap gap-1 ${alignRight ? 'justify-end' : 'justify-start'}`}>
+                    {bubbleReactions.map((reaction, index) => (
+                      <span key={`${reaction.sender}-${index}`} className="inline-flex items-center gap-1 rounded-full border border-[#e4ddd0] bg-white px-2 py-0.5 text-[10px] text-[#525252] shadow-sm">
+                        <span>{reaction.emoji}</span>
+                        <span className="truncate max-w-[110px]">{reaction.sender}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
+              {alignRight && (
+                <div className="w-8 h-8 rounded-full bg-white border border-[#d8d2c7] flex items-center justify-center flex-shrink-0 text-[15px] shadow-sm">
+                  <span>{senderEmoji}</span>
+                </div>
+              )}
             </div>
           );
         })}
 
         {isRunning && (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#e2e2e2] flex items-center justify-center">
-              <span className="text-[10px] text-[#667781]">...</span>
+          <div className="flex items-center gap-2 rounded-2xl border border-[#e4ddd0] bg-white/80 px-3 py-2 w-fit shadow-sm">
+            <div className="w-7 h-7 rounded-full bg-[#f3f1ec] flex items-center justify-center">
+              <span className="text-[10px] text-[#667781]">✨</span>
             </div>
-            <span className="text-[11px] text-[#667781] italic">agents are working...</span>
+            <span className="text-[11px] text-[#667781] italic">Team is thinking through the next move...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Final answer banner */}
       {taskStatus?.final_answer && (
-        <div className="mx-4 mb-2 rounded-xl bg-[#d9fdd3] px-4 py-3 shadow-sm">
+        <div className="mx-5 mb-3 rounded-[22px] border border-[#dbe8ff] bg-white px-4 py-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 size={14} className="text-[#005c4b]" />
-            <span className="text-[11px] font-semibold text-[#005c4b]">Team Decision</span>
+            <CheckCircle2 size={14} className="text-[#117dff]" />
+            <span className="text-[11px] font-semibold text-[#117dff]">Team Decision</span>
           </div>
-          <p className="text-[11px] leading-relaxed text-[#025c4b]">{taskStatus.final_answer}</p>
+          <p className="text-[12px] leading-relaxed text-[#253041]">{taskStatus.final_answer}</p>
         </div>
       )}
 
-      {/* WhatsApp-style input bar */}
-      <div className="flex items-end gap-2 px-3 py-2 bg-[#f0f2f5] border-t border-[#e2e2e2]">
-        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Smile size={20} /></button>
-        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Paperclip size={20} /></button>
-        <div className="flex-1 rounded-2xl bg-white px-4 py-2">
+      <div className="flex items-end gap-2 px-5 py-4 bg-white border-t border-[#e7e2d8]">
+        <div className="flex-1 rounded-[20px] border border-[#e3e0db] bg-[#faf9f4] px-4 py-2.5">
           <textarea
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
@@ -682,9 +848,9 @@ function WorkspaceSlidePanel({ employees, onClose }) {
               }
             }}
             rows={1}
-            placeholder={isRunning ? 'Agents are working...' : isCompleted ? 'Type a new task to re-run...' : 'Type a message'}
+            placeholder={isRunning ? 'Team is working...' : isCompleted ? 'Ask the team a follow-up...' : 'What should the team work on next?'}
             disabled={isRunning}
-            className="w-full resize-none bg-transparent text-[13px] text-[#111b21] outline-none placeholder:text-[#667781] disabled:opacity-50"
+            className="w-full resize-none bg-transparent text-[13px] text-[#111b21] outline-none placeholder:text-[#8a8f98] disabled:opacity-50"
           />
         </div>
         <button
@@ -696,13 +862,61 @@ function WorkspaceSlidePanel({ employees, onClose }) {
             }
           }}
           disabled={isRunning || !chatInput.trim()}
-          className="rounded-full p-2.5 text-white bg-[#00a884] hover:bg-[#06cf9c] disabled:opacity-40"
+          className="rounded-full p-2.5 text-white bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40"
         >
           <Send size={18} />
         </button>
-        <button className="rounded-full p-2 text-[#54656f] hover:bg-[#e2e2e2]"><Mic size={20} /></button>
       </div>
-    </div>
+      </div>
+
+      {thinkingMessage && (
+        <div className="fixed inset-0 z-[130] bg-[#111827]/35 backdrop-blur-[2px] flex items-center justify-center px-6" onClick={() => setThinkingMessage(null)}>
+          <div className="w-full max-w-2xl rounded-[24px] border border-[#e3e0db] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.22)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[#ece7de] px-5 py-4">
+              <div>
+                <p className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{thinkingMessage.senderName}</p>
+                <p className="text-[11px] text-[#7a7a7a]">{thinkingMessage.label}</p>
+              </div>
+              <button onClick={() => setThinkingMessage(null)} className="rounded-lg p-2 text-[#525252] hover:bg-[#f3f1ec]">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+              <pre className="whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-[#334155]">{thinkingMessage.detail}</pre>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function TaskHistoryCard({ task, onResume }) {
+  const isActive = task.status === 'running';
+  return (
+    <button
+      type="button"
+      onClick={() => onResume(task)}
+      className="w-full rounded-[14px] border border-[#e3e0db] bg-white p-4 text-left transition-all hover:border-[#117dff] hover:shadow-[0_12px_32px_rgba(17,125,255,0.08)]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-semibold text-[#0a0a0a] line-clamp-2">{task.brief}</p>
+          <p className="mt-1 text-[11px] text-[#8a8a8a]">
+            {formatTaskTime(task.started_at || task.completed_at)}
+          </p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${isActive ? 'bg-[#eaf4ff] text-[#117dff]' : 'bg-[#f3f1ec] text-[#6b7280]'}`}>
+          {task.status}
+        </span>
+      </div>
+      <p className="mt-3 text-[11px] leading-relaxed text-[#5d6674] line-clamp-2">
+        {task.final_answer || 'Open this session to review the transcript and continue the conversation.'}
+      </p>
+      <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
+        Resume session <ChevronRight size={12} />
+      </div>
+    </button>
   );
 }
 
@@ -1083,6 +1297,21 @@ export default function DigitalEmployees() {
   const [slidePanelOpen, setSlidePanelOpen] = useState(false);
   const [workspaceSelectedSlugs, setWorkspaceSelectedSlugs] = useState([]);
   const [seeding, setSeeding] = useState(false);
+  const [recentTasks, setRecentTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [activeWorkspaceTaskId, setActiveWorkspaceTaskId] = useState(null);
+
+  const loadRecentTasks = useCallback(async () => {
+    setTasksLoading(true);
+    try {
+      const data = await apiClient.listTeamTasks(8);
+      setRecentTasks(data.tasks || []);
+    } catch (e) {
+      setRecentTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -1090,12 +1319,13 @@ export default function DigitalEmployees() {
     try {
       const { employees: list } = await apiClient.listEmployees();
       setEmployees(list || []);
+      await loadRecentTasks();
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadRecentTasks]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -1139,6 +1369,7 @@ export default function DigitalEmployees() {
       await fetch();
       setSurface('workspace');
       setSlidePanelOpen(true);
+      setActiveWorkspaceTaskId(null);
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
@@ -1148,6 +1379,13 @@ export default function DigitalEmployees() {
   function handleOpen(emp) {
     setSurface('employee');
     setChatEmployee(emp);
+  }
+
+  function handleResumeTask(task) {
+    setSurface('workspace');
+    setChatEmployee(null);
+    setSlidePanelOpen(true);
+    setActiveWorkspaceTaskId(task.task_id);
   }
 
   function handleToggleWorkspaceSelect(emp) {
@@ -1162,9 +1400,10 @@ export default function DigitalEmployees() {
 
   const runningEmployees = useMemo(() => employees.filter(e => e.status === 'running'), [employees]);
   const isWorkspaceMode = surface === 'workspace';
+  const dockedWorkspaceWidth = slidePanelOpen ? 'min(50vw, 720px)' : '0px';
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
+    <div className="max-w-7xl mx-auto space-y-4 transition-[padding-right] duration-300" style={isWorkspaceMode && slidePanelOpen ? { paddingRight: dockedWorkspaceWidth } : undefined}>
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
@@ -1190,7 +1429,7 @@ export default function DigitalEmployees() {
           {isWorkspaceMode && (
             <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
               <Users size={13} />
-              Workspace panel
+              {slidePanelOpen ? 'Workspace open' : 'Workspace panel'}
             </button>
           )}
           <button onClick={fetch} disabled={loading}
@@ -1205,7 +1444,10 @@ export default function DigitalEmployees() {
           </button>
           {isWorkspaceMode ? (
             <button
-              onClick={() => setSlidePanelOpen(true)}
+              onClick={() => {
+                setActiveWorkspaceTaskId(null);
+                setSlidePanelOpen(true);
+              }}
               disabled={workspaceSelectedSlugs.length < 2}
               className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0] disabled:opacity-50"
             >
@@ -1242,7 +1484,7 @@ export default function DigitalEmployees() {
         </div>
       ) : (
         <>
-          {isWorkspaceMode && (
+          {isWorkspaceMode && !slidePanelOpen && (
             <div className="rounded-[10px] border border-[#e3e0db] bg-white p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1269,6 +1511,29 @@ export default function DigitalEmployees() {
                 ))}
               </div>
             </div>
+          )}
+
+          {surface === 'employee' && (
+            <section className="rounded-[16px] border border-[#e3e0db] bg-[#fbfaf7] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Tasks</h2>
+                  <p className="mt-1 text-[12px] text-[#737373]">Reopen a past team session and continue from its transcript.</p>
+                </div>
+                <button onClick={loadRecentTasks} className="rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#525252] hover:bg-[#faf9f4]">
+                  {tasksLoading ? 'Loading...' : 'Refresh tasks'}
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {recentTasks.length > 0 ? recentTasks.map((task) => (
+                  <TaskHistoryCard key={task.task_id} task={task} onResume={handleResumeTask} />
+                )) : (
+                  <div className="rounded-[12px] border border-dashed border-[#ddd6c9] bg-white px-4 py-8 text-center text-[12px] text-[#8a8a8a] md:col-span-2">
+                    {tasksLoading ? 'Loading recent tasks...' : 'No task sessions yet. Run a workspace task and it will appear here.'}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1301,7 +1566,15 @@ export default function DigitalEmployees() {
       )}
 
       {slidePanelOpen && (
-        <WorkspaceSlidePanel employees={employees} onClose={() => setSlidePanelOpen(false)} />
+        <WorkspaceSlidePanel
+          employees={employees}
+          initialTaskId={activeWorkspaceTaskId}
+          onTaskActivity={loadRecentTasks}
+          onClose={() => {
+            setSlidePanelOpen(false);
+            setActiveWorkspaceTaskId(null);
+          }}
+        />
       )}
     </div>
   );
