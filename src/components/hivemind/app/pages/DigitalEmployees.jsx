@@ -90,15 +90,6 @@ const TOOL_COPY = {
   hivemind_web_crawl: 'Crawl and summarize web pages',
 };
 
-const ROLE_EMOJI = {
-  coordinator: '🧭',
-  skeptic: '🧐',
-  investigator: '🔎',
-  generalist: '🛠️',
-  synthesizer: '✨',
-  system: '🧠',
-};
-
 const REACTION_EMOJI = {
   eyes: '👀',
   thumbs_up: '👍',
@@ -201,6 +192,35 @@ function formatTaskTime(value) {
   } catch {
     return value;
   }
+}
+
+function nameBadgeCopy(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'TM';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+}
+
+function deliveryModeForMessage(msg) {
+  if (!msg) return 'typing';
+  if (msg.kind === 'action') return 'thinking';
+  if (msg.kind === 'claim' || msg.kind === 'review' || msg.kind === 'revision') return 'thinking';
+  return 'typing';
+}
+
+function TypingDots({ tone = 'default' }) {
+  const dotClass = tone === 'accent' ? 'bg-white/80' : 'bg-[#7a8798]';
+  return (
+    <span className="inline-flex items-center gap-1">
+      {[0, 1, 2].map((index) => (
+        <span
+          key={index}
+          className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass} animate-bounce`}
+          style={{ animationDelay: `${index * 120}ms`, animationDuration: '1s' }}
+        />
+      ))}
+    </span>
+  );
 }
 
 const STATUS_STYLES = {
@@ -469,10 +489,15 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
   const [taskId, setTaskId] = useState(null);
   const [taskStatus, setTaskStatus] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [displayedMessages, setDisplayedMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [thinkingMessage, setThinkingMessage] = useState(null);
+  const [pendingDelivery, setPendingDelivery] = useState(null);
   const messagesEndRef = useRef(null);
+  const deliveredIdsRef = useRef(new Set());
+  const queueRef = useRef([]);
+  const deliveryTimerRef = useRef(null);
 
   useEffect(() => {
     if (!initialTaskId) return;
@@ -520,6 +545,50 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [displayedMessages, pendingDelivery]);
+
+  useEffect(() => {
+    const pending = (messages || []).filter((msg) => !deliveredIdsRef.current.has(msg.msg_id));
+    if (!pending.length) return undefined;
+    queueRef.current = [...queueRef.current, ...pending];
+
+    const pump = () => {
+      if (deliveryTimerRef.current || queueRef.current.length === 0) return;
+      const nextMessage = queueRef.current.shift();
+      if (!nextMessage) return;
+      const senderName = nextMessage.sender_name || 'TeamRoom';
+      const senderRole = nextMessage.sender_role || 'generalist';
+      const alignRight = senderRole === 'coordinator' || senderRole === 'synthesizer';
+      const metadata = normalizeMetadata(nextMessage.metadata);
+
+      if (nextMessage.kind === 'action' && metadata.action_label === 'react') {
+        deliveredIdsRef.current.add(nextMessage.msg_id);
+        setDisplayedMessages((prev) => [...prev, nextMessage]);
+        pump();
+        return;
+      }
+
+      const mode = deliveryModeForMessage(nextMessage);
+      setPendingDelivery({
+        senderName,
+        senderBadge: nameBadgeCopy(senderName),
+        alignRight,
+        mode,
+      });
+
+      const delay = nextMessage.kind === 'system' ? 220 : mode === 'thinking' ? 900 : 650;
+      deliveryTimerRef.current = window.setTimeout(() => {
+        deliveredIdsRef.current.add(nextMessage.msg_id);
+        setDisplayedMessages((prev) => [...prev, nextMessage]);
+        setPendingDelivery(null);
+        deliveryTimerRef.current = null;
+        pump();
+      }, delay);
+    };
+
+    pump();
+
+    return () => undefined;
   }, [messages]);
 
   const toggleSlug = (slug) => {
@@ -532,6 +601,14 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
     setLoading(true);
     setTaskStatus(null);
     setMessages([]);
+    setDisplayedMessages([]);
+    setPendingDelivery(null);
+    deliveredIdsRef.current = new Set();
+    queueRef.current = [];
+    if (deliveryTimerRef.current) {
+      window.clearTimeout(deliveryTimerRef.current);
+      deliveryTimerRef.current = null;
+    }
     try {
       const data = await apiClient.createTeamTask({
         brief: nextBrief,
@@ -556,7 +633,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
 
   const reactionMap = useMemo(() => {
     const map = new Map();
-    messages.forEach((msg) => {
+    displayedMessages.forEach((msg) => {
       if (msg.kind !== 'action') return;
       const metadata = normalizeMetadata(msg.metadata);
       if (metadata.action_label !== 'react' || !metadata.target_message_id) return;
@@ -568,7 +645,13 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
       map.set(metadata.target_message_id, bucket);
     });
     return map;
-  }, [messages]);
+  }, [displayedMessages]);
+
+  useEffect(() => () => {
+    if (deliveryTimerRef.current) {
+      window.clearTimeout(deliveryTimerRef.current);
+    }
+  }, []);
 
   const isRunning = taskStatus?.status === 'running';
   const isCompleted = taskStatus?.status === 'completed';
@@ -594,27 +677,30 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">
               Select Agents <span className="text-[#117dff]">({selectedSlugs.length} selected)</span>
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
               {runningEmployees.map(emp => (
                 <button
                   key={emp.id}
                   onClick={() => toggleSlug(emp.slug)}
-                  className={`text-left rounded-[10px] border p-3 transition-all ${
+                  className={`w-full text-left rounded-[12px] border p-3 transition-all ${
                     selectedSlugs.includes(emp.slug)
                       ? 'border-[#117dff] ring-2 ring-[#117dff]/20 bg-[#f5f9ff]'
                       : 'border-[#e3e0db] bg-white hover:border-[#d4d0ca]'
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-3 mb-1">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
                       selectedSlugs.includes(emp.slug) ? 'bg-[#117dff]' : 'bg-[#117dff]/10'
                     }`}>
                       <Bot size={13} className={selectedSlugs.includes(emp.slug) ? 'text-white' : 'text-[#117dff]'} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-semibold text-[#0a0a0a] truncate">{emp.name}</p>
                       <p className="text-[10px] text-[#a3a3a3]">{emp.role_archetype || 'generalist'}</p>
                     </div>
+                    {selectedSlugs.includes(emp.slug) && (
+                      <span className="rounded-full bg-[#117dff] px-2 py-1 text-[10px] font-semibold text-white">selected</span>
+                    )}
                   </div>
                   {SEEDED_PERSONA_SLUGS.includes(emp.slug) && (
                     <span className="inline-block mt-1 rounded-full bg-[#f0eadc] px-2 py-0.5 text-[9px] text-[#8a6b2f]">human</span>
@@ -678,7 +764,6 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
 
   // ── Render: Themed Group Chat Phase ───────────────────────
   const groupName = selectedEmployees.map(e => e.name).join(', ');
-  const groupAvatars = selectedEmployees.slice(0, 4);
   const headerTitle = groupName || taskStatus?.brief || 'Workspace session';
 
   return (
@@ -688,11 +773,11 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         <button onClick={() => setPhase('picker')} className="rounded-lg p-1.5 text-[#54656f] hover:bg-[#e2e2e2]">
           <ArrowRight size={18} className="rotate-180" />
         </button>
-        <div className="flex -space-x-2">
-          {groupAvatars.map((emp, i) => (
-            <div key={emp.id} className="w-8 h-8 rounded-full bg-[#117dff] border-2 border-white flex items-center justify-center text-[15px]" style={{ zIndex: 4 - i }}>
-              <span>{ROLE_EMOJI[emp.role_archetype] || '🤖'}</span>
-            </div>
+        <div className="flex flex-wrap gap-1.5 max-w-[220px]">
+          {selectedEmployees.slice(0, 3).map((emp) => (
+            <span key={emp.id} className="inline-flex items-center rounded-[10px] bg-[#eaf2ff] px-2.5 py-1 text-[10px] font-semibold text-[#117dff] border border-[#cfe0ff]">
+              {emp.name}
+            </span>
           ))}
         </div>
         <div className="flex-1 min-w-0">
@@ -711,7 +796,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
           <div className="rounded-xl bg-[#fce4e4] px-4 py-3 text-[12px] text-[#dc2626] text-center">{taskStatus.error}</div>
         )}
 
-        {messages.length === 0 && !isRunning && (
+        {displayedMessages.length === 0 && !pendingDelivery && !isRunning && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center px-6">
               <div className="w-16 h-16 rounded-full bg-[#117dff]/10 mx-auto mb-3 flex items-center justify-center">
@@ -722,12 +807,12 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
           </div>
         )}
 
-        {messages.map((msg) => {
+        {displayedMessages.map((msg) => {
           const isAction = msg.kind === 'action';
           const isSystem = msg.kind === 'system';
           const senderName = msg.sender_name || 'TeamRoom';
           const senderRole = msg.sender_role || 'generalist';
-          const senderEmoji = ROLE_EMOJI[senderRole] || '🤖';
+          const senderBadge = nameBadgeCopy(senderName);
           const metadata = normalizeMetadata(msg.metadata);
           const presentation = extractMessagePresentation(msg);
           const bubbleReactions = reactionMap.get(msg.msg_id) || [];
@@ -759,7 +844,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
                   onClick={() => setThinkingMessage({ senderName, label: 'Tool activity', detail: msg.content })}
                   className="rounded-full border border-[#d6e3ff] bg-white/90 px-3 py-1 text-[10px] text-[#2457a6] italic hover:border-[#117dff]"
                 >
-                  {senderEmoji} {actionLabel}
+                  {senderName} · {actionLabel}
                 </button>
               </div>
             );
@@ -768,8 +853,8 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
           return (
             <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className={`flex items-end gap-2 ${alignRight ? 'justify-end' : 'justify-start'}`}>
               {!alignRight && (
-                <div className="w-8 h-8 rounded-full bg-white border border-[#d8d2c7] flex items-center justify-center flex-shrink-0 text-[15px] shadow-sm">
-                  <span>{senderEmoji}</span>
+                <div className="h-8 min-w-[42px] rounded-[10px] bg-[#eef2f7] border border-[#d8dfe8] flex items-center justify-center flex-shrink-0 px-2 text-[10px] font-semibold text-[#4f5f79] shadow-sm">
+                  <span>{senderBadge}</span>
                 </div>
               )}
               <div className={`max-w-[78%] ${alignRight ? 'items-end' : 'items-start'} flex flex-col`}>
@@ -801,15 +886,41 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
                 )}
               </div>
               {alignRight && (
-                <div className="w-8 h-8 rounded-full bg-white border border-[#d8d2c7] flex items-center justify-center flex-shrink-0 text-[15px] shadow-sm">
-                  <span>{senderEmoji}</span>
+                <div className="h-8 min-w-[42px] rounded-[10px] bg-[#dbe8ff] border border-[#b7d2ff] flex items-center justify-center flex-shrink-0 px-2 text-[10px] font-semibold text-[#117dff] shadow-sm">
+                  <span>{senderBadge}</span>
                 </div>
               )}
             </div>
           );
         })}
 
-        {isRunning && (
+        {pendingDelivery && (
+          <div className={`flex items-end gap-2 ${pendingDelivery.alignRight ? 'justify-end' : 'justify-start'}`}>
+            {!pendingDelivery.alignRight && (
+              <div className="h-8 min-w-[42px] rounded-[10px] bg-[#eef2f7] border border-[#d8dfe8] flex items-center justify-center flex-shrink-0 px-2 text-[10px] font-semibold text-[#4f5f79] shadow-sm">
+                <span>{pendingDelivery.senderBadge}</span>
+              </div>
+            )}
+            <div className={`max-w-[72%] ${pendingDelivery.alignRight ? 'items-end' : 'items-start'} flex flex-col`}>
+              <p className={`text-[11px] font-semibold mb-1 ${pendingDelivery.alignRight ? 'text-[#117dff]' : 'text-[#5b6472]'}`}>
+                {pendingDelivery.senderName}
+              </p>
+              <div className={`rounded-[20px] px-3.5 py-3 shadow-sm border inline-flex items-center gap-2 ${pendingDelivery.alignRight ? 'rounded-br-[6px] bg-[#117dff] text-white border-[#117dff]' : 'rounded-bl-[6px] bg-white text-[#1f2937] border-[#e4ddd0]'}`}>
+                <span className={`text-[11px] ${pendingDelivery.alignRight ? 'text-white/90' : 'text-[#6b7280]'}`}>
+                  {pendingDelivery.mode === 'thinking' ? 'thinking' : 'typing'}
+                </span>
+                <TypingDots tone={pendingDelivery.alignRight ? 'accent' : 'default'} />
+              </div>
+            </div>
+            {pendingDelivery.alignRight && (
+              <div className="h-8 min-w-[42px] rounded-[10px] bg-[#dbe8ff] border border-[#b7d2ff] flex items-center justify-center flex-shrink-0 px-2 text-[10px] font-semibold text-[#117dff] shadow-sm">
+                <span>{pendingDelivery.senderBadge}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isRunning && !pendingDelivery && (
           <div className="flex items-center gap-2 rounded-2xl border border-[#e4ddd0] bg-white/80 px-3 py-2 w-fit shadow-sm">
             <div className="w-7 h-7 rounded-full bg-[#f3f1ec] flex items-center justify-center">
               <span className="text-[10px] text-[#667781]">✨</span>
@@ -1295,7 +1406,6 @@ export default function DigitalEmployees() {
   const [surface, setSurface] = useState('employee');
   const [chatEmployee, setChatEmployee] = useState(null);
   const [slidePanelOpen, setSlidePanelOpen] = useState(false);
-  const [workspaceSelectedSlugs, setWorkspaceSelectedSlugs] = useState([]);
   const [seeding, setSeeding] = useState(false);
   const [recentTasks, setRecentTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -1388,17 +1498,10 @@ export default function DigitalEmployees() {
     setActiveWorkspaceTaskId(task.task_id);
   }
 
-  function handleToggleWorkspaceSelect(emp) {
-    setWorkspaceSelectedSlugs(prev =>
-      prev.includes(emp.slug) ? prev.filter(s => s !== emp.slug) : [...prev, emp.slug]
-    );
-  }
-
   const running = employees.filter(e => e.status === 'running').length;
   const paused = employees.filter(e => e.status === 'paused').length;
   const draft = employees.filter(e => e.status === 'draft').length;
 
-  const runningEmployees = useMemo(() => employees.filter(e => e.status === 'running'), [employees]);
   const isWorkspaceMode = surface === 'workspace';
   const dockedWorkspaceWidth = slidePanelOpen ? 'min(50vw, 720px)' : '0px';
 
@@ -1421,7 +1524,6 @@ export default function DigitalEmployees() {
               setChatEmployee(null);
             } else {
               setSlidePanelOpen(false);
-              setWorkspaceSelectedSlugs([]);
             }
           }} />
         </div>
@@ -1448,11 +1550,10 @@ export default function DigitalEmployees() {
                 setActiveWorkspaceTaskId(null);
                 setSlidePanelOpen(true);
               }}
-              disabled={workspaceSelectedSlugs.length < 2}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0] disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
             >
               <Zap size={13} />
-              Run Task{workspaceSelectedSlugs.length >= 2 ? ` (${workspaceSelectedSlugs.length})` : ''}
+              Run Task
             </button>
           ) : (
             <button onClick={() => setCreateOpen(true)}
@@ -1484,73 +1585,51 @@ export default function DigitalEmployees() {
         </div>
       ) : (
         <>
-          {isWorkspaceMode && !slidePanelOpen && (
-            <div className="rounded-[10px] border border-[#e3e0db] bg-white p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Workspace mode</h2>
-                  <p className="mt-1 text-[12px] text-[#737373]">
-                    Click agent cards to select them, then open the slide panel or hit Run Task. Selected agents get a blue border.
-                  </p>
-                </div>
-                <button onClick={() => setSlidePanelOpen(true)} className="rounded-[6px] bg-[#117dff] px-3 py-2 text-[12px] text-white hover:bg-[#0066e0]">
-                  Open workspace
-                </button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {runningEmployees.map(emp => (
-                  <span key={emp.id} className={`rounded-full border px-3 py-1.5 text-[11px] cursor-pointer transition-all ${
-                    workspaceSelectedSlugs.includes(emp.slug)
-                      ? 'border-[#117dff] bg-[#f5f9ff] text-[#117dff] font-semibold'
-                      : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252]'
-                  }`}
-                    onClick={() => handleToggleWorkspaceSelect(emp)}
-                  >
-                    {emp.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {surface === 'employee' && (
+          {surface === 'workspace' && !slidePanelOpen && (
             <section className="rounded-[16px] border border-[#e3e0db] bg-[#fbfaf7] p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Tasks</h2>
-                  <p className="mt-1 text-[12px] text-[#737373]">Reopen a past team session and continue from its transcript.</p>
+                  <h2 className="text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Workspace Tasks</h2>
+                  <p className="mt-1 text-[12px] text-[#737373]">Run and resume team sessions here. Agent selection happens inside the workspace panel.</p>
                 </div>
-                <button onClick={loadRecentTasks} className="rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#525252] hover:bg-[#faf9f4]">
-                  {tasksLoading ? 'Loading...' : 'Refresh tasks'}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={loadRecentTasks} className="rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#525252] hover:bg-[#faf9f4]">
+                    {tasksLoading ? 'Loading...' : 'Refresh tasks'}
+                  </button>
+                  <button onClick={() => setSlidePanelOpen(true)} className="rounded-[8px] bg-[#117dff] px-3 py-2 text-[12px] text-white hover:bg-[#0066e0]">
+                    Open workspace
+                  </button>
+                </div>
               </div>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="mt-4 space-y-3">
                 {recentTasks.length > 0 ? recentTasks.map((task) => (
                   <TaskHistoryCard key={task.task_id} task={task} onResume={handleResumeTask} />
                 )) : (
-                  <div className="rounded-[12px] border border-dashed border-[#ddd6c9] bg-white px-4 py-8 text-center text-[12px] text-[#8a8a8a] md:col-span-2">
-                    {tasksLoading ? 'Loading recent tasks...' : 'No task sessions yet. Run a workspace task and it will appear here.'}
+                  <div className="rounded-[12px] border border-dashed border-[#ddd6c9] bg-white px-4 py-8 text-center text-[12px] text-[#8a8a8a]">
+                    {tasksLoading ? 'Loading workspace tasks...' : 'No workspace sessions yet. Run a task from Workspace mode and it will appear here.'}
                   </div>
                 )}
               </div>
             </section>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {employees.map(emp => (
-              <EmployeeCard
-                key={emp.id}
-                employee={emp}
-                onPause={handlePause}
-                onResume={handleResume}
-                onArchive={handleArchive}
-                onOpen={handleOpen}
-                selectable={isWorkspaceMode}
-                selected={workspaceSelectedSlugs.includes(emp.slug)}
-                onToggleSelect={handleToggleWorkspaceSelect}
-              />
-            ))}
-          </div>
+          {surface === 'employee' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {employees.map(emp => (
+                <EmployeeCard
+                  key={emp.id}
+                  employee={emp}
+                  onPause={handlePause}
+                  onResume={handleResume}
+                  onArchive={handleArchive}
+                  onOpen={handleOpen}
+                  selectable={false}
+                  selected={false}
+                  onToggleSelect={undefined}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
