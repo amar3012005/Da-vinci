@@ -524,7 +524,7 @@ export default function KnowledgeBase() {
     // (Smart Ingest UPDATE relationships sometimes strip metadata into a new version).
     const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
     const settled = await Promise.allSettled(
-      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 100 }))
+      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 100, scope: 'all' }))
     );
 
     const seenIds = new Set();
@@ -556,7 +556,7 @@ export default function KnowledgeBase() {
     // Last-ditch fallback: if all three queries returned nothing, try semantic search.
     if (docs.length === 0) {
       try {
-        const result = await apiClient.quickSearch('knowledge-base document-summary');
+        const result = await apiClient.searchMemories('knowledge-base document-summary', { scope: 'all', n_results: 100 });
         const fallback = (result?.results || result?.memories || []).filter((m) => {
           const tags = m.tags || [];
           return tags.includes('document-summary') || tags.includes('schema-record');
