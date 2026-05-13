@@ -435,31 +435,24 @@ export default function MemoryGraph() {
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
   // total node count so dense graphs don't overlap.
-  // Brain-like layout: clusters get organic initial positions seeded by a
-  // golden-angle spiral (like sunflower seeds). This avoids the rigid ring
-  // that made everything arc-shaped. Orphans get random scatter seeds.
+  // BA / Cytoscape style: no rigid placement. Centroids only used as a
+  // *weak bias* during physics — emergence does the rest. Random initial
+  // angle per cluster avoids deterministic patterns.
   const clusterCentroids = useMemo(() => {
     const out = {};
     const realClusters = clusters.filter((c) => c.id !== "_orphan");
     const K = realClusters.length || 1;
-    // Spread radius scales with node count — bigger brain, bigger spread.
-    // Minimum radius proportional to cluster count: K clusters need 2*K*minSep room.
-    const minSep = 220;
-    const R = K <= 1 ? 0 : Math.max(K * minSep * 0.7, 80 * Math.sqrt(graphData.nodes.length));
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ~137.5°
-    realClusters
-      .sort((a, b) => (b.size || 0) - (a.size || 0))
-      .forEach((c, i) => {
-        // Sunflower spiral: angle = i * golden_angle, r = R * sqrt(i/K)
-        const angle = i * goldenAngle;
-        // Shift everything outward: smallest cluster still gets r >= 0.4*R
-        const r = R * (0.4 + 0.6 * Math.sqrt((i + 1) / (K + 1)));
-        out[c.id] = { x: Math.cos(angle) * r, y: Math.sin(angle) * r };
-      });
-    // Orphans: no fixed centroid, just gentle push outward
-    if (clusters.find((c) => c.id === "_orphan")) {
-      out["_orphan"] = { x: 0, y: 0 };
-    }
+    if (K <= 1) return out;
+    // Loose ring of centroids — random jitter so it doesn't look like spokes
+    const R = 80 + 30 * Math.sqrt(graphData.nodes.length);
+    realClusters.forEach((c, i) => {
+      // Hash cluster id to stable angle (so re-render doesn't shuffle)
+      let h = 0;
+      for (let k = 0; k < c.id.length; k++) h = (h * 31 + c.id.charCodeAt(k)) | 0;
+      const angle = (Math.abs(h) % 360) * (Math.PI / 180);
+      const jitter = 0.85 + ((Math.abs(h >> 8) % 100) / 100) * 0.3; // 0.85-1.15
+      out[c.id] = { x: Math.cos(angle) * R * jitter, y: Math.sin(angle) * R * jitter };
+    });
     return out;
   }, [clusters, graphData.nodes.length]);
 
@@ -547,151 +540,68 @@ export default function MemoryGraph() {
     try {
       const fg = graphRef.current;
 
-      // ★ KILL the default center force — this is what pulls everything to (0,0)
+      // BA / Cytoscape style: strip all custom forces, trust physics.
       try { fg.d3Force('center', null); } catch (_e) { /* noop */ }
+      try { fg.d3Force('radialSpread', null); } catch (_e) { /* noop */ }
+      try { fg.d3Force('clusterPull', null); } catch (_e) { /* noop */ }
+      try { fg.d3Force('clusterRepel', null); } catch (_e) { /* noop */ }
+      try { fg.d3Force('clusterX', null); } catch (_e) { /* noop */ }
+      try { fg.d3Force('clusterY', null); } catch (_e) { /* noop */ }
 
-      // 1. Charge: hubs push very hard so spokes have room to spread 360°
+      // Degree-proportional repulsion (BA: hub repulsion ∝ degree)
       const charge = fg.d3Force?.('charge');
       if (charge?.strength) {
         charge.strength((node) => {
-          if (node.clusterId === '_orphan') return -8;
-          if (node.clusterRole === 'hub') return -350; // 75% stronger (was -200)
-          return -80; // moderate inter-spoke repel
+          if (node.clusterId === '_orphan') return -20;
+          const degree = (node.val || 1);
+          // Repulsion scales with degree — preferential attachment shows
+          const base = -40 - degree * 6;
+          return node.clusterRole === 'hub' ? base * 1.4 : base;
         });
-        // Increase theta for performance with many nodes
         if (charge.theta) charge.theta(0.9);
+        if (charge.distanceMax) charge.distanceMax(450);
       }
 
-      // 2. Links: tight within cluster, long across. Weak strength lets
-      //    radial spread force win — links pull children to hub but don't
-      //    constrain their angle.
+      // Links: dense local, sparse global. Strong intra → BA-style tight
+      // neighborhoods. Weak inter → bridges stretch organically.
       const link = fg.d3Force?.('link');
       if (link?.distance) {
         link.distance((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 45 : 150 + Math.sqrt(n);
+          return sameCluster ? 30 : 90;
         });
         link.strength((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 0.25 : 0.05; // weaker so radial spread dominates angle
+          return sameCluster ? 0.7 : 0.1;
         });
       }
 
+      // Single soft cluster bias — no rigid placement, just preference.
       if (clusters.length > 1 && fg.d3Force) {
-        // 3. Centroid pull — STRONGER now that forceCenter is gone.
-        //    This is the main macro-layout driver.
-        fg.d3Force('clusterPull', (alpha) => {
-          const pull = 0.15;
+        fg.d3Force('clusterBias', (alpha) => {
+          const pull = 0.03; // very weak — physics dominates
           for (const node of graphData.nodes) {
+            if (node.clusterId === '_orphan') continue;
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
-            if (node.clusterId === '_orphan') {
-              // Orphans: gentle random drift outward from center
-              const dist = Math.sqrt((node.x || 0) ** 2 + (node.y || 0) ** 2) || 1;
-              const targetDist = 400 + Math.random() * 200;
-              if (dist < targetDist) {
-                const pushOut = 0.01 * alpha;
-                node.vx = (node.vx || 0) + ((node.x || 0.1) / dist) * pushOut * targetDist;
-                node.vy = (node.vy || 0) + ((node.y || 0.1) / dist) * pushOut * targetDist;
-              }
-              continue;
-            }
-            const w = node.clusterRole === 'hub' ? 1.5
-              : node.clusterRole === 'bridge' ? 0.3
-              : 1.0;
-            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * w * alpha;
-            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * w * alpha;
-          }
-        });
-
-        // 4. Radial child spread — THE force that makes hubs radiate in 360°.
-        //    For each hub, assign each child an evenly-spaced angle slot and
-        //    pull it to (hub + r*cos(θ), hub + r*sin(θ)). Strong enough to
-        //    overcome link pull, which only enforces distance, not angle.
-        fg.d3Force('radialSpread', (alpha) => {
-          const spreadStrength = 0.35; // 3x stronger than before (was 0.12)
-          const childRadius = 55 + Math.sqrt(n) * 1.2;
-          for (const [hubId, children] of hubChildIndex) {
-            const hub = graphData.nodes.find((nd) => nd.id === hubId);
-            if (!hub || hub.x == null) continue;
-            const count = children.length;
-            if (count === 0) continue;
-            const angleStep = (2 * Math.PI) / count;
-            const baseAngle = (hub._radialSeed != null) ? hub._radialSeed : (hub._radialSeed = Math.random() * Math.PI * 2);
-            children.forEach((child, idx) => {
-              if (child.x == null) return;
-              const targetAngle = baseAngle + idx * angleStep;
-              const tx = hub.x + Math.cos(targetAngle) * childRadius;
-              const ty = hub.y + Math.sin(targetAngle) * childRadius;
-              child.vx = (child.vx || 0) + (tx - child.x) * spreadStrength * alpha;
-              child.vy = (child.vy || 0) + (ty - child.y) * spreadStrength * alpha;
-            });
-          }
-        });
-
-        // 5. Cluster-vs-cluster repulsion — push lobes apart hard
-        fg.d3Force('clusterRepel', (alpha) => {
-          const minDist = 280 + Math.sqrt(n) * 6; // much bigger min separation
-          const ids = Object.keys(clusterCentroids).filter((id) => id !== '_orphan');
-          const liveCentroids = {};
-          const counts = {};
-          for (const node of graphData.nodes) {
-            if (!node.clusterId || node.clusterId === '_orphan') continue;
-            if (!liveCentroids[node.clusterId]) {
-              liveCentroids[node.clusterId] = { x: 0, y: 0 };
-              counts[node.clusterId] = 0;
-            }
-            liveCentroids[node.clusterId].x += node.x || 0;
-            liveCentroids[node.clusterId].y += node.y || 0;
-            counts[node.clusterId]++;
-          }
-          for (const id of ids) {
-            if (counts[id]) {
-              liveCentroids[id].x /= counts[id];
-              liveCentroids[id].y /= counts[id];
-            }
-          }
-          for (let i = 0; i < ids.length; i++) {
-            for (let j = i + 1; j < ids.length; j++) {
-              const a = liveCentroids[ids[i]];
-              const b = liveCentroids[ids[j]];
-              if (!a || !b) continue;
-              const dx = (a.x || 0) - (b.x || 0);
-              const dy = (a.y || 0) - (b.y || 0);
-              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-              if (dist < minDist) {
-                const push = (minDist - dist) * 0.08 * alpha; // 4x original strength
-                const ux = (dx / dist) * push;
-                const uy = (dy / dist) * push;
-                for (const node of graphData.nodes) {
-                  if (node.clusterId === ids[i]) {
-                    node.vx = (node.vx || 0) + ux;
-                    node.vy = (node.vy || 0) + uy;
-                  } else if (node.clusterId === ids[j]) {
-                    node.vx = (node.vx || 0) - ux;
-                    node.vy = (node.vy || 0) - uy;
-                  }
-                }
-              }
-            }
+            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
+            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
           }
         });
       } else {
         if (fg.d3Force) {
-          try { fg.d3Force('clusterPull', null); } catch (_e) { /* noop */ }
-          try { fg.d3Force('radialSpread', null); } catch (_e) { /* noop */ }
-          try { fg.d3Force('clusterRepel', null); } catch (_e) { /* noop */ }
+          try { fg.d3Force('clusterBias', null); } catch (_e) { /* noop */ }
         }
       }
       fg.d3ReheatSimulation?.();
     } catch (_e) {
       // d3Force may not exist yet on first render — re-run when nodes arrive.
     }
-  }, [graphData.nodes, clusters.length, clusterCentroids, hubChildIndex]);
+  }, [graphData.nodes, clusters.length, clusterCentroids]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
@@ -738,13 +648,12 @@ export default function MemoryGraph() {
         TYPE_COLORS.default;
 
       const glow = node.temporalWeight || 0.3;
-      // Smaller base — was 2.5, now 1.4. Caps prevent monster hubs.
-      let radius = Math.min(8, Math.sqrt(node.val || 4) * 1.4);
+      // BA-style: hub size proportional to degree (val). Spokes uniform small.
+      let radius = Math.min(10, Math.sqrt(node.val || 4) * 2.0);
 
-      // Cluster role bumps — gentle, not dominant.
-      if (isOrphan) radius = Math.max(radius * 0.5, 1.2);
-      else if (node.clusterRole === "hub") radius = Math.min(9, radius * 1.25);
-      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.9, 2);
+      if (isOrphan) radius = Math.max(radius * 0.45, 1.5);
+      else if (node.clusterRole === "hub") radius = Math.min(11, radius * 1.4);
+      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.2);
 
       // Size adjustments per layer (overrides cluster sizing for special types)
       if (node.nodeLayer === "fact") radius = Math.max(radius * 0.7, 3);
