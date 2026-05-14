@@ -312,6 +312,7 @@ const CONNECTORS = [
 ];
 
 const DIRECT_MCP_ENDPOINT = 'https://core.hivemind.davinciai.eu:8050/api/mcp';
+const CLAUDE_INSTALLER_BASE = 'https://core.hivemind.davinciai.eu:8050/install';
 
 const CLAUDE_TERMINAL_OS = {
   macos: {
@@ -341,11 +342,13 @@ function detectTerminalOs() {
 
 function buildClaudeSetupCommand(os, apiKey) {
   const safeApiKey = apiKey || 'YOUR_API_KEY';
+  const encodedApiKey = encodeURIComponent(safeApiKey);
   if (os === 'windows') {
-    return `if (-not (Get-Command claude -ErrorAction SilentlyContinue)) { irm https://claude.ai/install.ps1 | iex }; try { claude mcp remove hivemind | Out-Null } catch {}; claude mcp add --scope user --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${safeApiKey}"; Write-Host ""; Write-Host "Now quit and reopen Claude Desktop, then continue to Step 2."`;
+    return `irm "${CLAUDE_INSTALLER_BASE}/claude-mcp-windows.ps1?api_key=${encodedApiKey}" | iex`;
   }
 
-  return `(command -v claude >/dev/null 2>&1 || curl -fsSL https://claude.ai/install.sh | bash) && (claude mcp remove hivemind >/dev/null 2>&1 || true) && claude mcp add --scope user --transport http hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${safeApiKey}" && printf '\nNow quit and reopen Claude Desktop, then continue to Step 2.\n'`;
+  const platform = os === 'linux' ? 'linux' : 'macos';
+  return `curl -fsSL "${CLAUDE_INSTALLER_BASE}/claude-mcp-${platform}.sh?api_key=${encodedApiKey}" | bash`;
 }
 
 function isLegacyMcpEndpointUrl(url) {
