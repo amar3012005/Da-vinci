@@ -38,8 +38,9 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
 
-  <!-- Preload hero image for LCP -->
-  <link rel="preload" as="image" href="%PUBLIC_URL%/main_background.jpeg" fetchpriority="high" />
+  <!-- Hero image preload removed — was firing on every route (graph/memories/connectors)
+       but only used on landing hero, producing console warning + wasted bandwidth.
+       Component that uses it sets bg via inline style, browser fetches on-demand. -->
 
   <script
     defer

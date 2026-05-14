@@ -359,14 +359,51 @@ export default function MemoryGraph() {
     return slug ? `/hivemind/projects/${slug}` : "/hivemind";
   }, [projectFilter]);
 
-  // Fetch graph data
+  // LocalStorage key for graph snapshot — keyed by query params so different
+  // scope/project/limit combos cache independently.
+  const cacheKey = useMemo(
+    () => `hm:graph:${scope}:${projectFilter || ""}:${nodeLimit}`,
+    [scope, projectFilter, nodeLimit]
+  );
+
+  // Hydrate from localStorage on mount — show cached graph INSTANTLY
+  // while real fetch happens in background (stale-while-revalidate FE).
+  const hydrateFromCache = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return false;
+      const cached = JSON.parse(raw);
+      if (!cached || !cached.nodes || !cached.edges) return false;
+      // Cap stale display at 24h — older than that, don't bother
+      if (Date.now() - (cached.savedAt || 0) > 24 * 60 * 60 * 1000) return false;
+      const nodes = cached.nodes.map((n) => ({
+        ...n,
+        val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
+      }));
+      const links = cached.edges.map((e) => ({
+        source: e.source,
+        target: e.target,
+        type: e.type,
+        confidence: e.confidence || 1,
+      }));
+      setGraphData({ nodes, links });
+      setRawEdges(cached.edges);
+      setMeta(cached.meta || null);
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }, [cacheKey]);
+
+  // Fetch graph data — uses cached snapshot for instant render, then revalidates.
   const fetchGraph = useCallback(async () => {
-    setLoading(true);
+    const hadCache = hydrateFromCache();
+    // Only show spinner if no cache to display
+    setLoading(!hadCache);
     setError(null);
     try {
       const data = await apiClient.getGraph({
         project: projectFilter || undefined,
-        // 0 → unbounded (server caps at 50k). >0 → exact node budget.
         limit: nodeLimit,
         scope,
       });
@@ -386,13 +423,32 @@ export default function MemoryGraph() {
       setGraphData({ nodes, links });
       setRawEdges(data.edges || []);
       setMeta(data.meta || null);
+      // Persist for next mount — show instantly on refresh
+      try {
+        const snapshot = {
+          nodes: data.nodes || [],
+          edges: data.edges || [],
+          meta: data.meta || null,
+          savedAt: Date.now(),
+        };
+        const serialized = JSON.stringify(snapshot);
+        // Cap at 4MB to fit comfortably in localStorage (typical 5-10MB quota)
+        if (serialized.length < 4 * 1024 * 1024) {
+          localStorage.setItem(cacheKey, serialized);
+        }
+      } catch (_e) {
+        // localStorage quota exceeded or disabled — non-fatal
+      }
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
-      setGraphData({ nodes: [], links: [] });
+      // Keep cached graph visible on fetch error if we have one
+      if (!hadCache) {
+        setError(err.response?.data?.error || err.message);
+        setGraphData({ nodes: [], links: [] });
+      }
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope, nodeLimit]);
+  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey]);
 
   const userColorMap = useMemo(() => {
     const ids = [
