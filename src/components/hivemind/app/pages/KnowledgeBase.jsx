@@ -620,15 +620,19 @@ export default function KnowledgeBase() {
     const docId = doc ? doc.id : docOrId;
     const uploadId = doc?.metadata?.upload_id
       || doc?.metadata?.source_upload_id
+      || doc?.metadata?.sourceUploadId
+      || doc?.source_metadata?.upload_id
+      || doc?.source_metadata?.source_upload_id
+      || doc?.source_metadata?.sourceUploadId
       || doc?.source_metadata?.metadata?.source_upload_id
+      || doc?.source_metadata?.metadata?.upload_id
+      || doc?.source_metadata?.metadata?.sourceUploadId
       || null;
     setDeletingDocId(docId);
     try {
       const result = await apiClient.deleteDocument({
         memoryId: docId,
-        // Fall back to docId — if it's an upload_id rather than a UUID
-        // the server uses this as the upload_id key.
-        uploadId: uploadId || docId,
+        uploadId,
       });
       const deletedCount = result?.deleted || result?.deleted_count || result?.memory_ids?.length || null;
       // Optimistic local removal — refetch confirms.
