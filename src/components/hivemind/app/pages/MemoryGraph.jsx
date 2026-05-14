@@ -507,32 +507,6 @@ export default function MemoryGraph() {
   }, [searchQuery, graphData.nodes]);
 
   // ── Brain-like force physics v3 ──
-  // Key insight: d3 default forceCenter(0,0) pulls everything to origin.
-  // Must KILL it. Then use strong centroid pull + radial child spread to
-  // make each cluster a neuron with dendrites radiating in all directions.
-  //
-  // Build a hub→children adjacency index so we can spread children evenly.
-  const hubChildIndex = useMemo(() => {
-    const index = new Map(); // hubNodeId -> [childNode, ...]
-    const nodeMap = new Map();
-    for (const node of graphData.nodes) nodeMap.set(node.id, node);
-    for (const edge of rawEdges) {
-      const src = typeof edge.source === 'object' ? edge.source : nodeMap.get(edge.source);
-      const tgt = typeof edge.target === 'object' ? edge.target : nodeMap.get(edge.target);
-      if (!src || !tgt) continue;
-      // Hub parent → child spoke
-      if (src.clusterRole === 'hub' && tgt.clusterRole !== 'hub' && src.clusterId === tgt.clusterId) {
-        if (!index.has(src.id)) index.set(src.id, []);
-        index.get(src.id).push(tgt);
-      }
-      if (tgt.clusterRole === 'hub' && src.clusterRole !== 'hub' && tgt.clusterId === src.clusterId) {
-        if (!index.has(tgt.id)) index.set(tgt.id, []);
-        index.get(tgt.id).push(src);
-      }
-    }
-    return index;
-  }, [graphData.nodes, rawEdges]);
-
   useEffect(() => {
     if (!graphRef.current) return;
     const n = graphData.nodes.length;
