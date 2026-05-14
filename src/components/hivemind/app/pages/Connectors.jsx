@@ -341,7 +341,7 @@ function detectTerminalOs() {
 }
 
 function buildClaudeSetupCommand(os, apiKey) {
-  const safeApiKey = apiKey || 'YOUR_API_KEY';
+  const safeApiKey = apiKey || '';
   const encodedApiKey = encodeURIComponent(safeApiKey);
   if (os === 'windows') {
     return `irm "${CLAUDE_INSTALLER_BASE}/claude-mcp-windows.ps1?api_key=${encodedApiKey}" | iex`;
@@ -1127,6 +1127,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
   const navigate = useNavigate();
   const userId = user?.id || user?.userId || 'YOUR_USER_ID';
   const apiKey = generatedKey || apiKeys?.[0]?.key || apiKeys?.[0]?.api_key || 'YOUR_API_KEY';
+  const apiKeyReady = apiKey !== 'YOUR_API_KEY';
   const isClaudeTerminalSetup = ['claude', 'claude-code'].includes(connector?.id);
 
   useEffect(() => {
@@ -1167,7 +1168,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
     },
   }, null, 2);
 
-  const claudeSetupCommand = buildClaudeSetupCommand(terminalOs, apiKey);
+  const claudeSetupCommand = apiKeyReady
+    ? buildClaudeSetupCommand(terminalOs, apiKey)
+    : 'Generating your HIVEMIND API key...';
 
   const config = isClaudeTerminalSetup ? claudeSetupCommand : jsonConfig;
 
@@ -1233,7 +1236,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl shadow-xl max-w-5xl w-full max-h-[85vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-[#f3f1ec]">
@@ -1252,148 +1255,152 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
 
         {/* Steps */}
         <div className="px-6 py-4">
-          <div className="mb-5 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-4">
-            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">Step 1</p>
-            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              {isClaudeTerminalSetup
-                ? 'Open Terminal with the shortcut for your OS, run the Claude MCP setup command, fully quit and reopen Claude, then verify the connection before moving to Step 2.'
-                : 'Copy this schema into your AI client\'s MCP/server setup so it can connect immediately.'}
-            </p>
-            {isClaudeTerminalSetup && (
-              <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {Object.entries(CLAUDE_TERMINAL_OS).map(([key, value]) => (
-                    <button
-                      key={key}
-                      onClick={() => setTerminalOs(key)}
-                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
-                        terminalOs === key
-                          ? 'border-[#117dff]/40 bg-[#117dff]/8 text-[#117dff]'
-                          : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#117dff]/20'
-                      }`}
-                    >
-                      {value.label}
-                    </button>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.85fr)] xl:items-start">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-4">
+                <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">Step 1</p>
+                <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+                  {isClaudeTerminalSetup
+                    ? 'Open Terminal with the shortcut for your OS, run the Claude MCP setup command, fully quit and reopen Claude, then verify the connection before moving to Step 2.'
+                    : 'Copy this schema into your AI client\'s MCP/server setup so it can connect immediately.'}
+                </p>
+                {isClaudeTerminalSetup && (
+                  <div className="rounded-lg border border-[#e3e0db] bg-white p-3 mb-3">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {Object.entries(CLAUDE_TERMINAL_OS).map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={() => setTerminalOs(key)}
+                          className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                            terminalOs === key
+                              ? 'border-[#117dff]/40 bg-[#117dff]/8 text-[#117dff]'
+                              : 'border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#117dff]/20'
+                          }`}
+                        >
+                          {value.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">Open Terminal</p>
+                      <p className="text-[12px] font-semibold text-[#117dff] mb-1">{CLAUDE_TERMINAL_OS[terminalOs].shortcut}</p>
+                      <p className="text-[12px] text-[#525252] leading-relaxed">{CLAUDE_TERMINAL_OS[terminalOs].followup}</p>
+                    </div>
+                  </div>
+                )}
+
+                {isClaudeTerminalSetup && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-amber-700 mb-1">Restart Claude</p>
+                    <p className="text-[12px] text-amber-800 leading-relaxed">After the command finishes, fully quit Claude Desktop or Claude Code and open it again before you move to Step 2.</p>
+                  </div>
+                )}
+              </div>
+
+              {connector.configPath && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db]">
+                  <FileText size={12} className="text-[#a3a3a3] shrink-0" />
+                  <span className="text-[10px] font-mono text-[#737373] truncate">{connector.configPath}</span>
+                </div>
+              )}
+
+              <div className="relative">
+                <div className="absolute top-2 right-2 z-10">
+                  <button
+                    onClick={handleCopy}
+                    disabled={isClaudeTerminalSetup && !apiKeyReady}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                      copied
+                        ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                        : 'bg-white/90 text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec]'
+                    } disabled:opacity-50`}
+                  >
+                    {copied ? <Check size={12} /> : <Copy size={12} />}
+                    {copied ? 'Copied!' : isClaudeTerminalSetup ? 'Copy Command' : 'Copy Config'}
+                  </button>
+                </div>
+                <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre-wrap break-words min-h-[220px]">
+                  {config}
+                </pre>
+              </div>
+
+              {!apiKeyReady && (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                  <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 font-['Space_Grotesk']">
+                    We are generating a dedicated API key for this setup now. If this does not populate in a moment, create one in <a href="/hivemind/app/keys" className="underline font-semibold">API Keys</a> and reopen this setup.
+                  </p>
+                </div>
+              )}
+
+              <div className="rounded-lg border border-[#e3e0db] bg-white p-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">Verify Connection</p>
+                  {verificationState?.healthy ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                      <Check size={10} />
+                      Connected
+                    </span>
+                  ) : verificationState?.error ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-600">
+                      <AlertCircle size={10} />
+                      Needs attention
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+                  {isClaudeTerminalSetup
+                    ? 'After you reopen Claude, click Verify Connection here. If it still errors, reopen Claude one more time, make sure the MCP command finished successfully, then verify again before Step 2.'
+                    : 'After saving the config in your client, run verification here. We will inspect the direct HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.'}
+                </p>
+                {verificationState?.error && (
+                  <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 font-['Space_Grotesk']">
+                    {verificationState.error}
+                  </p>
+                )}
+                {verificationState?.error && isClaudeTerminalSetup && (
+                  <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700 font-['Space_Grotesk']">
+                    Fully quit Claude Code or Claude Desktop, open it again, then click Verify Connection once more before moving to Step 2.
+                  </p>
+                )}
+                <button
+                  onClick={handleVerify}
+                  disabled={verifying || !apiKeyReady}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#117dff]/20 bg-[#117dff]/10 px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-[#117dff] hover:bg-[#117dff]/15 disabled:opacity-50"
+                >
+                  {verifying ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+                  {verificationState?.healthy ? 'Re-check Connection' : 'Verify Connection'}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 xl:sticky xl:top-0">
+              <div className="rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4 min-h-[220px]">
+                <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
+                <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
+                  Once Step 1 is connected, go to the MCP Server page for the HIVEMIND default prompt and the longer coding or agent prompt variants.
+                </p>
+                <button
+                  onClick={goToPrompt}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#117dff] px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-all"
+                >
+                  <ExternalLink size={14} />
+                  Continue to MCP Server Prompt
+                </button>
+              </div>
+
+              {!isClaudeTerminalSetup && (
+                <div className="space-y-3 rounded-xl border border-[#e3e0db] bg-white p-4">
+                  {(connector.setupSteps || []).map((step, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</div>
+                      <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed">{step}</p>
+                    </div>
                   ))}
                 </div>
-                <div className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-3">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">Open Terminal</p>
-                  <p className="text-[12px] font-semibold text-[#117dff] mb-1">{CLAUDE_TERMINAL_OS[terminalOs].shortcut}</p>
-                  <p className="text-[12px] text-[#525252] leading-relaxed">{CLAUDE_TERMINAL_OS[terminalOs].followup}</p>
-                </div>
-              </div>
-            )}
-          
-            {isClaudeTerminalSetup && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-amber-700 mb-1">Restart Claude</p>
-                <p className="text-[12px] text-amber-800 leading-relaxed">After the command finishes, fully quit Claude Desktop or Claude Code and open it again before you move to Step 2.</p>
-              </div>
-            )}
-
+              )}
+            </div>
           </div>
-
-          {/* Config path hint */}
-          {connector.configPath && (
-            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db]">
-              <FileText size={12} className="text-[#a3a3a3] shrink-0" />
-              <span className="text-[10px] font-mono text-[#737373] truncate">{connector.configPath}</span>
-            </div>
-          )}
-
-          {/* Config / commands block */}
-          <div className="relative">
-            <div className="absolute top-2 right-2 z-10">
-              <button
-                onClick={handleCopy}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
-                  copied
-                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                    : 'bg-white/90 text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec]'
-                }`}
-              >
-                {copied ? <Check size={12} /> : <Copy size={12} />}
-                {copied ? 'Copied!' : isClaudeTerminalSetup ? 'Copy Command' : 'Copy Config'}
-              </button>
-            </div>
-            <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre-wrap break-words">
-              {config}
-            </pre>
-          </div>
-
-          {apiKey === 'YOUR_API_KEY' && (
-            <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
-              <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 font-['Space_Grotesk']">
-                Create an API key first in <a href="/hivemind/app/keys" className="underline font-semibold">API Keys</a>, then replace YOUR_API_KEY in the config.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-3 rounded-lg border border-[#e3e0db] bg-white p-3">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="text-[10px] uppercase tracking-[0.08em] text-[#a3a3a3]">Verify Connection</p>
-              {verificationState?.healthy ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                  <Check size={10} />
-                  Connected
-                </span>
-              ) : verificationState?.error ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-600">
-                  <AlertCircle size={10} />
-                  Needs attention
-                </span>
-              ) : null}
-            </div>
-            <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              {isClaudeTerminalSetup
-                ? 'After you reopen Claude, click Verify Connection here. If it still errors, reopen Claude one more time, make sure the MCP command finished successfully, then verify again before Step 2.'
-                : 'After saving the config in your client, run verification here. We will inspect the direct HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.'}
-            </p>
-            {verificationState?.error && (
-              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600 font-['Space_Grotesk']">
-                {verificationState.error}
-              </p>
-            )}
-            {verificationState?.error && isClaudeTerminalSetup && (
-              <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700 font-['Space_Grotesk']">
-                Fully quit Claude Code or Claude Desktop, open it again, then click Verify Connection once more before moving to Step 2.
-              </p>
-            )}
-            <button
-              onClick={handleVerify}
-              disabled={verifying || apiKey === 'YOUR_API_KEY'}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#117dff]/20 bg-[#117dff]/10 px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-[#117dff] hover:bg-[#117dff]/15 disabled:opacity-50"
-            >
-              {verifying ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
-              {verificationState?.healthy ? 'Re-check Connection' : 'Verify Connection'}
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-xl border border-[#dbe8ff] bg-[#f7fbff] p-4">
-            <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#117dff] mb-2">Step 2</p>
-            <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
-              Once Step 1 is connected, go to the MCP Server page for the HIVEMIND default prompt and the longer coding or agent prompt variants.
-            </p>
-            <button
-              onClick={goToPrompt}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#117dff] px-4 py-2.5 text-sm font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-all"
-            >
-              <ExternalLink size={14} />
-              Continue to MCP Server Prompt
-            </button>
-          </div>
-
-          {!isClaudeTerminalSetup && (
-            <div className="space-y-3 mb-5">
-              {(connector.setupSteps || []).map((step, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</div>
-                  <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed">{step}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
