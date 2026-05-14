@@ -351,10 +351,6 @@ function buildClaudeSetupCommand(os, apiKey) {
   return `curl -fsSL "${CLAUDE_INSTALLER_BASE}/claude-mcp-${platform}.sh?api_key=${encodedApiKey}" | bash`;
 }
 
-function buildClaudeCodeCommand(apiKey) {
-  return `claude mcp add --transport http --scope user hivemind "${DIRECT_MCP_ENDPOINT}" --header "Authorization: Bearer ${apiKey}"`;
-}
-
 function isLegacyMcpEndpointUrl(url) {
   return typeof url === 'string' && (url.includes('/api/mcp/servers/') || url.includes('/api/mcp/rpc'));
 }
@@ -1176,9 +1172,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
 
   const claudeSetupCommand = !apiKeyReady
     ? 'Generating your HIVEMIND API key...'
-    : isClaudeCodeSetup
-      ? buildClaudeCodeCommand(apiKey)
-      : buildClaudeSetupCommand(terminalOs, apiKey);
+    : buildClaudeSetupCommand(terminalOs, apiKey);
 
   const config = isClaudeTerminalSetup ? claudeSetupCommand : jsonConfig;
 
@@ -1255,7 +1249,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
             <div>
               <h2 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">{connector.setupTitle || `Connect ${connector.name}`}</h2>
               <p className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">
-                {isClaudeTerminalSetup ? 'One-time setup — run the Claude MCP command, verify it, then continue to Step 2' : 'One-time setup — paste config into your tool'}
+                {isClaudeTerminalSetup ? 'One-time setup — run the full Claude MCP installer script, let it configure and restart Claude, then verify before Step 2' : 'One-time setup — paste config into your tool'}
               </p>
             </div>
           </div>
@@ -1269,9 +1263,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 <p className="text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">Step 1</p>
                 <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
                   {isClaudeDesktopSetup
-                    ? 'Open Terminal with the shortcut for your OS, run the Claude MCP setup command, fully quit and reopen Claude, then verify the connection before moving to Step 2.'
+                    ? 'Open Terminal with the shortcut for your OS, run the full Claude MCP setup script, let it install or update Claude, configure HIVEMIND, and restart Claude before moving to Step 2.'
                     : isClaudeCodeSetup
-                      ? 'Open Claude Code terminal, run the direct HTTP MCP command below, then verify the connection before moving to Step 2.'
+                      ? 'Open Claude Code terminal or your system terminal, run the full HIVEMIND setup script below, let it install Claude if needed, register the MCP server, and restart Claude before moving to Step 2.'
                     : 'Copy this schema into your AI client\'s MCP/server setup so it can connect immediately.'}
                 </p>
                 {isClaudeTerminalSetup && (
@@ -1296,7 +1290,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                       <p className="text-[12px] font-semibold text-[#117dff] mb-1">{CLAUDE_TERMINAL_OS[terminalOs].shortcut}</p>
                       <p className="text-[12px] text-[#525252] leading-relaxed">
                         {isClaudeCodeSetup
-                          ? 'Open the terminal inside Claude Code, or open your system terminal and run the command there.'
+                          ? 'Open the terminal inside Claude Code, or open your system terminal and run the setup script there.'
                           : CLAUDE_TERMINAL_OS[terminalOs].followup}
                       </p>
                     </div>
@@ -1306,7 +1300,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 {isClaudeDesktopSetup && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <p className="text-[10px] uppercase tracking-[0.08em] text-amber-700 mb-1">Restart Claude</p>
-                    <p className="text-[12px] text-amber-800 leading-relaxed">After the command finishes, fully quit Claude Desktop and open it again before you move to Step 2.</p>
+                    <p className="text-[12px] text-amber-800 leading-relaxed">The setup script handles the restart step. If Claude is still open on the old session, quit and reopen it once before Step 2.</p>
                   </div>
                 )}
               </div>
@@ -1330,7 +1324,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                     } disabled:opacity-50`}
                   >
                     {copied ? <Check size={12} /> : <Copy size={12} />}
-                    {copied ? 'Copied!' : isClaudeTerminalSetup ? 'Copy Command' : 'Copy Config'}
+                    {copied ? 'Copied!' : isClaudeTerminalSetup ? 'Copy Setup Script' : 'Copy Config'}
                   </button>
                 </div>
                 <pre className="bg-[#0a0a0a] text-[#e2e8f0] text-xs font-mono rounded-xl p-4 pr-28 overflow-x-auto leading-relaxed whitespace-pre-wrap break-words min-h-[220px]">
@@ -1364,9 +1358,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                 </div>
                 <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-3">
                   {isClaudeDesktopSetup
-                    ? 'After you reopen Claude Desktop, click Verify Connection here. If it still errors, reopen Claude one more time, make sure the MCP command finished successfully, then verify again before Step 2.'
+                    ? 'After the setup script completes, click Verify Connection here. If it still errors, reopen Claude one more time, make sure the installer finished successfully, then verify again before Step 2.'
                     : isClaudeCodeSetup
-                      ? 'After the command finishes in Claude Code, click Verify Connection here. If it still errors, run `claude mcp get hivemind` to confirm the server is registered, then verify again before Step 2.'
+                      ? 'After the setup script finishes, click Verify Connection here. If it still errors, run `claude mcp get hivemind` to confirm the server is registered, then verify again before Step 2.'
                     : 'After saving the config in your client, run verification here. We will inspect the direct HIVEMIND MCP endpoint and mark this connector as connected when it responds cleanly.'}
                 </p>
                 {verificationState?.error && (
