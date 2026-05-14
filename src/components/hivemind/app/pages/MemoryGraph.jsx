@@ -325,6 +325,7 @@ export default function MemoryGraph() {
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [viewState, setViewState] = useState({ distance: 1100, target: null, camera: null, inFrameNodeIds: [], labelMode: "hidden", linkMode: "sparse" });
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
   const [showLegend, setShowLegend] = useState(false);
@@ -516,6 +517,167 @@ export default function MemoryGraph() {
     return matches;
   }, [graphData.nodes, layerFilter]);
 
+  const visibleGraphData = useMemo(() => {
+    const nodes = graphData.nodes || [];
+    const links = graphData.links || [];
+    if (nodes.length === 0) return { nodes: [], links: [] };
+
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const neighbors = new Map();
+    links.forEach((link) => {
+      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+      const targetId = typeof link.target === "object" ? link.target.id : link.target;
+      if (!neighbors.has(sourceId)) neighbors.set(sourceId, new Set());
+      if (!neighbors.has(targetId)) neighbors.set(targetId, new Set());
+      neighbors.get(sourceId).add(targetId);
+      neighbors.get(targetId).add(sourceId);
+    });
+
+    const zoomTier = viewState.distance > 900
+      ? "far"
+      : viewState.distance > 500
+        ? "mid"
+        : viewState.distance > 260
+          ? "near"
+          : "detail";
+
+    const tierConfig = {
+      far: { limit: 140, depth: 0, showDetails: false },
+      mid: { limit: 320, depth: 1, showDetails: false },
+      near: { limit: 700, depth: 1, showDetails: true },
+      detail: { limit: 1200, depth: 2, showDetails: true },
+    }[zoomTier];
+
+    const viewTarget = viewState.target || { x: 0, y: 0, z: 0 };
+    const cameraPoint = viewState.camera || null;
+    const inFrameNodeIds = new Set(viewState.inFrameNodeIds || []);
+    const detailRadius = Math.max(120, viewState.distance * 0.72);
+    const priorityRadius = Math.max(220, viewState.distance * 1.35);
+
+    const getNodePoint = (node) => ({
+      x: Number.isFinite(node.x) ? node.x : 0,
+      y: Number.isFinite(node.y) ? node.y : 0,
+      z: Number.isFinite(node.z) ? node.z : 0,
+    });
+
+    const distanceToViewTarget = (node) => {
+      const point = getNodePoint(node);
+      const dx = point.x - viewTarget.x;
+      const dy = point.y - viewTarget.y;
+      const dz = point.z - viewTarget.z;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    };
+
+    const hasPosition = (node) => Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z);
+
+    const getViewAlignment = (node) => {
+      if (!cameraPoint || !hasPosition(node)) return 0;
+
+      const point = getNodePoint(node);
+      const lookX = viewTarget.x - cameraPoint.x;
+      const lookY = viewTarget.y - cameraPoint.y;
+      const lookZ = viewTarget.z - cameraPoint.z;
+      const nodeX = point.x - cameraPoint.x;
+      const nodeY = point.y - cameraPoint.y;
+      const nodeZ = point.z - cameraPoint.z;
+      const lookLen = Math.sqrt(lookX * lookX + lookY * lookY + lookZ * lookZ) || 1;
+      const nodeLen = Math.sqrt(nodeX * nodeX + nodeY * nodeY + nodeZ * nodeZ) || 1;
+      const cosine = (lookX * nodeX + lookY * nodeY + lookZ * nodeZ) / (lookLen * nodeLen);
+      return Math.max(0, cosine);
+    };
+
+    const isNearViewTarget = (node, radius = detailRadius) => {
+      if (!hasPosition(node)) return true;
+      return distanceToViewTarget(node) <= radius;
+    };
+
+    const isDetailNode = (node) => {
+      if (node.clusterRole === "hub" || node.clusterRole === "bridge") return false;
+      return ["fact", "observation", "tara", "tara-insight", "promoted", "verified"].includes(node.nodeLayer);
+    };
+
+    const scoreNode = (node) => {
+      const importance = node.importanceScore || 0;
+      const hubScore = node.hubScore || 0;
+      const strength = node.strength || 0;
+      const recallCount = node.recallCount || 0;
+      const degree = node.val || neighbors.get(node.id)?.size || 0;
+      const clusterBoost = node.clusterRole === "hub" ? 16 : node.clusterRole === "bridge" ? 10 : 0;
+      const detailPenalty = isDetailNode(node) ? 7 : 0;
+      const viewDistance = distanceToViewTarget(node);
+      const viewBoost = hasPosition(node)
+        ? Math.max(0, (priorityRadius - Math.min(viewDistance, priorityRadius * 1.6)) / 24)
+        : 0;
+      const alignmentBoost = getViewAlignment(node) * 12;
+      const frustumBoost = inFrameNodeIds.has(node.id) ? 22 : 0;
+      return importance * 14 + hubScore * 10 + strength * 4 + recallCount * 0.45 + degree * 1.2 + clusterBoost + viewBoost + alignmentBoost + frustumBoost - detailPenalty;
+    };
+
+    const rankedMajorNodes = [...nodes]
+      .filter((node) => tierConfig.showDetails || !isDetailNode(node))
+      .sort((left, right) => scoreNode(right) - scoreNode(left));
+
+    const visibleIds = new Set(rankedMajorNodes.slice(0, tierConfig.limit).map((node) => node.id));
+
+    const focusIds = new Set();
+    if (selectedNode?.id) focusIds.add(selectedNode.id);
+    if (hoveredNode?.id) focusIds.add(hoveredNode.id);
+    highlightNodes.forEach((id) => focusIds.add(id));
+
+    const expandFrom = [...focusIds];
+    expandFrom.forEach((id) => visibleIds.add(id));
+
+    let frontier = new Set(expandFrom);
+    for (let depth = 0; depth < tierConfig.depth; depth += 1) {
+      const next = new Set();
+      frontier.forEach((id) => {
+        (neighbors.get(id) || new Set()).forEach((neighborId) => {
+          visibleIds.add(neighborId);
+          next.add(neighborId);
+        });
+      });
+      frontier = next;
+      if (frontier.size === 0) break;
+    }
+
+    if (tierConfig.showDetails) {
+      [...visibleIds].forEach((id) => {
+        const anchorNode = nodeMap.get(id);
+        const anchorFocused = focusIds.has(id);
+        if (!anchorNode) return;
+        const anchorInFrame = inFrameNodeIds.size === 0 || inFrameNodeIds.has(id);
+        if (!anchorFocused && !anchorInFrame && !isNearViewTarget(anchorNode)) return;
+
+        (neighbors.get(id) || new Set()).forEach((neighborId) => {
+          const neighbor = nodeMap.get(neighborId);
+          if (!neighbor || !isDetailNode(neighbor)) return;
+          const neighborInFrame = inFrameNodeIds.size === 0 || inFrameNodeIds.has(neighborId);
+          if (anchorFocused || neighborInFrame || isNearViewTarget(neighbor)) visibleIds.add(neighborId);
+        });
+      });
+    }
+
+    const visibleNodes = nodes.filter((node) => visibleIds.has(node.id));
+    const visibleIdSet = new Set(visibleNodes.map((node) => node.id));
+    const visibleLinks = links.filter((link) => {
+      const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+      const targetId = typeof link.target === "object" ? link.target.id : link.target;
+      if (!visibleIdSet.has(sourceId) || !visibleIdSet.has(targetId)) return false;
+
+      if (viewState.linkMode === "sparse") {
+        return focusIds.has(sourceId) || focusIds.has(targetId) || inFrameNodeIds.has(sourceId) || inFrameNodeIds.has(targetId);
+      }
+
+      if (viewState.linkMode === "focus") {
+        return focusIds.has(sourceId) || focusIds.has(targetId) || (inFrameNodeIds.has(sourceId) && inFrameNodeIds.has(targetId));
+      }
+
+      return true;
+    });
+
+    return { nodes: visibleNodes, links: visibleLinks };
+  }, [graphData, highlightNodes, hoveredNode, selectedNode, viewState]);
+
   useEffect(() => {
     fetchGraph();
   }, [fetchGraph]);
@@ -558,7 +720,7 @@ export default function MemoryGraph() {
   // ── Brain-like force physics v3 ──
   useEffect(() => {
     if (!graphRef.current) return;
-    const n = graphData.nodes.length;
+    const n = visibleGraphData.nodes.length;
     if (n === 0) return;
     try {
       const fg = graphRef.current;
@@ -606,7 +768,7 @@ export default function MemoryGraph() {
       if (clusters.length > 1 && fg.d3Force) {
         fg.d3Force('clusterBias', (alpha) => {
           const pull = 0.02;
-          for (const node of graphData.nodes) {
+          for (const node of visibleGraphData.nodes) {
             if (node.clusterId === '_orphan') continue;
             const centroid = clusterCentroids[node.clusterId];
             if (!centroid) continue;
@@ -623,7 +785,7 @@ export default function MemoryGraph() {
     } catch (_e) {
       // d3Force may not exist yet on first render — re-run when nodes arrive.
     }
-  }, [graphData.nodes, clusters.length, clusterCentroids]);
+  }, [visibleGraphData.nodes, clusters.length, clusterCentroids]);
 
   // Node click
   const handleNodeClick = useCallback((node) => {
@@ -908,7 +1070,7 @@ export default function MemoryGraph() {
         {graphData.nodes.length > 0 && (
           <MemoryGraph3D
             ref={graphRef}
-            graphData={graphData}
+            graphData={visibleGraphData}
             selectedNode={selectedNode}
             highlightNodes={highlightNodes}
             filteredNodes={filteredNodes}
@@ -926,6 +1088,7 @@ export default function MemoryGraph() {
               setSelectedNode(null);
               setHoveredNode(null);
             }}
+            onViewStateChange={setViewState}
             backgroundColor="rgba(0,0,0,0)"
             width={
               typeof window !== "undefined"

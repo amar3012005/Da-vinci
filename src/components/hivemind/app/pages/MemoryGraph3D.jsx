@@ -47,6 +47,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     onNodeClick,
     onNodeHover,
     onBackgroundClick,
+    onViewStateChange,
     width,
     height,
     backgroundColor = DEFAULT_BG,
@@ -58,6 +59,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const resizeObserverRef = useRef(null);
   const highlightedNodesRef = useRef(new Set());
   const highlightedLinksRef = useRef(new Set());
+  const animationFrameRef = useRef(null);
+  const viewStateRef = useRef({
+    distance: 1100,
+    inFrameNodeIds: new Set(),
+    labelMode: "hidden",
+    linkMode: "sparse",
+  });
 
   const linkKeys = useMemo(() => {
     return new Set(
@@ -85,9 +93,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     (node) => {
       if (layerFilter !== "all" && !filteredNodes.has(node.id)) return false;
       if (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge") return false;
+      const inFrameNodeIds = viewStateRef.current.inFrameNodeIds;
+      if (inFrameNodeIds.size > 0 && Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z)) {
+        if (!inFrameNodeIds.has(node.id) && !highlightNodes.has(node.id) && selectedNode?.id !== node.id) {
+          return false;
+        }
+      }
       return true;
     },
-    [clusterFilter, filteredNodes, layerFilter],
+    [clusterFilter, filteredNodes, highlightNodes, layerFilter, selectedNode],
   );
 
   const isLinkVisible = useCallback(
@@ -97,9 +111,37 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       const sourceNode = graphData.nodes.find((node) => node.id === sourceId);
       const targetNode = graphData.nodes.find((node) => node.id === targetId);
       if (!sourceNode || !targetNode) return false;
-      return isNodeVisible(sourceNode) && isNodeVisible(targetNode);
+      if (!isNodeVisible(sourceNode) || !isNodeVisible(targetNode)) return false;
+
+      const highlightedLinks = highlightedLinksRef.current;
+      if (highlightedLinks.has(link)) return true;
+
+      const linkMode = viewStateRef.current.linkMode;
+      const sourceImportant = selectedNode?.id === sourceId || highlightNodes.has(sourceId);
+      const targetImportant = selectedNode?.id === targetId || highlightNodes.has(targetId);
+
+      if (linkMode === "sparse") {
+        return sourceImportant || targetImportant || sourceNode.clusterRole === "hub" || targetNode.clusterRole === "hub";
+      }
+
+      if (linkMode === "focus") {
+        return sourceImportant || targetImportant || sourceNode.clusterId === targetNode.clusterId;
+      }
+
+      return true;
     },
-    [graphData.nodes, isNodeVisible],
+    [graphData.nodes, highlightNodes, isNodeVisible, selectedNode],
+  );
+
+  const getNodeLabel = useCallback(
+    (node) => {
+      const labelMode = viewStateRef.current.labelMode;
+      const isImportant = selectedNode?.id === node.id || highlightNodes.has(node.id) || highlightedNodesRef.current.has(node.id);
+      if (labelMode === "hidden" && !isImportant) return "";
+      if (labelMode === "focus" && !isImportant && node.clusterRole !== "hub") return "";
+      return `<div class="node-label">${node.title || "Untitled"}</div>`;
+    },
+    [highlightNodes, selectedNode],
   );
 
   const refreshHighlight = useCallback(() => {
@@ -195,7 +237,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkWidth((link) => (highlightedLinksRef.current.has(link) ? 1.2 : 0.4))
       .linkVisibility((link) => isLinkVisible(link))
       .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
-      .nodeLabel((node) => `<div class="node-label">${node.title || "Untitled"}</div>`)
+      .nodeLabel((node) => getNodeLabel(node))
       .onNodeClick((node) => onNodeClick?.(node))
       .onNodeHover((node) => {
         const highlightedNodes = highlightedNodesRef.current;
@@ -269,6 +311,63 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       controls.panSpeed = 0.7;
       controls.minDistance = 24;
       controls.maxDistance = 3000;
+
+      const emitViewState = () => {
+        if (animationFrameRef.current != null) return;
+        animationFrameRef.current = window.requestAnimationFrame(() => {
+          animationFrameRef.current = null;
+          const cameraNow = fg.camera?.();
+          const targetNow = controls.target?.clone?.() || new THREE.Vector3();
+          if (!cameraNow) return;
+
+          cameraNow.updateMatrix?.();
+          cameraNow.updateMatrixWorld?.();
+          cameraNow.updateProjectionMatrix?.();
+
+          const frustum = new THREE.Frustum();
+          const projectionMatrix = new THREE.Matrix4().multiplyMatrices(
+            cameraNow.projectionMatrix,
+            cameraNow.matrixWorldInverse,
+          );
+          frustum.setFromProjectionMatrix(projectionMatrix);
+
+          const inFrameNodeIds = new Set();
+          (graphData.nodes || []).forEach((node) => {
+            if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return;
+            const radius = getNodeRadius(node) * 1.8;
+            const sphere = new THREE.Sphere(new THREE.Vector3(node.x, node.y, node.z), radius);
+            if (frustum.intersectsSphere(sphere)) inFrameNodeIds.add(node.id);
+          });
+
+          const distance = cameraNow.position.distanceTo(targetNow);
+          const labelMode = distance > 520 ? "hidden" : distance > 240 ? "focus" : "all";
+          const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
+
+          viewStateRef.current = {
+            distance,
+            inFrameNodeIds,
+            labelMode,
+            linkMode,
+          };
+
+          refreshHighlight();
+          onViewStateChange?.({
+            distance,
+            target: { x: targetNow.x, y: targetNow.y, z: targetNow.z },
+            camera: {
+              x: cameraNow.position.x,
+              y: cameraNow.position.y,
+              z: cameraNow.position.z,
+            },
+            inFrameNodeIds: [...inFrameNodeIds],
+            labelMode,
+            linkMode,
+          });
+        });
+      };
+
+      controls.addEventListener?.("change", emitViewState);
+      emitViewState();
     }
 
     const ambientLight = new THREE.AmbientLight("#ffffff", 1.2);
@@ -286,12 +385,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     resizeObserverRef.current.observe(containerRef.current);
 
     return () => {
+      if (animationFrameRef.current != null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;
       fgRef.current?._destructor?.();
       fgRef.current = null;
     };
-  }, [backgroundColor, getNodeColor, graphData.links, highlightNodes, isLinkVisible, isNodeVisible, neighborMap, onBackgroundClick, onNodeClick, onNodeHover, refreshHighlight, selectedNode]);
+  }, [backgroundColor, getNodeColor, getNodeLabel, graphData.links, graphData.nodes, highlightNodes, isLinkVisible, isNodeVisible, neighborMap, onBackgroundClick, onNodeClick, onNodeHover, onViewStateChange, refreshHighlight, selectedNode]);
 
   useEffect(() => {
     const fg = fgRef.current;
