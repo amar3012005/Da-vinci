@@ -75,6 +75,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const onBackgroundClickRef = useRef(onBackgroundClick);
   const onViewStateChangeRef = useRef(onViewStateChange);
   const emitViewStateRef = useRef(null);
+  const resumeFrameRef = useRef(null);
   const backgroundColorRef = useRef(backgroundColor);
   const isNodeVisibleRef = useRef(null);
   const isLinkVisibleRef = useRef(null);
@@ -199,6 +200,34 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkColor(fg.linkColor())
       .linkDirectionalParticles(fg.linkDirectionalParticles())
       .linkWidth(fg.linkWidth());
+  }, []);
+
+  const withPausedAnimation = useCallback((mutate) => {
+    const fg = fgRef.current;
+    if (!fg) return;
+
+    try {
+      fg.pauseAnimation?.();
+    } catch (_error) {
+      // noop
+    }
+
+    try {
+      mutate(fg);
+    } finally {
+      if (resumeFrameRef.current != null) {
+        window.cancelAnimationFrame(resumeFrameRef.current);
+      }
+      resumeFrameRef.current = window.requestAnimationFrame(() => {
+        resumeFrameRef.current = null;
+        if (fgRef.current !== fg) return;
+        try {
+          fg.resumeAnimation?.();
+        } catch (_error) {
+          // noop
+        }
+      });
+    }
   }, []);
 
   const getNodeColor = useCallback((node) => {
@@ -470,6 +499,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         window.cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
+      if (resumeFrameRef.current != null) {
+        window.cancelAnimationFrame(resumeFrameRef.current);
+        resumeFrameRef.current = null;
+      }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;
       try {
@@ -504,64 +537,63 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   }, [height, width]);
 
   useEffect(() => {
-    const fg = fgRef.current;
-    if (!fg) return;
-    fg.graphData(graphData);
-    refreshHighlight();
-  }, [graphData, refreshHighlight]);
+    withPausedAnimation((fg) => {
+      fg.graphData(graphData);
+      refreshHighlight();
+    });
+  }, [graphData, refreshHighlight, withPausedAnimation]);
 
   useEffect(() => {
-    const fg = fgRef.current;
-    if (!fg) return;
-
-    const charge = fg.d3Force("charge");
-    if (charge?.strength) {
-      charge.strength((node) => {
-        if (node.clusterId === "_orphan") return -28;
-        return -78 - (node.val || 1) * 11;
-      });
-      charge.theta?.(0.9);
-      charge.distanceMax?.(650);
-    }
-
-    const link = fg.d3Force("link");
-    if (link?.distance) {
-      link.distance((edge) => {
-        const src = edge.source;
-        const tgt = edge.target;
-        const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-        return sameCluster ? 48 : 138;
-      });
-      link.strength((edge) => {
-        const src = edge.source;
-        const tgt = edge.target;
-        const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-        return sameCluster ? 0.46 : 0.075;
-      });
-    }
-
-    if (clustersRef.current.length > 1) {
-      fg.d3Force("clusterBias", (alpha) => {
-        const pull = 0.015;
-        const centroids = clusterCentroidsRef.current || {};
-        for (const node of graphDataRef.current.nodes || []) {
-          if (node.clusterId === "_orphan") continue;
-          const centroid = centroids[node.clusterId];
-          if (!centroid) continue;
-          node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
-          node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
-        }
-      });
-    } else {
-      try {
-        fg.d3Force("clusterBias", null);
-      } catch (_error) {
-        // noop
+    withPausedAnimation((fg) => {
+      const charge = fg.d3Force("charge");
+      if (charge?.strength) {
+        charge.strength((node) => {
+          if (node.clusterId === "_orphan") return -28;
+          return -78 - (node.val || 1) * 11;
+        });
+        charge.theta?.(0.9);
+        charge.distanceMax?.(650);
       }
-    }
 
-    fg.d3ReheatSimulation();
-  }, [clusterCentroids, clusters.length, graphData.nodes]);
+      const link = fg.d3Force("link");
+      if (link?.distance) {
+        link.distance((edge) => {
+          const src = edge.source;
+          const tgt = edge.target;
+          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
+          return sameCluster ? 48 : 138;
+        });
+        link.strength((edge) => {
+          const src = edge.source;
+          const tgt = edge.target;
+          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
+          return sameCluster ? 0.46 : 0.075;
+        });
+      }
+
+      if (clustersRef.current.length > 1) {
+        fg.d3Force("clusterBias", (alpha) => {
+          const pull = 0.015;
+          const centroids = clusterCentroidsRef.current || {};
+          for (const node of graphDataRef.current.nodes || []) {
+            if (node.clusterId === "_orphan") continue;
+            const centroid = centroids[node.clusterId];
+            if (!centroid) continue;
+            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
+            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
+          }
+        });
+      } else {
+        try {
+          fg.d3Force("clusterBias", null);
+        } catch (_error) {
+          // noop
+        }
+      }
+
+      fg.d3ReheatSimulation();
+    });
+  }, [clusterCentroids, clusters.length, graphData.nodes, withPausedAnimation]);
 
   useEffect(() => {
     refreshHighlight();
