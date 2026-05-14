@@ -6,7 +6,6 @@ import React, {
   useMemo,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ForceGraph2D from "react-force-graph-2d";
 import {
   Network,
   X,
@@ -30,6 +29,7 @@ import {
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 import { PageIndexViewer } from "../PageIndexViewer";
+import MemoryGraph3D from "./MemoryGraph3D";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 const EDGE_COLORS = {
@@ -107,13 +107,6 @@ const ORPHAN_COLOR = "#a3a3a3"; // for `_orphan` bucket (no edges)
 function truncate(str, len = 80) {
   if (!str) return "";
   return str.length > len ? str.slice(0, len) + "..." : str;
-}
-
-function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
@@ -334,6 +327,7 @@ export default function MemoryGraph() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
+  const [showLegend, setShowLegend] = useState(false);
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
@@ -556,8 +550,7 @@ export default function MemoryGraph() {
       const firstId = [...matches][0];
       const node = graphData.nodes.find((n) => n.id === firstId);
       if (node) {
-        graphRef.current.centerAt(node.x, node.y, 600);
-        graphRef.current.zoom(3, 600);
+        graphRef.current.focusNode?.(node, 700, 3.6);
       }
     }
   }, [searchQuery, graphData.nodes]);
@@ -635,10 +628,6 @@ export default function MemoryGraph() {
   // Node click
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
-    if (graphRef.current) {
-      graphRef.current.centerAt(node.x, node.y, 400);
-      graphRef.current.zoom(4, 400);
-    }
   }, []);
 
   // Navigate to node from sidecar
@@ -649,199 +638,6 @@ export default function MemoryGraph() {
     },
     [graphData.nodes, handleNodeClick],
   );
-
-  // Custom node painting — shapes per layer type
-  const paintNode = useCallback(
-    (node, ctx, globalScale) => {
-      const isHighlighted =
-        highlightNodes.size > 0 && highlightNodes.has(node.id);
-      const isOrphan = node.clusterId === "_orphan";
-      const isDimmed =
-        (highlightNodes.size > 0 && !highlightNodes.has(node.id)) ||
-        (layerFilter !== "all" && !filteredNodes.has(node.id)) ||
-        (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge") ||
-        isOrphan; // Orphans always dimmed so clusters dominate visually
-      const isSelected = selectedNode?.id === node.id;
-
-      // Color: type/layer-first (preserves semantic meaning of colors).
-      // Cluster identity shown through position + hub ring color, NOT node fill.
-      // This way: blue = fact, red = decision, violet = goal, etc. — always.
-      const layerColor = LAYER_COLORS[node.nodeLayer];
-      const baseColor =
-        layerColor ||
-        (scope === "team" || scope === "all"
-          ? userColorMap[node.userId] || TYPE_COLORS.default
-          : null) ||
-        TYPE_COLORS[node.memoryType] ||
-        TYPE_COLORS.default;
-
-      const glow = node.temporalWeight || 0.3;
-      // BA-style: hub size proportional to degree (val). Spokes uniform small.
-      let radius = Math.min(10, Math.sqrt(node.val || 4) * 2.0);
-
-      if (isOrphan) radius = Math.max(radius * 0.45, 1.5);
-      else if (node.clusterRole === "hub") radius = Math.min(11, radius * 1.4);
-      else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.2);
-
-      // Size adjustments per layer — modest bumps so no layer dominates.
-      if (node.nodeLayer === "fact") radius = Math.max(radius * 0.7, 3);
-      if (node.nodeLayer === "promoted") radius = Math.min(8, radius * 1.05);
-      if (node.nodeLayer === "tara") radius = Math.min(8, radius * 1.05);
-      if (node.nodeLayer === "tara-insight") radius = radius * 1.1;
-
-      // Obsidian style: NO halos, NO glows, NO cluster rings, NO bridge outlines.
-      // Just the node body (legend-colored shape) + selection/highlight rings only.
-
-      if (isSelected) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#117dff";
-        ctx.lineWidth = 2 / globalScale;
-        ctx.stroke();
-      }
-      if (isHighlighted) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#d97706";
-        ctx.lineWidth = 1.5 / globalScale;
-        ctx.stroke();
-      }
-
-      // ── Node body — shape per layer type ──
-
-      if (node.nodeLayer === "tara-insight") {
-        // 4-point star for clinical insights
-        const spikes = 4;
-        const outerR = radius;
-        const innerR = radius * 0.45;
-        ctx.beginPath();
-        for (let i = 0; i < spikes * 2; i++) {
-          const r = i % 2 === 0 ? outerR : innerR;
-          const angle = (Math.PI / spikes) * i - Math.PI / 2;
-          ctx.lineTo(
-            node.x + r * Math.cos(angle),
-            node.y + r * Math.sin(angle),
-          );
-        }
-        ctx.closePath();
-        ctx.fillStyle = isDimmed
-          ? hexToRgba(baseColor, 0.15)
-          : hexToRgba(baseColor, 0.8);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-        ctx.lineWidth = 1 / globalScale;
-        ctx.stroke();
-      } else if (node.nodeLayer === "tara") {
-        // Hexagon for TARA conversation turns
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i - Math.PI / 6;
-          ctx.lineTo(
-            node.x + radius * Math.cos(angle),
-            node.y + radius * Math.sin(angle),
-          );
-        }
-        ctx.closePath();
-        ctx.fillStyle = isDimmed
-          ? hexToRgba(baseColor, 0.15)
-          : hexToRgba(baseColor, 0.75);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(baseColor, 0.95);
-        ctx.lineWidth = 1 / globalScale;
-        ctx.stroke();
-      } else if (node.nodeLayer === "fact") {
-        // Diamond for extracted facts
-        ctx.beginPath();
-        ctx.moveTo(node.x, node.y - radius);
-        ctx.lineTo(node.x + radius, node.y);
-        ctx.lineTo(node.x, node.y + radius);
-        ctx.lineTo(node.x - radius, node.y);
-        ctx.closePath();
-        ctx.fillStyle = isDimmed
-          ? hexToRgba(baseColor, 0.15)
-          : hexToRgba(baseColor, 0.7);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(baseColor, 0.9);
-        ctx.lineWidth = 0.5 / globalScale;
-        ctx.stroke();
-      } else if (node.nodeLayer === "observation") {
-        // Rounded square for observations
-        const s = radius * 0.85;
-        ctx.beginPath();
-        ctx.roundRect(node.x - s, node.y - s, s * 2, s * 2, 3);
-        ctx.fillStyle = isDimmed
-          ? hexToRgba(baseColor, 0.15)
-          : hexToRgba(baseColor, 0.6);
-        ctx.fill();
-        ctx.strokeStyle = hexToRgba(baseColor, 0.8);
-        ctx.lineWidth = 0.5 / globalScale;
-        ctx.stroke();
-      } else {
-        // Circle for regular memories
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isDimmed
-          ? hexToRgba(baseColor, 0.15)
-          : hexToRgba(baseColor, 0.6 + glow * 0.4);
-        ctx.fill();
-        ctx.strokeStyle = isDimmed
-          ? hexToRgba(baseColor, 0.1)
-          : hexToRgba(baseColor, 0.8);
-        ctx.lineWidth = 0.5 / globalScale;
-        ctx.stroke();
-      }
-
-      // Label (only at zoom)
-      if (globalScale > 1.8 && !isDimmed) {
-        const label = truncate(node.title || "", 30);
-        ctx.font = `${Math.max(10, 11 / globalScale)}px Space Grotesk, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = isDimmed ? "rgba(0,0,0,0.1)" : "rgba(10,10,10,0.8)";
-        ctx.fillText(label, node.x, node.y + radius + 2);
-      }
-    },
-    [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes, clusterFilter],
-  );
-
-  // Obsidian-style links: single neutral grey, thin, very low opacity.
-  // Edge color reserved only for the legend (Updates/Extends/Derives).
-  const paintLink = useCallback((link, ctx, globalScale) => {
-    const color = EDGE_COLORS[link.type] || "#9ca3af";
-    // Confidence subtly shifts opacity but never gets bright
-    const opacity = 0.12 + (link.confidence || 0.5) * 0.15;
-    const width = 0.5 + (link.confidence || 0.5) * 0.5; // thinner overall
-
-    ctx.strokeStyle = hexToRgba(color, opacity);
-    ctx.lineWidth = width;
-    if (link.type === "Derives") {
-      ctx.setLineDash([3, 3]);
-    }
-    ctx.beginPath();
-    ctx.moveTo(link.source.x, link.source.y);
-    ctx.lineTo(link.target.x, link.target.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Add label at midpoint (only at high zoom)
-    if (globalScale > 2.5) {
-      const midX = (link.source.x + link.target.x) / 2;
-      const midY = (link.source.y + link.target.y) / 2;
-      const label = `${link.type} ${((link.confidence || 1) * 100).toFixed(0)}%`;
-      ctx.font = `${10 / globalScale}px Space Grotesk, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "rgba(10,10,10,0.7)";
-
-      // Background for readability
-      const textWidth = ctx.measureText(label).width;
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
-      ctx.fillRect(midX - textWidth / 2 - 2, midY - 6, textWidth + 4, 12);
-
-      ctx.fillStyle = "rgba(10,10,10,0.8)";
-      ctx.fillText(label, midX, midY);
-    }
-  }, []);
 
   // Stats
   const stats = useMemo(() => {
@@ -874,9 +670,9 @@ export default function MemoryGraph() {
   const matchCount = highlightNodes.size;
 
   return (
-    <div className="h-screen bg-[#faf9f4] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[radial-gradient(circle_at_top,_#f5f3ef_0%,_#faf9f4_40%,_#f8f6f1_100%)] flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="shrink-0 border-b border-[#e3e0db] bg-white px-4 py-3 flex items-center gap-3 z-10">
+      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/80 backdrop-blur-xl px-4 py-3 flex items-center gap-3 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center">
             <Network size={16} className="text-[#8b5cf6]" />
@@ -1073,7 +869,7 @@ export default function MemoryGraph() {
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
         </button>
         <button
-          onClick={() => graphRef.current?.zoomToFit(400, 40)}
+          onClick={() => graphRef.current?.fitView?.(400)}
           className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
           title="Fit to view"
         >
@@ -1082,31 +878,10 @@ export default function MemoryGraph() {
 
         {/* Stats */}
         {stats && (
-          <div className="flex items-center gap-3 ml-auto text-[10px] font-mono text-[#a3a3a3]">
-            <span>{stats.nodes} nodes</span>
-            <span>{stats.edges} edges</span>
-            <span>{stats.projects} projects</span>
-            {clusters.length > 0 && (
-              <span title="Mind-groups derived from edge structure (Louvain)">
-                <span className="text-[#117dff]">●</span> {clusters.length} clusters
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <span className="text-[#10b981]">◆</span> {layerCounts.fact}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-[#a855f7]">⬡</span> {layerCounts.tara}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-[#f97316]">⭐</span>{" "}
-              {layerCounts["tara-insight"]}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-[#ef4444]">⚠</span> {layerCounts.promoted}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-[#22c55e]">✓</span> {layerCounts.verified}
-            </span>
+          <div className="flex items-center gap-2 ml-auto text-[10px] font-mono text-[#8b857d]">
+            <span>{stats.nodes}n</span>
+            <span>{stats.edges}e</span>
+            {clusters.length > 0 && <span>{clusters.length}c</span>}
           </div>
         )}
       </div>
@@ -1131,39 +906,27 @@ export default function MemoryGraph() {
         )}
 
         {graphData.nodes.length > 0 && (
-          <ForceGraph2D
+          <MemoryGraph3D
             ref={graphRef}
             graphData={graphData}
-            nodeCanvasObject={paintNode}
-            linkCanvasObject={paintLink}
+            selectedNode={selectedNode}
+            highlightNodes={highlightNodes}
+            filteredNodes={filteredNodes}
+            layerFilter={layerFilter}
+            clusterFilter={clusterFilter}
+            scope={scope}
+            userColorMap={userColorMap}
+            clusterCentroids={clusterCentroids}
+            clusters={clusters}
             onNodeClick={handleNodeClick}
-            onNodeHover={(node, event) => {
+            onNodeHover={(node) => {
               setHoveredNode(node);
-              if (event) {
-                setTooltipPosition({ x: event.clientX, y: event.clientY });
-              }
             }}
             onBackgroundClick={() => {
               setSelectedNode(null);
               setHoveredNode(null);
             }}
-            nodePointerAreaPaint={(node, color, ctx) => {
-              const r = Math.sqrt(node.val || 4) * 2.5 + 2;
-              ctx.beginPath();
-              ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-              ctx.fillStyle = color;
-              ctx.fill();
-            }}
-            linkDirectionalArrowLength={3}
-            linkDirectionalArrowRelPos={0.9}
-            linkDirectionalArrowColor={(link) =>
-              EDGE_COLORS[link.type] || "#e3e0db"
-            }
-            cooldownTicks={Math.min(400, Math.max(100, Math.round(Math.sqrt(graphData.nodes.length) * 20)))}
-            warmupTicks={Math.min(150, 50 + Math.round(Math.sqrt(graphData.nodes.length) * 3))}
-            d3AlphaDecay={graphData.nodes.length > 1000 ? 0.012 : 0.02}
-            d3VelocityDecay={0.3}
-            backgroundColor="#faf9f4"
+            backgroundColor="rgba(0,0,0,0)"
             width={
               typeof window !== "undefined"
                 ? window.innerWidth - (selectedNode ? 340 : 0) - 260
@@ -1188,30 +951,38 @@ export default function MemoryGraph() {
         )}
 
         {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-[#e3e0db] rounded-xl px-3 py-2.5 z-10 max-w-[420px]">
-          <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">
-            Relationships
-          </p>
-          <div className="flex items-center gap-3">
-            {Object.entries(EDGE_COLORS).map(([type, color]) => (
-              <div key={type} className="flex items-center gap-1.5">
-                <div
-                  className="w-4 h-0.5 rounded-full"
-                  style={{
-                    backgroundColor: color,
-                    opacity: type === "Derives" ? 0.6 : 1,
-                  }}
-                />
-                <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">
-                  {EDGE_LABELS[type]}
-                </span>
+        <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 max-w-[420px]">
+          <button
+            onClick={() => setShowLegend((value) => !value)}
+            className="self-start rounded-full border border-[#e3e0db] bg-white/80 backdrop-blur-xl px-3 py-1.5 text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] hover:text-[#525252]"
+          >
+            {showLegend ? "Hide Legend" : "Show Legend"}
+          </button>
+          {showLegend && (
+            <div className="bg-white/82 backdrop-blur-xl border border-[#e3e0db] rounded-2xl px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">
+                Relationships
+              </p>
+              <div className="flex items-center gap-3">
+                {Object.entries(EDGE_COLORS).map(([type, color]) => (
+                  <div key={type} className="flex items-center gap-1.5">
+                    <div
+                      className="w-4 h-0.5 rounded-full"
+                      style={{
+                        backgroundColor: color,
+                        opacity: type === "Derives" ? 0.6 : 1,
+                      }}
+                    />
+                    <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">
+                      {EDGE_LABELS[type]}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-            Node Shapes = Layer Type
-          </p>
-          <div className="flex flex-wrap gap-3">
+              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
+                Node Shapes = Layer Type
+              </p>
+              <div className="flex flex-wrap gap-3">
             <div className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 14 14">
                 <polygon
@@ -1368,6 +1139,8 @@ export default function MemoryGraph() {
                 </div>
               </>
             )}
+            </div>
+          )}
         </div>
 
         {/* Zoom + cluster panel controls */}
@@ -1389,17 +1162,15 @@ export default function MemoryGraph() {
           {[
             {
               icon: ZoomIn,
-              action: () =>
-                graphRef.current?.zoom(graphRef.current.zoom() * 1.5, 200),
+              action: () => graphRef.current?.zoomBy?.(1.35, 220),
             },
             {
               icon: ZoomOut,
-              action: () =>
-                graphRef.current?.zoom(graphRef.current.zoom() / 1.5, 200),
+              action: () => graphRef.current?.zoomBy?.(1 / 1.35, 220),
             },
             {
               icon: Crosshair,
-              action: () => graphRef.current?.zoomToFit(400, 40),
+              action: () => graphRef.current?.fitView?.(400),
             },
           ].map(({ icon: Icon, action }, i) => (
             <button
@@ -1468,8 +1239,7 @@ export default function MemoryGraph() {
                           // Fly camera to cluster centroid
                           const centroid = clusterCentroids[c.id];
                           if (centroid && graphRef.current) {
-                            graphRef.current.centerAt(centroid.x, centroid.y, 800);
-                            graphRef.current.zoom(2.5, 800);
+                            graphRef.current.focusPoint?.(centroid, 800);
                           }
                         }}
                       >
@@ -1492,10 +1262,7 @@ export default function MemoryGraph() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNode(n);
-                                  if (graphRef.current && n.x != null) {
-                                    graphRef.current.centerAt(n.x, n.y, 600);
-                                    graphRef.current.zoom(4, 600);
-                                  }
+                                  graphRef.current?.focusNode?.(n, 700, 3.8);
                                 }}
                               >
                                 {n.clusterRole === "hub" ? "★ " : n.clusterRole === "bridge" ? "◇ " : ""}
