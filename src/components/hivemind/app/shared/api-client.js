@@ -2,7 +2,6 @@ import axios from 'axios';
 import { API_DEFAULTS } from './theme';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
-const ACCOUNT_DELETE_STREAM_ENDPOINT = '/v1/account/delete';
 
 /**
  * HIVEMIND API Client
@@ -169,67 +168,6 @@ class HiveMindApiClient {
       timeout: 300000,
     });
     return data;
-  }
-
-  /**
-   * Delete account with SSE progress streaming.
-   * @param {(progress: number, step: string) => void} onProgress
-   * @returns {Promise<{success: boolean, error?: string}>}
-   */
-  deleteAccountStreaming(onProgress) {
-    return new Promise((resolve, reject) => {
-      const baseURL = this.controlPlane.defaults.baseURL;
-      const url = `${baseURL}${ACCOUNT_DELETE_STREAM_ENDPOINT}`;
-
-      fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify({ confirm: 'DELETE', stream: true }),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-          return reject(new Error(err.error || `HTTP ${res.status}`));
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (onProgress) onProgress(data.progress, data.step);
-                if (data.done) {
-                  if (data.success) {
-                    resolve({ success: true });
-                  } else {
-                    reject(new Error(data.error || 'Deletion failed'));
-                  }
-                }
-              } catch {
-                // Ignore malformed SSE lines
-              }
-            }
-          }
-        }
-
-        // If stream ended without a done event
-        resolve({ success: true });
-      }).catch(reject);
-    });
   }
 
   // ─── Control Plane: Organizations ────────────────────────────

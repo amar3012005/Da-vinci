@@ -363,7 +363,7 @@ const CODING_TOOLS = [
     ],
     example: `hivemind_log_decision({
   title: "Use SSE not WebSocket for delete progress",
-  decision: "Server-Sent Events streaming progress 0-100% via /v1/account/delete",
+      decision: "Server-Sent Events streaming progress 0-100% via DELETE /v1/account",
   rationale: "One-way server→client, simpler than WS, works through CDN",
   alternatives: ["WebSocket", "Long polling", "Fire-and-forget + status endpoint"],
   affected_files: ["core/src/control-plane-server.js"]

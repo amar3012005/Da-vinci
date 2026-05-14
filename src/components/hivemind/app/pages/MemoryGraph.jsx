@@ -314,6 +314,7 @@ export default function MemoryGraph() {
   const [showFilters, setShowFilters] = useState(false);
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [viewState, setViewState] = useState({ distance: 1100, target: null, camera: null, inFrameNodeIds: [], labelMode: "hidden", linkMode: "sparse" });
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
@@ -1020,7 +1021,12 @@ export default function MemoryGraph() {
       </div>
 
       {/* Graph canvas */}
-      <div className="flex-1 relative">
+      <div
+        className="flex-1 relative"
+        onMouseMove={(e) => {
+          setTooltipPosition({ x: e.clientX, y: e.clientY });
+        }}
+      >
         {loading && graphData.nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="flex flex-col items-center gap-3">
