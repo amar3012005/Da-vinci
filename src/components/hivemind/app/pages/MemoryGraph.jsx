@@ -524,40 +524,39 @@ export default function MemoryGraph() {
 
       // Degree-proportional repulsion (BA: hub repulsion ∝ degree)
       const charge = fg.d3Force?.('charge');
+      // Obsidian-style: stronger charge + longer links → spacious layout.
       if (charge?.strength) {
         charge.strength((node) => {
-          if (node.clusterId === '_orphan') return -20;
+          if (node.clusterId === '_orphan') return -30;
           const degree = (node.val || 1);
-          // Repulsion scales with degree — preferential attachment shows
-          const base = -40 - degree * 6;
-          return node.clusterRole === 'hub' ? base * 1.4 : base;
+          // Heavier repulsion than BA tuning for Obsidian "lots of whitespace" feel
+          return -80 - degree * 12;
         });
         if (charge.theta) charge.theta(0.9);
-        if (charge.distanceMax) charge.distanceMax(450);
+        if (charge.distanceMax) charge.distanceMax(600);
       }
 
-      // Links: dense local, sparse global. Strong intra → BA-style tight
-      // neighborhoods. Weak inter → bridges stretch organically.
+      // Links: longer baseline so graph spreads out
       const link = fg.d3Force?.('link');
       if (link?.distance) {
         link.distance((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 30 : 90;
+          return sameCluster ? 50 : 140;
         });
         link.strength((edge) => {
           const src = edge.source;
           const tgt = edge.target;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 0.7 : 0.1;
+          return sameCluster ? 0.5 : 0.08;
         });
       }
 
-      // Single soft cluster bias — no rigid placement, just preference.
+      // Very gentle cluster bias — barely there, just nudges related nodes
       if (clusters.length > 1 && fg.d3Force) {
         fg.d3Force('clusterBias', (alpha) => {
-          const pull = 0.03; // very weak — physics dominates
+          const pull = 0.02;
           for (const node of graphData.nodes) {
             if (node.clusterId === '_orphan') continue;
             const centroid = clusterCentroids[node.clusterId];
@@ -612,7 +611,6 @@ export default function MemoryGraph() {
       // Cluster identity shown through position + hub ring color, NOT node fill.
       // This way: blue = fact, red = decision, violet = goal, etc. — always.
       const layerColor = LAYER_COLORS[node.nodeLayer];
-      const clusterColor = clusterColorMap[node.clusterId]; // used for hub rings only
       const baseColor =
         layerColor ||
         (scope === "team" || scope === "all"
@@ -635,44 +633,9 @@ export default function MemoryGraph() {
       if (node.nodeLayer === "tara") radius = Math.min(8, radius * 1.05);
       if (node.nodeLayer === "tara-insight") radius = radius * 1.1;
 
-      // Outer glow (temporal decay) — subtle, matches green fact halo
-      if (glow > 0.3 && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 2 + glow * 3, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba(baseColor, glow * 0.06);
-        ctx.fill();
-      }
+      // Obsidian style: NO halos, NO glows, NO cluster rings, NO bridge outlines.
+      // Just the node body (legend-colored shape) + selection/highlight rings only.
 
-      // All special-layer halos — uniform size + low opacity so red/blue
-      // don't dominate. Matches the gentle green fact halo aesthetic.
-      const haloAlpha = 0.06;
-      const haloPad = 2.5;
-      if (node.nodeLayer === "promoted" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#ef4444", haloAlpha);
-        ctx.fill();
-      }
-      if (node.nodeLayer === "verified" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#22c55e", haloAlpha);
-        ctx.fill();
-      }
-      if (node.nodeLayer === "tara" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#a855f7", haloAlpha);
-        ctx.fill();
-      }
-      if (node.nodeLayer === "tara-insight" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#f97316", haloAlpha);
-        ctx.fill();
-      }
-
-      // Selection ring
       if (isSelected) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius + 3, 0, 2 * Math.PI);
@@ -680,34 +643,12 @@ export default function MemoryGraph() {
         ctx.lineWidth = 2 / globalScale;
         ctx.stroke();
       }
-
-      // Highlight ring
       if (isHighlighted) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius + 2, 0, 2 * Math.PI);
         ctx.strokeStyle = "#d97706";
         ctx.lineWidth = 1.5 / globalScale;
         ctx.stroke();
-      }
-
-      // Hub-role ring — uses CLUSTER color so you can see which lobe it anchors
-      // while the node fill stays type-colored for semantic meaning.
-      if (node.clusterRole === "hub" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 2.5, 0, 2 * Math.PI);
-        ctx.strokeStyle = hexToRgba(clusterColor || baseColor, 0.8);
-        ctx.lineWidth = 2.5 / globalScale;
-        ctx.stroke();
-      }
-      // Bridge nodes — dashed cluster-colored outline.
-      if (node.clusterRole === "bridge" && !isDimmed) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 1.5, 0, 2 * Math.PI);
-        ctx.strokeStyle = hexToRgba(clusterColor || baseColor, 0.6);
-        ctx.lineWidth = 1.2 / globalScale;
-        ctx.setLineDash([3, 2]);
-        ctx.stroke();
-        ctx.setLineDash([]);
       }
 
       // ── Node body — shape per layer type ──
@@ -807,16 +748,18 @@ export default function MemoryGraph() {
     [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes, clusterColorMap, clusterFilter],
   );
 
-  // Custom link painting
+  // Obsidian-style links: single neutral grey, thin, very low opacity.
+  // Edge color reserved only for the legend (Updates/Extends/Derives).
   const paintLink = useCallback((link, ctx, globalScale) => {
-    const color = EDGE_COLORS[link.type] || "#e3e0db";
-    const opacity = 0.35 + (link.confidence || 0.5) * 0.3;
-    const width = 0.5 + (link.confidence || 0.5) * 2;
+    const color = EDGE_COLORS[link.type] || "#9ca3af";
+    // Confidence subtly shifts opacity but never gets bright
+    const opacity = 0.12 + (link.confidence || 0.5) * 0.15;
+    const width = 0.5 + (link.confidence || 0.5) * 0.5; // thinner overall
 
     ctx.strokeStyle = hexToRgba(color, opacity);
     ctx.lineWidth = width;
-    if (link.type === "Derives" || (link.confidence || 1) < 0.5) {
-      ctx.setLineDash([4, 3]);
+    if (link.type === "Derives") {
+      ctx.setLineDash([3, 3]);
     }
     ctx.beginPath();
     ctx.moveTo(link.source.x, link.source.y);
