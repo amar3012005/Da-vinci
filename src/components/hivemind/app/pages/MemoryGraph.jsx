@@ -801,7 +801,7 @@ export default function MemoryGraph() {
         ctx.fillText(label, node.x, node.y + radius + 2);
       }
     },
-    [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes, clusterColorMap, clusterFilter],
+    [highlightNodes, selectedNode, scope, userColorMap, layerFilter, filteredNodes, clusterFilter],
   );
 
   // Obsidian-style links: single neutral grey, thin, very low opacity.
