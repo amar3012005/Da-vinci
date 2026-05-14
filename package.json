@@ -47,15 +47,14 @@
     "unicornstudio-react": "^1.4.31"
   },
   "overrides": {
-    "three": "0.183.2",
     "3d-force-graph": {
-      "three": "0.183.2"
+      "three": "$three"
     },
     "three-render-objects": {
-      "three": "0.183.2"
+      "three": "$three"
     },
     "three-forcegraph": {
-      "three": "0.183.2"
+      "three": "$three"
     }
   },
   "scripts": {
@@ -89,8 +88,5 @@
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.183.0",
     "typescript": "^5.9.2"
-  },
-  "overrides": {
-    "three": "$three"
   }
 }
