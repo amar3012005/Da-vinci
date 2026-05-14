@@ -60,6 +60,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const highlightedNodesRef = useRef(new Set());
   const highlightedLinksRef = useRef(new Set());
   const animationFrameRef = useRef(null);
+  const graphDataRef = useRef(graphData);
+  const neighborMapRef = useRef(new Map());
+  const onNodeClickRef = useRef(onNodeClick);
+  const onNodeHoverRef = useRef(onNodeHover);
+  const onBackgroundClickRef = useRef(onBackgroundClick);
+  const onViewStateChangeRef = useRef(onViewStateChange);
   const viewStateRef = useRef({
     distance: 1100,
     inFrameNodeIds: new Set(),
@@ -80,6 +86,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     });
     return neighbors;
   }, [graphData.links]);
+
+  useEffect(() => {
+    graphDataRef.current = graphData;
+    neighborMapRef.current = neighborMap;
+    onNodeClickRef.current = onNodeClick;
+    onNodeHoverRef.current = onNodeHover;
+    onBackgroundClickRef.current = onBackgroundClick;
+    onViewStateChangeRef.current = onViewStateChange;
+  }, [graphData, neighborMap, onBackgroundClick, onNodeClick, onNodeHover, onViewStateChange]);
 
   const isNodeVisible = useCallback(
     (node) => {
@@ -230,13 +245,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkVisibility((link) => isLinkVisible(link))
       .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
       .nodeLabel((node) => getNodeLabel(node))
-      .onNodeClick((node) => onNodeClick?.(node))
+      .onNodeClick((node) => onNodeClickRef.current?.(node))
       .onNodeHover((node) => {
         const highlightedNodes = highlightedNodesRef.current;
         const highlightedLinks = highlightedLinksRef.current;
 
         if ((!node && highlightedNodes.size === 0) || (node && highlightedNodes.has(node.id) && highlightedNodes.size > 1)) {
-          onNodeHover?.(node);
+          onNodeHoverRef.current?.(node);
           return;
         }
 
@@ -245,9 +260,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
         if (node) {
           highlightedNodes.add(node.id);
-          (neighborMap.get(node.id) || new Set()).forEach((neighborId) => highlightedNodes.add(neighborId));
+          (neighborMapRef.current.get(node.id) || new Set()).forEach((neighborId) => highlightedNodes.add(neighborId));
 
-          (graphData.links || []).forEach((link) => {
+          (graphDataRef.current.links || []).forEach((link) => {
             const sourceId = typeof link.source === "object" ? link.source.id : link.source;
             const targetId = typeof link.target === "object" ? link.target.id : link.target;
             if (sourceId === node.id || targetId === node.id) {
@@ -256,7 +271,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
         }
 
-        onNodeHover?.(node);
+        onNodeHoverRef.current?.(node);
         refreshHighlight();
       })
       .onLinkHover((link) => {
@@ -275,7 +290,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
         refreshHighlight();
       })
-      .onBackgroundClick(() => onBackgroundClick?.())
+      .onBackgroundClick(() => onBackgroundClickRef.current?.())
       .nodeThreeObject(null)
       .nodeThreeObjectExtend(false);
 
@@ -324,7 +339,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           frustum.setFromProjectionMatrix(projectionMatrix);
 
           const inFrameNodeIds = new Set();
-          (graphData.nodes || []).forEach((node) => {
+          (graphDataRef.current.nodes || []).forEach((node) => {
             if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return;
             const radius = getNodeRadius(node) * 1.8;
             const sphere = new THREE.Sphere(new THREE.Vector3(node.x, node.y, node.z), radius);
@@ -343,7 +358,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           };
 
           refreshHighlight();
-          onViewStateChange?.({
+          onViewStateChangeRef.current?.({
             distance,
             target: { x: targetNow.x, y: targetNow.y, z: targetNow.z },
             camera: {
@@ -386,7 +401,20 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       fgRef.current?._destructor?.();
       fgRef.current = null;
     };
-  }, [backgroundColor, getNodeColor, getNodeLabel, graphData.links, graphData.nodes, highlightNodes, isLinkVisible, isNodeVisible, neighborMap, onBackgroundClick, onNodeClick, onNodeHover, onViewStateChange, refreshHighlight, selectedNode]);
+  }, [backgroundColor, getNodeColor, getNodeLabel, isLinkVisible, isNodeVisible, refreshHighlight]);
+
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    fg
+      .backgroundColor(backgroundColor)
+      .nodeColor((node) => getNodeColor(node))
+      .nodeVisibility((node) => isNodeVisible(node))
+      .linkVisibility((link) => isLinkVisible(link))
+      .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
+      .nodeLabel((node) => getNodeLabel(node));
+    refreshHighlight();
+  }, [backgroundColor, getNodeColor, getNodeLabel, isLinkVisible, isNodeVisible, refreshHighlight]);
 
   useEffect(() => {
     const fg = fgRef.current;
