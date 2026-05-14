@@ -1427,8 +1427,8 @@ export default function MemoryGraph() {
           <div
             className="absolute z-30 bg-white/95 backdrop-blur border border-[#e3e0db] rounded-lg shadow-lg px-3 py-2 pointer-events-none"
             style={{
-              left: Math.min(tooltipPosition.x + 12, window.innerWidth - 220),
-              top: Math.min(tooltipPosition.y + 12, window.innerHeight - 150),
+              right: 16,
+              top: 84,
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">
