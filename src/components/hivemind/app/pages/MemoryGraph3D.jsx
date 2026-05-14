@@ -297,6 +297,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (!containerRef.current || fgRef.current) return;
 
     const fg = ForceGraph3D({ controlType: "orbit" })(containerRef.current)
+      .graphData(graphDataRef.current)
       .backgroundColor(backgroundColorRef.current)
       .showNavInfo(false)
       .nodeResolution(12)
