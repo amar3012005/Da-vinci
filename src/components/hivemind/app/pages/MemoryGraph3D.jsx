@@ -7,7 +7,7 @@ import React, {
   useRef,
 } from "react";
 import ForceGraph3D from "3d-force-graph";
-import * as THREE from "3d-force-graph/node_modules/three";
+import * as THREE from "three";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 const GRAPH_THEME = {
@@ -66,6 +66,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const onNodeHoverRef = useRef(onNodeHover);
   const onBackgroundClickRef = useRef(onBackgroundClick);
   const onViewStateChangeRef = useRef(onViewStateChange);
+  const emitViewStateRef = useRef(null);
+  const backgroundColorRef = useRef(backgroundColor);
+  const isNodeVisibleRef = useRef(null);
+  const isLinkVisibleRef = useRef(null);
+  const getNodeColorRef = useRef(null);
+  const getNodeLabelRef = useRef(null);
+  const refreshHighlightRef = useRef(null);
   const viewStateRef = useRef({
     distance: 1100,
     inFrameNodeIds: new Set(),
@@ -86,15 +93,6 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     });
     return neighbors;
   }, [graphData.links]);
-
-  useEffect(() => {
-    graphDataRef.current = graphData;
-    neighborMapRef.current = neighborMap;
-    onNodeClickRef.current = onNodeClick;
-    onNodeHoverRef.current = onNodeHover;
-    onBackgroundClickRef.current = onBackgroundClick;
-    onViewStateChangeRef.current = onViewStateChange;
-  }, [graphData, neighborMap, onBackgroundClick, onNodeClick, onNodeHover, onViewStateChange]);
 
   const isNodeVisible = useCallback(
     (node) => {
@@ -177,6 +175,34 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     [highlightNodes, selectedNode],
   );
 
+  useEffect(() => {
+    graphDataRef.current = graphData;
+    neighborMapRef.current = neighborMap;
+    onNodeClickRef.current = onNodeClick;
+    onNodeHoverRef.current = onNodeHover;
+    onBackgroundClickRef.current = onBackgroundClick;
+    onViewStateChangeRef.current = onViewStateChange;
+    backgroundColorRef.current = backgroundColor;
+    isNodeVisibleRef.current = isNodeVisible;
+    isLinkVisibleRef.current = isLinkVisible;
+    getNodeColorRef.current = getNodeColor;
+    getNodeLabelRef.current = getNodeLabel;
+    refreshHighlightRef.current = refreshHighlight;
+  }, [
+    backgroundColor,
+    getNodeColor,
+    getNodeLabel,
+    graphData,
+    isLinkVisible,
+    isNodeVisible,
+    neighborMap,
+    onBackgroundClick,
+    onNodeClick,
+    onNodeHover,
+    onViewStateChange,
+    refreshHighlight,
+  ]);
+
   const focusNode = useCallback((node, duration = 900, distanceMultiplier = 4.5) => {
     const fg = fgRef.current;
     if (!fg || !node) return;
@@ -230,21 +256,21 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (!containerRef.current || fgRef.current) return;
 
     const fg = ForceGraph3D({ controlType: "orbit" })(containerRef.current)
-      .backgroundColor(backgroundColor)
+      .backgroundColor(backgroundColorRef.current)
       .showNavInfo(false)
       .nodeResolution(8)
       .nodeRelSize(1.9)
       .nodeOpacity(0.92)
-      .nodeColor((node) => getNodeColor(node))
+      .nodeColor((node) => getNodeColorRef.current(node))
       .nodeVal((node) => getNodeRadius(node))
-      .nodeVisibility((node) => isNodeVisible(node))
+      .nodeVisibility((node) => isNodeVisibleRef.current(node))
       .linkOpacity(0.22)
       .linkDirectionalParticleWidth(1.2)
       .linkDirectionalParticles((link) => (highlightedLinksRef.current.has(link) ? 2 : 0))
       .linkWidth((link) => (highlightedLinksRef.current.has(link) ? 1.2 : 0.4))
-      .linkVisibility((link) => isLinkVisible(link))
+      .linkVisibility((link) => isLinkVisibleRef.current(link))
       .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
-      .nodeLabel((node) => getNodeLabel(node))
+      .nodeLabel((node) => getNodeLabelRef.current(node))
       .onNodeClick((node) => onNodeClickRef.current?.(node))
       .onNodeHover((node) => {
         const highlightedNodes = highlightedNodesRef.current;
@@ -272,7 +298,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         }
 
         onNodeHoverRef.current?.(node);
-        refreshHighlight();
+        refreshHighlightRef.current();
       })
       .onLinkHover((link) => {
         const highlightedNodes = highlightedNodesRef.current;
@@ -288,7 +314,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           highlightedNodes.add(targetId);
         }
 
-        refreshHighlight();
+        refreshHighlightRef.current();
       })
       .onBackgroundClick(() => onBackgroundClickRef.current?.())
       .nodeThreeObject(null)
@@ -357,7 +383,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             linkMode,
           };
 
-          refreshHighlight();
+          refreshHighlightRef.current();
           onViewStateChangeRef.current?.({
             distance,
             target: { x: targetNow.x, y: targetNow.y, z: targetNow.z },
@@ -373,6 +399,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         });
       };
 
+      emitViewStateRef.current = emitViewState;
       controls.addEventListener?.("change", emitViewState);
       emitViewState();
     }
@@ -392,16 +419,26 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     resizeObserverRef.current.observe(containerRef.current);
 
     return () => {
+      const activeControls = fg.controls?.();
+      if (activeControls && emitViewStateRef.current) {
+        activeControls.removeEventListener?.("change", emitViewStateRef.current);
+      }
+      emitViewStateRef.current = null;
       if (animationFrameRef.current != null) {
         window.cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;
-      fgRef.current?._destructor?.();
+      try {
+        fg.pauseAnimation?.();
+      } catch (_error) {
+        // noop
+      }
+      fg._destructor?.();
       fgRef.current = null;
     };
-  }, [backgroundColor, getNodeColor, getNodeLabel, isLinkVisible, isNodeVisible, refreshHighlight]);
+  }, []);
 
   useEffect(() => {
     const fg = fgRef.current;
