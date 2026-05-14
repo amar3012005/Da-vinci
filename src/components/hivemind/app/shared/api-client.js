@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { API_DEFAULTS } from './theme';
 
+const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
+const ACCOUNT_DELETE_STREAM_ENDPOINT = '/v1/account/delete';
+
 /**
  * HIVEMIND API Client
  *
@@ -161,9 +164,8 @@ class HiveMindApiClient {
   }
 
   async deleteAccount(confirm = 'DELETE') {
-    const { data } = await this.controlPlane.post('/v1/account/delete', {
-      confirm,
-    }, {
+    const { data } = await this.controlPlane.delete(ACCOUNT_DELETE_ENDPOINT, {
+      data: { confirm },
       timeout: 300000,
     });
     return data;
@@ -177,7 +179,7 @@ class HiveMindApiClient {
   deleteAccountStreaming(onProgress) {
     return new Promise((resolve, reject) => {
       const baseURL = this.controlPlane.defaults.baseURL;
-      const url = `${baseURL}/v1/account/delete`;
+      const url = `${baseURL}${ACCOUNT_DELETE_STREAM_ENDPOINT}`;
 
       fetch(url, {
         method: 'POST',

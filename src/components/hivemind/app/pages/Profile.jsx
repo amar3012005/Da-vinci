@@ -1021,10 +1021,9 @@ function DataPrivacySection() {
     setDeleteProgress(0);
     setDeleteStep('Initiating deletion...');
     try {
-      await apiClient.deleteAccountStreaming((progress, step) => {
-        if (progress >= 0) setDeleteProgress(progress);
-        if (step) setDeleteStep(step);
-      });
+      setDeleteProgress(20);
+      setDeleteStep('Deleting account data...');
+      await apiClient.deleteAccount('DELETE');
       apiClient.clearApiKey();
       setDeleteProgress(100);
       setDeleteStep('Account deleted. Redirecting...');
