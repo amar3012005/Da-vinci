@@ -713,10 +713,38 @@ class HiveMindApiClient {
       // first and falls back to upload_id without a second round-trip.
       payload = { memory_id: idOrPayload, upload_id: idOrPayload };
     }
-    const { data } = await this.controlPlane.delete('/v1/proxy/knowledge/document', {
-      data: payload,
-    });
-    return data;
+
+    const attempts = [];
+    const addAttempt = (candidate) => {
+      if (!candidate || Object.keys(candidate).length === 0) return;
+      const key = JSON.stringify(candidate);
+      if (!attempts.some((entry) => entry.key === key)) {
+        attempts.push({ key, payload: candidate });
+      }
+    };
+
+    addAttempt(payload);
+    if (payload.memory_id) addAttempt({ memory_id: payload.memory_id });
+    if (payload.upload_id) addAttempt({ upload_id: payload.upload_id });
+
+    let lastError;
+    for (const attempt of attempts) {
+      try {
+        const { data } = await this.controlPlane.delete('/v1/proxy/knowledge/document', {
+          data: attempt.payload,
+        });
+        return data;
+      } catch (error) {
+        lastError = error;
+        const status = error?.response?.status;
+        // Retry only on server-side mismatch; 4xx should surface immediately.
+        if (status && status < 500) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
   }
 
   async uploadDocument(file, options = {}) {
