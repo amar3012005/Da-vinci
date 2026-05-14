@@ -67,14 +67,6 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     linkMode: "sparse",
   });
 
-  const linkKeys = useMemo(() => {
-    return new Set(
-      (graphData.links || []).map((link) =>
-        `${typeof link.source === "object" ? link.source.id : link.source}->${typeof link.target === "object" ? link.target.id : link.target}`,
-      ),
-    );
-  }, [graphData.links]);
-
   const neighborMap = useMemo(() => {
     const neighbors = new Map();
     (graphData.links || []).forEach((link) => {

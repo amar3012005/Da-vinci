@@ -52,16 +52,6 @@ const TYPE_COLORS = {
   relationship: "#db2777",
   default: "#525252",
 };
-// Resident layer visual encodings
-const LAYER_COLORS = {
-  fact: "#10b981", // emerald — extracted facts
-  observation: "#f59e0b", // amber — observations
-  promoted: "#ef4444", // red — promoted risks
-  verified: "#22c55e", // green — turing verified
-  tara: "#a855f7", // purple — TARA conversation turns
-  "tara-insight": "#f97316", // orange — clinical reasoning insights
-  memory: null, // use TYPE_COLORS
-};
 
 // Layer filter definitions for UI
 const LAYER_FILTERS = [
@@ -324,7 +314,6 @@ export default function MemoryGraph() {
   const [showFilters, setShowFilters] = useState(false);
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [viewState, setViewState] = useState({ distance: 1100, target: null, camera: null, inFrameNodeIds: [], labelMode: "hidden", linkMode: "sparse" });
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
@@ -810,24 +799,6 @@ export default function MemoryGraph() {
       projects: meta.projects?.length || 0,
     };
   }, [meta, graphData]);
-
-  // Layer breakdown
-  const layerCounts = useMemo(() => {
-    const counts = {
-      fact: 0,
-      observation: 0,
-      promoted: 0,
-      verified: 0,
-      tara: 0,
-      "tara-insight": 0,
-      memory: 0,
-    };
-    graphData.nodes.forEach((n) => {
-      const layer = n.nodeLayer || "memory";
-      counts[layer] = (counts[layer] || 0) + 1;
-    });
-    return counts;
-  }, [graphData.nodes]);
 
   const matchCount = highlightNodes.size;
 
