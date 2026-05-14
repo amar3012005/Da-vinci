@@ -18,11 +18,11 @@ const GRAPH_THEME = {
 };
 
 function getNodeRadius(node) {
-  let radius = Math.min(6.6, Math.sqrt(node.val || 4) * 1.12);
+  let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
 
-  if (node.clusterId === "_orphan") radius = Math.max(radius * 0.45, 1.1);
-  else if (node.clusterRole === "hub") radius = Math.min(8.5, radius * 1.22);
-  else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.82, 1.8);
+  if (node.clusterId === "_orphan") radius = Math.max(radius * 0.48, 1);
+  else if (node.clusterRole === "hub") radius = Math.min(7.2, radius * 1.18);
+  else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.82, 1.6);
 
   if (node.nodeLayer === "fact") radius = Math.max(radius * 0.85, 2.1);
   if (node.nodeLayer === "promoted") radius = Math.min(6.1, radius * 1.02);
@@ -61,7 +61,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const highlightedLinksRef = useRef(new Set());
   const animationFrameRef = useRef(null);
   const graphDataRef = useRef(graphData);
+  const nodeMapRef = useRef(new Map());
   const neighborMapRef = useRef(new Map());
+  const clusterCentroidsRef = useRef(clusterCentroids);
+  const clustersRef = useRef(clusters);
+  const selectedNodeRef = useRef(selectedNode);
+  const highlightNodesRef = useRef(highlightNodes);
+  const filteredNodesRef = useRef(filteredNodes);
+  const layerFilterRef = useRef(layerFilter);
+  const clusterFilterRef = useRef(clusterFilter);
   const onNodeClickRef = useRef(onNodeClick);
   const onNodeHoverRef = useRef(onNodeHover);
   const onBackgroundClickRef = useRef(onBackgroundClick);
@@ -94,27 +102,62 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     return neighbors;
   }, [graphData.links]);
 
-  const isNodeVisible = useCallback(
-    (node) => {
-      if (layerFilter !== "all" && !filteredNodes.has(node.id)) return false;
-      if (clusterFilter && node.clusterId !== clusterFilter && node.clusterRole !== "bridge") return false;
+  const nodeMap = useMemo(
+    () => new Map((graphData.nodes || []).map((node) => [node.id, node])),
+    [graphData.nodes],
+  );
+
+  useEffect(() => {
+    graphDataRef.current = graphData;
+    nodeMapRef.current = nodeMap;
+    neighborMapRef.current = neighborMap;
+    clusterCentroidsRef.current = clusterCentroids;
+    clustersRef.current = clusters;
+    selectedNodeRef.current = selectedNode;
+    highlightNodesRef.current = highlightNodes;
+    filteredNodesRef.current = filteredNodes;
+    layerFilterRef.current = layerFilter;
+    clusterFilterRef.current = clusterFilter;
+    onNodeClickRef.current = onNodeClick;
+    onNodeHoverRef.current = onNodeHover;
+    onBackgroundClickRef.current = onBackgroundClick;
+    onViewStateChangeRef.current = onViewStateChange;
+  }, [
+    clusterCentroids,
+    clusterFilter,
+    clusters,
+    filteredNodes,
+    graphData,
+    highlightNodes,
+    layerFilter,
+    neighborMap,
+    nodeMap,
+    onBackgroundClick,
+    onNodeClick,
+    onNodeHover,
+    onViewStateChange,
+    selectedNode,
+  ]);
+
+  const isNodeVisible = useCallback((node) => {
+      if (layerFilterRef.current !== "all" && !filteredNodesRef.current.has(node.id)) return false;
+      if (clusterFilterRef.current && node.clusterId !== clusterFilterRef.current && node.clusterRole !== "bridge") return false;
       const inFrameNodeIds = viewStateRef.current.inFrameNodeIds;
       if (inFrameNodeIds.size > 0 && Number.isFinite(node.x) && Number.isFinite(node.y) && Number.isFinite(node.z)) {
-        if (!inFrameNodeIds.has(node.id) && !highlightNodes.has(node.id) && selectedNode?.id !== node.id) {
+        if (!inFrameNodeIds.has(node.id) && !highlightNodesRef.current.has(node.id) && selectedNodeRef.current?.id !== node.id) {
           return false;
         }
       }
       return true;
     },
-    [clusterFilter, filteredNodes, highlightNodes, layerFilter, selectedNode],
+    [],
   );
 
-  const isLinkVisible = useCallback(
-    (link) => {
+  const isLinkVisible = useCallback((link) => {
       const sourceId = typeof link.source === "object" ? link.source.id : link.source;
       const targetId = typeof link.target === "object" ? link.target.id : link.target;
-      const sourceNode = graphData.nodes.find((node) => node.id === sourceId);
-      const targetNode = graphData.nodes.find((node) => node.id === targetId);
+      const sourceNode = nodeMapRef.current.get(sourceId);
+      const targetNode = nodeMapRef.current.get(targetId);
       if (!sourceNode || !targetNode) return false;
       if (!isNodeVisible(sourceNode) || !isNodeVisible(targetNode)) return false;
 
@@ -122,8 +165,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (highlightedLinks.has(link)) return true;
 
       const linkMode = viewStateRef.current.linkMode;
-      const sourceImportant = selectedNode?.id === sourceId || highlightNodes.has(sourceId);
-      const targetImportant = selectedNode?.id === targetId || highlightNodes.has(targetId);
+      const sourceImportant = selectedNodeRef.current?.id === sourceId || highlightNodesRef.current.has(sourceId);
+      const targetImportant = selectedNodeRef.current?.id === targetId || highlightNodesRef.current.has(targetId);
 
       if (linkMode === "sparse") {
         return sourceImportant || targetImportant || sourceNode.clusterRole === "hub" || targetNode.clusterRole === "hub";
@@ -135,18 +178,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
       return true;
     },
-    [graphData.nodes, highlightNodes, isNodeVisible, selectedNode],
+    [isNodeVisible],
   );
 
-  const getNodeLabel = useCallback(
-    (node) => {
+  const getNodeLabel = useCallback((node) => {
       const labelMode = viewStateRef.current.labelMode;
-      const isImportant = selectedNode?.id === node.id || highlightNodes.has(node.id) || highlightedNodesRef.current.has(node.id);
+      const isImportant = selectedNodeRef.current?.id === node.id || highlightNodesRef.current.has(node.id) || highlightedNodesRef.current.has(node.id);
       if (labelMode === "hidden" && !isImportant) return "";
       if (labelMode === "focus" && !isImportant && node.clusterRole !== "hub") return "";
       return `<div class="node-label">${node.title || "Untitled"}</div>`;
     },
-    [highlightNodes, selectedNode],
+    [],
   );
 
   const refreshHighlight = useCallback(() => {
@@ -159,20 +201,19 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkWidth(fg.linkWidth());
   }, []);
 
-  const getNodeColor = useCallback(
-    (node) => {
+  const getNodeColor = useCallback((node) => {
       const highlightedNodes = highlightedNodesRef.current;
       if (highlightedNodes.has(node.id)) {
-        return selectedNode?.id === node.id ? GRAPH_THEME.accent : GRAPH_THEME.accentHover;
+        return selectedNodeRef.current?.id === node.id ? GRAPH_THEME.accent : GRAPH_THEME.accentHover;
       }
 
-      if (highlightNodes.size > 0 && !highlightNodes.has(node.id)) {
+      if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
         return "rgba(143,138,130,0.18)";
       }
 
       return GRAPH_THEME.mutedNode;
     },
-    [highlightNodes, selectedNode],
+    [],
   );
 
   useEffect(() => {
@@ -258,16 +299,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const fg = ForceGraph3D({ controlType: "orbit" })(containerRef.current)
       .backgroundColor(backgroundColorRef.current)
       .showNavInfo(false)
-      .nodeResolution(8)
-      .nodeRelSize(1.9)
-      .nodeOpacity(0.92)
+      .nodeResolution(12)
+      .nodeRelSize(1.65)
+      .nodeOpacity(0.9)
       .nodeColor((node) => getNodeColorRef.current(node))
       .nodeVal((node) => getNodeRadius(node))
       .nodeVisibility((node) => isNodeVisibleRef.current(node))
-      .linkOpacity(0.22)
-      .linkDirectionalParticleWidth(1.2)
+      .linkOpacity(0.28)
+      .linkDirectionalParticleWidth(1.1)
       .linkDirectionalParticles((link) => (highlightedLinksRef.current.has(link) ? 2 : 0))
-      .linkWidth((link) => (highlightedLinksRef.current.has(link) ? 1.2 : 0.4))
+      .linkWidth((link) => (highlightedLinksRef.current.has(link) ? 1.15 : 0.35))
       .linkVisibility((link) => isLinkVisibleRef.current(link))
       .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
       .nodeLabel((node) => getNodeLabelRef.current(node))
@@ -339,9 +380,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (controls) {
       controls.enableDamping = true;
       controls.dampingFactor = 0.1;
-      controls.rotateSpeed = 0.55;
-      controls.zoomSpeed = 0.85;
-      controls.panSpeed = 0.7;
+      controls.rotateSpeed = 0.5;
+      controls.zoomSpeed = 0.72;
+      controls.panSpeed = 0.62;
       controls.minDistance = 24;
       controls.maxDistance = 3000;
 
@@ -438,7 +479,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       fg._destructor?.();
       fgRef.current = null;
     };
-  }, []);
+  // The graph instance must be created once; live React values are read from refs above.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const fg = fgRef.current;
@@ -474,11 +516,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const charge = fg.d3Force("charge");
     if (charge?.strength) {
       charge.strength((node) => {
-        if (node.clusterId === "_orphan") return -22;
-        return -65 - (node.val || 1) * 10;
+        if (node.clusterId === "_orphan") return -28;
+        return -78 - (node.val || 1) * 11;
       });
       charge.theta?.(0.9);
-      charge.distanceMax?.(700);
+      charge.distanceMax?.(650);
     }
 
     const link = fg.d3Force("link");
@@ -487,22 +529,23 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         const src = edge.source;
         const tgt = edge.target;
         const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-        return sameCluster ? 35 : 120;
+        return sameCluster ? 48 : 138;
       });
       link.strength((edge) => {
         const src = edge.source;
         const tgt = edge.target;
         const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-        return sameCluster ? 0.42 : 0.08;
+        return sameCluster ? 0.46 : 0.075;
       });
     }
 
-    if (clusters.length > 1) {
+    if (clustersRef.current.length > 1) {
       fg.d3Force("clusterBias", (alpha) => {
-        const pull = 0.018;
-        for (const node of graphData.nodes) {
+        const pull = 0.015;
+        const centroids = clusterCentroidsRef.current || {};
+        for (const node of graphDataRef.current.nodes || []) {
           if (node.clusterId === "_orphan") continue;
-          const centroid = clusterCentroids[node.clusterId];
+          const centroid = centroids[node.clusterId];
           if (!centroid) continue;
           node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
           node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
@@ -517,11 +560,6 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     }
 
     fg.d3ReheatSimulation();
-    const timeout = window.setTimeout(() => {
-      fg.cooldownTicks(0);
-    }, 2200);
-
-    return () => window.clearTimeout(timeout);
   }, [clusterCentroids, clusters.length, graphData.nodes]);
 
   useEffect(() => {

@@ -99,6 +99,25 @@ function truncate(str, len = 80) {
   return str.length > len ? str.slice(0, len) + "..." : str;
 }
 
+function safeStorageGet(key) {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
 function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
   // Create node lookup for resolving IDs to titles
@@ -300,6 +319,9 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 export default function MemoryGraph() {
   const { org } = useAuth();
   const graphRef = useRef();
+  const pendingViewStateRef = useRef(null);
+  const viewStateTimerRef = useRef(null);
+  const lastCommittedViewStateRef = useRef(null);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -323,16 +345,63 @@ export default function MemoryGraph() {
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
   // returning users keep their preferred density without re-selecting.
   const [nodeLimit, setNodeLimit] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    const stored = window.localStorage.getItem('hm-graph-limit');
+    const stored = safeStorageGet("hm-graph-limit");
     if (stored === null) return 0; // default: show everything
     const parsed = parseInt(stored, 10);
     return Number.isFinite(parsed) ? parsed : 0;
   });
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('hm-graph-limit', String(nodeLimit));
+    safeStorageSet("hm-graph-limit", String(nodeLimit));
   }, [nodeLimit]);
+
+  const commitPendingViewState = useCallback(() => {
+    viewStateTimerRef.current = null;
+    const next = pendingViewStateRef.current;
+    if (!next) return;
+
+    const last = lastCommittedViewStateRef.current;
+    const distanceChanged = !last || Math.abs((next.distance || 0) - (last.distance || 0)) > 36;
+    const labelChanged = !last || next.labelMode !== last.labelMode || next.linkMode !== last.linkMode;
+    const frameCountChanged = !last || (next.inFrameNodeIds?.length || 0) !== (last.inFrameNodeIds?.length || 0);
+
+    if (!distanceChanged && !labelChanged && !frameCountChanged) return;
+
+    lastCommittedViewStateRef.current = next;
+    setViewState(next);
+  }, []);
+
+  const handleViewStateChange = useCallback((nextViewState) => {
+    if (!nextViewState) return;
+
+    pendingViewStateRef.current = {
+      ...nextViewState,
+      distance: Math.round((nextViewState.distance || 0) / 12) * 12,
+      target: nextViewState.target
+        ? {
+            x: Math.round((nextViewState.target.x || 0) / 24) * 24,
+            y: Math.round((nextViewState.target.y || 0) / 24) * 24,
+            z: Math.round((nextViewState.target.z || 0) / 24) * 24,
+          }
+        : null,
+      camera: nextViewState.camera
+        ? {
+            x: Math.round((nextViewState.camera.x || 0) / 24) * 24,
+            y: Math.round((nextViewState.camera.y || 0) / 24) * 24,
+            z: Math.round((nextViewState.camera.z || 0) / 24) * 24,
+          }
+        : null,
+    };
+
+    if (viewStateTimerRef.current != null) return;
+    viewStateTimerRef.current = window.setTimeout(commitPendingViewState, 120);
+  }, [commitPendingViewState]);
+
+  useEffect(() => () => {
+    if (viewStateTimerRef.current != null) {
+      window.clearTimeout(viewStateTimerRef.current);
+      viewStateTimerRef.current = null;
+    }
+  }, []);
 
   const pageIndexRootPath = useMemo(() => {
     if (!projectFilter) return "/hivemind";
@@ -354,7 +423,7 @@ export default function MemoryGraph() {
   // while real fetch happens in background (stale-while-revalidate FE).
   const hydrateFromCache = useCallback(() => {
     try {
-      const raw = localStorage.getItem(cacheKey);
+      const raw = safeStorageGet(cacheKey);
       if (!raw) return false;
       const cached = JSON.parse(raw);
       if (!cached || !cached.nodes || !cached.edges) return false;
@@ -417,9 +486,7 @@ export default function MemoryGraph() {
         };
         const serialized = JSON.stringify(snapshot);
         // Cap at 4MB to fit comfortably in localStorage (typical 5-10MB quota)
-        if (serialized.length < 4 * 1024 * 1024) {
-          localStorage.setItem(cacheKey, serialized);
-        }
+        if (serialized.length < 4 * 1024 * 1024) safeStorageSet(cacheKey, serialized);
       } catch (_e) {
         // localStorage quota exceeded or disabled — non-fatal
       }
@@ -706,76 +773,6 @@ export default function MemoryGraph() {
     }
   }, [searchQuery, graphData.nodes]);
 
-  // ── Brain-like force physics v3 ──
-  useEffect(() => {
-    if (!graphRef.current) return;
-    const n = visibleGraphData.nodes.length;
-    if (n === 0) return;
-    try {
-      const fg = graphRef.current;
-
-      // BA / Cytoscape style: strip all custom forces, trust physics.
-      try { fg.d3Force('center', null); } catch (_e) { /* noop */ }
-      try { fg.d3Force('radialSpread', null); } catch (_e) { /* noop */ }
-      try { fg.d3Force('clusterPull', null); } catch (_e) { /* noop */ }
-      try { fg.d3Force('clusterRepel', null); } catch (_e) { /* noop */ }
-      try { fg.d3Force('clusterX', null); } catch (_e) { /* noop */ }
-      try { fg.d3Force('clusterY', null); } catch (_e) { /* noop */ }
-
-      // Degree-proportional repulsion (BA: hub repulsion ∝ degree)
-      const charge = fg.d3Force?.('charge');
-      // Obsidian-style: stronger charge + longer links → spacious layout.
-      if (charge?.strength) {
-        charge.strength((node) => {
-          if (node.clusterId === '_orphan') return -30;
-          const degree = (node.val || 1);
-          // Heavier repulsion than BA tuning for Obsidian "lots of whitespace" feel
-          return -80 - degree * 12;
-        });
-        if (charge.theta) charge.theta(0.9);
-        if (charge.distanceMax) charge.distanceMax(600);
-      }
-
-      // Links: longer baseline so graph spreads out
-      const link = fg.d3Force?.('link');
-      if (link?.distance) {
-        link.distance((edge) => {
-          const src = edge.source;
-          const tgt = edge.target;
-          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 50 : 140;
-        });
-        link.strength((edge) => {
-          const src = edge.source;
-          const tgt = edge.target;
-          const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
-          return sameCluster ? 0.5 : 0.08;
-        });
-      }
-
-      // Very gentle cluster bias — barely there, just nudges related nodes
-      if (clusters.length > 1 && fg.d3Force) {
-        fg.d3Force('clusterBias', (alpha) => {
-          const pull = 0.02;
-          for (const node of visibleGraphData.nodes) {
-            if (node.clusterId === '_orphan') continue;
-            const centroid = clusterCentroids[node.clusterId];
-            if (!centroid) continue;
-            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
-            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
-          }
-        });
-      } else {
-        if (fg.d3Force) {
-          try { fg.d3Force('clusterBias', null); } catch (_e) { /* noop */ }
-        }
-      }
-      fg.d3ReheatSimulation?.();
-    } catch (_e) {
-      // d3Force may not exist yet on first render — re-run when nodes arrive.
-    }
-  }, [visibleGraphData.nodes, clusters.length, clusterCentroids]);
-
   // Node click
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
@@ -1059,7 +1056,7 @@ export default function MemoryGraph() {
               setSelectedNode(null);
               setHoveredNode(null);
             }}
-            onViewStateChange={setViewState}
+            onViewStateChange={handleViewStateChange}
             backgroundColor="rgba(0,0,0,0)"
             width={
               typeof window !== "undefined"

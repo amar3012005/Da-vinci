@@ -46,6 +46,18 @@
     "twilio": "^5.4.2",
     "unicornstudio-react": "^1.4.31"
   },
+  "overrides": {
+    "three": "0.183.2",
+    "3d-force-graph": {
+      "three": "0.183.2"
+    },
+    "three-render-objects": {
+      "three": "0.183.2"
+    },
+    "three-forcegraph": {
+      "three": "0.183.2"
+    }
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

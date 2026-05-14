@@ -5,6 +5,24 @@ import apiClient from './api-client';
 const STORAGE_TEAM = 'hivemind_active_team_id';
 const STORAGE_PROJECT = 'hivemind_active_project_id';
 
+function readStorage(key) {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key) || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(mutator) {
+  if (typeof window === 'undefined') return;
+  try {
+    mutator(window.localStorage);
+  } catch {
+    // Storage can be blocked during auth callbacks or embedded/private contexts.
+  }
+}
+
 const TeamContext = createContext({
   teams: [],
   projects: [],
@@ -22,33 +40,27 @@ const TeamContext = createContext({
 export function TeamProvider({ children }) {
   const [teams, setTeams] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [activeTeamId, _setActiveTeamId] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(STORAGE_TEAM) || null;
-  });
-  const [activeProjectId, _setActiveProjectId] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem(STORAGE_PROJECT) || null;
-  });
+  const [activeTeamId, _setActiveTeamId] = useState(() => readStorage(STORAGE_TEAM));
+  const [activeProjectId, _setActiveProjectId] = useState(() => readStorage(STORAGE_PROJECT));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const setActiveTeamId = useCallback((id) => {
     _setActiveTeamId(id);
     _setActiveProjectId(null); // reset project when team changes
-    if (typeof window !== 'undefined') {
-      if (id) window.localStorage.setItem(STORAGE_TEAM, id);
-      else window.localStorage.removeItem(STORAGE_TEAM);
-      window.localStorage.removeItem(STORAGE_PROJECT);
-    }
+    writeStorage((storage) => {
+      if (id) storage.setItem(STORAGE_TEAM, id);
+      else storage.removeItem(STORAGE_TEAM);
+      storage.removeItem(STORAGE_PROJECT);
+    });
   }, []);
 
   const setActiveProjectId = useCallback((id) => {
     _setActiveProjectId(id);
-    if (typeof window !== 'undefined') {
-      if (id) window.localStorage.setItem(STORAGE_PROJECT, id);
-      else window.localStorage.removeItem(STORAGE_PROJECT);
-    }
+    writeStorage((storage) => {
+      if (id) storage.setItem(STORAGE_PROJECT, id);
+      else storage.removeItem(STORAGE_PROJECT);
+    });
   }, []);
 
   const refresh = useCallback(async () => {
