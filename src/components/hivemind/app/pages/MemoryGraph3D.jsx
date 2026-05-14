@@ -7,7 +7,7 @@ import React, {
   useRef,
 } from "react";
 import ForceGraph3D from "3d-force-graph";
-import * as THREE from "three";
+import * as THREE from "3d-force-graph/node_modules/three";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 const GRAPH_THEME = {
