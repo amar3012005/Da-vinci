@@ -629,49 +629,46 @@ export default function MemoryGraph() {
       else if (node.clusterRole === "hub") radius = Math.min(11, radius * 1.4);
       else if (node.clusterRole === "bridge") radius = Math.max(radius * 0.85, 2.2);
 
-      // Size adjustments per layer (overrides cluster sizing for special types)
+      // Size adjustments per layer — modest bumps so no layer dominates.
       if (node.nodeLayer === "fact") radius = Math.max(radius * 0.7, 3);
-      if (node.nodeLayer === "promoted") radius = radius * 1.5;
-      if (node.nodeLayer === "tara") radius = radius * 1.2;
+      if (node.nodeLayer === "promoted") radius = Math.min(8, radius * 1.05);
+      if (node.nodeLayer === "tara") radius = Math.min(8, radius * 1.05);
       if (node.nodeLayer === "tara-insight") radius = radius * 1.1;
 
-      // Outer glow (temporal decay)
+      // Outer glow (temporal decay) — subtle, matches green fact halo
       if (glow > 0.3 && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 4 + glow * 6, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba(baseColor, glow * 0.15);
+        ctx.arc(node.x, node.y, radius + 2 + glow * 3, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba(baseColor, glow * 0.06);
         ctx.fill();
       }
 
-      // Promoted risk — red halo
+      // All special-layer halos — uniform size + low opacity so red/blue
+      // don't dominate. Matches the gentle green fact halo aesthetic.
+      const haloAlpha = 0.06;
+      const haloPad = 2.5;
       if (node.nodeLayer === "promoted" && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#ef4444", 0.15);
+        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba("#ef4444", haloAlpha);
         ctx.fill();
       }
-
-      // Verified — green badge glow
       if (node.nodeLayer === "verified" && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#22c55e", 0.12);
+        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba("#22c55e", haloAlpha);
         ctx.fill();
       }
-
-      // TARA turn — purple halo
       if (node.nodeLayer === "tara" && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#a855f7", 0.12);
+        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba("#a855f7", haloAlpha);
         ctx.fill();
       }
-
-      // Clinical insight — orange glow
       if (node.nodeLayer === "tara-insight" && !isDimmed) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 5, 0, 2 * Math.PI);
-        ctx.fillStyle = hexToRgba("#f97316", 0.15);
+        ctx.arc(node.x, node.y, radius + haloPad, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba("#f97316", haloAlpha);
         ctx.fill();
       }
 
