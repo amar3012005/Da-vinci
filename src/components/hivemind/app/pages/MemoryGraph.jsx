@@ -25,6 +25,8 @@ import {
   Hexagon,
   Map as MapIcon,
   Layers,
+  BookOpen,
+  Radio,
 } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
@@ -125,6 +127,23 @@ function safeStorageSet(key, value) {
   } catch (_error) {
     return false;
   }
+}
+
+function getNodeTimestamp(node) {
+  const candidates = [
+    node.updatedAt,
+    node.createdAt,
+    node.timestamp,
+    node.lastAccessedAt,
+  ];
+  for (const value of candidates) {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  if (Number.isFinite(node.daysSinceUpdate)) {
+    return Date.now() - node.daysSinceUpdate * 24 * 60 * 60 * 1000;
+  }
+  return null;
 }
 
 function LegendShape({ shape, color }) {
@@ -365,9 +384,11 @@ export default function MemoryGraph() {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
-  const [showLegend, setShowLegend] = useState(false);
+  const [showLegend, setShowLegend] = useState(true);
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
+  const [temporalProgress, setTemporalProgress] = useState(1);
+  const [isLiveMode, setIsLiveMode] = useState(true);
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
   // returning users keep their preferred density without re-selecting.
   const [nodeLimit, setNodeLimit] = useState(() => {
@@ -540,19 +561,21 @@ export default function MemoryGraph() {
     return out;
   }, [clusters, graphData.nodes.length]);
 
-  // Filtered nodes based on layer filter
-  const filteredNodes = useMemo(() => {
-    if (layerFilter === "all") return new Set(graphData.nodes.map((n) => n.id));
-    const matches = new Set();
-    graphData.nodes.forEach((n) => {
-      if (n.nodeLayer === layerFilter) matches.add(n.id);
-    });
-    return matches;
-  }, [graphData.nodes, layerFilter]);
-
   useEffect(() => {
     fetchGraph();
   }, [fetchGraph]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (isLiveMode && document.visibilityState === "visible") fetchGraph();
+    };
+    const interval = window.setInterval(refreshIfVisible, 30000);
+    return () => window.clearInterval(interval);
+  }, [fetchGraph, isLiveMode]);
+
+  useEffect(() => {
+    if (isLiveMode) setTemporalProgress(1);
+  }, [isLiveMode]);
 
   // Debounce search input
   useEffect(() => {
@@ -615,21 +638,65 @@ export default function MemoryGraph() {
 
   const matchCount = highlightNodes.size;
 
+  const temporalNodes = useMemo(() => {
+    return graphData.nodes
+      .map((node) => ({ node, timestamp: getNodeTimestamp(node) }))
+      .filter((entry) => Number.isFinite(entry.timestamp))
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }, [graphData.nodes]);
+
+  const temporalBounds = useMemo(() => {
+    if (temporalNodes.length === 0) return null;
+    return {
+      min: temporalNodes[0].timestamp,
+      max: temporalNodes[temporalNodes.length - 1].timestamp,
+    };
+  }, [temporalNodes]);
+
+  const temporalCutoff = useMemo(() => {
+    if (!temporalBounds) return null;
+    return temporalBounds.min + (temporalBounds.max - temporalBounds.min) * temporalProgress;
+  }, [temporalBounds, temporalProgress]);
+
+  const temporalFilteredNodes = useMemo(() => {
+    if (!temporalCutoff || temporalProgress >= 0.999) return new Set(graphData.nodes.map((n) => n.id));
+    const visibleIds = new Set();
+    graphData.nodes.forEach((node) => {
+      const timestamp = getNodeTimestamp(node);
+      if (!timestamp || timestamp <= temporalCutoff) visibleIds.add(node.id);
+    });
+    return visibleIds;
+  }, [graphData.nodes, temporalCutoff, temporalProgress]);
+
+  const filteredNodes = useMemo(() => {
+    const matches = new Set();
+    graphData.nodes.forEach((n) => {
+      const matchesLayer = layerFilter === "all" || n.nodeLayer === layerFilter;
+      const matchesTime = temporalFilteredNodes.has(n.id);
+      if (matchesLayer && matchesTime) matches.add(n.id);
+    });
+    return matches;
+  }, [graphData.nodes, layerFilter, temporalFilteredNodes]);
+
   return (
     <div className="h-screen bg-[radial-gradient(circle_at_top,_#f5f3ef_0%,_#faf9f4_40%,_#f8f6f1_100%)] flex flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/80 backdrop-blur-xl px-4 py-3 flex items-center gap-3 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center">
-            <Network size={16} className="text-[#8b5cf6]" />
+      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/84 backdrop-blur-xl px-4 py-3 flex flex-wrap items-center gap-2 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-2 pr-2">
+          <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center">
+            <Network size={16} className="text-[#117dff]" />
           </div>
-          <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a]">
-            Memory Graph
-          </h1>
+          <div>
+            <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a] leading-none">
+              Memory Graph
+            </h1>
+            <p className="text-[10px] font-mono text-[#8b857d] mt-1">
+              live graph, time scrub, explicit legend
+            </p>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 min-w-[220px] max-w-[320px]">
           <Search
             size={13}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]"
@@ -638,16 +705,15 @@ export default function MemoryGraph() {
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={matchCount > 0 ? `Search nodes... (${matchCount} matches)` : 'Search nodes...'}
-            className="w-full pl-8 pr-3 py-1.5 border border-[#e3e0db] rounded-lg text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-[#faf9f4]"
+            placeholder={matchCount > 0 ? `Search memories (${matchCount})` : "Search memories"}
+            className="w-full pl-8 pr-3 py-2 border border-[#e3e0db] rounded-xl text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-[#faf9f4]"
           />
         </div>
 
-        {/* Filters */}
         <div className="relative">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] border border-[#e3e0db] text-[#525252] hover:border-[#117dff]/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-['Space_Grotesk'] border border-[#e3e0db] text-[#525252] hover:border-[#117dff]/20 transition-colors bg-[#faf9f4]"
           >
             <Filter size={12} />
             {projectFilter || "All Projects"}
@@ -659,14 +725,14 @@ export default function MemoryGraph() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="absolute top-full mt-1 left-0 bg-white border border-[#e3e0db] rounded-lg shadow-lg z-30 py-1 min-w-[160px]"
+                className="absolute top-full mt-1 left-0 bg-white border border-[#e3e0db] rounded-xl shadow-lg z-30 py-1 min-w-[180px]"
               >
                 <button
                   onClick={() => {
                     setProjectFilter("");
                     setShowFilters(false);
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] text-[#525252] hover:bg-[#faf9f4]"
+                  className="w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:bg-[#faf9f4]"
                 >
                   All Projects
                 </button>
@@ -677,7 +743,7 @@ export default function MemoryGraph() {
                       setProjectFilter(p);
                       setShowFilters(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] hover:bg-[#faf9f4] ${projectFilter === p ? "text-[#117dff] font-semibold" : "text-[#525252]"}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] hover:bg-[#faf9f4] ${projectFilter === p ? "text-[#117dff] font-semibold" : "text-[#525252]"}`}
                   >
                     {p}
                   </button>
@@ -687,50 +753,31 @@ export default function MemoryGraph() {
           </AnimatePresence>
         </div>
 
-        {/* Cluster filter — surfaces the mind-groups derived server-side. */}
         {clusters.length > 1 && (
           <div className="relative group">
             <select
               value={clusterFilter || ""}
               onChange={(e) => setClusterFilter(e.target.value || null)}
-              className="appearance-none rounded-lg border border-[#e3e0db] bg-white pl-7 pr-7 py-1.5 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#117dff]/20 transition-colors focus:outline-none cursor-pointer"
-              title="Filter to a single mind-group"
+              className="appearance-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] pl-7 pr-7 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#117dff]/20 transition-colors focus:outline-none cursor-pointer"
             >
               <option value="">All Clusters</option>
-              {clusters
-                .filter((c) => c.id !== "_orphan")
-                .map((c) => {
-                  // Build a label from top tags or fall back to id.
-                  const lbl = c.label
-                    || (c.topTags?.length ? c.topTags.slice(0, 2).join(", ") : c.id);
-                  return (
-                    <option key={c.id} value={c.id}>
-                      ● {lbl} ({c.size})
-                    </option>
-                  );
-                })}
+              {clusters.filter((c) => c.id !== "_orphan").map((c) => {
+                const lbl = c.label || (c.topTags?.length ? c.topTags.slice(0, 2).join(", ") : c.id);
+                return <option key={c.id} value={c.id}>{lbl} ({c.size})</option>;
+              })}
             </select>
-            {clusterFilter && (
-              <span
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-                style={{ backgroundColor: clusterColorMap[clusterFilter] || "#117dff" }}
-              />
-            )}
-            {!clusterFilter && (
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a3a3a3]">●</span>
-            )}
+            <span
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+              style={{ backgroundColor: clusterFilter ? (clusterColorMap[clusterFilter] || "#117dff") : "#a3a3a3" }}
+            />
             <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
           </div>
         )}
 
-        <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1">
+        <div className="flex items-center gap-1 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-1">
           {[
             { key: "personal", label: "My" },
-            {
-              key: "team",
-              label: "Team",
-              disabled: org?.plan !== "enterprise",
-            },
+            { key: "team", label: "Team", disabled: org?.plan !== "enterprise" },
             { key: "all", label: "All", disabled: org?.plan !== "enterprise" },
           ].map((option) => (
             <button
@@ -738,10 +785,8 @@ export default function MemoryGraph() {
               type="button"
               disabled={option.disabled}
               onClick={() => !option.disabled && setScope(option.key)}
-              className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] ${
-                scope === option.key
-                  ? "bg-[#117dff]/10 text-[#117dff]"
-                  : "text-[#737373]"
+              className={`rounded-lg px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.08em] ${
+                scope === option.key ? "bg-[#117dff]/10 text-[#117dff]" : "text-[#737373]"
               } ${option.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
             >
               {option.label}
@@ -749,85 +794,61 @@ export default function MemoryGraph() {
           ))}
         </div>
 
-        {/* Layer filter buttons */}
-        <div className="flex items-center gap-1">
-          {LAYER_FILTERS.map((layer) => (
-            <button
-              key={layer.key}
-              onClick={() => setLayerFilter(layer.key)}
-              className={`px-2 py-1 rounded text-[10px] font-['Space_Grotesk'] ${
-                layerFilter === layer.key
-                  ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20'
-                  : 'text-[#525252] border border-transparent'
-              }`}
-            >
-              {layer.icon && (
-                <span style={{ color: layer.color }}>{layer.icon} </span>
-              )}
-              {layer.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowLegend((value) => !value)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
+            showLegend
+              ? "border-[#117dff]/25 bg-[#117dff]/8 text-[#117dff]"
+              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
+          }`}
+        >
+          <BookOpen size={12} />
+          Legend
+        </button>
 
-        {/* Node density selector — controls how many memories the server returns */}
-        <div className="flex items-center gap-1 rounded-lg border border-[#e3e0db] bg-white p-1" title="How many memory nodes to load">
-          {[
-            { key: 300, label: '300' },
-            { key: 1000, label: '1K' },
-            { key: 5000, label: '5K' },
-            { key: 0, label: 'All' },
-          ].map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setNodeLimit(option.key)}
-              className={`rounded-md px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
-                nodeLimit === option.key
-                  ? 'bg-[#117dff]/10 text-[#117dff]'
-                  : 'text-[#737373] hover:text-[#525252]'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setIsLiveMode((value) => !value)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
+            isLiveMode
+              ? "border-[#16a34a]/25 bg-[#16a34a]/8 text-[#15803d]"
+              : "border-[#e3e0db] bg-[#faf9f4] text-[#737373]"
+          }`}
+        >
+          <Radio size={12} />
+          {isLiveMode ? "Live" : "Paused"}
+        </button>
 
-        {/* Memory Map button */}
         <button
           onClick={() => {
             setPageIndexRefreshKey((k) => k + 1);
             setPageIndexModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
-          title="View memory hierarchy map"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
         >
           <MapIcon size={12} />
-          <span className="hidden lg:inline">Memory Map</span>
+          Memory Map
         </button>
 
-        {/* Actions */}
         <button
           onClick={fetchGraph}
           disabled={loading}
-          className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors disabled:opacity-40"
+          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors disabled:opacity-40"
           title="Refresh"
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => graphRef.current?.fitView?.(400)}
-          className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
+          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
           title="Fit to view"
         >
           <Maximize2 size={13} />
         </button>
 
-        {/* Stats */}
         {stats && (
-          <div className="flex items-center gap-2 ml-auto text-[10px] font-mono text-[#8b857d]">
-            <span>{stats.nodes}n</span>
-            <span>{stats.edges}e</span>
-            {clusters.length > 0 && <span>{clusters.length}c</span>}
+          <div className="ml-auto flex items-center gap-2 text-[10px] font-mono text-[#8b857d]">
+            <span>{filteredNodes.size}/{stats.nodes} nodes</span>
+            <span>{stats.edges} edges</span>
           </div>
         )}
       </div>
@@ -885,6 +906,68 @@ export default function MemoryGraph() {
           />
         )}
 
+        {graphData.nodes.length > 0 && (
+          <div className="absolute top-4 left-4 z-10 w-[280px] rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                  Graph Controls
+                </p>
+                <p className="text-xs text-[#525252] font-['Space_Grotesk'] mt-1">
+                  fewer header controls, graph-first layout
+                </p>
+              </div>
+            </div>
+            <div className="mb-3">
+              <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-1.5">
+                Memory Type
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {LAYER_FILTERS.map((layer) => (
+                  <button
+                    key={layer.key}
+                    onClick={() => setLayerFilter(layer.key)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-['Space_Grotesk'] border ${
+                      layerFilter === layer.key
+                        ? "bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20"
+                        : "text-[#525252] border-[#ece8e0] bg-[#faf9f4]"
+                    }`}
+                  >
+                    {layer.icon && <span style={{ color: layer.color }}>{layer.icon} </span>}
+                    {layer.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-1.5">
+                Density
+              </p>
+              <div className="flex items-center gap-1 rounded-xl border border-[#ece8e0] bg-[#faf9f4] p-1">
+                {[
+                  { key: 300, label: "300" },
+                  { key: 1000, label: "1K" },
+                  { key: 5000, label: "5K" },
+                  { key: 0, label: "All" },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setNodeLimit(option.key)}
+                    className={`rounded-lg px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                      nodeLimit === option.key
+                        ? "bg-[#117dff]/10 text-[#117dff]"
+                        : "text-[#737373] hover:text-[#525252]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {graphData.nodes.length === 0 && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
@@ -899,14 +982,19 @@ export default function MemoryGraph() {
 
         {/* Legend */}
         <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 max-w-[420px]">
-          <button
-            onClick={() => setShowLegend((value) => !value)}
-            className="self-start rounded-full border border-[#e3e0db] bg-white/80 backdrop-blur-xl px-3 py-1.5 text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] hover:text-[#525252]"
-          >
-            {showLegend ? "Hide Legend" : "Show Legend"}
-          </button>
           {showLegend && (
             <div className="bg-white/82 backdrop-blur-xl border border-[#e3e0db] rounded-2xl px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-mono text-[#8b857d] uppercase tracking-[0.14em]">
+                  Legend
+                </p>
+                <button
+                  onClick={() => setShowLegend(false)}
+                  className="text-[#a3a3a3] hover:text-[#525252]"
+                >
+                  <X size={12} />
+                </button>
+              </div>
               <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">
                 Relationships
               </p>
@@ -947,13 +1035,69 @@ export default function MemoryGraph() {
                 <p>Color + shape = memory type.</p>
                 <p>Cluster glow appears only when that group is focused.</p>
                 <p>Labels appear only when you zoom in and only for the visible top-ranked nodes.</p>
+                <p>Time rail reveals memories from earliest to latest.</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Zoom + cluster panel controls */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-10">
+        <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
+          {temporalBounds && (
+            <div className="flex items-end gap-2">
+              <div className="rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col justify-between h-[220px] text-[10px] font-mono text-[#8b857d]">
+                    <span>{new Date(temporalBounds.max).toLocaleDateString()}</span>
+                    <span className="opacity-0">mid</span>
+                    <span>{new Date(temporalBounds.min).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-2">
+                      Time
+                    </p>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={Math.round(temporalProgress * 100)}
+                      onChange={(e) => {
+                        const next = Number(e.target.value) / 100;
+                        setTemporalProgress(next);
+                        setIsLiveMode(next >= 0.999);
+                      }}
+                      className="h-[220px] w-6 appearance-none bg-transparent cursor-pointer temporal-slider"
+                      style={{ writingMode: "vertical-lr", direction: "rtl" }}
+                      aria-label="Temporal memory formation scrubber"
+                    />
+                    <button
+                      onClick={() => {
+                        setTemporalProgress(1);
+                        setIsLiveMode(true);
+                      }}
+                      className="mt-2 rounded-lg border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 text-[10px] font-mono text-[#525252]"
+                    >
+                      Now
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 border-t border-[#eee9e1] pt-2">
+                  <p className="text-[10px] font-mono text-[#8b857d] uppercase tracking-[0.14em]">
+                    Visible Window
+                  </p>
+                  <p className="mt-1 text-xs text-[#0a0a0a] font-['Space_Grotesk']">
+                    {temporalCutoff ? new Date(temporalCutoff).toLocaleString() : "All time"}
+                  </p>
+                  <p className="mt-1 text-[10px] text-[#525252] font-['Space_Grotesk']">
+                    {filteredNodes.size} memories currently formed
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
           {/* Cluster sidebar toggle */}
           {clusters.length > 1 && (
             <button
@@ -990,6 +1134,7 @@ export default function MemoryGraph() {
               <Icon size={14} />
             </button>
           ))}
+          </div>
         </div>
 
         {/* Node detail sidecar */}
