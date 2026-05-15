@@ -801,10 +801,11 @@ class HiveMindApiClient {
 
   // ─── Core: Gmail Connector (direct) ─────────────────────────
 
-  async gmailConnect(targetScope = 'personal') {
-    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/connect', {
-      params: { target_scope: targetScope },
-    });
+  async gmailConnect(targetScope = 'personal', services = null) {
+    // services: 'all' or comma-separated subset, e.g. 'gmail,drive,calendar'
+    const params = { target_scope: targetScope };
+    if (services && services !== 'all') params.services = services;
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/gmail/connect', { params });
     return data;
   }
 
@@ -820,6 +821,38 @@ class HiveMindApiClient {
 
   async gmailDisconnect() {
     const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/disconnect');
+    return data;
+  }
+
+  // ─── Core: Google Workspace (multi-service) ────────────────
+
+  async googleWorkspaceStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/google/status');
+    return data;
+  }
+
+  async googleWorkspaceDisconnect(provider) {
+    // provider: 'gmail' | 'google_drive' | 'google_calendar' | ... | 'all'
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/google/disconnect', { provider });
+    return data;
+  }
+
+  async workspaceHealth() {
+    const { data } = await this.controlPlane.get('/v1/proxy/workspace/health');
+    return data;
+  }
+
+  async workspaceCall(tool, args = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/workspace/call', { tool, args });
+    return data;
+  }
+
+  async workspaceLiveQuery(query, options = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/workspace/live-query', {
+      query,
+      memory_results: options.memoryResults || [],
+      force_services: options.forceServices || null,
+    });
     return data;
   }
 
