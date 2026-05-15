@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# HIVEMIND × Claude Code (CLI) — one-shot installer
+# HIVEMIND × Claude Code — one-shot installer (writes ~/.claude.json directly)
 # Run: curl -fsSL https://hivemind.davinciai.eu/install/claude-code.sh | bash
 #
-# Claude Code uses its own CLI to register MCP servers (no JSON file editing).
-# We just need to invoke `claude mcp add` with the right args.
+# Claude Code reads ~/.claude.json. We write the canonical HIVEMIND MCP
+# schema directly so the install is consistent with Cursor/Antigravity
+# and survives across CLI version bumps. CLI fallback used only when
+# claude binary is present AND user prefers it.
 
 set -euo pipefail
 
@@ -16,61 +18,77 @@ else
   source <(curl -fsSL "$COMMON_LIB")
 fi
 
-header "Claude Code (CLI)"
+header "Claude Code"
 
 step "Detecting OS..."
 detect_os
 ok "OS: $OS ($ARCH)"
 
 check_prereqs
-require_cmd claude
 
 # ──────────────────────────────────────────────────────────────────────
-# Key
+# Locate Claude Code config (~/.claude.json, all platforms)
 # ──────────────────────────────────────────────────────────────────────
+step "Locating Claude Code config..."
+CC_CONFIG="${HOME}/.claude.json"
+ok "Config path: $CC_CONFIG"
+
 prompt_for_key
 validate_key
 
 # ──────────────────────────────────────────────────────────────────────
-# Register MCP server via Claude Code CLI
+# Patch ~/.claude.json — set mcpServers.hivemind to canonical schema.
+# If CLI ALSO has the entry (project/local scope), strip it so we don't
+# end up with duplicates that error on next `claude mcp remove`.
 # ──────────────────────────────────────────────────────────────────────
-step "Registering HIVEMIND with Claude Code..."
+step "Patching Claude Code config..."
+ensure_json_file "$CC_CONFIG"
 
-# Remove any existing 'hivemind' entry first (idempotent).
-# Strip from all 3 scopes — a bare `mcp remove` errors when entry exists in
-# multiple scopes, and a leftover project/local entry blocks the user-scope
-# `mcp add` below with "already exists".
-claude mcp remove hivemind -s user    2>/dev/null || true
-claude mcp remove hivemind -s local   2>/dev/null || true
-claude mcp remove hivemind -s project 2>/dev/null || true
+if jq -e '.mcpServers.hivemind' "$CC_CONFIG" >/dev/null 2>&1; then
+  warn "Existing 'hivemind' entry found in $CC_CONFIG"
+  if ! confirm "Overwrite it?"; then abort "Aborted"; fi
+fi
 
-# Add it (user scope = available across all sessions)
-if claude mcp add --transport http --scope user hivemind \
-  "$HIVEMIND_MCP_URL" \
-  --header "Authorization: Bearer $HIVEMIND_KEY"; then
-  ok "Registered: claude mcp list will show 'hivemind'"
-else
-  abort "claude mcp add failed"
+backup_file "$CC_CONFIG"
+
+json_merge "$CC_CONFIG" \
+  ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+     \"transport\": \"http\",
+     \"url\": \"$HIVEMIND_MCP_URL\",
+     \"headers\": {
+       \"Authorization\": \"Bearer $HIVEMIND_KEY\"
+     }
+   }"
+
+ok "Wrote mcpServers.hivemind to $CC_CONFIG"
+
+# Best-effort cleanup of stale project/local scope entries that would
+# otherwise block `claude mcp` remove operations later.
+if command -v claude >/dev/null 2>&1; then
+  claude mcp remove hivemind -s local   >/dev/null 2>&1 || true
+  claude mcp remove hivemind -s project >/dev/null 2>&1 || true
 fi
 
 # ──────────────────────────────────────────────────────────────────────
-# Verify
+# Verify — CLI list check + server reachability
 # ──────────────────────────────────────────────────────────────────────
-step "Listing registered MCP servers..."
-if claude mcp list 2>/dev/null | grep -q "hivemind"; then
-  ok "Confirmed: hivemind is registered"
-else
-  warn "Could not confirm via 'claude mcp list' — try in a new Claude Code session"
+step "Verifying Claude Code sees the entry..."
+if command -v claude >/dev/null 2>&1; then
+  if claude mcp list 2>/dev/null | grep -q "hivemind"; then
+    ok "claude mcp list shows hivemind"
+  else
+    warn "claude mcp list did not show hivemind — restart Claude Code"
+  fi
 fi
 
 verify_connection
 
-# Claude Code is a CLI — no restart needed. New sessions pick it up.
 echo ""
-ok "No restart needed — Claude Code picks up new MCP servers on next session"
+ok "Claude Code picks up MCP servers on next session — no restart of OS needed"
 
-record_install "claude-code" "claude-mcp-cli"
+record_install "claude-code" "$CC_CONFIG"
 print_success_footer "Claude Code"
 
-echo "  ${C_DIM}Tip: list servers with  claude mcp list${C_RESET}"
-echo "  ${C_DIM}Tip: remove with        claude mcp remove --scope user hivemind${C_RESET}"
+echo "  ${C_DIM}Config: $CC_CONFIG${C_RESET}"
+echo "  ${C_DIM}List:   claude mcp list${C_RESET}"
+echo "  ${C_DIM}Remove: curl -fsSL $INSTALLER_BASE/uninstall.sh | bash -s claude-code${C_RESET}"

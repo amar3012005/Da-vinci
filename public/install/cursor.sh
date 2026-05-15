@@ -74,9 +74,11 @@ fi
 
 backup_file "$CURSOR_CONFIG"
 
-# Merge: set mcpServers.hivemind = {url, headers}
+# Merge: set mcpServers.hivemind = {transport, url, headers}
+# Canonical HIVEMIND MCP schema used across Cursor/Antigravity/Claude.
 json_merge "$CURSOR_CONFIG" \
   ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+     \"transport\": \"http\",
      \"url\": \"$HIVEMIND_MCP_URL\",
      \"headers\": {
        \"Authorization\": \"Bearer $HIVEMIND_KEY\"
@@ -89,9 +91,12 @@ ok "Wrote mcpServers.hivemind"
 # Step 5: Verify + restart
 # ──────────────────────────────────────────────────────────────────────
 verify_connection
+verify_mcp_loaded || true
 
 if confirm "Restart Cursor now?"; then
   restart_app "Cursor" "cursor" "cursor"
+  sleep 3
+  verify_mcp_loaded || warn "Try again after Cursor fully loads"
 else
   warn "Cursor not restarted — quit and relaunch it manually to activate"
 fi

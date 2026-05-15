@@ -119,6 +119,7 @@ ok "Wrote mcp.servers.hivemind"
 # Verify + restart
 # ──────────────────────────────────────────────────────────────────────
 verify_connection
+verify_mcp_loaded || true
 
 if confirm "Reload VS Code window now? (use Command Palette → Developer: Reload Window)"; then
   case "$OS" in

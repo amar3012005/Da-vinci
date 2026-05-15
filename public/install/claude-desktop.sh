@@ -84,26 +84,40 @@ fi
 
 backup_file "$CD_CONFIG"
 
-# Claude Desktop only supports stdio MCP natively → use mcp-remote bridge.
-# This spawns `npx -y mcp-remote <URL>` which proxies stdio → HTTP MCP.
-json_merge "$CD_CONFIG" \
-  ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
-     \"command\": \"npx\",
-     \"args\": [
-       \"-y\",
-       \"mcp-remote\",
-       \"$HIVEMIND_MCP_URL\",
-       \"--header\",
-       \"Authorization: Bearer $HIVEMIND_KEY\"
-     ]
-   }"
-
-ok "Wrote mcpServers.hivemind (via mcp-remote stdio bridge)"
+# Claude Desktop 0.7+ supports HTTP MCP transport directly. Older versions
+# need an mcp-remote stdio bridge. Default = HTTP transport (canonical
+# schema). Set USE_BRIDGE=1 to force the legacy stdio bridge.
+if [ "${USE_BRIDGE:-0}" = "1" ]; then
+  json_merge "$CD_CONFIG" \
+    ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+       \"command\": \"npx\",
+       \"args\": [
+         \"-y\",
+         \"mcp-remote\",
+         \"$HIVEMIND_MCP_URL\",
+         \"--header\",
+         \"Authorization: Bearer $HIVEMIND_KEY\"
+       ]
+     }"
+  ok "Wrote mcpServers.hivemind (stdio bridge — legacy Desktop)"
+else
+  json_merge "$CD_CONFIG" \
+    ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+       \"transport\": \"http\",
+       \"url\": \"$HIVEMIND_MCP_URL\",
+       \"headers\": {
+         \"Authorization\": \"Bearer $HIVEMIND_KEY\"
+       }
+     }"
+  ok "Wrote mcpServers.hivemind (HTTP transport — Desktop 0.7+)"
+  log "If Claude Desktop < 0.7, re-run with USE_BRIDGE=1 to use stdio bridge"
+fi
 
 # ──────────────────────────────────────────────────────────────────────
 # Step 5: Verify + restart
 # ──────────────────────────────────────────────────────────────────────
 verify_connection
+verify_mcp_loaded || true
 
 if confirm "Restart Claude Desktop now?"; then
   case "$OS" in

@@ -1644,7 +1644,32 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
     ? 'Generating your HIVEMIND API key...'
     : buildClaudeSetupCommand(terminalOs, apiKey);
 
-  const config = isClaudeTerminalSetup ? claudeSetupCommand : jsonConfig;
+  // ── Mode tab: install / uninstall ──
+  // Drives which command block + CTA the modal renders.
+  const [modalMode, setModalMode] = useState('install');
+
+  // Map connector.id → install script slug served from /install/<slug>.sh
+  const INSTALLER_BASE_URL = 'https://hivemind.davinciai.eu/install';
+  const installerSlugMap = {
+    'cursor':         'cursor',
+    'antigravity':    'antigravity',
+    'vscode':         'vscode',
+    'claude':         'claude-desktop',
+    'claude-code':    'claude-code',
+    'notebooklm':     'notebooklm',
+  };
+  const installerSlug = installerSlugMap[connector?.id] || 'remote-mcp';
+
+  // One-liner install + uninstall commands (work on macOS/Linux/WSL).
+  // FE installer flow: writes JSON config, restarts app, verifies MCP load.
+  const oneLinerInstall = apiKeyReady
+    ? `curl -fsSL "${INSTALLER_BASE_URL}/${installerSlug}.sh" | HIVEMIND_KEY="${apiKey}" bash`
+    : 'Generating your HIVEMIND API key...';
+  const oneLinerUninstall = `curl -fsSL "${INSTALLER_BASE_URL}/uninstall.sh" | bash -s ${installerSlug}`;
+
+  const config = modalMode === 'uninstall'
+    ? oneLinerUninstall
+    : (isClaudeTerminalSetup ? claudeSetupCommand : (apiKeyReady ? oneLinerInstall : jsonConfig));
 
   const promptVariant = ['cursor', 'vscode', 'claude-code'].includes(connector?.id) ? 'coding' : 'agent';
 
@@ -1754,15 +1779,40 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
           </button>
         </div>
 
+        {/* Mode tabs — Install / Uninstall */}
+        <div className="px-5 pt-3 flex items-center gap-1.5 shrink-0 border-b border-[#f3f1ec]">
+          {[
+            { id: 'install',   label: 'Install',   icon: '▶' },
+            { id: 'uninstall', label: 'Disconnect', icon: '✕' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setModalMode(tab.id)}
+              className={`px-3 py-1.5 rounded-t-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-colors border-b-2 ${
+                modalMode === tab.id
+                  ? 'text-[#117dff] border-[#117dff]'
+                  : 'text-[#737373] border-transparent hover:text-[#0a0a0a]'
+              }`}
+            >
+              <span className="mr-1">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Body — two columns, no outer scroll */}
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.95fr)]">
           {/* LEFT — Step 1: config + verify */}
           <div className="p-5 flex flex-col gap-3 min-h-0 border-r border-[#f3f1ec]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-[#0a0a0a] text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                <span className={`w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${
+                  modalMode === 'uninstall' ? 'bg-red-500' : 'bg-[#0a0a0a]'
+                }`}>1</span>
                 <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-                  {isClaudeTerminalSetup ? 'Run setup script' : 'Paste MCP config'}
+                  {modalMode === 'uninstall'
+                    ? 'Run uninstall one-liner'
+                    : (isClaudeTerminalSetup ? 'Run setup script' : 'Run install one-liner')}
                 </p>
               </div>
               {connector.configPath && (
@@ -1840,22 +1890,34 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
 
           {/* RIGHT — Step 2 + setup steps */}
           <div className="p-5 flex flex-col gap-3 bg-[#fafaf7] min-h-0 overflow-y-auto">
-            <div className="rounded-lg border border-[#dbe8ff] bg-[#f7fbff] p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-5 h-5 rounded-full bg-[#117dff] text-white text-[10px] font-bold flex items-center justify-center">2</span>
-                <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Activate MCP prompt</p>
+            {modalMode === 'uninstall' ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Restart {connector.name}</p>
+                </div>
+                <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-relaxed">
+                  After the one-liner finishes, quit + reopen {connector.name} so the MCP entry clears from memory. Reinstall any time using the Install tab.
+                </p>
               </div>
-              <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-2.5">
-                After Step 1 verifies, load the HIVEMIND prompt variants ({promptVariant === 'coding' ? 'coding' : 'agent'}) into your client.
-              </p>
-              <button
-                onClick={goToPrompt}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#117dff] px-3 py-2 text-[12px] font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-colors"
-              >
-                <ExternalLink size={12} />
-                Continue to Prompt
-              </button>
-            </div>
+            ) : (
+              <div className="rounded-lg border border-[#dbe8ff] bg-[#f7fbff] p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-5 h-5 rounded-full bg-[#117dff] text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Activate MCP prompt</p>
+                </div>
+                <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-2.5">
+                  After Step 1 verifies, load the HIVEMIND prompt variants ({promptVariant === 'coding' ? 'coding' : 'agent'}) into your client.
+                </p>
+                <button
+                  onClick={goToPrompt}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#117dff] px-3 py-2 text-[12px] font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-colors"
+                >
+                  <ExternalLink size={12} />
+                  Continue to Prompt
+                </button>
+              </div>
+            )}
 
             {/* Inline setup steps (non-Claude) */}
             {!isClaudeTerminalSetup && (connector.setupSteps || []).length > 0 && (

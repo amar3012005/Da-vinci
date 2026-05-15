@@ -319,6 +319,33 @@ verify_connection() {
   fi
 }
 
+# Hit MCP endpoint directly with bearer to confirm tools list responds.
+# Stronger check than /api/health — actually exercises the MCP protocol.
+# Returns 0 on success, 1 on failure (non-fatal — caller decides).
+verify_mcp_loaded() {
+  step "Verifying MCP endpoint responds with tools list..."
+  local resp http_code
+  resp=$(curl -sS -o /tmp/.hivemind-mcp-check -w "%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer $HIVEMIND_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json, text/event-stream" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+    "$HIVEMIND_MCP_URL" 2>/dev/null || echo "000")
+  http_code="$resp"
+  if [ "$http_code" = "200" ] && grep -q '"tools"\|"name"' /tmp/.hivemind-mcp-check 2>/dev/null; then
+    local tool_count
+    tool_count=$(grep -o '"name"' /tmp/.hivemind-mcp-check | wc -l | tr -d ' ')
+    ok "MCP endpoint live — $tool_count tools available"
+    rm -f /tmp/.hivemind-mcp-check
+    return 0
+  else
+    warn "MCP endpoint check failed (HTTP $http_code) — restart the client app and retry"
+    rm -f /tmp/.hivemind-mcp-check
+    return 1
+  fi
+}
+
 # ──────────────────────────────────────────────────────────────────────
 # Footer with usage examples
 # ──────────────────────────────────────────────────────────────────────

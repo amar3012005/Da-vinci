@@ -59,6 +59,7 @@ backup_file "$AG_CONFIG"
 
 json_merge "$AG_CONFIG" \
   ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+     \"transport\": \"http\",
      \"url\": \"$HIVEMIND_MCP_URL\",
      \"headers\": {
        \"Authorization\": \"Bearer $HIVEMIND_KEY\"
@@ -68,9 +69,12 @@ json_merge "$AG_CONFIG" \
 ok "Wrote mcpServers.hivemind"
 
 verify_connection
+verify_mcp_loaded || true
 
 if confirm "Restart Antigravity now?"; then
   restart_app "Antigravity" "antigravity" "antigravity"
+  sleep 3
+  verify_mcp_loaded || warn "Try again after Antigravity fully loads"
 else
   warn "Restart Antigravity manually to activate"
 fi
