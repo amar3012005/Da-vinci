@@ -1615,15 +1615,22 @@ export default function Connectors() {
     setVerifiedMcpEndpoints(mapped);
   }, [endpoints, user?.id, user?.userId]);
 
-  const handleOAuthConnect = useCallback(async (provider) => {
+  const handleOAuthConnect = useCallback(async (provider, opts = {}) => {
     setConnectingProvider(provider);
     try {
       const targetScope = targetScopes[provider] || 'personal';
       const teamId = targetScope === 'team' ? (selectedTeamIds[provider] || null) : null;
 
-      // Use direct Gmail API for Gmail, control plane for others
-      if (provider === 'gmail') {
-        const data = await apiClient.gmailConnect(targetScope);
+      // Google Workspace (any service) routes through gmailConnect with services param
+      // opts.services: 'all' (master tile), or specific list like 'gmail,drive,calendar'
+      const isGoogleService = provider === 'gmail'
+        || provider.startsWith('google-')
+        || opts.services
+        || opts.googleService;
+
+      if (isGoogleService) {
+        const services = opts.services || opts.googleService || provider.replace(/^google-/, '');
+        const data = await apiClient.gmailConnect(targetScope, services);
         if (data.url) {
           window.location.href = data.url;
         } else {
@@ -1912,7 +1919,13 @@ export default function Connectors() {
                 return;
               }
               if (connector.oauthProvider) {
-                handleOAuthConnect(connector.oauthProvider);
+                // Google service tiles pass their `googleService` to scope OAuth
+                // to only the selected services. master "Google Workspace" tile
+                // passes 'all' which means default = every available service.
+                handleOAuthConnect(connector.oauthProvider, {
+                  services: connector.googleService,
+                  isMaster: connector.isMaster,
+                });
               }
             }}
             onDisconnect={() => {
