@@ -15,6 +15,35 @@ const GRAPH_THEME = {
   mutedLink: "#cfc8be",
   accent: "#5f86c9",
   accentHover: "#d49a4a",
+  shell: "#f8f6f1",
+  halo: "#efe9de",
+};
+
+const TYPE_COLORS = {
+  fact: "#117dff",
+  decision: "#dc2626",
+  preference: "#d97706",
+  goal: "#8b5cf6",
+  lesson: "#16a34a",
+  event: "#0891b2",
+  relationship: "#db2777",
+  default: "#6b665f",
+};
+
+const RELATION_STYLES = {
+  Updates: { color: "#117dff", width: 0.62, particles: 0, opacity: 0.42 },
+  Extends: { color: "#16a34a", width: 0.56, particles: 0, opacity: 0.38 },
+  Derives: { color: "#8b5cf6", width: 0.52, particles: 1, opacity: 0.34 },
+  Contradicts: { color: "#dc2626", width: 0.7, particles: 2, opacity: 0.46 },
+  Supports: { color: "#0891b2", width: 0.54, particles: 0, opacity: 0.36 },
+  References: { color: "#a8a095", width: 0.34, particles: 0, opacity: 0.24 },
+  default: { color: "#cfc8be", width: 0.35, particles: 0, opacity: 0.26 },
+};
+
+const LABEL_LIMITS = {
+  hidden: 0,
+  focus: 18,
+  all: 42,
 };
 
 function getNodeRadius(node) {
@@ -30,6 +59,85 @@ function getNodeRadius(node) {
   if (node.nodeLayer === "tara-insight") radius *= 1.04;
 
   return radius;
+}
+
+function getNodeType(node) {
+  return (node.memoryType || node.type || "").toLowerCase() || "default";
+}
+
+function getRelationStyle(link) {
+  return RELATION_STYLES[link?.type] || RELATION_STYLES.default;
+}
+
+function hexToRgb(hex) {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!match) return { r: 143, g: 138, b: 130 };
+  return {
+    r: parseInt(match[1], 16),
+    g: parseInt(match[2], 16),
+    b: parseInt(match[3], 16),
+  };
+}
+
+function makeMaterial(color, opacity = 0.96) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    transparent: opacity < 1,
+    opacity,
+    roughness: 0.42,
+    metalness: 0.06,
+  });
+}
+
+function makeNodeShape(node, color, clusterTint) {
+  const radius = getNodeRadius(node);
+  const type = getNodeType(node);
+  const group = new THREE.Group();
+  const primaryMaterial = makeMaterial(color, 0.96);
+  const haloMaterial = makeMaterial(clusterTint || GRAPH_THEME.halo, clusterTint ? 0.22 : 0.1);
+  let mesh;
+
+  switch (type) {
+    case "decision":
+      mesh = new THREE.Mesh(new THREE.OctahedronGeometry(radius * 1.02, 0), primaryMaterial);
+      break;
+    case "preference":
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.7, radius * 1.28, radius * 1.05), primaryMaterial);
+      break;
+    case "goal":
+      mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, radius * 1.45, 6), primaryMaterial);
+      mesh.rotation.z = Math.PI / 2;
+      break;
+    case "lesson":
+      mesh = new THREE.Mesh(new THREE.TetrahedronGeometry(radius * 1.18, 0), primaryMaterial);
+      break;
+    case "event":
+      mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius * 0.68, radius * 1.28, 4, 8), primaryMaterial);
+      mesh.rotation.z = Math.PI / 2;
+      break;
+    case "relationship": {
+      const torus = new THREE.Mesh(
+        new THREE.TorusGeometry(radius * 0.88, Math.max(radius * 0.16, 0.24), 12, 28),
+        primaryMaterial,
+      );
+      torus.rotation.x = Math.PI / 2;
+      mesh = torus;
+      break;
+    }
+    case "fact":
+    default:
+      mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 14), primaryMaterial);
+      break;
+  }
+
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(radius * (clusterTint ? 1.95 : 1.55), 12, 12),
+    haloMaterial,
+  );
+  group.add(halo);
+  group.add(mesh);
+  group.userData = { primaryMaterial, haloMaterial };
+  return group;
 }
 
 const MemoryGraph3D = forwardRef(function MemoryGraph3D(
@@ -85,6 +193,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const viewStateRef = useRef({
     distance: 1100,
     inFrameNodeIds: new Set(),
+    labelNodeIds: new Set(),
     labelMode: "hidden",
     linkMode: "sparse",
   });
@@ -187,6 +296,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       const isImportant = selectedNodeRef.current?.id === node.id || highlightNodesRef.current.has(node.id) || highlightedNodesRef.current.has(node.id);
       if (labelMode === "hidden" && !isImportant) return "";
       if (labelMode === "focus" && !isImportant && node.clusterRole !== "hub") return "";
+      if (!viewStateRef.current.labelNodeIds.has(node.id) && !isImportant) return "";
       return `<div class="node-label">${node.title || "Untitled"}</div>`;
     },
     [],
@@ -197,6 +307,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (!fg) return;
     fg
       .nodeColor(fg.nodeColor())
+      .nodeThreeObject(fg.nodeThreeObject())
       .linkColor(fg.linkColor())
       .linkDirectionalParticles(fg.linkDirectionalParticles())
       .linkWidth(fg.linkWidth());
@@ -232,18 +343,52 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const getNodeColor = useCallback((node) => {
       const highlightedNodes = highlightedNodesRef.current;
+      const baseColor = TYPE_COLORS[getNodeType(node)] || TYPE_COLORS.default;
       if (highlightedNodes.has(node.id)) {
         return selectedNodeRef.current?.id === node.id ? GRAPH_THEME.accent : GRAPH_THEME.accentHover;
       }
 
       if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
-        return "rgba(143,138,130,0.18)";
+        const rgb = hexToRgb(baseColor);
+        return `rgba(${rgb.r},${rgb.g},${rgb.b},0.14)`;
       }
 
-      return GRAPH_THEME.mutedNode;
+      return baseColor;
     },
     [],
   );
+
+  const getClusterHaloColor = useCallback((node) => {
+    const activeCluster = clusterFilterRef.current;
+    if (activeCluster && node.clusterId === activeCluster) return GRAPH_THEME.accent;
+    if (selectedNodeRef.current?.clusterId && node.clusterId === selectedNodeRef.current.clusterId) return GRAPH_THEME.accent;
+    if (highlightNodesRef.current.has(node.id)) return GRAPH_THEME.accentHover;
+    return null;
+  }, []);
+
+  const getLinkColor = useCallback((link) => {
+    if (highlightedLinksRef.current.has(link)) return GRAPH_THEME.accent;
+    return getRelationStyle(link).color;
+  }, []);
+
+  const getLinkWidth = useCallback((link) => {
+    const style = getRelationStyle(link);
+    return highlightedLinksRef.current.has(link) ? Math.max(style.width + 0.55, 1.1) : style.width;
+  }, []);
+
+  const getLinkParticles = useCallback((link) => {
+    const style = getRelationStyle(link);
+    return highlightedLinksRef.current.has(link) ? Math.max(style.particles, 2) : style.particles;
+  }, []);
+
+  const updateNodeObjectAppearance = useCallback((node, object3d) => {
+    if (!object3d?.userData?.primaryMaterial) return;
+    const color = getNodeColorRef.current(node);
+    const haloColor = getClusterHaloColor(node);
+    object3d.userData.primaryMaterial.color.set(color);
+    object3d.userData.haloMaterial.color.set(haloColor || GRAPH_THEME.halo);
+    object3d.userData.haloMaterial.opacity = haloColor ? 0.24 : 0.08;
+  }, [getClusterHaloColor]);
 
   useEffect(() => {
     graphDataRef.current = graphData;
@@ -334,13 +479,18 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeOpacity(0.9)
       .nodeColor((node) => getNodeColorRef.current(node))
       .nodeVal((node) => getNodeRadius(node))
+      .nodeThreeObject((node) => {
+        const clusterTint = getClusterHaloColor(node);
+        return makeNodeShape(node, getNodeColorRef.current(node), clusterTint);
+      })
+      .nodeThreeObjectExtend(false)
       .nodeVisibility((node) => isNodeVisibleRef.current(node))
-      .linkOpacity(0.28)
+      .linkOpacity((link) => getRelationStyle(link).opacity)
       .linkDirectionalParticleWidth(1.1)
-      .linkDirectionalParticles((link) => (highlightedLinksRef.current.has(link) ? 2 : 0))
-      .linkWidth((link) => (highlightedLinksRef.current.has(link) ? 1.15 : 0.35))
+      .linkDirectionalParticles((link) => getLinkParticles(link))
+      .linkWidth((link) => getLinkWidth(link))
       .linkVisibility((link) => isLinkVisibleRef.current(link))
-      .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
+      .linkColor((link) => getLinkColor(link))
       .nodeLabel((node) => getNodeLabelRef.current(node))
       .onNodeClick((node) => onNodeClickRef.current?.(node))
       .onNodeHover((node) => {
@@ -388,7 +538,6 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         refreshHighlightRef.current();
       })
       .onBackgroundClick(() => onBackgroundClickRef.current?.())
-      .nodeThreeObject(null)
       .nodeThreeObjectExtend(false);
 
     fgRef.current = fg;
@@ -446,10 +595,31 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const distance = cameraNow.position.distanceTo(targetNow);
           const labelMode = distance > 520 ? "hidden" : distance > 240 ? "focus" : "all";
           const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
+          const labelBudget = LABEL_LIMITS[labelMode] ?? 0;
+          const rankedVisibleNodes = [...inFrameNodeIds]
+            .map((id) => nodeMapRef.current.get(id))
+            .filter(Boolean)
+            .sort((a, b) => {
+              const score = (node) => {
+                let value = (node.importanceScore || 0) * 10 + (node.val || 0) + (node.hubScore || 0) * 4;
+                if (selectedNodeRef.current?.id === node.id) value += 1000;
+                if (highlightNodesRef.current.has(node.id)) value += 500;
+                if (highlightedNodesRef.current.has(node.id)) value += 250;
+                if (node.clusterRole === "hub") value += 30;
+                return value;
+              };
+              return score(b) - score(a);
+            });
+          const labelNodeIds = new Set(
+            labelBudget > 0 ? rankedVisibleNodes.slice(0, labelBudget).map((node) => node.id) : [],
+          );
+          if (selectedNodeRef.current?.id) labelNodeIds.add(selectedNodeRef.current.id);
+          highlightNodesRef.current.forEach((id) => labelNodeIds.add(id));
 
           viewStateRef.current = {
             distance,
             inFrameNodeIds,
+            labelNodeIds,
             labelMode,
             linkMode,
           };
@@ -464,6 +634,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
               z: cameraNow.position.z,
             },
             inFrameNodeIds: [...inFrameNodeIds],
+            labelNodeIds: [...labelNodeIds],
             labelMode,
             linkMode,
           });
@@ -522,12 +693,33 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg
       .backgroundColor(backgroundColor)
       .nodeColor((node) => getNodeColor(node))
+      .nodeThreeObject((node) => {
+        const clusterTint = getClusterHaloColor(node);
+        const object3d = makeNodeShape(node, getNodeColor(node), clusterTint);
+        updateNodeObjectAppearance(node, object3d);
+        return object3d;
+      })
       .nodeVisibility((node) => isNodeVisible(node))
       .linkVisibility((link) => isLinkVisible(link))
-      .linkColor((link) => (highlightedLinksRef.current.has(link) ? GRAPH_THEME.accent : GRAPH_THEME.mutedLink))
+      .linkColor((link) => getLinkColor(link))
+      .linkWidth((link) => getLinkWidth(link))
+      .linkDirectionalParticles((link) => getLinkParticles(link))
+      .linkOpacity((link) => getRelationStyle(link).opacity)
       .nodeLabel((node) => getNodeLabel(node));
     refreshHighlight();
-  }, [backgroundColor, getNodeColor, getNodeLabel, isLinkVisible, isNodeVisible, refreshHighlight]);
+  }, [
+    backgroundColor,
+    getClusterHaloColor,
+    getLinkColor,
+    getLinkParticles,
+    getLinkWidth,
+    getNodeColor,
+    getNodeLabel,
+    isLinkVisible,
+    isNodeVisible,
+    refreshHighlight,
+    updateNodeObjectAppearance,
+  ]);
 
   useEffect(() => {
     const fg = fgRef.current;

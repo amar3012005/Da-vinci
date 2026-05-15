@@ -52,6 +52,15 @@ const TYPE_COLORS = {
   relationship: "#db2777",
   default: "#525252",
 };
+const TYPE_LEGEND = [
+  { key: "fact", label: "Fact", shape: "circle" },
+  { key: "decision", label: "Decision", shape: "diamond" },
+  { key: "preference", label: "Preference", shape: "square" },
+  { key: "goal", label: "Goal", shape: "hex" },
+  { key: "lesson", label: "Lesson", shape: "triangle" },
+  { key: "event", label: "Event", shape: "capsule" },
+  { key: "relationship", label: "Relationship", shape: "ring" },
+];
 
 // Layer filter definitions for UI
 const LAYER_FILTERS = [
@@ -116,6 +125,27 @@ function safeStorageSet(key, value) {
   } catch (_error) {
     return false;
   }
+}
+
+function LegendShape({ shape, color }) {
+  const common = { fill: color, fillOpacity: 0.72, stroke: color, strokeWidth: 0.7 };
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+      {shape === "diamond" && <polygon points="7,1 13,7 7,13 1,7" {...common} />}
+      {shape === "square" && <rect x="2" y="2.2" width="10" height="9.6" rx="2" {...common} />}
+      {shape === "hex" && <polygon points="7,1 11.7,3.5 11.7,10.5 7,13 2.3,10.5 2.3,3.5" {...common} />}
+      {shape === "triangle" && <polygon points="7,1.4 12.2,11.8 1.8,11.8" {...common} />}
+      {shape === "capsule" && <rect x="1.6" y="4" width="10.8" height="6" rx="3" {...common} />}
+      {shape === "ring" && (
+        <>
+          <circle cx="7" cy="7" r="4.6" fill="none" stroke={color} strokeWidth="1.5" />
+          <circle cx="7" cy="7" r="2.4" fill="#ffffff" />
+        </>
+      )}
+      {shape === "circle" && <circle cx="7" cy="7" r="4.6" {...common} />}
+    </svg>
+  );
 }
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
@@ -880,14 +910,14 @@ export default function MemoryGraph() {
               <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">
                 Relationships
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 {Object.entries(EDGE_COLORS).map(([type, color]) => (
                   <div key={type} className="flex items-center gap-1.5">
                     <div
                       className="w-4 h-0.5 rounded-full"
                       style={{
                         backgroundColor: color,
-                        opacity: type === "Derives" ? 0.6 : 1,
+                        opacity: type === "Derives" ? 0.7 : 1,
                       }}
                     />
                     <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">
@@ -897,165 +927,27 @@ export default function MemoryGraph() {
                 ))}
               </div>
               <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-                Node Shapes = Layer Type
+                Node Type
               </p>
-              <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <polygon
-                  points="7,0 14,7 7,14 0,7"
-                  fill="#10b981"
-                  opacity="0.7"
-                />
-                <polygon
-                  points="7,0 14,7 7,14 0,7"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="0.5"
-                />
-              </svg>
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Fact
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <polygon
-                  points="7,0 12,3.5 12,10.5 7,14 2,10.5 2,3.5"
-                  fill="#a855f7"
-                  opacity="0.75"
-                />
-                <polygon
-                  points="7,0 12,3.5 12,10.5 7,14 2,10.5 2,3.5"
-                  fill="none"
-                  stroke="#a855f7"
-                  strokeWidth="0.5"
-                />
-              </svg>
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                TARA
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 14 14">
-                <polygon
-                  points="7,0 8.5,5.5 14,7 8.5,8.5 7,14 5.5,8.5 0,7 5.5,5.5"
-                  fill="#f97316"
-                  opacity="0.8"
-                />
-                <polygon
-                  points="7,0 8.5,5.5 14,7 8.5,8.5 7,14 5.5,8.5 0,7 5.5,5.5"
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="0.5"
-                />
-              </svg>
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Insight
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <rect
-                x="2"
-                y="2"
-                width="10"
-                height="10"
-                rx="2"
-                fill="#f59e0b"
-                opacity="0.6"
-              />
-              <rect
-                x="2"
-                y="2"
-                width="10"
-                height="10"
-                rx="2"
-                fill="none"
-                stroke="#f59e0b"
-                strokeWidth="0.5"
-              />
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Observation
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <circle cx="7" cy="7" r="5" fill="#117dff" opacity="0.6" />
-              <circle
-                cx="7"
-                cy="7"
-                r="5"
-                fill="none"
-                stroke="#117dff"
-                strokeWidth="0.5"
-              />
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Memory
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <circle cx="7" cy="7" r="5" fill="#ef4444" opacity="0.15" />
-              <circle
-                cx="7"
-                cy="7"
-                r="5"
-                fill="none"
-                stroke="#ef4444"
-                strokeWidth="1"
-              />
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Risk
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <circle cx="7" cy="7" r="5" fill="#22c55e" opacity="0.12" />
-              <circle
-                cx="7"
-                cy="7"
-                r="5"
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth="1"
-              />
-              <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                Verified
-              </span>
-            </div>
-          </div>
-          <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-            Node Glow = Recency
-          </p>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-[#117dff]" />
-            <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-              Recent
-            </span>
-            <div className="w-6 h-0.5 bg-gradient-to-r from-[#117dff] to-[#117dff]/10 rounded mx-1" />
-            <div className="w-3 h-3 rounded-full bg-[#117dff]/15" />
-            <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-              Old
-            </span>
-          </div>
-          {(scope === "team" || scope === "all") &&
-            Object.keys(userColorMap).length > 0 && (
-              <>
-                <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-                  Node Color = Member
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(userColorMap).map(([memberId, color]) => (
-                    <div key={memberId} className="flex items-center gap-1.5">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
-                        {memberId.slice(0, 8)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+              <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                {TYPE_LEGEND.map((item) => (
+                  <div key={item.key} className="flex items-center gap-1.5">
+                    <LegendShape shape={item.shape} color={TYPE_COLORS[item.key]} />
+                    <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
+                Reading The Graph
+              </p>
+              <div className="space-y-1 text-[10px] text-[#525252] font-['Space_Grotesk']">
+                <p>Size = importance and recall weight.</p>
+                <p>Color + shape = memory type.</p>
+                <p>Cluster glow appears only when that group is focused.</p>
+                <p>Labels appear only when you zoom in and only for the visible top-ranked nodes.</p>
+              </div>
             </div>
           )}
         </div>
