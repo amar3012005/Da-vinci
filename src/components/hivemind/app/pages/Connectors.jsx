@@ -1923,6 +1923,9 @@ export default function Connectors() {
   const [workspaceWizardQueue, setWorkspaceWizardQueue] = useState([]); // services to walk through
   const [workspaceWizardIdx, setWorkspaceWizardIdx] = useState(0);
   const [workspaceWizardEmail, setWorkspaceWizardEmail] = useState(null);
+  // Per-service standalone config modal (when user clicks Configure/Sync Now
+  // on an individual Google service tile, OUTSIDE the post-OAuth wizard)
+  const [standaloneConfigProvider, setStandaloneConfigProvider] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
   const [targetScopes, setTargetScopes] = useState({});
@@ -2204,20 +2207,17 @@ export default function Connectors() {
     }
   }, [refetchOAuth, targetScopes.gmail, workspaceWizardQueue, workspaceWizardIdx, advanceWorkspaceWizard]);
 
-  // Save per-service config to backend (creates/updates platform_integration.connectorMetadata)
+  // Save per-service config to backend + trigger sync via dedicated endpoint
   const handleServiceConfigSave = useCallback(async (provider, config) => {
     try {
-      // For now stash in connectorMetadata via cadence endpoint as a stub.
-      // Real implementation would have a per-service config endpoint.
-      // We trigger initial sync by setting sync_interval_minutes to a value.
-      await apiClient.controlPlane?.post?.('/v1/proxy/connectors/cadence', {
-        provider,
-        sync_interval_minutes: provider === 'google_tasks' && config.mode === 'live' ? null : 60,
-      }).catch(() => null);
-      // Trigger immediate sync attempt — backend scheduler will pick it up.
-      setToastMessage({ type: 'success', text: `${provider} configured. Sync scheduled.` });
+      const result = await apiClient.googleServiceSync(provider, config);
+      const note = result?.mode === 'live-only'
+        ? `${provider}: configured (live-only, no background sync).`
+        : `${provider}: configured + initial sync started.`;
+      setToastMessage({ type: 'success', text: note });
     } catch (err) {
       console.warn('[wizard] save config failed:', err.message);
+      setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
     advanceWorkspaceWizard();
   }, [advanceWorkspaceWizard]);
@@ -2485,6 +2485,35 @@ export default function Connectors() {
               }
             }}
             onResync={() => {
+              // Google service tile → open per-service config modal with
+              // the right schema (Drive shows Drive options, Calendar shows
+              // Calendar options, etc.) — NOT the generic Gmail one.
+              const isGoogleSvc = connector.category === 'google_workspace'
+                && connector.id !== 'google-workspace';
+              if (isGoogleSvc) {
+                // Map FE service id → backend platformType
+                const providerMap = {
+                  'gmail':            'gmail',
+                  'google-drive':     'google_drive',
+                  'google-calendar':  'google_calendar',
+                  'google-docs':      'google_docs',
+                  'google-sheets':    'google_sheets',
+                  'google-slides':    'google_slides',
+                  'google-contacts':  'google_contacts',
+                  'google-chat':      'google_chat',
+                  'google-tasks':     'google_tasks',
+                  'google-forms':     'google_forms',
+                };
+                const backendProvider = providerMap[connector.id];
+                if (backendProvider === 'gmail') {
+                  // Gmail has its own dedicated modal w/ exclude_categories etc.
+                  setGmailEmail(connector.accountRef || null);
+                  setGmailSettingsOpen(true);
+                } else if (backendProvider) {
+                  setStandaloneConfigProvider(backendProvider);
+                }
+                return;
+              }
               if (connector.oauthProvider) {
                 handleResync(connector.oauthProvider);
               }
@@ -2638,6 +2667,30 @@ export default function Connectors() {
               />
             );
           })()}
+      </AnimatePresence>
+
+      {/* Standalone per-service config modal — opened when user clicks
+          Reconfigure/Sync Now on a single Google service tile (OUTSIDE the
+          wizard chain). Each service gets its own schema-driven popup. */}
+      <AnimatePresence>
+        {standaloneConfigProvider && (
+          <GoogleServiceSyncConfig
+            provider={standaloneConfigProvider}
+            email={null}
+            stepLabel="Per-service sync"
+            onSave={async (cfg) => {
+              try {
+                await apiClient.googleServiceSync(standaloneConfigProvider, cfg);
+                setToastMessage({ type: 'success', text: `${standaloneConfigProvider}: config saved + sync started.` });
+              } catch (err) {
+                setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+              }
+              setStandaloneConfigProvider(null);
+            }}
+            onSkip={() => setStandaloneConfigProvider(null)}
+            onClose={() => setStandaloneConfigProvider(null)}
+          />
+        )}
       </AnimatePresence>
 
       {/* MCP Setup Modal */}

@@ -837,6 +837,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Per-service sync config + run trigger
+  async googleServiceSync(provider, config = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/google/sync', { provider, config });
+    return data;
+  }
+
   async workspaceHealth() {
     const { data } = await this.controlPlane.get('/v1/proxy/workspace/health');
     return data;
