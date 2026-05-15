@@ -46,6 +46,8 @@ const LABEL_LIMITS = {
   all: 42,
 };
 
+const RELATION_LABEL_DISTANCE = 260;
+
 function getNodeRadius(node) {
   let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
 
@@ -196,6 +198,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     labelNodeIds: new Set(),
     labelMode: "hidden",
     linkMode: "sparse",
+    relationLabelMode: "hidden",
   });
 
   const neighborMap = useMemo(() => {
@@ -302,6 +305,28 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     [],
   );
 
+  const getLinkLabel = useCallback((link) => {
+    const { relationLabelMode } = viewStateRef.current;
+    if (relationLabelMode === "hidden") return "";
+
+    const sourceId = typeof link.source === "object" ? link.source.id : link.source;
+    const targetId = typeof link.target === "object" ? link.target.id : link.target;
+    const sourceImportant = selectedNodeRef.current?.id === sourceId || highlightNodesRef.current.has(sourceId);
+    const targetImportant = selectedNodeRef.current?.id === targetId || highlightNodesRef.current.has(targetId);
+    const showByFocus = sourceImportant || targetImportant || highlightedLinksRef.current.has(link);
+    if (relationLabelMode === "focus" && !showByFocus) return "";
+
+    const confidence = Number.isFinite(link.confidence)
+      ? `${Math.round(link.confidence * 100)}%`
+      : null;
+    return `
+      <div style="display:flex;align-items:center;gap:6px;padding:3px 7px;border:1px solid rgba(227,224,219,0.9);border-radius:999px;background:rgba(255,255,255,0.92);box-shadow:0 6px 16px rgba(0,0,0,0.05);font-family:'Space Grotesk',sans-serif;font-size:10px;line-height:1;color:#525252;white-space:nowrap;">
+        <span style="font-weight:600;">${link.type || "Relates"}</span>
+        ${confidence ? `<span style="font-family:monospace;font-size:9px;color:#8b857d;">${confidence}</span>` : ""}
+      </div>
+    `;
+  }, []);
+
   const refreshHighlight = useCallback(() => {
     const fg = fgRef.current;
     if (!fg) return;
@@ -309,6 +334,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeColor(fg.nodeColor())
       .nodeThreeObject(fg.nodeThreeObject())
       .linkColor(fg.linkColor())
+      .linkLabel(fg.linkLabel())
       .linkDirectionalParticles(fg.linkDirectionalParticles())
       .linkWidth(fg.linkWidth());
   }, []);
@@ -378,7 +404,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const getLinkParticles = useCallback((link) => {
     const style = getRelationStyle(link);
-    return highlightedLinksRef.current.has(link) ? Math.max(style.particles, 2) : style.particles;
+    const baseParticles = style.particles + ((link.type === "Derives" || link.type === "References") ? 1 : 0);
+    return highlightedLinksRef.current.has(link) ? Math.max(baseParticles, 3) : baseParticles;
+  }, []);
+
+  const getLinkParticleSpeed = useCallback((link) => {
+    if (link.type === "Contradicts") return 0.0045;
+    if (link.type === "Derives") return 0.0038;
+    if (link.type === "References") return 0.0032;
+    return 0.0024;
   }, []);
 
   const updateNodeObjectAppearance = useCallback((node, object3d) => {
@@ -488,9 +522,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkOpacity((link) => getRelationStyle(link).opacity)
       .linkDirectionalParticleWidth(1.1)
       .linkDirectionalParticles((link) => getLinkParticles(link))
+      .linkDirectionalParticleSpeed((link) => getLinkParticleSpeed(link))
       .linkWidth((link) => getLinkWidth(link))
       .linkVisibility((link) => isLinkVisibleRef.current(link))
       .linkColor((link) => getLinkColor(link))
+      .linkLabel((link) => getLinkLabel(link))
       .nodeLabel((node) => getNodeLabelRef.current(node))
       .onNodeClick((node) => onNodeClickRef.current?.(node))
       .onNodeHover((node) => {
@@ -558,10 +594,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg.controls?.();
     if (controls) {
       controls.enableDamping = true;
-      controls.dampingFactor = 0.1;
-      controls.rotateSpeed = 0.5;
-      controls.zoomSpeed = 0.72;
-      controls.panSpeed = 0.62;
+      controls.dampingFactor = 0.06;
+      controls.rotateSpeed = 0.78;
+      controls.zoomSpeed = 0.95;
+      controls.panSpeed = 0.9;
       controls.minDistance = 24;
       controls.maxDistance = 3000;
 
@@ -595,6 +631,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const distance = cameraNow.position.distanceTo(targetNow);
           const labelMode = distance > 520 ? "hidden" : distance > 240 ? "focus" : "all";
           const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
+          const relationLabelMode = distance > RELATION_LABEL_DISTANCE ? "hidden" : distance > 180 ? "focus" : "all";
           const labelBudget = LABEL_LIMITS[labelMode] ?? 0;
           const rankedVisibleNodes = [...inFrameNodeIds]
             .map((id) => nodeMapRef.current.get(id))
@@ -622,6 +659,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             labelNodeIds,
             labelMode,
             linkMode,
+            relationLabelMode,
           };
 
           refreshHighlightRef.current();
@@ -637,6 +675,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             labelNodeIds: [...labelNodeIds],
             labelMode,
             linkMode,
+            relationLabelMode,
           });
         });
       };
@@ -702,8 +741,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeVisibility((node) => isNodeVisible(node))
       .linkVisibility((link) => isLinkVisible(link))
       .linkColor((link) => getLinkColor(link))
+      .linkLabel((link) => getLinkLabel(link))
       .linkWidth((link) => getLinkWidth(link))
       .linkDirectionalParticles((link) => getLinkParticles(link))
+      .linkDirectionalParticleSpeed((link) => getLinkParticleSpeed(link))
       .linkOpacity((link) => getRelationStyle(link).opacity)
       .nodeLabel((node) => getNodeLabel(node));
     refreshHighlight();
@@ -711,7 +752,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     backgroundColor,
     getClusterHaloColor,
     getLinkColor,
+    getLinkLabel,
     getLinkParticles,
+    getLinkParticleSpeed,
     getLinkWidth,
     getNodeColor,
     getNodeLabel,
