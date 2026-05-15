@@ -417,6 +417,12 @@ export default function MemoryGraph() {
   const [pageIndexRefreshKey, setPageIndexRefreshKey] = useState(0);
   const [temporalProgress, setTemporalProgress] = useState(1);
   const [isLiveMode, setIsLiveMode] = useState(true);
+  const [temporalMode, setTemporalMode] = useState('travel'); // 'travel' | 'diff'
+  const [temporalPlaying, setTemporalPlaying] = useState(false);
+  const [temporalSpeed, setTemporalSpeed] = useState(1); // 1x / 2x / 4x
+  // Diff window — when in diff mode, highlight nodes added in the LAST
+  // `diffWindowMs` ms of the visible cutoff vs prior state.
+  const [diffWindowMs, setDiffWindowMs] = useState(24 * 60 * 60 * 1000); // 1d
   // Node budget. 0 = unbounded (server clamps to 50000). Persisted to localStorage so
   // returning users keep their preferred density without re-selecting.
   const [nodeLimit, setNodeLimit] = useState(() => {
@@ -688,6 +694,45 @@ export default function MemoryGraph() {
     });
     return visibleIds;
   }, [graphData.nodes, temporalCutoff, temporalProgress]);
+
+  // Diff mode: nodes added inside the last `diffWindowMs` of the cutoff.
+  // Surfaces "what's NEW at this point in time" rather than "what existed".
+  const temporalDiffNodes = useMemo(() => {
+    if (temporalMode !== 'diff' || !temporalCutoff) return null;
+    const windowStart = temporalCutoff - diffWindowMs;
+    const newIds = new Set();
+    graphData.nodes.forEach((node) => {
+      const ts = getNodeTimestamp(node);
+      if (ts && ts > windowStart && ts <= temporalCutoff) newIds.add(node.id);
+    });
+    return newIds;
+  }, [temporalMode, temporalCutoff, diffWindowMs, graphData.nodes]);
+
+  // Auto-play: advance temporalProgress on a rAF loop while playing.
+  // Total animation duration scales w/ speed: base 12s, /speed.
+  useEffect(() => {
+    if (!temporalPlaying || !temporalBounds) return;
+    const durationMs = 12000 / temporalSpeed;
+    const startProgress = temporalProgress >= 0.999 ? 0 : temporalProgress;
+    const startWall = performance.now();
+    let raf = 0;
+    const tick = (now) => {
+      const elapsed = now - startWall;
+      const t = startProgress + elapsed / durationMs;
+      if (t >= 1) {
+        setTemporalProgress(1);
+        setTemporalPlaying(false);
+        setIsLiveMode(true);
+        return;
+      }
+      setTemporalProgress(t);
+      setIsLiveMode(false);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [temporalPlaying, temporalSpeed, temporalBounds]);
 
   const filteredNodes = useMemo(() => {
     const matches = new Set();
@@ -1087,28 +1132,67 @@ export default function MemoryGraph() {
                   Now
                 </button>
               </div>
-              <div className="flex items-center gap-2 mb-2">
-                <button className="px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
+              <div className="flex items-center gap-1.5 mb-2">
+                <button
+                  onClick={() => setTemporalMode('travel')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
+                    temporalMode === 'travel'
+                      ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                      : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
+                  }`}
+                >
                   Time Travel
                 </button>
-                <button className="px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#faf9f4] text-[#737373] border border-[#e3e0db]">
-                  Temporal Diff
+                <button
+                  onClick={() => setTemporalMode('diff')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
+                    temporalMode === 'diff'
+                      ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                      : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
+                  }`}
+                >
+                  Diff
+                </button>
+                <button
+                  onClick={() => {
+                    if (temporalProgress >= 0.999) setTemporalProgress(0);
+                    setTemporalPlaying((p) => !p);
+                  }}
+                  className="ml-auto px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#0a0a0a] text-white border border-[#0a0a0a] hover:bg-[#262626]"
+                  aria-label={temporalPlaying ? 'Pause' : 'Play'}
+                >
+                  {temporalPlaying ? '⏸ Pause' : '▶ Play'}
+                </button>
+                <button
+                  onClick={() => setTemporalSpeed((s) => (s >= 4 ? 1 : s * 2))}
+                  className="px-1.5 py-1 rounded-lg text-[10px] font-mono bg-[#faf9f4] text-[#525252] border border-[#e3e0db]"
+                  title="Playback speed"
+                >
+                  {temporalSpeed}×
                 </button>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={Math.round(temporalProgress * 100)}
-                onChange={(e) => {
-                  const next = Number(e.target.value) / 100;
-                  setTemporalProgress(next);
-                  setIsLiveMode(next >= 0.999);
-                }}
-                className="w-full h-2 appearance-none bg-[#f2eee7] rounded-full cursor-pointer temporal-slider-horizontal"
-                aria-label="Temporal memory formation scrubber"
-              />
+              <div className="relative">
+                <input
+                  type="range"
+                  min={0}
+                  max={1000}
+                  step={1}
+                  value={Math.round(temporalProgress * 1000)}
+                  onChange={(e) => {
+                    const next = Number(e.target.value) / 1000;
+                    setTemporalProgress(next);
+                    setIsLiveMode(next >= 0.999);
+                    if (temporalPlaying) setTemporalPlaying(false);
+                  }}
+                  className="w-full h-2 appearance-none bg-[#f2eee7] rounded-full cursor-pointer temporal-slider-horizontal"
+                  aria-label="Temporal memory formation scrubber"
+                />
+                {/* Progress bar underlay — animated fill mirrors temporalProgress */}
+                <div
+                  className="pointer-events-none absolute left-0 top-0 h-2 rounded-full bg-gradient-to-r from-[#117dff] to-[#60a5fa] opacity-60 transition-[width] duration-100"
+                  style={{ width: `${Math.round(temporalProgress * 100)}%` }}
+                />
+              </div>
               <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-[#8b857d]">
                 <span>{new Date(temporalBounds.min).toLocaleDateString()}</span>
                 <span>{new Date(temporalBounds.max).toLocaleDateString()}</span>
@@ -1116,21 +1200,57 @@ export default function MemoryGraph() {
               <div className="mt-2 flex items-center justify-between border-t border-[#eee9e1] pt-2">
                 <div>
                   <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
-                    Visible Window
+                    {temporalMode === 'diff' ? 'Cutoff' : 'Visible Window'}
                   </p>
                   <p className="mt-1 text-xs text-[#0a0a0a] font-['Space_Grotesk']">
-                    {temporalCutoff ? new Date(temporalCutoff).toLocaleString() : "All time"}
+                    {temporalCutoff ? new Date(temporalCutoff).toLocaleString() : 'All time'}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
-                    Live
-                  </p>
-                  <p className="text-xs text-[#15803d] font-['Space_Grotesk']">
-                    {isLiveMode ? "On" : "Paused"}
-                  </p>
+                  {temporalMode === 'diff' ? (
+                    <>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                        Δ Added
+                      </p>
+                      <p className="text-xs text-[#117dff] font-['Space_Grotesk'] font-semibold">
+                        {temporalDiffNodes ? temporalDiffNodes.size : 0}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                        Live
+                      </p>
+                      <p className="text-xs text-[#15803d] font-['Space_Grotesk']">
+                        {isLiveMode ? 'On' : 'Paused'}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
+              {temporalMode === 'diff' && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b857d]">Δ window</span>
+                  {[
+                    { label: '1h', ms: 60 * 60 * 1000 },
+                    { label: '1d', ms: 24 * 60 * 60 * 1000 },
+                    { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+                    { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      onClick={() => setDiffWindowMs(opt.ms)}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
+                        diffWindowMs === opt.ms
+                          ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                          : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
