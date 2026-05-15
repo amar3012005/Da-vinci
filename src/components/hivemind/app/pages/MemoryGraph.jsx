@@ -146,6 +146,24 @@ function getNodeTimestamp(node) {
   return null;
 }
 
+function normalizeGraphPayload(nodesInput = [], edgesInput = []) {
+  const nodes = nodesInput.map((n) => ({
+    ...n,
+    val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
+  }));
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const links = edgesInput
+    .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
+    .map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+      type: edge.type,
+      confidence: edge.confidence || 1,
+    }));
+
+  return { nodes, links };
+}
+
 function LegendShape({ shape, color }) {
   const common = { fill: color, fillOpacity: 0.72, stroke: color, strokeWidth: 0.7 };
 
@@ -427,18 +445,9 @@ export default function MemoryGraph() {
       if (!cached || !cached.nodes || !cached.edges) return false;
       // Cap stale display at 24h — older than that, don't bother
       if (Date.now() - (cached.savedAt || 0) > 24 * 60 * 60 * 1000) return false;
-      const nodes = cached.nodes.map((n) => ({
-        ...n,
-        val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
-      }));
-      const links = cached.edges.map((e) => ({
-        source: e.source,
-        target: e.target,
-        type: e.type,
-        confidence: e.confidence || 1,
-      }));
+      const { nodes, links } = normalizeGraphPayload(cached.nodes, cached.edges);
       setGraphData({ nodes, links });
-      setRawEdges(cached.edges);
+      setRawEdges(cached.edges.filter((edge) => nodes.some((node) => node.id === edge.source) && nodes.some((node) => node.id === edge.target)));
       setMeta(cached.meta || null);
       return true;
     } catch (_e) {
@@ -458,21 +467,9 @@ export default function MemoryGraph() {
         limit: nodeLimit,
         scope,
       });
-      const nodes = (data.nodes || []).map((n) => ({
-        ...n,
-        val: Math.max(
-          2,
-          (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5,
-        ),
-      }));
-      const links = (data.edges || []).map((e) => ({
-        source: e.source,
-        target: e.target,
-        type: e.type,
-        confidence: e.confidence || 1,
-      }));
+      const { nodes, links } = normalizeGraphPayload(data.nodes || [], data.edges || []);
       setGraphData({ nodes, links });
-      setRawEdges(data.edges || []);
+      setRawEdges((data.edges || []).filter((edge) => nodes.some((node) => node.id === edge.source) && nodes.some((node) => node.id === edge.target)));
       setMeta(data.meta || null);
       // Persist for next mount — show instantly on refresh
       try {

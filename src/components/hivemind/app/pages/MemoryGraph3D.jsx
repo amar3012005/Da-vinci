@@ -31,13 +31,13 @@ const TYPE_COLORS = {
 };
 
 const RELATION_STYLES = {
-  Updates: { color: "#117dff", width: 0.62, particles: 0, opacity: 0.42 },
-  Extends: { color: "#16a34a", width: 0.56, particles: 0, opacity: 0.38 },
-  Derives: { color: "#8b5cf6", width: 0.52, particles: 1, opacity: 0.34 },
-  Contradicts: { color: "#dc2626", width: 0.7, particles: 2, opacity: 0.46 },
-  Supports: { color: "#0891b2", width: 0.54, particles: 0, opacity: 0.36 },
-  References: { color: "#a8a095", width: 0.34, particles: 0, opacity: 0.24 },
-  default: { color: "#cfc8be", width: 0.35, particles: 0, opacity: 0.26 },
+  Updates: { color: "#8ebcff", width: 0.22, particles: 5, opacity: 0.12, dashScale: 1.35 },
+  Extends: { color: "#9fddb2", width: 0.2, particles: 5, opacity: 0.11, dashScale: 1.25 },
+  Derives: { color: "#c8b6ff", width: 0.2, particles: 6, opacity: 0.12, dashScale: 1.45 },
+  Contradicts: { color: "#d8d2ca", width: 0.18, particles: 4, opacity: 0.09, dashScale: 1.25 },
+  Supports: { color: "#abd6de", width: 0.18, particles: 4, opacity: 0.1, dashScale: 1.2 },
+  References: { color: "#d7d0c7", width: 0.16, particles: 4, opacity: 0.08, dashScale: 1.15 },
+  default: { color: "#d7d0c7", width: 0.16, particles: 4, opacity: 0.08, dashScale: 1.15 },
 };
 
 const LABEL_LIMITS = {
@@ -335,6 +335,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObject(fg.nodeThreeObject())
       .linkColor(fg.linkColor())
       .linkLabel(fg.linkLabel())
+      .linkOpacity(fg.linkOpacity())
       .linkDirectionalParticles(fg.linkDirectionalParticles())
       .linkWidth(fg.linkWidth());
   }, []);
@@ -399,20 +400,24 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const getLinkWidth = useCallback((link) => {
     const style = getRelationStyle(link);
-    return highlightedLinksRef.current.has(link) ? Math.max(style.width + 0.55, 1.1) : style.width;
+    return highlightedLinksRef.current.has(link) ? 1.12 : style.width;
   }, []);
 
   const getLinkParticles = useCallback((link) => {
     const style = getRelationStyle(link);
-    const baseParticles = style.particles + ((link.type === "Derives" || link.type === "References") ? 1 : 0);
-    return highlightedLinksRef.current.has(link) ? Math.max(baseParticles, 3) : baseParticles;
+    return highlightedLinksRef.current.has(link) ? 0 : style.particles;
   }, []);
 
   const getLinkParticleSpeed = useCallback((link) => {
-    if (link.type === "Contradicts") return 0.0045;
-    if (link.type === "Derives") return 0.0038;
-    if (link.type === "References") return 0.0032;
-    return 0.0024;
+    if (link.type === "Derives") return 0.0042;
+    if (link.type === "Updates") return 0.0038;
+    if (link.type === "Extends") return 0.0034;
+    return 0.0028;
+  }, []);
+
+  const getLinkOpacity = useCallback((link) => {
+    const style = getRelationStyle(link);
+    return highlightedLinksRef.current.has(link) ? 0.74 : style.opacity;
   }, []);
 
   const updateNodeObjectAppearance = useCallback((node, object3d) => {
@@ -519,7 +524,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       })
       .nodeThreeObjectExtend(false)
       .nodeVisibility((node) => isNodeVisibleRef.current(node))
-      .linkOpacity((link) => getRelationStyle(link).opacity)
+      .linkOpacity((link) => getLinkOpacity(link))
       .linkDirectionalParticleWidth(1.1)
       .linkDirectionalParticles((link) => getLinkParticles(link))
       .linkDirectionalParticleSpeed((link) => getLinkParticleSpeed(link))
@@ -594,10 +599,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const controls = fg.controls?.();
     if (controls) {
       controls.enableDamping = true;
-      controls.dampingFactor = 0.06;
-      controls.rotateSpeed = 0.78;
-      controls.zoomSpeed = 0.95;
-      controls.panSpeed = 0.9;
+      controls.dampingFactor = 0.032;
+      controls.rotateSpeed = 1.08;
+      controls.zoomSpeed = 1.14;
+      controls.panSpeed = 1.05;
       controls.minDistance = 24;
       controls.maxDistance = 3000;
 
@@ -745,7 +750,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .linkWidth((link) => getLinkWidth(link))
       .linkDirectionalParticles((link) => getLinkParticles(link))
       .linkDirectionalParticleSpeed((link) => getLinkParticleSpeed(link))
-      .linkOpacity((link) => getRelationStyle(link).opacity)
+      .linkOpacity((link) => getLinkOpacity(link))
       .nodeLabel((node) => getNodeLabel(node));
     refreshHighlight();
   }, [
@@ -753,6 +758,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     getClusterHaloColor,
     getLinkColor,
     getLinkLabel,
+    getLinkOpacity,
     getLinkParticles,
     getLinkParticleSpeed,
     getLinkWidth,
@@ -795,12 +801,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         link.distance((edge) => {
           const src = edge.source;
           const tgt = edge.target;
+          if (!src || !tgt) return 120;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
           return sameCluster ? 48 : 138;
         });
         link.strength((edge) => {
           const src = edge.source;
           const tgt = edge.target;
+          if (!src || !tgt) return 0.02;
           const sameCluster = src?.clusterId && src.clusterId === tgt?.clusterId;
           return sameCluster ? 0.46 : 0.075;
         });
