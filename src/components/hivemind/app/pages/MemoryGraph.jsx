@@ -936,23 +936,20 @@ export default function MemoryGraph() {
         )}
 
         {graphData.nodes.length > 0 && (
-          <div className="absolute top-4 left-4 z-10 w-[280px] rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between mb-3">
+          <div className="absolute top-4 left-4 z-10 w-[260px] rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center justify-between mb-2">
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
                   Graph Controls
                 </p>
-                <p className="text-xs text-[#525252] font-['Space_Grotesk'] mt-1">
-                  fewer header controls, graph-first layout
+                <p className="text-[11px] text-[#525252] font-['Space_Grotesk'] mt-1">
+                  fit-to-window, no scroll
                 </p>
               </div>
             </div>
-            <div className="mb-3">
-              <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-1.5">
-                Memory Type
-              </p>
+            <div className="mb-2">
               <div className="flex flex-wrap gap-1">
-                {LAYER_FILTERS.map((layer) => (
+                {LAYER_FILTERS.slice(0, 4).map((layer) => (
                   <button
                     key={layer.key}
                     onClick={() => setLayerFilter(layer.key)}
@@ -969,9 +966,6 @@ export default function MemoryGraph() {
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-1.5">
-                Density
-              </p>
               <div className="flex items-center gap-1 rounded-xl border border-[#ece8e0] bg-[#faf9f4] p-1">
                 {[
                   { key: 300, label: "300" },
@@ -1073,53 +1067,67 @@ export default function MemoryGraph() {
         {/* Zoom + cluster panel controls */}
         <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
           {temporalBounds && (
-            <div className="flex items-end gap-2">
-              <div className="rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex flex-col justify-between h-[220px] text-[10px] font-mono text-[#8b857d]">
-                    <span>{new Date(temporalBounds.max).toLocaleDateString()}</span>
-                    <span className="opacity-0">mid</span>
-                    <span>{new Date(temporalBounds.min).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d] mb-2">
-                      Time
-                    </p>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={1}
-                      value={Math.round(temporalProgress * 100)}
-                      onChange={(e) => {
-                        const next = Number(e.target.value) / 100;
-                        setTemporalProgress(next);
-                        setIsLiveMode(next >= 0.999);
-                      }}
-                      className="h-[220px] w-6 appearance-none bg-transparent cursor-pointer temporal-slider"
-                      style={{ writingMode: "vertical-lr", direction: "rtl" }}
-                      aria-label="Temporal memory formation scrubber"
-                    />
-                    <button
-                      onClick={() => {
-                        setTemporalProgress(1);
-                        setIsLiveMode(true);
-                      }}
-                      className="mt-2 rounded-lg border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 text-[10px] font-mono text-[#525252]"
-                    >
-                      Now
-                    </button>
-                  </div>
+            <div className="rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)] w-[290px]">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                    Temporal Explorer
+                  </p>
+                  <p className="text-[11px] text-[#525252] font-['Space_Grotesk']">
+                    Bi-temporal time travel and diff
+                  </p>
                 </div>
-                <div className="mt-2 border-t border-[#eee9e1] pt-2">
-                  <p className="text-[10px] font-mono text-[#8b857d] uppercase tracking-[0.14em]">
+                <button
+                  onClick={() => {
+                    setTemporalProgress(1);
+                    setIsLiveMode(true);
+                  }}
+                  className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-1 text-[10px] font-mono text-[#525252]"
+                >
+                  Now
+                </button>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <button className="px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
+                  Time Travel
+                </button>
+                <button className="px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#faf9f4] text-[#737373] border border-[#e3e0db]">
+                  Temporal Diff
+                </button>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(temporalProgress * 100)}
+                onChange={(e) => {
+                  const next = Number(e.target.value) / 100;
+                  setTemporalProgress(next);
+                  setIsLiveMode(next >= 0.999);
+                }}
+                className="w-full h-2 appearance-none bg-[#f2eee7] rounded-full cursor-pointer temporal-slider-horizontal"
+                aria-label="Temporal memory formation scrubber"
+              />
+              <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-[#8b857d]">
+                <span>{new Date(temporalBounds.min).toLocaleDateString()}</span>
+                <span>{new Date(temporalBounds.max).toLocaleDateString()}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-[#eee9e1] pt-2">
+                <div>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
                     Visible Window
                   </p>
                   <p className="mt-1 text-xs text-[#0a0a0a] font-['Space_Grotesk']">
                     {temporalCutoff ? new Date(temporalCutoff).toLocaleString() : "All time"}
                   </p>
-                  <p className="mt-1 text-[10px] text-[#525252] font-['Space_Grotesk']">
-                    {filteredNodes.size} memories currently formed
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                    Live
+                  </p>
+                  <p className="text-xs text-[#15803d] font-['Space_Grotesk']">
+                    {isLiveMode ? "On" : "Paused"}
                   </p>
                 </div>
               </div>
