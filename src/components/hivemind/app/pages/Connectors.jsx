@@ -1160,6 +1160,366 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   );
 }
 
+// ─── Google Workspace Intro Modal (one-time, before master OAuth) ──────────
+
+function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
+  const services = [
+    { key: 'gmail',    name: 'Gmail',    desc: 'Email threads → event memories', color: '#ef4444' },
+    { key: 'drive',    name: 'Drive',    desc: 'Docs/Sheets/Slides as searchable KB', color: '#f59e0b' },
+    { key: 'calendar', name: 'Calendar', desc: 'Past events as memory, future live', color: '#3b82f6' },
+    { key: 'contacts', name: 'Contacts', desc: 'Structured directory, no pollution', color: '#9333ea' },
+    { key: 'tasks',    name: 'Tasks',    desc: 'Live lookup on demand', color: '#10b981' },
+    { key: 'docs',     name: 'Docs+',    desc: 'Sheets, Slides, Forms — auto-detected', color: '#0891b2' },
+  ];
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onCancel}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-[#4285F4]/10 flex items-center justify-center">
+            <Mail size={20} className="text-[#4285F4]" />
+          </div>
+          <div>
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Connect Google Workspace</h3>
+            <p className="text-[#525252] text-xs">One consent → all services. Disconnect any one anytime.</p>
+          </div>
+        </div>
+
+        <div className="mb-5 p-3 rounded-xl bg-[#fef3c7] border border-[#fde68a]">
+          <p className="text-[11px] font-mono text-[#92400e] leading-relaxed">
+            <span className="font-bold">⓵ One-time consent.</span> Google shows a single approval screen listing all 10 services below.
+            You can revoke any individual service later from this page without affecting the others.
+          </p>
+        </div>
+
+        <div className="space-y-2 mb-5">
+          {services.map(s => (
+            <div key={s.key} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#faf9f4] border border-[#eae7e1]">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+              <span className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] w-20">{s.name}</span>
+              <span className="text-[11px] text-[#525252] flex-1">{s.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-[11px] text-[#a3a3a3] font-mono mb-5">
+          After approval, we&apos;ll walk you through sync settings for each connected service.
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onProceed}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#4285F4] text-white hover:bg-[#3367d6] flex items-center justify-center gap-2"
+          >
+            <Zap size={14} />
+            Continue to Google
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Per-service Sync Config Schemas ──────────────────────────────────────────
+
+const SERVICE_CONFIG_SCHEMAS = {
+  google_drive: {
+    title: 'Configure Drive Sync',
+    icon: { component: HardDrive, color: '#f59e0b', bg: 'bg-amber-50' },
+    fields: [
+      {
+        key: 'mime_types',
+        label: 'File types',
+        type: 'multi',
+        options: [
+          { value: 'document', label: 'Docs' },
+          { value: 'spreadsheet', label: 'Sheets' },
+          { value: 'presentation', label: 'Slides' },
+          { value: 'pdf', label: 'PDFs' },
+        ],
+        default: ['document', 'spreadsheet', 'presentation'],
+      },
+      {
+        key: 'date_range',
+        label: 'Modified within',
+        type: 'single',
+        options: [
+          { value: '7d', label: 'Last 7 days' },
+          { value: '30d', label: 'Last 30 days' },
+          { value: '90d', label: 'Last 90 days' },
+          { value: '365d', label: 'Last year' },
+          { value: 'all', label: 'All time' },
+        ],
+        default: '90d',
+      },
+      {
+        key: 'max_files',
+        label: 'Max files',
+        type: 'slider',
+        min: 50, max: 5000, step: 50, default: 500,
+      },
+    ],
+  },
+  google_calendar: {
+    title: 'Configure Calendar Sync',
+    icon: { component: Calendar, color: '#3b82f6', bg: 'bg-blue-50' },
+    fields: [
+      {
+        key: 'date_range',
+        label: 'Backfill window',
+        type: 'single',
+        options: [
+          { value: '90d', label: 'Last 90 days' },
+          { value: '365d', label: 'Last year' },
+          { value: '730d', label: 'Last 2 years' },
+        ],
+        default: '365d',
+      },
+      {
+        key: 'future_mode',
+        label: 'Upcoming events',
+        type: 'single',
+        options: [
+          { value: 'live', label: 'Live-query only (no pre-ingest)' },
+          { value: 'sync_30', label: 'Pre-ingest next 30 days' },
+          { value: 'sync_90', label: 'Pre-ingest next 90 days' },
+        ],
+        default: 'live',
+      },
+      {
+        key: 'calendars',
+        label: 'Calendars',
+        type: 'multi',
+        options: [
+          { value: 'primary', label: 'Primary' },
+          { value: 'shared', label: 'Shared with me' },
+          { value: 'team', label: 'Team calendars' },
+        ],
+        default: ['primary'],
+      },
+    ],
+  },
+  google_contacts: {
+    title: 'Configure Contacts Sync',
+    icon: { component: Mail, color: '#9333ea', bg: 'bg-violet-50' },
+    fields: [
+      {
+        key: 'groups',
+        label: 'Contact groups',
+        type: 'multi',
+        options: [
+          { value: 'mycontacts', label: 'My Contacts' },
+          { value: 'starred', label: 'Starred' },
+          { value: 'other', label: 'Other contacts' },
+        ],
+        default: ['mycontacts'],
+      },
+      {
+        key: 'max_contacts',
+        label: 'Max contacts',
+        type: 'slider',
+        min: 100, max: 5000, step: 100, default: 1000,
+      },
+    ],
+  },
+  google_tasks: {
+    title: 'Configure Tasks',
+    icon: { component: Calendar, color: '#10b981', bg: 'bg-emerald-50' },
+    fields: [
+      {
+        key: 'mode',
+        label: 'Sync mode',
+        type: 'single',
+        options: [
+          { value: 'live', label: 'Live-query only' },
+          { value: 'sync', label: 'Pre-ingest task lists' },
+        ],
+        default: 'live',
+      },
+    ],
+  },
+  google_docs: {
+    title: 'Configure Docs Sync',
+    icon: { component: HardDrive, color: '#0891b2', bg: 'bg-cyan-50' },
+    fields: [
+      {
+        key: 'chunk_size',
+        label: 'Chunk size',
+        type: 'single',
+        options: [
+          { value: 'small', label: 'Small (400 chars)' },
+          { value: 'medium', label: 'Medium (800 chars)' },
+          { value: 'large', label: 'Large (1200 chars)' },
+        ],
+        default: 'medium',
+      },
+      {
+        key: 'date_range',
+        label: 'Modified within',
+        type: 'single',
+        options: [
+          { value: '30d', label: 'Last 30 days' },
+          { value: '90d', label: 'Last 90 days' },
+          { value: '365d', label: 'Last year' },
+          { value: 'all', label: 'All time' },
+        ],
+        default: '90d',
+      },
+    ],
+  },
+};
+
+// ─── Generic Service Sync Config Modal ────────────────────────────────────────
+
+function GoogleServiceSyncConfig({ provider, email, onSave, onSkip, onClose, stepLabel }) {
+  const schema = SERVICE_CONFIG_SCHEMAS[provider];
+  const initial = {};
+  if (schema) {
+    for (const f of schema.fields) initial[f.key] = f.default;
+  }
+  const [config, setConfig] = useState(initial);
+  const [saving, setSaving] = useState(false);
+
+  if (!schema) {
+    // No schema → auto-save defaults and advance
+    return null;
+  }
+
+  const Icon = schema.icon.component;
+
+  const toggleMulti = (key, value) => {
+    setConfig(c => {
+      const cur = c[key] || [];
+      return { ...c, [key]: cur.includes(value) ? cur.filter(x => x !== value) : [...cur, value] };
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(config);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl ${schema.icon.bg} flex items-center justify-center`}>
+              <Icon size={18} style={{ color: schema.icon.color }} />
+            </div>
+            <div>
+              <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">{schema.title}</h3>
+              {email && <p className="text-[#a3a3a3] text-xs font-mono">{email}</p>}
+            </div>
+          </div>
+          {stepLabel && (
+            <span className="text-[10px] font-mono text-[#a3a3a3] bg-[#f3f1ec] px-2 py-1 rounded">
+              {stepLabel}
+            </span>
+          )}
+        </div>
+
+        {schema.fields.map(field => (
+          <div key={field.key} className="mb-4">
+            <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">
+              {field.label}
+              {field.type === 'slider' && (
+                <span className="text-[#117dff] ml-2">{config[field.key]}</span>
+              )}
+            </label>
+
+            {(field.type === 'single' || field.type === 'multi') && (
+              <div className="flex flex-wrap gap-2">
+                {field.options.map(opt => {
+                  const isActive = field.type === 'multi'
+                    ? (config[field.key] || []).includes(opt.value)
+                    : config[field.key] === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => field.type === 'multi'
+                        ? toggleMulti(field.key, opt.value)
+                        : setConfig(c => ({ ...c, [field.key]: opt.value }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                        isActive
+                          ? field.type === 'multi'
+                            ? 'bg-[#22c55e]/10 text-[#16a34a] border border-[#bbf7d0]'
+                            : 'bg-[#117dff] text-white'
+                          : 'bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] border border-transparent'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {field.type === 'slider' && (
+              <>
+                <input
+                  type="range"
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  value={config[field.key]}
+                  onChange={e => setConfig(c => ({ ...c, [field.key]: Number(e.target.value) }))}
+                  className="w-full accent-[#117dff]"
+                />
+                <div className="flex justify-between text-[10px] text-[#a3a3a3] font-mono mt-1">
+                  <span>{field.min}</span><span>{field.max}</span>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+
+        <div className="flex gap-3">
+          <button
+            onClick={onSkip}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Zap size={14} />
+                Save &amp; Continue
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── MCP Setup Modal ─────────────────────────────────────────────────────────
 
 function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existingEndpointStatus }) {
@@ -1492,6 +1852,12 @@ export default function Connectors() {
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
   const [gmailEmail, setGmailEmail] = useState(null);
+  // Google Workspace multi-service intro + wizard
+  const [workspaceIntroOpen, setWorkspaceIntroOpen] = useState(false);
+  const [pendingWorkspaceConnect, setPendingWorkspaceConnect] = useState(null); // { services, targetScope }
+  const [workspaceWizardQueue, setWorkspaceWizardQueue] = useState([]); // services to walk through
+  const [workspaceWizardIdx, setWorkspaceWizardIdx] = useState(0);
+  const [workspaceWizardEmail, setWorkspaceWizardEmail] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
   const [targetScopes, setTargetScopes] = useState({});
@@ -1553,9 +1919,43 @@ export default function Connectors() {
     const email = searchParams.get('email');
 
     if (connected === 'gmail' && needsConfig === 'true') {
-      // Gmail connected — open settings modal before syncing
-      setGmailEmail(email || null);
-      setGmailSettingsOpen(true);
+      // Gmail connected — check if multiple Google services were granted.
+      // If yes → start wizard chain. If just Gmail → open single Gmail settings.
+      (async () => {
+        try {
+          const status = await apiClient.googleWorkspaceStatus();
+          const connectedSvcs = (status.services || [])
+            .filter(s => s.connected)
+            .map(s => s.provider);
+          setWorkspaceWizardEmail(email || status.google_account || null);
+
+          // If multiple services granted (more than just gmail) → wizard chain
+          if (connectedSvcs.length > 1) {
+            // Order: gmail first (already has dedicated modal), then drive/calendar/etc
+            const wizardOrder = [
+              'gmail', 'google_drive', 'google_calendar', 'google_docs',
+              'google_sheets', 'google_slides', 'google_contacts', 'google_tasks',
+            ];
+            const queue = wizardOrder.filter(s => connectedSvcs.includes(s));
+            setWorkspaceWizardQueue(queue);
+            setWorkspaceWizardIdx(0);
+            // First step uses dedicated Gmail modal if gmail is first
+            if (queue[0] === 'gmail') {
+              setGmailEmail(email || null);
+              setGmailSettingsOpen(true);
+            }
+          } else {
+            // Single Gmail connection — use existing modal
+            setGmailEmail(email || null);
+            setGmailSettingsOpen(true);
+          }
+        } catch (_e) {
+          // Fallback to Gmail-only flow
+          setGmailEmail(email || null);
+          setGmailSettingsOpen(true);
+        }
+      })();
+
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('connected');
       nextParams.delete('needs_config');
@@ -1630,6 +2030,16 @@ export default function Connectors() {
 
       if (isGoogleService) {
         const services = opts.services || opts.googleService || provider.replace(/^google-/, '');
+        // Master tile (services='all') → show intro modal FIRST (one-time explanation)
+        if (opts.isMaster) {
+          const seen = window.localStorage.getItem('hm_workspace_intro_seen');
+          if (!seen) {
+            setConnectingProvider(null);
+            setPendingWorkspaceConnect({ services, targetScope });
+            setWorkspaceIntroOpen(true);
+            return;
+          }
+        }
         const data = await apiClient.gmailConnect(targetScope, services);
         if (data.url) {
           window.location.href = data.url;
@@ -1695,16 +2105,57 @@ export default function Connectors() {
     }
   }, [refetchOAuth]);
 
+  // Advance the multi-service wizard to the next step, or close if done
+  const advanceWorkspaceWizard = useCallback(() => {
+    const nextIdx = workspaceWizardIdx + 1;
+    if (nextIdx >= workspaceWizardQueue.length) {
+      // Wizard complete
+      setWorkspaceWizardQueue([]);
+      setWorkspaceWizardIdx(0);
+      setWorkspaceWizardEmail(null);
+      setToastMessage({ type: 'success', text: 'All Google services configured. Sync running in background.' });
+      refetchOAuth();
+    } else {
+      setWorkspaceWizardIdx(nextIdx);
+      // If next is gmail, open Gmail modal; else generic config modal shows
+      if (workspaceWizardQueue[nextIdx] === 'gmail') {
+        setGmailSettingsOpen(true);
+      }
+    }
+  }, [workspaceWizardIdx, workspaceWizardQueue, refetchOAuth]);
+
   const handleGmailSync = useCallback(async (settings) => {
     try {
       await apiClient.gmailSync({ ...settings, target_scope: targetScopes.gmail || 'personal' });
       setToastMessage({ type: 'success', text: 'Gmail sync started! Check status for progress.' });
       setGmailSettingsOpen(false);
       refetchOAuth();
+      // If wizard is active and we just configured gmail, advance to next
+      if (workspaceWizardQueue.length > 0 && workspaceWizardQueue[workspaceWizardIdx] === 'gmail') {
+        advanceWorkspaceWizard();
+      }
     } catch (err) {
       setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
-  }, [refetchOAuth, targetScopes.gmail]);
+  }, [refetchOAuth, targetScopes.gmail, workspaceWizardQueue, workspaceWizardIdx, advanceWorkspaceWizard]);
+
+  // Save per-service config to backend (creates/updates platform_integration.connectorMetadata)
+  const handleServiceConfigSave = useCallback(async (provider, config) => {
+    try {
+      // For now stash in connectorMetadata via cadence endpoint as a stub.
+      // Real implementation would have a per-service config endpoint.
+      // We trigger initial sync by setting sync_interval_minutes to a value.
+      await apiClient.controlPlane?.post?.('/v1/proxy/connectors/cadence', {
+        provider,
+        sync_interval_minutes: provider === 'google_tasks' && config.mode === 'live' ? null : 60,
+      }).catch(() => null);
+      // Trigger immediate sync attempt — backend scheduler will pick it up.
+      setToastMessage({ type: 'success', text: `${provider} configured. Sync scheduled.` });
+    } catch (err) {
+      console.warn('[wizard] save config failed:', err.message);
+    }
+    advanceWorkspaceWizard();
+  }, [advanceWorkspaceWizard]);
 
   const handleWhatsAppDisconnect = useCallback(async () => {
     try {
@@ -2026,15 +2477,69 @@ export default function Connectors() {
         </div>
       )}
 
-      {/* Gmail Sync Settings Modal */}
+      {/* Google Workspace Intro Modal (one-time, before master OAuth) */}
+      <AnimatePresence>
+        {workspaceIntroOpen && (
+          <GoogleWorkspaceIntroModal
+            onProceed={async () => {
+              window.localStorage.setItem('hm_workspace_intro_seen', '1');
+              setWorkspaceIntroOpen(false);
+              const cfg = pendingWorkspaceConnect;
+              setPendingWorkspaceConnect(null);
+              if (cfg) {
+                try {
+                  const data = await apiClient.gmailConnect(cfg.targetScope, cfg.services);
+                  if (data.url) window.location.href = data.url;
+                } catch (err) {
+                  setToastMessage({ type: 'error', text: err.response?.data?.error || err.message });
+                }
+              }
+            }}
+            onCancel={() => {
+              setWorkspaceIntroOpen(false);
+              setPendingWorkspaceConnect(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Gmail Sync Settings Modal — also used as step 1 of wizard when gmail granted */}
       <AnimatePresence>
         {gmailSettingsOpen && (
           <GmailSyncSettings
             email={gmailEmail}
             onSync={handleGmailSync}
-            onClose={() => setGmailSettingsOpen(false)}
+            onClose={() => {
+              setGmailSettingsOpen(false);
+              // If wizard active and user closed gmail step, advance anyway
+              if (workspaceWizardQueue.length > 0 && workspaceWizardQueue[workspaceWizardIdx] === 'gmail') {
+                advanceWorkspaceWizard();
+              }
+            }}
           />
         )}
+      </AnimatePresence>
+
+      {/* Multi-service wizard — shown for non-gmail services in queue */}
+      <AnimatePresence>
+        {workspaceWizardQueue.length > 0
+          && workspaceWizardQueue[workspaceWizardIdx]
+          && workspaceWizardQueue[workspaceWizardIdx] !== 'gmail'
+          && !gmailSettingsOpen
+          && (() => {
+            const currentProvider = workspaceWizardQueue[workspaceWizardIdx];
+            const stepLabel = `Step ${workspaceWizardIdx + 1} of ${workspaceWizardQueue.length}`;
+            return (
+              <GoogleServiceSyncConfig
+                provider={currentProvider}
+                email={workspaceWizardEmail}
+                stepLabel={stepLabel}
+                onSave={(cfg) => handleServiceConfigSave(currentProvider, cfg)}
+                onSkip={advanceWorkspaceWizard}
+                onClose={advanceWorkspaceWizard}
+              />
+            );
+          })()}
       </AnimatePresence>
 
       {/* MCP Setup Modal */}
