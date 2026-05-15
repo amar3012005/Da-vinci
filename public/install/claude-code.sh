@@ -36,8 +36,13 @@ validate_key
 # ──────────────────────────────────────────────────────────────────────
 step "Registering HIVEMIND with Claude Code..."
 
-# Remove any existing 'hivemind' entry first (idempotent)
-claude mcp remove --scope user hivemind 2>/dev/null || true
+# Remove any existing 'hivemind' entry first (idempotent).
+# Strip from all 3 scopes — a bare `mcp remove` errors when entry exists in
+# multiple scopes, and a leftover project/local entry blocks the user-scope
+# `mcp add` below with "already exists".
+claude mcp remove hivemind -s user    2>/dev/null || true
+claude mcp remove hivemind -s local   2>/dev/null || true
+claude mcp remove hivemind -s project 2>/dev/null || true
 
 # Add it (user scope = available across all sessions)
 if claude mcp add --transport http --scope user hivemind \
