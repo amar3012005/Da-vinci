@@ -72,6 +72,13 @@ validate_key
 # ──────────────────────────────────────────────────────────────────────
 # Step 4: Patch config
 # ──────────────────────────────────────────────────────────────────────
+# IMPORTANT: must quit Claude Desktop BEFORE writing config — see
+# quit_app_before_write() in installer-common.sh for the race details.
+quit_app_before_write "Claude" "claude"
+# Some installs use "Claude Desktop" as the bundle name
+osascript -e 'tell application "Claude Desktop" to quit' 2>/dev/null || true
+pkill -x "Claude Desktop" 2>/dev/null || true
+
 step "Patching Claude Desktop config..."
 ensure_json_file "$CD_CONFIG"
 

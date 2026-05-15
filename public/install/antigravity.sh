@@ -47,6 +47,7 @@ ok "Config path: $AG_CONFIG"
 prompt_for_key
 validate_key
 
+quit_app_before_write "Antigravity" "antigravity"
 step "Patching Antigravity MCP config..."
 ensure_json_file "$AG_CONFIG"
 

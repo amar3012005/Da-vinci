@@ -70,6 +70,7 @@ validate_key
 # (JSONC). We use jq which requires pure JSON, so strip comments first
 # into a temp file, edit, then restore via best-effort write.
 # ──────────────────────────────────────────────────────────────────────
+quit_app_before_write "Visual Studio Code" "code"
 step "Patching VS Code settings..."
 mkdir -p "$(dirname "$VSCODE_CONFIG")"
 if [ ! -f "$VSCODE_CONFIG" ]; then

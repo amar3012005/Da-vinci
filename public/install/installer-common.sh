@@ -253,6 +253,37 @@ restart_app_macos() {
   fi
 }
 
+# ──────────────────────────────────────────────────────────────────────
+# quit_app_before_write — must be called BEFORE editing GUI app config.
+# Many Electron/native apps (Claude Desktop, Cursor, VS Code) hold the
+# config in memory and overwrite the file on quit — wiping our changes.
+# Quit first → write → relaunch is the only safe order.
+# ──────────────────────────────────────────────────────────────────────
+quit_app_before_write() {
+  # Args: <macos-app-name> <linux-proc-pattern>
+  local mac_name="$1"
+  local linux_proc="${2:-}"
+  step "Quitting $mac_name before writing config (prevents wipe-on-quit race)..."
+  case "$OS" in
+    macos)
+      osascript -e "tell application \"$mac_name\" to quit" 2>/dev/null || true
+      pkill -x "$mac_name" 2>/dev/null || true
+      # Wait up to 5s for full exit
+      for _ in 1 2 3 4 5; do
+        pgrep -x "$mac_name" >/dev/null 2>&1 || break
+        sleep 1
+      done
+      ok "$mac_name not running"
+      ;;
+    linux)
+      [ -n "$linux_proc" ] && { pkill -f "$linux_proc" 2>/dev/null || true; sleep 1; }
+      ;;
+    wsl|windows)
+      warn "Close $mac_name on Windows manually before continuing"
+      ;;
+  esac
+}
+
 restart_app_linux() {
   local proc_pattern="$1"
   local launch_cmd="$2"

@@ -61,6 +61,9 @@ validate_key
 # ──────────────────────────────────────────────────────────────────────
 # Step 4: Patch config
 # ──────────────────────────────────────────────────────────────────────
+# Quit Cursor first — Electron apps wipe disk edits on quit if held in memory.
+quit_app_before_write "Cursor" "cursor"
+
 step "Patching Cursor MCP config..."
 ensure_json_file "$CURSOR_CONFIG"
 
