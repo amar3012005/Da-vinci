@@ -140,10 +140,29 @@ function TokenUsage({ usage }) {
   );
 }
 
+// ─── Slack pending-action sentinel ─────────────────────────────────────────
+// Server appends `<<HIVEMIND:SLACK_PENDING>>{json}` to the assistant turn so
+// the next user message can be matched as confirm/cancel against the staged
+// action. UI strips this before rendering but keeps it in msg.content so the
+// raw value gets sent back as history on the next /api/chat call.
+const SLACK_PENDING_SENTINEL = '<<HIVEMIND:SLACK_PENDING>>';
+
+function stripSlackPending(text) {
+  if (!text) return text;
+  const idx = text.indexOf(SLACK_PENDING_SENTINEL);
+  return idx === -1 ? text : text.slice(0, idx).trimEnd();
+}
+
+function hasSlackPending(text) {
+  return typeof text === 'string' && text.includes(SLACK_PENDING_SENTINEL);
+}
+
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }) {
   const isUser = msg.role === 'user';
+  const displayContent = isUser ? msg.content : stripSlackPending(msg.content);
+  const pendingSlack = !isUser && hasSlackPending(msg.content);
 
   if (isUser) {
     return (
@@ -183,10 +202,15 @@ function MessageBubble({ msg }) {
           {msg.error ? (
             <div className="flex items-start gap-2 text-[#dc2626]">
               <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-              <span>{msg.content}</span>
+              <span>{displayContent}</span>
             </div>
           ) : (
-            msg.content
+            displayContent
+          )}
+          {pendingSlack && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-700">
+              Slack action pending · reply confirm
+            </div>
           )}
           <Sources sources={msg.sources} />
           <TokenUsage usage={msg.usage} />
