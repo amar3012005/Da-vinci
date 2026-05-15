@@ -39,6 +39,11 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 
 const CONNECTOR_CATEGORIES = [
   {
+    key: 'google_workspace',
+    label: 'Google Workspace',
+    description: 'Gmail, Drive, Calendar, Docs, Sheets, Contacts, Tasks',
+  },
+  {
     key: 'mcp_clients',
     label: 'MCP Clients',
     description: 'AI assistants connected via MCP protocol',
@@ -46,7 +51,7 @@ const CONNECTOR_CATEGORIES = [
   {
     key: 'workspace',
     label: 'Workspace Apps',
-    description: 'Email, calendar, and communication tools',
+    description: 'Slack, Notion, Confluence, Linear',
   },
   {
     key: 'knowledge',
@@ -201,15 +206,15 @@ const CONNECTORS = [
     setupHint: 'Set SALESFORCE_CLIENT_ID + SALESFORCE_CLIENT_SECRET on the control plane',
   },
   // ── Google Workspace family ──
-  // All grant via a single OAuth flow but each becomes a separate
-  // platform_integration row so users can disconnect any one without
-  // losing the others.
+  // Master tile + per-service tiles. All share oauthProvider='gmail'.
+  // Each granted scope creates its own platform_integration row so
+  // services can be disconnected independently.
   {
     id: 'google-workspace',
     name: 'Google Workspace',
     description: 'Connect Gmail + Drive + Calendar + Docs + Sheets + more in one click',
     icon: Mail,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#4285F4',
     priority: 0,
@@ -222,7 +227,7 @@ const CONNECTORS = [
     name: 'Gmail',
     description: 'Email threads as searchable event memories',
     icon: Mail,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#ef4444',
     priority: 1,
@@ -234,7 +239,7 @@ const CONNECTORS = [
     name: 'Google Drive',
     description: 'Index Docs, Sheets, Slides — live search for files',
     icon: HardDrive,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#f59e0b',
     priority: 1,
@@ -246,7 +251,7 @@ const CONNECTORS = [
     name: 'Google Calendar',
     description: 'Past events as memory, future events live on demand',
     icon: Calendar,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#3b82f6',
     priority: 1,
@@ -254,11 +259,47 @@ const CONNECTORS = [
     googleService: 'calendar',
   },
   {
+    id: 'google-docs',
+    name: 'Google Docs',
+    description: 'Doc bodies chunked + ingested like KB uploads',
+    icon: FileText,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#0891b2',
+    priority: 1,
+    oauthProvider: 'gmail',
+    googleService: 'docs',
+  },
+  {
+    id: 'google-sheets',
+    name: 'Google Sheets',
+    description: 'Live cell + range read on demand',
+    icon: HardDrive,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#16a34a',
+    priority: 2,
+    oauthProvider: 'gmail',
+    googleService: 'sheets',
+  },
+  {
+    id: 'google-slides',
+    name: 'Google Slides',
+    description: 'Presentation text + structure',
+    icon: FileText,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#d97706',
+    priority: 2,
+    oauthProvider: 'gmail',
+    googleService: 'slides',
+  },
+  {
     id: 'google-contacts',
     name: 'Google Contacts',
     description: 'Structured contact directory — no memory pollution',
     icon: Mail,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#9333ea',
     priority: 2,
@@ -270,12 +311,36 @@ const CONNECTORS = [
     name: 'Google Tasks',
     description: 'Live task lookup — fetched when AI needs them',
     icon: Calendar,
-    category: 'workspace',
+    category: 'google_workspace',
     status: 'available',
     color: '#10b981',
     priority: 2,
     oauthProvider: 'gmail',
     googleService: 'tasks',
+  },
+  {
+    id: 'google-chat',
+    name: 'Google Chat',
+    description: 'Spaces, messages — live query',
+    icon: Mail,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#0d9488',
+    priority: 3,
+    oauthProvider: 'gmail',
+    googleService: 'chat',
+  },
+  {
+    id: 'google-forms',
+    name: 'Google Forms',
+    description: 'Form responses — live query',
+    icon: FileText,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#7c3aed',
+    priority: 3,
+    oauthProvider: 'gmail',
+    googleService: 'forms',
   },
   {
     id: 'slack',
@@ -2250,9 +2315,42 @@ export default function Connectors() {
     return c;
   });
 
-  const filteredConnectors = activeCategory
-    ? mergedConnectors.filter((c) => c.category === activeCategory)
-    : mergedConnectors;
+  // Sort order:
+  //   1. Connection state (connected first, then available, then coming_soon, then disabled/missing config last)
+  //   2. priority asc (master tiles first, then primary, then secondary)
+  //   3. alphabetical by name
+  const STATE_RANK = {
+    connected: 0,
+    available: 1,
+    needs_config: 1,
+    error: 2,
+    coming_soon: 3,
+    unavailable: 4,
+    disabled: 5,
+  };
+  const stateOf = (c) => {
+    if (c.connected || c.status === 'connected') return 'connected';
+    if (c.status === 'available') return 'available';
+    if (c.status === 'coming_soon') return 'coming_soon';
+    if (c.unavailable || c.requiresConfig || c.missingCredentials) return 'unavailable';
+    return c.status || 'available';
+  };
+
+  const sortConnectors = (list) => [...list].sort((a, b) => {
+    const ra = STATE_RANK[stateOf(a)] ?? 99;
+    const rb = STATE_RANK[stateOf(b)] ?? 99;
+    if (ra !== rb) return ra - rb;
+    const pa = a.priority ?? 99;
+    const pb = b.priority ?? 99;
+    if (pa !== pb) return pa - pb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  const filteredConnectors = sortConnectors(
+    activeCategory
+      ? mergedConnectors.filter((c) => c.category === activeCategory)
+      : mergedConnectors
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
