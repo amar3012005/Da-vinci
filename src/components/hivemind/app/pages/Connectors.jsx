@@ -1667,9 +1667,9 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
     : 'Generating your HIVEMIND API key...';
   const oneLinerUninstall = `curl -fsSL "${INSTALLER_BASE_URL}/uninstall.sh" | bash -s ${installerSlug}`;
 
-  const config = modalMode === 'uninstall'
-    ? oneLinerUninstall
-    : (isClaudeTerminalSetup ? claudeSetupCommand : (apiKeyReady ? oneLinerInstall : jsonConfig));
+  // Always show the install one-liner (curl|bash) — never raw JSON.
+  // Script writes config file, restarts app, runs verify_mcp_loaded.
+  const config = modalMode === 'uninstall' ? oneLinerUninstall : oneLinerInstall;
 
   const promptVariant = ['cursor', 'vscode', 'claude-code'].includes(connector?.id) ? 'coding' : 'agent';
 
@@ -1810,9 +1810,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                   modalMode === 'uninstall' ? 'bg-red-500' : 'bg-[#0a0a0a]'
                 }`}>1</span>
                 <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-                  {modalMode === 'uninstall'
-                    ? 'Run uninstall one-liner'
-                    : (isClaudeTerminalSetup ? 'Run setup script' : 'Run install one-liner')}
+                  {modalMode === 'uninstall' ? 'Run uninstall command' : 'Run install command in terminal'}
                 </p>
               </div>
               {connector.configPath && (
