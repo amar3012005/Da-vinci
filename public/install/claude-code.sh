@@ -51,9 +51,13 @@ fi
 
 backup_file "$CC_CONFIG"
 
+# Claude Code schema (per code.claude.com/docs/en/mcp):
+# user/local scope → ~/.claude.json
+#   mcpServers.<name>.type = "http" | "streamable-http" | "sse" | "stdio"
+# Field name is `type`, NOT `transport` (Cursor convention).
 json_merge "$CC_CONFIG" \
   ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
-     \"transport\": \"http\",
+     \"type\": \"http\",
      \"url\": \"$HIVEMIND_MCP_URL\",
      \"headers\": {
        \"Authorization\": \"Bearer $HIVEMIND_KEY\"

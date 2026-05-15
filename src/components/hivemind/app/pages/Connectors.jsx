@@ -422,7 +422,6 @@ const CONNECTORS = [
 ];
 
 const DIRECT_MCP_ENDPOINT = 'https://core.hivemind.davinciai.eu:8050/api/mcp';
-const CLAUDE_INSTALLER_BASE = 'https://core.hivemind.davinciai.eu:8050/install';
 
 const CLAUDE_TERMINAL_OS = {
   macos: {
@@ -448,17 +447,6 @@ function detectTerminalOs() {
   if (value.includes('win')) return 'windows';
   if (value.includes('linux') || value.includes('x11')) return 'linux';
   return 'macos';
-}
-
-function buildClaudeSetupCommand(os, apiKey) {
-  const safeApiKey = apiKey || '';
-  const encodedApiKey = encodeURIComponent(safeApiKey);
-  if (os === 'windows') {
-    return `irm "${CLAUDE_INSTALLER_BASE}/claude-mcp-windows.ps1?api_key=${encodedApiKey}" | iex`;
-  }
-
-  const platform = os === 'linux' ? 'linux' : 'macos';
-  return `curl -fsSL "${CLAUDE_INSTALLER_BASE}/claude-mcp-${platform}.sh?api_key=${encodedApiKey}" | bash`;
 }
 
 function isLegacyMcpEndpointUrl(url) {
@@ -1627,22 +1615,6 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
       active = false;
     };
   }, [apiKeys, connector?.id, connector?.name, generatedKey, user?.id, user?.userId]);
-
-  const jsonConfig = JSON.stringify({
-    mcpServers: {
-      hivemind: {
-        transport: 'http',
-        url: DIRECT_MCP_ENDPOINT,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      },
-    },
-  }, null, 2);
-
-  const claudeSetupCommand = !apiKeyReady
-    ? 'Generating your HIVEMIND API key...'
-    : buildClaudeSetupCommand(terminalOs, apiKey);
 
   // ── Mode tab: install / uninstall ──
   // Drives which command block + CTA the modal renders.

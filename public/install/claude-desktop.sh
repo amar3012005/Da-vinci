@@ -101,9 +101,11 @@ if [ "${USE_BRIDGE:-0}" = "1" ]; then
      }"
   ok "Wrote mcpServers.hivemind (stdio bridge — legacy Desktop)"
 else
+  # Claude Desktop schema (matches Claude Code per code.claude.com):
+  # mcpServers.<name>.type = "http" — NOT "transport"
   json_merge "$CD_CONFIG" \
     ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
-       \"transport\": \"http\",
+       \"type\": \"http\",
        \"url\": \"$HIVEMIND_MCP_URL\",
        \"headers\": {
          \"Authorization\": \"Bearer $HIVEMIND_KEY\"
