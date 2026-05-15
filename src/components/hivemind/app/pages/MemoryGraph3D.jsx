@@ -21,6 +21,8 @@ const GRAPH_THEME = {
 
 const TYPE_COLORS = {
   fact: "#117dff",
+  fact_raw: "#117dff",
+  fact_extracted: "#16a34a",
   decision: "#dc2626",
   preference: "#d97706",
   goal: "#8b5cf6",
@@ -67,8 +69,43 @@ function getNodeType(node) {
   return (node.memoryType || node.type || "").toLowerCase() || "default";
 }
 
+function getFactVariant(node) {
+  if (!node) return "raw";
+  const flags = [
+    node.factVariant,
+    node.factSource,
+    node.extractionSource,
+    node.memoryVariant,
+    node.sourceKind,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+
+  if (node.isExtracted || node.extracted || flags.some((value) => value.includes("extract"))) {
+    return "extracted";
+  }
+
+  if (node.isRaw || flags.some((value) => value.includes("raw") || value.includes("manual"))) {
+    return "raw";
+  }
+
+  if (node.sourcePlatform && String(node.sourcePlatform).toLowerCase().includes("knowledge")) {
+    return "extracted";
+  }
+
+  return "raw";
+}
+
 function getRelationStyle(link) {
   return RELATION_STYLES[link?.type] || RELATION_STYLES.default;
+}
+
+function getNodeColorBase(node) {
+  const type = getNodeType(node);
+  if (type === "fact") {
+    return getFactVariant(node) === "extracted" ? TYPE_COLORS.fact_extracted : TYPE_COLORS.fact_raw;
+  }
+  return TYPE_COLORS[type] || TYPE_COLORS.default;
 }
 
 function hexToRgb(hex) {
@@ -95,13 +132,26 @@ function makeNodeShape(node, color, clusterTint) {
   const radius = getNodeRadius(node);
   const type = getNodeType(node);
   const group = new THREE.Group();
-  const primaryMaterial = makeMaterial(color, 0.96);
-  const haloMaterial = makeMaterial(clusterTint || GRAPH_THEME.halo, clusterTint ? 0.22 : 0.1);
+  const primaryMaterial = makeMaterial(color, 0.95);
+  const haloMaterial = new THREE.MeshBasicMaterial({
+    color: clusterTint || GRAPH_THEME.halo,
+    transparent: true,
+    opacity: clusterTint ? 0.26 : 0.12,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const fieldMaterial = new THREE.MeshBasicMaterial({
+    color: clusterTint || color,
+    transparent: true,
+    opacity: clusterTint ? 0.12 : 0.08,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
   let mesh;
 
   switch (type) {
     case "decision":
-      mesh = new THREE.Mesh(new THREE.OctahedronGeometry(radius * 1.02, 0), primaryMaterial);
+      mesh = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.98, 16, 16), primaryMaterial);
       break;
     case "preference":
       mesh = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.7, radius * 1.28, radius * 1.05), primaryMaterial);
@@ -114,8 +164,7 @@ function makeNodeShape(node, color, clusterTint) {
       mesh = new THREE.Mesh(new THREE.TetrahedronGeometry(radius * 1.18, 0), primaryMaterial);
       break;
     case "event":
-      mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius * 0.68, radius * 1.28, 4, 8), primaryMaterial);
-      mesh.rotation.z = Math.PI / 2;
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.55, radius * 1.1, radius * 1.1), primaryMaterial);
       break;
     case "relationship": {
       const torus = new THREE.Mesh(
@@ -127,18 +176,27 @@ function makeNodeShape(node, color, clusterTint) {
       break;
     }
     case "fact":
+    case "fact_raw":
+    case "fact_extracted":
     default:
       mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 14), primaryMaterial);
       break;
   }
 
+  const field = new THREE.Mesh(
+    new THREE.SphereGeometry(radius * (clusterTint ? 2.15 : 1.95), 14, 14),
+    fieldMaterial,
+  );
   const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * (clusterTint ? 1.95 : 1.55), 12, 12),
+    new THREE.SphereGeometry(radius * (clusterTint ? 1.55 : 1.35), 12, 12),
     haloMaterial,
   );
+  halo.renderOrder = 2;
+  field.renderOrder = 1;
   group.add(halo);
+  group.add(field);
   group.add(mesh);
-  group.userData = { primaryMaterial, haloMaterial };
+  group.userData = { primaryMaterial, haloMaterial, fieldMaterial };
   return group;
 }
 
@@ -370,7 +428,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   const getNodeColor = useCallback((node) => {
       const highlightedNodes = highlightedNodesRef.current;
-      const baseColor = TYPE_COLORS[getNodeType(node)] || TYPE_COLORS.default;
+      const baseColor = getNodeColorBase(node);
       if (highlightedNodes.has(node.id)) {
         return selectedNodeRef.current?.id === node.id ? GRAPH_THEME.accent : GRAPH_THEME.accentHover;
       }

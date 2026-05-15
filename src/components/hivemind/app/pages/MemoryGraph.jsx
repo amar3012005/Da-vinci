@@ -129,6 +129,16 @@ function safeStorageSet(key, value) {
   }
 }
 
+function hexToRgb(hex) {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!match) return { r: 255, g: 255, b: 255 };
+  return {
+    r: parseInt(match[1], 16),
+    g: parseInt(match[2], 16),
+    b: parseInt(match[3], 16),
+  };
+}
+
 function getNodeTimestamp(node) {
   const candidates = [
     node.updatedAt,
@@ -534,6 +544,20 @@ export default function MemoryGraph() {
     return out;
   }, [clusters]);
 
+  const atmosphereStyle = useMemo(() => {
+    const colors = Object.values(clusterColorMap).filter(Boolean).slice(0, 4);
+    const selectedColor = clusterFilter ? (clusterColorMap[clusterFilter] || "#117dff") : null;
+    const palette = selectedColor ? [selectedColor, ...colors.filter((c) => c !== selectedColor)] : colors;
+    const [a = "#117dff", b = "#16a34a", c = "#8b5cf6"] = palette;
+    return {
+      background:
+        `radial-gradient(circle at 18% 22%, rgba(${hexToRgb(a).r},${hexToRgb(a).g},${hexToRgb(a).b},0.10) 0%, rgba(255,255,255,0) 34%),` +
+        `radial-gradient(circle at 80% 24%, rgba(${hexToRgb(b).r},${hexToRgb(b).g},${hexToRgb(b).b},0.08) 0%, rgba(255,255,255,0) 30%),` +
+        `radial-gradient(circle at 56% 78%, rgba(${hexToRgb(c).r},${hexToRgb(c).g},${hexToRgb(c).b},0.09) 0%, rgba(255,255,255,0) 38%),` +
+        `linear-gradient(180deg, rgba(250,249,244,0.96) 0%, rgba(247,245,240,0.92) 100%)`,
+    };
+  }, [clusterColorMap, clusterFilter]);
+
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
   // total node count so dense graphs don't overlap.
@@ -676,7 +700,7 @@ export default function MemoryGraph() {
   }, [graphData.nodes, layerFilter, temporalFilteredNodes]);
 
   return (
-    <div className="h-screen bg-[radial-gradient(circle_at_top,_#f5f3ef_0%,_#faf9f4_40%,_#f8f6f1_100%)] flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
       {/* Top bar */}
       <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/84 backdrop-blur-xl px-4 py-3 flex flex-wrap items-center gap-2 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 pr-2">
@@ -852,6 +876,14 @@ export default function MemoryGraph() {
 
       {/* Graph canvas */}
       <div className="flex-1 relative">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at center, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 72%, rgba(255,255,255,0.36) 100%)",
+            mixBlendMode: "screen",
+          }}
+        />
         {loading && graphData.nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="flex flex-col items-center gap-3">
