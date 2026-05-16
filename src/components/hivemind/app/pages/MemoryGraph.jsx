@@ -35,9 +35,9 @@ import MemoryGraph3D from "./MemoryGraph3D";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 const EDGE_COLORS = {
-  Updates: "#117dff", // blue — evolution
-  Extends: "#16a34a", // green — deepening
-  Derives: "#8b5cf6", // purple — inference
+  Updates: "#4c4943",
+  Extends: "#706a61",
+  Derives: "#5c5851",
 };
 const EDGE_LABELS = {
   Updates: "Updates",
@@ -45,13 +45,13 @@ const EDGE_LABELS = {
   Derives: "Derives",
 };
 const TYPE_COLORS = {
-  fact: "#117dff",
-  preference: "#d97706",
-  decision: "#dc2626",
-  lesson: "#16a34a",
-  goal: "#8b5cf6",
-  event: "#0891b2",
-  relationship: "#db2777",
+  fact: "#5f5b53",
+  preference: "#7a746b",
+  decision: "#24221f",
+  lesson: "#676158",
+  goal: "#545048",
+  event: "#817b72",
+  relationship: "#4a4640",
   default: "#525252",
 };
 const TYPE_LEGEND = [
@@ -67,39 +67,38 @@ const TYPE_LEGEND = [
 // Layer filter definitions for UI
 const LAYER_FILTERS = [
   { key: "all", label: "All", icon: null },
-  { key: "fact", label: "Facts", icon: "◆", color: "#10b981" },
-  { key: "tara", label: "TARA", icon: "⬡", color: "#a855f7" },
-  { key: "tara-insight", label: "Insights", icon: "⭐", color: "#f97316" },
-  { key: "promoted", label: "Risks", icon: "⚠", color: "#ef4444" },
-  { key: "verified", label: "Verified", icon: "✓", color: "#22c55e" },
-  { key: "observation", label: "Obs", icon: "▢", color: "#f59e0b" },
+  { key: "fact", label: "Facts", icon: "◆", color: "#5f5b53" },
+  { key: "tara", label: "TARA", icon: "⬡", color: "#4a4640" },
+  { key: "tara-insight", label: "Insights", icon: "★", color: "#24221f" },
+  { key: "promoted", label: "Risks", icon: "△", color: "#36332d" },
+  { key: "verified", label: "Verified", icon: "✓", color: "#5c5851" },
+  { key: "observation", label: "Obs", icon: "▢", color: "#7a746b" },
 ];
 const USER_COLORS = [
-  "#117dff",
-  "#16a34a",
-  "#d97706",
-  "#8b5cf6",
-  "#dc2626",
-  "#0891b2",
-  "#db2777",
+  "#1f1f1f",
+  "#36332d",
+  "#4c4943",
+  "#5c5851",
+  "#706a61",
+  "#817b72",
+  "#928c82",
   "#525252",
 ];
 
-// Cluster palette — distinct enough to read at thumbnail scale.
-// Keeps the existing light-theme aesthetic; no neon, no dark mode.
+// Cluster palette stays monochrome; density and selection carry the hierarchy.
 const CLUSTER_COLORS = [
-  "#117dff", // blue
-  "#16a34a", // green
-  "#d97706", // amber
-  "#8b5cf6", // violet
-  "#dc2626", // red
-  "#0891b2", // cyan
-  "#db2777", // pink
-  "#65a30d", // lime
-  "#7c3aed", // purple
-  "#ea580c", // orange
-  "#0d9488", // teal
-  "#9333ea", // magenta
+  "#2a2926",
+  "#3a3731",
+  "#4a4640",
+  "#5a554c",
+  "#6b655b",
+  "#7c7569",
+  "#8b8478",
+  "#9b9386",
+  "#aaa296",
+  "#b8afa3",
+  "#c6beb3",
+  "#d2cbc0",
 ];
 
 const ORPHAN_COLOR = "#a3a3a3"; // for `_orphan` bucket (no edges)
@@ -129,15 +128,8 @@ function safeStorageSet(key, value) {
   }
 }
 
-function hexToRgb(hex) {
-  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!match) return { r: 255, g: 255, b: 255 };
-  return {
-    r: parseInt(match[1], 16),
-    g: parseInt(match[2], 16),
-    b: parseInt(match[3], 16),
-  };
-}
+// hexToRgb removed — old atmosphereStyle used it for cluster-colored
+// gradients; mono atmosphereStyle uses fixed greyscale rgba values now.
 
 function getNodeTimestamp(node) {
   const candidates = [
@@ -266,7 +258,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
             {node.tags.map((t) => (
               <span
                 key={t}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20"
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-[#0a0a0a]/8 text-[#0a0a0a] border border-[#0a0a0a]/15"
               >
                 {t}
               </span>
@@ -322,7 +314,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
                   <button
                     key={`out-${i}`}
                     onClick={() => onNavigate(targetId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/20 text-left transition-colors group"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#0a0a0a]/20 text-left transition-colors group"
                   >
                     <GitBranch
                       size={10}
@@ -337,7 +329,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
                     <span className="text-[9px] font-mono text-[#a3a3a3]">
                       ({((e.confidence || 0) * 100).toFixed(0)}%)
                     </span>
-                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#117dff]">
+                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#0a0a0a]">
                       {targetTitle}
                     </span>
                   </button>
@@ -352,7 +344,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
                   <button
                     key={`in-${i}`}
                     onClick={() => onNavigate(sourceId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/20 text-left transition-colors group"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#0a0a0a]/20 text-left transition-colors group"
                   >
                     <GitBranch
                       size={10}
@@ -368,7 +360,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
                     <span className="text-[9px] font-mono text-[#a3a3a3]">
                       ({((e.confidence || 0) * 100).toFixed(0)}%)
                     </span>
-                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#117dff]">
+                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#0a0a0a]">
                       {sourceTitle}
                     </span>
                   </button>
@@ -418,6 +410,14 @@ export default function MemoryGraph() {
   const [temporalProgress, setTemporalProgress] = useState(1);
   const [isLiveMode, setIsLiveMode] = useState(true);
   const [temporalMode, setTemporalMode] = useState('travel'); // 'travel' | 'diff'
+  // Graph-only theme toggle — affects ONLY the 3D canvas, not the rest of
+  // the HIVEMIND UI. Persisted to localStorage so the choice sticks.
+  const [graphTheme, setGraphTheme] = useState(() => {
+    try { return localStorage.getItem("hm-graph-theme") || "day"; } catch { return "day"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("hm-graph-theme", graphTheme); } catch { /* ignore */ }
+  }, [graphTheme]);
   const [temporalPlaying, setTemporalPlaying] = useState(false);
   const [temporalSpeed, setTemporalSpeed] = useState(1); // 1x / 2x / 4x
   // Diff window — when in diff mode, highlight nodes added in the LAST
@@ -551,18 +551,26 @@ export default function MemoryGraph() {
   }, [clusters]);
 
   const atmosphereStyle = useMemo(() => {
-    const colors = Object.values(clusterColorMap).filter(Boolean).slice(0, 4);
-    const selectedColor = clusterFilter ? (clusterColorMap[clusterFilter] || "#117dff") : null;
-    const palette = selectedColor ? [selectedColor, ...colors.filter((c) => c !== selectedColor)] : colors;
-    const [a = "#117dff", b = "#16a34a", c = "#8b5cf6"] = palette;
+    if (graphTheme === "night") {
+      // Cosmic monochrome — deep black with two faint radial pools (think
+      // distant nebulae) and a subtle vignette. No chroma anywhere.
+      return {
+        background:
+          `radial-gradient(circle at 22% 26%, rgba(255,255,255,0.045) 0%, rgba(0,0,0,0) 36%),` +
+          `radial-gradient(circle at 78% 70%, rgba(255,255,255,0.035) 0%, rgba(0,0,0,0) 38%),` +
+          `radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 100%),` +
+          `linear-gradient(180deg, #07080b 0%, #04050a 100%)`,
+      };
+    }
+    // Day — ink-on-paper monochrome. Soft warm-grey wash, no chroma.
     return {
       background:
-        `radial-gradient(circle at 18% 22%, rgba(${hexToRgb(a).r},${hexToRgb(a).g},${hexToRgb(a).b},0.10) 0%, rgba(255,255,255,0) 34%),` +
-        `radial-gradient(circle at 80% 24%, rgba(${hexToRgb(b).r},${hexToRgb(b).g},${hexToRgb(b).b},0.08) 0%, rgba(255,255,255,0) 30%),` +
-        `radial-gradient(circle at 56% 78%, rgba(${hexToRgb(c).r},${hexToRgb(c).g},${hexToRgb(c).b},0.09) 0%, rgba(255,255,255,0) 38%),` +
-        `linear-gradient(180deg, rgba(250,249,244,0.96) 0%, rgba(247,245,240,0.92) 100%)`,
+        `radial-gradient(circle at 18% 22%, rgba(10,10,10,0.04) 0%, rgba(255,255,255,0) 32%),` +
+        `radial-gradient(circle at 80% 24%, rgba(10,10,10,0.03) 0%, rgba(255,255,255,0) 30%),` +
+        `radial-gradient(circle at 56% 78%, rgba(10,10,10,0.05) 0%, rgba(255,255,255,0) 38%),` +
+        `linear-gradient(180deg, rgba(252,251,247,1) 0%, rgba(244,241,234,1) 100%)`,
     };
-  }, [clusterColorMap, clusterFilter]);
+  }, [graphTheme]);
 
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
@@ -749,8 +757,8 @@ export default function MemoryGraph() {
       {/* Top bar */}
       <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/84 backdrop-blur-xl px-4 py-3 flex flex-wrap items-center gap-2 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 pr-2">
-          <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center">
-            <Network size={16} className="text-[#117dff]" />
+          <div className="w-8 h-8 rounded-lg bg-[#0a0a0a]/8 flex items-center justify-center">
+            <Network size={16} className="text-[#0a0a0a]" />
           </div>
           <div>
             <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a] leading-none">
@@ -772,14 +780,14 @@ export default function MemoryGraph() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={matchCount > 0 ? `Search memories (${matchCount})` : "Search memories"}
-            className="w-full pl-8 pr-3 py-2 border border-[#e3e0db] rounded-xl text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-[#faf9f4]"
+            className="w-full pl-8 pr-3 py-2 border border-[#e3e0db] rounded-xl text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#0a0a0a]/35 bg-[#faf9f4]"
           />
         </div>
 
         <div className="relative">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-['Space_Grotesk'] border border-[#e3e0db] text-[#525252] hover:border-[#117dff]/20 transition-colors bg-[#faf9f4]"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-['Space_Grotesk'] border border-[#e3e0db] text-[#525252] hover:border-[#0a0a0a]/20 transition-colors bg-[#faf9f4]"
           >
             <Filter size={12} />
             {projectFilter || "All Projects"}
@@ -809,7 +817,7 @@ export default function MemoryGraph() {
                       setProjectFilter(p);
                       setShowFilters(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] hover:bg-[#faf9f4] ${projectFilter === p ? "text-[#117dff] font-semibold" : "text-[#525252]"}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] hover:bg-[#faf9f4] ${projectFilter === p ? "text-[#0a0a0a] font-semibold" : "text-[#525252]"}`}
                   >
                     {p}
                   </button>
@@ -824,7 +832,7 @@ export default function MemoryGraph() {
             <select
               value={clusterFilter || ""}
               onChange={(e) => setClusterFilter(e.target.value || null)}
-              className="appearance-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] pl-7 pr-7 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#117dff]/20 transition-colors focus:outline-none cursor-pointer"
+              className="appearance-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] pl-7 pr-7 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#0a0a0a]/20 transition-colors focus:outline-none cursor-pointer"
             >
               <option value="">All Clusters</option>
               {clusters.filter((c) => c.id !== "_orphan").map((c) => {
@@ -834,7 +842,7 @@ export default function MemoryGraph() {
             </select>
             <span
               className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-              style={{ backgroundColor: clusterFilter ? (clusterColorMap[clusterFilter] || "#117dff") : "#a3a3a3" }}
+              style={{ backgroundColor: clusterFilter ? (clusterColorMap[clusterFilter] || "#0a0a0a") : "#a3a3a3" }}
             />
             <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
           </div>
@@ -852,7 +860,7 @@ export default function MemoryGraph() {
               disabled={option.disabled}
               onClick={() => !option.disabled && setScope(option.key)}
               className={`rounded-lg px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.08em] ${
-                scope === option.key ? "bg-[#117dff]/10 text-[#117dff]" : "text-[#737373]"
+                scope === option.key ? "bg-[#0a0a0a]/8 text-[#0a0a0a]" : "text-[#737373]"
               } ${option.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
             >
               {option.label}
@@ -864,7 +872,7 @@ export default function MemoryGraph() {
           onClick={() => setShowLegend((value) => !value)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
             showLegend
-              ? "border-[#117dff]/25 bg-[#117dff]/8 text-[#117dff]"
+              ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/8 text-[#0a0a0a]"
               : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
           }`}
         >
@@ -876,7 +884,7 @@ export default function MemoryGraph() {
           onClick={() => setIsLiveMode((value) => !value)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
             isLiveMode
-              ? "border-[#16a34a]/25 bg-[#16a34a]/8 text-[#15803d]"
+              ? "border-[#0a0a0a]/18 bg-[#0a0a0a]/7 text-[#0a0a0a]"
               : "border-[#e3e0db] bg-[#faf9f4] text-[#737373]"
           }`}
         >
@@ -889,7 +897,7 @@ export default function MemoryGraph() {
             setPageIndexRefreshKey((k) => k + 1);
             setPageIndexModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0a0a0a] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#262626] transition-colors"
         >
           <MapIcon size={12} />
           Memory Map
@@ -898,14 +906,14 @@ export default function MemoryGraph() {
         <button
           onClick={fetchGraph}
           disabled={loading}
-          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors disabled:opacity-40"
+          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#0a0a0a]/20 transition-colors disabled:opacity-40"
           title="Refresh"
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => graphRef.current?.fitView?.(400)}
-          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
+          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#0a0a0a]/20 transition-colors"
           title="Fit to view"
         >
           <Maximize2 size={13} />
@@ -969,6 +977,7 @@ export default function MemoryGraph() {
             }}
             onViewStateChange={undefined}
             backgroundColor="rgba(0,0,0,0)"
+            theme={graphTheme}
             width={
               typeof window !== "undefined"
                 ? window.innerWidth - (selectedNode ? 340 : 0) - 260
@@ -981,16 +990,36 @@ export default function MemoryGraph() {
         )}
 
         {graphData.nodes.length > 0 && (
-          <div className="absolute top-4 left-4 z-10 w-[260px] rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between mb-2">
+          <div
+            className={`absolute top-4 left-4 z-10 w-[260px] rounded-2xl border backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-colors ${
+              graphTheme === "night"
+                ? "border-white/10 bg-white/[0.04]"
+                : "border-[#e3e0db] bg-white/88"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2 gap-2">
               <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                <p className={`text-[10px] font-mono uppercase tracking-[0.14em] ${graphTheme === "night" ? "text-[#a3a3a3]" : "text-[#8b857d]"}`}>
                   Graph Controls
                 </p>
-                <p className="text-[11px] text-[#525252] font-['Space_Grotesk'] mt-1">
+                <p className={`text-[11px] font-['Space_Grotesk'] mt-1 ${graphTheme === "night" ? "text-[#c8c4bc]" : "text-[#525252]"}`}>
                   fit-to-window, no scroll
                 </p>
               </div>
+              {/* Day / Night toggle — graph only, not whole app */}
+              <button
+                onClick={() => setGraphTheme((t) => (t === "day" ? "night" : "day"))}
+                className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] transition-colors ${
+                  graphTheme === "night"
+                    ? "border-white/15 bg-white/[0.06] text-[#f4f1ea] hover:bg-white/[0.10]"
+                    : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:bg-[#f3f1ec]"
+                }`}
+                title={graphTheme === "night" ? "Switch to Day" : "Switch to Night (cosmic)"}
+                aria-label="Toggle graph theme"
+              >
+                <span aria-hidden="true">{graphTheme === "night" ? "☾" : "☀"}</span>
+                <span>{graphTheme === "night" ? "Night" : "Day"}</span>
+              </button>
             </div>
             <div className="mb-2">
               <div className="flex flex-wrap gap-1">
