@@ -805,14 +805,22 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // (mode='focus'). Far zoom = mode='hidden' = opacity 0 = no noise.
       .linkThreeObjectExtend(true)
       .linkThreeObject((link) => makeLinkLabelSprite(link, themeRef.current.name))
-      .linkPositionUpdate((sprite, { start, end }, link) => {
-        if (!sprite || !start || !end) return;
-        // Position sprite at midpoint of link
-        sprite.position.set(
-          (start.x + end.x) / 2,
-          (start.y + end.y) / 2,
-          (start.z + end.z) / 2,
-        );
+      .linkPositionUpdate((sprite, coords, link) => {
+        // Defensive: ForceGraph occasionally calls this with partially
+        // initialized endpoints during the first frame after a graph swap
+        // (start or end can be undefined / NaN). Guard every read.
+        if (!sprite || !sprite.material || !coords) return;
+        const start = coords.start;
+        const end = coords.end;
+        if (!start || !end) { sprite.material.opacity = 0; return; }
+        const sx = start.x, sy = start.y, sz = start.z;
+        const ex = end.x,   ey = end.y,   ez = end.z;
+        if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Number.isFinite(sz) ||
+            !Number.isFinite(ex) || !Number.isFinite(ey) || !Number.isFinite(ez)) {
+          sprite.material.opacity = 0;
+          return;
+        }
+        sprite.position.set((sx + ex) / 2, (sy + ey) / 2, (sz + ez) / 2);
         // Distance-gated opacity
         const view = viewStateRef.current;
         const mode = view.relationLabelMode;
