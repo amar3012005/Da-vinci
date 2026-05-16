@@ -80,6 +80,56 @@ const RELATION_WEIGHTS = {
   default:     { weight: 0.70, width: 1.0, opacity: 0.55 },
 };
 
+// ─── Operator-keyed edge styling (overrides mono palette) ────────────────
+// Per user spec:
+//   Updates    = dashed blue  (evolution / mutation)
+//   Extends    = solid green  (deepening)
+//   Derives    = solid purple (inference / synthesis)
+//   Contradicts= solid red    (conflict)
+//   Supports   = solid emerald (corroboration)
+//   References = thin gray    (mention only)
+// Color overrides are theme-aware via mixHex against the active accent so
+// they still read well on the black night canvas.
+const EDGE_OPERATOR_STYLE = {
+  Updates:     { color: "#117dff", dash: [6, 4], width: 1.6 },
+  Extends:     { color: "#16a34a", dash: null,    width: 1.4 },
+  Derives:     { color: "#8b5cf6", dash: null,    width: 1.4 },
+  Contradicts: { color: "#dc2626", dash: [3, 3],  width: 1.6 },
+  Supports:    { color: "#059669", dash: null,    width: 1.2 },
+  References:  { color: "#9ca3af", dash: [1, 3],  width: 0.9 },
+  default:     { color: null,      dash: null,    width: 1.0 },
+};
+
+// ─── Per-node fact-type styling (overrides mono palette) ────────────────
+// Per user spec:
+//   extracted-fact → green square w/ glow field
+//   fact           → blue circle w/ glow field
+// Detection priority: tags array first, then memory_type, then nodeLayer.
+function getFactKind(node) {
+  const tags = node?.tags || [];
+  const tagSet = new Set(tags.map((t) => String(t).toLowerCase()));
+  if (tagSet.has("extracted-fact") || tagSet.has("fact-extracted")) return "extracted-fact";
+  const mt = String(node?.memory_type || node?.nodeLayer || "").toLowerCase();
+  if (mt === "fact_extracted") return "extracted-fact";
+  if (mt === "fact" || mt === "fact_raw" || tagSet.has("fact")) return "fact";
+  return null;
+}
+
+const FACT_STYLE = {
+  "extracted-fact": {
+    shape: "square",
+    fill:   "#16a34a", // green-600
+    glow:   "rgba(22,163,74,0.30)",
+    border: "#15803d",
+  },
+  fact: {
+    shape: "circle",
+    fill:   "#117dff", // hive blue
+    glow:   "rgba(17,125,255,0.30)",
+    border: "#0066e0",
+  },
+};
+
 function mixHex(a, b, t) {
   const pa = a.replace("#", "");
   const pb = b.replace("#", "");
@@ -275,20 +325,58 @@ export default function MemoryGraph2D() {
   const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
     if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
     const r = getNodeRadius(node);
-    const color = getNodeColor(node);
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    if (node.clusterRole === "hub") {
+    const factKind = getFactKind(node);
+
+    if (factKind) {
+      // ── Fact-type node: shape + colored glow field ──
+      const style = FACT_STYLE[factKind];
+      // Glow halo (radial gradient via stacked translucent fills)
+      const glowR = r * 2.6;
+      ctx.save();
+      const grad = ctx.createRadialGradient(node.x, node.y, r * 0.6, node.x, node.y, glowR);
+      grad.addColorStop(0, style.glow);
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(node.x - glowR, node.y - glowR, glowR * 2, glowR * 2);
+      ctx.restore();
+
+      // Body
+      if (style.shape === "square") {
+        const s = r * 1.8;
+        ctx.fillStyle = style.fill;
+        ctx.strokeStyle = style.border;
+        ctx.lineWidth = 1.2 / globalScale;
+        ctx.beginPath();
+        ctx.rect(node.x - s / 2, node.y - s / 2, s, s);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = style.fill;
+        ctx.strokeStyle = style.border;
+        ctx.lineWidth = 1.2 / globalScale;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else {
+      // ── Mono node (existing palette) ──
+      const color = getNodeColor(node);
       ctx.beginPath();
-      ctx.arc(node.x, node.y, r + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 0.9 / globalScale;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      if (node.clusterRole === "hub") {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 0.9 / globalScale;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     }
+
     if (selectedNode?.id === node.id) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, r + 4 / globalScale, 0, Math.PI * 2);
@@ -320,15 +408,27 @@ export default function MemoryGraph2D() {
     if (!s || !t || !Number.isFinite(s.x) || !Number.isFinite(t.x) ||
         !Number.isFinite(s.y) || !Number.isFinite(t.y)) return;
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
+    const op = EDGE_OPERATOR_STYLE[link?.type] || EDGE_OPERATOR_STYLE.default;
     const focused = selectedNode && (s.id === selectedNode.id || t.id === selectedNode.id);
+
+    ctx.save();
+    if (op.dash) {
+      // Dash scaled by zoom so pattern stays visually consistent.
+      const k = Math.max(0.5, 1 / Math.max(0.5, globalScale * 0.7));
+      ctx.setLineDash(op.dash.map((d) => d * k));
+    }
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.lineTo(t.x, t.y);
-    ctx.strokeStyle = getLinkColor(link);
+    // Operator color overrides mono palette when defined; falls back to
+    // theme-aware mixHex for unknown types (or 'default' bucket).
+    ctx.strokeStyle = op.color || getLinkColor(link);
     ctx.globalAlpha = focused ? 1 : style.opacity;
-    ctx.lineWidth = (focused ? style.width * 1.3 : style.width) / Math.max(1, globalScale * 0.6);
+    ctx.lineWidth = ((focused ? op.width * 1.3 : op.width) || style.width) / Math.max(1, globalScale * 0.6);
     ctx.stroke();
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
+    ctx.restore();
     // Perspective label
     if (globalScale < 2.0 && !focused) return;
     const type = link.type || "Relates";
