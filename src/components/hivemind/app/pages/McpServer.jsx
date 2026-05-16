@@ -1083,19 +1083,39 @@ export default function McpServer() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               {
-                title: 'Claude Desktop / Claude Code',
+                title: 'Claude Desktop / Code · macOS & Linux',
                 icon: Terminal,
-                // Universal stdio bridge via mcp-remote — works on every
-                // Claude Desktop version (pre-0.7 lacks native HTTP) and on
-                // Claude Code (which also accepts JSON config). Write to:
-                //   macOS  : ~/Library/Application Support/Claude/claude_desktop_config.json
-                //   Linux  : ~/.config/Claude/claude_desktop_config.json
-                //   Windows: %APPDATA%\\Claude\\claude_desktop_config.json
                 config: `{
   "mcpServers": {
     "hivemind": {
       "command": "npx",
       "args": [
+        "-y",
+        "mcp-remote",
+        "https://core.hivemind.davinciai.eu:8050/api/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_API_KEY"
+      ]
+    }
+  }
+}`,
+              },
+              {
+                title: 'Claude Desktop / Code · Windows',
+                icon: Terminal,
+                // Windows: Claude Desktop wraps configured command in
+                // cmd.exe /C without quoting space-bearing paths. Bare
+                // `npx` → cmd splits on space in the resolved path
+                // (C:\Program Files\nodejs\npx.cmd) → "Der Befehl
+                // C:\Program ist falsch geschrieben". Wrap with cmd /c
+                // explicitly so PATH+PATHEXT does the lookup safely.
+                config: `{
+  "mcpServers": {
+    "hivemind": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
         "-y",
         "mcp-remote",
         "https://core.hivemind.davinciai.eu:8050/api/mcp",

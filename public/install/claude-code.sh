@@ -56,17 +56,38 @@ backup_file "$CC_CONFIG"
 # (pre-0.7 Desktop lacks native HTTP transport). The bridge process
 # spawns on stdio and proxies JSON-RPC to the HIVEMIND HTTP endpoint
 # with the Authorization header. No descriptor pre-fetch — direct RPC.
-json_merge "$CC_CONFIG" \
-  ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
-     \"command\": \"npx\",
-     \"args\": [
-       \"-y\",
-       \"mcp-remote\",
-       \"$HIVEMIND_MCP_URL\",
-       \"--header\",
-       \"Authorization: Bearer $HIVEMIND_KEY\"
-     ]
-   }"
+# Per-OS spawn shape — Windows needs `cmd /c npx` wrapper (see Desktop
+# branch below for full reasoning).
+case "$OS" in
+  windows|wsl)
+    json_merge "$CC_CONFIG" \
+      ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+         \"command\": \"cmd\",
+         \"args\": [
+           \"/c\",
+           \"npx\",
+           \"-y\",
+           \"mcp-remote\",
+           \"$HIVEMIND_MCP_URL\",
+           \"--header\",
+           \"Authorization: Bearer $HIVEMIND_KEY\"
+         ]
+       }"
+    ;;
+  *)
+    json_merge "$CC_CONFIG" \
+      ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+         \"command\": \"npx\",
+         \"args\": [
+           \"-y\",
+           \"mcp-remote\",
+           \"$HIVEMIND_MCP_URL\",
+           \"--header\",
+           \"Authorization: Bearer $HIVEMIND_KEY\"
+         ]
+       }"
+    ;;
+esac
 
 ok "Wrote mcpServers.hivemind (stdio bridge via mcp-remote) to $CC_CONFIG"
 
@@ -91,17 +112,45 @@ if [ -n "${CD_CONFIG:-}" ]; then
   pkill -x "Claude Desktop" 2>/dev/null || true
   ensure_json_file "$CD_CONFIG"
   backup_file "$CD_CONFIG"
-  json_merge "$CD_CONFIG" \
-    ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
-       \"command\": \"npx\",
-       \"args\": [
-         \"-y\",
-         \"mcp-remote\",
-         \"$HIVEMIND_MCP_URL\",
-         \"--header\",
-         \"Authorization: Bearer $HIVEMIND_KEY\"
-       ]
-     }"
+  # ── Per-OS spawn shape ──
+  # Windows: Claude Desktop wraps the configured command in
+  #   `cmd.exe /C <command> <args>` WITHOUT quoting paths that contain
+  #   spaces. If command is set to the full path `C:\Program Files\
+  #   nodejs\npx.cmd`, cmd splits on space → "Der Befehl C:\Program ist
+  #   entweder falsch geschrieben…". Solution: spawn `cmd /c npx ...`
+  #   so PATH resolution picks the right binary (.cmd extension via
+  #   PATHEXT) with no full-path-with-space leakage.
+  # macOS / Linux / WSL: bare `npx` is safe — no space issue.
+  case "$OS" in
+    windows|wsl)
+      json_merge "$CD_CONFIG" \
+        ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+           \"command\": \"cmd\",
+           \"args\": [
+             \"/c\",
+             \"npx\",
+             \"-y\",
+             \"mcp-remote\",
+             \"$HIVEMIND_MCP_URL\",
+             \"--header\",
+             \"Authorization: Bearer $HIVEMIND_KEY\"
+           ]
+         }"
+      ;;
+    *)
+      json_merge "$CD_CONFIG" \
+        ".mcpServers = (.mcpServers // {}) | .mcpServers.hivemind = {
+           \"command\": \"npx\",
+           \"args\": [
+             \"-y\",
+             \"mcp-remote\",
+             \"$HIVEMIND_MCP_URL\",
+             \"--header\",
+             \"Authorization: Bearer $HIVEMIND_KEY\"
+           ]
+         }"
+      ;;
+  esac
   ok "Wrote mcpServers.hivemind (stdio bridge) to $CD_CONFIG"
 fi
 

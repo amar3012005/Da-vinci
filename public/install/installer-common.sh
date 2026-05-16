@@ -54,18 +54,22 @@ abort() { fail "$1"; exit 1; }
 # OS detection
 # ──────────────────────────────────────────────────────────────────────
 detect_os() {
-  case "$(uname -s)" in
-    Darwin*)   OS="macos" ;;
-    Linux*)
-      if grep -qiE "(microsoft|wsl)" /proc/version 2>/dev/null; then
-        OS="wsl"
-      else
-        OS="linux"
-      fi
-      ;;
-    MINGW*|MSYS*|CYGWIN*) OS="windows" ;;
-    *) OS="unknown" ;;
-  esac
+  # Respect pre-set OS so test harnesses + CI can pin a target without
+  # uname-based override.
+  if [ -z "${OS:-}" ] || [ "$OS" = "unknown" ]; then
+    case "$(uname -s)" in
+      Darwin*)   OS="macos" ;;
+      Linux*)
+        if grep -qiE "(microsoft|wsl)" /proc/version 2>/dev/null; then
+          OS="wsl"
+        else
+          OS="linux"
+        fi
+        ;;
+      MINGW*|MSYS*|CYGWIN*) OS="windows" ;;
+      *) OS="unknown" ;;
+    esac
+  fi
   ARCH="$(uname -m)"
   export OS ARCH
 }
