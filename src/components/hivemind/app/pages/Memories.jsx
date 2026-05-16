@@ -182,12 +182,56 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
         {memory.memory_type && <TypeBadge type={memory.memory_type} />}
         {memory.source && <SourceBadge source={memory.source} />}
         <RelationshipIndicator memory={memory} />
-        {memory.source_platform && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[#a3a3a3] font-mono">
-            <Monitor size={10} />
-            {memory.source_platform}
-          </span>
-        )}
+        {(() => {
+          // Source platform may live at top level OR inside source_metadata
+          // (Gmail/Drive/Calendar memories all write to source_metadata).
+          // Resolve and render a consistent badge regardless of provider.
+          const sp =
+            memory.source_platform ||
+            memory.source_metadata?.source_platform ||
+            memory.metadata?.source_platform ||
+            null;
+          if (!sp) return null;
+          const SOURCE_LABEL = {
+            gmail: 'Gmail',
+            google_drive: 'Drive',
+            google_calendar: 'Calendar',
+            google_docs: 'Docs',
+            google_sheets: 'Sheets',
+            google_slides: 'Slides',
+            google_contacts: 'Contacts',
+            google_chat: 'Google Chat',
+            google_tasks: 'Tasks',
+            google_forms: 'Forms',
+            slack: 'Slack',
+            notion: 'Notion',
+            github: 'GitHub',
+            knowledge_base: 'Company Info',
+            document: 'Company Info',
+            chat: 'Talk to HIVE',
+            'talk-to-hive': 'Talk to HIVE',
+          };
+          const SOURCE_COLOR = {
+            gmail: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+            google_drive: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+            google_calendar: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+            google_docs: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
+            google_sheets: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+            google_slides: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+            slack: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+            knowledge_base: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+            document: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+            chat: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
+          };
+          const label = SOURCE_LABEL[sp] || sp;
+          const c = SOURCE_COLOR[sp] || { bg: 'bg-[#faf9f4]', text: 'text-[#525252]', border: 'border-[#e3e0db]' };
+          return (
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-[0.06em] border ${c.bg} ${c.text} ${c.border}`}>
+              <Monitor size={9} />
+              {label}
+            </span>
+          );
+        })()}
         {memory.document_date && (
           <span className="text-[10px] font-mono text-[#d4d0ca]">
             {new Date(memory.document_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -283,12 +327,22 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
             {memory.memory_type && <TypeBadge type={memory.memory_type} />}
             {memory.source && <SourceBadge source={memory.source} />}
             <RelationshipIndicator memory={memory} />
-            {memory.source_platform && (
-              <span className="inline-flex items-center gap-1 text-xs text-[#a3a3a3] font-mono">
-                <Monitor size={11} />
-                {memory.source_platform}
-              </span>
-            )}
+            {(() => {
+              const sp =
+                memory.source_platform ||
+                memory.source_metadata?.source_platform ||
+                memory.metadata?.source_platform ||
+                null;
+              if (!sp) return null;
+              const LABEL = { gmail: 'Gmail', google_drive: 'Drive', google_calendar: 'Calendar', google_docs: 'Docs', google_sheets: 'Sheets', google_slides: 'Slides', google_contacts: 'Contacts', google_chat: 'Google Chat', google_tasks: 'Tasks', google_forms: 'Forms', slack: 'Slack', notion: 'Notion', github: 'GitHub', knowledge_base: 'Company Info', document: 'Company Info', chat: 'Talk to HIVE', 'talk-to-hive': 'Talk to HIVE' };
+              const COLOR = { gmail: 'bg-red-50 text-red-700 border-red-200', google_drive: 'bg-amber-50 text-amber-700 border-amber-200', google_calendar: 'bg-blue-50 text-blue-700 border-blue-200', google_docs: 'bg-sky-50 text-sky-700 border-sky-200', google_sheets: 'bg-emerald-50 text-emerald-700 border-emerald-200', slack: 'bg-violet-50 text-violet-700 border-violet-200', knowledge_base: 'bg-indigo-50 text-indigo-700 border-indigo-200', document: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+              return (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-[0.08em] border ${COLOR[sp] || 'bg-[#faf9f4] text-[#525252] border-[#e3e0db]'}`}>
+                  <Monitor size={10} />
+                  {LABEL[sp] || sp}
+                </span>
+              );
+            })()}
             <span className="text-xs font-mono text-[#d4d0ca] flex items-center gap-1">
               <Clock size={10} />
               {relativeTime(memory.created_at)}
