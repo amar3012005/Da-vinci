@@ -21,7 +21,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import { motion } from "framer-motion";
-import { Network, RefreshCw, ZoomIn, ZoomOut, Crosshair, Sun, Moon } from "lucide-react";
+import { Network, RefreshCw, ZoomIn, ZoomOut, Crosshair, Sun, Moon, Filter, Check } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 
@@ -177,6 +177,54 @@ function getNodeRadius(node) {
   return Math.max(2.4, base);
 }
 
+// ─── Source classification ───────────────────────────────────────────────
+// Bucket every node into a human-readable source category. Used by the
+// Sources dropdown filter so users can hide/show Gmail / Drive / Calendar
+// / Knowledge Base etc. independently.
+const SOURCE_LABELS = {
+  gmail: "Gmail",
+  google_drive: "Drive",
+  google_calendar: "Calendar",
+  google_docs: "Docs",
+  google_sheets: "Sheets",
+  google_slides: "Slides",
+  google_contacts: "Contacts",
+  google_chat: "Google Chat",
+  google_tasks: "Tasks",
+  google_forms: "Forms",
+  slack: "Slack",
+  notion: "Notion",
+  github: "GitHub",
+  knowledge: "Company Information",
+  knowledge_base: "Company Information",
+  document: "Company Information",
+  chat: "Talk to HIVE",
+  "talk-to-hive": "Talk to HIVE",
+  hivemind: "Manual notes",
+  other: "Other",
+};
+
+function getNodeSource(node) {
+  const sp = node?.source_metadata?.source_platform || node?.source_platform || node?.metadata?.source_platform;
+  if (sp) {
+    const k = String(sp).toLowerCase();
+    if (SOURCE_LABELS[k]) return k;
+  }
+  const tags = node?.tags || [];
+  const tagSet = new Set(tags.map((t) => String(t).toLowerCase()));
+  if (tagSet.has("gmail") || tagSet.has("gmail_thread") || tagSet.has("gmail-thread")) return "gmail";
+  if (tagSet.has("google_drive") || tagSet.has("drive")) return "google_drive";
+  if (tagSet.has("google_calendar") || tagSet.has("calendar")) return "google_calendar";
+  if (tagSet.has("google_docs") || tagSet.has("docs")) return "google_docs";
+  if (tagSet.has("slack")) return "slack";
+  if (tagSet.has("notion")) return "notion";
+  if (tagSet.has("github")) return "github";
+  if (tagSet.has("knowledge-base") || tagSet.has("document-summary") || tagSet.has("schema-record")) return "knowledge";
+  if (tagSet.has("talk-to-hive") || tagSet.has("chat")) return "chat";
+  if (tagSet.has("hivemind") || tagSet.has("manual")) return "hivemind";
+  return "other";
+}
+
 // ─── Normalize backend payload → ForceGraph2D format ─────────────────────
 function normalizeGraphPayload(nodes = [], edges = []) {
   const nodeMap = new Map();
@@ -228,6 +276,17 @@ export default function MemoryGraph2D() {
   const palette = THEMES[theme];
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dims, setDims] = useState({ w: 1200, h: 700 });
+  // Sources filter: set of source keys to HIDE. Persisted to localStorage.
+  const [hiddenSources, setHiddenSources] = useState(() => {
+    try {
+      const raw = localStorage.getItem("hm-graph2d-hidden-sources");
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch { return new Set(); }
+  });
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  useEffect(() => {
+    try { localStorage.setItem("hm-graph2d-hidden-sources", JSON.stringify([...hiddenSources])); } catch { /* */ }
+  }, [hiddenSources]);
 
   // Persist user prefs
   useEffect(() => {
@@ -267,6 +326,34 @@ export default function MemoryGraph2D() {
   }, [nodeLimit, scope]);
 
   useEffect(() => { refetch(); }, [refetch]);
+
+  // Source counts (for dropdown badges) + filtered view.
+  const sourceCounts = useMemo(() => {
+    const counts = new Map();
+    for (const n of graphData.nodes) {
+      const k = getNodeSource(n);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    return counts;
+  }, [graphData.nodes]);
+
+  const visibleGraph = useMemo(() => {
+    if (hiddenSources.size === 0) return graphData;
+    const visibleIds = new Set();
+    const nodes = graphData.nodes.filter((n) => {
+      const k = getNodeSource(n);
+      const ok = !hiddenSources.has(k);
+      if (ok) visibleIds.add(n.id);
+      return ok;
+    });
+    // Keep edges where both endpoints visible
+    const links = graphData.links.filter((l) => {
+      const sId = typeof l.source === "object" ? l.source?.id : l.source;
+      const tId = typeof l.target === "object" ? l.target?.id : l.target;
+      return visibleIds.has(sId) && visibleIds.has(tId);
+    });
+    return { nodes, links };
+  }, [graphData, hiddenSources]);
 
   // ─── Physics tuning ──────────────────────────────────────────────────
   // Spread nodes spatially: strong repulsion, weak center, collision so
@@ -515,6 +602,79 @@ export default function MemoryGraph2D() {
             </button>
           ))}
         </div>
+        {/* Sources dropdown filter */}
+        <div className="relative">
+          <button
+            onClick={() => setSourcesOpen((o) => !o)}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.08em] transition-colors ${
+              theme === "night"
+                ? "border-white/15 bg-white/[0.06] text-[#f4f1ea] hover:bg-white/[0.10]"
+                : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:bg-[#f3f1ec]"
+            }`}
+            title="Filter by source"
+            aria-label="Sources filter"
+          >
+            <Filter size={11} />
+            Sources
+            {hiddenSources.size > 0 && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] ${theme === "night" ? "bg-white/15 text-white" : "bg-[#117dff]/10 text-[#117dff]"}`}>
+                −{hiddenSources.size}
+              </span>
+            )}
+          </button>
+          {sourcesOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setSourcesOpen(false)} />
+              <div className={`absolute right-0 top-full mt-1.5 z-30 w-[240px] rounded-xl border ${palette.panelBorder} ${theme === "night" ? "bg-[#0a0c10]/95" : "bg-white"} backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.15)] p-1.5 max-h-[60vh] overflow-y-auto`}>
+                <div className={`px-2 py-1 text-[9px] font-mono uppercase tracking-[0.12em] ${palette.panelMuted} flex items-center justify-between`}>
+                  <span>Toggle sources</span>
+                  {hiddenSources.size > 0 && (
+                    <button
+                      onClick={() => setHiddenSources(new Set())}
+                      className={`text-[9px] font-mono uppercase ${theme === "night" ? "text-[#9a958d] hover:text-white" : "text-[#737373] hover:text-[#117dff]"}`}
+                    >
+                      Show all
+                    </button>
+                  )}
+                </div>
+                {[...sourceCounts.entries()]
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([key, count]) => {
+                    const hidden = hiddenSources.has(key);
+                    const label = SOURCE_LABELS[key] || key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setHiddenSources((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(key)) next.delete(key);
+                            else next.add(key);
+                            return next;
+                          });
+                        }}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] font-['Space_Grotesk'] transition-colors ${
+                          theme === "night"
+                            ? "text-[#c8c4bc] hover:bg-white/10"
+                            : "text-[#0a0a0a] hover:bg-[#f3f1ec]"
+                        } ${hidden ? "opacity-50" : ""}`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                          hidden
+                            ? (theme === "night" ? "border-white/20" : "border-[#e3e0db]")
+                            : (theme === "night" ? "border-white bg-white" : "border-[#117dff] bg-[#117dff]")
+                        }`}>
+                          {!hidden && <Check size={9} className={theme === "night" ? "text-[#0a0c10]" : "text-white"} strokeWidth={3} />}
+                        </span>
+                        <span className="flex-1 text-left truncate">{label}</span>
+                        <span className={`text-[10px] font-mono ${palette.panelMuted}`}>{count}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </>
+          )}
+        </div>
         {/* Day/Night toggle */}
         <button
           onClick={() => setTheme((t) => (t === "day" ? "night" : "day"))}
@@ -568,7 +728,7 @@ export default function MemoryGraph2D() {
         {graphData.nodes.length > 0 && (
           <ForceGraph2D
             ref={fgRef}
-            graphData={graphData}
+            graphData={visibleGraph}
             width={dims.w}
             height={dims.h}
             backgroundColor={palette.canvasBg}
