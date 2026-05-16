@@ -1085,10 +1085,26 @@ export default function McpServer() {
               {
                 title: 'Claude Desktop / Claude Code',
                 icon: Terminal,
-                config: `claude mcp add --transport http hivemind \
-  "https://core.hivemind.davinciai.eu:8050/api/mcp" \
-  --scope user \
-  --header "Authorization: Bearer YOUR_API_KEY"`,
+                // Universal stdio bridge via mcp-remote — works on every
+                // Claude Desktop version (pre-0.7 lacks native HTTP) and on
+                // Claude Code (which also accepts JSON config). Write to:
+                //   macOS  : ~/Library/Application Support/Claude/claude_desktop_config.json
+                //   Linux  : ~/.config/Claude/claude_desktop_config.json
+                //   Windows: %APPDATA%\\Claude\\claude_desktop_config.json
+                config: `{
+  "mcpServers": {
+    "hivemind": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://core.hivemind.davinciai.eu:8050/api/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_API_KEY"
+      ]
+    }
+  }
+}`,
               },
               {
                 title: 'Cursor / VS Code',
