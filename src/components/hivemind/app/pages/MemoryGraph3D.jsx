@@ -1125,24 +1125,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         });
       }
 
-      if (clustersRef.current.length > 1) {
-        fg.d3Force("clusterBias", (alpha) => {
-          const pull = 0.015;
-          const centroids = clusterCentroidsRef.current || {};
-          for (const node of graphDataRef.current.nodes || []) {
-            if (node.clusterId === "_orphan") continue;
-            const centroid = centroids[node.clusterId];
-            if (!centroid) continue;
-            node.vx = (node.vx || 0) + (centroid.x - (node.x || 0)) * pull * alpha;
-            node.vy = (node.vy || 0) + (centroid.y - (node.y || 0)) * pull * alpha;
-          }
-        });
-      } else {
-        try {
-          fg.d3Force("clusterBias", null);
-        } catch (_error) {
-          // noop
-        }
+      // Cluster centroid pull DISABLED — user wants zero implied
+      // connections. Only real DB relationships should pull nodes
+      // together (via the standard d3 link force). Centroid bias was
+      // making unrelated nodes drift into the same visual cluster,
+      // reading as a "connection" that doesn't exist.
+      try {
+        fg.d3Force("clusterBias", null);
+      } catch (_error) {
+        // noop
       }
 
       fg.d3ReheatSimulation();
