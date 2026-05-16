@@ -30,6 +30,7 @@ import {
   Globe,
   Mail,
   Briefcase,
+  Network,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -254,10 +255,15 @@ function ConfirmDialog({
 
 // ─── Section 1: Brain Metrics Hero ──────────────────────────────────────────
 
-function BrainMetricsHero({ user, org, plan, stats, profileFacts }) {
+// ─── Account Header Card ─────────────────────────────────────────────────────
+// Compact identity card: avatar, name, email, plan/org badges, quick actions,
+// inline stat ticker. Replaces the old dark-themed BrainMetricsHero — same
+// info, lighter footprint, cleaner hierarchy on the page.
+function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) {
   const navigate = useNavigate();
   const nameFromFacts = profileFacts?.find((f) => f.key === 'name')?.value;
   const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'User';
+  const email = user?.email || '—';
 
   const {
     memory_count: rawMemCount,
@@ -266,82 +272,111 @@ function BrainMetricsHero({ user, org, plan, stats, profileFacts }) {
   } = stats || {};
   const memoryCount = rawMemCount || (observation_count > 0 ? observation_count : 0);
   const factCount = profileFacts?.length || 0;
+  const sourceCount = (stats?.top_source_platforms || []).length;
 
-  const sourcePlatforms = stats?.top_source_platforms || [];
+  const stats4 = [
+    { label: 'Memories',    value: memoryCount,        icon: Brain,   to: '/hivemind/app/memories' },
+    { label: 'Connections', value: relationship_count, icon: Link,    to: '/hivemind/app/graph' },
+    { label: 'Facts',       value: factCount,          icon: User,    to: null },
+    { label: 'Sources',     value: sourceCount,        icon: Globe,   to: '/hivemind/app/connectors' },
+  ];
 
-  const metrics = [
-    { label: 'memories', value: memoryCount, icon: Brain },
-    { label: 'connections', value: relationship_count, icon: Link },
-    { label: 'facts', value: factCount, icon: User },
-    { label: 'sources', value: sourcePlatforms.length, icon: Globe },
+  const quickActions = [
+    { label: 'Talk to HIVE', icon: MessageSquare, to: '/hivemind/app/overview', primary: true },
+    { label: 'Memory Graph', icon: Network,       to: '/hivemind/app/graph' },
+    { label: 'Connectors',   icon: ExternalLink,  to: '/hivemind/app/connectors' },
+    { label: 'Settings',     icon: Settings2,     to: '/hivemind/app/settings' },
   ];
 
   return (
-    <motion.div
-      variants={fadeUp}
-      className="rounded-xl overflow-hidden"
-      style={{ background: '#0a0a0f' }}
-    >
-      <div className="p-8">
-        {/* Header row */}
-        <div className="flex items-center gap-5 mb-8">
-          <UserAvatar displayName={displayName} email={user?.email} />
-          <div>
-            <h2 className="text-white text-2xl font-bold font-['Space_Grotesk']">
-              {displayName}&apos;s Second Brain
-            </h2>
-            <div className="flex items-center gap-3 mt-1">
-              {org && (
-                <span className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] flex items-center gap-1.5">
-                  <Building2 size={13} />
-                  {org.name}
-                </span>
-              )}
-              <PlanBadge plan={plan} />
-            </div>
+    <motion.div variants={fadeUp} className="rounded-2xl border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+      {/* Top: identity row */}
+      <div className="p-6 flex flex-col md:flex-row md:items-center gap-5">
+        <UserAvatar displayName={displayName} email={email} />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] truncate">{displayName}</h2>
+          <p className="text-[#737373] text-sm font-mono truncate">{email}</p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            {org && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
+                <Building2 size={11} />
+                {org.name || org.slug || 'Org'}
+              </span>
+            )}
+            <PlanBadge plan={plan} />
+            {user?.role && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
+                <Shield size={11} />
+                {user.role}
+              </span>
+            )}
           </div>
         </div>
+        {/* Sign Out */}
+        <button
+          onClick={onSignOut}
+          className="self-start md:self-center inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#dc2626]/5 transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
 
-        {/* Metric cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {metrics.map(({ label, value, icon: Icon }) => (
-            <div
-              key={label}
-              className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.08] transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Icon size={14} className="text-[#117dff]" />
+      {/* Quick actions */}
+      <div className="px-6 pb-5 grid grid-cols-2 md:grid-cols-4 gap-2">
+        {quickActions.map(({ label, icon: Icon, to, primary }) => (
+          <button
+            key={label}
+            onClick={() => navigate(to)}
+            className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[12.5px] font-semibold font-['Space_Grotesk'] transition-colors ${
+              primary
+                ? 'bg-[#0a0a0a] text-white hover:bg-[#262626]'
+                : 'bg-[#faf9f4] text-[#0a0a0a] border border-[#e3e0db] hover:bg-[#f3f1ec]'
+            }`}
+          >
+            <Icon size={13} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Stat ticker — click to jump */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 border-t border-[#f3f1ec]">
+        {stats4.map(({ label, value, icon: Icon, to }, i) => {
+          const inner = (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <Icon size={12} className="text-[#117dff]" />
+                <span className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.1em]">{label}</span>
               </div>
-              <p className="text-white text-3xl font-bold font-mono leading-none mb-1">
+              <p className="text-[#0a0a0a] text-2xl font-bold font-mono leading-none">
                 <AnimatedCounter value={value} />
               </p>
-              <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider">{label}</p>
+            </>
+          );
+          const borderCls = i < stats4.length - 1 ? 'sm:border-r border-[#f3f1ec]' : '';
+          return to ? (
+            <button
+              key={label}
+              onClick={() => navigate(to)}
+              className={`px-5 py-4 text-left hover:bg-[#faf9f4] transition-colors ${borderCls}`}
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={label} className={`px-5 py-4 ${borderCls}`}>
+              {inner}
             </div>
-          ))}
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => navigate('/hivemind/app/graph')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#117dff] text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-[#0066e0] transition-colors"
-          >
-            View Graph
-            <ArrowRight size={14} />
-          </button>
-          <button
-            onClick={() => navigate('/hivemind/app/chat')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/20 text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-white/10 transition-colors"
-          >
-            <MessageSquare size={14} />
-            Talk to HIVE
-            <ArrowRight size={14} />
-          </button>
-        </div>
+          );
+        })}
       </div>
     </motion.div>
   );
 }
+
+// BrainMetricsHero removed — superseded by AccountHeaderCard above which
+// folds identity, plan/org badges, quick actions, and the stat ticker into
+// one compact light-themed card.
+
 
 // ─── Section 2: Knowledge Identity Card ─────────────────────────────────────
 
@@ -1200,8 +1235,10 @@ function DataPrivacySection() {
 // ─── Main Profile Page ───────────────────────────────────────────────────────
 
 export default function Profile() {
-  const { user, org } = useAuth();
-  const [factsExpanded, setFactsExpanded] = useState(false);
+  const { user, org, logout } = useAuth();
+  // Profile Facts auto-expand by default — they're the most-useful
+  // editable surface on this page, no reason to hide them on first load.
+  const [factsExpanded, setFactsExpanded] = useState(true);
 
   // Fetch persistent profile facts from /api/profiles (plural)
   const profilesQuery = useApiQuery(async () => {
@@ -1234,10 +1271,10 @@ export default function Profile() {
   return (
     <div className="min-h-full">
       {/* Page header */}
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Second Brain Dashboard</h1>
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Your Profile</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          Your knowledge identity, memory footprint, and privacy controls
+          Account info, knowledge identity, and privacy controls
         </p>
       </motion.div>
 
@@ -1247,13 +1284,14 @@ export default function Profile() {
         animate="visible"
         className="space-y-6"
       >
-        {/* Section 1: Brain Metrics Hero */}
-        <BrainMetricsHero
+        {/* Section 1: Account header — identity + quick actions + stat ticker */}
+        <AccountHeaderCard
           user={user}
           org={org}
           plan={statsData?.plan}
           stats={statsData}
           profileFacts={facts}
+          onSignOut={logout}
         />
 
         {/* Section 2: Knowledge Identity Card */}

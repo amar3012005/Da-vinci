@@ -59,29 +59,32 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
     adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
   }
 
+  // Sidebar order: most-used / first-time-user flow first.
+  // 1) Land on Overview → 2) Talk to HIVE (daily driver) → 3) connect data
+  // → 4) inspect memories → 5) explore graph → ...advanced last.
   const sections = [
     {
       label: null,
       items: [
-        { to: '/hivemind/app/overview', icon: LayoutDashboard, label: 'Overview' },
+        { to: '/hivemind/app/overview',   icon: LayoutDashboard, label: 'Overview' },
+        { to: '/hivemind/app/overview',   icon: MessageSquare,   label: 'Talk to HIVE' },
       ],
     },
     {
       label: 'Your Brain',
       items: [
-        { to: '/hivemind/app/memories', icon: Brain, label: 'Memories' },
-        { to: '/hivemind/app/graph', icon: Network, label: 'Memory Graph' },
-        { to: '/hivemind/app/knowledge', icon: BookOpen, label: 'Knowledge Base' },
-        { to: '/hivemind/app/profile', icon: User, label: 'Profile' },
-        { to: '/hivemind/app/connectors', icon: Cable, label: 'Connectors' },
+        // Connectors first — ingestion gate. No data, no brain.
+        { to: '/hivemind/app/connectors', icon: Cable,    label: 'Connectors' },
+        { to: '/hivemind/app/memories',   icon: Brain,    label: 'Memories' },
+        { to: '/hivemind/app/graph',      icon: Network,  label: 'Memory Graph' },
+        { to: '/hivemind/app/knowledge',  icon: BookOpen, label: 'Knowledge Base' },
       ],
     },
     {
       label: 'AI Features',
       items: [
-        { to: '/hivemind/app/overview', icon: MessageSquare, label: 'Talk to HIVE' },
-        { to: '/hivemind/app/web', icon: Globe, label: 'Web Intel' },
-        { to: '/hivemind/app/tara', icon: Mic, label: 'TARA × HIVE' },
+        { to: '/hivemind/app/web',  icon: Globe, label: 'Web Intel' },
+        { to: '/hivemind/app/tara', icon: Mic,   label: 'TARA × HIVE' },
       ],
     },
     {
@@ -95,8 +98,9 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
     {
       label: 'Account',
       items: [
-        { to: '/hivemind/app/billing', icon: CreditCard, label: 'Billing' },
-        { to: '/hivemind/app/settings', icon: Settings, label: 'Settings' },
+        { to: '/hivemind/app/profile',  icon: User,       label: 'Profile' },
+        { to: '/hivemind/app/billing',  icon: CreditCard, label: 'Billing' },
+        { to: '/hivemind/app/settings', icon: Settings,   label: 'Settings' },
       ],
     },
   ];
