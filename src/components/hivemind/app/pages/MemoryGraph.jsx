@@ -410,14 +410,6 @@ export default function MemoryGraph() {
   const [temporalProgress, setTemporalProgress] = useState(1);
   const [isLiveMode, setIsLiveMode] = useState(true);
   const [temporalMode, setTemporalMode] = useState('travel'); // 'travel' | 'diff'
-  // Graph-only theme toggle — affects ONLY the 3D canvas, not the rest of
-  // the HIVEMIND UI. Persisted to localStorage so the choice sticks.
-  const [graphTheme, setGraphTheme] = useState(() => {
-    try { return localStorage.getItem("hm-graph-theme") || "day"; } catch { return "day"; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem("hm-graph-theme", graphTheme); } catch { /* ignore */ }
-  }, [graphTheme]);
   const [temporalPlaying, setTemporalPlaying] = useState(false);
   const [temporalSpeed, setTemporalSpeed] = useState(1); // 1x / 2x / 4x
   // Diff window — when in diff mode, highlight nodes added in the LAST
@@ -551,18 +543,6 @@ export default function MemoryGraph() {
   }, [clusters]);
 
   const atmosphereStyle = useMemo(() => {
-    if (graphTheme === "night") {
-      // Cosmic monochrome — deep black with two faint radial pools (think
-      // distant nebulae) and a subtle vignette. No chroma anywhere.
-      return {
-        background:
-          `radial-gradient(circle at 22% 26%, rgba(255,255,255,0.045) 0%, rgba(0,0,0,0) 36%),` +
-          `radial-gradient(circle at 78% 70%, rgba(255,255,255,0.035) 0%, rgba(0,0,0,0) 38%),` +
-          `radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 100%),` +
-          `linear-gradient(180deg, #07080b 0%, #04050a 100%)`,
-      };
-    }
-    // Day — ink-on-paper monochrome. Soft warm-grey wash, no chroma.
     return {
       background:
         `radial-gradient(circle at 18% 22%, rgba(10,10,10,0.04) 0%, rgba(255,255,255,0) 32%),` +
@@ -570,7 +550,7 @@ export default function MemoryGraph() {
         `radial-gradient(circle at 56% 78%, rgba(10,10,10,0.05) 0%, rgba(255,255,255,0) 38%),` +
         `linear-gradient(180deg, rgba(252,251,247,1) 0%, rgba(244,241,234,1) 100%)`,
     };
-  }, [graphTheme]);
+  }, []);
 
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
@@ -933,14 +913,14 @@ export default function MemoryGraph() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle at center, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 72%, rgba(255,255,255,0.36) 100%)",
-            mixBlendMode: "screen",
+              "radial-gradient(circle at center, rgba(255,252,245,0) 0%, rgba(255,252,245,0.16) 70%, rgba(235,229,218,0.26) 100%)",
+            mixBlendMode: "normal",
           }}
         />
         {loading && graphData.nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
               <span className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">
                 Loading memory graph...
               </span>
@@ -949,7 +929,7 @@ export default function MemoryGraph() {
         )}
 
         {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-xs text-[#dc2626] font-['Space_Grotesk']">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-[#fff8f3] border border-[#d8c7bb] rounded-xl px-4 py-2 text-xs text-[#4a3328] font-['Space_Grotesk']">
             {error}
           </div>
         )}
@@ -977,7 +957,6 @@ export default function MemoryGraph() {
             }}
             onViewStateChange={undefined}
             backgroundColor="rgba(0,0,0,0)"
-            theme={graphTheme}
             width={
               typeof window !== "undefined"
                 ? window.innerWidth - (selectedNode ? 340 : 0) - 260
@@ -990,36 +969,16 @@ export default function MemoryGraph() {
         )}
 
         {graphData.nodes.length > 0 && (
-          <div
-            className={`absolute top-4 left-4 z-10 w-[260px] rounded-2xl border backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.10)] transition-colors ${
-              graphTheme === "night"
-                ? "border-white/10 bg-white/[0.04]"
-                : "border-[#e3e0db] bg-white/88"
-            }`}
-          >
+          <div className="absolute top-4 left-4 z-10 w-[260px] rounded-2xl border border-[#ded8ce] bg-white/86 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
             <div className="flex items-center justify-between mb-2 gap-2">
               <div>
-                <p className={`text-[10px] font-mono uppercase tracking-[0.14em] ${graphTheme === "night" ? "text-[#a3a3a3]" : "text-[#8b857d]"}`}>
+                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
                   Graph Controls
                 </p>
-                <p className={`text-[11px] font-['Space_Grotesk'] mt-1 ${graphTheme === "night" ? "text-[#c8c4bc]" : "text-[#525252]"}`}>
-                  fit-to-window, no scroll
+                <p className="text-[11px] font-['Space_Grotesk'] mt-1 text-[#525252]">
+                  monochrome network view
                 </p>
               </div>
-              {/* Day / Night toggle — graph only, not whole app */}
-              <button
-                onClick={() => setGraphTheme((t) => (t === "day" ? "night" : "day"))}
-                className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] transition-colors ${
-                  graphTheme === "night"
-                    ? "border-white/15 bg-white/[0.06] text-[#f4f1ea] hover:bg-white/[0.10]"
-                    : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:bg-[#f3f1ec]"
-                }`}
-                title={graphTheme === "night" ? "Switch to Day" : "Switch to Night (cosmic)"}
-                aria-label="Toggle graph theme"
-              >
-                <span aria-hidden="true">{graphTheme === "night" ? "☾" : "☀"}</span>
-                <span>{graphTheme === "night" ? "Night" : "Day"}</span>
-              </button>
             </div>
             <div className="mb-2">
               <div className="flex flex-wrap gap-1">
@@ -1029,7 +988,7 @@ export default function MemoryGraph() {
                     onClick={() => setLayerFilter(layer.key)}
                     className={`px-2.5 py-1.5 rounded-lg text-[10px] font-['Space_Grotesk'] border ${
                       layerFilter === layer.key
-                        ? "bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20"
+                        ? "bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15"
                         : "text-[#525252] border-[#ece8e0] bg-[#faf9f4]"
                     }`}
                   >
@@ -1053,7 +1012,7 @@ export default function MemoryGraph() {
                     onClick={() => setNodeLimit(option.key)}
                     className={`rounded-lg px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
                       nodeLimit === option.key
-                        ? "bg-[#117dff]/10 text-[#117dff]"
+                        ? "bg-[#0a0a0a]/8 text-[#0a0a0a]"
                         : "text-[#737373] hover:text-[#525252]"
                     }`}
                   >
@@ -1166,7 +1125,7 @@ export default function MemoryGraph() {
                   onClick={() => setTemporalMode('travel')}
                   className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
                     temporalMode === 'travel'
-                      ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                      ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
                       : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
                   }`}
                 >
@@ -1176,7 +1135,7 @@ export default function MemoryGraph() {
                   onClick={() => setTemporalMode('diff')}
                   className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
                     temporalMode === 'diff'
-                      ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                      ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
                       : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
                   }`}
                 >
@@ -1218,7 +1177,7 @@ export default function MemoryGraph() {
                 />
                 {/* Progress bar underlay — animated fill mirrors temporalProgress */}
                 <div
-                  className="pointer-events-none absolute left-0 top-0 h-2 rounded-full bg-gradient-to-r from-[#117dff] to-[#60a5fa] opacity-60 transition-[width] duration-100"
+                  className="pointer-events-none absolute left-0 top-0 h-2 rounded-full bg-gradient-to-r from-[#0a0a0a] to-[#777168] opacity-55 transition-[width] duration-100"
                   style={{ width: `${Math.round(temporalProgress * 100)}%` }}
                 />
               </div>
@@ -1241,7 +1200,7 @@ export default function MemoryGraph() {
                       <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
                         Δ Added
                       </p>
-                      <p className="text-xs text-[#117dff] font-['Space_Grotesk'] font-semibold">
+                      <p className="text-xs text-[#0a0a0a] font-['Space_Grotesk'] font-semibold">
                         {temporalDiffNodes ? temporalDiffNodes.size : 0}
                       </p>
                     </>
@@ -1250,7 +1209,7 @@ export default function MemoryGraph() {
                       <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
                         Live
                       </p>
-                      <p className="text-xs text-[#15803d] font-['Space_Grotesk']">
+                      <p className="text-xs text-[#36332d] font-['Space_Grotesk']">
                         {isLiveMode ? 'On' : 'Paused'}
                       </p>
                     </>
@@ -1271,7 +1230,7 @@ export default function MemoryGraph() {
                       onClick={() => setDiffWindowMs(opt.ms)}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
                         diffWindowMs === opt.ms
-                          ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+                          ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
                           : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db]'
                       }`}
                     >
@@ -1290,7 +1249,7 @@ export default function MemoryGraph() {
               onClick={() => setShowClusterPanel((v) => !v)}
               className={`w-8 h-8 rounded-lg backdrop-blur border flex items-center justify-center transition-colors mb-1 ${
                 showClusterPanel
-                  ? "bg-[#117dff]/10 border-[#117dff]/30 text-[#117dff]"
+                  ? "bg-[#0a0a0a]/8 border-[#0a0a0a]/20 text-[#0a0a0a]"
                   : "bg-white/90 border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252]"
               }`}
               title="Toggle mind groups panel"
@@ -1371,7 +1330,7 @@ export default function MemoryGraph() {
                         key={c.id}
                         className={`rounded-lg px-2.5 py-2 cursor-pointer transition-all border ${
                           isActive
-                            ? "border-[#117dff]/30 bg-[#117dff]/5"
+                            ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/6"
                             : "border-transparent hover:bg-[#f5f4f0]"
                         }`}
                         onClick={() => {
@@ -1398,7 +1357,7 @@ export default function MemoryGraph() {
                             {topNodes.map((n) => (
                               <div
                                 key={n.id}
-                                className="text-[10px] text-[#525252] truncate cursor-pointer hover:text-[#117dff] transition-colors"
+                                className="text-[10px] text-[#525252] truncate cursor-pointer hover:text-[#0a0a0a] transition-colors"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNode(n);
@@ -1439,11 +1398,11 @@ export default function MemoryGraph() {
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span className="w-3 h-3 flex items-center justify-center">
-                {hoveredNode.nodeLayer === 'tara-insight' && <Star size={10} className="text-[#f97316]" />}
-                {hoveredNode.nodeLayer === 'tara' && <Hexagon size={10} className="text-[#a855f7]" />}
-                {hoveredNode.nodeLayer === 'fact' && <div className="w-2 h-2 rotate-45 bg-[#10b981]" />}
-                {hoveredNode.nodeLayer === 'observation' && <Square size={10} className="text-[#f59e0b]" />}
-                {(!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory') && <Circle size={10} className="text-[#117dff]" />}
+                {hoveredNode.nodeLayer === 'tara-insight' && <Star size={10} className="text-[#24221f]" />}
+                {hoveredNode.nodeLayer === 'tara' && <Hexagon size={10} className="text-[#4a4640]" />}
+                {hoveredNode.nodeLayer === 'fact' && <div className="w-2 h-2 rotate-45 bg-[#5f5b53]" />}
+                {hoveredNode.nodeLayer === 'observation' && <Square size={10} className="text-[#7a746b]" />}
+                {(!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory') && <Circle size={10} className="text-[#36332d]" />}
               </span>
               <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate max-w-[180px]">
                 {hoveredNode.title || 'Untitled'}
@@ -1494,7 +1453,7 @@ export default function MemoryGraph() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db] bg-[#faf9f4]">
                 <div className="flex items-center gap-3">
-                  <MapIcon size={18} className="text-[#117dff]" />
+                  <MapIcon size={18} className="text-[#0a0a0a]" />
                   <div>
                     <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Memory Map</h3>
                     <p className="text-xs text-[#666]">Hierarchical organization of your memories</p>
