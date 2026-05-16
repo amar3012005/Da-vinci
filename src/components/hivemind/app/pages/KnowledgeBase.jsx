@@ -33,6 +33,57 @@ const fadeUp = {
 
 const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'xlsx', 'xls'];
 
+// ─── Robust upload helpers ─────────────────────────────────────────────
+// We do NOT use localStorage for upload buffers — it caps at ~5MB, is
+// synchronous (blocks main thread), and is lost on cache clear. Instead
+// we use sessionStorage for SMALL just-uploaded-doc rows (metadata only,
+// no blobs) so a page refresh during indexing doesn't make a doc
+// 'disappear'. Real bytes are streamed straight to the server.
+
+const SESSION_KEY = 'hm-kb-pending';
+
+function loadPendingFromSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePendingToSession(docs) {
+  try {
+    // Only keep metadata fields — never serialize the original File blob.
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(docs.slice(0, 40)));
+  } catch {
+    /* quota or private mode — non-fatal */
+  }
+}
+
+// SHA-256 of file bytes via WebCrypto. Used to detect re-uploads before
+// even hitting the server. Returns lowercase hex.
+async function sha256File(file) {
+  if (!file || !window.crypto?.subtle) return null;
+  try {
+    const buf = await file.arrayBuffer();
+    const digest = await window.crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  } catch {
+    return null;
+  }
+}
+
+// Look at an existing doc's tags for the backend's doc-hash:<16hex> tag.
+function getDocHashTag(doc) {
+  const tags = doc?.tags || [];
+  const hit = tags.find((t) => typeof t === 'string' && t.startsWith('doc-hash:'));
+  return hit ? hit.split(':')[1] : null;
+}
+
 const TYPE_LABELS = {
   invoice: 'Invoice / Purchase Order',
   contract: 'Contract / Legal',
@@ -505,7 +556,9 @@ export default function KnowledgeBase() {
   const [selectedProject, setSelectedProject] = useState('');
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [justUploadedDocs, setJustUploadedDocs] = useState([]);
+  // Hydrate pending docs from sessionStorage so a refresh mid-indexing
+  // doesn't visually "lose" docs the user just uploaded.
+  const [justUploadedDocs, setJustUploadedDocs] = useState(() => loadPendingFromSession());
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [smartExtract, setSmartExtract] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -523,8 +576,10 @@ export default function KnowledgeBase() {
     // never filter out a document just because its metadata fields are missing
     // (Smart Ingest UPDATE relationships sometimes strip metadata into a new version).
     const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
+    // Bumped limit 100 → 500 per tag family. Earlier 100 silently truncated
+    // accounts past 100 docs, which read as 'losing past documents'.
     const settled = await Promise.allSettled(
-      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 100, scope: 'all' }))
+      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 500, scope: 'all' }))
     );
 
     const seenIds = new Set();
@@ -600,16 +655,31 @@ export default function KnowledgeBase() {
     });
   }, [documents, typeFilter]);
 
-  // Clear just-uploaded docs once they appear in fetched results
+  // Clear just-uploaded docs once they appear in fetched results.
+  // Match either by id OR by doc-hash so deduped uploads also resolve.
   useEffect(() => {
     if (kbMemories && justUploadedDocs.length > 0) {
       const fetchedIds = new Set(kbMemories.map((d) => d.id));
-      const stillPending = justUploadedDocs.filter((d) => !fetchedIds.has(d.id));
+      const fetchedHashes = new Set(kbMemories.map(getDocHashTag).filter(Boolean));
+      const stillPending = justUploadedDocs.filter((d) => {
+        if (fetchedIds.has(d.id)) return false;
+        const h = d.docHash || getDocHashTag(d);
+        if (h && fetchedHashes.has(h)) return false;
+        return true;
+      });
       if (stillPending.length < justUploadedDocs.length) {
         setJustUploadedDocs(stillPending);
       }
     }
   }, [kbMemories, justUploadedDocs]);
+
+  // Persist pending list to sessionStorage so a refresh mid-indexing
+  // doesn't visually drop documents that are still being processed
+  // server-side. sessionStorage is per-tab, ~5MB cap — we only store
+  // metadata rows (no blobs).
+  useEffect(() => {
+    savePendingToSession(justUploadedDocs);
+  }, [justUploadedDocs]);
 
   const handleDeleteDocument = useCallback(async (docOrId) => {
     // Accept either a raw id (legacy) or the full doc object so we can
@@ -760,6 +830,32 @@ export default function KnowledgeBase() {
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading' } : u
       ));
+
+      // ── Client-side SHA-256 dedup ──
+      // Backend already hashes (16-hex prefix) but doing it client-side
+      // lets us SKIP the upload entirely if we already have a doc with
+      // matching hash in the current list. Saves bandwidth + avoids the
+      // race where backend dedup returns a fresh upload_id that doesn't
+      // match the existing doc-hash row (root cause of duplicate cards).
+      let clientHash = null;
+      if (file.size <= 25 * 1024 * 1024) {
+        // Cap hashing at 25MB to keep main thread responsive on huge files.
+        // For >25MB we fall back to backend-only dedup.
+        clientHash = (await sha256File(file))?.slice(0, 16) || null;
+      }
+      if (clientHash) {
+        const existing = (kbMemories || []).find((d) => getDocHashTag(d) === clientHash);
+        if (existing) {
+          setUploads((prev) => prev.map((u) =>
+            u.id === uploadEntry.id
+              ? { ...u, status: 'success', progress: 100, deduped: true,
+                  message: 'Already in knowledge base — skipped re-upload' }
+              : u
+          ));
+          return;
+        }
+      }
+
       try {
         const result = await apiClient.uploadDocument(file, {
           tags: customTags || undefined,
@@ -774,6 +870,25 @@ export default function KnowledgeBase() {
             ));
           },
         });
+
+        // ── Server-side dedup response ──
+        // If backend matched an existing doc-hash, it returns
+        // { deduped: true, existing_memory_id }. Do NOT add a fresh
+        // justUploadedDocs row — the existing doc is already in the
+        // fetched list. That was the duplicate-card root cause.
+        if (result?.deduped) {
+          setUploads((prev) => prev.map((u) =>
+            u.id === uploadEntry.id
+              ? { ...u, status: 'success', progress: 100, deduped: true,
+                  message: result.message || 'Already in knowledge base — skipped re-upload',
+                  existingMemoryId: result.existing_memory_id }
+              : u
+          ));
+          // Refetch to ensure the existing doc surfaces in the list.
+          queueRefetch();
+          return;
+        }
+
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id, progress: 100 }
@@ -782,12 +897,17 @@ export default function KnowledgeBase() {
         setJustUploadedDocs((prev) => [{
           id: result.upload_id || `pending-${uploadEntry.id}`,
           title: result.filename || file.name,
+          docHash: clientHash || null, // for converge-detection in useEffect
           metadata: {
             document_title: result.filename || file.name,
             total_chunks: result.chunks || 1,
             filename: result.filename || file.name,
+            upload_id: result.upload_id,
           },
-          tags: customTags ? customTags.split(',').map((t) => t.trim()) : [],
+          tags: [
+            ...(customTags ? customTags.split(',').map((t) => t.trim()) : []),
+            ...(clientHash ? [`doc-hash:${clientHash}`] : []),
+          ],
           created_at: new Date().toISOString(),
         }, ...prev]);
         queueRefetch();
@@ -814,7 +934,7 @@ export default function KnowledgeBase() {
       }
     });
     await Promise.all(workers);
-  }, [customTags, refetchKb, pickConcurrency]);
+  }, [customTags, refetchKb, pickConcurrency, kbMemories]);
 
   // Cancel a queued/uploading entry
   const handleCancelUpload = useCallback((entryId) => {
