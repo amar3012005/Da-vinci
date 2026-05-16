@@ -824,6 +824,28 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Gmail v2: preview / ingest-selected / flush ────────────
+  // Approval flow: caller fetches a preview with filter config applied,
+  // user picks threads, caller posts thread_ids to /ingest-selected.
+  // Flush nukes all Gmail-sourced memories (soft delete).
+  async gmailPreview(filterConfig = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/preview', filterConfig);
+    return data;
+  }
+
+  async gmailIngestSelected(threadIds, threadMode = 'thread') {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/ingest-selected', {
+      thread_ids: threadIds,
+      thread_mode: threadMode,
+    });
+    return data;
+  }
+
+  async gmailFlush() {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/flush', {});
+    return data;
+  }
+
   // ─── Core: Google Workspace (multi-service) ────────────────
 
   async googleWorkspaceStatus() {
