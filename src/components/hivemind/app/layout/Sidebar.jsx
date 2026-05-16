@@ -76,7 +76,8 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
         // Connectors first — ingestion gate. No data, no brain.
         { to: '/hivemind/app/connectors', icon: Cable,    label: 'Connectors' },
         { to: '/hivemind/app/memories',   icon: Brain,    label: 'Memories' },
-        { to: '/hivemind/app/graph',      icon: Network,  label: 'Memory Graph' },
+        { to: '/hivemind/app/graph',      icon: Network,  label: 'Memory Graph · 3D' },
+        { to: '/hivemind/app/graph-2d',   icon: Network,  label: 'Memory Graph · 2D' },
         { to: '/hivemind/app/knowledge',  icon: BookOpen, label: 'Knowledge Base' },
       ],
     },
