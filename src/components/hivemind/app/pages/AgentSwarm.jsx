@@ -668,6 +668,56 @@ export default function AgentSwarm() {
                       ▶ Approve All ({hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id)).length})
                     </button>
                   )}
+
+                  {/* Bulk Delete By Tag — only when NL intent is destructive + has explicit tag filter.
+                      Two-step: dry-run preview match count → confirm → execute hard delete. */}
+                  {hygieneStats?.intent?.safety_class === 'destructive'
+                   && Array.isArray(hygieneStats?.intent?.filter?.tags)
+                   && hygieneStats.intent.filter.tags.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        const f = hygieneStats.intent.filter;
+                        try {
+                          const dry = await apiClient.bulkDeleteByTag({
+                            tags: f.tags,
+                            date_from: f.date_from,
+                            date_to: f.date_to,
+                            dry_run: true,
+                          });
+                          const n = dry.matched_count || 0;
+                          if (n === 0) {
+                            // eslint-disable-next-line no-alert
+                            window.alert('No memories match the tag/date filter. Nothing to delete.');
+                            return;
+                          }
+                          // eslint-disable-next-line no-alert
+                          if (!window.confirm(`Permanently delete ${n} memories matching:\n  tags: ${f.tags.join(', ')}\n  ${f.date_to ? `older than ${new Date(f.date_to).toLocaleDateString()}` : ''}\n  ${f.date_from ? `newer than ${new Date(f.date_from).toLocaleDateString()}` : ''}\n\nIncludes Qdrant vector purge. NOT reversible.`)) return;
+                          let totalDeleted = 0;
+                          for (let i = 0; i < 5; i++) {
+                            const res = await apiClient.bulkDeleteByTag({
+                              tags: f.tags,
+                              date_from: f.date_from,
+                              date_to: f.date_to,
+                              dry_run: false,
+                            });
+                            totalDeleted += res.deleted || 0;
+                            if (!res.matched || res.matched === 0) break;
+                          }
+                          // eslint-disable-next-line no-alert
+                          window.alert(`Deleted ${totalDeleted} memories. Re-scanning graph...`);
+                          await runHygieneScan();
+                        } catch (err) {
+                          console.error('Bulk delete by tag failed:', err);
+                          // eslint-disable-next-line no-alert
+                          window.alert(`Bulk delete failed: ${err?.response?.data?.message || err.message}`);
+                        }
+                      }}
+                      className="text-[10px] px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold"
+                      title={`Permanently delete every memory matching tags=[${hygieneStats.intent.filter.tags.join(', ')}]`}
+                    >
+                      🗑 Bulk Delete Matching
+                    </button>
+                  )}
                   {/* Re-scan */}
                   <button
                     onClick={runHygieneScan}

@@ -572,6 +572,30 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * Bulk delete memories matching tag + date filter.
+   * Used by AgentSwarm when NL intent is destructive + has tag filter.
+   * Default dry_run:true so callers can preview match count before nuke.
+   *
+   * @param {object} filter
+   * @param {string[]} filter.tags - required, OR-matched against memory.tags
+   * @param {string|null} filter.date_from - ISO, optional
+   * @param {string|null} filter.date_to - ISO, optional
+   * @param {string|null} filter.project - optional project scope
+   * @param {boolean} filter.dry_run - default true
+   * @returns {Promise<{matched_count?:number, deleted?:number, sample?:object[], filter:object}>}
+   */
+  async bulkDeleteByTag(filter = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/memories/bulk-delete-by-tag', {
+      tags: filter.tags || [],
+      date_from: filter.date_from || null,
+      date_to: filter.date_to || null,
+      project: filter.project || null,
+      dry_run: filter.dry_run !== false,
+    });
+    return data;
+  }
+
   async searchMemories(query, params = {}) {
     const { data } = await this.controlPlane.post('/v1/proxy/memories/search', { query, ...params });
     return data;
