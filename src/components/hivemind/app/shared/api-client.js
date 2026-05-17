@@ -1181,17 +1181,17 @@ class HiveMindApiClient {
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr() {
-    const { data } = await this.controlPlane.post('/api/connectors/whatsapp/qr');
+    const { data } = await this.controlPlane.post('/v1/connectors/whatsapp/qr');
     return data;
   }
 
   async whatsappStatus() {
-    const { data } = await this.controlPlane.get('/api/connectors/whatsapp/status');
+    const { data } = await this.controlPlane.get('/v1/connectors/whatsapp/status');
     return data;
   }
 
   async whatsappDisconnect() {
-    const { data } = await this.controlPlane.post('/api/connectors/whatsapp/disconnect');
+    const { data } = await this.controlPlane.post('/v1/connectors/whatsapp/disconnect');
     return data;
   }
 

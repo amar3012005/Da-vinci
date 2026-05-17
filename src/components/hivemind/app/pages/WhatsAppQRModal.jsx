@@ -7,8 +7,8 @@ import apiClient from '../shared/api-client';
  * WhatsAppQRModal — QR-based device pairing for WhatsApp connector.
  *
  * Flow:
- *  1. POST /api/connectors/whatsapp/qr → renders QR code
- *  2. Poll GET /api/connectors/whatsapp/status every 2s
+ *  1. POST /v1/connectors/whatsapp/qr -> renders QR code
+ *  2. Poll GET /v1/connectors/whatsapp/status every 2s
  *  3. When paired: phone number shown, modal closes with success
  *  4. User can regenerate QR or cancel
  */
@@ -20,10 +20,23 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const pollRef = useRef(null);
+  const fetchQrRef = useRef(null);
   const mountedRef = useRef(true);
   const elapsedRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
 
   const TIMEOUT_S = 120;
+
+  const clearTimers = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+  }, []);
 
   const pollStatus = useCallback(async () => {
     setElapsed(prev => {
@@ -57,6 +70,14 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
     }, 2000);
   }, [pollStatus]);
 
+  const scheduleQrRetry = useCallback((delayMs = 2000) => {
+    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    retryTimeoutRef.current = setTimeout(() => {
+      retryTimeoutRef.current = null;
+      if (mountedRef.current) fetchQrRef.current?.();
+    }, delayMs);
+  }, []);
+
   const fetchQr = useCallback(async () => {
     try {
       const data = await apiClient.whatsappQr();
@@ -65,9 +86,12 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setQr(data.qr);
         setStatus('qr_ready');
         startPolling();
+      } else if (data.status === 'generating') {
+        setStatus('loading');
+        scheduleQrRetry();
       } else {
         setStatus('error');
-        setErrorMessage('Failed to generate QR code');
+        setErrorMessage(data.error || 'Failed to generate QR code');
       }
     } catch (e) {
       if (mountedRef.current) {
@@ -75,7 +99,9 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setErrorMessage(e.response?.data?.error || e.message);
       }
     }
-  }, [startPolling]);
+  }, [scheduleQrRetry, startPolling]);
+
+  fetchQrRef.current = fetchQr;
 
   const startPairing = useCallback(async () => {
     setStatus('loading');
@@ -83,6 +109,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
     setQr(null);
     setElapsed(0);
     elapsedRef.current = 0;
+    clearTimers();
 
     try {
       const data = await apiClient.whatsappQr();
@@ -93,10 +120,10 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setStatus('qr_ready');
         startPolling();
       } else if (data.status === 'generating') {
-        // QR still generating — wait and retry
-        pollRef.current = setTimeout(() => {
-          if (mountedRef.current) fetchQr();
-        }, 2000);
+        scheduleQrRetry();
+      } else {
+        setStatus('error');
+        setErrorMessage(data.error || 'Failed to generate QR code');
       }
     } catch (e) {
       if (mountedRef.current) {
@@ -104,19 +131,19 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setErrorMessage(e.response?.data?.error || e.message);
       }
     }
-  }, [fetchQr, startPolling]);
+  }, [clearTimers, scheduleQrRetry, startPolling]);
 
   useEffect(() => {
     mountedRef.current = true;
     startPairing();
     return () => {
       mountedRef.current = false;
-      if (pollRef.current) clearInterval(pollRef.current);
+      clearTimers();
     };
-  }, [startPairing]);
+  }, [clearTimers, startPairing]);
 
   function handleRegenerate() {
-    if (pollRef.current) clearInterval(pollRef.current);
+    clearTimers();
     startPairing();
   }
 
