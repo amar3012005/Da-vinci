@@ -572,6 +572,41 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Research session ephemeral buffers (Phase 3) ──────────────
+
+  /** List active research sessions with buffered proposal counts. */
+  async listResearchSessions() {
+    const { data } = await this.controlPlane.get('/v1/proxy/research/sessions');
+    return data;
+  }
+
+  /** Pending buffered proposals for a session — counts + samples. */
+  async getResearchPendingProposals(sessionId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/research/sessions/${sessionId}/pending-proposals`);
+    return data;
+  }
+
+  /**
+   * Approve subset (or all) buffered proposals → flush to memories table.
+   * @param {string} sessionId
+   * @param {object} [opts]
+   * @param {string[]} [opts.kinds]
+   * @param {string[]} [opts.ids]
+   */
+  async approveResearchProposals(sessionId, opts = {}) {
+    const { data } = await this.controlPlane.post(
+      `/v1/proxy/research/sessions/${sessionId}/approve`,
+      { kinds: opts.kinds, ids: opts.ids }
+    );
+    return data;
+  }
+
+  /** Drop buffer without persisting. */
+  async discardResearchProposals(sessionId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/research/sessions/${sessionId}/discard`);
+    return data;
+  }
+
   /**
    * Bulk delete memories matching tag + date filter.
    * Used by AgentSwarm when NL intent is destructive + has tag filter.

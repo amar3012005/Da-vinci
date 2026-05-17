@@ -107,10 +107,65 @@ export default function AgentSwarm() {
   const [executingIds, setExecutingIds] = useState(new Set());
   const [executedIds, setExecutedIds] = useState(new Set());
 
+  // Phase 3: Research session ephemeral-buffer panel
+  const [researchSessions, setResearchSessions] = useState([]);
+  const [researchPanelOpen, setResearchPanelOpen] = useState(false);
+  const [researchActingOn, setResearchActingOn] = useState(null);
+
   const pollRef = useRef(null);
+  const researchPollRef = useRef(null);
 
   // Cleanup polling on unmount
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+  useEffect(() => () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (researchPollRef.current) clearInterval(researchPollRef.current);
+  }, []);
+
+  /* ── Research session buffer polling (Phase 3) ── */
+  const refreshResearchSessions = useCallback(async () => {
+    try {
+      const data = await apiClient.listResearchSessions();
+      setResearchSessions(Array.isArray(data?.sessions) ? data.sessions : []);
+    } catch (err) {
+      console.warn('listResearchSessions failed:', err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshResearchSessions();
+    researchPollRef.current = setInterval(refreshResearchSessions, 10000);
+    return () => clearInterval(researchPollRef.current);
+  }, [refreshResearchSessions]);
+
+  const approveResearchSession = useCallback(async (sessionId, kinds) => {
+    setResearchActingOn(sessionId);
+    try {
+      const result = await apiClient.approveResearchProposals(sessionId, kinds ? { kinds } : {});
+      // eslint-disable-next-line no-alert
+      window.alert(`Approved: ${result.persisted} memories persisted${result.errors ? `, ${result.errors} errors` : ''}.`);
+      await refreshResearchSessions();
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      window.alert(`Approve failed: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setResearchActingOn(null);
+    }
+  }, [refreshResearchSessions]);
+
+  const discardResearchSession = useCallback(async (sessionId) => {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm('Discard all buffered research traces for this session? Nothing will be persisted to the graph.')) return;
+    setResearchActingOn(sessionId);
+    try {
+      await apiClient.discardResearchProposals(sessionId);
+      await refreshResearchSessions();
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      window.alert(`Discard failed: ${err?.response?.data?.message || err.message}`);
+    } finally {
+      setResearchActingOn(null);
+    }
+  }, [refreshResearchSessions]);
 
   /* ── Run agent ──────────────────────────────────── */
 
@@ -303,13 +358,98 @@ export default function AgentSwarm() {
           <h1 className="text-lg font-bold text-[#0a0a0a]">Agent Swarm Intelligence</h1>
           <p className="text-xs text-[#a3a3a3]">Resident agents that make your knowledge graph smarter over time</p>
         </div>
-        {running && (
-          <div className="flex items-center gap-2 text-xs text-[#117dff]">
-            <Loader2 size={14} className="animate-spin" />
-            Running {runPhase}...
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {running && (
+            <div className="flex items-center gap-2 text-xs text-[#117dff]">
+              <Loader2 size={14} className="animate-spin" />
+              Running {runPhase}...
+            </div>
+          )}
+          {/* Pending research approvals badge */}
+          {researchSessions.length > 0 && (
+            <button
+              onClick={() => setResearchPanelOpen(v => !v)}
+              className="text-xs font-mono px-3 py-1 rounded-lg border border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 transition-colors"
+              title="Buffered research traces awaiting approval"
+            >
+              📋 {researchSessions.length} pending research {researchSessions.length === 1 ? 'session' : 'sessions'}
+              {' · '}
+              {researchSessions.reduce((sum, s) => sum + (s.total || 0), 0)} buffered
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── Phase 3: Research session approval panel ── */}
+      {researchPanelOpen && researchSessions.length > 0 && (
+        <div className="shrink-0 mx-5 mb-3 bg-amber-50 border border-amber-300 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-amber-200 bg-amber-100/50">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} className="text-amber-700" />
+              <h3 className="text-sm font-bold text-amber-900">Pending Research Approvals</h3>
+              <span className="text-[10px] font-mono text-amber-700">
+                {researchSessions.length} session{researchSessions.length === 1 ? '' : 's'} — buffered in RAM, not yet written to graph
+              </span>
+            </div>
+            <button
+              onClick={() => setResearchPanelOpen(false)}
+              className="text-[10px] px-2 py-0.5 rounded text-amber-800 hover:bg-amber-200/60"
+            >
+              Collapse
+            </button>
+          </div>
+          <div className="divide-y divide-amber-200">
+            {researchSessions.map(s => {
+              const acting = researchActingOn === s.sessionId;
+              const ageMin = Math.floor((s.ageMs || 0) / 60000);
+              return (
+                <div key={s.sessionId} className="px-4 py-3 flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-mono text-amber-900 truncate" title={s.sessionId}>
+                      {s.firstTitle || s.sessionId.slice(0, 8)}
+                    </div>
+                    <div className="text-[10px] font-mono text-amber-700 mt-0.5">
+                      {ageMin}m ago · {s.total} buffered ·
+                      {' obs:' + s.counts.observations}
+                      {' findings:' + s.counts.findings}
+                      {' sources:' + s.counts.sources}
+                      {' exec:' + s.counts.executionEvents}
+                      {' chk:' + s.counts.checkpoints}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
+                    <button
+                      onClick={() => approveResearchSession(s.sessionId, ['findings', 'sources'])}
+                      disabled={acting || (s.counts.findings + s.counts.sources === 0)}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 font-semibold"
+                      title="Persist only findings + sources (skip raw observations and execution events)"
+                    >
+                      ✓ Findings + Sources
+                    </button>
+                    <button
+                      onClick={() => approveResearchSession(s.sessionId, null)}
+                      disabled={acting || s.total === 0}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-40 font-semibold"
+                      title="Persist everything in the buffer"
+                    >
+                      ✓ Approve All
+                    </button>
+                    <button
+                      onClick={() => discardResearchSession(s.sessionId)}
+                      disabled={acting}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 font-semibold"
+                      title="Drop buffer — nothing persisted"
+                    >
+                      🗑 Discard
+                    </button>
+                    {acting && <Loader2 size={12} className="animate-spin text-amber-700 ml-1" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Agent tabs (horizontal) ── */}
       <div className="shrink-0 px-5 flex gap-2">
