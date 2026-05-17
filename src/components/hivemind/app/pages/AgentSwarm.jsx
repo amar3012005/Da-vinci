@@ -958,15 +958,36 @@ export default function AgentSwarm() {
                               )}
                             </div>
                           )}
-                          {/* Memory list */}
+                          {/* Memory list — show the action target chip
+                              based on suggestedAction, not is_canonical.
+                              keep   = canonical reference to preserve
+                              delete = will be hard-deleted on approve
+                              archive = will be marked is_latest=false
+                              link    = will be linked to canonical newer */}
                           <div className="space-y-0.5">
-                            {memories.slice(0, 3).map(m => (
-                              <div key={m.id} className="flex items-center gap-1.5 text-[10px]">
-                                {m.is_canonical && <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">keep</span>}
-                                <span className="text-[#a3a3a3] font-mono">{m.id?.slice(0, 8)}</span>
-                                <span className="text-[#525252] truncate">{m.title || m.content_preview || '—'}</span>
-                              </div>
-                            ))}
+                            {memories.slice(0, 3).map(m => {
+                              let chip = null;
+                              if (proposal.category === 'targeted' || (m.role && m.role !== 'newer')) {
+                                if (proposal.suggestedAction === 'delete') {
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700">delete</span>;
+                                } else if (proposal.suggestedAction === 'archive' || proposal.suggestedAction === 'archive_duplicates') {
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700">archive</span>;
+                                } else if (proposal.suggestedAction === 'link_update_chain') {
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700">link</span>;
+                                } else if (proposal.suggestedAction === 'suppress') {
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-gray-200 text-gray-700">suppress</span>;
+                                }
+                              } else if (m.is_canonical) {
+                                chip = <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">keep</span>;
+                              }
+                              return (
+                                <div key={m.id} className="flex items-center gap-1.5 text-[10px]">
+                                  {chip}
+                                  <span className="text-[#a3a3a3] font-mono">{m.id?.slice(0, 8)}</span>
+                                  <span className="text-[#525252] truncate">{m.title || m.content_preview || '—'}</span>
+                                </div>
+                              );
+                            })}
                             {memories.length > 3 && (
                               <span className="text-[10px] text-[#a3a3a3]">+{memories.length - 3} more</span>
                             )}
