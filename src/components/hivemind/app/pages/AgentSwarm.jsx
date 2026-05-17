@@ -177,16 +177,26 @@ export default function AgentSwarm() {
   const executeProposal = useCallback(async (proposal, action) => {
     setExecutingIds(prev => new Set([...prev, proposal.id]));
     try {
-      await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/execute', {
+      // Action mapping: 'merge' (legacy from old proposals) → 'archive_duplicates'
+      // (the new no-merge action). 'archive' / 'delete' / 'suppress' pass through.
+      const serverAction = action === 'merge' ? 'archive_duplicates' : action;
+      const res = await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/execute', {
         proposals: [proposal],
-        action,
+        action: serverAction,
       });
+      const results = res?.data?.results || [];
+      const ok = results.every(r => r.status === 'executed');
+      if (!ok) {
+        const errMsg = results.find(r => r.status === 'failed')?.error || 'execute returned non-success';
+        throw new Error(errMsg);
+      }
       setExecutedIds(prev => new Set([...prev, proposal.id]));
-      // Remove from executing after completion
-      setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
     } catch (err) {
-      console.error('Execute failed:', err.message);
-      // Remove from executing on error too
+      console.error('Execute failed:', err?.response?.data?.error || err.message);
+      // Surface to user — DON'T mark executed if it actually failed
+      // eslint-disable-next-line no-alert
+      window.alert(`Action failed: ${err?.response?.data?.error || err.message}\n\nProposal stays in queue. Check console for details.`);
+    } finally {
       setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
     }
   }, []);
