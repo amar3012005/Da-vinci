@@ -103,7 +103,7 @@ const Hero = () => {
           >
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#117dff]/[0.08] border border-[#117dff]/15 text-[#117dff] text-[10px] sm:text-xs font-semibold tracking-wide uppercase">
               <Sparkles size={10} className="sm:w-3 sm:h-3 text-[#117dff]" />
-              Built in Hannover, Germany
+              Built in Germany for the World
             </span>
           </motion.div>
 
@@ -114,7 +114,7 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4 sm:mb-6 max-w-4xl text-[#0a0a0a] font-['Space_Grotesk']"
           >
-            Europe's AI<br />
+            A Cognitive Soverign<br />
             <span className="text-[#117dff]">Memory Engine.</span>
           </motion.h1>
 
@@ -125,7 +125,8 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-sm sm:text-base md:text-lg lg:text-xl text-[#525252] mb-6 sm:mb-8 max-w-2xl leading-relaxed px-2"
           >
-            Sovereign. Sub-50ms. GDPR-compliant. Built in Hannover for individuals, developers, and enterprise teams.
+            Sovereign. Sub-50ms. GDPR-compliant. 
+            For enterprise teams, developers, and individuals.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -141,7 +142,7 @@ const Hero = () => {
               onClick={() => navigate('/hivemind/login')}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-7 py-3 bg-[#117dff] text-white font-semibold rounded-[4px] hover:bg-[#0066e0] transition-colors group cursor-pointer border-none text-xs sm:text-sm uppercase tracking-[0.075em] shadow-[0_2px_8px_rgba(17,125,255,0.15)]"
             >
-              Start Building Free
+              Lets Evolve
               <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </motion.button>
             <motion.button
@@ -342,7 +343,7 @@ const Hero = () => {
           >
             {[
               { icon: Zap, label: 'Sub-50ms Recall', color: '#117dff' },
-              { icon: Brain, label: '9 MCP Tools', color: '#16a34a' },
+              { icon: Brain, label: '22 MCP Tools', color: '#16a34a' },
               { icon: Cable, label: 'Cross-Platform', color: '#ea580c' },
               { label: '🇪🇺 EU Sovereign', color: '#117dff' },
             ].map((item, i, arr) => (
