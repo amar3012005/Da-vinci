@@ -620,20 +620,21 @@ export default function AgentSwarm() {
         )}
 
         {/* ── Graph Hygiene Proposals (post-Turing) ── */}
-        {(hygieneProposals.length > 0 || hygieneLoading) && (
+        {/* Always render once Turing has completed OR a scan is running */}
+        {(hygieneProposals.length > 0 || hygieneLoading || hygieneStats || results.turing) && (
           <div className="space-y-3 mt-3">
             <div className="bg-white border border-[#e3e0db] rounded-xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#f5f3ee]">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={14} className="text-amber-500" />
-                  <h3 className="text-sm font-bold text-[#0a0a0a]">Graph Cleanup Proposals</h3>
+                  <h3 className="text-sm font-bold text-[#0a0a0a]">Cleanup Approvals</h3>
                   {hygieneStats && (
                     <span className="text-[10px] font-mono text-[#a3a3a3]">
-                      {hygieneStats.scanned} scanned · {hygieneStats.issues} issues
+                      {hygieneStats.scanned ?? 0} scanned · {hygieneStats.issues ?? 0} issues
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   {hygieneStats?.intent && (
                     <span
                       className="text-[10px] font-mono text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/20 rounded px-2 py-0.5 max-w-[420px] truncate"
@@ -649,13 +650,69 @@ export default function AgentSwarm() {
                       {hygieneStats.llm_dropped ? ` · dropped: ${hygieneStats.llm_dropped}` : ''}
                     </span>
                   )}
+                  {/* Approve All — runs each proposal w/ its suggestedAction */}
+                  {hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id)).length > 0 && (
+                    <button
+                      onClick={async () => {
+                        const pending = hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id));
+                        // eslint-disable-next-line no-alert
+                        if (!window.confirm(`Approve ALL ${pending.length} proposals? Each runs its suggested action (archive/delete/suppress). Reversible only for archive.`)) return;
+                        // Run sequentially so failures don't cascade
+                        for (const p of pending) {
+                          await executeProposal(p, p.suggestedAction || 'archive');
+                        }
+                      }}
+                      className="text-[10px] px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-semibold"
+                      title="Approve every pending proposal at once"
+                    >
+                      ▶ Approve All ({hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id)).length})
+                    </button>
+                  )}
+                  {/* Re-scan */}
+                  <button
+                    onClick={runHygieneScan}
+                    disabled={hygieneLoading}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors disabled:opacity-40"
+                  >
+                    {hygieneLoading ? '…' : '↻ Re-scan'}
+                  </button>
                 </div>
               </div>
 
-              {hygieneLoading && (
+              {hygieneLoading && hygieneProposals.length === 0 && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 size={20} className="animate-spin text-[#117dff]" />
                   <span className="text-xs text-[#a3a3a3] ml-2">Scanning graph health...</span>
+                </div>
+              )}
+
+              {!hygieneLoading && hygieneProposals.length === 0 && hygieneStats && (
+                <div className="px-4 py-10 text-center">
+                  <CheckCircle2 size={28} className="text-emerald-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-[#0a0a0a]">Nothing to clean.</p>
+                  <p className="text-xs text-[#a3a3a3] mt-1">
+                    {hygieneStats.scanned ?? 0} memories scanned. No proposals after LLM verification.
+                  </p>
+                  <button
+                    onClick={runHygieneScan}
+                    className="mt-3 text-[10px] px-3 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors"
+                  >
+                    ↻ Run again
+                  </button>
+                </div>
+              )}
+
+              {!hygieneLoading && hygieneProposals.length === 0 && !hygieneStats && results.turing && (
+                <div className="px-4 py-10 text-center">
+                  <AlertTriangle size={20} className="text-amber-500 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-[#0a0a0a]">Run the cleanup scan</p>
+                  <p className="text-xs text-[#a3a3a3] mt-1">Turing finished but no hygiene scan triggered. Click below.</p>
+                  <button
+                    onClick={runHygieneScan}
+                    className="mt-3 text-[11px] px-3 py-1.5 rounded-lg bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors font-semibold"
+                  >
+                    ▶ Scan graph for cleanup
+                  </button>
                 </div>
               )}
 
