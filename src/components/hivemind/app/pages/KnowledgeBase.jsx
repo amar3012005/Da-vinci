@@ -569,6 +569,8 @@ export default function KnowledgeBase() {
   const [deletingDocId, setDeletingDocId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const fileInputRef = useRef(null);
+  // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
+  const [relSummaries, setRelSummaries] = useState({});
 
   const { data: kbMemories, loading: kbLoading, refetch: refetchKb } = useApiQuery(async () => {
     // Fetch from THREE tag families in parallel — covers regular uploads, enterprise
@@ -627,6 +629,25 @@ export default function KnowledgeBase() {
 
     return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   }, []);
+
+  // Fetch per-doc relationship summaries in batch whenever the doc list changes.
+  // Backend resolves doc+chunk cluster then groups by relationship type so we
+  // can show "(N relations: X Updates, Y Extends, Z Derives)" per card.
+  useEffect(() => {
+    if (!kbMemories || kbMemories.length === 0) return;
+    const docIds = kbMemories.map(d => d.id).filter(Boolean).slice(0, 100);
+    if (docIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiClient.knowledgeRelationsSummary(docIds);
+        if (!cancelled) setRelSummaries(data?.summaries || {});
+      } catch (err) {
+        console.warn('relations-summary fetch failed:', err?.response?.data?.message || err.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [kbMemories]);
 
   // Combine fetched documents with just-uploaded ones for immediate display
   const documents = useMemo(() => {
@@ -1339,6 +1360,23 @@ export default function KnowledgeBase() {
                       {meta.total_chunks && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
                       )}
+                      {/* Relationship counts from canonical buildRoutedIngestPayloads pipeline */}
+                      {(() => {
+                        const rs = relSummaries[doc.id];
+                        if (!rs || !rs.total) return null;
+                        const types = Object.entries(rs.byType || {})
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([t, c]) => `${c} ${t}`)
+                          .join(', ');
+                        return (
+                          <span
+                            className="text-[#117dff] text-[10px] font-mono bg-[#117dff]/8 border border-[#117dff]/20 rounded px-1.5 py-0.5"
+                            title={`Edges touching this document cluster (${rs.cluster_size} memories)`}
+                          >
+                            {rs.total} relations{types ? `: ${types}` : ''}
+                          </span>
+                        );
+                      })()}
                       {meta.pages && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.pages} pages</span>
                       )}

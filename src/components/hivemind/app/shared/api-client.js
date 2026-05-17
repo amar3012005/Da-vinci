@@ -806,6 +806,15 @@ class HiveMindApiClient {
     throw lastError;
   }
 
+  /**
+   * Batch relations summary for KB documents.
+   * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
+   */
+  async knowledgeRelationsSummary(docIds = []) {
+    const { data } = await this.controlPlane.post('/v1/proxy/knowledge/relations-summary', { doc_ids: docIds });
+    return data;
+  }
+
   async uploadDocument(file, options = {}) {
     const formData = new FormData();
     formData.append('file', file);
