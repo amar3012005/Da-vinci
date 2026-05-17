@@ -161,18 +161,23 @@ export default function AgentSwarm() {
   const runHygieneScan = useCallback(async () => {
     setHygieneLoading(true);
     try {
-      const { data } = await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/scan', {
-        limit: 50,
-        categories: ['duplicates', 'noise', 'stale', 'orphans', 'artifacts'],
-      });
+      // Pass NL goal to backend — it parses to structured intent + filter.
+      // If goal blank, backend defaults to scanning all categories.
+      const payload = { limit: 50 };
+      if (goal && goal.trim()) {
+        payload.goal = goal.trim();
+      } else {
+        payload.categories = ['duplicates', 'noise', 'stale', 'orphans', 'artifacts'];
+      }
+      const { data } = await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/scan', payload);
       setHygieneProposals(data.proposals || []);
-      setHygieneStats(data.stats || null);
+      setHygieneStats({ ...(data.stats || {}), intent: data.intent || null });
     } catch (err) {
       console.warn('Hygiene scan failed:', err.message);
     } finally {
       setHygieneLoading(false);
     }
-  }, []);
+  }, [goal]);
 
   const executeProposal = useCallback(async (proposal, action) => {
     setExecutingIds(prev => new Set([...prev, proposal.id]));
@@ -628,13 +633,23 @@ export default function AgentSwarm() {
                     </span>
                   )}
                 </div>
-                {hygieneProposals.length > 0 && hygieneStats?.queued_for_approval !== undefined && (
-                  <span className="text-[10px] font-mono text-[#a3a3a3]">
-                    {hygieneStats.queued_for_approval ?? hygieneProposals.length} for approval
-                    {hygieneStats.llm_verified ? ` · LLM-verified: ${hygieneStats.llm_verified}` : ''}
-                    {hygieneStats.llm_dropped ? ` · dropped: ${hygieneStats.llm_dropped}` : ''}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {hygieneStats?.intent && (
+                    <span
+                      className="text-[10px] font-mono text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/20 rounded px-2 py-0.5 max-w-[420px] truncate"
+                      title={`Parsed by ${hygieneStats.intent.source}: ${JSON.stringify(hygieneStats.intent.filter)}`}
+                    >
+                      Understood: {hygieneStats.intent.summary}
+                    </span>
+                  )}
+                  {hygieneProposals.length > 0 && hygieneStats?.queued_for_approval !== undefined && (
+                    <span className="text-[10px] font-mono text-[#a3a3a3]">
+                      {hygieneStats.queued_for_approval ?? hygieneProposals.length} for approval
+                      {hygieneStats.llm_verified ? ` · LLM-verified: ${hygieneStats.llm_verified}` : ''}
+                      {hygieneStats.llm_dropped ? ` · dropped: ${hygieneStats.llm_dropped}` : ''}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {hygieneLoading && (
