@@ -1080,11 +1080,31 @@ export default function McpServer() {
         {/* Quick Setup Cards */}
         <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="mb-8">
           <h2 className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Quick Setup</h2>
+          <p className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] mb-3 leading-relaxed">
+            One endpoint, three wire formats. Pick the card matching your client. See <code className="text-[#117dff] bg-[#117dff]/5 px-1 rounded">core/docs/MCP_SERVER.md</code> for the full matrix.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               {
+                title: '⭐ Universal HTTP (canonical)',
+                icon: Globe,
+                subtitle: 'Modern clients — Claude Code, Claude Desktop 0.7+, any HTTP-capable MCP host',
+                config: `{
+  "mcpServers": {
+    "hivemind": {
+      "type": "http",
+      "url": "https://core.hivemind.davinciai.eu:8050/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}`,
+              },
+              {
                 title: 'Claude Desktop / Code · macOS & Linux',
                 icon: Terminal,
+                subtitle: 'stdio bridge via mcp-remote (universal fallback)',
                 config: `{
   "mcpServers": {
     "hivemind": {
@@ -1103,6 +1123,7 @@ export default function McpServer() {
               {
                 title: 'Claude Desktop / Code · Windows',
                 icon: Terminal,
+                subtitle: 'cmd /c wrapper avoids C:\\Program Files\\ space-path bug',
                 // Windows: Claude Desktop wraps configured command in
                 // cmd.exe /C without quoting space-bearing paths. Bare
                 // `npx` → cmd splits on space in the resolved path
@@ -1127,8 +1148,9 @@ export default function McpServer() {
 }`,
               },
               {
-                title: 'Cursor / VS Code',
+                title: 'Cursor / Antigravity',
                 icon: Terminal,
+                subtitle: 'mcpServers.hivemind w/ transport: "http" (Cursor convention)',
                 config: `{
   "mcpServers": {
     "hivemind": {
@@ -1142,35 +1164,81 @@ export default function McpServer() {
 }`,
               },
               {
-                title: 'REST API (Direct)',
-                icon: Globe,
-                config: `curl -X POST https://core.hivemind.davinciai.eu:8050/api/mcp \
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"method":"tools/list","params":{},"id":1}'`,
+                title: 'VS Code',
+                icon: Terminal,
+                subtitle: 'Nested under mcp.servers in settings.json (JSONC-aware)',
+                config: `{
+  "mcp": {
+    "servers": {
+      "hivemind": {
+        "type": "http",
+        "url": "https://core.hivemind.davinciai.eu:8050/api/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
+  }
+}`,
               },
               {
-                title: 'HTTP (Any Client)',
+                title: 'NotebookLM',
+                icon: Terminal,
+                subtitle: 'Stdio-only — installer writes a local bridge script + you point NotebookLM at it',
+                config: `# Install (writes ~/.hivemind/notebooklm-bridge.sh):
+curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
+  | HIVEMIND_KEY="hmk_live_<key>" bash
+
+# Then in NotebookLM: Settings → Tools/MCP → Add server (stdio)
+# Command: ~/.hivemind/notebooklm-bridge.sh`,
+              },
+              {
+                title: 'REST API (curl test)',
+                icon: Globe,
+                subtitle: 'Hit the endpoint directly to verify auth + tool list',
+                config: `curl -X POST https://core.hivemind.davinciai.eu:8050/api/mcp \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json, text/event-stream" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'`,
+              },
+              {
+                title: '⚠️ Legacy · @amar_528/mcp-bridge (DEPRECATED)',
                 icon: Link2,
-                config: `Endpoint: POST /api/mcp
-Headers:
-  Authorization: Bearer YOUR_API_KEY
-  Content-Type: application/json
-Body:
-  {"method":"tools/call","params":{"name":"hivemind_recall","arguments":{"query":"..."}},"id":1}`,
+                subtitle: 'Kept for installed users. New installs: use Universal HTTP above.',
+                config: `# OLD pinned-server form (no env key needed):
+{
+  "mcpServers": {
+    "hivemind": {
+      "command": "npx",
+      "args": [
+        "-y", "@amar_528/mcp-bridge", "hosted",
+        "--url", "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/<userId>"
+      ]
+    }
+  }
+}
+
+# Migrate by replacing the block with the Universal HTTP schema above.
+# Server-side legacy endpoints stay live for backward compat.`,
               },
             ].map((setup) => {
               const Icon = setup.icon;
               return (
                 <div key={setup.title} className="bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#e3e0db]/50">
-                    <div className="flex items-center gap-2">
-                      <Icon size={14} className="text-[#a3a3a3]" />
-                      <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{setup.title}</p>
+                  <div className="flex items-start justify-between px-4 py-3 border-b border-[#e3e0db]/50 gap-2">
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
+                      <Icon size={14} className="text-[#a3a3a3] shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate">{setup.title}</p>
+                        {setup.subtitle && (
+                          <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk'] mt-0.5 leading-snug">{setup.subtitle}</p>
+                        )}
+                      </div>
                     </div>
                     <CopyButton text={setup.config} label="" />
                   </div>
-                  <pre className="px-4 py-3 text-[10px] font-mono text-[#525252] leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-[160px] overflow-y-auto bg-[#faf9f4]">
+                  <pre className="px-4 py-3 text-[10px] font-mono text-[#525252] leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-[220px] overflow-y-auto bg-[#faf9f4]">
                     {setup.config}
                   </pre>
                 </div>
