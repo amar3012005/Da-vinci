@@ -1086,6 +1086,22 @@ export default function McpServer() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               {
+                title: '🚀 TUI Installer (one-liner)',
+                icon: Terminal,
+                subtitle: 'Charm Bubble Tea TUI — pick Claude Code / Desktop / Codex / Antigravity / VS Code from a menu, writes config + restarts client',
+                // macOS / Linux shim auto-detects arch + downloads the
+                // correct hivemind-mcp binary, then execs it. Windows
+                // hosts use the PowerShell variant. API key is read from
+                // HIVEMIND_API_KEY or prompted in the TUI.
+                config: `# macOS / Linux
+curl -fsSL https://core.hivemind.davinciai.eu:8050/install/tui.sh \\
+  | HIVEMIND_API_KEY="hmk_live_<key>" bash
+
+# Windows (PowerShell)
+$env:HIVEMIND_API_KEY="hmk_live_<key>"; \`
+  irm https://core.hivemind.davinciai.eu:8050/install/tui.ps1 | iex`,
+              },
+              {
                 title: '⭐ Universal HTTP (canonical)',
                 icon: Globe,
                 subtitle: 'Modern clients — Claude Code, Claude Desktop 0.7+, any HTTP-capable MCP host',
