@@ -191,29 +191,9 @@ export default function AgentSwarm() {
     }
   }, []);
 
-  const executeBulk = useCallback(async (action, category) => {
-    const targets = hygieneProposals
-      .filter(p => !executedIds.has(p.id) && !executingIds.has(p.id) && (!category || p.category === category));
-
-    // Execute all in parallel with Promise.all
-    await Promise.all(targets.map(async (p) => {
-      setExecutingIds(prev => new Set([...prev, p.id]));
-      try {
-        await apiClient.controlPlane.post('/v1/proxy/graph/hygiene/execute', {
-          proposals: [p],
-          action,
-        });
-        setExecutedIds(prev => new Set([...prev, p.id]));
-      } catch (err) {
-        console.error(`Bulk execute failed for ${p.id}:`, err.message);
-      } finally {
-        setExecutingIds(prev => { const n = new Set(prev); n.delete(p.id); return n; });
-      }
-    }));
-
-    // Refresh hygiene scan after bulk execution
-    await runHygieneScan();
-  }, [hygieneProposals, executedIds, executingIds, runHygieneScan]);
+  // executeBulk intentionally removed — per-card approval only per the
+  // enterprise-non-tech UX policy. No bulk "Merge All / Delete All" buttons
+  // (one click destroying 100s of memories at once is a foot-gun).
 
   const handleRunSingle = useCallback(async (agentId) => {
     setRunning(true);
@@ -638,27 +618,12 @@ export default function AgentSwarm() {
                     </span>
                   )}
                 </div>
-                {hygieneProposals.length > 0 && (
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => executeBulk('merge', 'duplicate')}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors font-medium"
-                    >
-                      Merge All Dupes
-                    </button>
-                    <button
-                      onClick={() => executeBulk('delete', 'noise')}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors font-medium"
-                    >
-                      Delete All Noise
-                    </button>
-                    <button
-                      onClick={() => executeBulk('archive')}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
-                    >
-                      Archive All Stale
-                    </button>
-                  </div>
+                {hygieneProposals.length > 0 && hygieneStats?.queued_for_approval !== undefined && (
+                  <span className="text-[10px] font-mono text-[#a3a3a3]">
+                    {hygieneStats.queued_for_approval ?? hygieneProposals.length} for approval
+                    {hygieneStats.llm_verified ? ` · LLM-verified: ${hygieneStats.llm_verified}` : ''}
+                    {hygieneStats.llm_dropped ? ` · dropped: ${hygieneStats.llm_dropped}` : ''}
+                  </span>
                 )}
               </div>
 
@@ -700,7 +665,27 @@ export default function AgentSwarm() {
                             </span>
                             {confBar(proposal.confidence)}
                           </div>
-                          <p className="text-xs text-[#525252] mb-1">{proposal.reason}</p>
+                          {/* Plain English reason — prefer LLM output, fall back to heuristic */}
+                          <p className="text-xs text-[#0a0a0a] font-medium mb-1">
+                            {proposal.llmReason || proposal.plainEnglishReason || proposal.reason}
+                          </p>
+                          {/* Verdict chip for transparency */}
+                          {proposal.verdict && (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-[0.06em] ${
+                                proposal.verdict === 'confirm'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : proposal.verdict === 'low_confidence'
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {proposal.verdict === 'confirm' ? 'LLM-verified' : proposal.verdict === 'low_confidence' ? 'Needs your review' : proposal.verdict}
+                              </span>
+                              {proposal.llmReason && proposal.reason && (
+                                <span className="text-[9px] text-[#a3a3a3] font-mono">heuristic: {proposal.reason.slice(0, 80)}{proposal.reason.length > 80 ? '…' : ''}</span>
+                              )}
+                            </div>
+                          )}
                           {/* Memory list */}
                           <div className="space-y-0.5">
                             {memories.slice(0, 3).map(m => (
@@ -726,25 +711,28 @@ export default function AgentSwarm() {
                             <Loader2 size={14} className="animate-spin text-[#117dff]" />
                           ) : (
                             <>
-                              {proposal.category === 'duplicate' && (
-                                <button
-                                  onClick={() => executeProposal(proposal, 'merge')}
-                                  className="text-[10px] px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
-                                >
-                                  Merge
-                                </button>
-                              )}
+                              {/* No 'Merge' action — policy: never fuse content. */}
+                              {/* Approve = run the safe action for this category   */}
+                              <button
+                                onClick={() => executeProposal(proposal, proposal.suggestedAction || 'archive')}
+                                className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-medium"
+                                title={`Run ${proposal.suggestedAction || 'archive'} on this memory`}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => setExecutedIds(prev => new Set([...prev, proposal.id]))}
+                                className="text-[10px] px-2.5 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors font-medium"
+                                title="Skip this proposal — no action taken"
+                              >
+                                Skip
+                              </button>
                               <button
                                 onClick={() => executeProposal(proposal, 'delete')}
                                 className="text-[10px] px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors font-medium"
+                                title="Permanently delete (cannot undo)"
                               >
                                 Delete
-                              </button>
-                              <button
-                                onClick={() => executeProposal(proposal, 'archive')}
-                                className="text-[10px] px-2.5 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors font-medium"
-                              >
-                                Archive
                               </button>
                             </>
                           )}
