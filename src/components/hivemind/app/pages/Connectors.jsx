@@ -2371,7 +2371,7 @@ export default function Connectors() {
   // github, linear, jira, confluence, etc). Flow:
   //   1. Backend gives short-lived connect session token
   //   2. @nangohq/frontend opens Nango popup against self-hosted
-  //      nango.hivemind.davinciai.eu, runs OAuth dance
+  //      api.hivemind.davinciai.eu:8042 (Nango admin/host), runs OAuth dance
   //   3. We persist (provider_key, connection_id) so backend can fetch
   //      fresh access tokens via Nango on every MCP call.
   const handleNangoConnect = useCallback(async (connector) => {
@@ -2383,7 +2383,7 @@ export default function Connectors() {
       const Nango = NangoMod.default || NangoMod.Nango || NangoMod;
       const nango = new Nango({
         connectSessionToken: connect_session_token,
-        host: process.env.REACT_APP_NANGO_HOST || 'https://nango.hivemind.davinciai.eu',
+        host: process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042',
       });
       const result = await nango.auth(providerKey);
       const connectionId = result?.connection?.connectionId || result?.connectionId;
