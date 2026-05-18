@@ -67,14 +67,13 @@ export const shadows = {
 //   1. Browsers / corporate networks / ad-blockers blocking the :8040 port
 //   2. Cross-origin cookie issues for first-party session cookies
 //   3. Wrong/empty REACT_APP_CONTROL_PLANE_URL baked into a Vercel build
-// Override via env var only when running the frontend off-domain (local dev,
-// preview deploys, etc).
+// FE is hosted on Vercel at hivemind.davinciai.eu — Vercel does NOT proxy
+// /v1/* to the control plane, so a same-origin request resolves to Vercel's
+// SPA fallback and returns 404/405. Always hit the api host explicitly.
 export const API_DEFAULTS = {
   controlPlaneBase:
     process.env.REACT_APP_CONTROL_PLANE_URL ||
-    (typeof window !== 'undefined' && window.location.hostname.endsWith('davinciai.eu')
-      ? '' // same-origin in production — Caddy proxies /v1 → control-plane
-      : 'https://api.hivemind.davinciai.eu:8040'),
+    'https://api.hivemind.davinciai.eu:8040',
   coreApiBase:
     process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
 };
