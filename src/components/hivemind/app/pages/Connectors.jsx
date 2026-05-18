@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CONNECTOR_BY_ID, CONNECTOR_MODES } from '../shared/connectors-catalog';
 import {
   Cable,
   Copy,
@@ -693,6 +694,47 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk'] mt-0.5 leading-snug">
                 {connector.accountRef ? connector.accountRef : connector.description}
               </p>
+              {/* Mode chips (ingestion / live) sourced from canonical
+                  connectors-catalog. Resolution: oauthProvider first, then id.
+                  Alias map handles legacy provider naming (outlook→microsoft365). */}
+              {(() => {
+                const PROVIDER_ALIAS = {
+                  outlook: 'microsoft365',
+                  ms365: 'microsoft365',
+                  msoffice: 'microsoft365',
+                  jira: 'atlassian',
+                  confluence: 'atlassian',
+                  drive: 'google-drive',
+                  docs: 'google-docs',
+                  sheets: 'google-sheets',
+                  slides: 'google-slides',
+                  contacts: 'google-contacts',
+                  tasks: 'google-tasks',
+                  chat: 'google-chat',
+                  calendar: 'google-calendar',
+                };
+                const rawId = connector.oauthProvider || connector.id;
+                const catalogId = PROVIDER_ALIAS[rawId] || rawId;
+                const cat = CONNECTOR_BY_ID[catalogId];
+                if (!cat || !Array.isArray(cat.mode)) return null;
+                return (
+                  <div className="flex items-center gap-1 mt-1">
+                    {cat.mode.map(m => (
+                      <span
+                        key={m}
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                          m === 'ingestion'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-violet-50 text-violet-700 border border-violet-200'
+                        }`}
+                        title={CONNECTOR_MODES[m]?.description || m}
+                      >
+                        {CONNECTOR_MODES[m]?.label || m}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
               {connector.lastSyncAt && (
                 <p className="text-[#d4d0ca] text-[10px] font-mono mt-0.5">
                   Last sync: {new Date(connector.lastSyncAt).toLocaleString()}
