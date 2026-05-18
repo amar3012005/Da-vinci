@@ -37,6 +37,7 @@ import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
+import Nango from '@nangohq/frontend';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -349,13 +350,12 @@ const CONNECTORS = [
   {
     id: 'slack',
     name: 'Slack',
-    description: 'Capture conversations and shared knowledge',
+    description: 'Channel messages, threads, files. Both batch sync + live query.',
     icon: MessageSquare,
     category: 'workspace',
     status: 'available',
     color: '#e11d48',
     priority: 2,
-    oauthProvider: 'slack',
     nangoProvider: 'slack',
   },
   {
@@ -426,7 +426,7 @@ const CONNECTORS = [
     status: 'available',
     color: '#5e6ad2',
     priority: 4,
-    oauthProvider: 'linear',
+    nangoProvider: 'linear',
     nangoProvider: 'linear',
   },
 ];
@@ -2585,7 +2585,12 @@ export default function Connectors() {
                 : live.status === 'degraded'
                   ? 'error'
                   : live.status === 'not_configured'
-                    ? 'coming_soon'
+                    // Nango-bridged connectors don't need legacy CLIENT_ID env
+                    // on the control plane — Nango holds the OAuth app creds
+                    // centrally (admin sets ONCE for the whole instance).
+                    // Keep 'available' so any tenant user clicks Connect →
+                    // Nango popup → done. Legacy non-Nango stays coming_soon.
+                    ? (c.nangoProvider ? 'available' : 'coming_soon')
                     : c.status;
 
         // Promote to needs_reauth when connected token lacks new scopes
