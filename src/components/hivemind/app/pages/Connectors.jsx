@@ -2383,10 +2383,14 @@ export default function Connectors() {
       const connectUiBase =
         process.env.REACT_APP_NANGO_CONNECT_URL ||
         'https://api.hivemind.davinciai.eu:8043';
+      const nangoApiUrl =
+        process.env.REACT_APP_NANGO_HOST ||
+        'https://api.hivemind.davinciai.eu:8042';
       await new Promise((resolve, reject) => {
         const ui = nango.openConnectUI({
           sessionToken: connect_session_token,
           baseURL: connectUiBase,
+          apiURL: nangoApiUrl,
           onEvent: async (event) => {
             try {
               if (event?.type === 'connect') {
