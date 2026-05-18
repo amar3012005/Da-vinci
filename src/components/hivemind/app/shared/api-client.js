@@ -806,6 +806,44 @@ class HiveMindApiClient {
     throw lastError;
   }
 
+  // ─── Connector catalog + status ────────────────────────────────
+
+  /** Static catalog of all connectors HIVEMIND knows about. Doesn't need auth. */
+  async getConnectorCatalog() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/catalog');
+    return data;
+  }
+
+  /**
+   * Merged view: catalog × tenant connection state. Each connector entry
+   * has { id, name, mode, authType, catalogStatus, connection|null }.
+   */
+  async getConnectorStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/status');
+    return data;
+  }
+
+  /** Per-connector status. */
+  async getConnector(id) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/connectors/${encodeURIComponent(id)}/status`);
+    return data;
+  }
+
+  /**
+   * Begin connect flow. For OAuth: returns { oauthStartUrl } — FE opens
+   * it in a popup. For api_key/connection_string: pass `body`.
+   */
+  async connectConnector(id, body = {}) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/connectors/${encodeURIComponent(id)}/connect`, body);
+    return data;
+  }
+
+  /** Revoke + delete tokens for a connector. */
+  async disconnectConnector(id) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/connectors/${encodeURIComponent(id)}/disconnect`);
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
