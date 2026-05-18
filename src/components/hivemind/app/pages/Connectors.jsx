@@ -2380,18 +2380,40 @@ export default function Connectors() {
     try {
       const { connect_session_token } = await apiClient.getNangoConnectSession(connector.id);
       const NangoMod = await import('@nangohq/frontend');
-      const Nango = NangoMod.default || NangoMod.Nango || NangoMod;
-      const nango = new Nango({
-        connectSessionToken: connect_session_token,
-        host: process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042',
+      const NangoCtor = NangoMod.default || NangoMod.Nango || NangoMod;
+      const nango = new NangoCtor();
+      const connectUiBase =
+        process.env.REACT_APP_NANGO_CONNECT_URL ||
+        'https://api.hivemind.davinciai.eu:8043';
+      await new Promise((resolve, reject) => {
+        const ui = nango.openConnectUI({
+          sessionToken: connect_session_token,
+          baseURL: connectUiBase,
+          onEvent: async (event) => {
+            try {
+              if (event?.type === 'connect') {
+                const payload = event.payload || {};
+                const pKey = payload.providerConfigKey || payload.provider_config_key || providerKey;
+                const connectionId = payload.connectionId || payload.connection_id;
+                if (!connectionId) throw new Error('Nango did not return a connection id');
+                await apiClient.finalizeNangoConnection(pKey, connectionId);
+                setToastMessage({ type: 'success', text: `${connector.name} connected via Nango` });
+                if (typeof refetchOAuth === 'function') refetchOAuth();
+                resolve();
+              } else if (event?.type === 'close') {
+                resolve();
+              } else if (event?.type === 'error') {
+                reject(new Error(event?.payload?.error || 'Nango connect error'));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          },
+        });
+        if (ui && typeof ui.setSessionToken === 'function') {
+          ui.setSessionToken(connect_session_token);
+        }
       });
-      const result = await nango.auth(providerKey);
-      const connectionId = result?.connection?.connectionId || result?.connectionId;
-      if (!connectionId) throw new Error('Nango did not return a connection id');
-      await apiClient.finalizeNangoConnection(providerKey, connectionId);
-      setToastMessage({ type: 'success', text: `${connector.name} connected via Nango` });
-      // Trigger OAuth list refetch so the card flips to 'connected'
-      if (typeof refetchOAuth === 'function') refetchOAuth();
     } catch (err) {
       setToastMessage({
         type: 'error',
