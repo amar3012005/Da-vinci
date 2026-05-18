@@ -1322,8 +1322,8 @@ class HiveMindApiClient {
 
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
-  async whatsappQr() {
-    const { data } = await this.controlPlane.post('/v1/connectors/whatsapp/qr');
+  async whatsappQr(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/connectors/whatsapp/qr', payload);
     return data;
   }
 

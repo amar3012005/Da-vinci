@@ -19,6 +19,8 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
   const [phoneNumber, setPhoneNumber] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [elapsed, setElapsed] = useState(0);
+  const [mode, setMode] = useState('bot');
+  const [selfChatPhone, setSelfChatPhone] = useState('');
   const pollRef = useRef(null);
   const fetchQrRef = useRef(null);
   const mountedRef = useRef(true);
@@ -26,6 +28,19 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
   const retryTimeoutRef = useRef(null);
 
   const TIMEOUT_S = 120;
+
+  const pairingPayload = useCallback(() => {
+    const normalizedPhone = String(selfChatPhone || '').replace(/\D/g, '');
+    if (mode === 'self_chat') {
+      return {
+        mode,
+        allowedUsers: normalizedPhone ? [normalizedPhone] : [],
+        pairedPhoneNumber: normalizedPhone || null,
+      };
+    }
+
+    return { mode: 'bot', allowedUsers: [] };
+  }, [mode, selfChatPhone]);
 
   const clearTimers = useCallback(() => {
     if (pollRef.current) {
@@ -80,7 +95,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
 
   const fetchQr = useCallback(async () => {
     try {
-      const data = await apiClient.whatsappQr();
+      const data = await apiClient.whatsappQr(pairingPayload());
       if (!mountedRef.current) return;
       if (data.qr) {
         setQr(data.qr);
@@ -99,11 +114,17 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setErrorMessage(e.response?.data?.error || e.message);
       }
     }
-  }, [scheduleQrRetry, startPolling]);
+  }, [pairingPayload, scheduleQrRetry, startPolling]);
 
   fetchQrRef.current = fetchQr;
 
   const startPairing = useCallback(async () => {
+    if (mode === 'self_chat' && !String(selfChatPhone || '').replace(/\D/g, '')) {
+      setStatus('error');
+      setErrorMessage('Enter your WhatsApp number before starting self-chat mode.');
+      return;
+    }
+
     setStatus('loading');
     setErrorMessage(null);
     setQr(null);
@@ -112,7 +133,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
     clearTimers();
 
     try {
-      const data = await apiClient.whatsappQr();
+      const data = await apiClient.whatsappQr(pairingPayload());
       if (!mountedRef.current) return;
 
       if (data.qr) {
@@ -131,7 +152,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
         setErrorMessage(e.response?.data?.error || e.message);
       }
     }
-  }, [clearTimers, scheduleQrRetry, startPolling]);
+  }, [clearTimers, mode, pairingPayload, scheduleQrRetry, selfChatPhone, startPolling]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -195,6 +216,52 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                 <div>
                   <span className="font-semibold text-[#0a0a0a]">Usage:</span> keep it conversational and avoid bulk outbound messaging.
                 </div>
+              </div>
+              <div className="mt-4 grid gap-3">
+                <div>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">Mode</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMode('bot')}
+                      className={`rounded-xl border px-3 py-2 text-left text-[11px] font-['Space_Grotesk'] transition ${
+                        mode === 'bot'
+                          ? 'border-[#0a0a0a] bg-white text-[#0a0a0a]'
+                          : 'border-[#e3e0db] bg-[#f8f6f1] text-[#525252]'
+                      }`}
+                    >
+                      <div className="font-semibold">Bot number</div>
+                      <div className="mt-1 text-[10px] leading-4 opacity-80">Best for a shared assistant line.</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('self_chat')}
+                      className={`rounded-xl border px-3 py-2 text-left text-[11px] font-['Space_Grotesk'] transition ${
+                        mode === 'self_chat'
+                          ? 'border-[#0a0a0a] bg-white text-[#0a0a0a]'
+                          : 'border-[#e3e0db] bg-[#f8f6f1] text-[#525252]'
+                      }`}
+                    >
+                      <div className="font-semibold">Self-chat</div>
+                      <div className="mt-1 text-[10px] leading-4 opacity-80">Only your own number can talk to HIVE.</div>
+                    </button>
+                  </div>
+                </div>
+                {mode === 'self_chat' && (
+                  <label className="block">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">Your WhatsApp number</p>
+                    <input
+                      type="tel"
+                      value={selfChatPhone}
+                      onChange={(e) => setSelfChatPhone(e.target.value)}
+                      placeholder="+491234567890"
+                      className="mt-2 w-full rounded-xl border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#0a0a0a] outline-none transition focus:border-[#0a0a0a]"
+                    />
+                    <p className="mt-1 text-[10px] text-[#8b857c] font-['Space_Grotesk']">
+                      Used to reject other chats after pairing.
+                    </p>
+                  </label>
+                )}
               </div>
             </div>
           )}
