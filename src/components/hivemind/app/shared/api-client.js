@@ -806,40 +806,43 @@ class HiveMindApiClient {
     throw lastError;
   }
 
-  // ─── Connector catalog + status ────────────────────────────────
+  // ─── Connector catalog + status (canonical, mode-aware) ──────────
+  // Renamed to *Catalog suffix to avoid collision with legacy methods:
+  //   - getConnectorStatus()  → MCP queue status (different endpoint)
+  //   - disconnectConnector() → control-plane OAuth disconnect
 
-  /** Static catalog of all connectors HIVEMIND knows about. Doesn't need auth. */
+  /** Static catalog of all connectors HIVEMIND knows about. */
   async getConnectorCatalog() {
     const { data } = await this.controlPlane.get('/v1/proxy/connectors/catalog');
     return data;
   }
 
   /**
-   * Merged view: catalog × tenant connection state. Each connector entry
-   * has { id, name, mode, authType, catalogStatus, connection|null }.
+   * Merged view: catalog × tenant connection state. Each entry has
+   * { id, name, mode, authType, catalogStatus, connection|null }.
    */
-  async getConnectorStatus() {
+  async getConnectorsCatalogStatus() {
     const { data } = await this.controlPlane.get('/v1/proxy/connectors/status');
     return data;
   }
 
-  /** Per-connector status. */
-  async getConnector(id) {
+  /** Per-connector status from canonical catalog endpoint. */
+  async getCatalogConnector(id) {
     const { data } = await this.controlPlane.get(`/v1/proxy/connectors/${encodeURIComponent(id)}/status`);
     return data;
   }
 
   /**
-   * Begin connect flow. For OAuth: returns { oauthStartUrl } — FE opens
-   * it in a popup. For api_key/connection_string: pass `body`.
+   * Begin connect flow via canonical dispatcher. For OAuth: returns
+   * { oauthStartUrl }. For api_key/connection_string: pass `body`.
    */
-  async connectConnector(id, body = {}) {
+  async connectCatalogConnector(id, body = {}) {
     const { data } = await this.controlPlane.post(`/v1/proxy/connectors/${encodeURIComponent(id)}/connect`, body);
     return data;
   }
 
-  /** Revoke + delete tokens for a connector. */
-  async disconnectConnector(id) {
+  /** Revoke + delete tokens via canonical dispatcher. */
+  async disconnectCatalogConnector(id) {
     const { data } = await this.controlPlane.post(`/v1/proxy/connectors/${encodeURIComponent(id)}/disconnect`);
     return data;
   }
