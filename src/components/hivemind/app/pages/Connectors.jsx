@@ -37,7 +37,6 @@ import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
-import Nango from '@nangohq/frontend';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -426,7 +425,6 @@ const CONNECTORS = [
     status: 'available',
     color: '#5e6ad2',
     priority: 4,
-    nangoProvider: 'linear',
     nangoProvider: 'linear',
   },
 ];
