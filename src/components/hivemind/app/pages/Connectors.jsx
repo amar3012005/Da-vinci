@@ -2586,6 +2586,23 @@ export default function Connectors() {
 
   // Merge static CONNECTORS with live OAuth status
   const mergedConnectors = CONNECTORS.map((c) => {
+    // Nango-bridged connectors: backend /v1/connectors overlays nango_connections
+    // keyed by registry id. We match against the registry id (== c.id usually,
+    // or fall back to c.nangoProvider).
+    if (c.nangoProvider && !c.oauthProvider) {
+      const live = oauthList.find(
+        (o) => o.provider === c.id || o.provider === c.nangoProvider
+      );
+      if (live && live.status === 'connected') {
+        return {
+          ...c,
+          status: 'connected',
+          accountRef: live.account_ref || null,
+          lastSyncAt: live.last_sync_at || null,
+        };
+      }
+      return c;
+    }
     if (c.oauthProvider) {
       const live = oauthList.find((o) => o.provider === c.oauthProvider);
       if (live) {
