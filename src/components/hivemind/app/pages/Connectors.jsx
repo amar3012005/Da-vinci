@@ -187,14 +187,15 @@ const CONNECTORS = [
   {
     id: 'atlassian',
     name: 'Atlassian (Jira + Confluence)',
-    description: 'Jira issues + Confluence pages via single Atlassian OAuth 2.0 (3LO)',
+    description: 'Jira issues + Confluence pages via Nango OAuth bridge',
     icon: BookOpen,
     category: 'knowledge',
-    status: 'needs_oauth_setup',
+    status: 'available',
     color: '#0052cc',
     priority: 1,
     oauthProvider: 'atlassian',
-    setupHint: 'Set ATLASSIAN_CLIENT_ID + ATLASSIAN_CLIENT_SECRET on the control plane',
+    nangoProvider: 'jira',
+    setupHint: 'OAuth credentials managed by Nango. Configure in Nango admin UI.',
   },
   {
     id: 'salesforce',
@@ -355,6 +356,7 @@ const CONNECTORS = [
     color: '#e11d48',
     priority: 2,
     oauthProvider: 'slack',
+    nangoProvider: 'slack',
   },
   {
     id: 'whatsapp',
@@ -388,6 +390,7 @@ const CONNECTORS = [
     color: '#f5f5f5',
     priority: 5,
     oauthProvider: 'notion',
+    nangoProvider: 'notion',
   },
   {
     id: 'confluence',
@@ -395,9 +398,11 @@ const CONNECTORS = [
     description: 'Import team documentation and spaces',
     icon: Layers,
     category: 'knowledge',
-    status: 'coming_soon',
+    status: 'available',
     color: '#3b82f6',
     priority: 6,
+    oauthProvider: 'confluence',
+    nangoProvider: 'confluence',
   },
   // Code
   {
@@ -410,6 +415,7 @@ const CONNECTORS = [
     color: '#f5f5f5',
     priority: 3,
     oauthProvider: 'github',
+    nangoProvider: 'github',
   },
   {
     id: 'linear',
@@ -417,9 +423,11 @@ const CONNECTORS = [
     description: 'Sync issues, projects, and roadmaps',
     icon: FileText,
     category: 'code',
-    status: 'coming_soon',
+    status: 'available',
     color: '#5e6ad2',
     priority: 4,
+    oauthProvider: 'linear',
+    nangoProvider: 'linear',
   },
 ];
 
@@ -2358,6 +2366,42 @@ export default function Connectors() {
     setVerifiedMcpEndpoints(mapped);
   }, [endpoints, user?.id, user?.userId]);
 
+  // ── Nango Connect (OAuth bridge) ──────────────────────────────────
+  // Used for connectors whose nangoProvider field is set (slack, notion,
+  // github, linear, jira, confluence, etc). Flow:
+  //   1. Backend gives short-lived connect session token
+  //   2. @nangohq/frontend opens Nango popup against self-hosted
+  //      nango.hivemind.davinciai.eu, runs OAuth dance
+  //   3. We persist (provider_key, connection_id) so backend can fetch
+  //      fresh access tokens via Nango on every MCP call.
+  const handleNangoConnect = useCallback(async (connector) => {
+    const providerKey = connector.nangoProvider;
+    setConnectingProvider(connector.oauthProvider || connector.id);
+    try {
+      const { connect_session_token } = await apiClient.getNangoConnectSession(connector.id);
+      const NangoMod = await import('@nangohq/frontend');
+      const Nango = NangoMod.default || NangoMod.Nango || NangoMod;
+      const nango = new Nango({
+        connectSessionToken: connect_session_token,
+        host: process.env.REACT_APP_NANGO_HOST || 'https://nango.hivemind.davinciai.eu',
+      });
+      const result = await nango.auth(providerKey);
+      const connectionId = result?.connection?.connectionId || result?.connectionId;
+      if (!connectionId) throw new Error('Nango did not return a connection id');
+      await apiClient.finalizeNangoConnection(providerKey, connectionId);
+      setToastMessage({ type: 'success', text: `${connector.name} connected via Nango` });
+      // Trigger OAuth list refetch so the card flips to 'connected'
+      if (typeof refetchOAuth === 'function') refetchOAuth();
+    } catch (err) {
+      setToastMessage({
+        type: 'error',
+        text: err?.response?.data?.error || err?.message || 'Nango connect failed',
+      });
+    } finally {
+      setConnectingProvider(null);
+    }
+  }, [refetchOAuth]);
+
   const handleOAuthConnect = useCallback(async (provider, opts = {}) => {
     setConnectingProvider(provider);
     try {
@@ -2740,6 +2784,12 @@ export default function Connectors() {
                 const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
                 const clientId = connector.oauthClientId || connector.id;
                 window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
+                return;
+              }
+              // Nango-bridged connectors (slack, notion, github, linear, jira,
+              // confluence, etc.) — opens Nango popup instead of legacy OAuth.
+              if (connector.nangoProvider) {
+                handleNangoConnect(connector);
                 return;
               }
               if (connector.oauthProvider) {

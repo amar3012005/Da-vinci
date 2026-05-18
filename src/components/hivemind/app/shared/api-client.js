@@ -847,6 +847,39 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Nango Connect (OAuth bridge) ──────────────────────────────
+  // For connectors backed by Nango (slack, notion, github, linear, jira,
+  // confluence, etc). Flow:
+  //   1. FE asks backend for a short-lived connect session token
+  //   2. FE opens Nango popup with @nangohq/frontend → nango.auth(provider)
+  //   3. On popup success FE calls finalize so backend persists the
+  //      (provider_key, connection_id) row to nango_connections.
+
+  /**
+   * Request a Nango Connect session for the given connector.
+   * Backend looks up nango_provider from data/mcp-connectors.json.
+   * Returns { connect_session_token, provider, host? }.
+   */
+  async getNangoConnectSession(connectorId) {
+    const { data } = await this.controlPlane.post(
+      '/v1/proxy/connectors/connect-session',
+      { connector_id: connectorId },
+    );
+    return data;
+  }
+
+  /**
+   * Persist the established Nango connection after the popup resolves.
+   * Backend upserts NangoConnection row scoped by (userId, providerKey, orgId).
+   */
+  async finalizeNangoConnection(provider_key, connection_id) {
+    const { data } = await this.controlPlane.post(
+      '/v1/proxy/connectors/connect',
+      { provider_key, connection_id },
+    );
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
