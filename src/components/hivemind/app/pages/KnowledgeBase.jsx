@@ -896,6 +896,8 @@ export default function KnowledgeBase() {
         }
       }
 
+      const tStart = Date.now();
+      let processingTimer = null;
       try {
         const result = await apiClient.uploadDocument(file, {
           tags: customTags || undefined,
@@ -905,11 +907,36 @@ export default function KnowledgeBase() {
           onUploadProgress: (e) => {
             if (!e.total) return;
             const pct = Math.round((e.loaded / e.total) * 100);
+            const elapsed = (Date.now() - tStart) / 1000;
+            const speedBps = elapsed > 0 ? e.loaded / elapsed : 0;
+            const etaSec = speedBps > 0 ? Math.max(0, (e.total - e.loaded) / speedBps) : null;
             setUploads((prev) => prev.map((u) =>
-              u.id === uploadEntry.id ? { ...u, progress: pct } : u
+              u.id === uploadEntry.id ? {
+                ...u, progress: pct,
+                speedBps,
+                etaSec,
+                bytesLoaded: e.loaded,
+                bytesTotal: e.total,
+                stage: pct < 100 ? 'uploading' : 'processing',
+              } : u
             ));
+            // After byte-upload hits 100% server still processes (parse → segment
+            // → embed → promote). Switch into indeterminate "processing" mode
+            // so the bar doesn't lie about being done.
+            if (pct >= 100 && !processingTimer) {
+              const tProcessStart = Date.now();
+              processingTimer = setInterval(() => {
+                setUploads((prev) => prev.map((u) =>
+                  u.id === uploadEntry.id ? {
+                    ...u, stage: 'processing',
+                    processingSec: Math.round((Date.now() - tProcessStart) / 1000),
+                  } : u
+                ));
+              }, 500);
+            }
           },
         });
+        if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
 
         // ── Server-side dedup response ──
         // If backend matched an existing doc-hash, it returns
@@ -969,6 +996,7 @@ export default function KnowledgeBase() {
         }, ...prev]);
         queueRefetch();
       } catch (err) {
+        if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
@@ -1303,12 +1331,17 @@ export default function KnowledgeBase() {
                   'bg-white border border-[#117dff]/20'
                 }`}
               >
-                {/* Per-file progress bar (background fill) */}
-                {u.status === 'uploading' && (u.progress || 0) > 0 && (
+                {/* Per-file progress bar (background fill).
+                    During byte-upload: actual %.
+                    During server-side processing: shimmer/indeterminate. */}
+                {u.status === 'uploading' && u.stage !== 'processing' && (u.progress || 0) > 0 && (
                   <div
-                    className="absolute inset-y-0 left-0 bg-[#117dff]/8 transition-all duration-200 pointer-events-none"
+                    className="absolute inset-y-0 left-0 bg-[#117dff]/10 transition-all duration-200 pointer-events-none"
                     style={{ width: `${u.progress}%` }}
                   />
+                )}
+                {u.status === 'uploading' && u.stage === 'processing' && (
+                  <div className="absolute inset-y-0 left-0 right-0 pointer-events-none bg-[#117dff]/8 animate-pulse" />
                 )}
                 <div className="relative flex items-center gap-3 flex-1 min-w-0">
                   {u.status === 'queued' && <Clock size={14} className="text-[#a3a3a3]" />}
@@ -1318,8 +1351,21 @@ export default function KnowledgeBase() {
                   {u.status === 'cancelled' && <XCircle size={14} className="text-[#a3a3a3]" />}
                   <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
                   {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
-                  {u.status === 'uploading' && (u.progress || 0) > 0 && (
-                    <span className="text-[#117dff] font-semibold">{u.progress}%</span>
+                  {u.status === 'uploading' && u.stage !== 'processing' && (u.progress || 0) > 0 && (
+                    <>
+                      <span className="text-[#117dff] font-semibold">{u.progress}%</span>
+                      {u.speedBps > 0 && (
+                        <span className="text-[#a3a3a3]">{formatBytes(u.speedBps)}/s</span>
+                      )}
+                      {u.etaSec != null && u.etaSec > 0 && u.etaSec < 999 && (
+                        <span className="text-[#a3a3a3]">eta {Math.ceil(u.etaSec)}s</span>
+                      )}
+                    </>
+                  )}
+                  {u.status === 'uploading' && u.stage === 'processing' && (
+                    <span className="text-[#117dff] font-semibold">
+                      Processing{u.processingSec ? ` · ${u.processingSec}s` : '…'}
+                    </span>
                   )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
                     <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
