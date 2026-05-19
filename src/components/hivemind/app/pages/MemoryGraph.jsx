@@ -622,9 +622,12 @@ export default function MemoryGraph() {
     const q = searchQuery.toLowerCase();
     const matches = new Set();
     graphData.nodes.forEach((n) => {
+      // Intelligent-graph nodes include kind=entity/document with .label, .aliases
       if (
         n.title?.toLowerCase().includes(q) ||
         n.content?.toLowerCase().includes(q) ||
+        n.label?.toLowerCase().includes(q) ||
+        n.aliases?.some?.((a) => String(a).toLowerCase().includes(q)) ||
         n.tags?.some((t) => t.toLowerCase().includes(q))
       ) {
         matches.add(n.id);

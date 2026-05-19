@@ -89,19 +89,35 @@ function getLabelTexture(type, confidence, themeName) {
   const key = `${type}|${confidence ?? "-"}|${themeName}`;
   if (labelTextureCache.has(key)) return labelTextureCache.get(key);
   const t = THEMES[themeName] || THEMES.day;
-  const text = confidence ? `${type}  ${confidence}` : type;
   const dpr = 2;
   const fontSize = 22 * dpr;
+  const confFontSize = 18 * dpr;
   const padX = 14 * dpr;
   const padY = 8 * dpr;
+  const gap = 6 * dpr;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  const textW = ctx.measureText(text).width;
-  canvas.width = Math.ceil(textW + padX * 2);
+  const typeW = ctx.measureText(type).width;
+  ctx.font = `500 ${confFontSize}px "JetBrains Mono", monospace`;
+  const confW = confidence ? ctx.measureText(confidence).width : 0;
+  const totalW = typeW + (confidence ? gap + confW : 0);
+  canvas.width = Math.ceil(totalW + padX * 2);
   canvas.height = Math.ceil(fontSize + padY * 2);
   const r = canvas.height / 2;
-  ctx.fillStyle = t.edgeLabelBg;
+  // Pill background — type-colored when known (red Contradicts, purple Derives...)
+  const typeColor = (() => {
+    const lc = String(type).toLowerCase();
+    if (lc === 'contradicts') return '#ef4444';
+    if (lc === 'derived_from' || lc === 'derives') return '#a78bfa';
+    if (lc === 'supports' || lc === 'mentions') return '#10b981';
+    if (lc === 'updates') return '#3b82f6';
+    if (lc === 'extends') return '#8b5cf6';
+    if (lc === 'needs_revision') return '#f59e0b';
+    if (lc === 'peer_review') return '#64748b';
+    return null;
+  })();
+  ctx.fillStyle = typeColor ? typeColor + '22' : t.edgeLabelBg; // tinted bg with low alpha
   ctx.beginPath();
   ctx.moveTo(r, 0);
   ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, r);
@@ -111,12 +127,19 @@ function getLabelTexture(type, confidence, themeName) {
   ctx.closePath();
   ctx.fill();
   ctx.lineWidth = dpr;
-  ctx.strokeStyle = t.edgeLabelBorder;
+  ctx.strokeStyle = typeColor || t.edgeLabelBorder;
   ctx.stroke();
+  // Type label (colored when known type)
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  ctx.fillStyle = t.label;
+  ctx.fillStyle = typeColor || t.label;
   ctx.textBaseline = "middle";
-  ctx.fillText(text, padX, canvas.height / 2);
+  ctx.fillText(type, padX, canvas.height / 2);
+  // Confidence pill — muted mono
+  if (confidence) {
+    ctx.font = `500 ${confFontSize}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = typeColor ? typeColor + 'cc' : t.label + 'cc';
+    ctx.fillText(confidence, padX + typeW + gap, canvas.height / 2);
+  }
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;

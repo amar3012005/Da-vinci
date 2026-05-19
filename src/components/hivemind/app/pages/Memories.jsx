@@ -1288,20 +1288,66 @@ function MemoriesTab({
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 
-              {/* Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Grid — flat or grouped-by-document */}
+              {groupByDoc ? (
                 <AnimatePresence mode="popLayout">
-                  {resolvedList.map((memory, i) => (
-                    <MemoryCard
-                      key={memory.id || i}
-                      memory={memory}
-                      index={i}
-                      onSelect={handleSelectMemory}
-                      isSelected={selectedMemory?.id === memory.id}
-                    />
-                  ))}
+                  {(() => {
+                    // Group by source_metadata.document_id (Phase 1 evidence-backed memories)
+                    const groups = new Map();
+                    for (const m of resolvedList) {
+                      const docId = m.source_metadata?.document_id
+                        || m.metadata?.source_metadata?.document_id
+                        || m.metadata?.document_id
+                        || null;
+                      const key = docId || 'ungrouped';
+                      if (!groups.has(key)) groups.set(key, { docId, items: [] });
+                      groups.get(key).items.push(m);
+                    }
+                    return Array.from(groups.entries()).map(([key, grp]) => {
+                      const first = grp.items[0];
+                      const docTitle = first?.source_metadata?.heading
+                        || first?.metadata?.source_metadata?.heading
+                        || (grp.docId ? `Document ${grp.docId.slice(0, 8)}` : 'Other memories');
+                      return (
+                        <div key={key} className="mb-4">
+                          <div className="flex items-center gap-2 mb-2 px-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#117dff]" />
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-[#525252]">
+                              {docTitle}
+                            </span>
+                            <span className="text-[10px] font-mono text-[#a3a3a3]">·{grp.items.length} memor{grp.items.length === 1 ? 'y' : 'ies'}</span>
+                          </div>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            {grp.items.map((memory, i) => (
+                              <MemoryCard
+                                key={memory.id || `${key}-${i}`}
+                                memory={memory}
+                                index={i}
+                                onSelect={handleSelectMemory}
+                                isSelected={selectedMemory?.id === memory.id}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </AnimatePresence>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <AnimatePresence mode="popLayout">
+                    {resolvedList.map((memory, i) => (
+                      <MemoryCard
+                        key={memory.id || i}
+                        memory={memory}
+                        index={i}
+                        onSelect={handleSelectMemory}
+                        isSelected={selectedMemory?.id === memory.id}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
 
               {/* Load more */}
               {!isSearching && hasMore && resolvedList.length >= PAGE_SIZE && (totalCount == null || resolvedList.length < totalCount) && (
