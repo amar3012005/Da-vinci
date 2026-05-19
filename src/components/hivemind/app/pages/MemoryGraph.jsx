@@ -423,6 +423,11 @@ export default function MemoryGraph() {
     const parsed = parseInt(stored, 10);
     return Number.isFinite(parsed) ? parsed : 0;
   });
+  // Intelligent graph (docs + entities + typed edges) toggle
+  const [intelligentMode, setIntelligentMode] = useState(() => safeStorageGet("hm-graph-intelligent") === "true");
+  useEffect(() => { safeStorageSet("hm-graph-intelligent", String(intelligentMode)); }, [intelligentMode]);
+  // Relationship type filter chips (Updates, Extends, Derives, Contradicts, supports, mentions)
+  const [edgeTypeFilter, setEdgeTypeFilter] = useState(new Set()); // empty = all
   useEffect(() => {
     safeStorageSet("hm-graph-limit", String(nodeLimit));
   }, [nodeLimit]);
@@ -470,12 +475,22 @@ export default function MemoryGraph() {
     setLoading(!hadCache);
     setError(null);
     try {
-      const data = await apiClient.getGraph({
-        project: projectFilter || undefined,
-        limit: nodeLimit,
-        scope,
-      });
-      const { nodes, links } = normalizeGraphPayload(data.nodes || [], data.edges || []);
+      const data = intelligentMode
+        ? await apiClient.getIntelligentGraph({ limit: Math.max(nodeLimit || 0, 500) || 500 })
+        : await apiClient.getGraph({ project: projectFilter || undefined, limit: nodeLimit, scope });
+      let nodes, links;
+      if (intelligentMode) {
+        // edges have `source/target/type/confidence`; normalize to links
+        nodes = (data.nodes || []).map(n => ({ ...n, val: n.size || 1 }));
+        links = (data.edges || []).map(e => ({ source: e.source, target: e.target, type: e.type, confidence: e.confidence, kind: e.kind }));
+        // Apply edge type filter
+        if (edgeTypeFilter.size > 0) {
+          links = links.filter(l => edgeTypeFilter.has(String(l.type || '').toLowerCase()));
+        }
+      } else {
+        const norm = normalizeGraphPayload(data.nodes || [], data.edges || []);
+        nodes = norm.nodes; links = norm.links;
+      }
       setGraphData({ nodes, links });
       setRawEdges((data.edges || []).filter((edge) => nodes.some((node) => node.id === edge.source) && nodes.some((node) => node.id === edge.target)));
       setMeta(data.meta || null);
@@ -502,7 +517,7 @@ export default function MemoryGraph() {
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey]);
+  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter]);
 
   const userColorMap = useMemo(() => {
     const ids = [
@@ -1023,6 +1038,60 @@ export default function MemoryGraph() {
             </div>
           </div>
         )}
+
+        {/* Intelligent mode + relationship type filters */}
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 flex-wrap max-w-[60%] justify-end">
+          <button
+            type="button"
+            onClick={() => setIntelligentMode(v => !v)}
+            className={`rounded-lg px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] border ${
+              intelligentMode
+                ? "bg-[#117dff]/10 border-[#117dff]/40 text-[#117dff]"
+                : "border-[#e3e0db] bg-white/80 text-[#737373] hover:text-[#525252]"
+            }`}
+            title="Show documents + entities + typed relationships"
+          >
+            ◆ Intelligent
+          </button>
+          {intelligentMode && [
+            { key: 'updates', label: 'Updates', color: '#3b82f6' },
+            { key: 'extends', label: 'Extends', color: '#8b5cf6' },
+            { key: 'derives', label: 'Derives', color: '#a78bfa' },
+            { key: 'derived_from', label: 'Evidence', color: '#a78bfa' },
+            { key: 'contradicts', label: 'Contradicts', color: '#ef4444' },
+            { key: 'mentions', label: 'Entities', color: '#10b981' },
+          ].map((opt) => {
+            const active = edgeTypeFilter.has(opt.key);
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  setEdgeTypeFilter(prev => {
+                    const next = new Set(prev);
+                    if (next.has(opt.key)) next.delete(opt.key); else next.add(opt.key);
+                    return next;
+                  });
+                }}
+                style={active ? { borderColor: opt.color, color: opt.color, background: opt.color + '14' } : undefined}
+                className={`rounded-lg px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] border bg-white/80 ${
+                  active ? "" : "border-[#e3e0db] text-[#737373]"
+                }`}
+              >
+                <span style={{ color: opt.color }}>●</span> {opt.label}
+              </button>
+            );
+          })}
+          {intelligentMode && edgeTypeFilter.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setEdgeTypeFilter(new Set())}
+              className="rounded-lg px-2 py-1 text-[10px] font-mono text-[#737373] hover:text-[#525252]"
+            >
+              Clear
+            </button>
+          )}
+        </div>
 
         {graphData.nodes.length === 0 && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center">

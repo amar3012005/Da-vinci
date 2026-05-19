@@ -612,6 +612,36 @@ export default function Memories() {
   const [activeType, setActiveType] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  // Phase 2 polish
+  const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
+  const [groupByDoc, setGroupByDoc] = useState(false);
+  const [topEntities, setTopEntities] = useState([]);
+  const [contradictionsCount, setContradictionsCount] = useState(0);
+
+  // Fetch top entities + contradiction count once
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
+        if (cancelled) return;
+        const seen = new Map();
+        for (const t of (data?.topics || [])) {
+          const e = t.entity;
+          if (!e?.canonicalName) continue;
+          const key = `${e.entityType}:${e.canonicalName.toLowerCase().replace(/\s+/g, '-')}`;
+          if (!seen.has(key)) seen.set(key, { key, type: e.entityType, name: e.canonicalName, count: e.mentionCount || 1 });
+        }
+        setTopEntities(Array.from(seen.values()).sort((a, b) => b.count - a.count).slice(0, 12));
+      } catch { /* noop */ }
+      try {
+        const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/contradictions', { params: { limit: 1 } }).catch(() => ({ data: null }));
+        if (cancelled) return;
+        setContradictionsCount(data?.count || 0);
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Pagination
   const [offset, setOffset] = useState(0);
@@ -633,9 +663,11 @@ export default function Memories() {
       limit: PAGE_SIZE,
       offset: 0,
       ...(activeType ? { memory_type: activeType } : {}),
-      ...(activeTag ? { tags: activeTag } : {}),
+      ...(activeTag || activeEntity
+        ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
+        : {}),
     }),
-    [activeType, activeTag],
+    [activeType, activeTag, activeEntity],
   );
 
   // List-mode fetch
@@ -826,6 +858,62 @@ export default function Memories() {
           })}
         </div>
 
+        {/* Contradiction banner — surfaces conflicting memories */}
+        {contradictionsCount > 0 && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-2">
+            <div className="flex items-center gap-2 text-[#dc2626]">
+              <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
+              <span className="text-sm font-['Space_Grotesk']">
+                <strong>{contradictionsCount}</strong> conflicting memor{contradictionsCount === 1 ? 'y' : 'ies'} detected
+              </span>
+            </div>
+            <a
+              href="/hivemind/app/memories?tab=contradictions"
+              className="text-[11px] font-mono uppercase tracking-wider text-[#dc2626] hover:underline"
+            >
+              Review →
+            </a>
+          </div>
+        )}
+
+        {/* Top-entity chip cloud + group-by toggle */}
+        {topEntities.length > 0 && (
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">Filter by entity:</span>
+            {topEntities.map(e => {
+              const active = activeEntity === e.key;
+              const tint = e.type === 'person' ? '#117dff'
+                : e.type === 'organization' ? '#8b5cf6'
+                : e.type === 'project' ? '#10b981'
+                : e.type === 'product' ? '#f59e0b'
+                : e.type === 'location' ? '#06b6d4'
+                : '#64748b';
+              return (
+                <button
+                  key={e.key}
+                  type="button"
+                  onClick={() => setActiveEntity(active ? null : e.key)}
+                  style={active ? { borderColor: tint, color: tint, background: tint + '14' } : undefined}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-mono border ${active ? '' : 'border-[#e3e0db] text-[#525252]'} hover:border-[${tint}]`}
+                >
+                  <span style={{ color: tint }}>●</span> {e.name}
+                  <span className="text-[#a3a3a3] ml-1">·{e.count}</span>
+                </button>
+              );
+            })}
+            <span className="ml-auto flex items-center gap-1.5 text-[10px] font-mono text-[#737373]">
+              <input
+                type="checkbox"
+                id="group-by-doc"
+                checked={groupByDoc}
+                onChange={(e) => setGroupByDoc(e.target.checked)}
+                className="accent-[#117dff]"
+              />
+              <label htmlFor="group-by-doc" className="cursor-pointer">Group by document</label>
+            </span>
+          </div>
+        )}
+
         {/* ── Tab Content ── */}
         {activeTab === 'memories' && (
           <MemoriesTab
@@ -835,6 +923,9 @@ export default function Memories() {
             setActiveType={setActiveType}
             activeTag={activeTag}
             setActiveTag={setActiveTag}
+            activeEntity={activeEntity}
+            setActiveEntity={setActiveEntity}
+            groupByDoc={groupByDoc}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
             offset={offset}
@@ -883,6 +974,9 @@ function MemoriesTab({
   setActiveType,
   activeTag,
   setActiveTag,
+  activeEntity,
+  setActiveEntity,
+  groupByDoc,
   showFilters,
   setShowFilters,
   offset,
@@ -907,9 +1001,11 @@ function MemoriesTab({
       limit: PAGE_SIZE,
       offset: 0,
       ...(activeType ? { memory_type: activeType } : {}),
-      ...(activeTag ? { tags: activeTag } : {}),
+      ...(activeTag || activeEntity
+        ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
+        : {}),
     }),
-    [activeType, activeTag],
+    [activeType, activeTag, activeEntity],
   );
 
   // List-mode fetch

@@ -205,7 +205,30 @@ function getNodeRadius(node) {
 }
 
 function getNodeType(node) {
-  return (node.memoryType || node.type || "").toLowerCase() || "default";
+  // Intelligent-graph node.kind takes precedence
+  if (node?.kind === 'document') return 'document';
+  if (node?.kind === 'entity') return 'entity';
+  return (node.memoryType || node.memory_type || node.type || "").toLowerCase() || "default";
+}
+
+// Color overrides for non-memory node kinds
+function getKindColor(node) {
+  if (node?.kind === 'document') return '#f59e0b';  // amber — like the image
+  if (node?.kind === 'entity') return '#10b981';     // emerald
+  return null;
+}
+
+// Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
+function getEdgeColorByType(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'contradicts') return '#ef4444';        // red
+  if (t === 'derived_from' || t === 'derives') return '#a78bfa'; // purple
+  if (t === 'supports' || t === 'mentions') return '#10b981';     // green
+  if (t === 'updates') return '#3b82f6';            // blue
+  if (t === 'extends') return '#8b5cf6';            // violet
+  if (t === 'needs_revision') return '#f59e0b';     // amber
+  if (t === 'peer_review') return '#64748b';        // slate
+  return null;
 }
 
 function getFactVariant(node) {
@@ -255,6 +278,10 @@ function greyFromWeight(weight, min = 38, max = 132) {
 }
 
 function getNodeColorBase(node) {
+  // Non-memory kinds (document/entity) get fixed brand colors
+  const kindColor = getKindColor(node);
+  if (kindColor) return kindColor;
+
   const type = getNodeType(node);
   const weight = getNodeWeight(node);
   const base = greyFromWeight(weight);
@@ -311,6 +338,14 @@ function makeNodeShape(node, color, clusterTint) {
   let mesh;
 
   switch (type) {
+    case "document":
+      // Diamond/octahedron — matches reference image style
+      mesh = new THREE.Mesh(new THREE.OctahedronGeometry(radius * 1.25, 0), primaryMaterial);
+      break;
+    case "entity":
+      // Hexagonal disc — entity nodes
+      mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.1, radius * 1.1, radius * 0.4, 6), primaryMaterial);
+      break;
     case "decision":
       mesh = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.98, 16, 16), primaryMaterial);
       break;
@@ -660,6 +695,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getLinkColor = useCallback((link) => {
     const t = themeRef.current;
     if (highlightedLinksRef.current.has(link)) return t.nodeAccent;
+    // Type-specific colors take priority (Contradicts=red, derived_from=purple, etc.)
+    const typeColor = getEdgeColorByType(link?.type);
+    if (typeColor) return typeColor;
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
     return mixHex(t.linkBase, t.nodeAccent, 1 - style.weight);
   }, []);

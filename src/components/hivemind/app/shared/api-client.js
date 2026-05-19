@@ -1148,14 +1148,21 @@ class HiveMindApiClient {
   async getGraph({ project, limit, scope } = {}) {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
-    // limit semantics:
-    //   undefined → omit param, server applies its default (large)
-    //   0         → explicit "no cap" — server clamps to its 50k hard ceiling
-    //   >0        → exact node budget
     if (typeof limit === 'number') params.set('limit', String(limit));
     if (scope) params.set('scope', scope);
     const qs = params.toString();
     const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
+    return data;
+  }
+
+  // Intelligent graph: memories + documents + entities + typed edges
+  async getIntelligentGraph({ limit = 500, entity, memoryType, documentId } = {}) {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    if (entity) params.set('entity', entity);
+    if (memoryType) params.set('memory_type', memoryType);
+    if (documentId) params.set('document_id', documentId);
+    const { data } = await this.controlPlane.get(`/v1/proxy/graph/intelligent?${params.toString()}`);
     return data;
   }
 
