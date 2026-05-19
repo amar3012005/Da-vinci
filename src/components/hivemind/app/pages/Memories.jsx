@@ -14,11 +14,20 @@ import {
   AlertTriangle,
   Loader2,
   GitFork,
+  FileText,
+  Database,
+  ExternalLink,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'memories', label: 'Memories', icon: Brain, description: 'Canonical organizational truths' },
+  { id: 'documents', label: 'Documents', icon: FileText, description: 'Uploaded files and their structure' },
+  { id: 'evidence', label: 'Evidence', icon: Database, description: 'Source segments and citations' },
+];
 
 const MEMORY_TYPES = [
   { key: 'experience', label: 'Experience', color: '#3b82f6' },
@@ -268,9 +277,38 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
-function MemoryDetailPanel({ memory, onClose, onDelete }) {
+function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [evidenceCount, setEvidenceCount] = useState(null);
+  const [entities, setEntities] = useState(null); // [{ canonical_name, entity_type, mention_count }]
+
+  // Fetch entity mentions for this memory (P2 Memory Intelligence)
+  useEffect(() => {
+    if (!memory?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await apiClient.controlPlane.get(`/v1/proxy/admin/topic-states`, { params: { limit: 10 } }).catch(() => ({ data: null }));
+        if (cancelled) return;
+        const fromMem = (data?.topics || []).filter(t => t.lastMemoryId === memory.id);
+        setEntities(fromMem.length ? fromMem : []);
+      } catch {
+        if (!cancelled) setEntities([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [memory?.id]);
+
+  // Fetch evidence count on mount
+  useEffect(() => {
+    apiClient.getMemoryEvidence(memory.id)
+      .then(data => {
+        const count = data?.evidence?.length || data?.length || 0;
+        setEvidenceCount(count);
+      })
+      .catch(() => setEvidenceCount(0));
+  }, [memory.id]);
 
   const handleDelete = async () => {
     if (!confirmDelete) {
@@ -417,6 +455,49 @@ function MemoryDetailPanel({ memory, onClose, onDelete }) {
             </div>
           )}
 
+          {/* Supporting Evidence */}
+          {evidenceCount !== null && evidenceCount > 0 && (
+            <div>
+              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                Evidence
+              </label>
+              <button
+                onClick={onViewEvidence}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-[#117dff]/5 border border-[#117dff]/20 rounded-xl text-sm font-semibold text-[#117dff] hover:bg-[#117dff]/10 transition-all group"
+              >
+                <div className="flex items-center gap-2">
+                  <Database size={16} />
+                  <span>View Supporting Evidence</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono">{evidenceCount} segment{evidenceCount !== 1 ? 's' : ''}</span>
+                  <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Entities (P2 Memory Intelligence) */}
+          {entities && entities.length > 0 && (
+            <div>
+              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                Entities
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {entities.slice(0, 12).map((t) => (
+                  <span key={t.id || t.topicKey}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono border border-[#e3e0db] bg-white text-[#525252]">
+                    <Brain size={9} />
+                    {t.entity?.canonicalName || t.topicKey}
+                    {t.entity?.entityType && (
+                      <span className="text-[#a3a3a3]">·{t.entity.entityType}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Metadata */}
           <div>
             <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
@@ -523,6 +604,9 @@ function EmptyState({ hasFilters }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Memories() {
+  // Tab state
+  const [activeTab, setActiveTab] = useState('memories');
+  
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState(null);
@@ -536,6 +620,7 @@ export default function Memories() {
 
   // Detail
   const [selectedMemory, setSelectedMemory] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   const debouncedQuery = useDebounce(searchQuery, 350);
 
@@ -686,14 +771,14 @@ export default function Memories() {
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <Brain size={22} className="text-[#117dff]" />
             </div>
             <div>
-              <h1 className="text-[#0a0a0a] text-xl font-bold">Memories</h1>
-              <p className="text-[#a3a3a3] text-xs">Browse and manage stored knowledge</p>
+              <h1 className="text-[#0a0a0a] text-xl font-bold">Memory Intelligence</h1>
+              <p className="text-[#a3a3a3] text-xs">Browse memories, documents, and evidence</p>
             </div>
           </div>
           {hasFilters && (
@@ -707,97 +792,332 @@ export default function Memories() {
           )}
         </div>
 
-        {/* ── Search Bar ── */}
-        <div className="relative mb-4">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d4d0ca] hover:text-[#525252] transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setOffset(0);
-              setAllMemories([]);
-              setHasMore(true);
-            }}
-            placeholder="Search memories semantically..."
-            className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-          />
+        {/* ── Tab Navigation ── */}
+        <div className="flex items-center gap-2 mb-6 border-b border-[#e3e0db]">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchQuery('');
+                  setSelectedMemory(null);
+                  setSelectedDocument(null);
+                }}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all relative ${
+                  isActive
+                    ? 'border-[#117dff] text-[#117dff]'
+                    : 'border-transparent text-[#a3a3a3] hover:text-[#525252] hover:border-[#d4d0ca]'
+                }`}
+              >
+                <Icon size={16} />
+                <span className="text-sm font-semibold">{tab.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-[#117dff]/5 rounded-t-lg -z-10"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Search mode indicator */}
-        {isSearching && !searchLoading && searchData && (
-          <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-[#d4d0ca]">
-            <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-[#16a34a]'}`} />
-            {searchData?.metadata?.fallbackApplied
-              ? 'Keyword search (vector unavailable)'
-              : 'Semantic search (vector + keyword)'}
-            {searchData?.metadata?.durationMs != null && (
-              <span className="ml-1">· {searchData.metadata.durationMs}ms</span>
-            )}
-            {searchData?.search_method && (
-              <span className="ml-1">· {searchData.search_method}</span>
-            )}
-          </div>
+        {/* ── Tab Content ── */}
+        {activeTab === 'memories' && (
+          <MemoriesTab
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            activeType={activeType}
+            setActiveType={setActiveType}
+            activeTag={activeTag}
+            setActiveTag={setActiveTag}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            offset={offset}
+            setOffset={setOffset}
+            allMemories={allMemories}
+            setAllMemories={setAllMemories}
+            hasMore={hasMore}
+            setHasMore={setHasMore}
+            selectedMemory={selectedMemory}
+            setSelectedMemory={setSelectedMemory}
+            debouncedQuery={debouncedQuery}
+            clearFilters={clearFilters}
+            hasFilters={hasFilters}
+            setActiveTab={setActiveTab}
+          />
         )}
 
-        {/* ── Filter Bar ── */}
-        <div className="mb-6">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 text-xs font-mono mb-3 transition-colors ${
-              showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
-            }`}
-          >
-            <Filter size={12} />
-            Filters
-            {(activeType || activeTag) && (
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
-            )}
-          </button>
+        {activeTab === 'documents' && (
+          <DocumentsTab
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedDocument={selectedDocument}
+            setSelectedDocument={setSelectedDocument}
+          />
+        )}
 
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                {/* Type filters */}
-                <div className="mb-3">
-                  <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                    Type
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {MEMORY_TYPES.map((t) => (
-                      <button
-                        key={t.key}
-                        onClick={() => {
-                          setActiveType(activeType === t.key ? null : t.key);
-                          setOffset(0);
-                          setAllMemories([]);
-                          setHasMore(true);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                          activeType === t.key
-                            ? 'border-current'
-                            : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
-                        }`}
-                        style={activeType === t.key ? { color: t.color, backgroundColor: `${t.color}15`, borderColor: `${t.color}40` } : {}}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+        {activeTab === 'evidence' && (
+          <EvidenceTab
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            setActiveTab={setActiveTab}
+            setSelectedDocument={setSelectedDocument}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Memories Tab (existing functionality) ──────────────────────────────────
+
+function MemoriesTab({
+  searchQuery,
+  setSearchQuery,
+  activeType,
+  setActiveType,
+  activeTag,
+  setActiveTag,
+  showFilters,
+  setShowFilters,
+  offset,
+  setOffset,
+  allMemories,
+  setAllMemories,
+  hasMore,
+  setHasMore,
+  selectedMemory,
+  setSelectedMemory,
+  debouncedQuery,
+  clearFilters,
+  hasFilters,
+  setActiveTab,
+}) {
+  // ─── Data fetching ──────────────────────────────────────────────
+
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  const listParams = useMemo(
+    () => ({
+      limit: PAGE_SIZE,
+      offset: 0,
+      ...(activeType ? { memory_type: activeType } : {}),
+      ...(activeTag ? { tags: activeTag } : {}),
+    }),
+    [activeType, activeTag],
+  );
+
+  // List-mode fetch
+  const {
+    data: listData,
+    loading: listLoading,
+    error: listError,
+    refetch: refetchList,
+  } = useApiQuery(
+    () => apiClient.listMemories(listParams),
+    [listParams],
+  );
+
+  // Search-mode fetch
+  const {
+    data: searchData,
+    loading: searchLoading,
+    error: searchError,
+  } = useApiQuery(
+    () => (isSearching ? apiClient.quickSearch(debouncedQuery) : Promise.resolve(null)),
+    [debouncedQuery, isSearching],
+  );
+
+  // Resolve which dataset to show
+  const resolvedList = useMemo(() => {
+    if (isSearching) {
+      const results = searchData?.results || searchData?.memories || searchData || [];
+      return Array.isArray(results) ? results : [];
+    }
+    const base = listData?.memories || listData?.results || listData || [];
+    const arr = Array.isArray(base) ? base : [];
+    // Merge for "load more"
+    if (allMemories.length > 0 && offset > 0) {
+      const ids = new Set(allMemories.map((m) => m.id));
+      const merged = [...allMemories];
+      arr.forEach((m) => {
+        if (!ids.has(m.id)) merged.push(m);
+      });
+      return merged;
+    }
+    return arr;
+  }, [isSearching, searchData, listData, allMemories, offset]);
+
+  // Total count from API pagination (server-side truth), not client array length
+  const totalCount = useMemo(() => {
+    if (isSearching) return null;
+    return listData?.pagination?.total ?? listData?.total ?? null;
+  }, [isSearching, listData]);
+
+  // Sync hasMore from initial API response
+  useEffect(() => {
+    if (listData && !isSearching && offset === 0) {
+      if (listData.pagination?.has_more === false) setHasMore(false);
+    }
+  }, [listData, isSearching, offset, setHasMore]);
+
+  const loading = isSearching ? searchLoading : listLoading;
+  const error = isSearching ? searchError : listError;
+
+  // Collect all unique tags for the filter bar
+  const availableTags = useMemo(() => {
+    const tags = new Set();
+    resolvedList.forEach((m) => (m.tags || []).forEach((t) => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [resolvedList]);
+
+  // ─── Handlers ───────────────────────────────────────────────────
+
+  const handleLoadMore = async () => {
+    const nextOffset = offset + PAGE_SIZE;
+    try {
+      const data = await apiClient.listMemories({ ...listParams, offset: nextOffset, limit: PAGE_SIZE });
+      const arr = data?.memories || data?.results || data || [];
+      const items = Array.isArray(arr) ? arr : [];
+      if (items.length < PAGE_SIZE) setHasMore(false);
+      setAllMemories((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        const merged = [...prev];
+        items.forEach((m) => {
+          if (!ids.has(m.id)) merged.push(m);
+        });
+        return merged;
+      });
+      setOffset(nextOffset);
+    } catch {
+      // silently fail
+    }
+  };
+
+  const handleSelectMemory = useCallback(
+    async (memory) => {
+      if (selectedMemory?.id === memory.id) {
+        setSelectedMemory(null);
+        return;
+      }
+      // Fetch full detail
+      try {
+        const full = await apiClient.getMemory(memory.id);
+        setSelectedMemory(full?.memory || full);
+      } catch {
+        setSelectedMemory(memory);
+      }
+    },
+    [selectedMemory, setSelectedMemory],
+  );
+
+  const handleDeleteMemory = useCallback(
+    (id) => {
+      setSelectedMemory(null);
+      setAllMemories((prev) => prev.filter((m) => m.id !== id));
+      refetchList();
+    },
+    [refetchList, setAllMemories, setSelectedMemory],
+  );
+
+  return (
+    <>
+      {/* ── Search Bar ── */}
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d4d0ca] hover:text-[#525252] transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setOffset(0);
+            setAllMemories([]);
+            setHasMore(true);
+          }}
+          placeholder="Search memories semantically..."
+          className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
+        />
+      </div>
+
+      {/* Search mode indicator */}
+      {isSearching && !searchLoading && searchData && (
+        <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-[#d4d0ca]">
+          <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-[#16a34a]'}`} />
+          {searchData?.metadata?.fallbackApplied
+            ? 'Keyword search (vector unavailable)'
+            : 'Semantic search (vector + keyword)'}
+          {searchData?.metadata?.durationMs != null && (
+            <span className="ml-1">· {searchData.metadata.durationMs}ms</span>
+          )}
+          {searchData?.search_method && (
+            <span className="ml-1">· {searchData.search_method}</span>
+          )}
+        </div>
+      )}
+
+      {/* ── Filter Bar ── */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-1.5 text-xs font-mono mb-3 transition-colors ${
+            showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
+          }`}
+        >
+          <Filter size={12} />
+          Filters
+          {(activeType || activeTag) && (
+            <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
+          )}
+        </button>
+
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              {/* Type filters */}
+              <div className="mb-3">
+                <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                  Type
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MEMORY_TYPES.map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => {
+                        setActiveType(activeType === t.key ? null : t.key);
+                        setOffset(0);
+                        setAllMemories([]);
+                        setHasMore(true);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        activeType === t.key
+                          ? 'border-current'
+                          : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
+                      }`}
+                      style={activeType === t.key ? { color: t.color, backgroundColor: `${t.color}15`, borderColor: `${t.color}40` } : {}}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
                 </div>
 
                 {/* Tag filters */}
@@ -889,7 +1209,6 @@ export default function Memories() {
             </>
           )}
         </div>
-      </div>
 
       {/* ── Detail Slide-over ── */}
       <AnimatePresence>
@@ -898,9 +1217,520 @@ export default function Memories() {
             memory={selectedMemory}
             onClose={() => setSelectedMemory(null)}
             onDelete={handleDeleteMemory}
+            onViewEvidence={() => setActiveTab('evidence')}
           />
         )}
       </AnimatePresence>
-    </div>
+    </>
+  );
+}
+
+// ─── Documents Tab ─────────────────────────────────────────────────────────────
+
+function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelectedDocument }) {
+  const PAGE_SIZE = 20;
+  const [offset, setOffset] = useState(0);
+  const [documents, setDocuments] = useState([]);
+
+  const debouncedQuery = useDebounce(searchQuery, 350);
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  // Fetch documents
+  const {
+    data,
+    loading,
+    error,
+  } = useApiQuery(
+    () => isSearching
+      ? apiClient.searchDocuments(debouncedQuery, { limit: PAGE_SIZE })
+      : apiClient.listDocuments({ limit: PAGE_SIZE, offset }),
+    [isSearching, debouncedQuery, offset]
+  );
+
+  useEffect(() => {
+    if (data) {
+      setDocuments(isSearching ? (data.results || []) : (data.documents || []));
+    }
+  }, [data, isSearching]);
+
+  return (
+    <>
+      {/* ── Search Bar ── */}
+      <div className="relative mb-6">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d4d0ca] hover:text-[#525252] transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search documents by title, tags, or platform..."
+          className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
+        />
+      </div>
+
+      {/* ── Loading / Error States ── */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-[#117dff]" />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <AlertTriangle size={16} />
+          <span>Failed to load documents</span>
+        </div>
+      )}
+
+      {/* ── Document Grid ── */}
+      {!loading && !error && documents.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {documents.map((doc, idx) => (
+            <DocumentCard
+              key={doc.id}
+              document={doc}
+              index={idx}
+              onSelect={() => setSelectedDocument(doc)}
+              isSelected={selectedDocument?.id === doc.id}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Empty State ── */}
+      {!loading && !error && documents.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <FileText size={48} className="text-[#d4d0ca] mb-4" />
+          <h3 className="text-[#525252] font-semibold mb-2">
+            {isSearching ? 'No documents found' : 'No documents yet'}
+          </h3>
+          <p className="text-[#a3a3a3] text-sm max-w-md">
+            {isSearching
+              ? 'Try a different search query'
+              : 'Upload documents through the knowledge base to start building your intelligence repository'}
+          </p>
+        </div>
+      )}
+
+      {/* ── Document Detail Slide-over ── */}
+      <AnimatePresence>
+        {selectedDocument && (
+          <DocumentDetailPanel
+            document={selectedDocument}
+            onClose={() => setSelectedDocument(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+// ─── Evidence Tab ──────────────────────────────────────────────────────────────
+
+function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDocument }) {
+  const [searchMode, setSearchMode] = useState('evidence'); // 'evidence' or 'hybrid'
+  const debouncedQuery = useDebounce(searchQuery, 350);
+
+  const {
+    data,
+    loading,
+    error,
+  } = useApiQuery(
+    () => {
+      if (!debouncedQuery.trim()) return Promise.resolve(null);
+      return searchMode === 'hybrid'
+        ? apiClient.hybridSearch(debouncedQuery, { limit: 20 })
+        : apiClient.searchEvidence(debouncedQuery, { limit: 20 });
+    },
+    [debouncedQuery, searchMode]
+  );
+
+  const results = data?.results || data?.evidence || data || [];
+
+  return (
+    <>
+      {/* ── Search Bar with Mode Toggle ── */}
+      <div className="space-y-4 mb-6">
+        <div className="relative">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#d4d0ca]" />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d4d0ca] hover:text-[#525252] transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search evidence segments..."
+            className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
+          />
+        </div>
+
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#a3a3a3] font-mono">Search mode:</span>
+          <button
+            onClick={() => setSearchMode('evidence')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              searchMode === 'evidence'
+                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
+                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
+            }`}
+          >
+            Evidence only
+          </button>
+          <button
+            onClick={() => setSearchMode('hybrid')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+              searchMode === 'hybrid'
+                ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]'
+                : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
+            }`}
+          >
+            Hybrid (evidence + memories)
+          </button>
+        </div>
+      </div>
+
+      {/* ── Loading / Error States ── */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-[#117dff]" />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <AlertTriangle size={16} />
+          <span>Failed to search evidence</span>
+        </div>
+      )}
+
+      {/* ── Evidence Results ── */}
+      {!loading && !error && results.length > 0 && (
+        <div className="space-y-3">
+          {results.map((item, idx) => (
+            <EvidenceCard 
+              key={`${item.segment_id || item.id}-${idx}`} 
+              evidence={item}
+              onViewDocument={(docId) => {
+                setActiveTab('documents');
+                // Fetch and select the document
+                apiClient.getDocument(docId).then(data => {
+                  setSelectedDocument(data.document || data);
+                }).catch(() => {});
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Empty / Prompt State ── */}
+      {!loading && !error && !debouncedQuery.trim() && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Database size={48} className="text-[#d4d0ca] mb-4" />
+          <h3 className="text-[#525252] font-semibold mb-2">Search evidence segments</h3>
+          <p className="text-[#a3a3a3] text-sm max-w-md">
+            Enter a query to search through uploaded document segments and find supporting evidence
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && debouncedQuery.trim() && results.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Database size={48} className="text-[#d4d0ca] mb-4" />
+          <h3 className="text-[#525252] font-semibold mb-2">No evidence found</h3>
+          <p className="text-[#a3a3a3] text-sm max-w-md">
+            Try a different query or switch search modes
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Document Card ─────────────────────────────────────────────────────────────
+
+function DocumentCard({ document, index, onSelect, isSelected }) {
+  const typeColor = document.documentType === 'pdf' ? '#ef4444' :
+                   document.documentType === 'docx' ? '#3b82f6' :
+                   document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.02 }}
+      onClick={onSelect}
+      className={`group relative w-full text-left bg-transparent border rounded-xl p-4 transition-all hover:shadow-md ${
+        isSelected
+          ? 'border-[#117dff] shadow-lg shadow-[#117dff]/10'
+          : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+      }`}
+    >
+      {/* Type Badge */}
+      <div className="flex items-start justify-between mb-3">
+        <div
+          className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide"
+          style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
+        >
+          {document.documentType || 'document'}
+        </div>
+        {document.sourcePlatform && (
+          <div className="flex items-center gap-1 text-[10px] text-[#a3a3a3] font-mono">
+            <Monitor size={10} />
+            {document.sourcePlatform}
+          </div>
+        )}
+      </div>
+
+      {/* Title */}
+      <h3 className="text-[#0a0a0a] font-semibold text-sm mb-2 line-clamp-2 group-hover:text-[#117dff] transition-colors">
+        {document.title}
+      </h3>
+
+      {/* Metadata */}
+      <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mb-3">
+        <span>{document.wordCount?.toLocaleString() || 0} words</span>
+        <span>·</span>
+        <span>{document.segmentCount || 0} segments</span>
+        <span>·</span>
+        <span>{document.promotedCount || 0} promoted</span>
+      </div>
+
+      {/* Tags */}
+      {document.tags && document.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {document.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="px-2 py-0.5 bg-[#117dff]/5 text-[#117dff] rounded text-[10px] font-medium"
+            >
+              {tag}
+            </span>
+          ))}
+          {document.tags.length > 3 && (
+            <span className="text-[10px] text-[#a3a3a3]">+{document.tags.length - 3} more</span>
+          )}
+        </div>
+      )}
+
+      {/* Created date */}
+      <div className="flex items-center gap-1 mt-3 text-[10px] text-[#d4d0ca] font-mono">
+        <Clock size={10} />
+        {new Date(document.createdAt).toLocaleDateString()}
+      </div>
+    </motion.button>
+  );
+}
+
+// ─── Evidence Card ─────────────────────────────────────────────────────────────
+
+function EvidenceCard({ evidence, onViewDocument }) {
+  const hasDocument = evidence.document_id || evidence.documentId;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-transparent border border-[#e3e0db] rounded-xl p-4 hover:border-[#d4d0ca] hover:shadow-sm transition-all"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <p className="text-[#0a0a0a] text-sm line-clamp-3 mb-2">
+            {evidence.content || evidence.text || evidence.excerpt}
+          </p>
+        </div>
+        {evidence.score && (
+          <div className="ml-3 px-2 py-1 bg-[#117dff]/10 text-[#117dff] rounded text-xs font-mono font-semibold">
+            {(evidence.score * 100).toFixed(0)}%
+          </div>
+        )}
+      </div>
+
+      {/* Metadata */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-[10px] text-[#a3a3a3] font-mono flex-1">
+          {evidence.document_title && (
+            <>
+              <FileText size={10} />
+              <span className="line-clamp-1">{evidence.document_title}</span>
+            </>
+          )}
+          {evidence.segment_index != null && (
+            <>
+              <span>·</span>
+              <span>Segment {evidence.segment_index + 1}</span>
+            </>
+          )}
+          {evidence.type === 'memory' && (
+            <>
+              <span>·</span>
+              <Brain size={10} />
+              <span>Canonical memory</span>
+            </>
+          )}
+        </div>
+        
+        {/* View Document Button */}
+        {hasDocument && onViewDocument && (
+          <button
+            onClick={() => onViewDocument(evidence.document_id || evidence.documentId)}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[#117dff] hover:bg-[#117dff]/10 rounded transition-colors"
+          >
+            <ExternalLink size={10} />
+            <span>View Doc</span>
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Document Detail Panel ─────────────────────────────────────────────────────
+
+function DocumentDetailPanel({ document, onClose }) {
+  const [detailData, setDetailData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (document) {
+      setLoading(true);
+      apiClient.getDocument(document.id)
+        .then(data => {
+          setDetailData(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    }
+  }, [document]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-[#0a0a0a]/20 backdrop-blur-sm z-50"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-[#faf9f4] shadow-2xl overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-[#0a0a0a] mb-1">{document.title}</h2>
+              <div className="flex items-center gap-2 text-xs text-[#a3a3a3] font-mono">
+                {document.documentType && (
+                  <span className="px-2 py-0.5 bg-[#117dff]/10 text-[#117dff] rounded font-semibold uppercase">
+                    {document.documentType}
+                  </span>
+                )}
+                {document.sourcePlatform && (
+                  <span>{document.sourcePlatform}</span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-[#a3a3a3] hover:text-[#525252] transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-[#117dff]" />
+            </div>
+          )}
+
+          {/* Content */}
+          {!loading && detailData && (
+            <>
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Word Count</span>
+                  <p className="text-[#0a0a0a] font-semibold">{document.wordCount?.toLocaleString() || 0}</p>
+                </div>
+                <div>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Segments</span>
+                  <p className="text-[#0a0a0a] font-semibold">{detailData.segments?.length || 0}</p>
+                </div>
+                <div>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Promoted</span>
+                  <p className="text-[#0a0a0a] font-semibold">{detailData.promotedMemories?.length || 0}</p>
+                </div>
+                <div>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Created</span>
+                  <p className="text-[#0a0a0a] font-semibold">{new Date(document.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Promoted Memories */}
+              {detailData.promotedMemories && detailData.promotedMemories.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-[#0a0a0a] mb-3 flex items-center gap-2">
+                    <Brain size={16} />
+                    Promoted Memories ({detailData.promotedMemories.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {detailData.promotedMemories.map(mem => (
+                      <div key={mem.id} className="p-3 bg-[#117dff]/5 border border-[#117dff]/20 rounded-lg">
+                        <p className="text-sm text-[#0a0a0a] font-medium mb-1">{mem.title}</p>
+                        <p className="text-xs text-[#525252] line-clamp-2">{mem.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Segments */}
+              {detailData.segments && detailData.segments.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-[#0a0a0a] mb-3 flex items-center gap-2">
+                    <Layers size={16} />
+                    Segments ({detailData.segments.length})
+                  </h3>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {detailData.segments.map(seg => (
+                      <div key={seg.id} className="p-3 bg-transparent border border-[#e3e0db] rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-mono text-[#a3a3a3]">Segment {seg.segmentIndex + 1}</span>
+                          <span className="text-xs font-mono text-[#d4d0ca]">{seg.wordCount} words</span>
+                        </div>
+                        <p className="text-xs text-[#525252] line-clamp-4">{seg.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
