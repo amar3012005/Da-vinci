@@ -10,11 +10,13 @@ import {
   Network,
   X,
   Search,
+  // eslint-disable-next-line no-unused-vars
   Filter,
   RefreshCw,
   Maximize2,
   GitBranch,
   Clock,
+  // eslint-disable-next-line no-unused-vars
   ChevronDown,
   ZoomIn,
   ZoomOut,
@@ -397,8 +399,10 @@ export default function MemoryGraph() {
   const [searchInput, setSearchInput] = useState(""); // Immediate
   const [searchQuery, setSearchQuery] = useState(""); // Debounced
   const [highlightNodes, setHighlightNodes] = useState(new Set());
+  // eslint-disable-next-line no-unused-vars
   const [projectFilter, setProjectFilter] = useState("");
   const [scope, setScope] = useState("personal");
+  // eslint-disable-next-line no-unused-vars
   const [showFilters, setShowFilters] = useState(false);
   const [layerFilter, setLayerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -752,101 +756,120 @@ export default function MemoryGraph() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
-      {/* Top bar */}
-      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/84 backdrop-blur-xl px-4 py-3 flex flex-wrap items-center gap-2 z-10 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-2 pr-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0a0a0a]/8 flex items-center justify-center">
-            <Network size={16} className="text-[#0a0a0a]" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a] leading-none">
-              Memory Graph
-            </h1>
-            <p className="text-[10px] font-mono text-[#8b857d] mt-1">
-              live graph, time scrub, explicit legend
-            </p>
-          </div>
+      {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
+      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/90 backdrop-blur-xl px-3 py-2 flex items-center gap-1.5 z-10 shadow-[0_4px_16px_rgba(0,0,0,0.04)] overflow-x-auto">
+        {/* Brand */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Network size={14} className="text-[#0a0a0a]" />
+          <span className="text-xs font-bold font-['Space_Grotesk'] text-[#0a0a0a] whitespace-nowrap">Memory Graph</span>
         </div>
 
-        <div className="relative flex-1 min-w-[220px] max-w-[320px]">
-          <Search
-            size={13}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]"
-          />
+        <div className="h-5 w-px bg-[#e3e0db] mx-1" />
+
+        {/* Search */}
+        <div className="relative shrink-0" style={{ minWidth: 180, maxWidth: 240 }}>
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={matchCount > 0 ? `Search memories (${matchCount})` : "Search memories"}
-            className="w-full pl-8 pr-3 py-2 border border-[#e3e0db] rounded-xl text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#0a0a0a]/35 bg-[#faf9f4]"
+            placeholder={matchCount > 0 ? `${matchCount} match${matchCount === 1 ? '' : 'es'}` : "Search…"}
+            className="w-full pl-7 pr-2 py-1.5 border border-[#e3e0db] rounded-lg text-[11px] font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#0a0a0a]/35 bg-[#faf9f4]"
           />
         </div>
 
-        <div className="relative">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-['Space_Grotesk'] border border-[#e3e0db] text-[#525252] hover:border-[#0a0a0a]/20 transition-colors bg-[#faf9f4]"
-          >
-            <Filter size={12} />
-            {projectFilter || "All Projects"}
-            <ChevronDown size={10} />
-          </button>
-          <AnimatePresence>
-            {showFilters && meta?.projects?.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                className="absolute top-full mt-1 left-0 bg-white border border-[#e3e0db] rounded-xl shadow-lg z-30 py-1 min-w-[180px]"
-              >
+        {/* Intelligent toggle + edge type filters (only in intelligent mode) */}
+        <button
+          type="button"
+          onClick={() => setIntelligentMode(v => !v)}
+          className={`shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-mono uppercase tracking-[0.06em] border ${
+            intelligentMode
+              ? "bg-[#117dff]/10 border-[#117dff]/40 text-[#117dff]"
+              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
+          }`}
+          title="Show documents + entities + typed edges"
+        >
+          ◆ Intelligent
+        </button>
+        {intelligentMode && (
+          <div className="flex items-center gap-1 shrink-0">
+            {[
+              { key: 'updates', label: 'Upd', color: '#3b82f6' },
+              { key: 'extends', label: 'Ext', color: '#8b5cf6' },
+              { key: 'derives', label: 'Der', color: '#a78bfa' },
+              { key: 'derived_from', label: 'Evid', color: '#a78bfa' },
+              { key: 'contradicts', label: 'Conf', color: '#ef4444' },
+              { key: 'mentions', label: 'Ent', color: '#10b981' },
+            ].map((opt) => {
+              const active = edgeTypeFilter.has(opt.key);
+              return (
                 <button
+                  key={opt.key}
+                  type="button"
                   onClick={() => {
-                    setProjectFilter("");
-                    setShowFilters(false);
+                    setEdgeTypeFilter(prev => {
+                      const next = new Set(prev);
+                      if (next.has(opt.key)) next.delete(opt.key); else next.add(opt.key);
+                      return next;
+                    });
                   }}
-                  className="w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:bg-[#faf9f4]"
+                  style={active ? { borderColor: opt.color, color: opt.color, background: opt.color + '14' } : undefined}
+                  className={`rounded-lg px-1.5 py-1 text-[10px] font-mono border ${
+                    active ? "" : "border-[#e3e0db] text-[#737373] bg-[#faf9f4]"
+                  }`}
+                  title={opt.key}
                 >
-                  All Projects
+                  <span style={{ color: opt.color }}>●</span> {opt.label}
                 </button>
-                {meta.projects.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => {
-                      setProjectFilter(p);
-                      setShowFilters(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs font-['Space_Grotesk'] hover:bg-[#faf9f4] ${projectFilter === p ? "text-[#0a0a0a] font-semibold" : "text-[#525252]"}`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {clusters.length > 1 && (
-          <div className="relative group">
-            <select
-              value={clusterFilter || ""}
-              onChange={(e) => setClusterFilter(e.target.value || null)}
-              className="appearance-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] pl-7 pr-7 py-2 text-xs font-['Space_Grotesk'] text-[#525252] hover:border-[#0a0a0a]/20 transition-colors focus:outline-none cursor-pointer"
-            >
-              <option value="">All Clusters</option>
-              {clusters.filter((c) => c.id !== "_orphan").map((c) => {
-                const lbl = c.label || (c.topTags?.length ? c.topTags.slice(0, 2).join(", ") : c.id);
-                return <option key={c.id} value={c.id}>{lbl} ({c.size})</option>;
-              })}
-            </select>
-            <span
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-              style={{ backgroundColor: clusterFilter ? (clusterColorMap[clusterFilter] || "#0a0a0a") : "#a3a3a3" }}
-            />
-            <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a3a3a3] pointer-events-none" />
+              );
+            })}
           </div>
         )}
 
-        <div className="flex items-center gap-1 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-1">
+        <div className="h-5 w-px bg-[#e3e0db] mx-1 shrink-0" />
+
+        {/* Layer pill — replace floating Graph Controls */}
+        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
+          {LAYER_FILTERS.slice(0, 4).map((layer) => (
+            <button
+              key={layer.key}
+              type="button"
+              onClick={() => setLayerFilter(layer.key)}
+              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
+                layerFilter === layer.key
+                  ? "bg-[#0a0a0a]/8 text-[#0a0a0a]"
+                  : "text-[#737373]"
+              }`}
+              title={layer.label}
+            >
+              {layer.icon ? <span style={{ color: layer.color }}>{layer.icon}</span> : layer.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Node budget */}
+        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
+          {[
+            { key: 300, label: '300' },
+            { key: 1000, label: '1K' },
+            { key: 5000, label: '5K' },
+            { key: 0, label: 'All' },
+          ].map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => setNodeLimit(o.key)}
+              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
+                nodeLimit === o.key ? "bg-[#0a0a0a]/8 text-[#0a0a0a]" : "text-[#737373]"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Scope */}
+        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
           {[
             { key: "personal", label: "My" },
             { key: "team", label: "Team", disabled: org?.plan !== "enterprise" },
@@ -857,7 +880,7 @@ export default function MemoryGraph() {
               type="button"
               disabled={option.disabled}
               onClick={() => !option.disabled && setScope(option.key)}
-              className={`rounded-lg px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.08em] ${
+              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
                 scope === option.key ? "bg-[#0a0a0a]/8 text-[#0a0a0a]" : "text-[#737373]"
               } ${option.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
             >
@@ -866,61 +889,57 @@ export default function MemoryGraph() {
           ))}
         </div>
 
+        {/* Action buttons */}
         <button
-          onClick={() => setShowLegend((value) => !value)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
-            showLegend
-              ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/8 text-[#0a0a0a]"
-              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
+          onClick={() => setShowLegend((v) => !v)}
+          className={`shrink-0 p-1.5 rounded-lg border text-[#525252] ${
+            showLegend ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/8 text-[#0a0a0a]" : "border-[#e3e0db] bg-[#faf9f4]"
           }`}
+          title="Toggle legend"
         >
           <BookOpen size={12} />
-          Legend
         </button>
-
         <button
-          onClick={() => setIsLiveMode((value) => !value)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-colors ${
+          onClick={() => setIsLiveMode((v) => !v)}
+          className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono border ${
             isLiveMode
-              ? "border-[#0a0a0a]/18 bg-[#0a0a0a]/7 text-[#0a0a0a]"
+              ? "border-[#10b981]/40 bg-[#10b981]/10 text-[#059669]"
               : "border-[#e3e0db] bg-[#faf9f4] text-[#737373]"
           }`}
+          title={isLiveMode ? "Live updates on" : "Paused"}
         >
-          <Radio size={12} />
+          <Radio size={10} />
           {isLiveMode ? "Live" : "Paused"}
         </button>
-
-        <button
-          onClick={() => {
-            setPageIndexRefreshKey((k) => k + 1);
-            setPageIndexModalOpen(true);
-          }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0a0a0a] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#262626] transition-colors"
-        >
-          <MapIcon size={12} />
-          Memory Map
-        </button>
-
         <button
           onClick={fetchGraph}
           disabled={loading}
-          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#0a0a0a]/20 transition-colors disabled:opacity-40"
+          className="shrink-0 p-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#0a0a0a]/20 disabled:opacity-40"
           title="Refresh"
         >
-          <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => graphRef.current?.fitView?.(400)}
-          className="p-2 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#a3a3a3] hover:text-[#525252] hover:border-[#0a0a0a]/20 transition-colors"
+          className="shrink-0 p-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#0a0a0a]/20"
           title="Fit to view"
         >
-          <Maximize2 size={13} />
+          <Maximize2 size={12} />
+        </button>
+        <button
+          onClick={() => { setPageIndexRefreshKey(k => k + 1); setPageIndexModalOpen(true); }}
+          className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#0a0a0a] text-white text-[10px] font-mono font-semibold hover:bg-[#262626]"
+          title="Memory Map"
+        >
+          <MapIcon size={10} />
+          Map
         </button>
 
+        {/* Stats */}
         {stats && (
-          <div className="ml-auto flex items-center gap-2 text-[10px] font-mono text-[#8b857d]">
+          <div className="ml-auto shrink-0 flex items-center gap-2 text-[10px] font-mono text-[#8b857d] pl-2 border-l border-[#e3e0db]">
             <span>{filteredNodes.size}/{stats.nodes} nodes</span>
-            <span>{stats.edges} edges</span>
+            <span>· {stats.edges} edges</span>
           </div>
         )}
       </div>
@@ -986,115 +1005,7 @@ export default function MemoryGraph() {
           />
         )}
 
-        {graphData.nodes.length > 0 && (
-          <div className="absolute top-4 left-4 z-10 w-[260px] rounded-2xl border border-[#ded8ce] bg-white/86 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
-                  Graph Controls
-                </p>
-                <p className="text-[11px] font-['Space_Grotesk'] mt-1 text-[#525252]">
-                  monochrome network view
-                </p>
-              </div>
-            </div>
-            <div className="mb-2">
-              <div className="flex flex-wrap gap-1">
-                {LAYER_FILTERS.slice(0, 4).map((layer) => (
-                  <button
-                    key={layer.key}
-                    onClick={() => setLayerFilter(layer.key)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-['Space_Grotesk'] border ${
-                      layerFilter === layer.key
-                        ? "bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15"
-                        : "text-[#525252] border-[#ece8e0] bg-[#faf9f4]"
-                    }`}
-                  >
-                    {layer.icon && <span style={{ color: layer.color }}>{layer.icon} </span>}
-                    {layer.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-1 rounded-xl border border-[#ece8e0] bg-[#faf9f4] p-1">
-                {[
-                  { key: 300, label: "300" },
-                  { key: 1000, label: "1K" },
-                  { key: 5000, label: "5K" },
-                  { key: 0, label: "All" },
-                ].map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => setNodeLimit(option.key)}
-                    className={`rounded-lg px-2 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
-                      nodeLimit === option.key
-                        ? "bg-[#0a0a0a]/8 text-[#0a0a0a]"
-                        : "text-[#737373] hover:text-[#525252]"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Intelligent mode + relationship type filters */}
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 flex-wrap max-w-[60%] justify-end">
-          <button
-            type="button"
-            onClick={() => setIntelligentMode(v => !v)}
-            className={`rounded-lg px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] border ${
-              intelligentMode
-                ? "bg-[#117dff]/10 border-[#117dff]/40 text-[#117dff]"
-                : "border-[#e3e0db] bg-white/80 text-[#737373] hover:text-[#525252]"
-            }`}
-            title="Show documents + entities + typed relationships"
-          >
-            ◆ Intelligent
-          </button>
-          {intelligentMode && [
-            { key: 'updates', label: 'Updates', color: '#3b82f6' },
-            { key: 'extends', label: 'Extends', color: '#8b5cf6' },
-            { key: 'derives', label: 'Derives', color: '#a78bfa' },
-            { key: 'derived_from', label: 'Evidence', color: '#a78bfa' },
-            { key: 'contradicts', label: 'Contradicts', color: '#ef4444' },
-            { key: 'mentions', label: 'Entities', color: '#10b981' },
-          ].map((opt) => {
-            const active = edgeTypeFilter.has(opt.key);
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => {
-                  setEdgeTypeFilter(prev => {
-                    const next = new Set(prev);
-                    if (next.has(opt.key)) next.delete(opt.key); else next.add(opt.key);
-                    return next;
-                  });
-                }}
-                style={active ? { borderColor: opt.color, color: opt.color, background: opt.color + '14' } : undefined}
-                className={`rounded-lg px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] border bg-white/80 ${
-                  active ? "" : "border-[#e3e0db] text-[#737373]"
-                }`}
-              >
-                <span style={{ color: opt.color }}>●</span> {opt.label}
-              </button>
-            );
-          })}
-          {intelligentMode && edgeTypeFilter.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setEdgeTypeFilter(new Set())}
-              className="rounded-lg px-2 py-1 text-[10px] font-mono text-[#737373] hover:text-[#525252]"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        {/* (Floating Graph Controls + Intelligent panel removed — controls now consolidated in top toolbar) */}
 
         {graphData.nodes.length === 0 && !loading && !error && (
           <div className="absolute inset-0 flex items-center justify-center">

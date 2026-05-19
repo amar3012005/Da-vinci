@@ -649,6 +649,25 @@ export default function KnowledgeBase() {
     return () => { cancelled = true; };
   }, [kbMemories]);
 
+  // Phase 1 evidence-backed stats per filename (segments + memory_evidence_links)
+  const [phase1Stats, setPhase1Stats] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await apiClient.listDocuments({ limit: 200 });
+        if (cancelled) return;
+        const map = {};
+        for (const d of (resp?.documents || [])) {
+          const baseName = (d.title || '').split('#')[0];
+          map[baseName] = { segments: d.segmentCount || 0, evidence: d.promotedCount || 0, documentId: d.id };
+        }
+        setPhase1Stats(map);
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, [kbMemories]);
+
   // Combine fetched documents with just-uploaded ones for immediate display
   const documents = useMemo(() => {
     if (!kbMemories) return justUploadedDocs;
@@ -1381,6 +1400,20 @@ export default function KnowledgeBase() {
                       {meta.document_title || doc.title || 'Untitled'}
                     </p>
                     <div className="flex items-center gap-3 mt-0.5">
+                      {/* Phase 1 evidence-backed stats (segments + memory_evidence_links) */}
+                      {(() => {
+                        const fname = meta.filename || srcMeta.filename || meta.document_title || doc.title;
+                        const p1 = fname ? phase1Stats[fname] : null;
+                        if (!p1) return null;
+                        return (
+                          <span
+                            className="text-[#16a34a] text-[10px] font-mono bg-[#16a34a]/8 border border-[#16a34a]/20 rounded px-1.5 py-0.5"
+                            title={`Evidence-backed: ${p1.segments} segments → ${p1.evidence} memory_evidence_links`}
+                          >
+                            {p1.segments} seg · {p1.evidence} mem
+                          </span>
+                        );
+                      })()}
                       {meta.total_chunks && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
                       )}
