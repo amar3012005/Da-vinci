@@ -641,6 +641,53 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Documents & Evidence (Phase 1) ───────────────────
+
+  async listDocuments(params = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/documents', { params });
+    return data;
+  }
+
+  async getDocument(id) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/documents/${id}`);
+    return data;
+  }
+
+  async searchDocuments(query, params = {}) {
+    const { data } = await this.controlPlane.get('/v1/proxy/documents/search', { 
+      params: { q: query, ...params } 
+    });
+    return data;
+  }
+
+  async searchEvidence(query, params = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/evidence/search', { 
+      query, ...params 
+    });
+    return data;
+  }
+
+  async hybridSearch(query, params = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/evidence/hybrid', { 
+      query, ...params 
+    });
+    return data;
+  }
+
+  async getMemoryEvidence(memoryId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/evidence/memory`, {
+      params: { memoryId }
+    });
+    return data;
+  }
+
+  async getDocumentEvidence(documentId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/evidence/document`, {
+      params: { documentId }
+    });
+    return data;
+  }
+
   // ─── Core: Resident Agents ──────────────────────────────────
 
   async listResidentAgents() {
