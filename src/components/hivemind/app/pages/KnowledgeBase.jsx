@@ -910,9 +910,26 @@ export default function KnowledgeBase() {
           return;
         }
 
+        // Phase 1b document_first response shape:
+        //   { mode: 'document_first', documentId, segmentCount,
+        //     candidateCount, promotedCount, promotedMemoryIds }
+        // Legacy shape:  { upload_id, chunks, status: 'processing' }
+        const isPhase1 = result?.mode === 'document_first';
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
-            ? { ...u, status: 'success', chunks: result.chunks, uploadId: result.upload_id, progress: 100 }
+            ? {
+                ...u,
+                status: 'success',
+                progress: 100,
+                mode: isPhase1 ? 'document_first' : 'legacy',
+                chunks: result.chunks ?? result.segmentCount ?? null,
+                segmentCount: result.segmentCount ?? null,
+                candidateCount: result.candidateCount ?? null,
+                promotedCount: result.promotedCount ?? null,
+                promotedMemoryIds: result.promotedMemoryIds ?? null,
+                documentId: result.documentId ?? null,
+                uploadId: result.upload_id ?? null,
+              }
             : u
         ));
         setJustUploadedDocs((prev) => [{
@@ -1285,7 +1302,14 @@ export default function KnowledgeBase() {
                   {u.status === 'uploading' && (u.progress || 0) > 0 && (
                     <span className="text-[#117dff] font-semibold">{u.progress}%</span>
                   )}
-                  {u.chunks && <span className="text-[#16a34a]">{u.chunks} chunks</span>}
+                  {u.mode === 'document_first' && u.segmentCount != null && (
+                    <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
+                      {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
+                    </span>
+                  )}
+                  {u.mode !== 'document_first' && u.chunks && (
+                    <span className="text-[#16a34a]">{u.chunks} chunks</span>
+                  )}
                   {u.error && <span className="text-[#dc2626] truncate max-w-[200px]">{u.error}</span>}
                   {u.status === 'queued' && <span className="text-[#a3a3a3]">Waiting...</span>}
                   {(u.status === 'queued' || u.status === 'uploading') && u.controller && (
