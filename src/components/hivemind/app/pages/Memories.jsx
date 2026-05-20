@@ -31,10 +31,13 @@ const TABS = [
 
 const MEMORY_TYPES = [
   { key: 'experience', label: 'Experience', color: '#3b82f6' },
-  { key: 'decision', label: 'Decision', color: '#f59e0b' },
-  { key: 'fact', label: 'Fact', color: '#22c55e' },
+  { key: 'decision',   label: 'Decision',   color: '#f59e0b' },
+  { key: 'fact',       label: 'Fact',       color: '#22c55e' },
   { key: 'preference', label: 'Preference', color: '#a855f7' },
-  { key: 'procedure', label: 'Procedure', color: '#ec4899' },
+  { key: 'procedure',  label: 'Procedure',  color: '#ec4899' },
+  // Cognition-loop output (auto-generated, queryable bi-temporally)
+  { key: 'synthesis',  label: 'Synthesis',  color: '#8b5cf6' },
+  { key: 'summary',    label: 'Summary',    color: '#06b6d4' },
 ];
 
 const TYPE_COLOR_MAP = Object.fromEntries(MEMORY_TYPES.map((t) => [t.key, t.color]));
@@ -611,6 +614,8 @@ export default function Memories() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  // is_latest toggle — when false, include superseded memories (post drift-compaction)
+  const [showSuperseded, setShowSuperseded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
   const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
@@ -666,8 +671,9 @@ export default function Memories() {
       ...(activeTag || activeEntity
         ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
         : {}),
+      ...(showSuperseded ? { is_latest: 'false' } : {}),
     }),
-    [activeType, activeTag, activeEntity],
+    [activeType, activeTag, activeEntity, showSuperseded],
   );
 
   // List-mode fetch
@@ -952,6 +958,8 @@ export default function Memories() {
             clearFilters={clearFilters}
             hasFilters={hasFilters}
             setActiveTab={setActiveTab}
+            showSuperseded={showSuperseded}
+            setShowSuperseded={setShowSuperseded}
           />
         )}
 
@@ -991,6 +999,8 @@ function MemoriesTab({
   groupByDoc,
   showFilters,
   setShowFilters,
+  showSuperseded,
+  setShowSuperseded,
   offset,
   setOffset,
   allMemories,
@@ -1016,8 +1026,9 @@ function MemoriesTab({
       ...(activeTag || activeEntity
         ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
         : {}),
+      ...(showSuperseded ? { is_latest: 'false' } : {}),
     }),
-    [activeType, activeTag, activeEntity],
+    [activeType, activeTag, activeEntity, showSuperseded],
   );
 
   // List-mode fetch
@@ -1226,9 +1237,32 @@ function MemoriesTab({
                     </button>
                   ))}
                 </div>
-                </div>
+              </div>
 
-                {/* Tag filters */}
+              {/* is_latest toggle — show superseded (drift-compacted) memories */}
+              <div className="mb-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showSuperseded}
+                    onChange={(e) => {
+                      setShowSuperseded(e.target.checked);
+                      setOffset(0);
+                      setAllMemories([]);
+                      setHasMore(true);
+                    }}
+                    className="w-3.5 h-3.5 accent-[#117dff]"
+                  />
+                  <span className="text-[11px] font-mono text-[#525252]">
+                    Show superseded
+                    <span className="ml-1 text-[#a3a3a3]">
+                      (older versions hidden by cognition drift-compaction + Updates edges)
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              {/* Tag filters */}
                 {availableTags.length > 0 && (
                   <div>
                     <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">

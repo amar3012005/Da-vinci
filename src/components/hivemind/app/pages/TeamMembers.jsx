@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown } from 'lucide-react';
+import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown, FolderKanban } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -18,6 +18,7 @@ export default function TeamMembers() {
   const { user } = useAuth();
   const [members, setMembers] = useState([]);
   const [orgMembers, setOrgMembers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -48,7 +49,17 @@ export default function TeamMembers() {
     }
   }, []);
 
-  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+  const fetchProjects = useCallback(async () => {
+    if (!activeTeamId) return;
+    try {
+      const resp = await apiClient.listTeamProjects(activeTeamId);
+      setProjects(resp.projects || []);
+    } catch {
+      setProjects([]);
+    }
+  }, [activeTeamId]);
+
+  useEffect(() => { fetchMembers(); fetchProjects(); }, [fetchMembers, fetchProjects]);
   useEffect(() => { fetchOrgMembers(); }, [fetchOrgMembers]);
 
   async function handleAdd() {
@@ -145,6 +156,7 @@ export default function TeamMembers() {
             <tr>
               <th className="text-left px-3 py-2 font-medium text-[#525252]">User</th>
               <th className="text-left px-3 py-2 font-medium text-[#525252]">Role</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">Project Access</th>
               <th className="text-left px-3 py-2 font-medium text-[#525252]">Joined</th>
               <th className="text-right px-3 py-2 font-medium text-[#525252]">Actions</th>
             </tr>
@@ -152,13 +164,17 @@ export default function TeamMembers() {
           <tbody>
             {members.length === 0 && !loading && (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-[#a3a3a3]">No members yet</td>
+                <td colSpan={5} className="text-center py-8 text-[#a3a3a3]">No members yet</td>
               </tr>
             )}
             {members.map(m => {
               const u = m.user || {};
               const cls = ROLE_BADGES[m.role] || ROLE_BADGES.member;
               const isSelf = (u.id || m.userId) === user?.id;
+              const memberProjectCount = projects.filter(p => 
+                p._count?.members > 0 || p.policy === 'team_inherited'
+              ).length;
+              
               return (
                 <tr key={m.userId || m.user_id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]">
                   <td className="px-3 py-2">
@@ -169,6 +185,12 @@ export default function TeamMembers() {
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>
                       {m.role === 'lead' && <Crown size={9} />}
                       {m.role}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-[#525252]">
+                      <FolderKanban size={11} className="text-[#117dff]" />
+                      {memberProjectCount} {memberProjectCount === 1 ? 'project' : 'projects'}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-[#a3a3a3] text-[11px]">

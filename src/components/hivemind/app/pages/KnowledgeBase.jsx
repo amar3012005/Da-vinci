@@ -568,6 +568,9 @@ export default function KnowledgeBase() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [deletingDocId, setDeletingDocId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  // Bulk-select state — Map<docId, doc> so we can pass full objects to delete handler
+  const [bulkSelected, setBulkSelected] = useState(new Map());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
@@ -721,6 +724,29 @@ export default function KnowledgeBase() {
   useEffect(() => {
     savePendingToSession(justUploadedDocs);
   }, [justUploadedDocs]);
+
+  // Bulk delete — iterates the selected map and runs deleteDocument per doc.
+  // Concurrency 3 so backend isn't slammed.
+  const handleBulkDelete = useCallback(async () => {
+    if (bulkSelected.size === 0) return;
+    if (!window.confirm(`Delete ${bulkSelected.size} document${bulkSelected.size === 1 ? '' : 's'}? This removes memories, segments, and evidence links.`)) return;
+    setBulkDeleting(true);
+    const docs = Array.from(bulkSelected.values());
+    const CONC = 3;
+    let i = 0;
+    const workers = Array.from({ length: Math.min(CONC, docs.length) }, async () => {
+      while (i < docs.length) {
+        const idx = i++;
+        const d = docs[idx];
+        try { await handleDeleteDocument(d); } catch { /* per-doc errors swallowed */ }
+      }
+    });
+    await Promise.all(workers);
+    setBulkSelected(new Map());
+    setBulkDeleting(false);
+    // handleDeleteDocument already triggers fetched-doc updates per call.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bulkSelected]);
 
   const handleDeleteDocument = useCallback(async (docOrId) => {
     // Accept either a raw id (legacy) or the full doc object so we can
@@ -976,6 +1002,10 @@ export default function KnowledgeBase() {
                 promotedMemoryIds: result.promotedMemoryIds ?? null,
                 documentId: result.documentId ?? null,
                 uploadId: result.upload_id ?? null,
+                // Enterprise schema extraction (when enterprise=auto|true and
+                // detected_type confidence ≥0.7). Surface inline so user sees
+                // the structured fields the system pulled.
+                enterprise: result.enterprise ?? null,
               }
             : u
         ));
@@ -1393,6 +1423,14 @@ export default function KnowledgeBase() {
                       {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
                     </span>
                   )}
+                  {u.enterprise?.detected_type && (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#8b5cf6]/10 text-[#7c3aed] border border-[#8b5cf6]/30"
+                      title={`Enterprise type detected: ${u.enterprise.detected_type} (confidence ${(u.enterprise.confidence * 100).toFixed(0)}%). ${u.enterprise.reasoning || ''}`}
+                    >
+                      {u.enterprise.detected_type}{u.enterprise.schema_fields ? ' · schema extracted' : ''}
+                    </span>
+                  )}
                   {u.mode !== 'document_first' && u.chunks && (
                     <span className="text-[#16a34a]">{u.chunks} chunks</span>
                   )}
@@ -1455,7 +1493,23 @@ export default function KnowledgeBase() {
               const docType = meta.document_type || (doc.tags || []).find((t) => t.startsWith('document_type:'))?.split(':')[1];
               const typeStyle = docType ? TYPE_COLORS[docType] || TYPE_COLORS.general : null;
               return (
-                <div key={doc.id} className="group flex items-center gap-4 px-4 py-3 rounded-xl border border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
+                <div key={doc.id} className={`group flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors ${bulkSelected.has(doc.id) ? 'border-[#117dff]/40 bg-[#117dff]/5' : 'border-[#eae7e1] hover:bg-[#faf9f4]'}`}>
+                  {/* Bulk-select checkbox — visible on hover OR when any selection active */}
+                  <input
+                    type="checkbox"
+                    checked={bulkSelected.has(doc.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setBulkSelected((prev) => {
+                        const next = new Map(prev);
+                        if (next.has(doc.id)) next.delete(doc.id);
+                        else next.set(doc.id, doc);
+                        return next;
+                      });
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`w-4 h-4 accent-[#117dff] cursor-pointer transition-opacity shrink-0 ${bulkSelected.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                  />
                   {getFileIcon(srcMeta.filename || meta.filename || meta.document_title)}
                   {typeStyle && (
                     <span className={`text-[10px] font-semibold font-['Space_Grotesk'] px-2 py-0.5 rounded-md border shrink-0 ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
@@ -1630,6 +1684,45 @@ export default function KnowledgeBase() {
                 />
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bulk-select floating action bar — appears when ≥1 doc checked ── */}
+      <AnimatePresence>
+        {bulkSelected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.18 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] px-4 py-2.5"
+          >
+            <span className="text-[12px] font-mono text-[#0a0a0a]">
+              <span className="font-bold text-[#117dff]">{bulkSelected.size}</span> selected
+            </span>
+            <button
+              onClick={() => setBulkSelected(new Map())}
+              disabled={bulkDeleting}
+              className="text-[11px] font-mono text-[#525252] hover:text-[#0a0a0a] disabled:opacity-40"
+            >
+              Clear
+            </button>
+            <div className="h-4 w-px bg-[#e3e0db]" />
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="text-[11px] font-mono font-semibold text-white bg-[#dc2626] hover:bg-[#b91c1c] px-3 py-1.5 rounded-md disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {bulkDeleting ? (
+                <>
+                  <Loader2 size={11} className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>Delete {bulkSelected.size}</>
+              )}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

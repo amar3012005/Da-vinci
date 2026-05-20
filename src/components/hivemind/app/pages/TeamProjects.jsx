@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import apiClient from '../shared/api-client';
 
@@ -15,6 +15,7 @@ export default function TeamProjects() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newPolicy, setNewPolicy] = useState('private');
 
   const fetchProjects = useCallback(async () => {
     if (!activeTeamId) return;
@@ -39,10 +40,13 @@ export default function TeamProjects() {
       await apiClient.createTeamProject(activeTeamId, {
         name: newName.trim(),
         description: newDescription.trim() || null,
+        policy: newPolicy,
+        teamId: activeTeamId,
       });
       setCreateOpen(false);
       setNewName('');
       setNewDescription('');
+      setNewPolicy('private');
       await fetchProjects();
       await refreshTeams();
     } catch (err) {
@@ -114,7 +118,15 @@ export default function TeamProjects() {
             No projects yet — click "New Project" to create one.
           </div>
         )}
-        {projects.map(p => (
+        {projects.map(p => {
+          const policyLabel = 
+            p.policy === 'team_inherited' ? 'Team Access' :
+            p.policy === 'org_visible' ? 'Org Visible' : 'Private';
+          const policyColor = 
+            p.policy === 'team_inherited' ? 'text-emerald-600' :
+            p.policy === 'org_visible' ? 'text-blue-600' : 'text-amber-600';
+          
+          return (
           <div key={p.id} className="bg-white border border-[#e3e0db] rounded-[8px] p-4 hover:border-[#d4d0ca] transition-colors">
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -132,21 +144,28 @@ export default function TeamProjects() {
             {p.description && (
               <p className="text-[12px] text-[#525252] mb-3 line-clamp-2">{p.description}</p>
             )}
+            <div className="flex items-center gap-2 mb-3">
+              <Shield size={11} className={policyColor} />
+              <span className={`text-[10px] font-medium ${policyColor}`}>{policyLabel}</span>
+            </div>
             <div className="flex items-center justify-between text-[10px] text-[#a3a3a3] font-mono">
-              <span>{p._count?.members ?? 0} members</span>
+              <span className="flex items-center gap-1">
+                <Users size={10} /> {p._count?.members ?? 0} members
+              </span>
               <span>{p._count?.memories ?? 0} memories</span>
             </div>
             <div className="text-[10px] text-[#a3a3a3] mt-1">
               Created {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setCreateOpen(false)}>
-          <div className="bg-white rounded-[8px] p-5 w-[440px] shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[8px] p-5 w-[480px] shadow-xl" onClick={e => e.stopPropagation()}>
             <h2 className="text-[15px] font-semibold mb-3">New Project in {activeTeam?.name}</h2>
+            
             <label className="block text-[11px] text-[#525252] mb-1">Name</label>
             <input
               autoFocus
@@ -155,13 +174,63 @@ export default function TeamProjects() {
               placeholder="Q1 OKRs"
               className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3"
             />
+            
             <label className="block text-[11px] text-[#525252] mb-1">Description (optional)</label>
             <textarea
               value={newDescription}
               onChange={e => setNewDescription(e.target.value)}
               rows={3}
-              className="w-full px-2 py-1.5 text-[13px] border border-[#e3e0db] rounded-[4px] mb-4 resize-y"
+              className="w-full px-2 py-1.5 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3 resize-y"
             />
+            
+            <label className="block text-[11px] font-medium text-[#525252] mb-2">Access Policy</label>
+            <div className="space-y-2 mb-4">
+              <label className="flex items-start gap-2 cursor-pointer p-2 border border-[#e3e0db] rounded-[6px] hover:bg-[#faf9f4] transition-colors">
+                <input
+                  type="radio"
+                  name="policy"
+                  value="private"
+                  checked={newPolicy === 'private'}
+                  onChange={e => setNewPolicy(e.target.value)}
+                  className="mt-0.5 accent-[#117dff]"
+                />
+                <div>
+                  <div className="text-[12px] font-medium text-[#0a0a0a]">Private</div>
+                  <div className="text-[10px] text-[#737373]">Only creator + explicitly added members</div>
+                </div>
+              </label>
+              
+              <label className="flex items-start gap-2 cursor-pointer p-2 border border-[#e3e0db] rounded-[6px] hover:bg-[#faf9f4] transition-colors">
+                <input
+                  type="radio"
+                  name="policy"
+                  value="team_inherited"
+                  checked={newPolicy === 'team_inherited'}
+                  onChange={e => setNewPolicy(e.target.value)}
+                  className="mt-0.5 accent-[#117dff]"
+                />
+                <div>
+                  <div className="text-[12px] font-medium text-[#0a0a0a]">Team Access</div>
+                  <div className="text-[10px] text-[#737373]">All team members automatically granted access</div>
+                </div>
+              </label>
+              
+              <label className="flex items-start gap-2 cursor-pointer p-2 border border-[#e3e0db] rounded-[6px] hover:bg-[#faf9f4] transition-colors">
+                <input
+                  type="radio"
+                  name="policy"
+                  value="org_visible"
+                  checked={newPolicy === 'org_visible'}
+                  onChange={e => setNewPolicy(e.target.value)}
+                  className="mt-0.5 accent-[#117dff]"
+                />
+                <div>
+                  <div className="text-[12px] font-medium text-[#0a0a0a]">Org Visible</div>
+                  <div className="text-[10px] text-[#737373]">Discoverable but access requires explicit grant</div>
+                </div>
+              </label>
+            </div>
+            
             <div className="flex justify-end gap-2">
               <button onClick={() => setCreateOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">Cancel</button>
               <button

@@ -21,7 +21,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import { motion } from "framer-motion";
-import { Network, RefreshCw, ZoomIn, ZoomOut, Crosshair, Sun, Moon, Filter, Check } from "lucide-react";
+import { Network, RefreshCw, ZoomIn, ZoomOut, Crosshair, Sun, Moon, Filter, Check, Download, Palette } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 
@@ -274,6 +274,11 @@ export default function MemoryGraph2D() {
     try { return localStorage.getItem("hm-graph2d-theme") || "day"; } catch { return "day"; }
   });
   const palette = THEMES[theme];
+  // Color-by selector — 'type' (default mono+fact), 'project', 'age', 'importance'
+  const [colorBy, setColorBy] = useState(() => {
+    try { return localStorage.getItem("hm-graph2d-colorby") || "type"; } catch { return "type"; }
+  });
+  useEffect(() => { try { localStorage.setItem("hm-graph2d-colorby", colorBy); } catch { /* */ } }, [colorBy]);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dims, setDims] = useState({ w: 1200, h: 700 });
   // Sources filter: set of source keys to HIDE. Persisted to localStorage.
@@ -390,14 +395,43 @@ export default function MemoryGraph2D() {
   }, [graphData]);
 
   // ─── Render helpers ──────────────────────────────────────────────────
+  // Stable hash → palette index for project-based coloring.
+  const hashStr = (s) => {
+    if (!s) return 0;
+    let h = 0;
+    for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+    return Math.abs(h);
+  };
   const getNodeColor = useCallback((node) => {
-    const type = getNodeType(node);
-    const w = TYPE_WEIGHTS[type] ?? TYPE_WEIGHTS.default;
-    const base = mixHex(palette.nodeBase, palette.nodeAccent, 1 - w);
+    const PROJECT_PALETTE = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#10b981', '#a855f7', '#eab308'];
     if (selectedNode?.id === node.id) return palette.nodeAccent;
     if (hoveredNode?.id === node.id) return palette.nodeAccent;
-    return base;
-  }, [palette, selectedNode, hoveredNode]);
+
+    // Color-by selector overrides default mono palette
+    if (colorBy === 'project') {
+      const proj = node.project || node.project_id || '__org__';
+      return PROJECT_PALETTE[hashStr(String(proj)) % PROJECT_PALETTE.length];
+    }
+    if (colorBy === 'age') {
+      const t = node.created_at ? new Date(node.created_at).getTime() : Date.now();
+      const ageH = (Date.now() - t) / 3_600_000;
+      // < 1d cyan → < 7d green → < 30d amber → > 30d red
+      if (ageH < 24) return '#06b6d4';
+      if (ageH < 168) return '#22c55e';
+      if (ageH < 720) return '#f59e0b';
+      return '#dc2626';
+    }
+    if (colorBy === 'importance') {
+      const imp = Number(node.importance_score ?? node.importanceScore ?? 0.5);
+      // low (gray) → high (hive blue)
+      return mixHex('#9ca3af', '#117dff', Math.max(0, Math.min(1, imp)));
+    }
+
+    // Default: monochrome by memory type
+    const type = getNodeType(node);
+    const w = TYPE_WEIGHTS[type] ?? TYPE_WEIGHTS.default;
+    return mixHex(palette.nodeBase, palette.nodeAccent, 1 - w);
+  }, [palette, selectedNode, hoveredNode, colorBy]);
 
   const getLinkColor = useCallback((link) => {
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
@@ -688,6 +722,50 @@ export default function MemoryGraph2D() {
         >
           {theme === "night" ? <Moon size={11} /> : <Sun size={11} />}
           {theme === "night" ? "Night" : "Day"}
+        </button>
+        {/* Color-by selector — paints nodes by type / project / age / importance */}
+        <div className={`flex items-center gap-1 rounded-full border ${palette.panelBorder} ${theme === "night" ? "bg-white/[0.04]" : "bg-[#faf9f4]"} px-1 py-0.5`} title="Color nodes by attribute">
+          <Palette size={11} className={theme === "night" ? "text-[#c8c4bc] ml-1.5" : "text-[#525252] ml-1.5"} />
+          {[
+            { v: 'type',       label: 'Type' },
+            { v: 'project',    label: 'Project' },
+            { v: 'age',        label: 'Age' },
+            { v: 'importance', label: 'Imp' },
+          ].map(({ v, label }) => (
+            <button
+              key={v}
+              onClick={() => setColorBy(v)}
+              className={`px-2 py-1 rounded-full text-[10px] font-mono uppercase tracking-[0.06em] transition-colors ${
+                colorBy === v
+                  ? (theme === 'night' ? 'bg-white/20 text-white' : 'bg-[#117dff]/15 text-[#117dff]')
+                  : (theme === 'night' ? 'text-[#c8c4bc] hover:bg-white/[0.08]' : 'text-[#525252] hover:bg-[#f3f1ec]')
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* PNG export — captures the underlying ForceGraph2D canvas as data URL */}
+        <button
+          onClick={() => {
+            try {
+              const canvas = containerRef.current?.querySelector('canvas');
+              if (!canvas) return;
+              const url = canvas.toDataURL('image/png');
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `memory-graph-${new Date().toISOString().slice(0, 10)}.png`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            } catch (e) {
+              // Silent — export is best-effort
+            }
+          }}
+          className={`p-2 rounded-lg border ${palette.panelBorder} ${theme === "night" ? "bg-white/[0.04] text-[#c8c4bc] hover:bg-white/[0.08]" : "bg-[#faf9f4] text-[#525252] hover:bg-[#f3f1ec]"} transition-colors`}
+          title="Export current view as PNG"
+        >
+          <Download size={13} />
         </button>
         <button
           onClick={refetch}

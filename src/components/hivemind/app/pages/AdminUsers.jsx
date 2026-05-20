@@ -148,10 +148,11 @@ function EditRolesModal({ member, onClose, onSave }) {
 
 // ─── Invite Modal ─────────────────────────────────────────────────────────────
 
-function InviteModal({ orgId, teams, onClose, onInvited }) {
+function InviteModal({ orgId, teams, projects, onClose, onInvited }) {
   const [email, setEmail] = useState('');
   const [selectedRoles, setSelectedRoles] = useState(['member']);
   const [selectedTeams, setSelectedTeams] = useState([]);
+  const [selectedProjects, setSelectedProjects] = useState([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
 
@@ -164,6 +165,12 @@ function InviteModal({ orgId, teams, onClose, onInvited }) {
   function toggleTeam(teamId) {
     setSelectedTeams(prev =>
       prev.includes(teamId) ? prev.filter(t => t !== teamId) : [...prev, teamId]
+    );
+  }
+
+  function toggleProject(projectId) {
+    setSelectedProjects(prev =>
+      prev.includes(projectId) ? prev.filter(p => p !== projectId) : [...prev, projectId]
     );
   }
 
@@ -183,6 +190,7 @@ function InviteModal({ orgId, teams, onClose, onInvited }) {
         email: email.trim().toLowerCase(),
         roles: selectedRoles,
         team_ids: selectedTeams,
+        project_ids: selectedProjects,
       });
       onInvited(result);
       onClose();
@@ -252,6 +260,27 @@ function InviteModal({ orgId, teams, onClose, onInvited }) {
               </div>
             </div>
           )}
+
+          {projects && projects.length > 0 && (
+            <div>
+              <label className="block text-[12px] font-medium text-[#525252] mb-2">
+                Grant Project Access (optional)
+              </label>
+              <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                {projects.map(project => (
+                  <label key={project.id} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedProjects.includes(project.id)}
+                      onChange={() => toggleProject(project.id)}
+                      className="w-4 h-4 accent-[#117dff]"
+                    />
+                    <span className="text-[13px] text-[#0a0a0a]">{project.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -284,6 +313,7 @@ export default function AdminUsers() {
   const { org } = useAuth();
   const { teams } = useTeamContext();
   const [members, setMembers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editTarget, setEditTarget] = useState(null);   // member row being role-edited
@@ -304,9 +334,20 @@ export default function AdminUsers() {
     }
   }, [org?.id]);
 
+  const fetchProjects = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const data = await apiClient.listProjects(org.id);
+      setProjects(data.projects || []);
+    } catch {
+      setProjects([]);
+    }
+  }, [org?.id]);
+
   useEffect(() => {
     fetchMembers();
-  }, [fetchMembers]);
+    fetchProjects();
+  }, [fetchMembers, fetchProjects]);
 
   async function handleSaveRoles(member, newRoles) {
     await apiClient.updateMemberRoles(org.id, member.user_id, newRoles);
@@ -500,6 +541,7 @@ export default function AdminUsers() {
         <InviteModal
           orgId={org?.id}
           teams={teams || []}
+          projects={projects || []}
           onClose={() => setShowInvite(false)}
           onInvited={() => fetchMembers()}
         />

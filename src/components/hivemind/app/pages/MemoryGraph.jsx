@@ -36,15 +36,24 @@ import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
+// Edge palette — semantically distinct hues so self-evolution chains are
+// visible at a glance. Tuned for white background; opacity tweaked per type
+// in the render path (Derives is the softest since most numerous).
 const EDGE_COLORS = {
-  Updates: "#4c4943",
-  Extends: "#706a61",
-  Derives: "#5c5851",
+  Updates:     "#f59e0b", // amber — supersession
+  Extends:     "#22c55e", // green — additive nuance
+  Derives:     "#8b5cf6", // violet — synthesis source link
+  Contradicts: "#ef4444", // red — conflict
+  supports:    "#3b82f6", // blue — evidence
+  mentions:    "#94a3b8", // slate — light reference
 };
 const EDGE_LABELS = {
   Updates: "Updates",
   Extends: "Extends",
   Derives: "Derives",
+  Contradicts: "Contradicts",
+  supports: "Supports",
+  mentions: "Mentions",
 };
 const TYPE_COLORS = {
   fact: "#5f5b53",
@@ -54,6 +63,8 @@ const TYPE_COLORS = {
   goal: "#545048",
   event: "#817b72",
   relationship: "#4a4640",
+  synthesis: "#8b5cf6",
+  summary: "#06b6d4",
   default: "#525252",
 };
 const TYPE_LEGEND = [
@@ -430,6 +441,10 @@ export default function MemoryGraph() {
   // Intelligent graph (docs + entities + typed edges) toggle
   const [intelligentMode, setIntelligentMode] = useState(() => safeStorageGet("hm-graph-intelligent") === "true");
   useEffect(() => { safeStorageSet("hm-graph-intelligent", String(intelligentMode)); }, [intelligentMode]);
+  // Canonical-only toggle — hides superseded nodes (is_latest=false) so the
+  // graph reflects the current state of knowledge after drift-compaction.
+  const [canonicalOnly, setCanonicalOnly] = useState(() => safeStorageGet("hm-graph-canonical") !== "false");
+  useEffect(() => { safeStorageSet("hm-graph-canonical", String(canonicalOnly)); }, [canonicalOnly]);
   // Relationship type filter chips (Updates, Extends, Derives, Contradicts, supports, mentions)
   const [edgeTypeFilter, setEdgeTypeFilter] = useState(new Set()); // empty = all
   useEffect(() => {
@@ -749,10 +764,12 @@ export default function MemoryGraph() {
     graphData.nodes.forEach((n) => {
       const matchesLayer = layerFilter === "all" || n.nodeLayer === layerFilter;
       const matchesTime = temporalFilteredNodes.has(n.id);
-      if (matchesLayer && matchesTime) matches.add(n.id);
+      // Canonical-only: drop nodes flagged is_latest=false (post drift-compaction)
+      const matchesCanon = !canonicalOnly || n.is_latest !== false;
+      if (matchesLayer && matchesTime && matchesCanon) matches.add(n.id);
     });
     return matches;
-  }, [graphData.nodes, layerFilter, temporalFilteredNodes]);
+  }, [graphData.nodes, layerFilter, temporalFilteredNodes, canonicalOnly]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
@@ -791,15 +808,32 @@ export default function MemoryGraph() {
         >
           ◆ Intelligent
         </button>
+
+        {/* Canonical-only toggle — hides superseded nodes post drift-compaction */}
+        <button
+          type="button"
+          onClick={() => setCanonicalOnly(v => !v)}
+          className={`shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-mono uppercase tracking-[0.06em] border ${
+            canonicalOnly
+              ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]"
+              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
+          }`}
+          title={canonicalOnly
+            ? "Canonical-only — hides superseded versions (is_latest=false). Click to show full history."
+            : "Showing full history. Click to hide superseded versions."}
+        >
+          ✓ Canonical
+        </button>
         {intelligentMode && (
           <div className="flex items-center gap-1 shrink-0">
             {[
-              { key: 'updates', label: 'Upd', color: '#3b82f6' },
-              { key: 'extends', label: 'Ext', color: '#8b5cf6' },
-              { key: 'derives', label: 'Der', color: '#a78bfa' },
-              { key: 'derived_from', label: 'Evid', color: '#a78bfa' },
-              { key: 'contradicts', label: 'Conf', color: '#ef4444' },
-              { key: 'mentions', label: 'Ent', color: '#10b981' },
+              // Palette matches EDGE_COLORS at top of file
+              { key: 'updates',      label: 'Upd',  color: '#f59e0b' },
+              { key: 'extends',      label: 'Ext',  color: '#22c55e' },
+              { key: 'derives',      label: 'Der',  color: '#8b5cf6' },
+              { key: 'derived_from', label: 'Evid', color: '#3b82f6' },
+              { key: 'contradicts',  label: 'Conf', color: '#ef4444' },
+              { key: 'mentions',     label: 'Ent',  color: '#94a3b8' },
             ].map((opt) => {
               const active = edgeTypeFilter.has(opt.key);
               return (

@@ -242,15 +242,18 @@ function getKindColor(node) {
 }
 
 // Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
+// Edge palette parity with MemoryGraph.jsx EDGE_COLORS so the same edge
+// type reads the same color across 2D / 3D / detail views.
 function getEdgeColorByType(type) {
   const t = String(type || '').toLowerCase();
-  if (t === 'contradicts') return '#ef4444';        // red
-  if (t === 'derived_from' || t === 'derives') return '#a78bfa'; // purple
-  if (t === 'supports' || t === 'mentions') return '#10b981';     // green
-  if (t === 'updates') return '#3b82f6';            // blue
-  if (t === 'extends') return '#8b5cf6';            // violet
-  if (t === 'needs_revision') return '#f59e0b';     // amber
-  if (t === 'peer_review') return '#64748b';        // slate
+  if (t === 'updates')      return '#f59e0b'; // amber — supersession
+  if (t === 'extends')      return '#22c55e'; // green — additive
+  if (t === 'derives' || t === 'derived_from') return '#8b5cf6'; // violet — synthesis link
+  if (t === 'contradicts')  return '#ef4444'; // red — conflict
+  if (t === 'supports')     return '#3b82f6'; // blue — evidence
+  if (t === 'mentions')     return '#94a3b8'; // slate — light reference
+  if (t === 'needs_revision') return '#f97316'; // orange
+  if (t === 'peer_review')  return '#64748b'; // slate
   return null;
 }
 
