@@ -391,14 +391,17 @@ function CognitionLoopPanel() {
 
   const refresh = async () => {
     try {
-      const [s, rec] = await Promise.all([
-        apiClient.get('/api/cognition/status'),
-        apiClient.get('/api/cognition/recent?limit=4').catch(() => ({ items: [] })),
+      const [sRes, recRes] = await Promise.all([
+        apiClient.core.get('/api/cognition/status'),
+        apiClient.core.get('/api/cognition/recent?limit=4').catch(() => ({ data: { items: [] } })),
       ]);
+      // axios responses wrap payload in `.data`
+      const s = sRes?.data ?? sRes;
+      const recItems = recRes?.data?.items ?? recRes?.items ?? [];
       setStatus(s);
-      setRecent(Array.isArray(rec?.items) ? rec.items : []);
+      setRecent(Array.isArray(recItems) ? recItems : []);
     } catch (e) {
-      setStatus({ enabled: false, error: e.message });
+      setStatus({ enabled: false, error: e?.response?.data?.error || e?.message });
     } finally {
       setLoading(false);
     }
@@ -414,7 +417,7 @@ function CognitionLoopPanel() {
     setTriggering(true);
     setMsg(null);
     try {
-      await apiClient.post('/api/cognition/synthesize-now', {});
+      await apiClient.core.post('/api/cognition/synthesize-now', {});
       setMsg('Triggered. Synthesis + drift compaction running in background. Refresh in ~10s.');
       setTimeout(refresh, 8000);
     } catch (e) {
