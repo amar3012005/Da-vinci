@@ -569,6 +569,7 @@ export default function KnowledgeBase() {
   const [deletingDocId, setDeletingDocId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
   const [relSummaries, setRelSummaries] = useState({});
 
@@ -1200,7 +1201,20 @@ export default function KnowledgeBase() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.docx,.txt,.md,.csv,.xlsx,.xls"
+            accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.xls,.ppt,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={folderInputRef}
+            type="file"
+            // @ts-ignore — non-standard HTML5 attrs for folder picker
+            webkitdirectory=""
+            directory=""
+            multiple
             className="hidden"
             onChange={(e) => {
               if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
@@ -1209,10 +1223,17 @@ export default function KnowledgeBase() {
           />
           <Upload size={32} className={`mx-auto mb-3 ${dragActive ? 'text-[#117dff]' : 'text-[#d4d0ca]'}`} />
           <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
-            Drop files here or click to upload
+            Drop files or folder here, or click to upload
           </p>
-          <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-            PDF, DOCX, TXT, MD, CSV, XLSX — max 100MB per file
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }}
+            className="mt-2 text-[11px] text-[#117dff] hover:text-[#0a5fcc] underline underline-offset-2"
+          >
+            Pick a folder instead
+          </button>
+          <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
+            PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file
           </p>
           <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
             Files are chunked into semantic sections and stored as searchable memories
