@@ -4,7 +4,7 @@ import {
   Cpu, Brain, Clock, Shield, GitBranch, Zap,
   Play, RefreshCw, AlertTriangle,
   CheckCircle2, XCircle, Loader2, Search,
-  Network
+  Network, Sparkles, Activity
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -382,6 +382,152 @@ function SwarmActivity() {
 
 /* ─── Main Engine Page ───────────────────────────────────────── */
 
+function CognitionLoopPanel() {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [triggering, setTriggering] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const refresh = async () => {
+    try {
+      const r = await apiClient.get('/api/cognition/status');
+      setStatus(r);
+    } catch (e) {
+      setStatus({ enabled: false, error: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+    const t = setInterval(refresh, 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const triggerNow = async () => {
+    setTriggering(true);
+    setMsg(null);
+    try {
+      await apiClient.post('/api/cognition/synthesize-now', {});
+      setMsg('Triggered. Synthesis + drift compaction running in background. Refresh in ~10s.');
+      setTimeout(refresh, 8000);
+    } catch (e) {
+      setMsg(`Failed: ${e.response?.data?.error || e.message}`);
+    } finally {
+      setTriggering(false);
+    }
+  };
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const ago = Math.round((Date.now() - d.getTime()) / 1000);
+    if (ago < 60) return `${ago}s ago`;
+    if (ago < 3600) return `${Math.round(ago / 60)}m ago`;
+    return `${Math.round(ago / 3600)}h ago`;
+  };
+
+  return (
+    <Card className="lg:col-span-2">
+      <div className="flex items-start justify-between mb-4">
+        <SectionHeader
+          icon={Sparkles}
+          title="Cognition Loop"
+          description="Hourly synthesis + drift compaction — the 'thinking' cron"
+        />
+        <button
+          onClick={triggerNow}
+          disabled={triggering || !status?.enabled}
+          className="text-[11px] font-mono px-3 py-1.5 rounded-md bg-[#117dff] text-white hover:bg-[#0a5fcc] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+        >
+          {triggering ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}
+          {triggering ? 'Running...' : 'Run now'}
+        </button>
+      </div>
+
+      {loading && <Loader2 size={16} className="animate-spin text-[#a3a3a3]" />}
+
+      {!loading && status && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-[#faf9f4] rounded-lg p-3">
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Status</div>
+              <div className="flex items-center gap-1.5">
+                {status.enabled ? (
+                  status.running
+                    ? <><Loader2 size={12} className="animate-spin text-[#117dff]" /><span className="text-xs font-semibold text-[#117dff]">running</span></>
+                    : <><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-emerald-700">idle</span></>
+                ) : (
+                  <><XCircle size={12} className="text-amber-600" /><span className="text-xs font-semibold text-amber-700">disabled</span></>
+                )}
+              </div>
+            </div>
+            <div className="bg-[#faf9f4] rounded-lg p-3">
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Last run</div>
+              <div className="text-xs font-semibold text-[#0a0a0a]">{fmtDate(status.last_run_at)}</div>
+              {status.last_run_ms && <div className="text-[10px] text-[#a3a3a3]">{(status.last_run_ms / 1000).toFixed(1)}s</div>}
+            </div>
+            <div className="bg-[#faf9f4] rounded-lg p-3">
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Next run</div>
+              <div className="text-xs font-semibold text-[#0a0a0a]">{fmtDate(status.next_run_at)}</div>
+              <div className="text-[10px] text-[#a3a3a3]">every {Math.round((status.interval_ms || 0) / 60000)}m</div>
+            </div>
+            <div className="bg-[#faf9f4] rounded-lg p-3">
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Last output</div>
+              <div className="text-xs font-semibold text-[#0a0a0a]">
+                {status.last_synthesis_count ?? 0} synth · {status.last_compaction_count ?? 0} compact
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-[#ece8de] pt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-mono">
+            <div>
+              <div className="text-[#a3a3a3]">Lookback</div>
+              <div className="text-[#0a0a0a] font-semibold">{status.lookback_hours}h</div>
+            </div>
+            <div>
+              <div className="text-[#a3a3a3]">Cluster range</div>
+              <div className="text-[#0a0a0a] font-semibold">{status.cluster_min}–{status.cluster_max}</div>
+            </div>
+            <div>
+              <div className="text-[#a3a3a3]">Drift threshold</div>
+              <div className="text-[#0a0a0a] font-semibold">≥{status.drift_threshold}</div>
+            </div>
+            <div>
+              <div className="text-[#a3a3a3]">Model</div>
+              <div className="text-[#0a0a0a] font-semibold truncate">{status.model}</div>
+            </div>
+          </div>
+
+          <div className="mt-3 p-3 bg-[#f0f7ff] border border-[#117dff]/15 rounded-lg text-[11px] text-[#0a0a0a] leading-relaxed">
+            <div className="font-semibold mb-1 flex items-center gap-1.5">
+              <Activity size={11} className="text-[#117dff]" />
+              How it works
+            </div>
+            <p>Every {Math.round((status.interval_ms || 0) / 60000)} minutes the loop walks memories created in the last {status.lookback_hours}h, groups them by primary tag, and asks the LLM to emit ONE emergent insight per cluster (saved as a <span className="font-mono bg-white px-1 rounded">synthesis</span> memory with <span className="font-mono bg-white px-1 rounded">Derives</span> edges to its sources). When a topic cluster grows past {status.drift_threshold} memories, the second pass compresses it into a canonical "as-of-today" summary and supersedes the older granular memories — keeping recall fast and preventing graph bloat.</p>
+          </div>
+
+          {status.errors && status.errors.length > 0 && (
+            <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-[10px] font-mono">
+              <div className="font-semibold text-amber-700 mb-1">Recent errors</div>
+              {status.errors.slice(-3).map((e, i) => (
+                <div key={i} className="text-amber-800 truncate">{e.at?.slice(11, 19)} {e.error}</div>
+              ))}
+            </div>
+          )}
+
+          {msg && (
+            <div className="mt-3 p-2 bg-[#117dff]/8 border border-[#117dff]/20 rounded text-[11px] text-[#0a5fcc]">
+              {msg}
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function Engine() {
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6 max-w-6xl">
@@ -412,6 +558,9 @@ export default function Engine() {
           </div>
         ))}
       </motion.div>
+
+      {/* Cognition Loop — full-width top section */}
+      <CognitionLoopPanel />
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

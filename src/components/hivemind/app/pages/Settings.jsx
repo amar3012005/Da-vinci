@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
@@ -10,6 +10,7 @@ import {
   Trash2,
   ExternalLink,
   Info,
+  Shield,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -102,10 +103,20 @@ export default function Settings() {
   const [copiedField, setCopiedField] = useState(null);
   const [revoking, setRevoking] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [projectPolicy, setProjectPolicy] = useState('private');
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policySaved, setPolicySaved] = useState(false);
   const timeoutRef = useRef(null);
 
   const controlPlaneUrl = apiClient.controlPlane.defaults.baseURL;
   const coreApiUrl = apiClient.core.defaults.baseURL;
+
+  // Load current org policy
+  useEffect(() => {
+    if (org?.defaultProjectPolicy) {
+      setProjectPolicy(org.defaultProjectPolicy);
+    }
+  }, [org]);
 
   const handleCopy = useCallback(async (text, field) => {
     try {
@@ -122,6 +133,20 @@ export default function Settings() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setCopiedField(null), 2000);
   }, []);
+
+  const handleSavePolicy = useCallback(async () => {
+    setPolicyLoading(true);
+    setPolicySaved(false);
+    try {
+      await apiClient.core.patch('/api/team/org', { defaultProjectPolicy: projectPolicy });
+      setPolicySaved(true);
+      setTimeout(() => setPolicySaved(false), 3000);
+    } catch {
+      // Silently handle errors
+    } finally {
+      setPolicyLoading(false);
+    }
+  }, [projectPolicy]);
 
   const handleRevokeAllKeys = useCallback(async () => {
     setRevoking(true);
@@ -247,6 +272,85 @@ export default function Settings() {
             />
           </div>
         </SectionCard>
+
+        {/* ── Project Access Policy ──────────────────────────────── */}
+        {user?.role === 'admin' && (
+          <SectionCard>
+            <SectionHeader
+              icon={Shield}
+              title="Project Access Policy"
+              description="Default access control for new projects"
+            />
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
+                  <input
+                    type="radio"
+                    name="projectPolicy"
+                    value="private"
+                    checked={projectPolicy === 'private'}
+                    onChange={(e) => setProjectPolicy(e.target.value)}
+                    className="w-4 h-4 text-[#117dff]"
+                  />
+                  <div>
+                    <div className="text-[#0a0a0a] text-sm font-medium">Private (default)</div>
+                    <div className="text-[#a3a3a3] text-xs mt-0.5">
+                      Creator + explicitly invited members only
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
+                  <input
+                    type="radio"
+                    name="projectPolicy"
+                    value="team_inherited"
+                    checked={projectPolicy === 'team_inherited'}
+                    onChange={(e) => setProjectPolicy(e.target.value)}
+                    className="w-4 h-4 text-[#117dff]"
+                  />
+                  <div>
+                    <div className="text-[#0a0a0a] text-sm font-medium">Team Inherited</div>
+                    <div className="text-[#a3a3a3] text-xs mt-0.5">
+                      All team members auto-granted access when project has a team
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
+                  <input
+                    type="radio"
+                    name="projectPolicy"
+                    value="org_visible"
+                    checked={projectPolicy === 'org_visible'}
+                    onChange={(e) => setProjectPolicy(e.target.value)}
+                    className="w-4 h-4 text-[#117dff]"
+                  />
+                  <div>
+                    <div className="text-[#0a0a0a] text-sm font-medium">Org Visible</div>
+                    <div className="text-[#a3a3a3] text-xs mt-0.5">
+                      Discoverable by all org members, access on request
+                    </div>
+                  </div>
+                </label>
+              </div>
+              <button
+                onClick={handleSavePolicy}
+                disabled={policyLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#117dff] text-white text-sm hover:bg-[#0066e0] disabled:opacity-50 transition-colors"
+              >
+                {policyLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : policySaved ? (
+                  <>
+                    <Check size={14} />
+                    Saved
+                  </>
+                ) : (
+                  'Save Policy'
+                )}
+              </button>
+            </div>
+          </SectionCard>
+        )}
 
         {/* ── Danger Zone ─────────────────────────────────────────── */}
         <SectionCard className="!border-red-200 !bg-red-50">
