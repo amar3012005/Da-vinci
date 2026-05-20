@@ -155,6 +155,8 @@ function InviteModal({ orgId, teams, projects, onClose, onInvited }) {
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [successResult, setSuccessResult] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   function toggleRole(role) {
     setSelectedRoles(prev =>
@@ -192,13 +194,77 @@ function InviteModal({ orgId, teams, projects, onClose, onInvited }) {
         team_ids: selectedTeams,
         project_ids: selectedProjects,
       });
+      // Surface email dispatch + join URL in a confirmation panel instead
+      // of closing the modal immediately. Admin needs the link in case
+      // email failed / was skipped.
+      setSuccessResult(result?.invite || result);
       onInvited(result);
-      onClose();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setSending(false);
     }
+  }
+
+  // Confirmation panel — appears AFTER successful invite creation. Shows
+  // email-dispatch status + a copy-able join URL so the admin has the link
+  // even when the email provider isn't configured (or send failed).
+  if (successResult) {
+    const joinUrl  = successResult.join_url || successResult.full_url || successResult.url || '';
+    const dispatch = successResult.email_dispatch || {};
+    const emailOk  = dispatch.ok === true;
+    const emailSkipped = dispatch.attempted === false || dispatch.reason === 'disabled';
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[15px] font-semibold text-[#0a0a0a]">Invitation created</h2>
+            <button onClick={onClose} className="text-[#737373] hover:text-[#0a0a0a]"><X size={18} /></button>
+          </div>
+          <div className={`mb-4 p-3 rounded-lg border text-[12px] ${emailOk ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : emailSkipped ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {emailOk && (
+              <>📧 <strong>Email sent</strong> to {successResult.email} via {dispatch.provider}.</>
+            )}
+            {emailSkipped && (
+              <>⚠️ No email provider configured — share the link below manually. <span className="block mt-1 text-[10px] opacity-80">(Set <code className="font-mono bg-white px-1 rounded">RESEND_API_KEY</code> on the control plane to auto-send.)</span></>
+            )}
+            {!emailOk && !emailSkipped && (
+              <>✗ Email send failed: <span className="font-mono text-[11px]">{dispatch.error || 'unknown'}</span>. Share the link manually.</>
+            )}
+          </div>
+          <label className="block text-[11px] font-medium text-[#525252] mb-1">Join link</label>
+          <div className="flex items-stretch gap-2 mb-4">
+            <input
+              type="text"
+              readOnly
+              value={joinUrl}
+              className="flex-1 px-3 py-2 text-[11px] font-mono border border-[#e3e0db] rounded-lg bg-[#faf9f4] text-[#0a0a0a]"
+              onClick={(e) => e.target.select()}
+            />
+            <button
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(joinUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+              }}
+              className="px-3 py-2 text-[11px] font-semibold rounded-lg bg-[#117dff] text-white hover:bg-[#0a5fcc]"
+            >
+              {copied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+          <div className="text-[10px] text-[#a3a3a3] font-mono mb-4">
+            Expires {successResult.expires_at ? new Date(successResult.expires_at).toLocaleDateString() : 'in 7 days'}
+            {Array.isArray(successResult.project_ids) && successResult.project_ids.length > 0 && (
+              <> · {successResult.project_ids.length} project{successResult.project_ids.length === 1 ? '' : 's'} scoped</>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 text-[12px] font-semibold rounded-lg bg-[#0a0a0a] text-white hover:bg-[#1a1a1a]"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
