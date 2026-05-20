@@ -401,7 +401,16 @@ function CognitionLoopPanel() {
       setStatus(s);
       setRecent(Array.isArray(recItems) ? recItems : []);
     } catch (e) {
-      setStatus({ enabled: false, error: e?.response?.data?.error || e?.message });
+      // IMPORTANT: distinguish a real "disabled by env" from a transient fetch
+      // failure. Old code always set enabled:false on any error, which made
+      // the panel look permanently off when the request 401'd or the network
+      // hiccupped. Keep enabled=null + carry the error so the UI can render
+      // a "status unknown" pill rather than a misleading "disabled" pill.
+      setStatus({
+        enabled: null,
+        error: e?.response?.data?.error || e?.message || 'status fetch failed',
+        statusCode: e?.response?.status,
+      });
     } finally {
       setLoading(false);
     }
@@ -462,14 +471,22 @@ function CognitionLoopPanel() {
             <div className="bg-[#faf9f4] rounded-lg p-3">
               <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Status</div>
               <div className="flex items-center gap-1.5">
-                {status.enabled ? (
+                {status.enabled === true ? (
                   status.running
                     ? <><Loader2 size={12} className="animate-spin text-[#117dff]" /><span className="text-xs font-semibold text-[#117dff]">running</span></>
                     : <><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-emerald-700">idle</span></>
-                ) : (
+                ) : status.enabled === false ? (
                   <><XCircle size={12} className="text-amber-600" /><span className="text-xs font-semibold text-amber-700">disabled</span></>
+                ) : (
+                  // enabled === null (or undefined) → status fetch failed; show
+                  // a neutral "unknown" pill plus the underlying error so the
+                  // user can act on it (auth, network, env) instead of guessing.
+                  <><XCircle size={12} className="text-slate-500" /><span className="text-xs font-semibold text-slate-600" title={status.error || ''}>unknown{status.statusCode ? ` (${status.statusCode})` : ''}</span></>
                 )}
               </div>
+              {status.enabled !== true && status.error && (
+                <div className="text-[9.5px] text-[#a3a3a3] mt-1 truncate" title={status.error}>{status.error}</div>
+              )}
             </div>
             <div className="bg-[#faf9f4] rounded-lg p-3">
               <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Last run</div>
