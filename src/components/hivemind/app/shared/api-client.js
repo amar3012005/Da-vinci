@@ -97,9 +97,17 @@ class HiveMindApiClient {
   }
 
   setCoreBaseUrl(url) {
-    if (url && url !== this._coreBaseUrl) {
-      this._coreBaseUrl = url;
-      this.core.defaults.baseURL = url;
+    // Guard against the control-plane returning a docker-internal hostname
+    // (http://hm-core:3000) — browsers can't resolve that and CSP would
+    // block it anyway. Force-fallback to the publicly resolvable default.
+    let safeUrl = url;
+    if (safeUrl && /^https?:\/\/(hm-core|localhost|127\.0\.0\.1|::1)(?::\d+)?/i.test(safeUrl)) {
+      console.warn('[api-client] ignoring internal core base URL from bootstrap:', safeUrl);
+      safeUrl = process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050';
+    }
+    if (safeUrl && safeUrl !== this._coreBaseUrl) {
+      this._coreBaseUrl = safeUrl;
+      this.core.defaults.baseURL = safeUrl;
     }
   }
 
