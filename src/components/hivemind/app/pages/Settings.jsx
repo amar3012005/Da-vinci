@@ -104,6 +104,7 @@ export default function Settings() {
   const [revoking, setRevoking] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [projectPolicy, setProjectPolicy] = useState('private');
+  const [memoryPolicy, setMemoryPolicy] = useState('private');
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
   const timeoutRef = useRef(null);
@@ -111,11 +112,22 @@ export default function Settings() {
   const controlPlaneUrl = apiClient.controlPlane.defaults.baseURL;
   const coreApiUrl = apiClient.core.defaults.baseURL;
 
-  // Load current org policy
+  // Load current org policies from canonical endpoint (covers both axes:
+  // project provisioning + memory-save routing).
   useEffect(() => {
-    if (org?.defaultProjectPolicy) {
-      setProjectPolicy(org.defaultProjectPolicy);
-    }
+    let abort = false;
+    (async () => {
+      try {
+        const r = await apiClient.core.get('/api/admin/org/policy');
+        if (abort) return;
+        if (r?.data?.default_project_policy) setProjectPolicy(r.data.default_project_policy);
+        if (r?.data?.memory_save_policy) setMemoryPolicy(r.data.memory_save_policy);
+      } catch {
+        // Fall back to org context value
+        if (org?.defaultProjectPolicy) setProjectPolicy(org.defaultProjectPolicy);
+      }
+    })();
+    return () => { abort = true; };
   }, [org]);
 
   const handleCopy = useCallback(async (text, field) => {
@@ -138,7 +150,10 @@ export default function Settings() {
     setPolicyLoading(true);
     setPolicySaved(false);
     try {
-      await apiClient.core.patch('/api/team/org', { defaultProjectPolicy: projectPolicy });
+      await apiClient.core.put('/api/admin/org/policy', {
+        default_project_policy: projectPolicy,
+        memory_save_policy: memoryPolicy,
+      });
       setPolicySaved(true);
       setTimeout(() => setPolicySaved(false), 3000);
     } catch {
@@ -146,7 +161,7 @@ export default function Settings() {
     } finally {
       setPolicyLoading(false);
     }
-  }, [projectPolicy]);
+  }, [projectPolicy, memoryPolicy]);
 
   const handleRevokeAllKeys = useCallback(async () => {
     setRevoking(true);
@@ -331,6 +346,38 @@ export default function Settings() {
                     </div>
                   </div>
                 </label>
+              </div>
+
+              {/* Memory-save policy — separate axis from project provisioning */}
+              <div className="pt-4 mt-2 border-t border-[#ece8de]">
+                <div className="text-[11px] text-[#a3a3a3] uppercase tracking-wide mb-2 font-semibold">
+                  Memory save policy
+                </div>
+                <p className="text-[11px] text-[#a3a3a3] mb-3">
+                  Where MCP <code className="font-mono text-[10px] bg-[#faf9f4] px-1 rounded">save_memory</code> routes when the caller omits a project.
+                </p>
+                <div className="space-y-2">
+                  {[
+                    { v: 'private',  t: 'Private (default)', d: 'Save to caller default project; falls through to org-wide.' },
+                    { v: 'org-wide', t: 'Org-wide',           d: 'Always saves org-wide unless project explicitly passed.' },
+                    { v: 'ask',      t: 'Ask',                d: 'Server hints Claude to ask the user which project on every save.' },
+                  ].map(({ v, t, d }) => (
+                    <label key={v} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
+                      <input
+                        type="radio"
+                        name="memoryPolicy"
+                        value={v}
+                        checked={memoryPolicy === v}
+                        onChange={(e) => setMemoryPolicy(e.target.value)}
+                        className="w-4 h-4 text-[#117dff]"
+                      />
+                      <div>
+                        <div className="text-[#0a0a0a] text-sm font-medium">{t}</div>
+                        <div className="text-[#a3a3a3] text-xs mt-0.5">{d}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
               <button
                 onClick={handleSavePolicy}

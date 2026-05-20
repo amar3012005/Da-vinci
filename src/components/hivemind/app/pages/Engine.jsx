@@ -384,14 +384,19 @@ function SwarmActivity() {
 
 function CognitionLoopPanel() {
   const [status, setStatus] = useState(null);
+  const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [msg, setMsg] = useState(null);
 
   const refresh = async () => {
     try {
-      const r = await apiClient.get('/api/cognition/status');
-      setStatus(r);
+      const [s, rec] = await Promise.all([
+        apiClient.get('/api/cognition/status'),
+        apiClient.get('/api/cognition/recent?limit=4').catch(() => ({ items: [] })),
+      ]);
+      setStatus(s);
+      setRecent(Array.isArray(rec?.items) ? rec.items : []);
     } catch (e) {
       setStatus({ enabled: false, error: e.message });
     } finally {
@@ -507,6 +512,29 @@ function CognitionLoopPanel() {
             </div>
             <p>Every {Math.round((status.interval_ms || 0) / 60000)} minutes the loop walks memories created in the last {status.lookback_hours}h, groups them by primary tag, and asks the LLM to emit ONE emergent insight per cluster (saved as a <span className="font-mono bg-white px-1 rounded">synthesis</span> memory with <span className="font-mono bg-white px-1 rounded">Derives</span> edges to its sources). When a topic cluster grows past {status.drift_threshold} memories, the second pass compresses it into a canonical "as-of-today" summary and supersedes the older granular memories — keeping recall fast and preventing graph bloat.</p>
           </div>
+
+          {recent.length > 0 && (
+            <div className="mt-4 border-t border-[#ece8de] pt-3">
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-2 font-semibold flex items-center gap-1.5">
+                <Sparkles size={10} className="text-[#117dff]" />
+                Recent output ({recent.length})
+              </div>
+              <div className="space-y-2">
+                {recent.map((r) => (
+                  <div key={r.id} className="bg-[#faf9f4] rounded-lg p-3 border border-[#ece8de]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-mono font-semibold text-[#0a0a0a] truncate flex-1">{r.title}</span>
+                      <Badge color={r.type === 'synthesis' ? 'purple' : 'cyan'}>{r.type}</Badge>
+                    </div>
+                    <p className="text-[11px] text-[#525252] leading-relaxed">{r.preview}{r.full_chars > 280 ? '…' : ''}</p>
+                    <div className="text-[9px] text-[#a3a3a3] font-mono mt-1">
+                      {new Date(r.created_at).toLocaleString()} · {r.full_chars} chars
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {status.errors && status.errors.length > 0 && (
             <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-[10px] font-mono">
