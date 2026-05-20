@@ -426,11 +426,26 @@ function CognitionLoopPanel() {
     setTriggering(true);
     setMsg(null);
     try {
-      await apiClient.core.post('/api/cognition/synthesize-now', {});
-      setMsg('Triggered. Synthesis + drift compaction running in background. Refresh in ~10s.');
-      setTimeout(refresh, 8000);
+      // Endpoint now runs inline + returns actual {synth, compact, ms}
+      // counts so we can show a truthful result instead of always saying
+      // "running in background" (which masked the empty-input case
+      // where 0 new memories were eligible — looked like a no-op).
+      const resp = await apiClient.core.post('/api/cognition/synthesize-now', {});
+      const r = resp?.data ?? resp ?? {};
+      if (r.skipped) {
+        setMsg(`Skipped: ${r.reason || 'already running'}`);
+      } else if ((r.synth ?? 0) === 0 && (r.compact ?? 0) === 0) {
+        setMsg(`Done in ${r.ms ?? 0}ms. 0 new — need ≥${status?.cluster_min ?? 4} recent memories per topic in last ${status?.lookback_hours ?? 24}h.`);
+      } else {
+        setMsg(`Done in ${r.ms ?? 0}ms. ${r.synth ?? 0} synthesis · ${r.compact ?? 0} drift-compaction written.`);
+      }
+      // Refresh sooner now that the call is synchronous.
+      setTimeout(refresh, 500);
     } catch (e) {
-      setMsg(`Failed: ${e.response?.data?.error || e.message}`);
+      const apiErr = e.response?.data?.error || e.message;
+      const apiCode = e.response?.status ? ` [${e.response.status}]` : '';
+      const roleSeen = e.response?.data?.role_seen;
+      setMsg(`Failed${apiCode}: ${apiErr}${roleSeen ? ` (your role: ${roleSeen.join(',') || 'none'})` : ''}`);
     } finally {
       setTriggering(false);
     }
