@@ -746,6 +746,40 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                   Last sync: {new Date(connector.lastSyncAt).toLocaleString()}
                 </p>
               )}
+              {(connector.status === 'error' || connector.status === 'needs_reauth') && connector.lastError && (() => {
+                // Classify root cause so the user knows whether to Retry or Reconnect.
+                const raw = String(connector.lastError);
+                const lower = raw.toLowerCase();
+                let kind = 'transient';
+                let label = 'Sync failed';
+                if (/no nango connection|no valid access token|token (refresh )?failed|reauth|revoked|invalid_grant|insufficient permission|insufficient_authentication_credentials|invalid auth/i.test(lower)) {
+                  kind = 'reauth'; label = 'Sign-in expired';
+                } else if (/\b(401|403)\b|invalid authentication credentials|expected oauth 2 access token/i.test(lower)) {
+                  kind = 'reauth'; label = 'Token rejected';
+                } else if (/\b429\b|rate limit|quota exceeded/i.test(lower)) {
+                  kind = 'rate-limit'; label = 'Rate-limited by provider';
+                } else if (/\b5\d\d\b|timeout|ETIMEDOUT|ECONNRESET|network/i.test(lower)) {
+                  kind = 'transient'; label = 'Network error';
+                } else if (/scope|missing.*permission/i.test(lower)) {
+                  kind = 'reauth'; label = 'Missing scopes';
+                }
+                const tone = kind === 'reauth'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : kind === 'rate-limit'
+                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'bg-red-50 border-red-200 text-red-700';
+                return (
+                  <div className={`mt-2 px-2 py-1.5 rounded-md border text-[10px] font-mono leading-relaxed ${tone}`}>
+                    <span className="font-semibold">{label}</span>
+                    <span className="ml-1 opacity-80" title={raw}>
+                      — {raw.replace(/\s+/g, ' ').slice(0, 110)}{raw.length > 110 ? '…' : ''}
+                    </span>
+                    {kind === 'reauth' && (
+                      <span className="ml-1 opacity-80">→ click <strong>Reconnect</strong></span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <ConnectorStatusBadge status={connector.status} />
@@ -946,30 +980,58 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
             </>
           )}
 
-          {connector.status === 'error' && connector.oauthProvider && (
-            <>
-              <button
-                onClick={onResync}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20 transition-all"
-              >
-                <RefreshCw size={12} />
-                Retry
-              </button>
-              <button
-                onClick={onConnect}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
-              >
-                <RefreshCw size={12} />
-                Reconnect
-              </button>
-              <button
-                onClick={onDisconnect}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
-              >
-                Disconnect
-              </button>
-            </>
-          )}
+          {connector.status === 'error' && connector.oauthProvider && (() => {
+            // Decide whether Retry or Reconnect is the primary CTA.
+            // Auth-shaped errors → Reconnect is primary (Retry pointless).
+            const raw = String(connector.lastError || '').toLowerCase();
+            const isAuth = /no nango connection|no valid access token|token (refresh )?failed|reauth|revoked|invalid_grant|insufficient|invalid auth|expected oauth 2|\b401\b|\b403\b|scope|missing.*permission/i.test(raw);
+            return (
+              <>
+                {isAuth ? (
+                  <>
+                    <button
+                      onClick={onConnect}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/15 text-amber-700 border border-amber-500/30 hover:bg-amber-500/25 transition-all"
+                    >
+                      <RefreshCw size={12} />
+                      Reconnect
+                    </button>
+                    <button
+                      onClick={onResync}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
+                      title="Re-running sync without a fresh sign-in usually won't help when the token is expired."
+                    >
+                      <RefreshCw size={12} />
+                      Retry anyway
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={onResync}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20 transition-all"
+                    >
+                      <RefreshCw size={12} />
+                      Retry
+                    </button>
+                    <button
+                      onClick={onConnect}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
+                    >
+                      <RefreshCw size={12} />
+                      Reconnect
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={onDisconnect}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
+                >
+                  Disconnect
+                </button>
+              </>
+            );
+          })()}
         </div>
       </div>
 
