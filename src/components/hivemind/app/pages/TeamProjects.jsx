@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, Send, UserPlus } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
+import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import ShareInviteModal from '../components/ShareInviteModal';
 
 /**
  * TeamProjects — manage projects under the currently-active team.
@@ -9,6 +11,8 @@ import apiClient from '../shared/api-client';
  */
 export default function TeamProjects() {
   const { activeTeam, activeTeamId, refresh: refreshTeams } = useTeamContext();
+  const { org } = useAuth();
+  const activeOrgId = org?.id;
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,6 +20,8 @@ export default function TeamProjects() {
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPolicy, setNewPolicy] = useState('private');
+  // ShareInviteModal target — { projectId, projectName } or null.
+  const [inviteTarget, setInviteTarget] = useState(null);
 
   const fetchProjects = useCallback(async () => {
     if (!activeTeamId) return;
@@ -133,13 +139,22 @@ export default function TeamProjects() {
                 <Folder size={16} className="text-[#117dff]" />
                 <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{p.name}</h3>
               </div>
-              <button
-                onClick={() => handleArchive(p.id)}
-                className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors"
-                title="Archive"
-              >
-                <Trash2 size={13} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setInviteTarget({ projectId: p.id, projectName: p.name })}
+                  className="text-[#a3a3a3] hover:text-[#117dff] transition-colors p-1"
+                  title="Invite to this project"
+                >
+                  <UserPlus size={13} />
+                </button>
+                <button
+                  onClick={() => handleArchive(p.id)}
+                  className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors p-1"
+                  title="Archive"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
             {p.description && (
               <p className="text-[12px] text-[#525252] mb-3 line-clamp-2">{p.description}</p>
@@ -160,6 +175,15 @@ export default function TeamProjects() {
           </div>
         )})}
       </div>
+
+      <ShareInviteModal
+        open={!!inviteTarget}
+        onClose={() => setInviteTarget(null)}
+        orgId={activeOrgId}
+        defaultProjectIds={inviteTarget ? [inviteTarget.projectId] : []}
+        defaultTeamIds={activeTeamId ? [activeTeamId] : []}
+        contextLabel={inviteTarget ? `${inviteTarget.projectName} (project)` : 'project'}
+      />
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setCreateOpen(false)}>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown, FolderKanban } from 'lucide-react';
+import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown, FolderKanban, Send } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import ShareInviteModal from '../components/ShareInviteModal';
 
 const ROLE_BADGES = {
   lead: 'bg-amber-500/10 text-amber-700 border-amber-500/30',
@@ -15,7 +16,8 @@ const ROLE_BADGES = {
  */
 export default function TeamMembers() {
   const { activeTeam, activeTeamId } = useTeamContext();
-  const { user } = useAuth();
+  const { user, org } = useAuth();
+  const activeOrgId = org?.id;
   const [members, setMembers] = useState([]);
   const [orgMembers, setOrgMembers] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -24,6 +26,7 @@ export default function TeamMembers() {
   const [addOpen, setAddOpen] = useState(false);
   const [addingUserId, setAddingUserId] = useState('');
   const [addingRole, setAddingRole] = useState('member');
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     if (!activeTeamId) return;
@@ -136,10 +139,17 @@ export default function TeamMembers() {
           </button>
           <button
             onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1] text-[#0a0a0a]"
           >
             <UserPlus size={13} />
-            Add Member
+            Add Existing
+          </button>
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+          >
+            <Send size={13} />
+            Invite to Team
           </button>
         </div>
       </header>
@@ -223,6 +233,14 @@ export default function TeamMembers() {
           </tbody>
         </table>
       </div>
+
+      <ShareInviteModal
+        open={inviteOpen}
+        onClose={() => { setInviteOpen(false); fetchMembers(); }}
+        orgId={activeOrgId}
+        defaultTeamIds={activeTeamId ? [activeTeamId] : []}
+        contextLabel={activeTeam?.name ? `${activeTeam.name} (team)` : 'team'}
+      />
 
       {addOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setAddOpen(false)}>

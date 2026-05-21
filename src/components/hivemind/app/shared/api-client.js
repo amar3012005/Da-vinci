@@ -227,13 +227,22 @@ class HiveMindApiClient {
     return data;
   }
 
-  async listInvites(orgId) {
-    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/invites`);
+  async listInvites(orgId, { status = 'all', projectId = null } = {}) {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.set('status', status);
+    if (projectId) params.set('project_id', projectId);
+    const qs = params.toString();
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/invites${qs ? `?${qs}` : ''}`);
     return data;
   }
 
   async revokeInvite(orgId, inviteId) {
     const { data } = await this.controlPlane.delete(`/v1/orgs/${orgId}/invites/${inviteId}`);
+    return data;
+  }
+
+  async resendInvite(orgId, inviteId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites/${inviteId}/resend`, {});
     return data;
   }
 

@@ -13,6 +13,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
+import ShareInviteModal from '../components/ShareInviteModal';
 
 // Roles available for assignment — mirrors ROLES set in backend permissions.js
 const ALL_ROLES = [
@@ -602,16 +603,13 @@ export default function AdminUsers() {
         />
       )}
 
-      {/* Invite modal */}
-      {showInvite && (
-        <InviteModal
-          orgId={org?.id}
-          teams={teams || []}
-          projects={projects || []}
-          onClose={() => setShowInvite(false)}
-          onInvited={() => fetchMembers()}
-        />
-      )}
+      {/* Share invite modal — replaces legacy InviteModal with multi-channel popup */}
+      <ShareInviteModal
+        open={showInvite}
+        onClose={() => { setShowInvite(false); fetchMembers(); }}
+        orgId={org?.id}
+        contextLabel={org?.name || 'workspace'}
+      />
     </div>
   );
 }
