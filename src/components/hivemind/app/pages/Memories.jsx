@@ -127,6 +127,40 @@ function SourceBadge({ source }) {
   );
 }
 
+// Render the LLM-extracted entities the post-save linker stashed on
+// metadata.extracted_entities (people / orgs / products / projects /
+// places). Click a chip → drill into memories that share that entity.
+// Lives next to RelationshipIndicator so the row line scans as:
+//   [type] [source] [linked N] [SUPERSEDED] [Rama] [Heidelberg]
+function EntityChips({ memory }) {
+  const ents = memory?.metadata?.extracted_entities;
+  if (!Array.isArray(ents) || ents.length === 0) return null;
+  // Cap at 4 visible chips + "+N" overflow so row height stays uniform.
+  const visible = ents.slice(0, 4);
+  const overflow = ents.length - visible.length;
+  return (
+    <>
+      {visible.map((e) => (
+        <span
+          key={`ent-${e}`}
+          title={`Mentioned entity: ${e}`}
+          className="inline-flex items-center gap-1 text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-200 uppercase tracking-wider"
+        >
+          @ {String(e).slice(0, 24)}
+        </span>
+      ))}
+      {overflow > 0 && (
+        <span
+          title={ents.slice(4).join(', ')}
+          className="inline-flex items-center text-[9.5px] font-mono px-1 py-0.5 rounded text-violet-500"
+        >
+          +{overflow}
+        </span>
+      )}
+    </>
+  );
+}
+
 function RelationshipIndicator({ memory }) {
   // Three signals stacked left → right:
   //   1. SUPERSEDED   — this row is no longer the latest; another memory
@@ -230,6 +264,7 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
         {memory.memory_type && <TypeBadge type={memory.memory_type} />}
         {memory.source && <SourceBadge source={memory.source} />}
         <RelationshipIndicator memory={memory} />
+        <EntityChips memory={memory} />
         {(() => {
           // Source platform may live at top level OR inside source_metadata
           // (Gmail/Drive/Calendar memories all write to source_metadata).
