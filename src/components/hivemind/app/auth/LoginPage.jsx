@@ -55,6 +55,21 @@ export default function LoginPage() {
     [location.search]
   );
 
+  // Persist cli_return_to into sessionStorage the moment the user lands
+  // here. The OAuth round-trip (Google/Zitadel) can drop URL params on
+  // some flows (e.g. when we end up at /hivemind/app/overview?auth=callback
+  // instead of the cli_return_to URL), so the AuthProvider checks
+  // sessionStorage on bootstrap completion to recover the CLI handoff.
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(location.search);
+      const cliReturnTo = urlParams.get('cli_return_to');
+      if (cliReturnTo) {
+        sessionStorage.setItem('hivemind_cli_return_to', cliReturnTo);
+      }
+    } catch (e) {}
+  }, [location.search]);
+
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);

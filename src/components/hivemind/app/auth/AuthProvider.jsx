@@ -74,8 +74,33 @@ export function AuthProvider({ children }) {
     }
   }, [location.search, runBootstrap]);
 
+  // CLI handoff recovery: when the user lands here authed AND we have a
+  // pending cli_return_to stashed in sessionStorage (LoginPage put it
+  // there when the user first arrived from the CLI), bounce them across
+  // to the control-plane URL so the API key gets minted and the
+  // localhost callback fires. Without this safety net, OAuth round-trips
+  // that drop URL params would dump the user on /overview while the CLI
+  // sat in its 'Waiting for sign-in…' loop forever.
+  useEffect(() => {
+    if (authState !== 'signed_in') return;
+    let pending;
+    try { pending = sessionStorage.getItem('hivemind_cli_return_to'); } catch (e) {}
+    if (!pending) return;
+    // Single-shot — clear before redirecting so we don't ping-pong.
+    try { sessionStorage.removeItem('hivemind_cli_return_to'); } catch (e) {}
+    // Cross-origin: control-plane host (api.hivemind.davinciai.eu:8040) is
+    // different from FE host (hivemind.davinciai.eu). window.location is
+    // the right tool — React Router can't navigate cross-origin.
+    window.location.href = pending;
+  }, [authState]);
+
   const login = useCallback((options = {}) => {
-    const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback`;
+    // Honor caller-provided returnTo (e.g. invitee bouncing through /hivemind/join/...)
+    // and fall back to the default overview landing.
+    const defaultReturn = `${window.location.origin}/hivemind/app/overview?auth=callback`;
+    const returnTo = typeof options.returnTo === 'string' && options.returnTo
+      ? options.returnTo
+      : defaultReturn;
     if (options.provider === 'google') {
       // Direct Google OAuth — bypasses Zitadel
       window.location.href = apiClient.getGoogleLoginUrl(returnTo);
