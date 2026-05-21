@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Sparkles,
   Globe,
-  ShieldCheck,
   Server,
   Network,
   Cpu,
@@ -41,13 +40,12 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: tt('evaluation', 'Evaluation') },
   ];
 
+  // Web Admin used to be a separate entry. It now lives as a collapsible
+  // "System Health" drawer inside /web (Web Studio) — same admin gate.
   const adminItems = [
     { to: '/hivemind/app/workspace',             icon: Building2,     label: tt('workspaceAdmin', 'Workspace Admin') },
     { to: '/hivemind/app/employees/playground',  icon: MessageSquare, label: tt('playground', 'Playground') },
   ];
-  if (showWebAdmin) {
-    adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: tt('webAdmin', 'Web Admin') });
-  }
 
   const sections = [
     {
