@@ -5,7 +5,7 @@ import {
   Globe, Search, Link as LinkIcon, Send, Loader2, AlertTriangle, Lock, X,
   ChevronDown, ChevronUp, RefreshCw, Save, BookmarkPlus, CheckCircle2,
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
-  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles,
+  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Brain, ArrowUpRight,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -256,14 +256,38 @@ export default function WebStudio() {
     }, { replace: true });
   }
 
+  // The currently running research job (if any) takes over the upper
+  // area. Once it succeeds it falls back to the "past research" toggle.
+  const activeResearchJob = useMemo(() => {
+    if (!pollingId) return null;
+    const j = jobList.find(j => j.id === pollingId);
+    if (!j) return null;
+    if (j.type !== 'research') return null;
+    if (j.status === 'succeeded' || j.status === 'failed') return null;
+    return j;
+  }, [jobList, pollingId]);
+
+  // Past research toggle (drop-down list above the chat bar).
+  const [pastOpen, setPastOpen] = useState(false);
+  const [previewJob, setPreviewJob] = useState(null);
+
+  const researchJobs = useMemo(
+    () => jobList.filter(j => j.type === 'research' && (j.status === 'succeeded' || j.status === 'failed')),
+    [jobList]
+  );
+  const nonResearchJobs = useMemo(
+    () => jobList.filter(j => j.type !== 'research'),
+    [jobList]
+  );
+
   return (
-    <div className="max-w-[1100px] mx-auto font-['Space_Grotesk']">
-      {/* Header */}
-      <header className="mb-5 flex items-start justify-between gap-4">
+    <div className="font-['Space_Grotesk'] flex flex-col h-[calc(100vh-3.5rem-3rem)] max-w-[1100px] mx-auto -my-2">
+      {/* Header — compact, always visible */}
+      <header className="shrink-0 flex items-start justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Globe size={18} className="text-[#117dff]" />
-            <h1 className="text-[22px] font-semibold text-[#0a0a0a]">Web Studio</h1>
+          <div className="flex items-center gap-2 mb-0.5">
+            <Globe size={16} className="text-[#117dff]" />
+            <h1 className="text-[18px] font-semibold text-[#0a0a0a]">Web Studio</h1>
             <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-2 py-0.5 rounded uppercase tracking-wider">Add-on</span>
             {featureLocked && (
               <span className="text-[9px] font-mono bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
@@ -271,56 +295,41 @@ export default function WebStudio() {
               </span>
             )}
           </div>
-          <p className="text-[12px] text-[#737373]">
-            Ask a question or paste a URL. Studio routes it to search or crawl, streams results, and one-click saves into HIVEMIND memory.
+          <p className="text-[11px] text-[#737373]">
+            Ask the web. Live progress streams here. Saves to HIVEMIND through the same canonical pipeline as Knowledge Base uploads.
           </p>
         </div>
         <UsageRings usage={usage} monthly={monthly} />
       </header>
 
-      {/* Prompt */}
-      <PromptBar
-        prompt={prompt} setPrompt={setPrompt}
-        mode={detectedMode} forcedMode={forcedMode} setForcedMode={setForcedMode}
-        submitting={submitting} onSubmit={handleSubmit} onKey={handleKey}
-        depth={crawlDepth} setDepth={setCrawlDepth}
-        pageLimit={crawlPageLimit} setPageLimit={setCrawlPageLimit}
-        researchModel={researchModel} setResearchModel={setResearchModel}
-        citationFormat={citationFormat} setCitationFormat={setCitationFormat}
-        domainPolicy={domainPolicy} checkingPolicy={checkingPolicy}
-        locked={featureLocked}
-      />
-
-      {/* Error */}
-      <AnimatePresence>
-        {submitError && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="mt-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700"
-          >
-            <AlertTriangle size={13} />{submitError}
-            <button onClick={() => setSubmitError(null)} className="ml-auto text-red-400 hover:text-red-700">
-              <X size={13} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Job timeline */}
-      <section className="mt-6">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Recent runs</h2>
-          <button onClick={refetchJobs} className="text-[10px] text-[#a3a3a3] hover:text-[#0a0a0a] flex items-center gap-1">
-            <RefreshCw size={11} /> Refresh
-          </button>
-        </div>
-        {jobList.length === 0 ? (
-          <EmptyState locked={featureLocked} />
+      {/* Upper area — fills available space, scrolls when content overflows.
+          • Running research → live progress + streaming content
+          • No active run → Past research toggle + (optional) drop-down list
+          • Non-research jobs always show in their own compact list */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin]">
+        {activeResearchJob ? (
+          <LiveResearchPanel job={activeResearchJob} />
         ) : (
-          <div className="relative">
-            {/* Capped list of compact rows. ~10 fit before internal scroll. */}
-            <div className="max-h-[640px] overflow-y-auto pr-1 [scrollbar-width:thin] border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec]">
-              {jobList.map(job => (
+          <PastResearchPanel
+            open={pastOpen}
+            onToggle={() => setPastOpen(v => !v)}
+            jobs={researchJobs}
+            onPick={setPreviewJob}
+            locked={featureLocked}
+          />
+        )}
+
+        {/* Non-research jobs (search/crawl) — always rendered below.       */}
+        {nonResearchJobs.length > 0 && (
+          <section className="mt-5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Search & Crawl runs</h3>
+              <button onClick={refetchJobs} className="text-[10px] text-[#a3a3a3] hover:text-[#0a0a0a] flex items-center gap-1">
+                <RefreshCw size={11} /> Refresh
+              </button>
+            </div>
+            <div className="border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec] max-h-[420px] overflow-y-auto">
+              {nonResearchJobs.map(job => (
                 <JobRow
                   key={job.id}
                   job={job}
@@ -330,70 +339,77 @@ export default function WebStudio() {
                 />
               ))}
             </div>
-            {jobList.length > 10 && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent rounded-b-xl" />
-            )}
-            <div className="mt-2 text-[10px] text-[#a3a3a3] font-mono text-right">
-              {jobList.length} run{jobList.length !== 1 ? 's' : ''} · scroll for older
-            </div>
-          </div>
+            <AnimatePresence>
+              {expandedJobId && (() => {
+                const job = nonResearchJobs.find(j => j.id === expandedJobId);
+                if (!job) return null;
+                return (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3">
+                    <ExpandedJobView
+                      job={job}
+                      onClose={() => setExpandedJobId(null)}
+                      onResultClick={setSelectedResult}
+                      onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
+                    />
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
+          </section>
         )}
 
-        {/* Expanded detail — renders below the list, no height cap; page scrolls. */}
+        {/* System health (admin only) */}
+        {adminAccessible && (
+          <section className="mt-6 pt-4 border-t border-[#e3e0db]">
+            <button onClick={toggleHealth} className="w-full flex items-center justify-between text-left">
+              <div className="flex items-center gap-2">
+                <Activity size={13} className="text-[#525252]" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">System Health</span>
+              </div>
+              {healthOpen ? <ChevronUp size={13} className="text-[#a3a3a3]" /> : <ChevronDown size={13} className="text-[#a3a3a3]" />}
+            </button>
+            <AnimatePresence>
+              {healthOpen && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <HealthPanel metrics={metrics} onRefresh={refetchMetrics} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+        )}
+
+        <div className="h-3" />
+      </div>
+
+      {/* Fixed bottom chat bar */}
+      <div className="shrink-0 pt-2 border-t border-[#e3e0db] bg-[#faf9f4]">
         <AnimatePresence>
-          {expandedJobId && (() => {
-            const job = jobList.find(j => j.id === expandedJobId);
-            if (!job) return null;
-            return (
-              <motion.div
-                key={expandedJobId}
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mt-4"
-              >
-                <ExpandedJobView
-                  job={job}
-                  onClose={() => setExpandedJobId(null)}
-                  onResultClick={setSelectedResult}
-                  onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
-                />
-              </motion.div>
-            );
-          })()}
+          {submitError && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="mb-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700"
+            >
+              <AlertTriangle size={13} />{submitError}
+              <button onClick={() => setSubmitError(null)} className="ml-auto text-red-400 hover:text-red-700">
+                <X size={13} />
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
-      </section>
+        <PromptBar
+          prompt={prompt} setPrompt={setPrompt}
+          mode={detectedMode} forcedMode={forcedMode} setForcedMode={setForcedMode}
+          submitting={submitting} onSubmit={handleSubmit} onKey={handleKey}
+          depth={crawlDepth} setDepth={setCrawlDepth}
+          pageLimit={crawlPageLimit} setPageLimit={setCrawlPageLimit}
+          researchModel={researchModel} setResearchModel={setResearchModel}
+          citationFormat={citationFormat} setCitationFormat={setCitationFormat}
+          domainPolicy={domainPolicy} checkingPolicy={checkingPolicy}
+          locked={featureLocked}
+        />
+      </div>
 
-      {/* System health (admin only) */}
-      {adminAccessible && (
-        <section className="mt-8 mb-12 border-t border-[#e3e0db] pt-5">
-          <button
-            onClick={toggleHealth}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div className="flex items-center gap-2">
-              <Activity size={14} className="text-[#525252]" />
-              <span className="text-[12px] font-semibold uppercase tracking-wider text-[#525252]">System Health</span>
-              <span className="text-[10px] text-[#a3a3a3]">— operational metrics & runtime telemetry</span>
-            </div>
-            {healthOpen ? <ChevronUp size={14} className="text-[#a3a3a3]" /> : <ChevronDown size={14} className="text-[#a3a3a3]" />}
-          </button>
-          <AnimatePresence>
-            {healthOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <HealthPanel metrics={metrics} onRefresh={refetchMetrics} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-      )}
-
-      {/* Detail modal */}
+      {/* Detail modal — for non-research result drilldown */}
       <AnimatePresence>
         {selectedResult && (
           <WebResultModal
@@ -408,6 +424,291 @@ export default function WebStudio() {
           />
         )}
       </AnimatePresence>
+
+      {/* Past-research preview popup with one-click save to HIVEMIND */}
+      <AnimatePresence>
+        {previewJob && (
+          <ResearchPreviewModal
+            job={previewJob}
+            onClose={() => setPreviewJob(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── Live research panel (running) ──────────────────────────────── */
+
+function LiveResearchPanel({ job }) {
+  const ref = useRef(null);
+  // Auto-scroll the panel as new content streams in.
+  useEffect(() => {
+    if (!ref.current) return;
+    ref.current.scrollTop = ref.current.scrollHeight;
+  }, [job.partial_content, job.progress?.length]);
+
+  return (
+    <div ref={ref} className="h-full">
+      <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
+        <header className="px-4 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4] flex items-center gap-2">
+          <Sparkles size={14} className="text-violet-500" />
+          <span className="text-[12px] font-semibold text-[#0a0a0a]">{job.params?.input || 'Research'}</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">streaming · {job.params?.model || 'auto'}</span>
+          <Loader2 size={12} className="text-violet-500 animate-spin" />
+        </header>
+        <div className="p-4">
+          <ResearchLiveView job={job} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Past research toggle + list ────────────────────────────────── */
+
+function PastResearchPanel({ open, onToggle, jobs, onPick, locked }) {
+  if (locked) return <EmptyState locked={true} />;
+
+  return (
+    <div className="h-full">
+      {/* Toggle button */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white border border-[#e3e0db] rounded-xl hover:border-[#d4d0ca] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles size={14} className="text-violet-500" />
+          <span className="text-[13px] font-semibold text-[#0a0a0a]">Past research</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3]">
+            {jobs.length === 0 ? 'no runs yet' : `${jobs.length} report${jobs.length !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+        {open ? <ChevronUp size={14} className="text-[#a3a3a3]" /> : <ChevronDown size={14} className="text-[#a3a3a3]" />}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            className="mt-2"
+          >
+            {jobs.length === 0 ? (
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-6 text-center">
+                <Sparkles size={18} className="text-[#117dff] mx-auto mb-2" />
+                <p className="text-[12px] text-[#0a0a0a] font-semibold">No past research yet</p>
+                <p className="text-[10px] text-[#737373] mt-1">Type a question in the chat bar below to start.</p>
+              </div>
+            ) : (
+              <div className="border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec] max-h-[460px] overflow-y-auto">
+                {jobs.map(job => {
+                  const results = Array.isArray(job.results) ? job.results : [];
+                  const title = deriveJobTitle(job, results);
+                  const sourceCount = results[0]?.sources?.length || 0;
+                  return (
+                    <button
+                      key={job.id}
+                      onClick={() => onPick(job)}
+                      className="w-full px-4 py-2.5 text-left hover:bg-[#faf9f4] transition-colors flex items-center gap-3"
+                    >
+                      <Sparkles size={13} className="text-violet-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</div>
+                        <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-[#a3a3a3]">
+                          <StatusBadge status={job.status} polling={false} />
+                          <span>·</span>
+                          <span>{relTime(job.createdAt || job.created_at)}</span>
+                          {sourceCount > 0 && <><span>·</span><span>{sourceCount} sources</span></>}
+                          {job.duration_ms != null && <><span>·</span><span>{formatMs(job.duration_ms)}</span></>}
+                        </div>
+                      </div>
+                      <ArrowUpRight size={12} className="text-[#a3a3a3] shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quiet hint when nothing else fills the area */}
+      {!open && jobs.length === 0 && (
+        <div className="mt-6 text-center text-[11px] text-[#a3a3a3]">
+          Ask the web — type below. e.g. <code className="font-mono bg-[#f3f1ec] px-1 rounded">compare vector DBs for 1M-row RAG</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Past research preview modal (with one-click save) ──────────── */
+
+function ResearchPreviewModal({ job, onClose }) {
+  const result = Array.isArray(job.results) ? job.results[0] : null;
+  const title = deriveJobTitle(job, job.results || []);
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null); // { documentId, segmentCount, promotedCount, promotedMemoryIds }
+  const [saveErr, setSaveErr] = useState(null);
+  const [relations, setRelations] = useState({}); // memoryId -> relations payload
+
+  async function handleSaveToHivemind() {
+    if (!result) return;
+    setSaving(true); setSaveErr(null);
+    try {
+      const resp = await apiClient.saveResearchToKnowledge({
+        title,
+        markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
+        sources: result.sources || [],
+        tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
+        jobId: job.id,
+      });
+      setSaved(resp);
+
+      // Fetch relations for each promoted memory so we can render a
+      // mini graph tree of the ingestion outcome.
+      const ids = Array.isArray(resp.promotedMemoryIds) ? resp.promotedMemoryIds.slice(0, 8) : [];
+      const relMap = {};
+      await Promise.all(ids.map(async (mid) => {
+        try {
+          relMap[mid] = await apiClient.getMemoryRelations(mid);
+        } catch { /* silent */ }
+      }));
+      setRelations(relMap);
+    } catch (e) {
+      setSaveErr(e.response?.data?.error || e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!job) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-2xl w-full max-w-[860px] max-h-[88vh] overflow-hidden flex flex-col shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <header className="px-5 py-4 border-b border-[#e3e0db] flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={14} className="text-violet-500" />
+              <span className="text-[10px] uppercase tracking-wider font-mono text-[#737373]">research</span>
+              <StatusBadge status={job.status} polling={false} />
+              {job.duration_ms != null && (
+                <span className="text-[10px] font-mono text-[#a3a3a3]">{formatMs(job.duration_ms)}</span>
+              )}
+            </div>
+            <h2 className="text-[16px] font-semibold text-[#0a0a0a] leading-tight">{title}</h2>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleSaveToHivemind}
+              disabled={saving || !!saved || !result}
+              className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-2 rounded-lg"
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" />
+                : saved ? <CheckCircle2 size={12} />
+                : <Save size={12} />}
+              {saving ? 'Saving' : saved ? 'Saved' : 'Save to HIVEMIND'}
+            </button>
+            <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-[#faf9f4]">
+              <X size={14} />
+            </button>
+          </div>
+        </header>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+          {saveErr && (
+            <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700">
+              <AlertTriangle size={12} /> {saveErr}
+            </div>
+          )}
+          {saved && <PostUploadGraphTree saved={saved} relations={relations} />}
+
+          {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
+          {!result && (
+            <div className="text-[12px] text-[#a3a3a3]">No report content available.</div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─── After-upload graph tree (segments → memories → relations) ─── */
+
+function PostUploadGraphTree({ saved, relations }) {
+  const totalRelations = Object.values(relations).reduce((acc, r) => acc + (r?.counts?.total || (r?.out?.length || 0) + (r?.in?.length || 0)), 0);
+  return (
+    <div className="mb-4 bg-violet-50 border border-violet-200 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <CheckCircle2 size={14} className="text-emerald-600" />
+        <span className="text-[12px] font-semibold text-[#0a0a0a]">Saved to HIVEMIND</span>
+        <span className="text-[10px] text-[#737373] font-mono ml-auto">
+          docId: <code>{(saved.documentId || '').slice(0, 8)}…</code>
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <Stat label="Segments" value={saved.segmentCount ?? 0} />
+        <Stat label="Memories" value={saved.promotedCount ?? saved.promotedMemoryIds?.length ?? 0} />
+        <Stat label="Relations" value={totalRelations} />
+      </div>
+      {Array.isArray(saved.promotedMemoryIds) && saved.promotedMemoryIds.length > 0 && (
+        <details>
+          <summary className="text-[10px] uppercase tracking-wider font-mono text-[#737373] cursor-pointer">
+            Memory tree
+          </summary>
+          <ul className="mt-2 space-y-1.5">
+            {saved.promotedMemoryIds.slice(0, 8).map(mid => {
+              const rel = relations[mid];
+              return (
+                <li key={mid} className="text-[11px]">
+                  <div className="flex items-center gap-1.5">
+                    <Brain size={10} className="text-violet-500" />
+                    <code className="text-[10px] text-[#525252] font-mono">{mid.slice(0, 8)}…</code>
+                    {rel && (
+                      <span className="text-[10px] text-[#a3a3a3]">
+                        · {(rel.out?.length || 0)} out / {(rel.in?.length || 0)} in
+                      </span>
+                    )}
+                  </div>
+                  {rel?.out?.length > 0 && (
+                    <ul className="ml-4 mt-0.5 text-[10px] text-[#737373]">
+                      {rel.out.slice(0, 3).map((r, i) => (
+                        <li key={i} className="truncate">↳ {r.type}: {r.peer_title || r.target_id?.slice(0, 8)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
+            {saved.promotedMemoryIds.length > 8 && (
+              <li className="text-[10px] text-[#a3a3a3]">+{saved.promotedMemoryIds.length - 8} more memories</li>
+            )}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="bg-white border border-violet-200 rounded-lg p-2">
+      <div className="text-[18px] font-semibold tabular-nums text-violet-700 leading-none">{value}</div>
+      <div className="text-[9px] uppercase tracking-wider text-[#737373] mt-1 font-mono">{label}</div>
     </div>
   );
 }

@@ -1108,6 +1108,39 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Save a research report through the same canonical pipeline as the
+  // Knowledge Base upload (POST /api/knowledge/upload) so it gets
+  // document_first chunking, segment promotion, and relationship
+  // enrichment. Returns { documentId, segmentCount, promotedCount,
+  // promotedMemoryIds[] }.
+  async saveResearchToKnowledge({ title, markdown, sources = [], tags = [], jobId, projectId, containerTag, targetScope = 'personal' }) {
+    const formData = new FormData();
+    // Build a synthetic markdown file. Append sources at the end so the
+    // segmenter captures them as their own bibliography section.
+    const safeTitle = (title || 'Research report').replace(/[\\/]/g, '-').slice(0, 120);
+    const filename = `${safeTitle}.md`;
+    const sourcesMd = sources.length
+      ? '\n\n---\n\n## Sources\n\n' + sources.map((s, i) => `${i + 1}. [${s.title || s.url}](${s.url})`).join('\n')
+      : '';
+    const file = new File([(markdown || '') + sourcesMd], filename, { type: 'text/markdown' });
+    formData.append('file', file);
+    const allTags = ['web-research', ...(jobId ? [`research-job:${jobId}`] : []), ...tags].join(',');
+    if (allTags) formData.append('tags', allTags);
+    if (containerTag) formData.append('containerTag', containerTag);
+    if (targetScope) formData.append('targetScope', targetScope);
+    if (projectId) formData.append('projectId', projectId);
+    const { data } = await this.controlPlane.post('/v1/proxy/knowledge/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
+    });
+    return data;
+  }
+
+  async getMemoryRelations(memoryId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/memories/${memoryId}/relationships`);
+    return data;
+  }
+
   async getWebJob(jobId) {
     const { data } = await this.controlPlane.get(`/v1/proxy/web/jobs/${jobId}`);
     return data;
