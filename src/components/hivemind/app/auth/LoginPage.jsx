@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft } from 'lucide-react';
 import { useAuth } from './AuthProvider';
@@ -19,6 +19,41 @@ function GoogleIcon({ size = 18 }) {
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // If the user landed on /login via ProtectedRoute (e.g. clicked an invite link
+  // /hivemind/join/<slug>/<token> while signed out), preserve that path as the
+  // post-OAuth returnTo so they land on the invite-acceptance screen instead of
+  // /overview (which would trigger Onboarding and create a duplicate personal org).
+  //
+  // Also honours ?cli_return_to=<abs-url> when the user was bounced here from
+  // the CLI browser-auth flow (control plane's /auth/cli/start). In that case
+  // we want OAuth to return to the control-plane URL (not the FE) so it can
+  // mint the API key and complete the localhost handoff.
+  const returnToFromState = useMemo(() => {
+    // CLI flow takes priority — URL param wins over location.state.
+    const urlParams = new URLSearchParams(location.search);
+    const cliReturnTo = urlParams.get('cli_return_to');
+    if (cliReturnTo) {
+      // Already a fully-qualified URL (control-plane host with the cli/start
+      // params encoded inside). Pass through verbatim.
+      return cliReturnTo;
+    }
+    const from = location.state && location.state.from;
+    if (!from || !from.pathname) return null;
+    // Don't bounce back to /login itself.
+    if (from.pathname.startsWith('/hivemind/login')) return null;
+    const search = from.search || '';
+    const sep = search ? (search.includes('auth=callback') ? '' : '&') : '?';
+    const authParam = search.includes('auth=callback') ? '' : `${sep}auth=callback`;
+    return `${window.location.origin}${from.pathname}${search}${authParam}`;
+  }, [location.state, location.search]);
+
+  // CLI flow: show a banner so the user knows why we asked them to sign in.
+  const isCliFlow = useMemo(
+    () => new URLSearchParams(location.search).has('cli_return_to'),
+    [location.search]
+  );
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
@@ -27,12 +62,24 @@ export default function LoginPage() {
   const [enterpriseName, setEnterpriseName] = useState('');
   const [hivemindName, setHivemindName] = useState('');
 
-  // Already signed in → go to dashboard
+  // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/hivemind/app/overview', { replace: true });
+      // CLI flow: jump to the cross-origin control-plane URL so it can
+      // mint the API key and 302 to the verified page.
+      const urlParams = new URLSearchParams(location.search);
+      const cliReturnTo = urlParams.get('cli_return_to');
+      if (cliReturnTo) {
+        window.location.href = cliReturnTo;
+        return;
+      }
+      const from = location.state && location.state.from;
+      const dest = from && from.pathname && !from.pathname.startsWith('/hivemind/login')
+        ? `${from.pathname}${from.search || ''}`
+        : '/hivemind/app/overview';
+      navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, location.state, location.search]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {
@@ -54,7 +101,11 @@ export default function LoginPage() {
       }));
     } catch (e) {}
 
-    const returnTo = `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
+    // If the user came via an invite link, send them back there after OAuth so
+    // they land on the invite-acceptance screen instead of the personal-org
+    // Onboarding flow.
+    const returnTo = returnToFromState
+      || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo);
@@ -108,6 +159,22 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* CLI flow banner — shown when user was bounced here from
+              `hivemind` CLI's browser handshake. Tells them why they're
+              being asked to sign in mid-terminal-command. */}
+          {isCliFlow && (
+            <div className="mb-6 p-3 rounded-lg bg-[#117dff]/8 border border-[#117dff]/20">
+              <div className="flex items-start gap-2">
+                <Zap size={14} className="text-[#117dff] mt-0.5 shrink-0" />
+                <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
+                  <span className="font-semibold">Signing you in to wire HIVEMIND into your CLI.</span>
+                  <br />
+                  <span className="text-[#3b6da3]">After this you'll see a confirmation screen, then control returns to your terminal.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <AnimatePresence mode="wait">
             {!showOnboarding ? (
               <motion.div
@@ -119,7 +186,7 @@ export default function LoginPage() {
               >
                 {/* Headline */}
                 <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
-                  Sign in to HIVEMIND
+                  {isCliFlow ? 'Authorize HIVEMIND CLI' : 'Sign in to HIVEMIND'}
                 </h2>
                 <p className="text-[#525252] text-sm mb-8 leading-relaxed">
                   Access your memory workspace, manage API keys, and configure MCP connections.
@@ -143,7 +210,7 @@ export default function LoginPage() {
                 {/* Auth buttons — always visible, even during loading */}
                 <div className="space-y-3">
                   <button
-                    onClick={() => login({ provider: 'google' })}
+                    onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-60 text-white font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.075em]"
                   >
@@ -156,7 +223,7 @@ export default function LoginPage() {
                   </button>
 
                   <button
-                    onClick={() => login()}
+                    onClick={() => login({ returnTo: returnToFromState || undefined })}
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-3 bg-transparent hover:bg-[#f3f1ec] disabled:opacity-60 text-[#0a0a0a] font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#d4d0ca] uppercase tracking-[0.075em]"
                   >

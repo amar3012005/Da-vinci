@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
+import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
 
 // Pages (lazy loaded for code splitting)
@@ -59,6 +60,7 @@ export default function HiveMindApp() {
     <AuthProvider>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        <Route path="cli-verified" element={<CliVerified />} />
         <Route
           path="join/:slug/:token"
           element={
