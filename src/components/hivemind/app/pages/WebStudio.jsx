@@ -57,9 +57,12 @@ export default function WebStudio() {
 
   // Prompt + mode
   const [prompt, setPrompt] = useState('');
-  const [forcedMode, setForcedMode] = useState(null); // null | 'search' | 'crawl'
+  const [forcedMode, setForcedMode] = useState(null); // null | 'research' | 'search' | 'crawl'
   const [crawlDepth, setCrawlDepth] = useState(1);
   const [crawlPageLimit, setCrawlPageLimit] = useState(10);
+  // Research knobs (depth-equivalent for Tavily).
+  const [researchModel, setResearchModel] = useState('auto'); // 'mini' | 'pro' | 'auto'
+  const [citationFormat, setCitationFormat] = useState('numbered'); // numbered | mla | apa | chicago
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -165,17 +168,21 @@ export default function WebStudio() {
   }, [effectiveInput, detectedMode]);
 
   // ─── Poll a job ────────────────────────────────────────────
+  // While running, also refetch the full job list every tick so the
+  // progress[] stream on research jobs shows up live in the expanded
+  // detail view (the list endpoint returns the same row shape).
   const startPolling = useCallback((jobId) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
     setPollingId(jobId);
     pollingRef.current = setInterval(async () => {
       try {
         const r = await apiClient.getWebJob(jobId);
+        refetchJobs();
         if (r?.status === 'succeeded' || r?.status === 'failed') {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
           setPollingId(null);
-          refetchJobs(); refetchUsage(); refetchMonthly();
+          refetchUsage(); refetchMonthly();
         }
       } catch {
         clearInterval(pollingRef.current);
@@ -183,7 +190,7 @@ export default function WebStudio() {
         setPollingId(null);
         refetchJobs();
       }
-    }, 2000);
+    }, 1500);
   }, [refetchJobs, refetchUsage, refetchMonthly]);
 
   // ─── Submit ────────────────────────────────────────────────
@@ -204,9 +211,12 @@ export default function WebStudio() {
         const id = r?.job_id || r?.id;
         if (id) startPolling(id);
       } else if (detectedMode === 'research') {
-        const r = await apiClient.submitWebResearch({ input, model: 'auto', citation_format: 'numbered' });
+        const r = await apiClient.submitWebResearch({ input, model: researchModel, citation_format: citationFormat });
         const id = r?.job_id || r?.id;
-        if (id) startPolling(id);
+        if (id) {
+          setExpandedJobId(id); // auto-open detail so user sees progress stream
+          startPolling(id);
+        }
       } else {
         const r = await apiClient.submitWebSearch({ query: input, limit: 10 });
         const id = r?.job_id || r?.id;
@@ -275,6 +285,8 @@ export default function WebStudio() {
         submitting={submitting} onSubmit={handleSubmit} onKey={handleKey}
         depth={crawlDepth} setDepth={setCrawlDepth}
         pageLimit={crawlPageLimit} setPageLimit={setCrawlPageLimit}
+        researchModel={researchModel} setResearchModel={setResearchModel}
+        citationFormat={citationFormat} setCitationFormat={setCitationFormat}
         domainPolicy={domainPolicy} checkingPolicy={checkingPolicy}
         locked={featureLocked}
       />
@@ -406,6 +418,7 @@ function PromptBar({
   prompt, setPrompt, mode, forcedMode, setForcedMode,
   submitting, onSubmit, onKey,
   depth, setDepth, pageLimit, setPageLimit,
+  researchModel, setResearchModel, citationFormat, setCitationFormat,
   domainPolicy, checkingPolicy, locked,
 }) {
   const ModeIcon = mode === 'crawl' ? LinkIcon
@@ -460,6 +473,44 @@ function PromptBar({
         disabled={locked}
         className="w-full px-4 pt-1 pb-2 text-[14px] text-[#0a0a0a] placeholder:text-[#a3a3a3] bg-transparent border-0 resize-none focus:outline-none disabled:opacity-50"
       />
+
+      {/* Research knobs — depth (model) + citation format */}
+      {mode === 'research' && (
+        <div className="px-4 py-2 border-t border-[#f3f1ec] flex flex-wrap items-center gap-3 text-[11px] text-[#525252]">
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">depth</span>
+          <div className="flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-md p-0.5">
+            {['mini', 'auto', 'pro'].map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setResearchModel(opt)}
+                className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase transition-colors ${
+                  researchModel === opt
+                    ? 'bg-violet-500 text-white'
+                    : 'text-[#525252] hover:bg-white'
+                }`}
+                title={opt === 'mini' ? 'Targeted, fast (single-angle)' : opt === 'pro' ? 'Comprehensive, multi-subtopic' : 'Auto-pick best for query'}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">cite</span>
+          <select
+            value={citationFormat}
+            onChange={e => setCitationFormat(e.target.value)}
+            className="bg-[#faf9f4] border border-[#e3e0db] rounded px-2 py-0.5 text-[10px] font-mono"
+          >
+            <option value="numbered">numbered</option>
+            <option value="apa">apa</option>
+            <option value="mla">mla</option>
+            <option value="chicago">chicago</option>
+          </select>
+          <span className="ml-auto text-[10px] text-[#a3a3a3] font-mono">
+            {researchModel === 'pro' ? '~60-180s · multi-subtopic' : researchModel === 'mini' ? '~15-40s · targeted' : 'auto-picked'}
+          </span>
+        </div>
+      )}
 
       {/* Crawl knobs */}
       {mode === 'crawl' && (
@@ -687,42 +738,175 @@ function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
             {job.error || 'Job failed'}
           </div>
         )}
-        {(status === 'queued' || status === 'running') && (
+        {(status === 'queued' || status === 'running') && jobType !== 'research' && (
           <div className="text-[12px] text-[#737373] flex items-center gap-2 py-3">
             <Loader2 size={13} className="animate-spin" />
-            {jobType === 'research'
-              ? 'Tavily Research is compiling your report — typically 20–90 seconds.'
-              : 'Waiting for results…'}
+            Waiting for results…
           </div>
         )}
-        {status === 'succeeded' && (
-          jobType === 'research'
-            ? <ResearchReport result={results[0]} />
-            : <RawResultList
-                results={results}
-                jobId={job.id}
-                jobType={jobType}
-                runtime={job.runtime}
-                fallback={job.fallback}
-                onResultClick={onResultClick}
-                onSaved={onMutate}
-              />
+
+        {/* Research: show live progress timeline + streamed content even
+            while running. Once succeeded, render final report + sources. */}
+        {jobType === 'research' && (status === 'running' || status === 'queued') && (
+          <ResearchLiveView job={job} />
+        )}
+        {status === 'succeeded' && jobType === 'research' && (
+          <ResearchReport result={results[0]} fallbackProgress={job.progress} />
+        )}
+        {status === 'succeeded' && jobType !== 'research' && (
+          <RawResultList
+            results={results}
+            jobId={job.id}
+            jobType={jobType}
+            runtime={job.runtime}
+            fallback={job.fallback}
+            onResultClick={onResultClick}
+            onSaved={onMutate}
+          />
         )}
       </div>
     </div>
   );
 }
 
+/* ─── Research live view (during streaming) ─────────────────────── */
+
+function ResearchLiveView({ job }) {
+  const partialContent = job.partial_content || '';
+  const partialSources = Array.isArray(job.partial_sources) ? job.partial_sources : [];
+
+  // Group by tool execution: each tool_call pairs with its tool_response.
+  // Reach into job.progress inside the memo so the lint rule for stable
+  // dep arrays is satisfied.
+  const steps = useMemo(() => {
+    const progress = Array.isArray(job.progress) ? job.progress : [];
+    const byId = new Map();
+    const order = [];
+    for (const p of progress) {
+      const key = p.id || `${p.tool}-${p.ts}`;
+      if (!byId.has(key)) {
+        byId.set(key, { tool: p.tool, id: p.id, queries: p.queries, sources: p.sources, call: null, response: null });
+        order.push(key);
+      }
+      const slot = byId.get(key);
+      if (p.kind === 'tool_call') slot.call = p;
+      if (p.kind === 'tool_response') slot.response = p;
+      if (p.queries) slot.queries = p.queries;
+      if (p.sources) slot.sources = [...(slot.sources || []), ...p.sources];
+    }
+    return order.map(k => byId.get(k));
+  }, [job.progress]);
+
+  const hasAny = steps.length > 0 || partialContent || partialSources.length > 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Step timeline */}
+      {steps.length > 0 && (
+        <ol className="space-y-1.5">
+          {steps.map((s, i) => (
+            <ResearchStep key={s.id || i} step={s} />
+          ))}
+        </ol>
+      )}
+
+      {/* Streamed content (markdown so far) */}
+      {partialContent && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider font-mono text-[#737373] mb-1.5 flex items-center gap-1.5">
+            <Sparkles size={11} className="text-violet-500" />
+            Report — streaming
+            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
+          </div>
+          <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
+{partialContent}
+          </pre>
+        </div>
+      )}
+
+      {!hasAny && (
+        <div className="text-[12px] text-[#737373] flex items-center gap-2 py-3">
+          <Loader2 size={13} className="animate-spin" />
+          Tavily Research starting…
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResearchStep({ step }) {
+  const TOOL_META = {
+    Planning:         { color: 'text-[#525252]', emoji: '🧭', label: 'Planning' },
+    WebSearch:        { color: 'text-[#117dff]', emoji: '🔎', label: 'Web search' },
+    ResearchSubtopic: { color: 'text-violet-600', emoji: '🧪', label: 'Subtopic research' },
+    Generating:       { color: 'text-emerald-600', emoji: '✍️', label: 'Generating report' },
+  };
+  const meta = TOOL_META[step.tool] || { color: 'text-[#737373]', emoji: '•', label: step.tool || 'step' };
+  const done = !!step.response;
+  const queries = step.queries || step.call?.queries || [];
+  const sources = step.sources || step.response?.sources || [];
+
+  return (
+    <li className="border border-[#e3e0db] rounded-lg px-3 py-2 bg-white">
+      <div className="flex items-center gap-2">
+        <span className="text-[14px]">{meta.emoji}</span>
+        <span className={`text-[12px] font-semibold ${meta.color}`}>{meta.label}</span>
+        {!done && <Loader2 size={11} className="text-[#a3a3a3] animate-spin" />}
+        {done && <CheckCircle2 size={11} className="text-emerald-500" />}
+        <span className="text-[10px] text-[#a3a3a3] font-mono ml-auto truncate">
+          {step.call?.arguments || step.response?.arguments || ''}
+        </span>
+      </div>
+
+      {queries.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {queries.slice(0, 8).map((q, i) => (
+            <span key={i} className="text-[10px] bg-[#117dff]/5 text-[#117dff] border border-[#117dff]/20 px-1.5 py-0.5 rounded font-mono">
+              {q.length > 60 ? q.slice(0, 57) + '…' : q}
+            </span>
+          ))}
+          {queries.length > 8 && <span className="text-[10px] text-[#a3a3a3]">+{queries.length - 8} more</span>}
+        </div>
+      )}
+
+      {sources.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {sources.slice(0, 6).map((s, i) => (
+            <a
+              key={i}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:border-[#117dff] hover:text-[#117dff] px-1.5 py-0.5 rounded inline-flex items-center gap-1 max-w-[260px]"
+              title={s.url}
+            >
+              {s.favicon && <img src={s.favicon} alt="" className="w-3 h-3" onError={e => { e.target.style.display = 'none'; }} />}
+              <span className="truncate">{s.title || s.url}</span>
+            </a>
+          ))}
+          {sources.length > 6 && <span className="text-[10px] text-[#a3a3a3]">+{sources.length - 6} more</span>}
+        </div>
+      )}
+    </li>
+  );
+}
+
 /* ─── Research report renderer ───────────────────────────────────── */
 
-function ResearchReport({ result }) {
+function ResearchReport({ result, fallbackProgress }) {
   if (!result) return null;
   const text = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
   const sources = Array.isArray(result.sources) ? result.sources : [];
+  // Build collapsible step timeline from saved progress[] when present.
+  const progress = Array.isArray(fallbackProgress) ? fallbackProgress : [];
   // Render markdown as plain pre-wrapped text. Heavy markdown formatter
   // would add a dep; keeping it lightweight + readable.
   return (
     <div>
+      {progress.length > 0 && (
+        <CollapsibleProgress progress={progress} />
+      )}
+
       <article className="prose prose-sm max-w-none">
         <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
 {text}
@@ -966,6 +1150,48 @@ function RuntimeBar({ label, count, total, color }) {
       <div className="h-1.5 bg-[#f3f1ec] rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
+    </div>
+  );
+}
+
+/* ─── Collapsible progress timeline (completed runs) ────────────── */
+
+function CollapsibleProgress({ progress }) {
+  const [open, setOpen] = useState(false);
+  const steps = useMemo(() => {
+    const byId = new Map();
+    const order = [];
+    for (const p of progress) {
+      const key = p.id || `${p.tool}-${p.ts}`;
+      if (!byId.has(key)) {
+        byId.set(key, { tool: p.tool, id: p.id, queries: p.queries, sources: p.sources, call: null, response: null });
+        order.push(key);
+      }
+      const slot = byId.get(key);
+      if (p.kind === 'tool_call') slot.call = p;
+      if (p.kind === 'tool_response') slot.response = p;
+      if (p.queries) slot.queries = p.queries;
+      if (p.sources) slot.sources = [...(slot.sources || []), ...p.sources];
+    }
+    return order.map(k => byId.get(k));
+  }, [progress]);
+  if (steps.length === 0) return null;
+  return (
+    <div className="mb-4 border border-[#e3e0db] rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full px-3 py-2 flex items-center gap-2 bg-[#faf9f4] hover:bg-[#f3f1ec] text-left"
+      >
+        {open ? <ChevronUp size={12} className="text-[#a3a3a3]" /> : <ChevronDown size={12} className="text-[#a3a3a3]" />}
+        <span className="text-[11px] font-mono uppercase tracking-wider text-[#737373]">
+          Research process ({steps.length} step{steps.length !== 1 ? 's' : ''})
+        </span>
+      </button>
+      {open && (
+        <ol className="p-3 space-y-1.5 border-t border-[#e3e0db]">
+          {steps.map((s, i) => <ResearchStep key={s.id || i} step={s} />)}
+        </ol>
+      )}
     </div>
   );
 }

@@ -60,8 +60,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
       items: [
         { to: '/hivemind/app/connectors', icon: Cable,    label: tt('connectors',  'Connectors') },
         { to: '/hivemind/app/memories',   icon: Brain,    label: tt('memories',    'Memories') },
-        { to: '/hivemind/app/graph',      icon: Network,  label: tt('graph3d',     'Memory Graph · 3D') },
-        { to: '/hivemind/app/graph-2d',   icon: Network,  label: tt('graph2d',     'Memory Graph · 2D') },
+        { to: '/hivemind/app/graph',      icon: Network,  label: tt('graphMain',   'Memory Graph') },
         { to: '/hivemind/app/knowledge',  icon: BookOpen, label: tt('knowledge',   'Knowledge Base') },
       ],
     },
