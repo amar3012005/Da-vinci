@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, Send, UserPlus } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';

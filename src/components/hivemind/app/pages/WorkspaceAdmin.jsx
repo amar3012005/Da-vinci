@@ -3,11 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Users, FolderKanban, UserCog, Send, ScrollText, KeyRound, Bot,
   LayoutDashboard, Activity, ArrowUpRight, Building2, RefreshCw, Loader2,
-  Clock, CheckCircle2, XCircle, TrendingUp, Crown,
+  Clock, CheckCircle2, XCircle,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
-import { useTeamContext } from '../shared/team-context';
 import ShareInviteModal from '../components/ShareInviteModal';
 
 // Sub-pages — lazy so the tab strip is fast even when admin pages bloat.
@@ -33,7 +32,6 @@ const TABS = [
 
 export default function WorkspaceAdmin() {
   const { org } = useAuth();
-  const { activeTeam } = useTeamContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
