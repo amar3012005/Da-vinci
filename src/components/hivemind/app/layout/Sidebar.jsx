@@ -29,6 +29,7 @@ import {
   ScrollText,
   KeyRound,
   UserCog,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -43,19 +44,15 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
   ];
 
-  // Unified Admin section — all workspace + RBAC + compliance under one roof.
-  // Admin pages are gated by the same showWebAdmin probe (org_owner|admin).
-  // Team Members + Projects always visible (work on active team via TeamContext).
+  // Unified Admin section. Single "Workspace Admin" entry leads to the
+  // tabbed landing page; per-tab deep links still work via /admin/*, /team/*
+  // and the ?tab= URL param. Playground + Web Admin stay separate (specialised
+  // surfaces, not org-scope admin).
   const adminItems = [
-    { to: '/hivemind/app/team/members', icon: Users, label: 'Team Members' },
-    { to: '/hivemind/app/team/projects', icon: FolderKanban, label: 'Projects' },
-    { to: '/hivemind/app/employees', icon: Bot, label: 'Digital Employees' },
+    { to: '/hivemind/app/workspace', icon: Building2, label: 'Workspace Admin' },
     { to: '/hivemind/app/employees/playground', icon: MessageSquare, label: 'Playground' },
   ];
   if (showWebAdmin) {
-    adminItems.push({ to: '/hivemind/app/admin/users', icon: UserCog, label: 'Org Members' });
-    adminItems.push({ to: '/hivemind/app/audit', icon: ScrollText, label: 'Audit Log' });
-    adminItems.push({ to: '/hivemind/app/admin/sso', icon: KeyRound, label: 'SSO Config' });
     adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
   }
 

@@ -24,6 +24,7 @@ const pageTitles = {
   '/hivemind/app/admin/users': 'Org Members',
   '/hivemind/app/admin/sso': 'SSO Configuration',
   '/hivemind/app/employees': 'Digital Employees',
+  '/hivemind/app/workspace': 'Workspace Admin',
 };
 
 const pageDescriptions = {
@@ -46,6 +47,7 @@ const pageDescriptions = {
   '/hivemind/app/admin/users': 'Org-wide roles, deactivation, and invite management',
   '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
   '/hivemind/app/employees': 'Autonomous AI agents — Hermes-style brains with HIVEMIND memory + Slack access',
+  '/hivemind/app/workspace': 'Members, teams, projects, invitations, audit and SSO — all in one place',
 };
 
 export default function TopBar() {

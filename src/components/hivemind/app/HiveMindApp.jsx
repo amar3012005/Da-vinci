@@ -36,6 +36,7 @@ const AdminUsers = React.lazy(() => import('./pages/AdminUsers'));
 const AdminSso = React.lazy(() => import('./pages/AdminSso'));
 const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const EmployeePlayground = React.lazy(() => import('./pages/EmployeePlayground'));
+const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
 
 function PageSuspense({ children }) {
   return (
@@ -100,6 +101,7 @@ export default function HiveMindApp() {
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
           <Route path="tara" element={<PageSuspense><TaraConfig /></PageSuspense>} />
+          <Route path="workspace" element={<PageSuspense><WorkspaceAdmin /></PageSuspense>} />
           <Route path="team/members" element={<PageSuspense><TeamMembers /></PageSuspense>} />
           <Route path="team/projects" element={<PageSuspense><TeamProjects /></PageSuspense>} />
           <Route path="admin/users" element={<PageSuspense><AdminUsers /></PageSuspense>} />
