@@ -1086,6 +1086,28 @@ export default function McpServer() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               {
+                title: '🚀 One-liner installer (npm, cross-platform)',
+                icon: Terminal,
+                subtitle: 'Picks Claude Code / Desktop / Cursor / VS Code / Codex / Antigravity from a menu, writes config, verifies endpoint — Node 18+ only.',
+                // npm @hivemind/cli — replaces older curl|bash + Go TUI
+                // attempts. Works on mac/linux/windows with no
+                // cross-compile, no Gatekeeper warnings, uses each host
+                // app's canonical config path.
+                config: `# Interactive (picks client from menu)
+npx -y @hivemind/cli setup
+
+# Non-interactive (scripted / CI)
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup claude-code
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup claude-desktop
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup cursor
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup vscode
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup codex
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup antigravity
+
+# Verify endpoint is reachable with your key
+HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli verify`,
+              },
+              {
                 title: '⭐ Universal HTTP (canonical)',
                 icon: Globe,
                 subtitle: 'Modern clients — Claude Code, Claude Desktop 0.7+, any HTTP-capable MCP host',
