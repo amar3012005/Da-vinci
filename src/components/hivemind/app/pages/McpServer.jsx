@@ -435,61 +435,145 @@ const CODING_TOOLS = [
   },
 ];
 
-/* ─── Time Travel Tools (bi-temporal — coding-scope gated) ─────────── */
+/* ─── Time Travel Tools (bi-temporal, work on every memory) ──────────
+ *
+ * Tool names changed (2026-05-21):
+ *   OLD: hivemind_code_at      → NEW: hivemind_at
+ *   OLD: hivemind_code_diff    → NEW: hivemind_diff
+ *   OLD: hivemind_code_timeline→ NEW: hivemind_timeline
+ *
+ * The new names are generic — they work on any memory (facts, decisions,
+ * documents, sessions), not just code memories. Legacy `code_*` names
+ * stay registered as aliases on the MCP server for backward compat with
+ * older Claude installs that hard-coded them. The ReAct agent uses the
+ * new short names. See SYSTEM_PROMPT below for usage. */
 const TEMPORAL_TOOLS = [
   {
-    name: 'hivemind_code_at',
+    name: 'hivemind_at',
+    aliasOf: 'hivemind_code_at (legacy)',
     icon: Clock,
     colorClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6]',
     badge: 'bi-temporal',
     badgeClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/20',
-    summary: 'What did the codebase look like on date X?',
-    description: 'Bi-temporal as-of snapshot. transaction_time = when system learned the fact. valid_time = when fact was true in the world. Pass either or both.',
+    summary: 'What did the memory graph look like on date X?',
+    description: 'Bi-temporal as-of snapshot of any memory. valid_at = when the fact was true in the world. Pair with `query` to filter to a topic, `tags`/`file_path` for surgical scope.',
     params: [
-      { name: 'transaction_time', required: false, desc: 'ISO timestamp — when system learned (required if valid_time omitted)' },
-      { name: 'valid_time', required: false, desc: 'ISO timestamp — when fact was true (required if transaction_time omitted)' },
-      { name: 'file_path', required: false, desc: 'Optional file path filter' },
-      { name: 'project', required: false, desc: 'Optional project filter' },
+      { name: 'valid_at', required: true, desc: 'ISO timestamp — return memories whose validity window covers this instant' },
+      { name: 'query', required: false, desc: 'Semantic filter, e.g. "coffee preference"' },
+      { name: 'tags', required: false, desc: 'AND-intersected tag filter, e.g. ["project:hivemind"]' },
+      { name: 'file_path', required: false, desc: 'Code-scoped — translated to tag file:<path>' },
+      { name: 'limit', required: false, desc: 'Default 20' },
     ],
-    example: `hivemind_code_at({
-  transaction_time: "2026-05-01T00:00:00Z",
-  file_path: "core/src/mcp/hosted-service.js"
+    example: `hivemind_at({
+  valid_at: "2026-05-21T08:00:00Z",
+  query: "coffee preference"
 })`,
   },
   {
-    name: 'hivemind_code_diff',
+    name: 'hivemind_diff',
+    aliasOf: 'hivemind_code_diff (legacy)',
     icon: GitCommit,
     colorClass: 'bg-[#16a34a]/10 text-[#16a34a]',
     badge: 'bi-temporal',
     badgeClass: 'bg-[#16a34a]/10 text-[#16a34a] border-[#16a34a]/20',
     summary: 'What changed between two timestamps?',
-    description: 'Returns added / removed / modified memories between time_a and time_b, each with tags + documentDate. AND-intersect with file_path tag and any extra tags.',
+    description: 'Returns added / removed / modified memories between `from` and `to`, with their tags + valid_at. Combine with `query` or `tags` to scope to a topic, or `file_path` for code-scoped diffs.',
     params: [
-      { name: 'time_a', required: true, desc: 'Earlier ISO timestamp' },
-      { name: 'time_b', required: true, desc: 'Later ISO timestamp' },
-      { name: 'file_path', required: false, desc: 'Filter — translated to tag file:<path>' },
-      { name: 'tags', required: false, desc: 'Additional AND-intersected tags (e.g. ["fn:foo", "decision"])' },
+      { name: 'from', required: true, desc: 'Earlier ISO timestamp' },
+      { name: 'to', required: true, desc: 'Later ISO timestamp' },
+      { name: 'query', required: false, desc: 'Semantic filter' },
+      { name: 'tags', required: false, desc: 'AND-intersected tags' },
+      { name: 'file_path', required: false, desc: 'Code-scoped diff — auto file:<path> tag' },
     ],
-    example: `hivemind_code_diff({
-  time_a: "2026-05-08T00:00:00Z",
-  time_b: "2026-05-09T00:00:00Z",
-  file_path: "core/src/mcp/hosted-service.js"
+    example: `hivemind_diff({
+  from: "2026-05-21T08:00:00Z",
+  to:   "2026-05-21T18:00:00Z",
+  query: "coffee preference"
 })`,
   },
   {
-    name: 'hivemind_code_timeline',
+    name: 'hivemind_timeline',
+    aliasOf: 'hivemind_code_timeline (legacy)',
     icon: History,
     colorClass: 'bg-[#d97706]/10 text-[#d97706]',
     badge: 'version chain',
     badgeClass: 'bg-[#d97706]/10 text-[#d97706] border-[#d97706]/20',
-    summary: 'Full version chain for a file or memory',
-    description: 'Walks the MemoryVersion ledger — every revision, supersession, and reason. Resolve by memory_id (preferred) or by file_path (resolves to latest memory tagged file:<path>).',
+    summary: 'Full version chain for a topic, memory, or file',
+    description: 'Walks the MemoryVersion ledger newest→oldest — every revision, supersession, derive, contradict. Resolve by `memory_id` (exact), `query` (semantic), `tags`, or `file_path` (code-scoped).',
     params: [
-      { name: 'memory_id', required: false, desc: 'Memory UUID to fetch timeline for' },
-      { name: 'file_path', required: false, desc: 'Alternative — resolves to latest memory tagged file:<path>' },
+      { name: 'memory_id', required: false, desc: 'Memory UUID to fetch full version history for' },
+      { name: 'query', required: false, desc: 'Semantic topic, e.g. "auth middleware"' },
+      { name: 'tags', required: false, desc: 'Filter by tags, e.g. ["decision", "project:hivemind"]' },
+      { name: 'file_path', required: false, desc: 'Code-scoped — auto file:<path>' },
+      { name: 'limit', required: false, desc: 'Default 20 versions' },
     ],
-    example: `hivemind_code_timeline({
-  file_path: "core/src/mcp/hosted-service.js"
+    example: `hivemind_timeline({
+  query: "coffee preference",
+  limit: 20
+})`,
+  },
+  {
+    name: 'hivemind_traverse_graph',
+    icon: GitCommit,
+    colorClass: 'bg-[#ec4899]/10 text-[#ec4899]',
+    badge: 'graph walk',
+    badgeClass: 'bg-[#ec4899]/10 text-[#ec4899] border-[#ec4899]/20',
+    summary: 'Walk relationships from a seed memory',
+    description: 'BFS expansion from a starting memory along typed edges (Updates / Extends / Derives / Contradicts / PartOf / Mentions). Returns connected cluster — the Supermemory super-RAG primitive.',
+    params: [
+      { name: 'memory_id', required: true, desc: 'Seed memory UUID' },
+      { name: 'depth', required: false, desc: 'Hop count, default 2' },
+      { name: 'relationship', required: false, desc: 'Filter to one edge type, default all' },
+    ],
+    example: `hivemind_traverse_graph({
+  memory_id: "63b0b493-…",
+  depth: 2
+})`,
+  },
+];
+
+/* ─── Code Time-Travel Tools (file/symbol scoped) ────────────────────
+ *
+ * Code-specific aliases of the generic time-travel tools above. Same
+ * underlying engine, but the args are scoped to file_path so editors
+ * (Cursor, Claude Code, Antigravity) can drop them straight into a
+ * "what did this function look like last week" workflow. */
+const CODE_TEMPORAL_TOOLS = [
+  {
+    name: 'hivemind_code_at',
+    icon: Clock,
+    colorClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6]',
+    badge: 'code · bi-temporal',
+    badgeClass: 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/20',
+    summary: 'What did the codebase look like on date X?',
+    description: 'Bi-temporal as-of snapshot scoped to code memories (file:<path> tag). Same semantics as hivemind_at but auto-injects the file/project filter.',
+    params: [
+      { name: 'file_path', required: true, desc: 'Code file path' },
+      { name: 'valid_at', required: false, desc: 'ISO timestamp — when fact was true in world' },
+      { name: 'transaction_time', required: false, desc: 'ISO timestamp — when system learned' },
+      { name: 'project', required: false, desc: 'Optional project filter' },
+    ],
+    example: `hivemind_code_at({
+  file_path: "core/src/server.js",
+  valid_at: "2026-05-15T00:00:00Z"
+})`,
+  },
+  {
+    name: 'hivemind_why_code',
+    icon: History,
+    colorClass: 'bg-[#0891b2]/10 text-[#0891b2]',
+    badge: 'code · narrative',
+    badgeClass: 'bg-[#0891b2]/10 text-[#0891b2] border-[#0891b2]/20',
+    summary: 'Why does this code look like this?',
+    description: 'Pulls every decision, refactor note, gotcha, and bug fix attached to a file or symbol. Built for "I changed this once, why did I do that" debugging sessions.',
+    params: [
+      { name: 'query', required: true, desc: 'What you want to know — "why did we use map instead of forEach in compactDrift"' },
+      { name: 'file_path', required: false, desc: 'Scope to a file' },
+      { name: 'fn_name', required: false, desc: 'Scope to a function' },
+    ],
+    example: `hivemind_why_code({
+  query: "why is contradiction detection regex-only",
+  file_path: "core/src/memory/conflict-detector.js"
 })`,
   },
 ];
@@ -786,19 +870,31 @@ TIME-TRAVEL TOOLS — USE FOR ARCHEOLOGY
 The MemoryVersion ledger is the authoritative history regardless of
 git state. Use these whenever you need to reason about evolution:
 
-  • hivemind_code_at({ transaction_time, file_path })
-    "What did this file look like on May 1, 14:00 UTC?"
+  Generic (any memory):
+  • hivemind_at({ valid_at, query?, tags?, file_path? })
+    "What did <topic / file> look like on May 1, 14:00 UTC?"
 
-  • hivemind_code_diff({ time_a, time_b, file_path })
-    "What changed in this file between yesterday and today?"
+  • hivemind_diff({ from, to, query?, tags?, file_path? })
+    "What changed in <topic / file> between yesterday and today?"
 
-  • hivemind_code_timeline({ file_path, limit?: 20 })
-    "Show me every revision of this file with reasons."
+  • hivemind_timeline({ memory_id? | query? | file_path?, limit?: 20 })
+    "Show me every revision of this memory with reasons."
+
+  • hivemind_traverse_graph({ memory_id, depth?: 2, relationship? })
+    "Walk relationships from this memory — return the connected cluster."
+
+  Code-scoped aliases (auto-inject file_path / fn_name tags):
+  • hivemind_code_at({ file_path, valid_at? | transaction_time? })
+  • hivemind_why_code({ query, file_path?, fn_name? })
 
 These are bi-temporal — they distinguish valid time (when the fact
 was true) from transaction time (when we learned it). Prefer them
 over git log when investigating bugs whose root cause predates the
 last commit.
+
+Legacy names hivemind_code_diff / hivemind_code_timeline still work
+on the server as aliases of the generic versions above, but new code
+should use the short names.
 
 ═══════════════════════════════════════════════════════════════════
 GRAPH NAVIGATION
@@ -953,13 +1049,20 @@ export default function McpServer() {
     setTimeout(() => setPromptCopied(false), 4000);
   };
 
-  const TOTAL_TOOLS = MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length;
+  // CODE_TEMPORAL_TOOLS are tucked under the Coding Intelligence tab
+  // because they take file_path/fn_name args — the generic time-travel
+  // tools (hivemind_at / _diff / _timeline / _traverse_graph) stay under
+  // Time Travel where they apply to every memory.
+  const TOTAL_TOOLS =
+    MEMORY_TOOLS.length + WEB_TOOLS.length +
+    CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length +
+    TEMPORAL_TOOLS.length;
   const activePrompt = promptVariant === 'coding' ? SYSTEM_PROMPT_CODING : SYSTEM_PROMPT_AGENT;
 
   const TAB_DATA = {
     tools: MEMORY_TOOLS,
     web: WEB_TOOLS,
-    coding: CODING_TOOLS,
+    coding: [...CODING_TOOLS, ...CODE_TEMPORAL_TOOLS],
     temporal: TEMPORAL_TOOLS,
   };
 
@@ -1281,7 +1384,7 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
           {[
             { id: 'tools', label: 'Memory', count: MEMORY_TOOLS.length },
             { id: 'web', label: 'Web Intelligence', count: WEB_TOOLS.length },
-            { id: 'coding', label: 'Coding Intelligence', count: CODING_TOOLS.length },
+            { id: 'coding', label: 'Coding Intelligence', count: CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length },
             { id: 'temporal', label: 'Time Travel', count: TEMPORAL_TOOLS.length },
           ].map(tab => (
             <button
