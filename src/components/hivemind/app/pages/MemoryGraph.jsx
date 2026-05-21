@@ -34,6 +34,7 @@ import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
+import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 // Edge palette — semantically distinct hues so self-evolution chains are
@@ -398,7 +399,9 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 }
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
-export default function MemoryGraph() {
+export default function MemoryGraph({ dimension = '3d' } = {}) {
+  // dimension: '3d' (default) | '2d' — same wrapper chrome, swaps inner canvas.
+  const is2D = dimension === '2d';
   const { org } = useAuth();
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -1005,7 +1008,7 @@ export default function MemoryGraph() {
           </div>
         )}
 
-        {graphData.nodes.length > 0 && (
+        {graphData.nodes.length > 0 && !is2D && (
           <MemoryGraph3D
             ref={graphRef}
             graphData={graphData}
@@ -1028,6 +1031,33 @@ export default function MemoryGraph() {
             }}
             onViewStateChange={undefined}
             backgroundColor="rgba(0,0,0,0)"
+            width={
+              typeof window !== "undefined"
+                ? window.innerWidth - (selectedNode ? 340 : 0) - 260
+                : 800
+            }
+            height={
+              typeof window !== "undefined" ? window.innerHeight - 52 : 600
+            }
+          />
+        )}
+
+        {graphData.nodes.length > 0 && is2D && (
+          <MemoryGraph2DCanvas
+            ref={graphRef}
+            graphData={graphData}
+            selectedNode={selectedNode}
+            highlightNodes={highlightNodes}
+            filteredNodes={filteredNodes}
+            onNodeClick={handleNodeClick}
+            onNodeHover={(node) => {
+              setHoveredNode(node);
+            }}
+            onBackgroundClick={() => {
+              setSelectedNode(null);
+              setHoveredNode(null);
+            }}
+            backgroundColor="rgba(250,249,244,1)"
             width={
               typeof window !== "undefined"
                 ? window.innerWidth - (selectedNode ? 340 : 0) - 260
