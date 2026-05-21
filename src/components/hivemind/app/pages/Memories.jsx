@@ -128,24 +128,60 @@ function SourceBadge({ source }) {
 }
 
 function RelationshipIndicator({ memory }) {
-  if (!memory.is_latest && memory.supersedes_id) {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#d4d0ca] uppercase tracking-wider">
+  // Three signals stacked left → right:
+  //   1. SUPERSEDED   — this row is no longer the latest; another memory
+  //                     replaced it via an Updates edge. Backend ships
+  //                     superseded_by (id of newer memory) on the row.
+  //   2. UPDATED BY N — count of incoming Updates/Extends edges (this row
+  //                     spawned newer versions of itself).
+  //   3. LINKED N     — total degree (incoming + outgoing edges) summary
+  //                     that mirrors Supermemory's "linked memories" pill.
+  // All three come from /api/memories list now ships edges_in_count /
+  // edges_out_count / superseded_by inline (no N+1 fetch).
+  const chips = [];
+
+  if ((memory.is_latest === false) || memory.superseded_by) {
+    chips.push(
+      <span
+        key="sup"
+        title={memory.superseded_by ? `replaced by ${memory.superseded_by.slice(0, 8)}…` : 'superseded'}
+        className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#a3a3a3] uppercase tracking-wider"
+      >
         <GitFork size={8} />
         superseded
       </span>
     );
   }
+
+  const totalEdges = (memory.edges_in_count || 0) + (memory.edges_out_count || 0);
+  if (totalEdges > 0) {
+    chips.push(
+      <span
+        key="links"
+        title={`${memory.edges_out_count || 0} outgoing · ${memory.edges_in_count || 0} incoming`}
+        className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#0a5fcc] uppercase tracking-wider"
+      >
+        <GitFork size={8} />
+        linked {totalEdges}
+      </span>
+    );
+  }
+
   if (memory.graph_expanded) {
     const relType = memory.expansion_metadata?.relationship_type || 'related';
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/70 uppercase tracking-wider">
+    chips.push(
+      <span
+        key="exp"
+        className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/70 uppercase tracking-wider"
+      >
         <GitFork size={8} />
         {relType}
       </span>
     );
   }
-  return null;
+
+  if (!chips.length) return null;
+  return <>{chips}</>;
 }
 
 // ─── Memory Card ──────────────────────────────────────────────────────────────
