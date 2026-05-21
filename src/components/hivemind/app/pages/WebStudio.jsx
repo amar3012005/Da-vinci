@@ -293,16 +293,26 @@ export default function WebStudio() {
         {jobList.length === 0 ? (
           <EmptyState locked={featureLocked} />
         ) : (
-          <div className="space-y-3">
-            {jobList.map(job => (
-              <JobThreadCard
-                key={job.id}
-                job={job}
-                isPolling={job.id === pollingId}
-                onResultClick={setSelectedResult}
-                onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
-              />
-            ))}
+          // Cap height so the workflow (prompt + timeline + health) stays
+          // visible above the fold. ~10 collapsed rows fit before scroll.
+          <div className="relative">
+            <div className="max-h-[640px] overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin]">
+              {jobList.map(job => (
+                <JobThreadCard
+                  key={job.id}
+                  job={job}
+                  isPolling={job.id === pollingId}
+                  onResultClick={setSelectedResult}
+                  onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
+                />
+              ))}
+            </div>
+            {jobList.length > 10 && (
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#faf9f4] to-transparent" />
+            )}
+            <div className="mt-2 text-[10px] text-[#a3a3a3] font-mono text-right">
+              {jobList.length} run{jobList.length !== 1 ? 's' : ''} · scroll for older
+            </div>
           </div>
         )}
       </section>
