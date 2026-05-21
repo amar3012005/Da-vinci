@@ -22,13 +22,8 @@ import {
   Cpu,
   BookOpen,
   Bot,
-  Users,
-  FolderKanban,
   Mic,
   MessageSquare,
-  ScrollText,
-  KeyRound,
-  UserCog,
   Building2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
