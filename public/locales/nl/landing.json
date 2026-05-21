@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Product",
+    "features": "Functies",
+    "pricing": "Prijzen",
+    "docs": "Documentatie",
+    "about": "Over",
+    "signIn": "Inloggen",
+    "signUp": "Aanmelden",
+    "tryFree": "Gratis proberen"
+  },
+  "hero": {
+    "title": "Het perfecte geheugen van je AI.",
+    "subtitle": "HIVEMIND maakt stateless LLM's contextbewuste assistenten met perfect geheugen over elke sessie, machine en gesprek.",
+    "ctaPrimary": "Probeer HIVEMIND gratis",
+    "ctaSecondary": "Lees de documentatie"
+  },
+  "footer": {
+    "privacy": "Privacy",
+    "terms": "Voorwaarden",
+    "contact": "Contact",
+    "sovereign": "EU Sovereign · Frankfurt, Duitsland"
+  }
+}

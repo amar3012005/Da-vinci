@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "उत्पाद",
+    "features": "विशेषताएँ",
+    "pricing": "कीमतें",
+    "docs": "दस्तावेज़",
+    "about": "के बारे में",
+    "signIn": "साइन इन",
+    "signUp": "साइन अप",
+    "tryFree": "मुफ़्त आज़माएँ"
+  },
+  "hero": {
+    "title": "आपके AI की परिपूर्ण स्मृति।",
+    "subtitle": "HIVEMIND stateless LLMs को संदर्भ-जानकार सहायक में बदलता है, जो हर सत्र, मशीन और बातचीत में परिपूर्ण स्मृति रखता है।",
+    "ctaPrimary": "HIVEMIND मुफ्त आज़माएँ",
+    "ctaSecondary": "दस्तावेज़ पढ़ें"
+  },
+  "footer": {
+    "privacy": "गोपनीयता",
+    "terms": "शर्तें",
+    "contact": "संपर्क",
+    "sovereign": "EU Sovereign · फ्रैंकफ़र्ट, जर्मनी"
+  }
+}

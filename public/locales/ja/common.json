@@ -1,0 +1,37 @@
+{
+  "language": "言語",
+  "languageHeader": "言語を選択",
+  "actions": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "create": "作成",
+    "update": "更新",
+    "close": "閉じる",
+    "back": "戻る",
+    "continue": "続行",
+    "search": "検索",
+    "filter": "フィルター",
+    "refresh": "更新",
+    "connect": "接続",
+    "disconnect": "切断",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "loading": "読み込み中…",
+    "submit": "送信",
+    "send": "送信",
+    "retry": "再試行",
+    "viewAll": "すべて表示",
+    "learnMore": "詳しく見る"
+  },
+  "states": {
+    "online": "オンライン",
+    "offline": "オフライン",
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "pending": "保留中",
+    "error": "エラー",
+    "success": "成功"
+  }
+}

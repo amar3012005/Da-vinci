@@ -2,7 +2,9 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
 import { Search, BookOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
+import LangSwitcher from './LangSwitcher';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -58,17 +60,23 @@ export default function TopBar() {
   const title = pageTitles[location.pathname] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';
 
+  const { t } = useTranslation('dashboard');
+  // Translate page title/description via topbar.pages.<routeSlug> keys when present.
+  const routeSlug = (location.pathname || '').replace(/^\/+/, '').replace(/\//g, '.') || 'home';
+  const tTitle = t(`topbar.titles.${routeSlug}`, { defaultValue: title });
+  const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
+
   return (
     <header className="h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-6 sticky top-0 z-30">
       {/* Left: Title + Description + Team switcher */}
       <div className="flex items-center gap-4 min-w-0">
         <div>
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
-            {title}
+            {tTitle}
           </h1>
-          {description && (
+          {tDesc && (
             <p className="text-[#a3a3a3] text-[11px] mt-0.5">
-              {description}
+              {tDesc}
             </p>
           )}
         </div>
@@ -83,7 +91,7 @@ export default function TopBar() {
           className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] hover:border-[#d4d0ca] text-[#a3a3a3] hover:text-[#525252] transition-all text-xs"
         >
           <Search size={13} />
-          <span className="hidden md:inline">Search memories...</span>
+          <span className="hidden md:inline">{t('topbar.searchMemories', 'Search memories...')}</span>
           <kbd className="hidden md:inline text-[10px] font-mono text-[#a3a3a3] bg-[#eae7e1] rounded px-1 py-0.5 ml-4">
             /
           </kbd>
@@ -100,6 +108,10 @@ export default function TopBar() {
           <BookOpen size={15} />
         </a>
 
+        {/* Language switcher */}
+        <LangSwitcher />
+
+
         {/* Health */}
         <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db]">
           <div
@@ -112,7 +124,7 @@ export default function TopBar() {
             }`}
           />
           <span className="text-[10px] text-[#a3a3a3] font-mono whitespace-nowrap">
-            {healthy === null ? '...' : healthy ? 'Online' : 'Offline'}
+            {healthy === null ? '...' : healthy ? t('topbar.online', 'Online') : t('topbar.offline', 'Offline')}
           </span>
         </div>
       </div>

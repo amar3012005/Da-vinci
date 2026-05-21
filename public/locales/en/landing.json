@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Product",
+    "features": "Features",
+    "pricing": "Pricing",
+    "docs": "Docs",
+    "about": "About",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "tryFree": "Try free"
+  },
+  "hero": {
+    "title": "Your AI's perfect memory.",
+    "subtitle": "HIVEMIND turns stateless LLMs into context-aware assistants with perfect recall across every session, machine, and conversation.",
+    "ctaPrimary": "Try HIVEMIND free",
+    "ctaSecondary": "Read the docs"
+  },
+  "footer": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact",
+    "sovereign": "EU Sovereign · Frankfurt, Germany"
+  }
+}

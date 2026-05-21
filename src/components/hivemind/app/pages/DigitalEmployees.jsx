@@ -241,11 +241,33 @@ function StatusBadge({ status }) {
   );
 }
 
+const HYPER_STATE_STYLES = {
+  baseline: 'bg-[#f3f1ec] text-[#737373] border-[#e3e0db]',
+  collecting_feedback: 'bg-amber-50 text-amber-700 border-amber-200',
+  ready_for_tuning: 'bg-violet-50 text-violet-700 border-violet-200',
+  optimized: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+
+function HyperStateBadge({ hyper }) {
+  if (!hyper) return null;
+  const cls = HYPER_STATE_STYLES[hyper.state] || HYPER_STATE_STYLES.baseline;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
+      <Sparkles size={10} />
+      {hyper.state_label || 'Baseline'}
+    </span>
+  );
+}
+
 function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectable, selected, onToggleSelect }) {
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const msgs = employee.metricsLast24h?.messages || 0;
   const tokens = employee.metricsLast24h?.tokens || 0;
+  const hyper = employee.hyper;
+  const versionLabel = employee.active_prompt_version?.version_label || hyper?.active_prompt_version?.version_label || 'v0';
+  const evalCount = hyper?.evaluation_count || 0;
+  const threshold = hyper?.tuning_threshold || 20;
 
   const handleClick = () => {
     if (selectable && onToggleSelect) {
@@ -282,6 +304,26 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
       {employee.persona && (
         <p className="text-[11px] text-[#525252] line-clamp-2 mb-3">{employee.persona}</p>
       )}
+
+      <div className="mb-3 rounded-[10px] border border-[#ece8e1] bg-[#fbfaf7] p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#8b857c]">Hyper Agent</p>
+            <p className="mt-1 text-[12px] font-semibold text-[#0a0a0a]">{versionLabel} active prompt</p>
+          </div>
+          <HyperStateBadge hyper={hyper} />
+        </div>
+        <div className="mt-3 flex items-center justify-between text-[10px] text-[#737373] font-mono">
+          <span>{evalCount}/{threshold} evals</span>
+          <span>{hyper?.source === 'prompt_tune' ? 'tuned prompt live' : 'seed prompt live'}</span>
+        </div>
+        <div className="mt-2 h-1.5 rounded-full bg-[#ece8e1] overflow-hidden">
+          <div
+            className={`h-full rounded-full ${hyper?.state === 'optimized' ? 'bg-emerald-500' : hyper?.state === 'ready_for_tuning' ? 'bg-violet-500' : 'bg-amber-400'}`}
+            style={{ width: `${hyper?.state === 'optimized' ? 100 : (hyper?.progress_pct || 0)}%` }}
+          />
+        </div>
+      </div>
 
       <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mt-auto pt-2 border-t border-[#eae7e1]">
         <span className="flex items-center gap-1"><Activity size={10} /> {msgs} msgs</span>
@@ -434,7 +476,7 @@ function EmployeeChatPreview({ employee, onClose }) {
     <PreviewWindow title={`${employee.name} DM`} subtitle={`1-on-1 employee chat · ${employee.slug}`} onClose={onClose}>
       <div className="space-y-3 p-4">
         <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-[11px] text-[#525252]">
-          Chat directly with this employee using its current persona, tools, and in-sidecar conversation memory.
+          Chat directly with this employee using its current prompt version {employee.active_prompt_version?.version_label || employee.hyper?.active_prompt_version?.version_label || 'v0'}, tools, and in-sidecar conversation memory.
         </div>
         <div className="space-y-2 min-h-[280px]">
           {messages.length === 0 ? (
@@ -1501,6 +1543,8 @@ export default function DigitalEmployees() {
   const running = employees.filter(e => e.status === 'running').length;
   const paused = employees.filter(e => e.status === 'paused').length;
   const draft = employees.filter(e => e.status === 'draft').length;
+  const optimized = employees.filter((e) => e.hyper?.state === 'optimized').length;
+  const readyForTuning = employees.filter((e) => e.hyper?.state === 'ready_for_tuning').length;
 
   const isWorkspaceMode = surface === 'workspace';
   const dockedWorkspaceWidth = slidePanelOpen ? 'min(50vw, 720px)' : '0px';
@@ -1514,6 +1558,9 @@ export default function DigitalEmployees() {
           </h1>
           <p className="text-[12px] text-[#a3a3a3] mt-1">
             Autonomous AI agents with HIVEMIND memory + Slack access. {employees.length} total · {running} running · {paused} paused · {draft} draft.
+          </p>
+          <p className="text-[11px] text-[#737373] mt-1">
+            Hyper status: {optimized} optimized · {readyForTuning} ready for tuning.
           </p>
         </div>
         <div className="flex justify-center">

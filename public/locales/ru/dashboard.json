@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Обзор",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Коннекторы",
+    "memories": "Память",
+    "graph3d": "Граф памяти · 3D",
+    "graph2d": "Граф памяти · 2D",
+    "knowledge": "База знаний",
+    "webIntel": "Веб-интел",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Рой агентов",
+    "engine": "Движок",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API‑ключи",
+    "evaluation": "Оценка",
+    "workspaceAdmin": "Администратор рабочего пространства",
+    "playground": "Песочница",
+    "webAdmin": "Веб‑админ",
+    "profile": "Профиль",
+    "billing": "Оплата",
+    "settings": "Настройки",
+    "signOut": "Выйти",
+    "groups": {
+      "yourBrain": "Ваш мозг",
+      "aiFeatures": "Функции ИИ",
+      "advanced": "Дополнительно",
+      "workspaceAdmin": "Администратор рабочего пространства",
+      "account": "Учётная запись"
+    },
+    "planLabel": {
+      "free": "Бесплатный план",
+      "starter": "Стартовый план",
+      "pro": "Pro план",
+      "team": "Командный план",
+      "enterprise": "Корпоративный план"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Поиск памяти…",
+    "online": "Онлайн",
+    "offline": "Оффлайн",
+    "titles": {
+      "hivemind.app.overview": "Обзор",
+      "hivemind.app.memories": "Память",
+      "hivemind.app.keys": "API‑ключи",
+      "hivemind.app.connectors": "Коннекторы",
+      "hivemind.app.profile": "Профиль",
+      "hivemind.app.evaluation": "Оценка",
+      "hivemind.app.settings": "Настройки",
+      "hivemind.app.billing": "Оплата",
+      "hivemind.app.web": "Веб‑интеллект",
+      "hivemind.app.web-admin": "Веб‑админ",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Граф памяти",
+      "hivemind.app.engine": "Интеллект движка",
+      "hivemind.app.team.members": "Участники команды",
+      "hivemind.app.team.projects": "Проекты команды",
+      "hivemind.app.audit": "Журнал аудита",
+      "hivemind.app.admin.users": "Участники организации",
+      "hivemind.app.admin.sso": "Конфигурация SSO",
+      "hivemind.app.employees": "Цифровые сотрудники",
+      "hivemind.app.workspace": "Администратор рабочего пространства"
+    }
+  },
+  "overview": {
+    "title": "Обзор",
+    "subtitle": "Ваш движок памяти HIVEMIND в одном взгляде.",
+    "recentMemories": "Последние записи",
+    "noMemories": "Записей пока нет.",
+    "noMemoriesHint": "Подключите MCP‑клиент, чтобы начать собирать записи.",
+    "quickSearch": "Быстрый поиск",
+    "quickActions": "Быстрые действия",
+    "createApiKey": "Создать API‑ключ",
+    "createApiKeyHint": "Создавайте ключи для MCP‑клиентов",
+    "connectMcp": "Подключить MCP‑клиент",
+    "connectMcpHint": "Подключите Claude, Cursor или свои клиенты",
+    "browseMemories": "Просмотр записей",
+    "browseMemoriesHint": "Исследуйте и управляйте сохранёнными записями",
+    "coreApiHealth": "Состояние Core API"
+  },
+  "memories": {
+    "title": "Записи",
+    "empty": "Записей ещё нет.",
+    "save": "Сохранить запись",
+    "delete": "Удалить",
+    "tags": "Теги",
+    "type": "Тип",
+    "created": "Создано",
+    "filterPlaceholder": "Фильтр по тегу, типу или тексту…"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "voice": "Голос",
+    "assistantName": "Имя ассистента",
+    "appearance": "Внешний вид",
+    "theme": "Тема",
+    "danger": "Опасная зона",
+    "deleteAccount": "Удалить аккаунт"
+  },
+  "connectors": {
+    "title": "Коннекторы",
+    "subtitle": "Подключите источники данных, чтобы HIVEMIND мог восстанавливать контекст между инструментами.",
+    "connect": "Подключить",
+    "connected": "Подключено",
+    "disconnect": "Отключить",
+    "needsReconnect": "Требуется переподключение"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "제품",
+    "features": "기능",
+    "pricing": "가격",
+    "docs": "문서",
+    "about": "소개",
+    "signIn": "로그인",
+    "signUp": "회원가입",
+    "tryFree": "무료 체험"
+  },
+  "hero": {
+    "title": "AI의 완벽한 기억.",
+    "subtitle": "HIVEMIND는 무상태 LLM을 컨텍스트 인식 어시스턴트로 전환해 모든 세션·기기·대화에서 완벽히 기억합니다.",
+    "ctaPrimary": "HIVEMIND 무료 체험",
+    "ctaSecondary": "문서 보기"
+  },
+  "footer": {
+    "privacy": "개인정보 보호정책",
+    "terms": "이용 약관",
+    "contact": "문의",
+    "sovereign": "EU 주권 · 독일 프랑크푸르트"
+  }
+}

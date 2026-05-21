@@ -1,0 +1,37 @@
+{
+  "language": "Język",
+  "languageHeader": "Wybierz język",
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "create": "Utwórz",
+    "update": "Aktualizuj",
+    "close": "Zamknij",
+    "back": "Wstecz",
+    "continue": "Kontynuuj",
+    "search": "Szukaj",
+    "filter": "Filtruj",
+    "refresh": "Odśwież",
+    "connect": "Połącz",
+    "disconnect": "Rozłącz",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano",
+    "loading": "Ładowanie…",
+    "submit": "Wyślij",
+    "send": "Wyślij",
+    "retry": "Spróbuj ponownie",
+    "viewAll": "Zobacz wszystkie",
+    "learnMore": "Dowiedz się więcej"
+  },
+  "states": {
+    "online": "Online",
+    "offline": "Offline",
+    "connected": "Połączono",
+    "disconnected": "Rozłączono",
+    "pending": "Oczekujące",
+    "error": "Błąd",
+    "success": "Sukces"
+  }
+}

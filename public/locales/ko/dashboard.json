@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "개요",
+    "talkToHive": "HIVE와 대화",
+    "connectors": "연결기",
+    "memories": "메모리",
+    "graph3d": "메모리 그래프 · 3D",
+    "graph2d": "메모리 그래프 · 2D",
+    "knowledge": "지식 베이스",
+    "webIntel": "웹 인텔",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "에이전트 스웜",
+    "engine": "엔진",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API 키",
+    "evaluation": "평가",
+    "workspaceAdmin": "워크스페이스 관리",
+    "playground": "플레이그라운드",
+    "webAdmin": "웹 관리",
+    "profile": "프로필",
+    "billing": "청구",
+    "settings": "설정",
+    "signOut": "로그아웃",
+    "groups": {
+      "yourBrain": "당신의 뇌",
+      "aiFeatures": "AI 기능",
+      "advanced": "고급",
+      "workspaceAdmin": "워크스페이스 관리",
+      "account": "계정"
+    },
+    "planLabel": {
+      "free": "무료 플랜",
+      "starter": "시작 플랜",
+      "pro": "프로 플랜",
+      "team": "팀 플랜",
+      "enterprise": "엔터프라이즈 플랜"
+    }
+  },
+  "topbar": {
+    "searchMemories": "메모리 검색…",
+    "online": "온라인",
+    "offline": "오프라인",
+    "titles": {
+      "hivemind.app.overview": "개요",
+      "hivemind.app.memories": "메모리",
+      "hivemind.app.keys": "API 키",
+      "hivemind.app.connectors": "연결기",
+      "hivemind.app.profile": "프로필",
+      "hivemind.app.evaluation": "평가",
+      "hivemind.app.settings": "설정",
+      "hivemind.app.billing": "청구",
+      "hivemind.app.web": "웹 인텔리전스",
+      "hivemind.app.web-admin": "웹 관리",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "메모리 그래프",
+      "hivemind.app.engine": "엔진 인텔리전스",
+      "hivemind.app.team.members": "팀 멤버",
+      "hivemind.app.team.projects": "팀 프로젝트",
+      "hivemind.app.audit": "감사 로그",
+      "hivemind.app.admin.users": "조직 멤버",
+      "hivemind.app.admin.sso": "SSO 설정",
+      "hivemind.app.employees": "디지털 직원",
+      "hivemind.app.workspace": "워크스페이스 관리"
+    }
+  },
+  "overview": {
+    "title": "개요",
+    "subtitle": "HIVEMIND 메모리 엔진을 한눈에.",
+    "recentMemories": "최근 메모리",
+    "noMemories": "아직 메모리가 없습니다.",
+    "noMemoriesHint": "MCP 클라이언트를 연결해 메모리 수집을 시작하세요.",
+    "quickSearch": "빠른 검색",
+    "quickActions": "빠른 작업",
+    "createApiKey": "API 키 생성",
+    "createApiKeyHint": "MCP 클라이언트를 위한 키 생성",
+    "connectMcp": "MCP 클라이언트 연결",
+    "connectMcpHint": "Claude, Cursor 또는 맞춤 클라이언트를 연결",
+    "browseMemories": "메모리 탐색",
+    "browseMemoriesHint": "저장된 메모리를 탐색하고 관리",
+    "coreApiHealth": "코어 API 상태"
+  },
+  "memories": {
+    "title": "메모리",
+    "empty": "아직 저장된 메모리가 없습니다.",
+    "save": "메모리 저장",
+    "delete": "삭제",
+    "tags": "태그",
+    "type": "유형",
+    "created": "생성일",
+    "filterPlaceholder": "태그, 유형, 텍스트로 필터링…"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어",
+    "voice": "음성",
+    "assistantName": "어시스턴트 이름",
+    "appearance": "모양",
+    "theme": "테마",
+    "danger": "위험 구역",
+    "deleteAccount": "계정 삭제"
+  },
+  "connectors": {
+    "title": "연결기",
+    "subtitle": "데이터 소스를 연결해 HIVEMIND가 도구 전반에 걸쳐 컨텍스트를 기억하도록 하세요.",
+    "connect": "연결",
+    "connected": "연결됨",
+    "disconnect": "연결 해제",
+    "needsReconnect": "재연결 필요"
+  }
+}

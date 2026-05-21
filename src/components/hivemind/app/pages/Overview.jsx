@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Activity,
   Brain,
@@ -74,7 +75,7 @@ function HealthCard({ healthy, onRefresh }) {
             <Activity size={20} className="text-[#117dff]" />
           </div>
           <div>
-            <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-0.5">Core API Health</p>
+            <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-0.5">{t('overview.coreApiHealth', 'Core API Health')}</p>
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${dotColor} ${glowColor}`} />
               <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">{label}</span>
@@ -199,6 +200,7 @@ function SearchResult({ result }) {
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
+  const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const healthy = useHealthStatus(30000);
 
@@ -271,9 +273,9 @@ export default function Overview() {
       >
         <div className="flex items-center gap-3 mb-1">
           <Hexagon size={20} className="text-[#117dff]" />
-          <h1 className="text-[#0a0a0a] text-2xl font-bold tracking-tight">Overview</h1>
+          <h1 className="text-[#0a0a0a] text-2xl font-bold tracking-tight">{t('overview.title', 'Overview')}</h1>
         </div>
-        <p className="text-[#525252] text-sm ml-8">Your HIVEMIND memory engine at a glance.</p>
+        <p className="text-[#525252] text-sm ml-8">{t('overview.subtitle', 'Your HIVEMIND memory engine at a glance.')}</p>
       </motion.div>
 
       {/* Grid */}
@@ -313,7 +315,7 @@ export default function Overview() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock size={16} className="text-[#a3a3a3]" />
-                <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">Recent Memories</h2>
+                <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">{t('overview.recentMemories', 'Recent Memories')}</h2>
               </div>
               <button
                 onClick={() => navigate('../memories')}
@@ -338,8 +340,8 @@ export default function Overview() {
             ) : memories.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Brain size={28} className="text-[#e3e0db] mb-3" />
-                <p className="text-[#a3a3a3] text-sm">No memories yet.</p>
-                <p className="text-[#d4d0ca] text-xs mt-1">Connect an MCP client to start ingesting memories.</p>
+                <p className="text-[#a3a3a3] text-sm">{t('overview.noMemories', 'No memories yet.')}</p>
+                <p className="text-[#d4d0ca] text-xs mt-1">{t('overview.noMemoriesHint', 'Connect an MCP client to start ingesting memories.')}</p>
               </div>
             ) : (
               <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-1">
@@ -357,7 +359,7 @@ export default function Overview() {
           <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-2 mb-3">
               <Search size={16} className="text-[#a3a3a3]" />
-              <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">Quick Search</h2>
+              <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">{t('overview.quickSearch', 'Quick Search')}</h2>
             </div>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
@@ -409,7 +411,7 @@ export default function Overview() {
 
           {/* Quick Actions */}
           <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider mb-3">Quick Actions</h2>
+            <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider mb-3">{t('overview.quickActions', 'Quick Actions')}</h2>
             <div className="space-y-2">
               <button
                 onClick={() => navigate('../keys')}
@@ -419,8 +421,8 @@ export default function Overview() {
                   <KeyRound size={14} className="text-[#117dff]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">Create API Key</p>
-                  <p className="text-[#a3a3a3] text-[11px]">Generate keys for MCP clients</p>
+                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.createApiKey', 'Create API Key')}</p>
+                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.createApiKeyHint', 'Generate keys for MCP clients')}</p>
                 </div>
                 <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
               </button>
@@ -433,8 +435,8 @@ export default function Overview() {
                   <Cable size={14} className="text-[#525252]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">Connect MCP Client</p>
-                  <p className="text-[#a3a3a3] text-[11px]">Link Claude, Cursor, or custom clients</p>
+                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.connectMcp', 'Connect MCP Client')}</p>
+                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.connectMcpHint', 'Link Claude, Cursor, or custom clients')}</p>
                 </div>
                 <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
               </button>
@@ -447,8 +449,8 @@ export default function Overview() {
                   <BookOpen size={14} className="text-[#525252]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">Browse Memories</p>
-                  <p className="text-[#a3a3a3] text-[11px]">Explore and manage stored memories</p>
+                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.browseMemories', 'Browse Memories')}</p>
+                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.browseMemoriesHint', 'Explore and manage stored memories')}</p>
                 </div>
                 <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
               </button>

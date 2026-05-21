@@ -1,0 +1,37 @@
+{
+  "language": "语言",
+  "languageHeader": "选择语言",
+  "actions": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "update": "更新",
+    "close": "关闭",
+    "back": "返回",
+    "continue": "继续",
+    "search": "搜索",
+    "filter": "筛选",
+    "refresh": "刷新",
+    "connect": "连接",
+    "disconnect": "断开",
+    "copy": "复制",
+    "copied": "已复制",
+    "loading": "加载中…",
+    "submit": "提交",
+    "send": "发送",
+    "retry": "重试",
+    "viewAll": "查看全部",
+    "learnMore": "了解更多"
+  },
+  "states": {
+    "online": "在线",
+    "offline": "离线",
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "pending": "待处理",
+    "error": "错误",
+    "success": "成功"
+  }
+}

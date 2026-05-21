@@ -1,0 +1,37 @@
+{
+  "language": "Taal",
+  "languageHeader": "Kies taal",
+  "actions": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "update": "Bijwerken",
+    "close": "Sluiten",
+    "back": "Terug",
+    "continue": "Doorgaan",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "refresh": "Vernieuwen",
+    "connect": "Verbinden",
+    "disconnect": "Verbreken",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd",
+    "loading": "Laden…",
+    "submit": "Verzenden",
+    "send": "Versturen",
+    "retry": "Probeer opnieuw",
+    "viewAll": "Bekijk alles",
+    "learnMore": "Meer info"
+  },
+  "states": {
+    "online": "Online",
+    "offline": "Offline",
+    "connected": "Verbonden",
+    "disconnected": "Verbroken",
+    "pending": "In behandeling",
+    "error": "Fout",
+    "success": "Succes"
+  }
+}

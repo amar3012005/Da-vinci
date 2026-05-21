@@ -1,0 +1,37 @@
+{
+  "language": "भाषा",
+  "languageHeader": "भाषा चुनें",
+  "actions": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएँ",
+    "edit": "संपादित करें",
+    "create": "बनाएँ",
+    "update": "अपडेट करें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "continue": "जारी रखें",
+    "search": "खोजें",
+    "filter": "फ़िल्टर",
+    "refresh": "रिफ्रेश करें",
+    "connect": "कनेक्ट करें",
+    "disconnect": "डिस्कनेक्ट करें",
+    "copy": "कॉपी करें",
+    "copied": "कॉपी किया गया",
+    "loading": "लोड हो रहा है…",
+    "submit": "सबमिट करें",
+    "send": "भेजें",
+    "retry": "फिर से प्रयास करें",
+    "viewAll": "सभी देखें",
+    "learnMore": "और जानें"
+  },
+  "states": {
+    "online": "ऑनलाइन",
+    "offline": "ऑफ़लाइन",
+    "connected": "कनेक्टेड",
+    "disconnected": "डिस्कनेक्टेड",
+    "pending": "लंबित",
+    "error": "त्रुटि",
+    "success": "सफलता"
+  }
+}

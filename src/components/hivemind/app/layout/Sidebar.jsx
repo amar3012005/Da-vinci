@@ -31,74 +31,68 @@ import {
   UserCog,
   Building2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 
 /** Build nav sections, conditionally including admin items. */
-function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
+function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
+  const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
-    { to: '/hivemind/app/swarm', icon: Bot, label: 'Agent Swarm' },
-    { to: '/hivemind/app/engine', icon: Cpu, label: 'Engine' },
-    { to: '/hivemind/app/mcp', icon: Server, label: 'MCP Server' },
-    { to: '/hivemind/app/keys', icon: Key, label: 'API Keys' },
-    { to: '/hivemind/app/evaluation', icon: FlaskConical, label: 'Evaluation' },
+    { to: '/hivemind/app/swarm',      icon: Bot,          label: tt('agentSwarm', 'Agent Swarm') },
+    { to: '/hivemind/app/engine',     icon: Cpu,          label: tt('engine', 'Engine') },
+    { to: '/hivemind/app/mcp',        icon: Server,       label: tt('mcpServer', 'MCP Server') },
+    { to: '/hivemind/app/keys',       icon: Key,          label: tt('apiKeys', 'API Keys') },
+    { to: '/hivemind/app/evaluation', icon: FlaskConical, label: tt('evaluation', 'Evaluation') },
   ];
 
-  // Unified Admin section. Single "Workspace Admin" entry leads to the
-  // tabbed landing page; per-tab deep links still work via /admin/*, /team/*
-  // and the ?tab= URL param. Playground + Web Admin stay separate (specialised
-  // surfaces, not org-scope admin).
   const adminItems = [
-    { to: '/hivemind/app/workspace', icon: Building2, label: 'Workspace Admin' },
-    { to: '/hivemind/app/employees/playground', icon: MessageSquare, label: 'Playground' },
+    { to: '/hivemind/app/workspace',             icon: Building2,     label: tt('workspaceAdmin', 'Workspace Admin') },
+    { to: '/hivemind/app/employees/playground',  icon: MessageSquare, label: tt('playground', 'Playground') },
   ];
   if (showWebAdmin) {
-    adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: 'Web Admin' });
+    adminItems.push({ to: '/hivemind/app/web-admin', icon: ShieldCheck, label: tt('webAdmin', 'Web Admin') });
   }
 
-  // Sidebar order: most-used / first-time-user flow first.
-  // 1) Land on Overview → 2) Talk to HIVE (daily driver) → 3) connect data
-  // → 4) inspect memories → 5) explore graph → ...advanced last.
   const sections = [
     {
       label: null,
       items: [
-        { to: '/hivemind/app/overview',   icon: LayoutDashboard, label: 'Overview' },
-        { to: '/hivemind/app/overview',   icon: MessageSquare,   label: 'Talk to HIVE' },
+        { to: '/hivemind/app/overview', icon: LayoutDashboard, label: tt('overview', 'Overview') },
+        { to: '/hivemind/app/overview', icon: MessageSquare,   label: tt('talkToHive', 'Talk to HIVE') },
       ],
     },
     {
-      label: 'Your Brain',
+      label: tt('groups.yourBrain', 'Your Brain'),
       items: [
-        // Connectors first — ingestion gate. No data, no brain.
-        { to: '/hivemind/app/connectors', icon: Cable,    label: 'Connectors' },
-        { to: '/hivemind/app/memories',   icon: Brain,    label: 'Memories' },
-        { to: '/hivemind/app/graph',      icon: Network,  label: 'Memory Graph · 3D' },
-        { to: '/hivemind/app/graph-2d',   icon: Network,  label: 'Memory Graph · 2D' },
-        { to: '/hivemind/app/knowledge',  icon: BookOpen, label: 'Knowledge Base' },
+        { to: '/hivemind/app/connectors', icon: Cable,    label: tt('connectors',  'Connectors') },
+        { to: '/hivemind/app/memories',   icon: Brain,    label: tt('memories',    'Memories') },
+        { to: '/hivemind/app/graph',      icon: Network,  label: tt('graph3d',     'Memory Graph · 3D') },
+        { to: '/hivemind/app/graph-2d',   icon: Network,  label: tt('graph2d',     'Memory Graph · 2D') },
+        { to: '/hivemind/app/knowledge',  icon: BookOpen, label: tt('knowledge',   'Knowledge Base') },
       ],
     },
     {
-      label: 'AI Features',
+      label: tt('groups.aiFeatures', 'AI Features'),
       items: [
-        { to: '/hivemind/app/web',  icon: Globe, label: 'Web Intel' },
-        { to: '/hivemind/app/tara', icon: Mic,   label: 'TARA × HIVE' },
+        { to: '/hivemind/app/web',  icon: Globe, label: tt('webIntel', 'Web Intel') },
+        { to: '/hivemind/app/tara', icon: Mic,   label: tt('tara',     'TARA × HIVE') },
       ],
     },
     {
-      label: 'Advanced',
+      label: tt('groups.advanced', 'Advanced'),
       items: advancedItems,
     },
     {
-      label: 'Workspace Admin',
+      label: tt('groups.workspaceAdmin', 'Workspace Admin'),
       items: adminItems,
     },
     {
-      label: 'Account',
+      label: tt('groups.account', 'Account'),
       items: [
-        { to: '/hivemind/app/profile',  icon: User,       label: 'Profile' },
-        { to: '/hivemind/app/billing',  icon: CreditCard, label: 'Billing' },
-        { to: '/hivemind/app/settings', icon: Settings,   label: 'Settings' },
+        { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
+        { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
+        { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
       ],
     },
   ];
@@ -107,6 +101,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam }) {
 }
 
 export default function Sidebar() {
+  const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -133,8 +128,10 @@ export default function Sidebar() {
     };
   }, []);
 
-  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise' });
-  const planLabel = org?.plan ? `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` : 'Free Plan';
+  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t });
+  const planLabel = org?.plan
+    ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
+    : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 
@@ -285,7 +282,7 @@ export default function Sidebar() {
           title={collapsed ? 'Sign Out' : undefined}
         >
           <LogOut size={16} />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>{t('sidebar.signOut', 'Sign Out')}</span>}
         </button>
       </div>
     </aside>

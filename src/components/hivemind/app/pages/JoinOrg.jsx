@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Hexagon } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { useAuth } from '../auth/AuthProvider';
 
 export default function JoinOrg() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
-  const [state, setState] = useState({ loading: true, error: '', org: null });
+  const { refresh: refreshAuth } = useAuth() || {};
+  const [state, setState] = useState({ loading: true, error: '', org: null, alreadyMember: false });
 
   useEffect(() => {
     let cancelled = false;
@@ -15,13 +17,30 @@ export default function JoinOrg() {
       try {
         const data = await apiClient.acceptInvite(token);
         if (cancelled) return;
-        setState({ loading: false, error: '', org: data.organization || null });
+        // Refresh bootstrap so AppShell stops asking for org setup —
+        // without this, after accepting the invite the user is bounced
+        // to the Onboarding screen and ends up creating a SECOND
+        // personal org instead of landing in the invited one.
+        try { await (refreshAuth ? refreshAuth() : Promise.resolve()); } catch {}
+        if (cancelled) return;
+        setState({
+          loading: false,
+          error: '',
+          org: data.organization || null,
+          alreadyMember: !!data.already_member,
+        });
+        // If they were already a member (re-visit to invite link),
+        // skip the success screen entirely and bounce to /overview.
+        if (data.already_member) {
+          navigate('/hivemind/app/overview', { replace: true });
+        }
       } catch (err) {
         if (cancelled) return;
         setState({
           loading: false,
           error: err.response?.data?.error || err.message,
           org: null,
+          alreadyMember: false,
         });
       }
     })();
@@ -29,7 +48,7 @@ export default function JoinOrg() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, navigate, refreshAuth]);
 
   return (
     <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4">

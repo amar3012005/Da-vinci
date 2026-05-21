@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Overzicht",
+    "talkToHive": "Praat met HIVE",
+    "connectors": "Connectoren",
+    "memories": "Herinneringen",
+    "graph3d": "Herinneringsgrafiek · 3D",
+    "graph2d": "Herinneringsgrafiek · 2D",
+    "knowledge": "Kennisbank",
+    "webIntel": "Webinzicht",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agentzwerm",
+    "engine": "Engine",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API-sleutels",
+    "evaluation": "Evaluatie",
+    "workspaceAdmin": "Werkruimtebeheer",
+    "playground": "Speelveld",
+    "webAdmin": "Webbeheer",
+    "profile": "Profiel",
+    "billing": "Facturering",
+    "settings": "Instellingen",
+    "signOut": "Afmelden",
+    "groups": {
+      "yourBrain": "Jouw Brein",
+      "aiFeatures": "AI-functies",
+      "advanced": "Geavanceerd",
+      "workspaceAdmin": "Werkruimtebeheer",
+      "account": "Account"
+    },
+    "planLabel": {
+      "free": "Gratis plan",
+      "starter": "Starterplan",
+      "pro": "Pro-plan",
+      "team": "Teamplan",
+      "enterprise": "Enterprise-plan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Zoek herinneringen…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Overzicht",
+      "hivemind.app.memories": "Herinneringen",
+      "hivemind.app.keys": "API-sleutels",
+      "hivemind.app.connectors": "Connectoren",
+      "hivemind.app.profile": "Profiel",
+      "hivemind.app.evaluation": "Evaluatie",
+      "hivemind.app.settings": "Instellingen",
+      "hivemind.app.billing": "Facturering",
+      "hivemind.app.web": "Webintelligentie",
+      "hivemind.app.web-admin": "Webbeheer",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Herinneringsgrafiek",
+      "hivemind.app.engine": "Engine-intelligentie",
+      "hivemind.app.team.members": "Teamleden",
+      "hivemind.app.team.projects": "Teamprojecten",
+      "hivemind.app.audit": "Auditlog",
+      "hivemind.app.admin.users": "Organisatieleden",
+      "hivemind.app.admin.sso": "SSO-configuratie",
+      "hivemind.app.employees": "Digitale medewerkers",
+      "hivemind.app.workspace": "Werkruimtebeheer"
+    }
+  },
+  "overview": {
+    "title": "Overzicht",
+    "subtitle": "Je HIVEMIND geheugenengine in één oogopslag.",
+    "recentMemories": "Recente herinneringen",
+    "noMemories": "Nog geen herinneringen.",
+    "noMemoriesHint": "Verbind een MCP-client om herinneringen te importeren.",
+    "quickSearch": "Snelle zoekopdracht",
+    "quickActions": "Snelle acties",
+    "createApiKey": "API-sleutel maken",
+    "createApiKeyHint": "Genereer sleutels voor MCP-clients",
+    "connectMcp": "MCP-client verbinden",
+    "connectMcpHint": "Koppel Claude, Cursor of aangepaste clients",
+    "browseMemories": "Herinneringen verkennen",
+    "browseMemoriesHint": "Verken en beheer opgeslagen herinneringen",
+    "coreApiHealth": "Core API-status"
+  },
+  "memories": {
+    "title": "Herinneringen",
+    "empty": "Nog geen herinneringen opgeslagen.",
+    "save": "Herinnering opslaan",
+    "delete": "Verwijderen",
+    "tags": "Tags",
+    "type": "Type",
+    "created": "Aangemaakt",
+    "filterPlaceholder": "Filter op tag, type of tekst…"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "voice": "Stem",
+    "assistantName": "Assistentnaam",
+    "appearance": "Uiterlijk",
+    "theme": "Thema",
+    "danger": "Gevarenzone",
+    "deleteAccount": "Account verwijderen"
+  },
+  "connectors": {
+    "title": "Connectoren",
+    "subtitle": "Verbind je gegevensbronnen zodat HIVEMIND context kan ophalen over tools.",
+    "connect": "Verbinden",
+    "connected": "Verbonden",
+    "disconnect": "Ontkoppelen",
+    "needsReconnect": "Moet opnieuw verbinden"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Genel Bakış",
+    "talkToHive": "HIVE ile Konuş",
+    "connectors": "Bağlayıcılar",
+    "memories": "Anılar",
+    "graph3d": "Bellek Grafiği · 3D",
+    "graph2d": "Bellek Grafiği · 2D",
+    "knowledge": "Bilgi Tabanı",
+    "webIntel": "Web İstihbaratı",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Ajan Sürü",
+    "engine": "Motor",
+    "mcpServer": "MCP Sunucusu",
+    "apiKeys": "API Anahtarları",
+    "evaluation": "Değerlendirme",
+    "workspaceAdmin": "Çalışma Alanı Yöneticisi",
+    "playground": "Deneme Alanı",
+    "webAdmin": "Web Yöneticisi",
+    "profile": "Profil",
+    "billing": "Faturalama",
+    "settings": "Ayarlar",
+    "signOut": "Oturumu Kapat",
+    "groups": {
+      "yourBrain": "Senin Beynin",
+      "aiFeatures": "AI Özellikleri",
+      "advanced": "Gelişmiş",
+      "workspaceAdmin": "Çalışma Alanı Yöneticisi",
+      "account": "Hesap"
+    },
+    "planLabel": {
+      "free": "Ücretsiz Plan",
+      "starter": "Başlangıç Planı",
+      "pro": "Pro Plan",
+      "team": "Takım Planı",
+      "enterprise": "Kurumsal Plan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Anıları ara…",
+    "online": "Çevrimiçi",
+    "offline": "Çevrimdışı",
+    "titles": {
+      "hivemind.app.overview": "Genel Bakış",
+      "hivemind.app.memories": "Anılar",
+      "hivemind.app.keys": "API Anahtarları",
+      "hivemind.app.connectors": "Bağlayıcılar",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Değerlendirme",
+      "hivemind.app.settings": "Ayarlar",
+      "hivemind.app.billing": "Faturalama",
+      "hivemind.app.web": "Web İstihbaratı",
+      "hivemind.app.web-admin": "Web Yöneticisi",
+      "hivemind.app.mcp": "MCP Sunucusu",
+      "hivemind.app.graph": "Bellek Grafiği",
+      "hivemind.app.engine": "Motor Zekâsı",
+      "hivemind.app.team.members": "Takım Üyeleri",
+      "hivemind.app.team.projects": "Takım Projeleri",
+      "hivemind.app.audit": "Denetim Günlüğü",
+      "hivemind.app.admin.users": "Org Üyeleri",
+      "hivemind.app.admin.sso": "SSO Yapılandırması",
+      "hivemind.app.employees": "Dijital Çalışanlar",
+      "hivemind.app.workspace": "Çalışma Alanı Yöneticisi"
+    }
+  },
+  "overview": {
+    "title": "Genel Bakış",
+    "subtitle": "HIVEMIND bellek motorunuzun bir bakışı.",
+    "recentMemories": "Son Anılar",
+    "noMemories": "Henüz anı yok.",
+    "noMemoriesHint": "Anı almaya başlamak için bir MCP istemcisi bağlayın.",
+    "quickSearch": "Hızlı Arama",
+    "quickActions": "Hızlı İşlemler",
+    "createApiKey": "API Anahtarı Oluştur",
+    "createApiKeyHint": "MCP istemcileri için anahtar oluştur",
+    "connectMcp": "MCP İstemcisi Bağla",
+    "connectMcpHint": "Claude, Cursor veya özel istemcileri bağlayın",
+    "browseMemories": "Anıları Gözat",
+    "browseMemoriesHint": "Depolanan anıları keşfedin ve yönetin",
+    "coreApiHealth": "Core API Sağlığı"
+  },
+  "memories": {
+    "title": "Anılar",
+    "empty": "Henüz kaydedilmiş anı yok.",
+    "save": "Anıyı kaydet",
+    "delete": "Sil",
+    "tags": "Etiketler",
+    "type": "Tür",
+    "created": "Oluşturulma",
+    "filterPlaceholder": "Etiket, tür veya metne göre filtrele…"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "language": "Dil",
+    "voice": "Ses",
+    "assistantName": "Asistan adı",
+    "appearance": "Görünüm",
+    "theme": "Tema",
+    "danger": "Tehlike bölgesi",
+    "deleteAccount": "Hesabı sil"
+  },
+  "connectors": {
+    "title": "Bağlayıcılar",
+    "subtitle": "Veri kaynaklarınızı bağlayın, böylece HIVEMIND araçlar arasında bağlamı hatırlayabilir.",
+    "connect": "Bağlan",
+    "connected": "Bağlandı",
+    "disconnect": "Bağlantıyı Kes",
+    "needsReconnect": "Yeniden bağlanmalı"
+  }
+}

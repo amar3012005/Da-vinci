@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Producto",
+    "features": "Características",
+    "pricing": "Precios",
+    "docs": "Documentación",
+    "about": "Acerca de",
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "tryFree": "Prueba gratis"
+  },
+  "hero": {
+    "title": "La memoria perfecta de tu IA.",
+    "subtitle": "HIVEMIND convierte LLMs sin estado en asistentes conscientes del contexto con recuerdo perfecto en cada sesión, máquina y conversación.",
+    "ctaPrimary": "Prueba HIVEMIND gratis",
+    "ctaSecondary": "Leer la documentación"
+  },
+  "footer": {
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "contact": "Contacto",
+    "sovereign": "UE Soberana · Frankfurt, Alemania"
+  }
+}

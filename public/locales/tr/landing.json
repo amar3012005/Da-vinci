@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Ürün",
+    "features": "Özellikler",
+    "pricing": "Fiyatlandırma",
+    "docs": "Dokümanlar",
+    "about": "Hakkında",
+    "signIn": "Giriş yap",
+    "signUp": "Kaydol",
+    "tryFree": "Ücretsiz dene"
+  },
+  "hero": {
+    "title": "Yapay zekânızın mükemmel hafızası.",
+    "subtitle": "HIVEMIND, durumsuz LLM'leri her oturum, cihaz ve konuşmada mükemmel hatırlama yeteneği olan bağlam‑farkındalıklı asistanlara dönüştürür.",
+    "ctaPrimary": "HIVEMIND'ı ücretsiz dene",
+    "ctaSecondary": "Dokümanları oku"
+  },
+  "footer": {
+    "privacy": "Gizlilik",
+    "terms": "Şartlar",
+    "contact": "İletişim",
+    "sovereign": "AB Egemenliği · Frankfurt, Almanya"
+  }
+}

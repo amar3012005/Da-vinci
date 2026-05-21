@@ -1,0 +1,37 @@
+{
+  "language": "Language",
+  "languageHeader": "Choose language",
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close",
+    "back": "Back",
+    "continue": "Continue",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "copy": "Copy",
+    "copied": "Copied",
+    "loading": "Loading…",
+    "submit": "Submit",
+    "send": "Send",
+    "retry": "Try again",
+    "viewAll": "View all",
+    "learnMore": "Learn more"
+  },
+  "states": {
+    "online": "Online",
+    "offline": "Offline",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "pending": "Pending",
+    "error": "Error",
+    "success": "Success"
+  }
+}

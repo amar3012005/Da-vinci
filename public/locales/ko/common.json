@@ -1,0 +1,37 @@
+{
+  "language": "언어",
+  "languageHeader": "언어 선택",
+  "actions": {
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "edit": "편집",
+    "create": "생성",
+    "update": "업데이트",
+    "close": "닫기",
+    "back": "뒤로",
+    "continue": "계속",
+    "search": "검색",
+    "filter": "필터",
+    "refresh": "새로고침",
+    "connect": "연결",
+    "disconnect": "연결 해제",
+    "copy": "복사",
+    "copied": "복사됨",
+    "loading": "로드 중…",
+    "submit": "제출",
+    "send": "보내기",
+    "retry": "다시 시도",
+    "viewAll": "전체 보기",
+    "learnMore": "자세히 보기"
+  },
+  "states": {
+    "online": "온라인",
+    "offline": "오프라인",
+    "connected": "연결됨",
+    "disconnected": "연결 끊김",
+    "pending": "대기 중",
+    "error": "오류",
+    "success": "성공"
+  }
+}

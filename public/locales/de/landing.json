@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produkt",
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "docs": "Dokumentation",
+    "about": "Über",
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "tryFree": "Kostenlos testen"
+  },
+  "hero": {
+    "title": "Das perfekte Gedächtnis deiner KI.",
+    "subtitle": "HIVEMIND verwandelt zustandslose LLMs in kontextbewusste Assistenten mit perfektem Erinnerungsvermögen über jede Sitzung, jedes Gerät und jedes Gespräch.",
+    "ctaPrimary": "HIVEMIND kostenlos testen",
+    "ctaSecondary": "Dokumentation lesen"
+  },
+  "footer": {
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "contact": "Kontakt",
+    "sovereign": "EU Sovereign · Frankfurt, Deutschland"
+  }
+}

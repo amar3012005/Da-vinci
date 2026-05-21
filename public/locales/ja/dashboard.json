@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "概要",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "コネクタ",
+    "memories": "メモリ",
+    "graph3d": "メモリグラフ · 3D",
+    "graph2d": "メモリグラフ · 2D",
+    "knowledge": "ナレッジベース",
+    "webIntel": "Web インテリ",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "エージェントスウォーム",
+    "engine": "エンジン",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API キー",
+    "evaluation": "評価",
+    "workspaceAdmin": "ワークスペース管理",
+    "playground": "プレイグラウンド",
+    "webAdmin": "Web 管理",
+    "profile": "プロフィール",
+    "billing": "請求",
+    "settings": "設定",
+    "signOut": "サインアウト",
+    "groups": {
+      "yourBrain": "あなたのブレイン",
+      "aiFeatures": "AI 機能",
+      "advanced": "高度な設定",
+      "workspaceAdmin": "ワークスペース管理",
+      "account": "アカウント"
+    },
+    "planLabel": {
+      "free": "無料プラン",
+      "starter": "スタータープラン",
+      "pro": "プロプラン",
+      "team": "チームプラン",
+      "enterprise": "エンタープライズプラン"
+    }
+  },
+  "topbar": {
+    "searchMemories": "メモリ検索…",
+    "online": "オンライン",
+    "offline": "オフライン",
+    "titles": {
+      "hivemind.app.overview": "概要",
+      "hivemind.app.memories": "メモリ",
+      "hivemind.app.keys": "API キー",
+      "hivemind.app.connectors": "コネクタ",
+      "hivemind.app.profile": "プロフィール",
+      "hivemind.app.evaluation": "評価",
+      "hivemind.app.settings": "設定",
+      "hivemind.app.billing": "請求",
+      "hivemind.app.web": "Web インテリジェンス",
+      "hivemind.app.web-admin": "Web 管理",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "メモリグラフ",
+      "hivemind.app.engine": "エンジンインテリジェンス",
+      "hivemind.app.team.members": "チームメンバー",
+      "hivemind.app.team.projects": "チームプロジェクト",
+      "hivemind.app.audit": "監査ログ",
+      "hivemind.app.admin.users": "組織メンバー",
+      "hivemind.app.admin.sso": "SSO 設定",
+      "hivemind.app.employees": "デジタル従業員",
+      "hivemind.app.workspace": "ワークスペース管理"
+    }
+  },
+  "overview": {
+    "title": "概要",
+    "subtitle": "HIVEMIND メモリエンジンを一目で確認。",
+    "recentMemories": "最近のメモリ",
+    "noMemories": "まだメモリがありません。",
+    "noMemoriesHint": "MCP クライアントを接続してメモリの取り込みを開始してください。",
+    "quickSearch": "クイック検索",
+    "quickActions": "クイックアクション",
+    "createApiKey": "API キーを作成",
+    "createApiKeyHint": "MCP クライアント用のキーを生成",
+    "connectMcp": "MCP クライアントを接続",
+    "connectMcpHint": "Claude、Cursor、またはカスタムクライアントをリンク",
+    "browseMemories": "メモリを閲覧",
+    "browseMemoriesHint": "保存されたメモリを探索・管理",
+    "coreApiHealth": "Core API ヘルス"
+  },
+  "memories": {
+    "title": "メモリ",
+    "empty": "まだ保存されたメモリはありません。",
+    "save": "メモリを保存",
+    "delete": "削除",
+    "tags": "タグ",
+    "type": "タイプ",
+    "created": "作成日",
+    "filterPlaceholder": "タグ、タイプ、テキストでフィルタ…"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "voice": "音声",
+    "assistantName": "アシスタント名",
+    "appearance": "外観",
+    "theme": "テーマ",
+    "danger": "危険ゾーン",
+    "deleteAccount": "アカウント削除"
+  },
+  "connectors": {
+    "title": "コネクタ",
+    "subtitle": "データソースを接続し、HIVEMIND がツール間でコンテキストを呼び出せるようにします。",
+    "connect": "接続",
+    "connected": "接続済み",
+    "disconnect": "切断",
+    "needsReconnect": "再接続が必要"
+  }
+}

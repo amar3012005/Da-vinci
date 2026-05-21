@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "概览",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "连接器",
+    "memories": "记忆",
+    "graph3d": "记忆图 · 3D",
+    "graph2d": "记忆图 · 2D",
+    "knowledge": "知识库",
+    "webIntel": "网络情报",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "代理群",
+    "engine": "引擎",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API Keys",
+    "evaluation": "评估",
+    "workspaceAdmin": "工作区管理员",
+    "playground": "实验场",
+    "webAdmin": "Web Admin",
+    "profile": "个人资料",
+    "billing": "账单",
+    "settings": "设置",
+    "signOut": "退出登录",
+    "groups": {
+      "yourBrain": "你的大脑",
+      "aiFeatures": "AI 功能",
+      "advanced": "高级",
+      "workspaceAdmin": "工作区管理员",
+      "account": "账户"
+    },
+    "planLabel": {
+      "free": "免费计划",
+      "starter": "入门计划",
+      "pro": "专业计划",
+      "team": "团队计划",
+      "enterprise": "企业计划"
+    }
+  },
+  "topbar": {
+    "searchMemories": "搜索记忆…",
+    "online": "在线",
+    "offline": "离线",
+    "titles": {
+      "hivemind.app.overview": "概览",
+      "hivemind.app.memories": "记忆",
+      "hivemind.app.keys": "API Keys",
+      "hivemind.app.connectors": "连接器",
+      "hivemind.app.profile": "个人资料",
+      "hivemind.app.evaluation": "评估",
+      "hivemind.app.settings": "设置",
+      "hivemind.app.billing": "账单",
+      "hivemind.app.web": "网络情报",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "记忆图",
+      "hivemind.app.engine": "引擎智能",
+      "hivemind.app.team.members": "团队成员",
+      "hivemind.app.team.projects": "团队项目",
+      "hivemind.app.audit": "审计日志",
+      "hivemind.app.admin.users": "组织成员",
+      "hivemind.app.admin.sso": "SSO 配置",
+      "hivemind.app.employees": "数字员工",
+      "hivemind.app.workspace": "工作区管理员"
+    }
+  },
+  "overview": {
+    "title": "概览",
+    "subtitle": "一目了然的 HIVEMIND 记忆引擎。",
+    "recentMemories": "最近的记忆",
+    "noMemories": "暂无记忆。",
+    "noMemoriesHint": "连接 MCP 客户端以开始摄取记忆。",
+    "quickSearch": "快速搜索",
+    "quickActions": "快速操作",
+    "createApiKey": "创建 API Key",
+    "createApiKeyHint": "为 MCP 客户端生成密钥",
+    "connectMcp": "连接 MCP 客户端",
+    "connectMcpHint": "链接 Claude、Cursor 或自定义客户端",
+    "browseMemories": "浏览记忆",
+    "browseMemoriesHint": "探索并管理已存储的记忆",
+    "coreApiHealth": "核心 API 健康"
+  },
+  "memories": {
+    "title": "记忆",
+    "empty": "暂无已保存的记忆。",
+    "save": "保存记忆",
+    "delete": "删除",
+    "tags": "标签",
+    "type": "类型",
+    "created": "创建时间",
+    "filterPlaceholder": "按标签、类型或文本过滤…"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "voice": "语音",
+    "assistantName": "助手名称",
+    "appearance": "外观",
+    "theme": "主题",
+    "danger": "危险区域",
+    "deleteAccount": "删除账户"
+  },
+  "connectors": {
+    "title": "连接器",
+    "subtitle": "连接你的数据源，让 HIVEMIND 能在工具间调用上下文。",
+    "connect": "连接",
+    "connected": "已连接",
+    "disconnect": "断开连接",
+    "needsReconnect": "需要重新连接"
+  }
+}

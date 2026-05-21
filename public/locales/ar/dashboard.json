@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "نظرة عامة",
+    "talkToHive": "تحدث إلى HIVE",
+    "connectors": "الموصلات",
+    "memories": "الذكريات",
+    "graph3d": "مخطط الذاكرة · 3D",
+    "graph2d": "مخطط الذاكرة · 2D",
+    "knowledge": "قاعدة المعرفة",
+    "webIntel": "معلومات الويب",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "سرب الوكيل",
+    "engine": "المحرك",
+    "mcpServer": "خادم MCP",
+    "apiKeys": "مفاتيح API",
+    "evaluation": "التقييم",
+    "workspaceAdmin": "إدارة مساحة العمل",
+    "playground": "ملعب",
+    "webAdmin": "إدارة الويب",
+    "profile": "الملف الشخصي",
+    "billing": "الفوترة",
+    "settings": "الإعدادات",
+    "signOut": "تسجيل الخروج",
+    "groups": {
+      "yourBrain": "دماغك",
+      "aiFeatures": "ميزات الذكاء الاصطناعي",
+      "advanced": "متقدم",
+      "workspaceAdmin": "إدارة مساحة العمل",
+      "account": "الحساب"
+    },
+    "planLabel": {
+      "free": "الخطة المجانية",
+      "starter": "خطة البداية",
+      "pro": "خطة المحترفين",
+      "team": "خطة الفريق",
+      "enterprise": "خطة المؤسسة"
+    }
+  },
+  "topbar": {
+    "searchMemories": "بحث في الذكريات…",
+    "online": "متصل",
+    "offline": "غير متصل",
+    "titles": {
+      "hivemind.app.overview": "نظرة عامة",
+      "hivemind.app.memories": "الذكريات",
+      "hivemind.app.keys": "مفاتيح API",
+      "hivemind.app.connectors": "الموصلات",
+      "hivemind.app.profile": "الملف الشخصي",
+      "hivemind.app.evaluation": "التقييم",
+      "hivemind.app.settings": "الإعدادات",
+      "hivemind.app.billing": "الفوترة",
+      "hivemind.app.web": "الذكاء الويب",
+      "hivemind.app.web-admin": "إدارة الويب",
+      "hivemind.app.mcp": "خادم MCP",
+      "hivemind.app.graph": "مخطط الذاكرة",
+      "hivemind.app.engine": "ذكاء المحرك",
+      "hivemind.app.team.members": "أعضاء الفريق",
+      "hivemind.app.team.projects": "مشاريع الفريق",
+      "hivemind.app.audit": "سجل التدقيق",
+      "hivemind.app.admin.users": "أعضاء المؤسسة",
+      "hivemind.app.admin.sso": "إعدادات SSO",
+      "hivemind.app.employees": "الموظفون الرقميون",
+      "hivemind.app.workspace": "إدارة مساحة العمل"
+    }
+  },
+  "overview": {
+    "title": "نظرة عامة",
+    "subtitle": "محرك الذاكرة HIVEMIND الخاص بك في لمحة.",
+    "recentMemories": "الذكريات الأخيرة",
+    "noMemories": "لا توجد ذكريات بعد.",
+    "noMemoriesHint": "قم بربط عميل MCP لبدء استيعاب الذكريات.",
+    "quickSearch": "بحث سريع",
+    "quickActions": "إجراءات سريعة",
+    "createApiKey": "إنشاء مفتاح API",
+    "createApiKeyHint": "إنشاء مفاتيح لعملاء MCP",
+    "connectMcp": "ربط عميل MCP",
+    "connectMcpHint": "ربط Claude أو Cursor أو عملاء مخصصين",
+    "browseMemories": "تصفح الذكريات",
+    "browseMemoriesHint": "استكشف وأدر الذكريات المخزنة",
+    "coreApiHealth": "صحة Core API"
+  },
+  "memories": {
+    "title": "الذكريات",
+    "empty": "لم يتم حفظ أي ذكريات بعد.",
+    "save": "حفظ الذاكرة",
+    "delete": "حذف",
+    "tags": "الوسوم",
+    "type": "النوع",
+    "created": "تم الإنشاء",
+    "filterPlaceholder": "تصفية حسب الوسم أو النوع أو النص…"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "language": "اللغة",
+    "voice": "الصوت",
+    "assistantName": "اسم المساعد",
+    "appearance": "المظهر",
+    "theme": "السمة",
+    "danger": "منطقة الخطر",
+    "deleteAccount": "حذف الحساب"
+  },
+  "connectors": {
+    "title": "الموصلات",
+    "subtitle": "ربط مصادر البيانات حتى يتمكن HIVEMIND من استرجاع السياق عبر الأدوات.",
+    "connect": "ربط",
+    "connected": "متصل",
+    "disconnect": "قطع الاتصال",
+    "needsReconnect": "يحتاج إلى إعادة ربط"
+  }
+}

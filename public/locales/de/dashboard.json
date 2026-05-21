@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Übersicht",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Konnektoren",
+    "memories": "Erinnerungen",
+    "graph3d": "Memory Graph · 3D",
+    "graph2d": "Memory Graph · 2D",
+    "knowledge": "Wissensdatenbank",
+    "webIntel": "Web-Intelligenz",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Engine",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API-Schlüssel",
+    "evaluation": "Bewertung",
+    "workspaceAdmin": "Workspace Admin",
+    "playground": "Playground",
+    "webAdmin": "Web Admin",
+    "profile": "Profil",
+    "billing": "Abrechnung",
+    "settings": "Einstellungen",
+    "signOut": "Abmelden",
+    "groups": {
+      "yourBrain": "Dein Gehirn",
+      "aiFeatures": "KI‑Funktionen",
+      "advanced": "Erweitert",
+      "workspaceAdmin": "Workspace Admin",
+      "account": "Konto"
+    },
+    "planLabel": {
+      "free": "Kostenloser Plan",
+      "starter": "Starter‑Plan",
+      "pro": "Pro‑Plan",
+      "team": "Team‑Plan",
+      "enterprise": "Enterprise‑Plan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Erinnerungen suchen…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Übersicht",
+      "hivemind.app.memories": "Erinnerungen",
+      "hivemind.app.keys": "API-Schlüssel",
+      "hivemind.app.connectors": "Konnektoren",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Bewertung",
+      "hivemind.app.settings": "Einstellungen",
+      "hivemind.app.billing": "Abrechnung",
+      "hivemind.app.web": "Web‑Intelligenz",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Memory Graph",
+      "hivemind.app.engine": "Engine‑Intelligenz",
+      "hivemind.app.team.members": "Teammitglieder",
+      "hivemind.app.team.projects": "Teamprojekte",
+      "hivemind.app.audit": "Audit‑Log",
+      "hivemind.app.admin.users": "Org‑Mitglieder",
+      "hivemind.app.admin.sso": "SSO‑Konfiguration",
+      "hivemind.app.employees": "Digitale Mitarbeitende",
+      "hivemind.app.workspace": "Workspace Admin"
+    }
+  },
+  "overview": {
+    "title": "Übersicht",
+    "subtitle": "Deine HIVEMIND‑Speicher‑Engine auf einen Blick.",
+    "recentMemories": "Neueste Erinnerungen",
+    "noMemories": "Noch keine Erinnerungen.",
+    "noMemoriesHint": "Verbinde einen MCP‑Client, um Erinnerungen zu ingestieren.",
+    "quickSearch": "Schnellsuche",
+    "quickActions": "Schnellaktionen",
+    "createApiKey": "API‑Schlüssel erstellen",
+    "createApiKeyHint": "Schlüssel für MCP‑Clients generieren",
+    "connectMcp": "MCP‑Client verbinden",
+    "connectMcpHint": "Claude, Cursor oder eigene Clients verknüpfen",
+    "browseMemories": "Erinnerungen durchsuchen",
+    "browseMemoriesHint": "Gespeicherte Erinnerungen erkunden und verwalten",
+    "coreApiHealth": "Core API‑Gesundheit"
+  },
+  "memories": {
+    "title": "Erinnerungen",
+    "empty": "Noch keine Erinnerungen gespeichert.",
+    "save": "Erinnerung speichern",
+    "delete": "Löschen",
+    "tags": "Tags",
+    "type": "Typ",
+    "created": "Erstellt",
+    "filterPlaceholder": "Nach Tag, Typ oder Text filtern…"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "voice": "Stimme",
+    "assistantName": "Assistentenname",
+    "appearance": "Erscheinungsbild",
+    "theme": "Design",
+    "danger": "Gefahrenbereich",
+    "deleteAccount": "Konto löschen"
+  },
+  "connectors": {
+    "title": "Konnektoren",
+    "subtitle": "Verbinde deine Datenquellen, damit HIVEMIND Kontext über Tools hinweg abrufen kann.",
+    "connect": "Verbinden",
+    "connected": "Verbunden",
+    "disconnect": "Trennen",
+    "needsReconnect": "Erneutes Verbinden nötig"
+  }
+}

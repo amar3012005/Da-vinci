@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produkt",
+    "features": "Funkcje",
+    "pricing": "Cennik",
+    "docs": "Dokumentacja",
+    "about": "O nas",
+    "signIn": "Zaloguj się",
+    "signUp": "Zarejestruj się",
+    "tryFree": "Wypróbuj za darmo"
+  },
+  "hero": {
+    "title": "Idealna pamięć Twojej AI.",
+    "subtitle": "HIVEMIND zamienia bezstanowe modele LLM w asystentów świadomych kontekstu z doskonałym zapamiętywaniem w każdej sesji, na każdym urządzeniu i w każdej rozmowie.",
+    "ctaPrimary": "Wypróbuj HIVEMIND za darmo",
+    "ctaSecondary": "Przeczytaj dokumentację"
+  },
+  "footer": {
+    "privacy": "Prywatność",
+    "terms": "Warunki",
+    "contact": "Kontakt",
+    "sovereign": "UE Suwerenne · Frankfurt, Niemcy"
+  }
+}

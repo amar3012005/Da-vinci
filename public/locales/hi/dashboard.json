@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "अवलोकन",
+    "talkToHive": "HIVE से बात करें",
+    "connectors": "कनेक्टर",
+    "memories": "स्मृतियाँ",
+    "graph3d": "स्मृति ग्राफ · 3D",
+    "graph2d": "स्मृति ग्राफ · 2D",
+    "knowledge": "ज्ञान आधार",
+    "webIntel": "वेब इंटेल",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "एजेंट स्वॉर्म",
+    "engine": "इंजन",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API कुंजियाँ",
+    "evaluation": "मूल्यांकन",
+    "workspaceAdmin": "वर्कस्पेस व्यवस्थापक",
+    "playground": "प्लेग्राउंड",
+    "webAdmin": "वेब व्यवस्थापक",
+    "profile": "प्रोफ़ाइल",
+    "billing": "बिलिंग",
+    "settings": "सेटिंग्स",
+    "signOut": "साइन आउट",
+    "groups": {
+      "yourBrain": "आपका मस्तिष्क",
+      "aiFeatures": "AI सुविधाएँ",
+      "advanced": "उन्नत",
+      "workspaceAdmin": "वर्कस्पेस व्यवस्थापक",
+      "account": "खाता"
+    },
+    "planLabel": {
+      "free": "नि:शुल्क योजना",
+      "starter": "स्टार्टर योजना",
+      "pro": "प्रो योजना",
+      "team": "टीम योजना",
+      "enterprise": "एंटरप्राइज़ योजना"
+    }
+  },
+  "topbar": {
+    "searchMemories": "स्मृतियों की खोज…",
+    "online": "ऑनलाइन",
+    "offline": "ऑफ़लाइन",
+    "titles": {
+      "hivemind.app.overview": "अवलोकन",
+      "hivemind.app.memories": "स्मृतियाँ",
+      "hivemind.app.keys": "API कुंजियाँ",
+      "hivemind.app.connectors": "कनेक्टर",
+      "hivemind.app.profile": "प्रोफ़ाइल",
+      "hivemind.app.evaluation": "मूल्यांकन",
+      "hivemind.app.settings": "सेटिंग्स",
+      "hivemind.app.billing": "बिलिंग",
+      "hivemind.app.web": "वेब इंटेलिजेंस",
+      "hivemind.app.web-admin": "वेब व्यवस्थापक",
+      "hivemind.app.mcp": "MCP सर्वर",
+      "hivemind.app.graph": "स्मृति ग्राफ",
+      "hivemind.app.engine": "इंजन इंटेलिजेंस",
+      "hivemind.app.team.members": "टीम सदस्य",
+      "hivemind.app.team.projects": "टीम प्रोजेक्ट्स",
+      "hivemind.app.audit": "ऑडिट लॉग",
+      "hivemind.app.admin.users": "संगठन सदस्य",
+      "hivemind.app.admin.sso": "SSO कॉन्फ़िगरेशन",
+      "hivemind.app.employees": "डिजिटल कर्मचारी",
+      "hivemind.app.workspace": "वर्कस्पेस व्यवस्थापक"
+    }
+  },
+  "overview": {
+    "title": "अवलोकन",
+    "subtitle": "आपका HIVEMIND मेमोरी इंजन एक नज़र में।",
+    "recentMemories": "हालिया स्मृतियाँ",
+    "noMemories": "अभी तक कोई स्मृति नहीं।",
+    "noMemoriesHint": "स्मृतियों को इकट्ठा करने के लिए MCP क्लाइंट कनेक्ट करें।",
+    "quickSearch": "त्वरित खोज",
+    "quickActions": "त्वरित कार्य",
+    "createApiKey": "API कुंजी बनाएं",
+    "createApiKeyHint": "MCP क्लाइंट्स के लिए कुंजियाँ उत्पन्न करें",
+    "connectMcp": "MCP क्लाइंट कनेक्ट करें",
+    "connectMcpHint": "Claude, Cursor या कस्टम क्लाइंट्स को लिंक करें",
+    "browseMemories": "स्मृतियों को देखें",
+    "browseMemoriesHint": "संग्रहीत स्मृतियों का अन्वेषण और प्रबंधन करें",
+    "coreApiHealth": "कोर API स्वास्थ्य"
+  },
+  "memories": {
+    "title": "स्मृतियाँ",
+    "empty": "अभी तक कोई स्मृति सहेजी नहीं गई।",
+    "save": "स्मृति सहेजें",
+    "delete": "हटाएँ",
+    "tags": "टैग",
+    "type": "प्रकार",
+    "created": "निर्मित",
+    "filterPlaceholder": "टैग, प्रकार या टेक्स्ट से फ़िल्टर करें…"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "language": "भाषा",
+    "voice": "वॉइस",
+    "assistantName": "सहायक नाम",
+    "appearance": "दिखावट",
+    "theme": "थीम",
+    "danger": "खतरे का क्षेत्र",
+    "deleteAccount": "खाता हटाएँ"
+  },
+  "connectors": {
+    "title": "कनेक्टर",
+    "subtitle": "अपने डेटा स्रोत कनेक्ट करें ताकि HIVEMIND टूल्स में संदर्भ याद रख सके।",
+    "connect": "कनेक्ट",
+    "connected": "कनेक्टेड",
+    "disconnect": "डिस्कनेक्ट",
+    "needsReconnect": "पुनः कनेक्शन आवश्यक"
+  }
+}

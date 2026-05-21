@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "製品",
+    "features": "機能",
+    "pricing": "料金",
+    "docs": "ドキュメント",
+    "about": "概要",
+    "signIn": "サインイン",
+    "signUp": "サインアップ",
+    "tryFree": "無料で試す"
+  },
+  "hero": {
+    "title": "AIの完璧な記憶。",
+    "subtitle": "HIVEMIND はステートレスな LLM を、すべてのセッション・デバイス・会話で完璧に記憶できるコンテキスト対応アシスタントに変えます。",
+    "ctaPrimary": "HIVEMIND を無料で試す",
+    "ctaSecondary": "ドキュメントを見る"
+  },
+  "footer": {
+    "privacy": "プライバシー",
+    "terms": "利用規約",
+    "contact": "お問い合わせ",
+    "sovereign": "EU 主権 · ドイツ・フランクフルト"
+  }
+}

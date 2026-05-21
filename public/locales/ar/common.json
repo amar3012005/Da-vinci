@@ -1,0 +1,37 @@
+{
+  "language": "اللغة",
+  "languageHeader": "اختر اللغة",
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تحرير",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "continue": "متابعة",
+    "search": "بحث",
+    "filter": "تصفية",
+    "refresh": "تحديث",
+    "connect": "اتصال",
+    "disconnect": "قطع الاتصال",
+    "copy": "نسخ",
+    "copied": "تم النسخ",
+    "loading": "جارٍ التحميل…",
+    "submit": "إرسال",
+    "send": "إرسال",
+    "retry": "حاول مرة أخرى",
+    "viewAll": "عرض الكل",
+    "learnMore": "اعرف المزيد"
+  },
+  "states": {
+    "online": "متصل",
+    "offline": "غير متصل",
+    "connected": "متصل",
+    "disconnected": "غير متصل",
+    "pending": "قيد الانتظار",
+    "error": "خطأ",
+    "success": "نجاح"
+  }
+}

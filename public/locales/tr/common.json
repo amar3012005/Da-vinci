@@ -1,0 +1,37 @@
+{
+  "language": "Dil",
+  "languageHeader": "Dil seçin",
+  "actions": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "create": "Oluştur",
+    "update": "Güncelle",
+    "close": "Kapat",
+    "back": "Geri",
+    "continue": "Devam et",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "refresh": "Yenile",
+    "connect": "Bağlan",
+    "disconnect": "Bağlantıyı kes",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "loading": "Yükleniyor…",
+    "submit": "Gönder",
+    "send": "Gönder",
+    "retry": "Tekrar dene",
+    "viewAll": "Hepsini göster",
+    "learnMore": "Daha fazla bilgi"
+  },
+  "states": {
+    "online": "Çevrimiçi",
+    "offline": "Çevrim dışı",
+    "connected": "Bağlı",
+    "disconnected": "Bağlantı kesildi",
+    "pending": "Beklemede",
+    "error": "Hata",
+    "success": "Başarılı"
+  }
+}
