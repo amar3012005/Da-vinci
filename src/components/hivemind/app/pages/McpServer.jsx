@@ -1095,22 +1095,21 @@ export default function McpServer() {
                 // Both spawn the same Node CLI (packages/cli) that writes the
                 // canonical config path for each host app and hits /api/mcp
                 // to verify the endpoint before exiting.
-                config: `# ── Easiest (curl|bash shim) ──
-curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh \\
-  | HIVEMIND_API_KEY=hmk_live_<key> bash
+                config: `# ── Easiest (browser sign-in — no API key needed) ──
+# Opens your browser, you click "Sign in", CLI receives the key on
+# a localhost callback and writes the config. Same UX as gh / vercel login.
+curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh | bash
 
-# ── Or via npx directly (tarball URL — works without npm publish) ──
-HIVEMIND_API_KEY=hmk_live_<key> \\
-  npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz setup
+# ── Pick a specific client (browser still opens) ──
+curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh | bash -s -- claude-code
+# replace with: claude-desktop | cursor | vscode | codex | antigravity
 
-# ── Pick a specific client (non-interactive) ──
+# ── Or skip browser, paste a key (CI / scripted) ──
 HIVEMIND_API_KEY=hmk_live_<key> \\
   npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz setup claude-code
-# replace claude-code with: claude-desktop | cursor | vscode | codex | antigravity
 
-# ── Just verify the endpoint reaches HIVEMIND ──
-HIVEMIND_API_KEY=hmk_live_<key> \\
-  npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz verify
+# ── gh-style: just sign in, print the key ──
+npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz login
 
 # Once @hivemind/cli is published to npm, all of the above shorten to:
 #   npx -y @hivemind/cli setup`,
