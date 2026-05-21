@@ -271,6 +271,28 @@ export default function WebStudio() {
   const [pastOpen, setPastOpen] = useState(false);
   const [previewJob, setPreviewJob] = useState(null);
 
+  // Persisted save snapshots so the graph-tree summary survives modal
+  // close + page reload. Keyed by jobId. Hydrated from localStorage on
+  // mount; mutations flush back synchronously.
+  const SAVES_KEY = 'hivemind:web-research-saves:v1';
+  const [savedByJob, setSavedByJob] = useState(() => {
+    if (typeof window === 'undefined') return {};
+    try { return JSON.parse(window.localStorage.getItem(SAVES_KEY) || '{}'); }
+    catch { return {}; }
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(SAVES_KEY, JSON.stringify(savedByJob)); }
+    catch { /* storage may be disabled in private mode */ }
+  }, [savedByJob]);
+
+  const recordSave = useCallback((jobId, snapshot) => {
+    setSavedByJob(prev => ({
+      ...prev,
+      [jobId]: { ...snapshot, savedAt: snapshot.savedAt || Date.now() },
+    }));
+  }, []);
+
   const researchJobs = useMemo(
     () => jobList.filter(j => j.type === 'research' && (j.status === 'succeeded' || j.status === 'failed')),
     [jobList]
@@ -316,6 +338,7 @@ export default function WebStudio() {
             jobs={researchJobs}
             onPick={setPreviewJob}
             locked={featureLocked}
+            savedByJob={savedByJob}
           />
         )}
 
@@ -430,6 +453,8 @@ export default function WebStudio() {
         {previewJob && (
           <ResearchPreviewModal
             job={previewJob}
+            savedSnapshot={savedByJob[previewJob.id] || null}
+            onSaved={(snap) => recordSave(previewJob.id, snap)}
             onClose={() => setPreviewJob(null)}
           />
         )}
@@ -467,7 +492,7 @@ function LiveResearchPanel({ job }) {
 
 /* ─── Past research toggle + list ────────────────────────────────── */
 
-function PastResearchPanel({ open, onToggle, jobs, onPick, locked }) {
+function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = {} }) {
   if (locked) return <EmptyState locked={true} />;
 
   return (
@@ -507,6 +532,7 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked }) {
                   const results = Array.isArray(job.results) ? job.results : [];
                   const title = deriveJobTitle(job, results);
                   const sourceCount = results[0]?.sources?.length || 0;
+                  const saved = savedByJob[job.id];
                   return (
                     <button
                       key={job.id}
@@ -515,13 +541,21 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked }) {
                     >
                       <Sparkles size={13} className="text-violet-500 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</span>
+                          {saved && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                              <CheckCircle2 size={8} /> saved
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-[#a3a3a3]">
                           <StatusBadge status={job.status} polling={false} />
                           <span>·</span>
                           <span>{relTime(job.createdAt || job.created_at)}</span>
                           {sourceCount > 0 && <><span>·</span><span>{sourceCount} sources</span></>}
                           {job.duration_ms != null && <><span>·</span><span>{formatMs(job.duration_ms)}</span></>}
+                          {saved && <><span>·</span><span>{(saved.promotedMemoryIds?.length || 0)} memories</span></>}
                         </div>
                       </div>
                       <ArrowUpRight size={12} className="text-[#a3a3a3] shrink-0" />
@@ -546,17 +580,50 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked }) {
 
 /* ─── Past research preview modal (with one-click save) ──────────── */
 
-function ResearchPreviewModal({ job, onClose }) {
+function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
   const result = Array.isArray(job.results) ? job.results[0] : null;
   const title = deriveJobTitle(job, job.results || []);
 
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(null); // { documentId, segmentCount, promotedCount, promotedMemoryIds }
+  // Hydrate from persisted snapshot so re-opens skip the prompt and
+  // jump straight to the graph-tree view.
+  const [saved, setSaved] = useState(savedSnapshot?.upload || null);
   const [saveErr, setSaveErr] = useState(null);
-  const [relations, setRelations] = useState({}); // memoryId -> relations payload
+  const [relations, setRelations] = useState(savedSnapshot?.relations || {});
+
+  // Re-sync if the parent's snapshot changes while the modal stays open
+  // (e.g. another save happened in a peer tab).
+  useEffect(() => {
+    if (savedSnapshot?.upload) setSaved(savedSnapshot.upload);
+    if (savedSnapshot?.relations) setRelations(savedSnapshot.relations);
+  }, [savedSnapshot]);
+
+  // Refresh relations on open if we have promoted ids but the relations
+  // map is stale (e.g. saved in another session / before relations RPC
+  // was implemented). Best-effort.
+  useEffect(() => {
+    const ids = saved?.promotedMemoryIds || [];
+    if (!ids.length) return;
+    const missing = ids.filter(mid => !relations[mid]);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const next = { ...relations };
+      await Promise.all(missing.slice(0, 8).map(async (mid) => {
+        try { next[mid] = await apiClient.getMemoryRelations(mid); }
+        catch { /* silent */ }
+      }));
+      if (!cancelled) {
+        setRelations(next);
+        onSaved?.({ upload: saved, relations: next });
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved?.documentId]);
 
   async function handleSaveToHivemind() {
-    if (!result) return;
+    if (!result || saved) return;
     setSaving(true); setSaveErr(null);
     try {
       const resp = await apiClient.saveResearchToKnowledge({
@@ -573,11 +640,11 @@ function ResearchPreviewModal({ job, onClose }) {
       const ids = Array.isArray(resp.promotedMemoryIds) ? resp.promotedMemoryIds.slice(0, 8) : [];
       const relMap = {};
       await Promise.all(ids.map(async (mid) => {
-        try {
-          relMap[mid] = await apiClient.getMemoryRelations(mid);
-        } catch { /* silent */ }
+        try { relMap[mid] = await apiClient.getMemoryRelations(mid); }
+        catch { /* silent */ }
       }));
       setRelations(relMap);
+      onSaved?.({ upload: resp, relations: relMap, savedAt: Date.now() });
     } catch (e) {
       setSaveErr(e.response?.data?.error || e.message);
     } finally {

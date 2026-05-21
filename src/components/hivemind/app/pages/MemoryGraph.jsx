@@ -400,8 +400,20 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph({ dimension = '3d' } = {}) {
-  // dimension: '3d' (default) | '2d' — same wrapper chrome, swaps inner canvas.
-  const is2D = dimension === '2d';
+  // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
+  // the inline pill in the toolbar. Persisted to localStorage so the choice
+  // sticks across reloads.
+  const [graphDim, setGraphDim] = useState(() => {
+    try {
+      const stored = localStorage.getItem('hivemind:graphDim');
+      if (stored === '2d' || stored === '3d') return stored;
+    } catch {}
+    return dimension;
+  });
+  const is2D = graphDim === '2d';
+  useEffect(() => {
+    try { localStorage.setItem('hivemind:graphDim', graphDim); } catch {}
+  }, [graphDim]);
   const { org } = useAuth();
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -927,6 +939,25 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         </div>
 
         {/* Action buttons */}
+
+        {/* 3D / 2D toggle — segmented pill */}
+        <div className="shrink-0 inline-flex items-center rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5">
+          {['3d', '2d'].map((dim) => (
+            <button
+              key={dim}
+              onClick={() => setGraphDim(dim)}
+              className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                graphDim === dim
+                  ? 'bg-[#0a0a0a] text-white'
+                  : 'text-[#737373] hover:text-[#0a0a0a]'
+              }`}
+              title={dim === '3d' ? '3D force graph' : '2D force graph'}
+            >
+              {dim.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => setShowLegend((v) => !v)}
           className={`shrink-0 p-1.5 rounded-lg border text-[#525252] ${

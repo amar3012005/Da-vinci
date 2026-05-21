@@ -15,6 +15,7 @@ import React, {
   useRef,
 } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { forceCollide, forceX, forceY } from 'd3-force';
 
 // ─── Palettes — mirrors MemoryGraph3D ───────────────────────────────────────
 
@@ -126,22 +127,49 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
     []
   );
 
-  // Tune the simulation — slightly tighter than the lib defaults so clusters
-  // form quickly without spinning forever.
+  // MiroFish GraphPanel physics — wide-spread Da-vinci MemoryGraph tuning.
+  // Mirrors d3.forceSimulation(...).force(...).alphaDecay(0.015)
+  //   .velocityDecay(0.25).alpha(1) from
+  //   MiroFish/frontend/src/components/GraphPanel.vue.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
     try {
-      fg.d3Force('charge')?.strength(-180);
-      fg.d3Force('link')?.distance(48).strength(0.35);
-      fg.d3Force('center')?.strength(0.04);
-    } catch {}
+      // charge: very strong repulsion w/ distance cap so clusters spread but
+      // don't fly off into the void.
+      const charge = fg.d3Force('charge');
+      if (charge) {
+        charge.strength(-350);
+        if (typeof charge.distanceMax === 'function') charge.distanceMax(500);
+      }
+      // link: long stable edges (120) at moderate strength (0.3).
+      const link = fg.d3Force('link');
+      if (link) link.distance(120).strength(0.3);
+      // center: very weak so the cluster shape isn't squashed.
+      const center = fg.d3Force('center');
+      if (center) center.strength(0.03);
+      // collide: prevents overlap, sized by node radius + 20px halo.
+      const existingCollide = fg.d3Force('collide');
+      if (existingCollide && typeof existingCollide.radius === 'function') {
+        existingCollide.radius((d) => getNodeRadius(d) + 20).strength(0.8);
+      } else {
+        fg.d3Force('collide', forceCollide().radius((d) => getNodeRadius(d) + 20).strength(0.8));
+      }
+      // x / y centering pull — extremely weak so layout doesn't collapse.
+      if (!fg.d3Force('x')) fg.d3Force('x', forceX().strength(0.015));
+      if (!fg.d3Force('y')) fg.d3Force('y', forceY().strength(0.015));
+      // Heat the simulation so clusters re-form on data change.
+      if (typeof fg.d3ReheatSimulation === 'function') fg.d3ReheatSimulation();
+    } catch (e) {
+      // Non-fatal — fall back to lib defaults.
+      console.warn('[MemoryGraph2DCanvas] physics setup partial:', e?.message);
+    }
   }, [graphData]);
 
   // Auto-fit on first data load.
   useEffect(() => {
     if (graphData?.nodes?.length > 0) {
-      const t = setTimeout(() => fgRef.current?.zoomToFit(600, 80), 600);
+      const t = setTimeout(() => fgRef.current?.zoomToFit(700, 80), 800);
       return () => clearTimeout(t);
     }
   }, [graphData]);
@@ -272,10 +300,14 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
       width={width}
       height={height}
       backgroundColor={backgroundColor}
-      nodeRelSize={5}
-      cooldownTicks={120}
-      d3AlphaDecay={0.025}
-      d3VelocityDecay={0.32}
+      nodeRelSize={6}
+      cooldownTicks={400}
+      warmupTicks={30}
+      d3AlphaMin={0.001}
+      d3AlphaDecay={0.015}
+      d3VelocityDecay={0.25}
+      minZoom={0.1}
+      maxZoom={8}
       enableNodeDrag
       enableZoomInteraction
       enablePanInteraction
