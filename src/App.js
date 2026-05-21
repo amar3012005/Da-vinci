@@ -4,6 +4,7 @@ import DavinciHomepage from './components/DavinciHomepage';
 import AboutPage from './components/AboutPage';
 import UnderProgress from './components/UnderProgress';
 import Terms from './components/Terms';
+import PrivacyPage from './pages/PrivacyPage';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 import ResearchPage from './components/ResearchPage';
@@ -41,6 +42,7 @@ function App() {
         <Route path="/about" element={<Layout><AboutPage /></Layout>} />
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
+        <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/benchmark" element={<BenchmarkPage />} />
