@@ -71,6 +71,10 @@ export default function WebStudio() {
   const [pollingId, setPollingId] = useState(null);
   const pollingRef = useRef(null);
 
+  // Single-expanded-job model so the detail view can grow tall and let
+  // the page itself scroll, while the list above stays capped at 10 rows.
+  const [expandedJobId, setExpandedJobId] = useState(null);
+
   // Modal
   const [selectedResult, setSelectedResult] = useState(null);
 
@@ -116,18 +120,22 @@ export default function WebStudio() {
   }, [jobs]);
 
   // ─── Resolve effective mode ────────────────────────────────
+  // Default text → research (Tavily comprehensive report). Slash overrides:
+  //   /research <q>  · /search <q> (raw 10 results) · /crawl <url>
+  // URL paste → crawl auto-detect.
   const detectedMode = useMemo(() => {
     if (forcedMode) return forcedMode;
     const p = prompt.trim();
-    if (!p) return 'search';
+    if (!p) return 'research';
+    if (p.startsWith('/research')) return 'research';
     if (p.startsWith('/search')) return 'search';
     if (p.startsWith('/crawl')) return 'crawl';
-    return looksLikeUrl(p.split(/\s+/)[0]) ? 'crawl' : 'search';
+    return looksLikeUrl(p.split(/\s+/)[0]) ? 'crawl' : 'research';
   }, [prompt, forcedMode]);
 
   // Strip slash prefix
   const effectiveInput = useMemo(() => {
-    return prompt.replace(/^\/(search|crawl)\s+/i, '').trim();
+    return prompt.replace(/^\/(research|search|crawl)\s+/i, '').trim();
   }, [prompt]);
 
   // ─── Domain policy probe (debounced on URL change) ─────────
@@ -193,6 +201,10 @@ export default function WebStudio() {
           return;
         }
         const r = await apiClient.submitWebCrawl({ urls: [url], depth: crawlDepth, page_limit: crawlPageLimit });
+        const id = r?.job_id || r?.id;
+        if (id) startPolling(id);
+      } else if (detectedMode === 'research') {
+        const r = await apiClient.submitWebResearch({ input, model: 'auto', citation_format: 'numbered' });
         const id = r?.job_id || r?.id;
         if (id) startPolling(id);
       } else {
@@ -293,28 +305,51 @@ export default function WebStudio() {
         {jobList.length === 0 ? (
           <EmptyState locked={featureLocked} />
         ) : (
-          // Cap height so the workflow (prompt + timeline + health) stays
-          // visible above the fold. ~10 collapsed rows fit before scroll.
           <div className="relative">
-            <div className="max-h-[640px] overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin]">
+            {/* Capped list of compact rows. ~10 fit before internal scroll. */}
+            <div className="max-h-[640px] overflow-y-auto pr-1 [scrollbar-width:thin] border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec]">
               {jobList.map(job => (
-                <JobThreadCard
+                <JobRow
                   key={job.id}
                   job={job}
+                  active={job.id === expandedJobId}
                   isPolling={job.id === pollingId}
-                  onResultClick={setSelectedResult}
-                  onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
+                  onClick={() => setExpandedJobId(prev => prev === job.id ? null : job.id)}
                 />
               ))}
             </div>
             {jobList.length > 10 && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[#faf9f4] to-transparent" />
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent rounded-b-xl" />
             )}
             <div className="mt-2 text-[10px] text-[#a3a3a3] font-mono text-right">
               {jobList.length} run{jobList.length !== 1 ? 's' : ''} · scroll for older
             </div>
           </div>
         )}
+
+        {/* Expanded detail — renders below the list, no height cap; page scrolls. */}
+        <AnimatePresence>
+          {expandedJobId && (() => {
+            const job = jobList.find(j => j.id === expandedJobId);
+            if (!job) return null;
+            return (
+              <motion.div
+                key={expandedJobId}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-4"
+              >
+                <ExpandedJobView
+                  job={job}
+                  onClose={() => setExpandedJobId(null)}
+                  onResultClick={setSelectedResult}
+                  onMutate={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
+                />
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
       </section>
 
       {/* System health (admin only) */}
@@ -373,27 +408,46 @@ function PromptBar({
   depth, setDepth, pageLimit, setPageLimit,
   domainPolicy, checkingPolicy, locked,
 }) {
-  const ModeIcon = mode === 'crawl' ? LinkIcon : Search;
+  const ModeIcon = mode === 'crawl' ? LinkIcon
+    : mode === 'research' ? Sparkles
+    : Search;
+  const modeColor = mode === 'crawl' ? 'text-amber-500'
+    : mode === 'research' ? 'text-violet-500'
+    : 'text-[#117dff]';
+  const modeLabel = mode === 'crawl' ? 'Crawl mode'
+    : mode === 'research' ? 'Research mode'
+    : 'Search mode';
+  const modeHint = mode === 'crawl'
+    ? 'Auto-detected from URL · /search or /research to override'
+    : mode === 'research'
+      ? 'Tavily compiles multi-source report with citations · /search for raw results'
+      : 'Raw 10 results · /research for comprehensive report';
   const placeholder = mode === 'crawl'
     ? 'Paste a URL to crawl…'
-    : 'Ask the web…  e.g. "best vector databases for 1M rows"';
+    : mode === 'research'
+      ? 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"'
+      : 'Search the web…  e.g. "milvus vs qdrant benchmarks"';
+
+  // Cycle force: research → search → crawl → null (auto)
+  const cycleForce = () => {
+    if (forcedMode === null)       setForcedMode('search');
+    else if (forcedMode === 'search')   setForcedMode('crawl');
+    else if (forcedMode === 'crawl')    setForcedMode('research');
+    else                                 setForcedMode(null);
+  };
 
   return (
     <div className={`relative bg-white border ${locked ? 'border-red-200' : 'border-[#e3e0db]'} rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden`}>
       {/* Mode indicator strip */}
       <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5">
-        <ModeIcon size={12} className={mode === 'crawl' ? 'text-amber-500' : 'text-[#117dff]'} />
-        <span className="text-[10px] font-mono uppercase tracking-wider text-[#737373]">
-          {mode === 'crawl' ? 'Crawl mode' : 'Search mode'}
-        </span>
+        <ModeIcon size={12} className={modeColor} />
+        <span className="text-[10px] font-mono uppercase tracking-wider text-[#737373]">{modeLabel}</span>
         {forcedMode && (
           <button onClick={() => setForcedMode(null)} className="text-[9px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]" title="Clear forced mode">
             (forced — clear)
           </button>
         )}
-        <span className="text-[9px] text-[#a3a3a3] ml-auto">
-          {mode === 'crawl' ? 'Auto-detected from URL · use /search to override' : 'Type /crawl <url> to force crawl'}
-        </span>
+        <span className="text-[9px] text-[#a3a3a3] ml-auto">{modeHint}</span>
       </div>
 
       {/* Textarea */}
@@ -434,11 +488,11 @@ function PromptBar({
       <div className="px-4 py-2 bg-[#faf9f4] border-t border-[#f3f1ec] flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setForcedMode(mode === 'search' ? 'crawl' : 'search')}
+            onClick={cycleForce}
             className="text-[10px] text-[#525252] hover:text-[#0a0a0a] px-2 py-1 rounded hover:bg-white border border-transparent hover:border-[#e3e0db]"
-            title="Switch mode"
+            title="Cycle: auto → search → crawl → research"
           >
-            ↔ {mode === 'search' ? 'Force crawl' : 'Force search'}
+            ↔ {forcedMode ? `forced: ${forcedMode}` : `auto · click to force`}
           </button>
           <span className="text-[10px] text-[#a3a3a3] ml-1">Enter to send · Shift+Enter newline</span>
         </div>
@@ -500,114 +554,227 @@ function UsagePill({ icon: Icon, label, used, limit, muted }) {
   );
 }
 
-/* ─── Job thread card ─────────────────────────────────────────────── */
+/* ─── Job row (compact, in list) ─────────────────────────────────── */
 
-function JobThreadCard({ job, isPolling, onResultClick, onMutate }) {
-  const [expanded, setExpanded] = useState(false);
+// Pick the best title for a job: research → report title; search/crawl →
+// query or first URL. Falls back to the bare query/URL params.
+function deriveJobTitle(job, results) {
+  if (job.type === 'research' && results?.[0]?.title) return results[0].title;
+  if (job.params?.input)  return job.params.input;
+  if (job.params?.query)  return job.params.query;
+  if (job.params?.urls?.[0]) return job.params.urls[0];
+  if (job.query)          return job.query;
+  if (job.urls?.[0])      return job.urls[0];
+  return 'Untitled run';
+}
+
+function jobIcon(type) {
+  if (type === 'crawl')    return LinkIcon;
+  if (type === 'research') return Sparkles;
+  return Search;
+}
+
+function jobColor(type) {
+  if (type === 'crawl')    return 'text-amber-500';
+  if (type === 'research') return 'text-violet-500';
+  return 'text-[#117dff]';
+}
+
+function JobRow({ job, active, isPolling, onClick }) {
+  const jobType = job.type || (job.urls ? 'crawl' : 'search');
+  const Icon = jobIcon(jobType);
+  const status = job.status || 'queued';
+  const results = Array.isArray(job.results) ? job.results : (job.results?.results || job.results?.items || []);
+  const title = deriveJobTitle(job, results);
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors ${
+        active ? 'bg-[#faf9f4]' : 'hover:bg-[#faf9f4]'
+      }`}
+    >
+      <Icon size={14} className={`shrink-0 ${jobColor(jobType)}`} />
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</div>
+        <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-[#a3a3a3]">
+          <span className="uppercase tracking-wider">{jobType}</span>
+          <span>·</span>
+          <StatusBadge status={status} polling={isPolling} />
+          <span>·</span>
+          <span>{relTime(job.createdAt || job.created_at)}</span>
+          {job.duration_ms != null && <><span>·</span><span>{formatMs(job.duration_ms)}</span></>}
+          {jobType === 'research' && results[0]?.sources?.length > 0 && (
+            <><span>·</span><span>{results[0].sources.length} sources</span></>
+          )}
+          {jobType !== 'research' && results.length > 0 && (
+            <><span>·</span><span>{results.length} result{results.length !== 1 ? 's' : ''}</span></>
+          )}
+        </div>
+      </div>
+      {active
+        ? <ChevronUp size={13} className="text-[#a3a3a3] shrink-0" />
+        : <ChevronDown size={13} className="text-[#a3a3a3] shrink-0" />}
+    </button>
+  );
+}
+
+/* ─── Expanded job detail (no height cap; page scrolls) ──────────── */
+
+function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
+  const jobType = job.type || (job.urls ? 'crawl' : 'search');
+  const status = job.status || 'queued';
+  const results = Array.isArray(job.results) ? job.results : (job.results?.results || job.results?.items || []);
+  const title = deriveJobTitle(job, results);
+  const Icon = jobIcon(jobType);
+
   const [retrying, setRetrying] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const jobType = job.type || (job.urls ? 'crawl' : 'search');
-  const Icon = jobType === 'crawl' ? LinkIcon : Search;
-  const query = job.query || (job.urls?.[0]) || '';
-  const status = job.status || 'queued';
-  const results = useMemo(() => {
-    if (!job.results) return [];
-    return Array.isArray(job.results) ? job.results : (job.results.results || job.results.items || []);
-  }, [job.results]);
-
-  const handleRetry = async (e) => {
-    e.stopPropagation();
+  async function handleRetry() {
     setRetrying(true);
     try { await apiClient.retryWebJob(job.id); onMutate(); } catch { /* silent */ } finally { setRetrying(false); }
-  };
-
-  const handleSaveAll = async (e) => {
-    e.stopPropagation();
+  }
+  async function handleSaveAll() {
     setSavingAll(true);
     try {
       await apiClient.saveWebResultToMemory(job.id, {
-        title: query,
-        tags: [jobType === 'crawl' ? 'web-crawl' : 'web-search'],
+        title,
+        tags: [jobType === 'crawl' ? 'web-crawl' : jobType === 'research' ? 'web-research' : 'web-search'],
       });
+      setSaved(true);
       onMutate();
     } catch { /* silent */ } finally { setSavingAll(false); }
-  };
+  }
 
   return (
-    <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden hover:border-[#d4d0ca] transition-colors">
-      {/* Header row */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-[#faf9f4]"
-      >
-        <Icon size={14} className={jobType === 'crawl' ? 'text-amber-500' : 'text-[#117dff]'} />
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{query}</div>
-          <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-[#a3a3a3]">
-            <StatusBadge status={status} polling={isPolling} />
-            <span>·</span>
-            <span>{relTime(job.createdAt || job.created_at)}</span>
-            {job.duration_ms != null && <><span>·</span><span>{formatMs(job.duration_ms)}</span></>}
-            {results.length > 0 && <><span>·</span><span>{results.length} result{results.length !== 1 ? 's' : ''}</span></>}
-            {job.runtime && <><span>·</span><span>{job.runtime}{job.fallback ? ' (fallback)' : ''}</span></>}
+    <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      {/* Detail header */}
+      <header className="px-5 py-3 border-b border-[#e3e0db] flex items-start justify-between gap-3 bg-[#faf9f4]">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon size={14} className={jobColor(jobType)} />
+            <span className="text-[10px] uppercase tracking-wider font-mono text-[#737373]">{jobType}</span>
+            <StatusBadge status={status} polling={false} />
+            {job.duration_ms != null && (
+              <span className="text-[10px] font-mono text-[#a3a3a3]">{formatMs(job.duration_ms)}</span>
+            )}
           </div>
+          <h3 className="text-[15px] font-semibold text-[#0a0a0a] leading-tight">{title}</h3>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 shrink-0">
           {status === 'failed' && (
-            <button onClick={handleRetry} className="text-[#a3a3a3] hover:text-[#117dff] p-1" title="Retry">
-              {retrying ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+            <button onClick={handleRetry} disabled={retrying} className="p-1.5 text-[#525252] hover:text-[#117dff] rounded hover:bg-white" title="Retry">
+              {retrying ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
             </button>
           )}
-          {results.length > 0 && (
-            <button onClick={handleSaveAll} className="text-[#a3a3a3] hover:text-emerald-600 p-1" title="Save all to memory">
-              {savingAll ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          {status === 'succeeded' && results.length > 0 && (
+            <button onClick={handleSaveAll} disabled={savingAll || saved} className={`p-1.5 rounded hover:bg-white ${saved ? 'text-emerald-600' : 'text-[#525252] hover:text-emerald-600'}`} title="Save report to memory">
+              {savingAll ? <Loader2 size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
             </button>
           )}
-          {expanded ? <ChevronUp size={13} className="text-[#a3a3a3]" /> : <ChevronDown size={13} className="text-[#a3a3a3]" />}
+          <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-white" title="Collapse">
+            <X size={13} />
+          </button>
         </div>
-      </button>
+      </header>
 
-      {/* Expanded: result list */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-3 pt-1 border-t border-[#f3f1ec] space-y-1.5">
-              {status === 'failed' && (
-                <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded p-2">
-                  {job.error || 'Job failed'}
-                </div>
-              )}
-              {(status === 'queued' || status === 'running') && (
-                <div className="text-[11px] text-[#737373] flex items-center gap-2 py-2">
-                  <Loader2 size={11} className="animate-spin" /> Waiting for results…
-                </div>
-              )}
-              {results.length === 0 && status === 'succeeded' && (
-                <div className="text-[11px] text-[#a3a3a3] py-2">No results returned.</div>
-              )}
-              {results.map((r, i) => (
-                <ResultLine
-                  key={i}
-                  result={r}
-                  type={jobType}
-                  jobId={job.id}
-                  index={i}
-                  runtime={job.runtime}
-                  fallback={job.fallback}
-                  onClick={() => onResultClick({ result: r, type: jobType, jobId: job.id, index: i, runtime: job.runtime, fallback: job.fallback })}
-                  onSaved={onMutate}
-                />
-              ))}
-            </div>
-          </motion.div>
+      {/* Body */}
+      <div className="px-5 py-4">
+        {status === 'failed' && (
+          <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded p-3">
+            {job.error || 'Job failed'}
+          </div>
         )}
-      </AnimatePresence>
+        {(status === 'queued' || status === 'running') && (
+          <div className="text-[12px] text-[#737373] flex items-center gap-2 py-3">
+            <Loader2 size={13} className="animate-spin" />
+            {jobType === 'research'
+              ? 'Tavily Research is compiling your report — typically 20–90 seconds.'
+              : 'Waiting for results…'}
+          </div>
+        )}
+        {status === 'succeeded' && (
+          jobType === 'research'
+            ? <ResearchReport result={results[0]} />
+            : <RawResultList
+                results={results}
+                jobId={job.id}
+                jobType={jobType}
+                runtime={job.runtime}
+                fallback={job.fallback}
+                onResultClick={onResultClick}
+                onSaved={onMutate}
+              />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Research report renderer ───────────────────────────────────── */
+
+function ResearchReport({ result }) {
+  if (!result) return null;
+  const text = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
+  const sources = Array.isArray(result.sources) ? result.sources : [];
+  // Render markdown as plain pre-wrapped text. Heavy markdown formatter
+  // would add a dep; keeping it lightweight + readable.
+  return (
+    <div>
+      <article className="prose prose-sm max-w-none">
+        <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
+{text}
+        </pre>
+      </article>
+
+      {sources.length > 0 && (
+        <section className="mt-6 pt-4 border-t border-[#e3e0db]">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2 flex items-center gap-1.5">
+            <FileText size={11} /> Sources ({sources.length})
+          </h4>
+          <ol className="space-y-1.5 list-decimal pl-5 text-[12px]">
+            {sources.map((s, i) => (
+              <li key={i} className="text-[#525252]">
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#117dff] hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  {s.title || s.url}
+                  <ExternalLink size={9} />
+                </a>
+                {s.title && s.url && (
+                  <div className="text-[10px] text-[#a3a3a3] font-mono truncate">{s.url}</div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function RawResultList({ results, jobId, jobType, runtime, fallback, onResultClick, onSaved }) {
+  if (results.length === 0) return <div className="text-[12px] text-[#a3a3a3] py-2">No results returned.</div>;
+  return (
+    <div className="space-y-1">
+      {results.map((r, i) => (
+        <ResultLine
+          key={i}
+          result={r}
+          type={jobType}
+          jobId={jobId}
+          index={i}
+          runtime={runtime}
+          fallback={fallback}
+          onClick={() => onResultClick({ result: r, type: jobType, jobId, index: i, runtime, fallback })}
+          onSaved={onSaved}
+        />
+      ))}
     </div>
   );
 }

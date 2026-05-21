@@ -1102,6 +1102,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Tavily Research — async comprehensive report with citations.
+  async submitWebResearch(params) {
+    const { data } = await this.controlPlane.post('/v1/proxy/web/research/jobs', params);
+    return data;
+  }
+
   async getWebJob(jobId) {
     const { data } = await this.controlPlane.get(`/v1/proxy/web/jobs/${jobId}`);
     return data;
