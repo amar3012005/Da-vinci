@@ -1074,30 +1074,39 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         )}
 
         {graphData.nodes.length > 0 && is2D && (
-          <MemoryGraph2DCanvas
-            ref={graphRef}
-            graphData={graphData}
-            selectedNode={selectedNode}
-            highlightNodes={highlightNodes}
-            filteredNodes={filteredNodes}
-            onNodeClick={handleNodeClick}
-            onNodeHover={(node) => {
-              setHoveredNode(node);
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: '#faf9f4',
+              backgroundImage: 'radial-gradient(circle, rgba(10,10,10,0.08) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
             }}
-            onBackgroundClick={() => {
-              setSelectedNode(null);
-              setHoveredNode(null);
-            }}
-            backgroundColor="rgba(250,249,244,1)"
-            width={
-              typeof window !== "undefined"
-                ? window.innerWidth - (selectedNode ? 340 : 0) - 260
-                : 800
-            }
-            height={
-              typeof window !== "undefined" ? window.innerHeight - 52 : 600
-            }
-          />
+          >
+            <MemoryGraph2DCanvas
+              ref={graphRef}
+              graphData={graphData}
+              selectedNode={selectedNode}
+              highlightNodes={highlightNodes}
+              filteredNodes={filteredNodes}
+              onNodeClick={handleNodeClick}
+              onNodeHover={(node) => {
+                setHoveredNode(node);
+              }}
+              onBackgroundClick={() => {
+                setSelectedNode(null);
+                setHoveredNode(null);
+              }}
+              backgroundColor="rgba(0,0,0,0)"
+              width={
+                typeof window !== "undefined"
+                  ? window.innerWidth - (selectedNode ? 340 : 0) - 260
+                  : 800
+              }
+              height={
+                typeof window !== "undefined" ? window.innerHeight - 52 : 600
+              }
+            />
+          </div>
         )}
 
         {/* (Floating Graph Controls + Intelligent panel removed — controls now consolidated in top toolbar) */}

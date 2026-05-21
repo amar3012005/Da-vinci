@@ -1,12 +1,27 @@
 /**
- * MemoryGraph2DCanvas — 2D ForceGraph canvas that mirrors the look and
- * interactions of MemoryGraph3D. Same node colours, same edge palette,
- * same hover/click/select callbacks, same monochrome cream background.
+ * MemoryGraph2DCanvas — pixel-replica of the MiroFish/Da-vinci scientific
+ * reasoning graph (frontend/MiroFish/GraphPanel.vue paintNode + paintLink).
  *
- * Used by MemoryGraph.jsx when `dimension === '2d'`.
+ * Visual contract (matches the reference screenshot):
+ *   • Cream background w/ subtle dot grid drawn by ForceGraph2D itself.
+ *   • Each node gets THREE concentric halos before the body:
+ *       r * 3.0 stroke α 0.06 + fill α 0.03
+ *       r * 2.2 stroke α 0.10 + fill α 0.05
+ *       r * 1.5 fill α 0.10
+ *   • Body shape varies by memory_type:
+ *       circle  — fact / conversation / goal / lesson  (large blue/green/teal)
+ *       diamond — decision / preference / event        (orange/violet)
+ *       square  — note                                 (small slate)
+ *       circle  — relationship                          (red)
+ *   • Always-on label (truncated to 18 chars + ellipsis) drawn below body.
+ *   • Selection blue ring +3px, search/highlight amber ring +2px.
+ *   • Edge line straight; dashed for derives / mentions / references OR
+ *     confidence < 0.5; tiny directional arrow at 90% of the segment;
+ *     midpoint label "<type> 70%" with white background pill.
+ *   • Edge colours follow MiroFish EDGE_COLORS palette + heuristic fallback.
  */
 
-import React, {
+import {
   forwardRef,
   useCallback,
   useEffect,
@@ -17,68 +32,132 @@ import React, {
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide, forceX, forceY } from 'd3-force';
 
-// ─── Palettes — mirrors MemoryGraph3D ───────────────────────────────────────
+// ─── Palettes (verbatim from MiroFish GraphPanel.vue) ───────────────────────
 
 const TYPE_COLORS = {
-  fact:         '#117dff',
-  preference:   '#d97706',
-  decision:     '#d97706',
-  goal:         '#16a34a',
-  event:        '#7c3aed',
-  lesson:       '#0d9488',
-  relationship: '#dc2626',
-  note:         '#475569',
+  // HIVEMIND memory types mapped onto MiroFish CSI palette
+  fact:         '#117dff', // blue   → Claim
   conversation: '#117dff',
+  preference:   '#FF8A34', // orange → Trial
+  decision:     '#FF8A34',
+  event:        '#9C27B0', // purple → Agent (rare)
+  goal:         '#16a34a', // green
+  lesson:       '#0d9488', // teal
+  relationship: '#dc2626', // red
+  note:         '#607D8B', // slate  → AgentAction
   default:      '#525252',
 };
 
-const EDGE_COLORS = {
-  Updates:     '#f59e0b',
-  Extends:     '#22c55e',
-  Derives:     '#8b5cf6',
-  Contradicts: '#ef4444',
-  Supports:    '#3b82f6',
-  supports:    '#3b82f6',
-  References:  '#94a3b8',
-  mentions:    '#94a3b8',
-  default:     '#cbd5e1',
+const TYPE_SHAPE = {
+  fact:         'circle',
+  conversation: 'circle',
+  preference:   'diamond',
+  decision:     'diamond',
+  event:        'diamond',
+  goal:         'circle',
+  lesson:       'circle',
+  relationship: 'circle',
+  note:         'square',
+  default:      'circle',
 };
 
+const TYPE_SIZE = {
+  fact:         1.1,
+  conversation: 1.0,
+  preference:   1.0,
+  decision:     1.0,
+  event:        1.0,
+  goal:         1.0,
+  lesson:       0.9,
+  relationship: 1.0,
+  note:         0.65,
+  default:      0.85,
+};
+
+const EDGE_COLORS = {
+  // canonical typed edges
+  Updates:        '#117dff',
+  Extends:        '#16a34a',
+  Derives:        '#8b5cf6',
+  Supports:       '#16a34a',
+  Contradicts:    '#dc2626',
+  References:    '#a3a3a3',
+  // common lower-case aliases
+  updates:        '#117dff',
+  extends:        '#16a34a',
+  derives:        '#8b5cf6',
+  derived_from:   '#8b5cf6',
+  supports:       '#16a34a',
+  contradicts:    '#dc2626',
+  references:    '#a3a3a3',
+  // MiroFish CSI styles seen in the reference screenshot
+  needs_revision: '#8b5cf6',
+  revise_claim:   '#a3a3a3',
+  peer_review:    '#a3a3a3',
+  investigate_source: '#a3a3a3',
+  PROPOSE_CLAIM:  '#a3a3a3',
+  // fallback
+  default:        '#c4c0ba',
+};
+
+// Heuristic colour from edge name when not in the table.
+function getEdgeColor(relType) {
+  if (!relType) return EDGE_COLORS.default;
+  if (EDGE_COLORS[relType]) return EDGE_COLORS[relType];
+  const lower = String(relType).toLowerCase();
+  if (EDGE_COLORS[lower]) return EDGE_COLORS[lower];
+  if (lower.includes('contra') || lower.includes('challeng')) return '#dc2626';
+  if (lower.includes('support') || lower.includes('verif') || lower.includes('extend')) return '#16a34a';
+  if (lower.includes('deriv') || lower.includes('infer') || lower.includes('revision')) return '#8b5cf6';
+  if (lower.includes('update')) return '#117dff';
+  if (lower.includes('search') || lower.includes('read') || lower.includes('source')) return '#0891b2';
+  if (lower.includes('role') || lower.includes('agent')) return '#9C27B0';
+  if (lower.includes('produc') || lower.includes('action')) return '#FF8A34';
+  return EDGE_COLORS.default;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string') return `rgba(120,120,120,${alpha})`;
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return `rgba(120,120,120,${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function getTypeKey(node) {
+  return (node.memoryType || node.memory_type || node.type || '').toLowerCase() || 'default';
+}
+
 function getNodeColor(node) {
-  const t = (node.memoryType || node.memory_type || node.type || '').toLowerCase();
-  return TYPE_COLORS[t] || TYPE_COLORS.default;
+  return TYPE_COLORS[getTypeKey(node)] || TYPE_COLORS.default;
+}
+
+function getNodeShape(node) {
+  return TYPE_SHAPE[getTypeKey(node)] || 'circle';
 }
 
 function getNodeRadius(node) {
-  const deg = node.degree || node.connections || 1;
-  return Math.max(4, Math.min(16, 4 + Math.log2(deg + 1) * 2.4));
+  const t = getTypeKey(node);
+  const base = 6;
+  const deg = Math.log2(1 + (node.degree || node.connections || 1));
+  const r = (base + deg * 1.6) * (TYPE_SIZE[t] || 1);
+  return Math.max(4, Math.min(18, r));
 }
 
-function getEdgeColor(link) {
-  const k = link.type || link.relation || link.label || 'default';
-  return EDGE_COLORS[k] || EDGE_COLORS[k?.toLowerCase?.()] || EDGE_COLORS.default;
-}
-
-// Word-wrap text into N lines for label rendering.
-function wrapLabel(text, maxLen = 22, maxLines = 2) {
-  if (!text) return [];
-  const words = String(text).replace(/\s+/g, ' ').trim().split(' ');
-  const lines = [];
-  let cur = '';
-  for (const w of words) {
-    if ((cur + ' ' + w).trim().length > maxLen) {
-      if (cur) lines.push(cur);
-      cur = w;
-    } else {
-      cur = (cur + ' ' + w).trim();
-    }
-    if (lines.length >= maxLines) break;
-  }
-  if (cur && lines.length < maxLines) lines.push(cur);
-  if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length + 4) {
-    lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,3}$/, '…');
-  }
-  return lines;
+// Polyfill roundRect for older canvases.
+function roundRect(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) return ctx.roundRect(x, y, w, h, r);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -101,13 +180,10 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
   const fgRef = useRef(null);
   const hoverIdRef = useRef(null);
 
-  // Highlight + filter sets (memoised so the render loop is cheap).
   const highlightSet = useMemo(() => new Set([...(highlightNodes || [])]), [highlightNodes]);
   const filteredSet = useMemo(() => new Set([...(filteredNodes || [])]), [filteredNodes]);
-
   const hasFilter = filteredSet.size > 0;
 
-  // Expose imperative methods to parent (mirrors MemoryGraph3D forwardRef API).
   useImperativeHandle(
     ref,
     () => ({
@@ -127,41 +203,31 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
     []
   );
 
-  // MiroFish GraphPanel physics — wide-spread Da-vinci MemoryGraph tuning.
-  // Mirrors d3.forceSimulation(...).force(...).alphaDecay(0.015)
-  //   .velocityDecay(0.25).alpha(1) from
-  //   MiroFish/frontend/src/components/GraphPanel.vue.
+  // Physics — MiroFish GraphPanel exact tuning.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
     try {
-      // charge: very strong repulsion w/ distance cap so clusters spread but
-      // don't fly off into the void.
       const charge = fg.d3Force('charge');
       if (charge) {
         charge.strength(-350);
         if (typeof charge.distanceMax === 'function') charge.distanceMax(500);
       }
-      // link: long stable edges (120) at moderate strength (0.3).
       const link = fg.d3Force('link');
       if (link) link.distance(120).strength(0.3);
-      // center: very weak so the cluster shape isn't squashed.
       const center = fg.d3Force('center');
       if (center) center.strength(0.03);
-      // collide: prevents overlap, sized by node radius + 20px halo.
+
       const existingCollide = fg.d3Force('collide');
       if (existingCollide && typeof existingCollide.radius === 'function') {
         existingCollide.radius((d) => getNodeRadius(d) + 20).strength(0.8);
       } else {
         fg.d3Force('collide', forceCollide().radius((d) => getNodeRadius(d) + 20).strength(0.8));
       }
-      // x / y centering pull — extremely weak so layout doesn't collapse.
       if (!fg.d3Force('x')) fg.d3Force('x', forceX().strength(0.015));
       if (!fg.d3Force('y')) fg.d3Force('y', forceY().strength(0.015));
-      // Heat the simulation so clusters re-form on data change.
       if (typeof fg.d3ReheatSimulation === 'function') fg.d3ReheatSimulation();
     } catch (e) {
-      // Non-fatal — fall back to lib defaults.
       console.warn('[MemoryGraph2DCanvas] physics setup partial:', e?.message);
     }
   }, [graphData]);
@@ -174,120 +240,188 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
     }
   }, [graphData]);
 
-  // ─── Canvas painters ──────────────────────────────────────────────────────
-
+  // ─── paintNode — MiroFish replica ─────────────────────────────────────────
   const paintNode = useCallback(
     (node, ctx, globalScale) => {
+      const baseColor = getNodeColor(node);
+      const r = getNodeRadius(node);
+      const shape = getNodeShape(node);
+
       const isSelected = selectedNode?.id === node.id;
       const isHighlight = highlightSet.has(node.id);
       const isDim = hasFilter && !filteredSet.has(node.id) && !isSelected && !isHighlight;
-      const r = getNodeRadius(node) * (isSelected ? 1.6 : isHighlight ? 1.25 : 1);
-      const color = getNodeColor(node);
+      const glow = 0.3;
 
-      // Soft outer glow on selected / hovered.
-      if (isSelected || hoverIdRef.current === node.id) {
+      // ── Concentric rings (3 layers) ──
+      if (!isDim) {
+        // Outer halo
         ctx.beginPath();
-        ctx.arc(node.x, node.y, r * 2.4, 0, Math.PI * 2);
-        const grd = ctx.createRadialGradient(node.x, node.y, r, node.x, node.y, r * 2.4);
-        grd.addColorStop(0, color + '55');
-        grd.addColorStop(1, color + '00');
-        ctx.fillStyle = grd;
+        ctx.arc(node.x, node.y, r * 3.0, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(baseColor, 0.06);
+        ctx.lineWidth = 0.5 / globalScale;
+        ctx.stroke();
+        ctx.fillStyle = hexToRgba(baseColor, 0.03);
+        ctx.fill();
+
+        // Middle halo
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r * 2.2, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(baseColor, 0.1);
+        ctx.lineWidth = 0.5 / globalScale;
+        ctx.stroke();
+        ctx.fillStyle = hexToRgba(baseColor, 0.05);
+        ctx.fill();
+
+        // Inner glow
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r * 1.5, 0, 2 * Math.PI);
+        ctx.fillStyle = hexToRgba(baseColor, 0.1);
         ctx.fill();
       }
 
-      // Body
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = isDim ? '#cbd5e1' : color;
-      ctx.globalAlpha = isDim ? 0.35 : 1;
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      // Selection ring
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#117dff';
+        ctx.lineWidth = 2 / globalScale;
+        ctx.stroke();
+      }
 
-      // Ring (selected gets primary blue)
-      ctx.lineWidth = isSelected ? 2.2 / globalScale : 1.2 / globalScale;
-      ctx.strokeStyle = isSelected ? '#117dff' : 'rgba(10,10,10,0.18)';
+      // Highlight ring (search / agent picked)
+      if (isHighlight && !isSelected) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 2, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 1.5 / globalScale;
+        ctx.stroke();
+      }
+
+      // Hover halo (extra soft ring on mouseover)
+      if (hoverIdRef.current === node.id && !isSelected) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 5, 0, 2 * Math.PI);
+        ctx.strokeStyle = hexToRgba(baseColor, 0.35);
+        ctx.lineWidth = 1.2 / globalScale;
+        ctx.stroke();
+      }
+
+      // ── Body shape ──
+      const fillAlpha = isDim ? 0.15 : 0.6 + glow * 0.4;
+      const strokeAlpha = isDim ? 0.1 : 0.8;
+
+      if (shape === 'diamond') {
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y - r);
+        ctx.lineTo(node.x + r, node.y);
+        ctx.lineTo(node.x, node.y + r);
+        ctx.lineTo(node.x - r, node.y);
+        ctx.closePath();
+      } else if (shape === 'square') {
+        const s = r * 0.6;
+        roundRect(ctx, node.x - s, node.y - s, s * 2, s * 2, 2);
+      } else if (shape === 'hexagon') {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 3) * i - Math.PI / 6;
+          ctx.lineTo(node.x + r * Math.cos(angle), node.y + r * Math.sin(angle));
+        }
+        ctx.closePath();
+      } else {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+      }
+      ctx.fillStyle = hexToRgba(baseColor, fillAlpha);
+      ctx.fill();
+      ctx.strokeStyle = hexToRgba(baseColor, strokeAlpha);
+      ctx.lineWidth = 0.5 / globalScale;
       ctx.stroke();
 
-      // Label (only when zoomed in OR selected / highlighted)
-      const showLabel = globalScale > 1.8 || isSelected || isHighlight;
-      if (showLabel) {
-        const title = node.title || node.label || (node.content || '').slice(0, 60) || 'memory';
-        const lines = wrapLabel(title, 24, isSelected ? 3 : 2);
-        const fontSize = (isSelected ? 11 : 9) / globalScale;
-        ctx.font = `${isSelected ? 700 : 500} ${fontSize}px Inter, system-ui, sans-serif`;
+      // ── Always-on label (truncated to 18 chars) ──
+      if (!isDim) {
+        const raw = node.title || node.label || node.name || (node.content || '').slice(0, 60) || 'memory';
+        const truncated = raw.length > 18 ? raw.substring(0, 18) + '…' : raw;
+        const fontSize = Math.max(9, 10 / globalScale);
+        ctx.font = `${fontSize}px "Space Grotesk", system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const lineHeight = fontSize * 1.2;
-        // Soft white-cream pill bg behind text for readability
-        const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
-        const padX = 4 / globalScale;
-        const padY = 2 / globalScale;
-        const boxW = widest + padX * 2;
-        const boxH = lineHeight * lines.length + padY * 2;
-        const boxX = node.x - boxW / 2;
-        const boxY = node.y + r + 4 / globalScale;
-        ctx.fillStyle = 'rgba(250,249,244,0.88)';
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(boxX, boxY, boxW, boxH, 3 / globalScale);
-        else ctx.rect(boxX, boxY, boxW, boxH);
-        ctx.fill();
-
-        ctx.fillStyle = isDim ? '#94a3b8' : '#0a0a0a';
-        lines.forEach((ln, i) => {
-          ctx.fillText(ln, node.x, boxY + padY + i * lineHeight);
-        });
+        ctx.fillStyle = 'rgba(10,10,10,0.7)';
+        ctx.fillText(truncated, node.x, node.y + r + 2);
       }
     },
     [selectedNode, highlightSet, filteredSet, hasFilter]
   );
 
+  // ─── paintLink — MiroFish replica ─────────────────────────────────────────
   const paintLink = useCallback(
     (link, ctx, globalScale) => {
-      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+      const src = typeof link.source === 'object' ? link.source : null;
+      const tgt = typeof link.target === 'object' ? link.target : null;
+      if (!src || !tgt) return;
+      const sx = src.x;
+      const sy = src.y;
+      const tx = tgt.x;
+      const ty = tgt.y;
+      if (sx === 0 && sy === 0 && tx === 0 && ty === 0) return;
+
+      const sourceId = src.id;
+      const targetId = tgt.id;
       const sourceImportant = selectedNode?.id === sourceId || highlightSet.has(sourceId);
       const targetImportant = selectedNode?.id === targetId || highlightSet.has(targetId);
       const isImportant = sourceImportant || targetImportant;
       const isDim = hasFilter && !filteredSet.has(sourceId) && !filteredSet.has(targetId) && !isImportant;
 
-      const color = getEdgeColor(link);
-      const op = isDim ? 0.05 : isImportant ? 0.85 : 0.32;
+      const confidence = link.confidence != null
+        ? link.confidence
+        : (link.rawData?.confidence ?? 0.7);
+      const relType = link.type || link.relation || link.label || 'RELATED';
+      const color = getEdgeColor(relType);
+      let opacity = 0.35 + (confidence || 0.5) * 0.3;
+      if (isImportant) opacity = Math.min(1, opacity + 0.3);
+      if (isDim) opacity = 0.08;
+      const lineWidth = 0.5 + (confidence || 0.5) * 2;
 
-      ctx.strokeStyle = color
-        .replace(/^#/, '')
-        .match(/.{2}/g)
-        ? `rgba(${parseInt(color.slice(1, 3), 16)},${parseInt(color.slice(3, 5), 16)},${parseInt(color.slice(5, 7), 16)},${op})`
-        : `rgba(120,120,120,${op})`;
-      ctx.lineWidth = (isImportant ? 1.4 : 0.8) / globalScale;
+      ctx.strokeStyle = hexToRgba(color, opacity);
+      ctx.lineWidth = lineWidth;
 
-      // Dashed for soft-relation edges (Derives / mentions / References)
-      const dashed = /derives|mentions|references/i.test(link.type || link.relation || '');
-      if (dashed) ctx.setLineDash([4 / globalScale, 3 / globalScale]);
+      const isDashed = confidence < 0.5
+        || /deriv|infer|revision|mentions|references/i.test(relType);
+      if (isDashed) ctx.setLineDash([5, 4]);
 
-      const src = typeof link.source === 'object' ? link.source : null;
-      const tgt = typeof link.target === 'object' ? link.target : null;
-      if (!src || !tgt) return;
       ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(tgt.x, tgt.y);
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(tx, ty);
       ctx.stroke();
-      if (dashed) ctx.setLineDash([]);
+      if (isDashed) ctx.setLineDash([]);
 
-      // Edge label — only when both endpoints important + zoomed in.
-      if (isImportant && globalScale > 1.6) {
-        const label = link.type || link.relation || link.label;
-        const conf = link.confidence != null ? Math.round(link.confidence * 100) + '%' : null;
-        if (label) {
-          const mx = (src.x + tgt.x) / 2;
-          const my = (src.y + tgt.y) / 2;
-          const fontSize = 8 / globalScale;
-          ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
-          ctx.fillStyle = color;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const text = conf ? `${label} ${conf}` : label;
-          ctx.fillText(text, mx, my - 4 / globalScale);
-        }
+      // Directional arrow at 90% of segment.
+      const t = 0.9;
+      const ax = sx + (tx - sx) * t;
+      const ay = sy + (ty - sy) * t;
+      const arrowLen = 3;
+      const angle = Math.atan2(ty - sy, tx - sx);
+      ctx.fillStyle = hexToRgba(color, Math.min(1, opacity + 0.15));
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - arrowLen * Math.cos(angle - 0.4), ay - arrowLen * Math.sin(angle - 0.4));
+      ctx.lineTo(ax - arrowLen * Math.cos(angle + 0.4), ay - arrowLen * Math.sin(angle + 0.4));
+      ctx.closePath();
+      ctx.fill();
+
+      // Edge label at midpoint w/ white background pill.
+      if (globalScale > 0.8 && !isDim) {
+        const midX = (sx + tx) / 2;
+        const midY = (sy + ty) / 2;
+        const labelText = `${relType} ${Math.round((confidence || 0.7) * 100)}%`;
+        const fontSize = 10 / globalScale;
+        ctx.font = `${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(labelText).width;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(midX - tw / 2 - 2, midY - 6, tw + 4, 12);
+        ctx.fillStyle = 'rgba(10,10,10,0.8)';
+        ctx.fillText(labelText, midX, midY);
       }
     },
     [selectedNode, highlightSet, filteredSet, hasFilter]
@@ -332,7 +466,7 @@ const MemoryGraph2DCanvas = forwardRef(function MemoryGraph2DCanvas(
         return 0;
       }}
       linkDirectionalParticleSpeed={0.005}
-      linkDirectionalParticleColor={(link) => getEdgeColor(link)}
+      linkDirectionalParticleColor={(link) => getEdgeColor(link.type || link.relation || '')}
     />
   );
 });
