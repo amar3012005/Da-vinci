@@ -212,11 +212,51 @@ function MessageBubble({ msg }) {
               Slack action pending · reply confirm
             </div>
           )}
+          <AgentSteps steps={msg.steps} />
           <Sources sources={msg.sources} />
           <TokenUsage usage={msg.usage} />
         </div>
       </div>
     </motion.div>
+  );
+}
+
+// ─── Agent toolcall timeline ──────────────────────────────────────────────────
+// ReAct agent emits steps[] = [{ tool, args, result_summary }] per /api/chat
+// response. Render as a compact "Used N tools" pill that expands to show
+// the per-step tool name + args summary + result. Mirrors the side-panel
+// chrome extension treatment.
+function AgentSteps({ steps }) {
+  const [open, setOpen] = useState(false);
+  if (!Array.isArray(steps) || steps.length === 0) return null;
+  return (
+    <div className="mt-2 pt-2 border-t border-[#ece9e2]">
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 text-[10.5px] font-mono uppercase tracking-wider text-[#117dff] hover:text-[#0a5fcc]"
+        type="button"
+      >
+        <span>⚙</span>
+        Used {steps.length} tool{steps.length === 1 ? '' : 's'}
+        <span style={{ display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▸</span>
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1">
+          {steps.map((s, i) => {
+            const argStr = (() => {
+              try { return JSON.stringify(s.args || {}).slice(0, 120); } catch { return ''; }
+            })();
+            return (
+              <div key={i} className="text-[11px] leading-snug pl-2 border-l-2 border-[#117dff]/30">
+                <div className="font-mono text-[#117dff]">{s.tool || '(unknown)'}</div>
+                {argStr && <div className="text-[#525252] truncate" title={argStr}>args: {argStr}</div>}
+                {s.result_summary && <div className="text-[#8a8a8a] truncate" title={s.result_summary}>→ {String(s.result_summary).slice(0, 140)}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -385,6 +425,7 @@ export function ChatPanel({ isOpen, onClose }) {
       let sources = [];
       let responseContent = '';
       let usage = null;
+      let steps = [];
 
       try {
         const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
@@ -396,6 +437,10 @@ export function ChatPanel({ isOpen, onClose }) {
         responseContent = chatData.response || '';
         sources = chatData.sources || [];
         usage = chatData.usage || null;
+        // ReAct agent ships the tool-call timeline as steps[]. Each entry:
+        //   { tool: 'hivemind_recall', args: {...}, result_summary: '9 memories' }
+        // Render below the response as a collapsible "Used N tools" strip.
+        steps = Array.isArray(chatData.steps) ? chatData.steps : [];
       } catch (chatErr) {
         console.warn('[Chat] chat failed:', chatErr?.message);
         responseContent = "I couldn't process your request right now. Please try again.";
@@ -408,6 +453,7 @@ export function ChatPanel({ isOpen, onClose }) {
         sources: sources.map(s => ({ ...s, title: s.title || (s.content || '').slice(0, 60) })),
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: usage,
+        steps,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
