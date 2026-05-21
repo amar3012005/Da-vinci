@@ -127,14 +127,19 @@ function SourceBadge({ source }) {
   );
 }
 
-// Render the LLM-extracted entities the post-save linker stashed on
-// metadata.extracted_entities (people / orgs / products / projects /
-// places). Click a chip → drill into memories that share that entity.
-// Lives next to RelationshipIndicator so the row line scans as:
-//   [type] [source] [linked N] [SUPERSEDED] [Rama] [Heidelberg]
+// Render the LLM-extracted entities the post-save linker stashed as
+// 'entity:<name>' tags. Memory model has no metadata JSONB column, so
+// entities ride on the tags array — also lets users filter
+// /api/memories?tags=entity:Rama directly.
+//
+// Row line scans as:
+//   [type] [source] [linked N] [SUPERSEDED] [@Rama] [@Heidelberg]
 function EntityChips({ memory }) {
-  const ents = memory?.metadata?.extracted_entities;
-  if (!Array.isArray(ents) || ents.length === 0) return null;
+  const tags = Array.isArray(memory?.tags) ? memory.tags : [];
+  const ents = tags
+    .filter(t => typeof t === 'string' && t.startsWith('entity:'))
+    .map(t => t.slice(7).replace(/_/g, ' '));
+  if (ents.length === 0) return null;
   // Cap at 4 visible chips + "+N" overflow so row height stays uniform.
   const visible = ents.slice(0, 4);
   const overflow = ents.length - visible.length;
