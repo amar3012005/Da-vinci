@@ -54,6 +54,7 @@ function getTypeStyle(type) {
 // ─── Sub-components ──────────────────────────────────────────────
 
 function HealthCard({ healthy, onRefresh }) {
+  const { t } = useTranslation('dashboard');
   const isUnknown = healthy === null;
   const label = isUnknown ? 'Checking...' : healthy ? 'All Systems Operational' : 'Service Degraded';
   const dotColor = isUnknown
