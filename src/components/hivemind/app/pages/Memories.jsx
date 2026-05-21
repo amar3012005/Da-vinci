@@ -356,11 +356,140 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
+// Render relations grouped by edge type. Shown inside MemoryDetailPanel
+// when /api/memories/:id/relationships returns.
+//
+// Edge types + their visual treatment:
+//   Updates      — green   (this memory updated something / something updated this)
+//   Extends      — sky     (this extended / was extended)
+//   Derives      — purple  (derived from / derivation source for)
+//   Contradicts  — red     (conflict)
+//   Mentions     — violet  (entity co-mention via LLM linker)
+//   PartOf       — slate   (section/turn/message → parent doc/session/thread)
+const REL_TYPE_STYLE = {
+  Updates:     { bg: 'bg-emerald-50',  border: 'border-emerald-200',  text: 'text-emerald-700',  label: 'Updates' },
+  Extends:     { bg: 'bg-sky-50',      border: 'border-sky-200',      text: 'text-sky-700',      label: 'Extends' },
+  Derives:     { bg: 'bg-purple-50',   border: 'border-purple-200',   text: 'text-purple-700',   label: 'Derives' },
+  Contradicts: { bg: 'bg-red-50',      border: 'border-red-200',      text: 'text-red-700',      label: 'Contradicts' },
+  Mentions:    { bg: 'bg-violet-50',   border: 'border-violet-200',   text: 'text-violet-700',   label: 'Mentions' },
+  PartOf:      { bg: 'bg-slate-50',    border: 'border-slate-200',    text: 'text-slate-700',    label: 'Part Of' },
+};
+
+function RelationsBlock({ loading, relations }) {
+  if (loading) {
+    return (
+      <div>
+        <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+          Relations
+        </label>
+        <div className="text-[11px] text-[#a3a3a3] italic">Loading…</div>
+      </div>
+    );
+  }
+  const byType = relations?.by_type;
+  const total = relations?.counts?.total || 0;
+  if (!byType || total === 0) {
+    return (
+      <div>
+        <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+          Relations
+        </label>
+        <div className="text-[11px] text-[#a3a3a3] italic">No relations yet.</div>
+      </div>
+    );
+  }
+  // Stable order so the same memory always renders the same section sequence.
+  const TYPE_ORDER = ['Updates', 'Extends', 'Derives', 'Contradicts', 'Mentions', 'PartOf'];
+  const orderedTypes = [
+    ...TYPE_ORDER.filter(t => byType[t]?.length),
+    ...Object.keys(byType).filter(t => !TYPE_ORDER.includes(t)),
+  ];
+
+  return (
+    <div>
+      <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-2">
+        Relations · {total}
+      </label>
+      <div className="space-y-3">
+        {orderedTypes.map((type) => {
+          const edges = byType[type] || [];
+          const style = REL_TYPE_STYLE[type] || REL_TYPE_STYLE.Mentions;
+          return (
+            <div key={type}>
+              <div className={`inline-flex items-center gap-1 text-[9.5px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded mb-1.5 border ${style.bg} ${style.text} ${style.border}`}>
+                {style.label} · {edges.length}
+              </div>
+              <div className="space-y-1">
+                {edges.map((e) => {
+                  const isOut = e.direction === 'out';
+                  const peerTitle = isOut ? e.target_title : e.source_title;
+                  const peerId = isOut ? e.target_id : e.source_id;
+                  const peerDeleted = isOut ? e.target_deleted : e.source_deleted;
+                  const peerNotLatest = isOut ? e.target_is_latest === false : e.source_is_latest === false;
+                  const shared = e.metadata?.shared_entities || [];
+                  const reason = e.metadata?.reason || '';
+                  const conf = typeof e.confidence === 'number' ? e.confidence.toFixed(2) : '';
+                  return (
+                    <div
+                      key={e.id}
+                      title={reason || (peerId ? `Memory ${peerId.slice(0, 8)}` : '')}
+                      className={`flex items-center gap-2 text-[11px] bg-white border ${style.border} rounded-lg px-2.5 py-1.5`}
+                    >
+                      <span className={`font-mono text-[10px] ${style.text}`} style={{ minWidth: 12 }}>
+                        {isOut ? '→' : '←'}
+                      </span>
+                      <span className="text-[#0a0a0a] truncate flex-1">
+                        {peerTitle || '(untitled)'}
+                        {peerDeleted && <span className="ml-1 text-[#d4d0ca]">·deleted</span>}
+                        {peerNotLatest && !peerDeleted && <span className="ml-1 text-[#d4d0ca]">·superseded</span>}
+                      </span>
+                      {shared.length > 0 && (
+                        <span className="text-[9.5px] text-violet-700 font-mono">
+                          @{shared.slice(0, 2).join(', @')}
+                        </span>
+                      )}
+                      {conf && (
+                        <span className="text-[9.5px] font-mono text-[#a3a3a3]">{conf}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(null);
   const [entities, setEntities] = useState(null); // [{ canonical_name, entity_type, mention_count }]
+  const [relations, setRelations] = useState(null); // { by_type: { Mentions: [...], ... }, counts: {} }
+  const [relationsLoading, setRelationsLoading] = useState(false);
+
+  // Fetch all relationships for this memory grouped by type (Mentions,
+  // Updates, Extends, Derives, Contradicts, PartOf). One round-trip
+  // pulls edges in both directions + peer titles for inline display.
+  useEffect(() => {
+    if (!memory?.id) return;
+    let cancelled = false;
+    setRelationsLoading(true);
+    apiClient.core.get(`/api/memories/${memory.id}/relationships`)
+      .then(({ data }) => {
+        if (!cancelled) setRelations(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setRelations(null);
+      })
+      .finally(() => {
+        if (!cancelled) setRelationsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [memory?.id]);
 
   // Fetch entity mentions for this memory (P2 Memory Intelligence)
   useEffect(() => {
@@ -510,29 +639,15 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
             </div>
           )}
 
-          {/* Relationships */}
-          {memory.relationships?.length > 0 && (
-            <div>
-              <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                Relationships
-              </label>
-              <div className="space-y-1.5">
-                {memory.relationships.map((rel, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 text-xs bg-white border border-[#e3e0db] rounded-lg px-3 py-2"
-                  >
-                    <Layers size={11} className="text-[#117dff]/60 shrink-0" />
-                    <span className="text-[#525252] font-mono">{rel.type || rel.relation_type || 'related'}</span>
-                    <span className="text-[#d4d0ca]">-&gt;</span>
-                    <span className="text-[#525252] font-['Space_Grotesk'] truncate">
-                      {rel.target_title || rel.target_id || rel.related_memory_id}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Relationships — grouped by edge type, fetched live from
+              /api/memories/:id/relationships. Each type gets its own
+              section (Mentions / Updates / Extends / Derives /
+              Contradicts / PartOf). Direction icons distinguish
+              outgoing (→) from incoming (←). Hover an edge for
+              the shared_entities + reason metadata the LLM linker
+              wrote at save time. */}
+          <RelationsBlock loading={relationsLoading} relations={relations} />
+
 
           {/* Supporting Evidence */}
           {evidenceCount !== null && evidenceCount > 0 && (
