@@ -1015,6 +1015,135 @@ you save now is the context you (or the next agent) will rely on when
 this conversation is gone.`;
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
+// One-command installer dialog. Top of the MCP page — single
+// curl|bash one-liner that wires HIVEMIND into whichever client the
+// user picks (Claude Code / Desktop, Cursor, VS Code, Codex, Antigravity).
+// No per-platform JSON snippets shown here — that's what
+// UniversalSchemaCard handles further down for power users.
+function InstallCommandCard() {
+  const [copied, setCopied] = useState(false);
+  const command = 'curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh | bash';
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+  return (
+    <motion.div {...fadeUp} transition={{ delay: 0.02 }} className="mb-6">
+      <div className="bg-[#0a0a0a] text-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.12)]">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#117dff]/20 flex items-center justify-center">
+              <Terminal size={14} className="text-[#117dff]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold font-['Space_Grotesk']">Install HIVEMIND in one command</p>
+              <p className="text-[11px] text-white/50 font-['Space_Grotesk']">Picks Claude Code / Desktop / Cursor / VS Code / Codex / Antigravity. Browser sign-in, no API key paste.</p>
+            </div>
+          </div>
+          <button
+            onClick={onCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/15 bg-white/5 hover:bg-white/10 transition"
+          >
+            {copied ? <><Check size={12} className="text-emerald-400" /> Copied</> : <><Copy size={12} /> Copy</>}
+          </button>
+        </div>
+        <pre className="px-5 py-4 text-[12.5px] font-mono whitespace-pre-wrap break-all text-emerald-300">
+          {command}
+        </pre>
+      </div>
+    </motion.div>
+  );
+}
+
+// Universal MCP schema accordion — shows the HTTP-transport JSON OR the
+// stdio bridge JSON depending on which tab the user picks. Replaces the
+// long per-client Quick Setup grid that used to live above. Power users
+// who want to hand-edit their config still get the canonical snippet.
+function UniversalSchemaCard() {
+  const [tab, setTab] = useState('http');
+  const [copied, setCopied] = useState(false);
+  const SNIPPETS = {
+    http: {
+      label: 'HTTP (canonical)',
+      sub: 'Claude Code, Claude Desktop 0.7+, Cursor, VS Code, Antigravity',
+      body: `{
+  "mcpServers": {
+    "hivemind": {
+      "type": "http",
+      "url": "https://core.hivemind.davinciai.eu:8050/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}`,
+    },
+    stdio: {
+      label: 'stdio (via mcp-remote)',
+      sub: 'Older clients without native HTTP transport — uses npx mcp-remote bridge',
+      body: `{
+  "mcpServers": {
+    "hivemind": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://core.hivemind.davinciai.eu:8050/api/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_API_KEY"
+      ]
+    }
+  }
+}`,
+    },
+  };
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(SNIPPETS[tab].body);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+  return (
+    <motion.div {...fadeUp} transition={{ delay: 0.15 }} className="mb-8">
+      <div className="bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#e3e0db]/50">
+          <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">Universal MCP schema</p>
+          <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Manual paste for clients the installer can't reach. Click a transport to view its JSON.</p>
+        </div>
+        <div className="flex gap-1.5 px-5 pt-3 pb-2">
+          {Object.entries(SNIPPETS).map(([id, s]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex-1 px-3 py-2 rounded-lg text-left transition border ${
+                tab === id ? 'bg-[#117dff]/5 border-[#117dff]/30' : 'bg-white border-[#e3e0db] hover:border-[#117dff]/20'
+              }`}
+            >
+              <p className={`text-xs font-semibold font-['Space_Grotesk'] ${tab === id ? 'text-[#117dff]' : 'text-[#0a0a0a]'}`}>{s.label}</p>
+              <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk']">{s.sub}</p>
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <button
+            onClick={onCopy}
+            className="absolute right-3 top-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#e3e0db] bg-white hover:border-[#117dff]/30 text-[#525252]"
+          >
+            {copied ? <><Check size={11} className="text-emerald-600" /> Copied</> : <><Copy size={11} /> Copy</>}
+          </button>
+          <pre className="px-5 py-4 text-[11px] font-mono text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[420px] overflow-y-auto">
+            {SNIPPETS[tab].body}
+          </pre>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function McpServer() {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('tools');
@@ -1071,7 +1200,7 @@ export default function McpServer() {
       {isGuidedWalkthrough && (
         <div className="fixed inset-0 z-10 bg-[#0a0a0a]/35 backdrop-blur-[2px] pointer-events-none" />
       )}
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto flex flex-col">
         <ApiKeyPrompt feature="MCP server connections" />
 
         {isGuidedWalkthrough && (
@@ -1088,8 +1217,8 @@ export default function McpServer() {
           </motion.div>
         )}
 
-        {/* Header */}
-        <motion.div {...fadeUp} className="mb-8">
+        {/* Header — order 0 (top) */}
+        <motion.div {...fadeUp} className="mb-6" style={{ order: 0 }}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <Server size={20} className="text-[#117dff]" />
@@ -1101,8 +1230,23 @@ export default function McpServer() {
           </p>
         </motion.div>
 
-        {/* System Prompt Card */}
-        <motion.div {...fadeUp} transition={{ delay: 0.05 }} className="mb-8">
+        {/* Page layout (CSS flex order — source order can be anything):
+              order 0 → Header
+              order 1 → One-command installer dialog
+              order 2 → Tab bar + tool cards
+              order 3 → System Prompt
+              order 4 → Universal schema (stdio + HTTPS) accordion
+              order 9 → Decision flowchart
+              hidden → Legacy per-platform Quick Setup grid
+            Re-order without re-shuffling source so the existing
+            walkthrough refs (copyButtonRef, pasteBannerRef) stay
+            inside the same DOM tree. */}
+        <div style={{ order: 1 }}>
+          <InstallCommandCard />
+        </div>
+
+        {/* System Prompt Card — order 3 (below tools) */}
+        <motion.div {...fadeUp} transition={{ delay: 0.05 }} className="mb-8" style={{ order: 3 }}>
           <div className={`bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden ${isGuidedWalkthrough ? 'relative z-20' : ''}`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#e3e0db]/50">
               <div className="flex items-center gap-3">
@@ -1180,8 +1324,11 @@ export default function McpServer() {
           </div>
         </motion.div>
 
-        {/* Quick Setup Cards */}
-        <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="mb-8">
+        {/* Quick Setup Cards — HIDDEN. The single InstallCommandCard at
+            top + the UniversalSchemaCard below cover everything this
+            grid used to. Keep source tree intact in case we restore the
+            per-platform view via a feature flag. */}
+        <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="mb-8" style={{ display: 'none' }}>
           <h2 className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Quick Setup</h2>
           <p className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] mb-3 leading-relaxed">
             One endpoint, three wire formats. Pick the card matching your client. See <code className="text-[#117dff] bg-[#117dff]/5 px-1 rounded">core/docs/MCP_SERVER.md</code> for the full matrix.
@@ -1379,7 +1526,8 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
           </div>
         </motion.div>
 
-        {/* Tab bar */}
+        {/* Tools group (Tab bar + cards) — order 2 (right after install) */}
+        <div style={{ order: 2 }}>
         <div className="flex gap-1 mb-4 bg-white border border-[#e3e0db] rounded-xl p-1 w-fit flex-wrap">
           {[
             { id: 'tools', label: 'Memory', count: MEMORY_TOOLS.length },
@@ -1407,9 +1555,15 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
             <ToolCard key={tool.name} tool={tool} />
           ))}
         </motion.div>
+        </div>
 
-        {/* Decision flowchart */}
-        <motion.div {...fadeUp} transition={{ delay: 0.2 }} className="mt-8">
+        {/* Universal MCP schema — order 4 (below system prompt) */}
+        <div style={{ order: 4 }}>
+          <UniversalSchemaCard />
+        </div>
+
+        {/* Decision flowchart — order 9 (at the very bottom) */}
+        <motion.div {...fadeUp} transition={{ delay: 0.2 }} className="mt-8" style={{ order: 9 }}>
           <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a] mb-4 flex items-center gap-2">
               <Zap size={14} className="text-[#d97706]" /> Decision Flowchart
