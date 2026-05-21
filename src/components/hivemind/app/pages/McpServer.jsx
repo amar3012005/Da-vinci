@@ -1089,23 +1089,31 @@ export default function McpServer() {
                 title: '🚀 One-liner installer (npm, cross-platform)',
                 icon: Terminal,
                 subtitle: 'Picks Claude Code / Desktop / Cursor / VS Code / Codex / Antigravity from a menu, writes config, verifies endpoint — Node 18+ only.',
-                // npm @hivemind/cli — replaces older curl|bash + Go TUI
-                // attempts. Works on mac/linux/windows with no
-                // cross-compile, no Gatekeeper warnings, uses each host
-                // app's canonical config path.
-                config: `# Interactive (picks client from menu)
-npx -y @hivemind/cli setup
+                // Two equivalent entry points:
+                //   A) Self-hosted tarball — works today, no npm publish needed
+                //   B) npm registry — switches on after we publish @hivemind/cli
+                // Both spawn the same Node CLI (packages/cli) that writes the
+                // canonical config path for each host app and hits /api/mcp
+                // to verify the endpoint before exiting.
+                config: `# ── Easiest (curl|bash shim) ──
+curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh \\
+  | HIVEMIND_API_KEY=hmk_live_<key> bash
 
-# Non-interactive (scripted / CI)
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup claude-code
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup claude-desktop
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup cursor
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup vscode
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup codex
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli setup antigravity
+# ── Or via npx directly (tarball URL — works without npm publish) ──
+HIVEMIND_API_KEY=hmk_live_<key> \\
+  npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz setup
 
-# Verify endpoint is reachable with your key
-HIVEMIND_API_KEY=hmk_live_<key> npx -y @hivemind/cli verify`,
+# ── Pick a specific client (non-interactive) ──
+HIVEMIND_API_KEY=hmk_live_<key> \\
+  npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz setup claude-code
+# replace claude-code with: claude-desktop | cursor | vscode | codex | antigravity
+
+# ── Just verify the endpoint reaches HIVEMIND ──
+HIVEMIND_API_KEY=hmk_live_<key> \\
+  npx -y https://core.hivemind.davinciai.eu:8050/install/cli.tgz verify
+
+# Once @hivemind/cli is published to npm, all of the above shorten to:
+#   npx -y @hivemind/cli setup`,
               },
               {
                 title: '⭐ Universal HTTP (canonical)',
