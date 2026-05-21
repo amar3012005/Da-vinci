@@ -149,6 +149,127 @@ function getLabelTexture(type, confidence, themeName) {
   return entry;
 }
 
+// ─── Persistent on-node tags ────────────────────────────────────────
+// Short labels rendered as a THREE sprite above each node — e.g. "doc",
+// "gmail", "@rama", "slack". Distance-gated like link labels so they
+// don't pile up at far zoom; on click they surface for every neighbor
+// of the selected node regardless of distance.
+
+const nodeTagTextureCache = new Map();
+
+function getNodeTagTexture(text, themeName) {
+  const key = `${themeName}:${text}`;
+  if (nodeTagTextureCache.has(key)) return nodeTagTextureCache.get(key);
+  const t = themeName === "night"
+    ? { bg: "rgba(20,20,22,0.78)", border: "rgba(170,170,180,0.35)", fg: "#ece9e3" }
+    : { bg: "rgba(255,253,247,0.82)", border: "rgba(38,35,30,0.25)", fg: "#1f1d1a" };
+  const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const fontSize = 16 * dpr;
+  const padX = 8 * dpr;
+  const padY = 4 * dpr;
+  ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  const textW = ctx.measureText(text).width;
+  canvas.width = Math.ceil(textW + padX * 2);
+  canvas.height = Math.ceil(fontSize + padY * 2);
+  const r = canvas.height / 2;
+  ctx.fillStyle = t.bg;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, r);
+  ctx.arcTo(canvas.width, canvas.height, 0, canvas.height, r);
+  ctx.arcTo(0, canvas.height, 0, 0, r);
+  ctx.arcTo(0, 0, canvas.width, 0, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = dpr;
+  ctx.strokeStyle = t.border;
+  ctx.stroke();
+  ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  ctx.fillStyle = t.fg;
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, padX, canvas.height / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  const entry = { texture: tex, w: canvas.width / dpr, h: canvas.height / dpr };
+  nodeTagTextureCache.set(key, entry);
+  return entry;
+}
+
+// Derive a short tag for a node from its source / platform / extracted
+// entity. Returns null if nothing usefully short exists — the sprite
+// is then skipped so the graph doesn't get noisy.
+function deriveNodeTag(node) {
+  if (!node) return null;
+  const meta = node.metadata || node.source_metadata || {};
+  const platform = (meta.source_platform || meta.platform || node.source_platform || node.platform || '').toString().toLowerCase();
+  const sourceType = (meta.source_type || node.source_type || node.memoryType || node.memory_type || '').toString().toLowerCase();
+  const tags = Array.isArray(node.tags) ? node.tags : [];
+
+  // Entity nodes — surface the entity name itself.
+  if (sourceType === 'entity' || node.memoryType === 'entity') {
+    const ent = tags.find(t => typeof t === 'string' && t.startsWith('entity:'))?.slice('entity:'.length)
+      || node.title || node.name;
+    if (ent) return `@${ent.length > 16 ? ent.slice(0, 15) + '…' : ent}`;
+  }
+
+  // Person extraction from entity tag if present
+  const entityTag = tags.find(t => typeof t === 'string' && t.startsWith('entity:'));
+  if (entityTag) {
+    const name = entityTag.slice('entity:'.length);
+    if (name && /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/.test(name)) {
+      return `@${name.length > 16 ? name.slice(0, 15) + '…' : name}`;
+    }
+  }
+
+  // Source platform → short tag
+  if (platform.includes('gmail')) return 'gmail';
+  if (platform.includes('slack')) return 'slack';
+  if (platform.includes('notion')) return 'notion';
+  if (platform.includes('linear')) return 'linear';
+  if (platform.includes('github')) return 'github';
+  if (platform.includes('drive')) return 'drive';
+  if (platform.includes('mcp')) return 'mcp';
+  if (platform.includes('claude')) return 'claude';
+  if (platform.includes('chatgpt') || platform.includes('openai')) return 'gpt';
+  if (platform.includes('cursor')) return 'cursor';
+  if (platform.includes('talk-to-hive')) return 'chat';
+  if (platform.includes('webapp') || platform.includes('chrome-ext')) return 'web';
+
+  // Source type → short tag
+  if (sourceType === 'document' || sourceType === 'documentation') return 'doc';
+  if (sourceType === 'code') return 'code';
+  if (sourceType === 'decision') return 'decision';
+  if (sourceType === 'preference') return 'preference';
+  if (sourceType === 'goal') return 'goal';
+  if (sourceType === 'conversation') return 'chat';
+
+  // Tag-driven hints
+  if (tags.some(t => /web-research|tavily/i.test(t))) return 'research';
+  if (tags.some(t => /web-crawl|web-search/i.test(t))) return 'web';
+
+  return null;
+}
+
+function makeNodeTagSprite(text, themeName) {
+  const { texture, w, h } = getNodeTagTexture(text, themeName);
+  const mat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0,            // updated each frame in render loop
+    depthTest: false,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(w * 0.16, h * 0.16, 1);
+  sprite.renderOrder = 998;
+  sprite.userData.nodeTag = text;
+  return sprite;
+}
+
 function makeLinkLabelSprite(link, themeName) {
   const type = link?.type || "Relates";
   const confidence = Number.isFinite(link?.confidence)
@@ -486,6 +607,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColorRef = useRef(null);
   const getNodeLabelRef = useRef(null);
   const refreshHighlightRef = useRef(null);
+  // nodeId -> Sprite for persistent short tags (doc, gmail, @person ...)
+  const nodeTagSpritesRef = useRef(new Map());
   const viewStateRef = useRef({
     distance: 1100,
     inFrameNodeIds: new Set(),
@@ -850,7 +973,23 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeVal((node) => getNodeRadius(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
-        return makeNodeShape(node, getNodeColorRef.current(node), clusterTint);
+        const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint);
+        // Append a short-text tag sprite as a child of the node group so
+        // it tracks the node automatically. Sprite opacity is driven by
+        // the per-frame render loop based on zoom + selection.
+        const tag = deriveNodeTag(node);
+        if (tag) {
+          const sprite = makeNodeTagSprite(tag, themeRef.current.name);
+          const radius = getNodeRadius(node);
+          // Offset above the node so it doesn't overlap the shape.
+          sprite.position.set(0, radius * 1.9 + 1.4, 0);
+          shape.add(sprite);
+          nodeTagSpritesRef.current.set(node.id, sprite);
+        } else {
+          // Ensure stale entry from previous graph swap is dropped.
+          nodeTagSpritesRef.current.delete(node.id);
+        }
+        return shape;
       })
       .nodeThreeObjectExtend(false)
       .nodeVisibility((node) => isNodeVisibleRef.current(node))
@@ -1042,6 +1181,31 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             relationLabelMode,
           };
 
+          // Drive opacity of persistent node-tag sprites. Rules:
+          //   • selected/highlighted node + every neighbor → always visible
+          //   • zoom='all' → only the ranked top N (labelNodeIds) surface
+          //   • zoom='focus' → only selected/highlighted (no noise at mid-zoom)
+          //   • zoom='hidden' → all sprites hidden except selected/highlighted
+          const selectedId = selectedNodeRef.current?.id || null;
+          const neighborIds = selectedId ? (neighborMapRef.current.get(selectedId) || new Set()) : new Set();
+          const themeName = themeRef.current.name;
+          nodeTagSpritesRef.current.forEach((sprite, nid) => {
+            if (!sprite?.material) return;
+            const isSelected = selectedId === nid;
+            const isNeighbor = selectedId ? neighborIds.has(nid) : false;
+            const isHighlighted = highlightNodesRef.current.has(nid) || highlightedNodesRef.current.has(nid);
+            const isLabeled = labelNodeIds.has(nid);
+            let opacity = 0;
+            if (isSelected) opacity = 1;
+            else if (isNeighbor) opacity = 0.95;
+            else if (isHighlighted) opacity = 0.92;
+            else if (labelMode === 'hidden') opacity = 0;
+            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? 0.55 : 0;
+            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'night' ? 0.9 : 0.85) : 0;
+            sprite.material.opacity = opacity;
+            sprite.visible = opacity > 0.01;
+          });
+
           refreshHighlightRef.current();
           onViewStateChangeRef.current?.({
             distance,
@@ -1102,6 +1266,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       }
       fg._destructor?.();
       fgRef.current = null;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      nodeTagSpritesRef.current?.clear?.();
     };
   // The graph instance must be created once; live React values are read from refs above.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1115,6 +1281,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
         const object3d = makeNodeShape(node, getNodeColor(node), clusterTint);
+        const tag = deriveNodeTag(node);
+        if (tag) {
+          const sprite = makeNodeTagSprite(tag, themeRef.current.name);
+          const radius = getNodeRadius(node);
+          sprite.position.set(0, radius * 1.9 + 1.4, 0);
+          object3d.add(sprite);
+          nodeTagSpritesRef.current.set(node.id, sprite);
+        } else {
+          nodeTagSpritesRef.current.delete(node.id);
+        }
         updateNodeObjectAppearance(node, object3d);
         return object3d;
       })
@@ -1154,6 +1330,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   useEffect(() => {
     withPausedAnimation((fg) => {
+      // graphData swap rebuilds node Three objects; drop any stale sprite
+      // references so the per-frame opacity loop doesn't touch orphans.
+      nodeTagSpritesRef.current.clear();
       fg.graphData(graphData);
       refreshHighlight();
     });
