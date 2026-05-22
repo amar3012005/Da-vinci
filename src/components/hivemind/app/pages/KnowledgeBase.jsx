@@ -31,7 +31,10 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
 
-const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'xlsx', 'xls'];
+const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'xlsx', 'xls',
+  // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
+  'png', 'jpg', 'jpeg', 'webp', 'gif'];
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
 
 // ─── Robust upload helpers ─────────────────────────────────────────────
 // We do NOT use localStorage for upload buffers — it caps at ~5MB, is
@@ -926,11 +929,22 @@ export default function KnowledgeBase() {
       const tStart = Date.now();
       let processingTimer = null;
       try {
-        const result = await apiClient.uploadDocument(file, {
-          tags: customTags || undefined,
-          targetScope,
-          containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
-          signal: uploadEntry.controller.signal,
+        const fileExt = (file.name.split('.').pop() || '').toLowerCase();
+        const isImage = IMAGE_EXTS.has(fileExt) || /^image\//.test(file.type || '');
+        const uploadFn = isImage ? apiClient.uploadImage.bind(apiClient) : apiClient.uploadDocument.bind(apiClient);
+        const uploadOpts = isImage
+          ? {
+              projectId: targetScope === 'organization' ? null : (project || null),
+              signal: uploadEntry.controller.signal,
+            }
+          : {
+              tags: customTags || undefined,
+              targetScope,
+              containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
+              signal: uploadEntry.controller.signal,
+            };
+        const result = await uploadFn(file, {
+          ...uploadOpts,
           onUploadProgress: (e) => {
             if (!e.total) return;
             const pct = Math.round((e.loaded / e.total) * 100);
@@ -1090,8 +1104,23 @@ export default function KnowledgeBase() {
     setPendingFiles([]);
 
     if (smartExtract) {
-      // Enterprise detect flow: process first file through detection
+      // Enterprise detect flow: process first file through detection.
+      // Images bypass detection — they route straight to /api/ingest/image
+      // (Groq vision), since the schema-detect path is for tabular docs.
+      const imageFiles = [];
+      const nonImageFiles = [];
       for (const file of files) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (IMAGE_EXTS.has(ext) || /^image\//.test(file.type || '')) {
+          imageFiles.push(file);
+        } else {
+          nonImageFiles.push(file);
+        }
+      }
+      if (imageFiles.length) {
+        handleFiles(imageFiles, { targetScope: selectedScope, project });
+      }
+      for (const file of nonImageFiles) {
         const ext = file.name.split('.').pop()?.toLowerCase();
         if (!ACCEPTED_EXTS.includes(ext)) {
           setUploads((prev) => [...prev, {
