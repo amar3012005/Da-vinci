@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
+import { QRCodeSVG } from 'qrcode.react';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 // Chat history survives browser close/reopen via localStorage. Keyed by the
@@ -354,6 +355,33 @@ function EmptyState() {
             {prompt}
           </span>
         ))}
+      </div>
+
+      {/* QR pairing — scan to use HIVEMIND on mobile (same memory) */}
+      <div
+        className="mt-4 flex items-center gap-3 p-3.5 rounded-xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-transparent max-w-[360px]"
+      >
+        <div className="flex-1 text-left min-w-0">
+          <div className="text-[13px] font-semibold text-[#0a0a0a] leading-tight">
+            Use on your phone
+          </div>
+          <div className="text-[11.5px] text-[#a3a3a3] leading-snug mt-1">
+            Scan to open Talk to HIVE on mobile — same memory, save from anywhere.
+          </div>
+          <div className="text-[9.5px] text-[#117dff]/70 font-mono mt-1.5 break-all">
+            hivemind.davinciai.eu/hivemind/m/chat
+          </div>
+        </div>
+        <div className="w-[88px] h-[88px] bg-white border border-[#e3e0db] rounded-lg p-1 flex items-center justify-center flex-shrink-0">
+          <QRCodeSVG
+            value="https://hivemind.davinciai.eu/hivemind/m/chat?from=dashboard"
+            size={80}
+            level="M"
+            marginSize={0}
+            bgColor="#ffffff"
+            fgColor="#0a0a0a"
+          />
+        </div>
       </div>
     </motion.div>
   );
