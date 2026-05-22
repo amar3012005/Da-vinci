@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { useTeamContext } from '../shared/team-context';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 // Chat history survives browser close/reopen via localStorage. Keyed by the
@@ -461,6 +462,9 @@ export function ChatPanel({ isOpen, onClose }) {
   // UI language from the navbar selector — passed to /api/chat so the
   // ReAct agent replies in the user's chosen language end-to-end.
   const { i18n } = useTranslation();
+  // Active project scope from the team selector — passed to /api/chat so
+  // saves/recalls auto-bind to the current project ("Ashley", "SOLVIS"...).
+  const { activeProjectId, activeProject } = useTeamContext();
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -507,6 +511,9 @@ export function ChatPanel({ isOpen, onClose }) {
           model: selectedModel,
           history: fullHistory,
           language: (i18n.language || 'en').slice(0, 2).toLowerCase(),
+          ...(activeProjectId
+            ? { project_id: activeProjectId, project_ids: [activeProjectId] }
+            : {}),
         });
         const chatData = chatRes.data;
         responseContent = chatData.response || '';
@@ -547,7 +554,7 @@ export function ChatPanel({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, selectedModel, messages, i18n.language]);
+  }, [input, loading, selectedModel, messages, i18n.language, activeProjectId]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -592,7 +599,9 @@ export function ChatPanel({ isOpen, onClose }) {
                 <div>
                   <h2 className="text-[#0a0a0a] text-[15px] font-semibold leading-tight">Talk to HIVE</h2>
                   <p className="text-[#a3a3a3] text-[10px] font-mono leading-tight">
-                    Memory engine second brain
+                    {activeProject
+                      ? <>scope · <span className="text-[#117dff]">{activeProject.name}</span></>
+                      : 'scope · org default'}
                   </p>
                 </div>
               </div>
