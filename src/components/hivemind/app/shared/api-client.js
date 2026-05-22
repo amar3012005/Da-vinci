@@ -358,6 +358,51 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hyper Agents — Rooms (WhatsApp-style CSI swarm) ────────
+
+  async listHyperRooms() {
+    const { data } = await this.controlPlane.get('/v1/hyper-rooms');
+    return data;
+  }
+
+  async createHyperRoom(payload) {
+    const { data } = await this.controlPlane.post('/v1/hyper-rooms', payload);
+    return data;
+  }
+
+  async getHyperRoom(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}`);
+    return data;
+  }
+
+  async updateHyperRoom(roomId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/hyper-rooms/${roomId}`, payload);
+    return data;
+  }
+
+  async archiveHyperRoom(roomId) {
+    const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}`);
+    return data;
+  }
+
+  async postHyperTurn(roomId, { user_message, idempotency_key }) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns`, {
+      user_message, idempotency_key,
+    });
+    return data;
+  }
+
+  async getHyperTurn(roomId, turnId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/turns/${turnId}`);
+    return data;
+  }
+
+  // SSE — caller manages EventSource lifecycle, we just expose URL.
+  hyperTurnStreamUrl(roomId, turnId) {
+    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    return `${base}/v1/hyper-rooms/${roomId}/turns/${turnId}/stream`;
+  }
+
   // ─── Control Plane: Digital Employees ───────────────────────
 
   async listEmployees() {
