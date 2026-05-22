@@ -289,13 +289,13 @@ function renderMarkdown(raw) {
     if (/^\s*[*-]\s+/.test(line)) {
       const items = [];
       while (i < lines.length && /^\s*[*-]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[*-]\s+/, '')); i++; }
-      blocks.push(<ul key={key++} className="list-disc pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `li-${key}-${ix}`)}</li>)}</ul>);
+      { const myKey = key++; blocks.push(<ul key={myKey} className="list-disc pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `li-${myKey}-${ix}`)}</li>)}</ul>); }
       continue;
     }
     if (/^\s*\d+\.\s+/.test(line)) {
       const items = [];
       while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*\d+\.\s+/, '')); i++; }
-      blocks.push(<ol key={key++} className="list-decimal pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `ol-${key}-${ix}`)}</li>)}</ol>);
+      { const myKey = key++; blocks.push(<ol key={myKey} className="list-decimal pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `ol-${myKey}-${ix}`)}</li>)}</ol>); }
       continue;
     }
     if (/^\s*>\s?/.test(line)) {
