@@ -10,9 +10,67 @@ import {
   MessageSquare,
   ChevronRight,
   AlertTriangle,
+  Trash2,
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+// Chat history survives browser close/reopen via localStorage. Keyed by the
+// authenticated user id when available so multi-account browsers don't bleed.
+// Cap at MAX_PERSIST messages to stay within the ~5MB localStorage quota.
+
+const MAX_PERSIST = 200;
+
+function getStorageUserId() {
+  try {
+    // Common auth-shape used elsewhere in da-vinci; fall back to 'anon'.
+    const raw =
+      localStorage.getItem('hivemind:user') ||
+      localStorage.getItem('user') ||
+      '';
+    if (!raw) return 'anon';
+    if (raw.startsWith('{')) {
+      const u = JSON.parse(raw);
+      return u?.id || u?.user_id || u?.email || 'anon';
+    }
+    return raw;
+  } catch {
+    return 'anon';
+  }
+}
+
+function storageKey() {
+  return `hivemind:talk-to-hive:messages:${getStorageUserId()}`;
+}
+
+function loadPersistedMessages() {
+  try {
+    const raw = localStorage.getItem(storageKey());
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePersistedMessages(msgs) {
+  try {
+    const trimmed = Array.isArray(msgs) ? msgs.slice(-MAX_PERSIST) : [];
+    localStorage.setItem(storageKey(), JSON.stringify(trimmed));
+  } catch {
+    /* quota exceeded or storage disabled — skip silently */
+  }
+}
+
+function clearPersistedMessages() {
+  try {
+    localStorage.removeItem(storageKey());
+  } catch {
+    /* ignore */
+  }
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -382,10 +440,22 @@ function ModelSelector({ selectedId, onSelect }) {
 // ─── Chat Panel (slide-out) ───────────────────────────────────────────────────
 
 export function ChatPanel({ isOpen, onClose }) {
-  const [messages, setMessages] = useState([]);
+  // Hydrate from localStorage on mount so chat survives browser close/reopen.
+  const [messages, setMessages] = useState(() => loadPersistedMessages());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
+
+  // Persist on every messages change (debounced via rAF to coalesce rapid bursts).
+  useEffect(() => {
+    const handle = requestAnimationFrame(() => savePersistedMessages(messages));
+    return () => cancelAnimationFrame(handle);
+  }, [messages]);
+
+  const handleClear = useCallback(() => {
+    setMessages([]);
+    clearPersistedMessages();
+  }, []);
   const textareaRef = useRef(null);
   const bottomRef = useRef(null);
   // UI language from the navbar selector — passed to /api/chat so the
@@ -528,6 +598,16 @@ export function ChatPanel({ isOpen, onClose }) {
               </div>
               <div className="flex items-center gap-2">
                 <ModelSelector selectedId={selectedModel} onSelect={setSelectedModel} />
+                {messages.length > 0 && (
+                  <button
+                    onClick={handleClear}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a3a3a3] hover:text-[#ef4444] hover:bg-[#f3f1ec] transition-colors"
+                    aria-label="Clear chat history"
+                    title="Clear chat history"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"

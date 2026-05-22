@@ -415,6 +415,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async optimizeEmployeePersona(payload) {
+    const { data } = await this.controlPlane.post('/v1/employees/optimize-persona', payload);
+    return data;
+  }
+
   async getEmployee(id) {
     const { data } = await this.controlPlane.get(`/v1/employees/${id}`);
     return data;

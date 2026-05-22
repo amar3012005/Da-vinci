@@ -1073,98 +1073,101 @@ function TaskHistoryCard({ task, onResume }) {
   );
 }
 
+// Single-step create form. We only ask for what matters: name, role, team,
+// short brief, and demographics. The brief is expanded by the server into a
+// full persona system-prompt via LLM, so users no longer hand-write prompts.
+// Model + max_tokens are NOT exposed — they default to the platform's tuned
+// values and can be adjusted from the employee detail view later.
 function CreateWizard({ open, onClose, onCreate, teams }) {
-  const [step, setStep] = useState(1);
+  const ROLE_ARCHETYPES = [
+    { id: 'generalist',   label: 'Generalist' },
+    { id: 'coordinator',  label: 'Coordinator' },
+    { id: 'investigator', label: 'Investigator' },
+    { id: 'skeptic',      label: 'Skeptic' },
+    { id: 'synthesizer',  label: 'Synthesizer' },
+    { id: 'advocate',     label: 'Advocate' },
+    { id: 'fact_checker', label: 'Fact-checker' },
+    { id: 'challenger',   label: 'Challenger' },
+  ];
+
   const [form, setForm] = useState({
     name: '',
-    persona: PERSONA_PRESETS[0].persona,
-    model: DEFAULT_GROQ_MODEL,
-    llm_provider: 'groq',
-    scope: 'team',
+    brief: '',
+    role_archetype: 'generalist',
     team_id: '',
-    slack_team_id: '',
-    slack_channels_allowed: '',
-    // Per-message Slack identity (one-app, many-personas pattern).
-    slack_display_name: '',
-    slack_avatar_emoji: ':robot_face:',
-    // Multi-employee team-task collaboration metadata.
-    tools: PERSONA_PRESETS[0].tools,
-    rate_limit_per_min: 30,
-    role_archetype: PERSONA_PRESETS[0].role_archetype,
-    peer_review_targets: PERSONA_PRESETS[0].peer_review_targets,
+    age: '',
+    gender: '',
+    experience_years: 0,
   });
+  const [persona, setPersona] = useState('');
+  const [optimizing, setOptimizing] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setStep(1);
+      setForm({ name: '', brief: '', role_archetype: 'generalist', team_id: '', age: '', gender: '', experience_years: 0 });
+      setPersona('');
       setError(null);
       setSubmitting(false);
+      setOptimizing(false);
     }
   }, [open]);
 
   if (!open) return null;
 
-  const toggleTool = (t) => setForm(f => ({
-    ...f,
-    tools: f.tools.includes(t) ? f.tools.filter(x => x !== t) : [...f.tools, t],
-  }));
-
-  const togglePeerReviewTarget = (role) => setForm(f => ({
-    ...f,
-    peer_review_targets: f.peer_review_targets.includes(role)
-      ? f.peer_review_targets.filter(x => x !== role)
-      : [...f.peer_review_targets, role],
-  }));
-
-  // Archetype options shared between the role dropdown and the
-  // peer-review-targets multi-select on the Collaboration step.
-  const ROLE_ARCHETYPES = [
-    { id: '',             label: 'Generalist (no specialty)' },
-    { id: 'explorer',     label: 'Explorer — gathers + proposes' },
-    { id: 'advocate',     label: 'Advocate — argues a position' },
-    { id: 'fact_checker', label: 'Fact-checker — verifies evidence' },
-    { id: 'legal',        label: 'Legal/Compliance — risk + policy' },
-    { id: 'challenger',   label: 'Challenger — adversarial reviewer' },
-    { id: 'synthesizer',  label: 'Synthesizer — consolidates team output' },
-  ];
-
-  const applyPreset = (preset) => {
-    setForm((prev) => ({
-      ...prev,
-      name: preset.name,
-      persona: preset.persona,
-      model: preset.model,
-      llm_provider: preset.llm_provider,
-      tools: preset.tools,
-      role_archetype: preset.role_archetype,
-      peer_review_targets: preset.peer_review_targets,
-    }));
-  };
+  async function optimize() {
+    setError(null);
+    setOptimizing(true);
+    try {
+      const teamName = teams.find(t => t.id === form.team_id)?.name || '';
+      const { persona: p } = await apiClient.optimizeEmployeePersona({
+        brief: form.brief.trim(),
+        name: form.name.trim(),
+        role: form.role_archetype,
+        team: teamName,
+        age: form.age || null,
+        gender: form.gender || null,
+        experience_years: Number(form.experience_years) || 0,
+      });
+      setPersona(p);
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setOptimizing(false);
+    }
+  }
 
   async function submit() {
     setError(null);
     setSubmitting(true);
     try {
+      // Auto-optimize persona on submit if user didn't preview it.
+      let finalPersona = persona;
+      if (!finalPersona) {
+        const teamName = teams.find(t => t.id === form.team_id)?.name || '';
+        const { persona: p } = await apiClient.optimizeEmployeePersona({
+          brief: form.brief.trim(),
+          name: form.name.trim(),
+          role: form.role_archetype,
+          team: teamName,
+          age: form.age || null,
+          gender: form.gender || null,
+          experience_years: Number(form.experience_years) || 0,
+        });
+        finalPersona = p;
+      }
       const payload = {
         name: form.name.trim(),
-        persona: form.persona,
-        model: form.model,
-        llm_provider: form.llm_provider,
-        scope: form.scope,
-        team_id: form.scope === 'team' && form.team_id ? form.team_id : null,
-        slack_team_id: form.slack_team_id || null,
-        slack_channels_allowed: form.slack_channels_allowed
-          ? form.slack_channels_allowed.split(',').map(s => s.trim()).filter(Boolean)
-          : [],
-        slack_display_name: form.slack_display_name?.trim() || null,
-        slack_avatar_emoji: form.slack_avatar_emoji?.trim() || null,
-        tools: form.tools,
+        persona: finalPersona,
+        scope: form.team_id ? 'team' : 'personal',
+        team_id: form.team_id || null,
         role_archetype: form.role_archetype,
-        peer_review_targets: form.peer_review_targets,
         policy_rules: {
-          rate_limit_per_min: Number(form.rate_limit_per_min) || 30,
+          rate_limit_per_min: 30,
+          age: form.age || null,
+          gender: form.gender || null,
+          experience_years: Number(form.experience_years) || 0,
         },
       };
       await onCreate(payload);
@@ -1176,6 +1179,8 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
     }
   }
 
+  const canSubmit = form.name.trim() && form.brief.trim() && form.role_archetype && form.team_id;
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="bg-white rounded-[12px] w-[560px] max-h-[90vh] overflow-y-auto shadow-2xl"
@@ -1184,14 +1189,97 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         <div className="p-5 border-b border-[#eae7e1] flex items-start justify-between">
           <div>
             <h2 className="text-[16px] font-semibold text-[#0a0a0a]">Create Digital Employee</h2>
-            <p className="text-[11px] text-[#a3a3a3] mt-0.5">Step {step} of 6</p>
+            <p className="text-[11px] text-[#a3a3a3] mt-0.5">Describe them in one line — we build the persona.</p>
           </div>
           <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#525252]"><X size={16} /></button>
         </div>
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          {step === 1 && (
+          <label className="block">
+            <span className="text-[11px] text-[#525252] font-medium">Name</span>
+            <input autoFocus value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. Maya Ortiz"
+              className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] focus:outline-none focus:border-[#117dff]" />
+          </label>
+
+          <label className="block">
+            <span className="text-[11px] text-[#525252] font-medium">Brief / what should they do?</span>
+            <textarea value={form.brief} onChange={e => setForm({ ...form, brief: e.target.value })}
+              rows={3}
+              placeholder="e.g. Calm operations lead who turns chaos into clear plans and keeps the team honest about owners and blockers."
+              className="w-full px-3 py-2 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] resize-y focus:outline-none focus:border-[#117dff]" />
+            <span className="text-[10px] text-[#a3a3a3]">One sentence is enough — we expand this into a full persona.</span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-[11px] text-[#525252] font-medium">Role</span>
+              <select value={form.role_archetype} onChange={e => setForm({ ...form, role_archetype: e.target.value })}
+                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
+                {ROLE_ARCHETYPES.map(r => (
+                  <option key={r.id} value={r.id}>{r.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-[#525252] font-medium">Team</span>
+              <select value={form.team_id} onChange={e => setForm({ ...form, team_id: e.target.value })}
+                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
+                <option value="">— select team —</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <label className="block">
+              <span className="text-[11px] text-[#525252] font-medium">Age</span>
+              <input type="number" min={18} max={99} value={form.age}
+                onChange={e => setForm({ ...form, age: e.target.value })}
+                placeholder="32"
+                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-[#525252] font-medium">Gender</span>
+              <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
+                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
+                <option value="">—</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="unspecified">Unspecified</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-[#525252] font-medium">Experience (yrs)</span>
+              <input type="number" min={0} max={60} value={form.experience_years}
+                onChange={e => setForm({ ...form, experience_years: e.target.value })}
+                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
+            </label>
+          </div>
+
+          {/* Persona preview block: LLM expansion of the brief. Optional. */}
+          <div className="rounded-[8px] border border-[#eae7e1] bg-[#faf9f4] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] uppercase tracking-[0.08em] text-[#737373] font-semibold">
+                Generated persona
+              </span>
+              <button onClick={optimize}
+                disabled={!form.brief.trim() || optimizing}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-[6px] bg-white border border-[#e3e0db] hover:border-[#117dff] hover:text-[#117dff] disabled:opacity-40">
+                {optimizing ? <RefreshCw size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                {persona ? 'Regenerate' : 'Preview'}
+              </button>
+            </div>
+            {persona ? (
+              <p className="mt-2 text-[12px] leading-relaxed text-[#0a0a0a] whitespace-pre-wrap">{persona}</p>
+            ) : (
+              <p className="mt-2 text-[11px] text-[#a3a3a3] italic">Optional. Auto-generated on create if you skip preview.</p>
+            )}
+          </div>
+
+          {false && (
             <>
               <div>
                 <span className="text-[11px] text-[#525252] font-medium">Human-like Persona Presets</span>
@@ -1226,7 +1314,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </label>
             </>
           )}
-          {step === 2 && (
+          {false && (
             <>
               <label className="block">
                 <span className="text-[11px] text-[#525252] font-medium">LLM Provider</span>
@@ -1246,7 +1334,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </label>
             </>
           )}
-          {step === 3 && (
+          {false && (
             <>
               <label className="block">
                 <span className="text-[11px] text-[#525252] font-medium">Slack Team ID (workspace)</span>
@@ -1285,7 +1373,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </div>
             </>
           )}
-          {step === 4 && (
+          {false && (
             <>
               <label className="block">
                 <span className="text-[11px] text-[#525252] font-medium">Scope</span>
@@ -1326,7 +1414,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </label>
             </>
           )}
-          {step === 5 && (
+          {false && (
             <>
               {/* Collaboration: role archetype + adversarial review targets.
                   Drives reviewer / synthesizer selection in the multi-agent
@@ -1365,12 +1453,12 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </div>
             </>
           )}
-          {step === 6 && (
+          {false && (
             <>
               <span className="text-[11px] text-[#525252] font-medium block mb-2">Enabled Simulation Actions</span>
             </>
           )}
-          {step === 6 && (
+          {false && (
             <>
               <span className="text-[11px] text-[#525252] font-medium block mb-2">Enabled Simulation Actions</span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1409,30 +1497,16 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-[#eae7e1] flex items-center justify-between">
-          <button onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1}
-            className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded disabled:opacity-30">
-            Back
+        <div className="p-5 border-t border-[#eae7e1] flex items-center justify-end gap-2">
+          <button onClick={onClose}
+            className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded">
+            Cancel
           </button>
-          <div className="flex gap-2">
-            <button onClick={onClose}
-              className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded">
-              Cancel
-            </button>
-            {step < 6 ? (
-              <button onClick={() => setStep(step + 1)}
-                disabled={step === 1 && !form.name.trim()}
-                className="px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
-                Next
-              </button>
-            ) : (
-              <button onClick={submit} disabled={submitting || !form.name.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
-                {submitting ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                Create
-              </button>
-            )}
-          </div>
+          <button onClick={submit} disabled={submitting || !canSubmit}
+            className="flex items-center gap-1.5 px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
+            {submitting ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            Create
+          </button>
         </div>
       </div>
     </div>
