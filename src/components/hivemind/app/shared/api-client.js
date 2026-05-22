@@ -420,6 +420,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async remintEmployeeKey(employeeId) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${employeeId}/remint-key`);
+    return data;
+  }
+
+  async remintAllEmployeeKeys(orgId) {
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/employees/remint-all-keys`);
+    return data;
+  }
+
   async getEmployee(id) {
     const { data } = await this.controlPlane.get(`/v1/employees/${id}`);
     return data;
