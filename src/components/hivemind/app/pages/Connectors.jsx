@@ -2442,9 +2442,11 @@ function ChatGPTConnectorCard() {
     : 'https://core.hivemind.davinciai.eu:8050') + '/v1/chatgpt/openapi.yaml';
   // Published HIVEMIND GPT URL. Platform team registers ONE OAuth client +
   // one GPT in OpenAI's editor; end users just open the GPT and click
-  // "Connect to HIVEMIND" once.
-  const GPT_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_CHATGPT_GPT_URL)
-    || 'https://chatgpt.com/g/hivemind';
+  // "Connect to HIVEMIND" once. Until that env var is set, the CTA flips
+  // to "Set up ChatGPT" and opens the admin expander.
+  const GPT_URL_ENV = (typeof process !== 'undefined' && process.env?.REACT_APP_CHATGPT_GPT_URL) || '';
+  const GPT_URL_CONFIGURED = /^https:\/\/(chatgpt|chat\.openai)\.com\/g\//.test(GPT_URL_ENV);
+  const GPT_URL = GPT_URL_CONFIGURED ? GPT_URL_ENV : null;
   const [copied, setCopied] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const copy = (text, key) => {
@@ -2545,18 +2547,35 @@ function ChatGPTConnectorCard() {
         </div>
       </div>
 
-      {/* Primary CTA — end-user one-click */}
-      <a
-        href={GPT_URL}
-        target="_blank"
-        rel="noreferrer noopener"
-        className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
-      >
-        Add HIVEMIND to ChatGPT →
-      </a>
-      <p className="text-[10.5px] text-[#a3a3a3] text-center mt-2 font-['Space_Grotesk']">
-        Opens our published GPT. Sign in to your HIVEMIND account once when prompted. No copy-paste, no setup.
-      </p>
+      {/* Primary CTA — end-user one-click. Disabled until a platform-team
+          admin publishes the GPT and sets REACT_APP_CHATGPT_GPT_URL. */}
+      {GPT_URL ? (
+        <>
+          <a
+            href={GPT_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
+          >
+            Add HIVEMIND to ChatGPT →
+          </a>
+          <p className="text-[10.5px] text-[#a3a3a3] text-center mt-2 font-['Space_Grotesk']">
+            Opens our published GPT. Sign in to your HIVEMIND account once when prompted. No copy-paste, no setup.
+          </p>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
+          >
+            Set up ChatGPT integration →
+          </button>
+          <p className="text-[10.5px] text-[#dc2626] text-center mt-2 font-['Space_Grotesk']">
+            Not published yet. Open <b>Admin</b> below, finish the 7-step setup, then set <code>REACT_APP_CHATGPT_GPT_URL</code> to the published GPT URL.
+          </p>
+        </>
+      )}
 
       {/* Admin section — collapsed by default. Platform team uses ONCE to
           register the OAuth client + paste it into OpenAI's GPT editor. */}
