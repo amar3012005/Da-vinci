@@ -11,7 +11,9 @@ import {
   ChevronRight,
   AlertTriangle,
   Trash2,
+  Paperclip,
   X,
+  CheckCircle2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -600,7 +602,14 @@ export function ChatPanel({ isOpen, onClose }) {
     clearPersistedMessages();
   }, []);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
+  // Active upload rows — { id, name, status, progress, title, memoryId, error }
+  const [uploads, setUploads] = useState([]);
+  const updateUpload = useCallback((id, patch) =>
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u))), []);
+  const removeUpload = useCallback((id) =>
+    setUploads((prev) => prev.filter((u) => u.id !== id)), []);
   // UI language from the navbar selector — passed to /api/chat so the
   // ReAct agent replies in the user's chosen language end-to-end.
   const { i18n } = useTranslation();
@@ -718,6 +727,37 @@ export function ChatPanel({ isOpen, onClose }) {
     }
   }, [input, loading, selectedModel, messages, i18n.language, activeProjectId]);
 
+  // Upload handler — auto-routes by MIME (image → Groq vision, doc → docling).
+  const handleFiles = useCallback(async (filesList) => {
+    const files = Array.from(filesList || []);
+    if (!files.length) return;
+    for (const file of files) {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const isImage = /^image\/(png|jpe?g|webp|gif)$/.test((file.type || '').toLowerCase());
+      setUploads((prev) => [...prev, { id, name: file.name, isImage, status: 'uploading', progress: 0 }]);
+      try {
+        const opts = {
+          ...(activeProjectId ? (isImage ? { projectId: activeProjectId } : { targetScope: 'project', containerTag: `project:${activeProjectId}` }) : {}),
+          onUploadProgress: (evt) => {
+            if (!evt.total) return;
+            updateUpload(id, { progress: Math.round((evt.loaded / evt.total) * 100) });
+          },
+        };
+        const result = isImage
+          ? await apiClient.uploadImage(file, opts)
+          : await apiClient.uploadDocument(file, opts);
+        const memId = result?.memory_id || result?.id || result?.memory?.id || null;
+        const title = result?.title || result?.classification?.suggested_title || file.name;
+        updateUpload(id, { status: 'done', progress: 100, memoryId: memId, title, kind: result?.classification?.kind || null });
+        setTimeout(() => removeUpload(id), 6000);
+      } catch (err) {
+        updateUpload(id, { status: 'error', error: err?.response?.data?.error || err?.message || 'upload failed' });
+      }
+    }
+  }, [activeProjectId, updateUpload, removeUpload]);
+
+  const onPickFiles = useCallback(() => fileInputRef.current?.click(), []);
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -825,6 +865,38 @@ export function ChatPanel({ isOpen, onClose }) {
 
             {/* ── Input Bar ── */}
             <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-[#e3e0db]">
+              {/* Active upload rows — image → Groq vision pipeline; doc → docling */}
+              {uploads.length > 0 && (
+                <div className="mb-2 space-y-1.5">
+                  {uploads.map((u) => (
+                    <div
+                      key={u.id}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[11.5px] ${
+                        u.status === 'done'
+                          ? 'bg-[#16a34a]/[0.06] border-[#16a34a]/30 text-[#15803d]'
+                          : u.status === 'error'
+                          ? 'bg-[#dc2626]/[0.06] border-[#dc2626]/30 text-[#b91c1c]'
+                          : 'bg-[#faf9f4] border-[#e3e0db] text-[#525252]'
+                      }`}
+                    >
+                      {u.status === 'done' ? <CheckCircle2 size={12} className="flex-shrink-0" />
+                        : u.status === 'error' ? <AlertTriangle size={12} className="flex-shrink-0" />
+                        : <Loader2 size={12} className="animate-spin flex-shrink-0" />}
+                      <span className="flex-1 truncate font-medium">{u.title || u.name}</span>
+                      <span className="font-mono text-[10px]">
+                        {u.status === 'done' ? `saved${u.kind ? ` · ${u.kind}` : ''}`
+                          : u.status === 'error' ? (u.error || 'failed').slice(0, 32)
+                          : `${u.progress || 0}%`}
+                      </span>
+                      <button
+                        onClick={() => removeUpload(u.id)}
+                        className="text-[#a3a3a3] hover:text-[#525252]"
+                        aria-label="Dismiss"
+                      ><X size={11} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div
                 className={`flex items-end gap-3 rounded-2xl border bg-[#faf9f4] px-4 py-3 transition-colors ${
                   overLimit
@@ -832,6 +904,22 @@ export function ChatPanel({ isOpen, onClose }) {
                     : 'border-[#e3e0db] focus-within:border-[#117dff]/40'
                 }`}
               >
+                <button
+                  onClick={onPickFiles}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#117dff] hover:bg-white border border-[#e3e0db] transition-colors flex-shrink-0"
+                  title="Upload image or document"
+                  aria-label="Upload"
+                >
+                  <Paperclip size={14} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.txt,.md,.csv,.docx,.xlsx,.pptx"
+                  className="hidden"
+                  onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
+                />
                 <textarea
                   ref={textareaRef}
                   value={input}
