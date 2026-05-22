@@ -79,16 +79,9 @@ const TASK_TEMPLATES = [
 
 const SEEDED_PERSONA_SLUGS = PERSONA_PRESETS.map((preset) => slugifyName(preset.name));
 
-const TOOL_COPY = {
-  hivemind_recall: 'Read memory and prior knowledge',
-  hivemind_save_memory: 'Write memory back into the workspace',
-  hivemind_slack_post: 'Post updates into the simulation or connected Slack',
-  hivemind_slack_react: 'React with emoji to signal agreement, urgency, or caution',
-  hivemind_slack_search: 'Search earlier conversations and shared context',
-  hivemind_slack_history: 'Read channel or thread history as simulation context',
-  hivemind_web_search: 'Search the web',
-  hivemind_web_crawl: 'Crawl and summarize web pages',
-};
+// TOOL_COPY removed — was used by the 6-step wizard's tools picker which
+// was collapsed into the single-step create form. Kept as a comment for
+// future reference if we re-introduce tool selection in the UI.
 
 const REACTION_EMOJI = {
   eyes: '👀',
