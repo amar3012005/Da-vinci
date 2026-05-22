@@ -30,6 +30,11 @@ import {
   Brain,
   FileText,
   Plus,
+  Paperclip,
+  CheckCircle2,
+  FileWarning,
+  Upload as UploadIcon,
+  X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -224,8 +229,12 @@ export default function TalkToHiveMobile() {
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Upload pipeline state — one row per file.
+  // status: 'queued' | 'uploading' | 'extracting' | 'making' | 'saving' | 'done' | 'error'
+  const [uploads, setUploads] = useState([]);
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Persist messages.
   useEffect(() => { saveMsgs(messages); }, [messages]);
@@ -284,6 +293,94 @@ export default function TalkToHiveMobile() {
       setLoading(false);
     }
   }, [input, loading, messages, selectedModel, i18n.language, activeProjectId]);
+
+  // ─── Upload pipeline ──────────────────────────────────────────────────
+  // Mobile chat fires-and-forgets: pick file(s) → POST each via
+  // apiClient.uploadDocument (same /v1/proxy/knowledge/upload endpoint
+  // KnowledgeBase.jsx uses → same canonical ingest pipeline → memories,
+  // facts, edges, etc.). The status strip above the composer animates
+  // through queued → uploading → extracting → making memories → saving →
+  // done. The chat surface itself doesn't care — server handles
+  // everything once the file lands.
+
+  const STAGE_LABEL = {
+    queued: 'Queued',
+    uploading: 'Uploading',
+    extracting: 'Extracting text',
+    making: 'Making memories',
+    saving: 'Saving',
+    done: 'Saved',
+    error: 'Failed',
+  };
+
+  const handlePickFiles = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFiles = useCallback(async (fileList) => {
+    const files = Array.from(fileList || []).filter(Boolean);
+    if (files.length === 0) return;
+
+    // Initial rows.
+    const rows = files.map((f, idx) => ({
+      id: `up-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+      file: f,
+      name: f.name,
+      size: f.size,
+      status: 'queued',
+      progress: 0,
+      error: null,
+      memoryId: null,
+    }));
+    setUploads((prev) => [...prev, ...rows]);
+
+    // Drive each upload in parallel — server-side ingest pipeline handles
+    // ordering. We just shepherd UI state through best-effort stages.
+    rows.forEach((row) => uploadOne(row));
+  }, [activeProjectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateUpload = (id, patch) =>
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+
+  const removeUpload = (id) =>
+    setUploads((prev) => prev.filter((u) => u.id !== id));
+
+  const uploadOne = async (row) => {
+    try {
+      updateUpload(row.id, { status: 'uploading', progress: 0 });
+
+      // Stage 1 — upload bytes. Real progress drives this stage's %.
+      const result = await apiClient.uploadDocument(row.file, {
+        ...(activeProjectId ? { targetScope: 'project', containerTag: `project:${activeProjectId}` } : {}),
+        onUploadProgress: (evt) => {
+          if (!evt.total) return;
+          const pct = Math.round((evt.loaded / evt.total) * 100);
+          updateUpload(row.id, { progress: pct });
+        },
+      });
+
+      // Server returns 200 once the file is queued for ingest. After that
+      // the canonical pipeline does extract → chunk → embed → save. We
+      // can't poll per-row cheaply, so we time-shift through synthetic
+      // stages so the user sees the work moving.
+      updateUpload(row.id, { status: 'extracting', progress: 100 });
+      await new Promise((r) => setTimeout(r, 700));
+      updateUpload(row.id, { status: 'making' });
+      await new Promise((r) => setTimeout(r, 900));
+      updateUpload(row.id, { status: 'saving' });
+      await new Promise((r) => setTimeout(r, 600));
+
+      const memId = result?.memory_id || result?.id || result?.memory?.id || null;
+      updateUpload(row.id, { status: 'done', memoryId: memId });
+      // Auto-dismiss successful rows after 5s.
+      setTimeout(() => removeUpload(row.id), 5000);
+    } catch (err) {
+      updateUpload(row.id, {
+        status: 'error',
+        error: err?.response?.data?.detail || err?.message || 'Upload failed',
+      });
+    }
+  };
 
   const clearChat = () => {
     if (!messages.length) return;
@@ -414,9 +511,100 @@ export default function TalkToHiveMobile() {
         </div>
       </div>
 
+      {/* ── Upload status strip (above composer, animated) ── */}
+      <AnimatePresence>
+        {uploads.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex-shrink-0 px-3 pt-2 overflow-hidden"
+          >
+            <div className="flex flex-col gap-1.5">
+              {uploads.map((u) => {
+                const isDone = u.status === 'done';
+                const isErr = u.status === 'error';
+                const isLive = !isDone && !isErr;
+                return (
+                  <motion.div
+                    key={u.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl border text-[12px] overflow-hidden ${
+                      isDone
+                        ? 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]'
+                        : isErr
+                          ? 'bg-[#fef2f2] border-[#fecaca] text-[#b91c1c]'
+                          : 'bg-white border-[#ece9e2] text-[#0a0a0a]'
+                    }`}
+                  >
+                    {/* Shimmer progress bar while live */}
+                    {isLive && (
+                      <motion.div
+                        className="absolute inset-y-0 left-0 bg-[#117dff]/10"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${u.status === 'uploading' ? u.progress || 8 : 100}%` }}
+                        transition={{ duration: 0.6 }}
+                      />
+                    )}
+                    <div className="relative flex-shrink-0">
+                      {isDone ? (
+                        <CheckCircle2 size={16} className="text-[#16a34a]" />
+                      ) : isErr ? (
+                        <FileWarning size={16} className="text-[#dc2626]" />
+                      ) : (
+                        <Loader2 size={16} className="text-[#117dff] animate-spin" />
+                      )}
+                    </div>
+                    <div className="relative min-w-0 flex-1">
+                      <div className="font-semibold truncate text-[12.5px] leading-tight">{u.name}</div>
+                      <div className="text-[10.5px] mt-0.5 font-mono opacity-80">
+                        {isErr
+                          ? u.error
+                          : `${STAGE_LABEL[u.status] || u.status}${u.status === 'uploading' && u.progress ? ` · ${u.progress}%` : '…'}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeUpload(u.id)}
+                      className="relative w-6 h-6 flex items-center justify-center rounded-md text-[#a3a3a3] active:bg-[#ece9e2]/60 flex-shrink-0"
+                      aria-label="Dismiss"
+                    >
+                      <X size={13} />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Composer ───────────────────────────────── */}
       <div className="flex-shrink-0 px-3 pt-2.5 pb-3 bg-[#faf9f4] border-t border-[#ece9e2]">
-        <div className="flex items-end gap-2 bg-white border border-[#ece9e2] rounded-[26px] pl-4 pr-1.5 py-1.5 focus-within:border-[#c0d8ff]">
+        <div className="flex items-end gap-2 bg-white border border-[#ece9e2] rounded-[26px] pl-2 pr-1.5 py-1.5 focus-within:border-[#c0d8ff]">
+          {/* Attach */}
+          <button
+            onClick={handlePickFiles}
+            className="w-10 h-10 rounded-full text-[#525252] flex items-center justify-center flex-shrink-0 active:bg-[#ece9e2]/60"
+            aria-label="Attach files"
+          >
+            <Paperclip size={18} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              handleFiles(e.target.files);
+              // Reset so picking the same file twice still fires onChange.
+              if (e.target) e.target.value = '';
+            }}
+            accept="*/*"
+          />
+
           <textarea
             ref={inputRef}
             value={input}
@@ -445,7 +633,7 @@ export default function TalkToHiveMobile() {
           <span className="text-[10px] text-[#a3a3a3] font-mono">
             {input.length}/{MAX_CHARS}
           </span>
-          <span className="text-[10px] text-[#a3a3a3]">Enter to send · Shift+Enter newline</span>
+          <span className="text-[10px] text-[#a3a3a3]">Tap 📎 to upload · Enter to send</span>
         </div>
       </div>
     </div>
