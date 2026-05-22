@@ -211,10 +211,20 @@ export default function Overview() {
   // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
-    // Opt-out via ?desktop=1 if the user really wants the dashboard on mobile.
+    // Detect phones either by narrow viewport OR by UA — catches the
+    // "Request Desktop Site" case where the viewport widens beyond 768px
+    // but the device is still a phone (Safari/Chrome desktop-mode toggle,
+    // iPad in spoof-desktop, etc).
+    const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
+    const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+    const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
+    const isMobile = narrowViewport || uaDataMobile || uaSniff;
+    // Forced entry from a QR/share link.
+    const fromQR = new URLSearchParams(window.location.search).get('from');
+    // Explicit opt-out so power users can still get the full dashboard
+    // on phone if they really want it: ?desktop=1.
     const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
-    if (isMobile && !optOut) navigate('/hivemind/m/chat', { replace: true });
+    if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
   }, [navigate]);
 
   // Profile / stats
