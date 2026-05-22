@@ -201,6 +201,120 @@ function TokenUsage({ usage }) {
   );
 }
 
+// ─── Markdown-lite renderer ──────────────────────────────────────────────
+// Dependency-free. Handles: code fences, pipe tables, headings, lists,
+// blockquotes, inline bold / italic / code / links. Same pattern as
+// TalkToHiveMobile.renderMarkdownMobile + extension renderMarkdownLite.
+function inlineMd(s, keyPrefix = 'i') {
+  if (!s) return null;
+  const out = [];
+  let rest = String(s);
+  let k = 0;
+  while (rest.length) {
+    const patterns = [
+      { re: /\*\*([^*]+)\*\*/, tag: 'b' },
+      { re: /(?<!\*)\*([^*\n]+)\*(?!\*)/, tag: 'i' },
+      { re: /`([^`]+)`/, tag: 'code' },
+      { re: /\[([^\]]+)\]\(([^)\s]+)\)/, tag: 'a' },
+    ];
+    let first = null;
+    for (const p of patterns) {
+      const m = rest.match(p.re);
+      if (m && (first === null || m.index < first.match.index)) first = { ...p, match: m };
+    }
+    if (!first) { out.push(rest); break; }
+    if (first.match.index > 0) out.push(rest.slice(0, first.match.index));
+    const v = first.match;
+    if (first.tag === 'b') out.push(<strong key={`${keyPrefix}-b-${k++}`}>{v[1]}</strong>);
+    else if (first.tag === 'i') out.push(<em key={`${keyPrefix}-i-${k++}`}>{v[1]}</em>);
+    else if (first.tag === 'code') out.push(<code key={`${keyPrefix}-c-${k++}`} className="px-1 py-0.5 rounded bg-black/5 text-[12px] font-mono">{v[1]}</code>);
+    else if (first.tag === 'a') out.push(
+      <a key={`${keyPrefix}-a-${k++}`} href={v[2]} target="_blank" rel="noreferrer noopener"
+         className="text-[#117dff] underline underline-offset-2 break-all">{v[1]}</a>
+    );
+    rest = rest.slice(v.index + v[0].length);
+  }
+  return out;
+}
+function isTableRow(line) { return /^\s*\|.*\|\s*$/.test(line); }
+function isTableSep(line) { return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line); }
+function parseTableRow(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+}
+function renderMarkdown(raw) {
+  if (!raw) return null;
+  const lines = String(raw).replace(/^\s+|\s+$/g, '').split(/\r?\n/);
+  const blocks = [];
+  let i = 0; let key = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (/^```/.test(trimmed)) {
+      const buf = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i].trim())) { buf.push(lines[i]); i++; }
+      if (i < lines.length) i++;
+      blocks.push(<pre key={key++} className="my-2 p-2.5 rounded-lg bg-[#0a0a0a] text-[#e5e5e5] text-[12px] font-mono leading-relaxed overflow-x-auto">{buf.join('\n')}</pre>);
+      continue;
+    }
+    if (!trimmed) { i++; continue; }
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const header = parseTableRow(line); i += 2; const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) { rows.push(parseTableRow(lines[i])); i++; }
+      blocks.push(
+        <div key={key++} className="my-2 -mx-1 overflow-x-auto">
+          <table className="min-w-full text-[12px] border-collapse">
+            <thead><tr className="bg-[#f3f1ec]">
+              {header.map((h, hx) => <th key={hx} className="text-left font-semibold px-2.5 py-1.5 border border-[#e3e0db]">{inlineMd(h, `th-${hx}`)}</th>)}
+            </tr></thead>
+            <tbody>{rows.map((r, rx) => (
+              <tr key={rx} className={rx % 2 ? 'bg-white' : 'bg-[#fafaf6]'}>
+                {r.map((c, cx) => <td key={cx} className="px-2.5 py-1.5 border border-[#e3e0db] align-top">{inlineMd(c, `td-${rx}-${cx}`)}</td>)}
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+    const h = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (h) {
+      const lvl = h[1].length;
+      const cls = lvl === 1 ? 'text-[15px] font-bold mt-2 mb-1'
+                : lvl === 2 ? 'text-[14px] font-bold mt-2 mb-1'
+                : lvl === 3 ? 'text-[13px] font-semibold mt-1.5 mb-0.5'
+                : 'text-[11px] font-semibold uppercase tracking-wider text-[#525252] mt-1 mb-0.5';
+      blocks.push(<div key={key++} className={cls}>{inlineMd(h[2], `h-${key}`)}</div>);
+      i++; continue;
+    }
+    if (/^\s*[*-]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[*-]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[*-]\s+/, '')); i++; }
+      blocks.push(<ul key={key++} className="list-disc pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `li-${key}-${ix}`)}</li>)}</ul>);
+      continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*\d+\.\s+/, '')); i++; }
+      blocks.push(<ol key={key++} className="list-decimal pl-5 space-y-0.5 my-1">{items.map((it, ix) => <li key={ix}>{inlineMd(it, `ol-${key}-${ix}`)}</li>)}</ol>);
+      continue;
+    }
+    if (/^\s*>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
+      blocks.push(<blockquote key={key++} className="my-1.5 border-l-2 border-[#117dff]/40 pl-3 text-[#525252] italic">{inlineMd(buf.join(' '), `bq-${key}`)}</blockquote>);
+      continue;
+    }
+    const para = [];
+    while (
+      i < lines.length && lines[i].trim() &&
+      !/^(#{1,4}\s|\s*[*-]\s+|\s*\d+\.\s+|```|>\s?)/.test(lines[i]) &&
+      !(isTableRow(lines[i]) && i + 1 < lines.length && isTableSep(lines[i + 1]))
+    ) { para.push(lines[i].trim()); i++; }
+    if (para.length) blocks.push(<p key={key++} className="my-1 leading-relaxed">{inlineMd(para.join(' '), `p-${key}`)}</p>);
+  }
+  return blocks;
+}
+
 // ─── Slack pending-action sentinel ─────────────────────────────────────────
 // Server appends `<<HIVEMIND:SLACK_PENDING>>{json}` to the assistant turn so
 // the next user message can be matched as confirm/cancel against the staged
@@ -259,14 +373,14 @@ function MessageBubble({ msg }) {
             <span className="text-[10px] font-mono text-[#c4c1bb] truncate">· {msg.model}</span>
           )}
         </div>
-        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed text-[#0a0a0a] whitespace-pre-wrap break-words shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed text-[#0a0a0a] break-words shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {msg.error ? (
             <div className="flex items-start gap-2 text-[#dc2626]">
               <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-              <span>{displayContent}</span>
+              <span className="whitespace-pre-wrap">{displayContent}</span>
             </div>
           ) : (
-            displayContent
+            <div className="space-y-0.5">{renderMarkdown(displayContent)}</div>
           )}
           {pendingSlack && (
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-700">
