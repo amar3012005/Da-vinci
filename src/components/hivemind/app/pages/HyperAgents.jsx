@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2,
+  AlertTriangle, Loader2, ArrowLeft,
   Network, Shield, Crown, Lightbulb, MessageCircle,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -49,6 +49,8 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  // viewMode: 'thread' (room open) | 'roster' (back to agent grid)
+  const [viewMode, setViewMode] = useState('thread');
 
   const fetchRooms = useCallback(async () => {
     setError(null);
@@ -164,15 +166,43 @@ export default function HyperAgents() {
         </div>
       </aside>
 
-      {/* Middle: thread */}
+      {/* Middle: thread or roster */}
       <main className="flex-1 min-w-0 flex flex-col">
-        {activeRoomId
-          ? <RoomThread key={activeRoomId} roomId={activeRoomId} onArchived={() => { fetchRooms(); setActiveRoomId(null); }} />
-          : (
-            <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3]">
-              Pick a room from the left.
+        {viewMode === 'roster' ? (
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
+              <button
+                onClick={() => setViewMode('thread')}
+                className="p-1.5 text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded"
+                title="Back to room"
+              >
+                <ArrowLeft size={14} />
+              </button>
+              <span className="text-[13px] font-semibold text-[#0a0a0a]">Agent roster</span>
+              <span className="text-[10px] text-[#a3a3a3] ml-auto">Browse + edit your hires</span>
             </div>
-          )}
+            <div className="p-4">
+              <DigitalEmployees />
+            </div>
+          </div>
+        ) : activeRoomId ? (
+          <RoomThread
+            key={activeRoomId}
+            roomId={activeRoomId}
+            onBack={() => setViewMode('roster')}
+            onArchived={() => { fetchRooms(); setActiveRoomId(null); }}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
+            <span>Pick a room from the left.</span>
+            <button
+              onClick={() => setViewMode('roster')}
+              className="text-[11px] text-[#117dff] hover:underline"
+            >
+              Or browse the agent roster →
+            </button>
+          </div>
+        )}
       </main>
 
       {/* Right rail: participants — rendered inside RoomThread */}
@@ -238,7 +268,7 @@ function RoomRow({ room, active, onClick, archived }) {
 
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
-function RoomThread({ roomId, onArchived }) {
+function RoomThread({ roomId, onArchived, onBack }) {
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -377,7 +407,17 @@ function RoomThread({ roomId, onArchived }) {
       <section className="flex-1 min-w-0 flex flex-col">
         {/* Header */}
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0 flex items-center gap-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-1 text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded shrink-0"
+                title="Back to agent roster"
+              >
+                <ArrowLeft size={14} />
+              </button>
+            )}
+            <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[#0a0a0a]">
               <Hash size={13} className="text-[#a3a3a3]" />
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
@@ -389,6 +429,7 @@ function RoomThread({ roomId, onArchived }) {
             </div>
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {participants.length} participant{participants.length !== 1 ? 's' : ''} · {turns.length} turn{turns.length !== 1 ? 's' : ''}
+            </div>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
