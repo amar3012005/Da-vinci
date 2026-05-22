@@ -1363,6 +1363,47 @@ export default function KnowledgeBase() {
             exit={{ opacity: 0, height: 0 }}
             className="mb-8 space-y-2"
           >
+            {/* Upload-state banner — tells the user when it's safe to leave */}
+            {(() => {
+              const inFlight = uploads.filter((u) => u.status === 'uploading' || u.status === 'queued').length;
+              const allLanded = inFlight === 0 && uploads.length > 0;
+              if (inFlight > 0) {
+                return (
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-[#f59e0b]/30 bg-[#fff8eb] text-[12.5px]">
+                    <div className="w-5 h-5 rounded-full bg-[#f59e0b]/15 border border-[#f59e0b]/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-[#92400e]">
+                        Don't close this page yet — {inFlight} file{inFlight === 1 ? '' : 's'} still uploading.
+                      </div>
+                      <div className="text-[#a16207] text-[11.5px] mt-0.5">
+                        Once every row shows <span className="font-semibold">Uploaded</span>, you're safe to leave — the server takes over and your new memories surface in 2–5 minutes.
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              if (allLanded) {
+                return (
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-[#16a34a]/30 bg-[#f0fdf4] text-[12.5px]">
+                    <div className="w-5 h-5 rounded-full bg-[#16a34a]/15 border border-[#16a34a]/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-[#166534]">
+                        All uploads complete — safe to close this page.
+                      </div>
+                      <div className="text-[#15803d] text-[11.5px] mt-0.5">
+                        The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Queue stats header */}
             {uploads.length > 1 && (() => {
               const queued = uploads.filter((u) => u.status === 'queued').length;
@@ -1448,9 +1489,15 @@ export default function KnowledgeBase() {
                     </span>
                   )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
-                    <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
-                      {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
-                    </span>
+                    u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (
+                      <span className="text-[#16a34a]" title="Phase 1 evidence-first ingest">
+                        {u.segmentCount} seg · {u.promotedCount ?? 0}/{u.candidateCount ?? 0} promoted
+                      </span>
+                    ) : (
+                      <span className="text-[#117dff]" title="Server is extracting + indexing this document. Memories will surface in 2-5 min.">
+                        Processing… new memories in 2–5 min
+                      </span>
+                    )
                   )}
                   {u.enterprise?.detected_type && (
                     <span
