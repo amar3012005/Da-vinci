@@ -75,6 +75,193 @@ function saveMsgs(msgs) {
 
 // ─── Subcomponents ─────────────────────────────────────────────────────────
 
+// ─── Markdown-lite renderer ──────────────────────────────────────────────
+// Same idea as HyperAgents.renderMarkdownLite but extended with:
+//   • code fences (```)
+//   • GitHub-style pipe tables (| a | b |\n|---|---|\n| c | d |)
+//   • inline bold / italic / code / links
+// Keeps the file dependency-free (no react-markdown).
+function inlineMd(s, keyPrefix = 'i') {
+  if (!s) return null;
+  const out = [];
+  let rest = String(s);
+  let k = 0;
+  while (rest.length) {
+    const patterns = [
+      { re: /\*\*([^*]+)\*\*/, tag: 'b' },
+      { re: /(?<!\*)\*([^*\n]+)\*(?!\*)/, tag: 'i' },
+      { re: /`([^`]+)`/, tag: 'code' },
+      { re: /\[([^\]]+)\]\(([^)]+)\)/, tag: 'a' },
+    ];
+    let first = null;
+    for (const p of patterns) {
+      const m = rest.match(p.re);
+      if (m && (first === null || m.index < first.match.index)) first = { ...p, match: m };
+    }
+    if (!first) { out.push(rest); break; }
+    if (first.match.index > 0) out.push(rest.slice(0, first.match.index));
+    const v = first.match;
+    if (first.tag === 'b') out.push(<strong key={`${keyPrefix}-b-${k++}`}>{v[1]}</strong>);
+    else if (first.tag === 'i') out.push(<em key={`${keyPrefix}-i-${k++}`}>{v[1]}</em>);
+    else if (first.tag === 'code') out.push(<code key={`${keyPrefix}-c-${k++}`} className="px-1 py-0.5 rounded bg-black/5 text-[13px] font-mono">{v[1]}</code>);
+    else if (first.tag === 'a') out.push(
+      <a key={`${keyPrefix}-a-${k++}`} href={v[2]} target="_blank" rel="noreferrer noopener"
+         className="text-[#117dff] underline underline-offset-2 break-all">{v[1]}</a>
+    );
+    rest = rest.slice(v.index + v[0].length);
+  }
+  return out;
+}
+
+function isTableRow(line) {
+  return /^\s*\|.*\|\s*$/.test(line);
+}
+function isTableSep(line) {
+  return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line);
+}
+function parseTableRow(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+}
+
+function renderMarkdownMobile(raw) {
+  if (!raw) return null;
+  const text = String(raw).replace(/^\s+|\s+$/g, '');
+  const blocks = [];
+  const lines = text.split(/\r?\n/);
+  let i = 0;
+  let key = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Code fence
+    if (/^```/.test(trimmed)) {
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i].trim())) {
+        buf.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing fence
+      blocks.push(
+        <pre key={key++} className="my-2 p-2.5 rounded-lg bg-[#0a0a0a] text-[#e5e5e5] text-[12px] font-mono leading-relaxed overflow-x-auto">
+          {buf.join('\n')}
+        </pre>
+      );
+      continue;
+    }
+
+    if (!trimmed) { i++; continue; }
+
+    // Table (header + separator + rows)
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const header = parseTableRow(line);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      blocks.push(
+        <div key={key++} className="my-2 -mx-1 overflow-x-auto">
+          <table className="min-w-full text-[13px] border-collapse">
+            <thead>
+              <tr className="bg-[#f3f1ec]">
+                {header.map((h, hx) => (
+                  <th key={hx} className="text-left font-semibold px-2.5 py-1.5 border border-[#e3e0db]">{inlineMd(h, `th-${hx}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, rx) => (
+                <tr key={rx} className={rx % 2 ? 'bg-white' : 'bg-[#fafaf6]'}>
+                  {r.map((c, cx) => (
+                    <td key={cx} className="px-2.5 py-1.5 border border-[#e3e0db] align-top">{inlineMd(c, `td-${rx}-${cx}`)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Heading
+    const h = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (h) {
+      const level = h[1].length;
+      const cls = level === 1 ? 'text-[17px] font-bold mt-2 mb-1'
+                : level === 2 ? 'text-[15px] font-bold mt-2 mb-1'
+                : level === 3 ? 'text-[14px] font-semibold mt-1.5 mb-0.5'
+                : 'text-[13px] font-semibold uppercase tracking-wider text-[#525252] mt-1 mb-0.5';
+      blocks.push(<div key={key++} className={cls}>{inlineMd(h[2], `h-${key}`)}</div>);
+      i++;
+      continue;
+    }
+
+    // Bullet list
+    if (/^\s*[*-]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[*-]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[*-]\s+/, ''));
+        i++;
+      }
+      blocks.push(
+        <ul key={key++} className="list-disc pl-5 space-y-0.5 my-1">
+          {items.map((it, ix) => <li key={ix}>{inlineMd(it, `li-${key}-${ix}`)}</li>)}
+        </ul>
+      );
+      continue;
+    }
+
+    // Numbered list
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+\.\s+/, ''));
+        i++;
+      }
+      blocks.push(
+        <ol key={key++} className="list-decimal pl-5 space-y-0.5 my-1">
+          {items.map((it, ix) => <li key={ix}>{inlineMd(it, `ol-${key}-${ix}`)}</li>)}
+        </ol>
+      );
+      continue;
+    }
+
+    // Blockquote
+    if (/^\s*>\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        buf.push(lines[i].replace(/^\s*>\s?/, ''));
+        i++;
+      }
+      blocks.push(
+        <blockquote key={key++} className="my-1.5 border-l-2 border-[#117dff]/40 pl-3 text-[#525252] italic">
+          {inlineMd(buf.join(' '), `bq-${key}`)}
+        </blockquote>
+      );
+      continue;
+    }
+
+    // Paragraph
+    const para = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !/^(#{1,4}\s|\s*[*-]\s+|\s*\d+\.\s+|```|>\s?)/.test(lines[i]) &&
+      !(isTableRow(lines[i]) && i + 1 < lines.length && isTableSep(lines[i + 1]))
+    ) {
+      para.push(lines[i].trim());
+      i++;
+    }
+    if (para.length) blocks.push(<p key={key++} className="my-1 leading-relaxed">{inlineMd(para.join(' '), `p-${key}`)}</p>);
+  }
+  return blocks;
+}
+
 function UserBubble({ content }) {
   return (
     <div className="self-end max-w-[85%] px-4 py-2.5 rounded-[20px] rounded-br-md bg-[#117dff] text-white text-[15px] leading-snug shadow-[0_1px_2px_rgba(17,125,255,0.18)]">
@@ -106,8 +293,8 @@ function AiBubble({ msg, model }) {
             <AlertTriangle size={12} /> Error
           </div>
         )}
-        <div className="text-[15px] leading-relaxed text-[#0a0a0a] whitespace-pre-wrap break-words">
-          {msg.content}
+        <div className="text-[15px] leading-relaxed text-[#0a0a0a] break-words space-y-0.5">
+          {renderMarkdownMobile(msg.content)}
         </div>
 
         {(hasSteps || hasSources || msg.usage) && (
