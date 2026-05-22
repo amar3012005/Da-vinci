@@ -22,7 +22,6 @@ import {
   BookOpen,
   Bot,
   Mic,
-  MessageSquare,
   Building2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,8 +42,8 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
   // Web Admin used to be a separate entry. It now lives as a collapsible
   // "System Health" drawer inside /web (Web Studio) — same admin gate.
   const adminItems = [
-    { to: '/hivemind/app/workspace',             icon: Building2,     label: tt('workspaceAdmin', 'Workspace Admin') },
-    { to: '/hivemind/app/employees/playground',  icon: MessageSquare, label: tt('playground', 'Playground') },
+    { to: '/hivemind/app/workspace', icon: Building2, label: tt('workspaceAdmin', 'Workspace Admin') },
+    { to: '/hivemind/app/employees', icon: Bot,      label: tt('hyperAgents', 'Hyper Agents') },
   ];
 
   const sections = [
@@ -52,7 +51,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
       label: null,
       items: [
         { to: '/hivemind/app/overview', icon: LayoutDashboard, label: tt('overview', 'Overview') },
-        { to: '/hivemind/app/overview', icon: MessageSquare,   label: tt('talkToHive', 'Talk to HIVE') },
       ],
     },
     {

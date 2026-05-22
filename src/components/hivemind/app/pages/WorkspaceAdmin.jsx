@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Users, FolderKanban, UserCog, Send, ScrollText, KeyRound, Bot,
+  Users, FolderKanban, UserCog, Send, ScrollText, KeyRound,
   LayoutDashboard, Activity, ArrowUpRight, Building2, RefreshCw, Loader2,
   Clock, CheckCircle2, XCircle,
 } from 'lucide-react';
@@ -15,19 +15,18 @@ const TeamMembers      = React.lazy(() => import('./TeamMembers'));
 const TeamProjects     = React.lazy(() => import('./TeamProjects'));
 const AuditLog         = React.lazy(() => import('./AuditLog'));
 const AdminSso         = React.lazy(() => import('./AdminSso'));
-const DigitalEmployees = React.lazy(() => import('./DigitalEmployees'));
 
 // Tab registry. `id` is the ?tab=… URL param; `icon` + `label` render in the strip.
-// `Component` = lazy sub-page; `Custom` = inline render function for tabs we built.
+// Digital Employees now lives at /hivemind/app/employees as its own
+// 'Hyper Agents' sidebar entry — no longer a tab here.
 const TABS = [
-  { id: 'overview',  label: 'Overview',          icon: LayoutDashboard },
-  { id: 'members',   label: 'Org Members',       icon: UserCog,  Component: AdminUsers },
-  { id: 'teams',     label: 'Team Members',      icon: Users,    Component: TeamMembers },
-  { id: 'projects',  label: 'Projects',          icon: FolderKanban, Component: TeamProjects },
-  { id: 'invites',   label: 'Invites',           icon: Send },
-  { id: 'employees', label: 'Digital Employees', icon: Bot,      Component: DigitalEmployees },
-  { id: 'audit',     label: 'Audit Log',         icon: ScrollText, Component: AuditLog },
-  { id: 'sso',       label: 'SSO Config',        icon: KeyRound, Component: AdminSso },
+  { id: 'overview',  label: 'Overview',     icon: LayoutDashboard },
+  { id: 'members',   label: 'Org Members',  icon: UserCog,  Component: AdminUsers },
+  { id: 'teams',     label: 'Team Members', icon: Users,    Component: TeamMembers },
+  { id: 'projects',  label: 'Projects',     icon: FolderKanban, Component: TeamProjects },
+  { id: 'invites',   label: 'Invites',      icon: Send },
+  { id: 'audit',     label: 'Audit Log',    icon: ScrollText, Component: AuditLog },
+  { id: 'sso',       label: 'SSO Config',   icon: KeyRound, Component: AdminSso },
 ];
 
 export default function WorkspaceAdmin() {
