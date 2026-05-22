@@ -355,28 +355,9 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
   );
 }
 
-function WorkspaceToggle({ value, onChange }) {
-  return (
-    <div className="inline-flex items-center rounded-full border border-[#e3e0db] bg-white p-1 shadow-[0_6px_20px_rgba(15,23,42,0.04)]">
-      {[
-        { id: 'employee', label: 'Employee' },
-        { id: 'workspace', label: 'Workspace' },
-      ].map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onChange(item.id)}
-          className={`px-4 py-1.5 rounded-full text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
-            value === item.id
-              ? 'bg-[#117dff] text-white shadow-[0_8px_18px_rgba(17,125,255,0.24)]'
-              : 'text-[#737373] hover:text-[#0a0a0a]'
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+// WorkspaceToggle removed per UX cleanup. Surface state still tracked
+// internally (employee | workspace) — toggled by the topbar Workspace
+// button. Re-introduce if multi-surface segmenting comes back.
 
 function PreviewWindow({ title, subtitle, onClose, children }) {
   const windowRef = useRef(null);
@@ -1421,17 +1402,10 @@ export default function DigitalEmployees() {
             Hyper status: {optimized} optimized · {readyForTuning} ready for tuning.
           </p>
         </div>
-        <div className="flex justify-center">
-          <WorkspaceToggle value={surface} onChange={(next) => {
-            setSurface(next);
-            if (next === 'workspace') {
-              setSlidePanelOpen(true);
-              setChatEmployee(null);
-            } else {
-              setSlidePanelOpen(false);
-            }
-          }} />
-        </div>
+        {/* Employee/Workspace toggle removed per UX cleanup —
+            workspace panel still reachable via the topbar button below. */}
+        <div />
+
         <div className="flex justify-end gap-2">
           {isWorkspaceMode && (
             <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
