@@ -420,6 +420,23 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── OAuth client registry (ChatGPT, Claude Desktop, custom GPTs, ...) ─
+
+  async listOAuthClients() {
+    const { data } = await this.controlPlane.get('/v1/oauth/clients');
+    return data;
+  }
+
+  async createOAuthClient(payload) {
+    const { data } = await this.controlPlane.post('/v1/oauth/clients', payload);
+    return data;
+  }
+
+  async deleteOAuthClient(clientId) {
+    const { data } = await this.controlPlane.delete(`/v1/oauth/clients/${encodeURIComponent(clientId)}`);
+    return data;
+  }
+
   async remintEmployeeKey(employeeId) {
     const { data } = await this.controlPlane.post(`/v1/employees/${employeeId}/remint-key`);
     return data;

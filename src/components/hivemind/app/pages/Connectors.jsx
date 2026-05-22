@@ -2451,6 +2451,62 @@ function ChatGPTConnectorCard() {
   const baseUrl = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL)
     || 'https://core.hivemind.davinciai.eu:8050';
 
+  // OAuth clients list + register form
+  const [clients, setClients] = useState([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [registerName, setRegisterName] = useState('ChatGPT');
+  const [registerRedirect, setRegisterRedirect] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState(null);
+
+  const refreshClients = useCallback(async () => {
+    setLoadingClients(true);
+    try {
+      const data = await apiClient.listOAuthClients();
+      setClients(data?.clients || []);
+    } catch (err) {
+      console.warn('[oauth-clients] list failed', err);
+    } finally {
+      setLoadingClients(false);
+    }
+  }, []);
+
+  useEffect(() => { refreshClients(); }, [refreshClients]);
+
+  const handleRegister = async () => {
+    setRegisterError(null);
+    setRegistering(true);
+    try {
+      const uris = registerRedirect.split(/[\n,]/).map((u) => u.trim()).filter(Boolean);
+      const data = await apiClient.createOAuthClient({
+        client_name: registerName.trim(),
+        redirect_uris: uris,
+        allowed_scopes: ['memory:read', 'memory:write', 'web:search'],
+      });
+      setShowRegister(false);
+      setRegisterName('ChatGPT');
+      setRegisterRedirect('');
+      await refreshClients();
+      // Copy the client_id immediately — that's what user pastes into OpenAI.
+      copy(data?.client?.client_id || '', 'new-client');
+    } catch (err) {
+      setRegisterError(err.response?.data?.error || err.message);
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleRevoke = async (clientId) => {
+    if (!window.confirm(`Revoke OAuth client ${clientId}? Apps using it will stop working immediately.`)) return;
+    try {
+      await apiClient.deleteOAuthClient(clientId);
+      await refreshClients();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -2500,6 +2556,108 @@ function ChatGPTConnectorCard() {
           <li>OpenAI returns a redirect URI; register it as an allowed callback in HIVEMIND admin.</li>
           <li>Publish the GPT. Users click <b>Connect to HIVEMIND</b> on first use.</li>
         </ol>
+      </div>
+
+      {/* OAuth client registry — register OpenAI's callback URL */}
+      <div className="mt-4 rounded-xl border border-[#e3e0db] bg-white">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#f3f1ec]">
+          <div>
+            <div className="text-[12px] font-semibold text-[#0a0a0a]">Registered OAuth clients</div>
+            <div className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk']">
+              Add OpenAI's callback URL here so ChatGPT can finish the OAuth handshake.
+            </div>
+          </div>
+          <button
+            onClick={() => setShowRegister(!showRegister)}
+            className="px-2.5 py-1 rounded border border-[#10a37f]/30 bg-[#10a37f]/[0.06] text-[#10a37f] text-[11px] font-semibold hover:bg-[#10a37f]/[0.10]"
+          >
+            {showRegister ? 'Cancel' : '+ Register client'}
+          </button>
+        </div>
+
+        {showRegister && (
+          <div className="px-3 py-3 border-b border-[#f3f1ec] bg-[#fafaf6] space-y-2">
+            <label className="block">
+              <span className="text-[10.5px] font-medium text-[#525252] uppercase tracking-wider">Client name</span>
+              <input
+                value={registerName}
+                onChange={(e) => setRegisterName(e.target.value)}
+                placeholder="e.g. ChatGPT - My Custom GPT"
+                className="w-full mt-1 px-2.5 py-1.5 text-[12px] border border-[#e3e0db] rounded focus:outline-none focus:border-[#10a37f]"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[10.5px] font-medium text-[#525252] uppercase tracking-wider">Redirect URI(s)</span>
+              <textarea
+                value={registerRedirect}
+                onChange={(e) => setRegisterRedirect(e.target.value)}
+                placeholder={'https://chat.openai.com/aip/g-<gpt-id>/oauth/callback\n(one per line or comma-separated)'}
+                rows={2}
+                className="w-full mt-1 px-2.5 py-1.5 text-[11.5px] font-mono border border-[#e3e0db] rounded focus:outline-none focus:border-[#10a37f]"
+              />
+              <span className="text-[10px] text-[#a3a3a3] block mt-0.5">
+                Get this from your OpenAI GPT &rarr; Configure &rarr; Actions &rarr; Auth setup. https only.
+              </span>
+            </label>
+            {registerError && (
+              <div className="text-[11px] text-[#dc2626] bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                {registerError}
+              </div>
+            )}
+            <button
+              onClick={handleRegister}
+              disabled={registering || !registerName.trim() || !registerRedirect.trim()}
+              className="w-full px-3 py-1.5 rounded bg-[#10a37f] text-white text-[12px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0d8c6c]"
+            >
+              {registering ? 'Registering…' : 'Register & mint client_id'}
+            </button>
+          </div>
+        )}
+
+        <div className="divide-y divide-[#f3f1ec]">
+          {loadingClients && clients.length === 0 && (
+            <div className="px-3 py-3 text-[11px] text-[#a3a3a3]">Loading clients…</div>
+          )}
+          {!loadingClients && clients.length === 0 && (
+            <div className="px-3 py-3 text-[11px] text-[#a3a3a3]">
+              No OAuth clients registered yet. Click "+ Register client" to add one.
+            </div>
+          )}
+          {clients.map((c) => (
+            <div key={c.client_id} className="px-3 py-2.5 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[12px] font-semibold text-[#0a0a0a]">{c.client_name}</span>
+                  <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                    c.status === 'active' ? 'bg-[#16a34a]/10 text-[#15803d]' : 'bg-[#a3a3a3]/10 text-[#525252]'
+                  }`}>{c.status}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <code className="text-[11px] font-mono text-[#117dff] break-all">{c.client_id}</code>
+                  <button
+                    onClick={() => copy(c.client_id, `client-${c.client_id}`)}
+                    className="text-[10px] text-[#a3a3a3] hover:text-[#0a0a0a]"
+                  >
+                    {copied === `client-${c.client_id}` ? '✓' : 'copy'}
+                  </button>
+                </div>
+                <div className="text-[10.5px] text-[#525252] font-['Space_Grotesk'] mt-1">
+                  <span className="text-[#a3a3a3]">redirect:</span>{' '}
+                  <span className="font-mono break-all">{c.redirect_uris.join(', ')}</span>
+                </div>
+                <div className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] mt-0.5">
+                  scopes: <span className="font-mono text-[#525252]">{(c.allowed_scopes || []).join(' ')}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleRevoke(c.client_id)}
+                className="text-[10.5px] text-[#dc2626] hover:underline font-medium flex-shrink-0"
+              >
+                Revoke
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-3 flex items-center gap-2">
