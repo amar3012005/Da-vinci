@@ -119,9 +119,9 @@ export default function HyperAgents() {
 
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
-    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem-3rem)] -my-2 max-w-[1400px] mx-auto bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
+    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem-3rem)] min-h-[600px] -my-2 max-w-[1400px] mx-auto bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
       {/* Left rail: rooms */}
-      <aside className="w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
+      <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -205,7 +205,10 @@ export default function HyperAgents() {
         )}
       </main>
 
-      {/* Right rail: participants — rendered inside RoomThread */}
+      {/* Right rail: participants is rendered inside <RoomThread/> so the
+          rail is co-located with thread-only data (live participants
+          from /v1/hyper-rooms/:id). When viewMode='roster' the right
+          rail is hidden — DigitalEmployees fills the full width. */}
 
       <AnimatePresence>
         {showCreate && (
@@ -500,7 +503,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
       </section>
 
       {/* Right rail: participants */}
-      <aside className="w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
+      <aside className="w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Users size={12} className="text-[#525252]" />
