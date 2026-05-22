@@ -119,7 +119,7 @@ export default function HyperAgents() {
 
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
-    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem-3rem)] min-h-[600px] -my-2 max-w-[1400px] mx-auto bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
+    <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       {/* Left rail: rooms */}
       <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
@@ -136,7 +136,7 @@ export default function HyperAgents() {
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto py-1">
+        <div className="flex-1 min-h-0 overflow-y-auto py-1">
           {liveRooms.map(r => (
             <RoomRow
               key={r.id}
@@ -167,9 +167,9 @@ export default function HyperAgents() {
       </aside>
 
       {/* Middle: thread or roster */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="flex-1 min-w-0 min-h-0 flex flex-col">
         {viewMode === 'roster' ? (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
               <button
                 onClick={() => setViewMode('thread')}
@@ -406,8 +406,8 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
 
   return (
-    <div className="flex flex-1 min-w-0">
-      <section className="flex-1 min-w-0 flex flex-col">
+    <div className="flex flex-1 min-w-0 min-h-0 h-full">
+      <section className="flex-1 min-w-0 min-h-0 flex flex-col">
         {/* Header */}
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
           <div className="min-w-0 flex items-center gap-2">
@@ -449,7 +449,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
         </header>
 
         {/* Thread */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {turns.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               Start the conversation — ask your team anything.
@@ -519,7 +519,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
             </button>
           )}
         </header>
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
           {participants.map(p => (
             <ParticipantChip key={p.id} agent={p} canRemove={!archived}
               onRemove={() => handleParticipantsChange(
