@@ -642,6 +642,90 @@ function TurnView({ turn, participants, liveLines }) {
   );
 }
 
+/* ─── Markdown-lite renderer ───────────────────────────────────────────
+ * Just enough to make lead reports look like a clean Slack message.
+ * Headers, lists, bold, inline code. No full markdown engine.
+ */
+function renderMarkdownLite(raw) {
+  if (!raw) return null;
+  const text = String(raw).replace(/^\s+|\s+$/g, '');
+  const blocks = [];
+  const lines = text.split(/\r?\n/);
+  let i = 0;
+  let key = 0;
+
+  const inline = (s) => {
+    // bold
+    const parts = [];
+    let rest = s;
+    let mIdx = 0;
+    while (rest.length) {
+      const b = rest.match(/\*\*([^*]+)\*\*/);
+      const it = rest.match(/`([^`]+)`/);
+      const first = [b, it].filter(Boolean).sort((a, c) => a.index - c.index)[0];
+      if (!first) { parts.push(rest); break; }
+      if (first.index > 0) parts.push(rest.slice(0, first.index));
+      if (first === b) parts.push(<strong key={`b-${mIdx++}`}>{b[1]}</strong>);
+      else parts.push(<code key={`c-${mIdx++}`} className="px-1 py-0.5 rounded bg-black/5 text-[12px] font-mono">{it[1]}</code>);
+      rest = rest.slice(first.index + first[0].length);
+    }
+    return parts;
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (!trimmed) { i++; continue; }
+    // Heading
+    const h = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (h) {
+      const level = h[1].length;
+      const cls = level === 1 ? 'text-[14px] font-bold mt-2 mb-1'
+                : level === 2 ? 'text-[13px] font-bold mt-2 mb-1'
+                : 'text-[12px] font-semibold uppercase tracking-wider text-[#525252] mt-1.5 mb-0.5';
+      blocks.push(<div key={key++} className={cls}>{inline(h[2])}</div>);
+      i++;
+      continue;
+    }
+    // Bullet list
+    if (/^\s*[*-]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[*-]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[*-]\s+/, ''));
+        i++;
+      }
+      blocks.push(
+        <ul key={key++} className="list-disc pl-5 space-y-0.5 my-1">
+          {items.map((it, ix) => <li key={ix}>{inline(it)}</li>)}
+        </ul>,
+      );
+      continue;
+    }
+    // Numbered list
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+\.\s+/, ''));
+        i++;
+      }
+      blocks.push(
+        <ol key={key++} className="list-decimal pl-5 space-y-0.5 my-1">
+          {items.map((it, ix) => <li key={ix}>{inline(it)}</li>)}
+        </ol>,
+      );
+      continue;
+    }
+    // Paragraph
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|\s*[*-]\s+|\s*\d+\.\s+)/.test(lines[i])) {
+      para.push(lines[i].trim());
+      i++;
+    }
+    blocks.push(<p key={key++} className="my-1 leading-relaxed">{inline(para.join(' '))}</p>);
+  }
+  return blocks;
+}
+
 /* ─── Bubble ─────────────────────────────────────────────────────────── */
 
 function AgentBubble({ agent, content, kind, agreement, confidence }) {
@@ -650,6 +734,7 @@ function AgentBubble({ agent, content, kind, agreement, confidence }) {
   const Icon = meta.icon;
   const indent = kind === 'react' || kind === 'validate';
   const agMeta = agreement ? AGREEMENT_META[agreement] : null;
+  const isShort = (content || '').length < 280 && !/\n.*\n/.test(content || '');
 
   return (
     <div className={`flex gap-2 ${indent ? 'ml-6' : ''}`}>
@@ -662,8 +747,8 @@ function AgentBubble({ agent, content, kind, agreement, confidence }) {
           ? <img src={agent.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
           : (agent?.name?.[0] || agent?.slug?.[0] || '?').toUpperCase()}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
+      <div className="min-w-0 max-w-[78%]">
+        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <span className="text-[11px] font-semibold text-[#0a0a0a]">{agent?.name || agent?.slug}</span>
           <span
             className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded inline-flex items-center gap-0.5"
@@ -682,10 +767,12 @@ function AgentBubble({ agent, content, kind, agreement, confidence }) {
           )}
         </div>
         <div
-          className="bg-white border border-[#e3e0db] rounded-2xl rounded-tl-md px-3 py-2 text-[13px] text-[#0a0a0a] leading-relaxed whitespace-pre-wrap"
-          style={kind === 'lead' ? {} : { background: '#faf9f4' }}
+          className="border border-[#e3e0db] rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[13px] text-[#0a0a0a] leading-relaxed break-words overflow-hidden"
+          style={{ background: kind === 'lead' ? '#ffffff' : '#faf9f4' }}
         >
-          {content || '…'}
+          {isShort
+            ? <span className="whitespace-pre-wrap">{content || '…'}</span>
+            : <div className="space-y-0.5">{renderMarkdownLite(content)}</div>}
         </div>
       </div>
     </div>
