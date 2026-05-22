@@ -2459,6 +2459,8 @@ function ChatGPTConnectorCard() {
   const [registerRedirect, setRegisterRedirect] = useState('');
   const [registering, setRegistering] = useState(false);
   const [registerError, setRegisterError] = useState(null);
+  // One-time secret reveal after creation — user copies before dismissing.
+  const [newSecret, setNewSecret] = useState(null); // { client_id, client_secret }
 
   const refreshClients = useCallback(async () => {
     setLoadingClients(true);
@@ -2483,13 +2485,24 @@ function ChatGPTConnectorCard() {
         client_name: registerName.trim(),
         redirect_uris: uris,
         allowed_scopes: ['memory:read', 'memory:write', 'web:search'],
+        confidential: true, // ChatGPT GPT Actions requires client_secret
       });
       setShowRegister(false);
       setRegisterName('ChatGPT');
       setRegisterRedirect('');
       await refreshClients();
-      // Copy the client_id immediately — that's what user pastes into OpenAI.
-      copy(data?.client?.client_id || '', 'new-client');
+      // Stash the one-time secret so the user can copy it before it
+      // disappears. Server never returns it again — only the SHA-256 hash
+      // is persisted.
+      if (data?.client_secret) {
+        setNewSecret({
+          client_id: data.client.client_id,
+          client_secret: data.client_secret,
+        });
+      } else {
+        // Public client — just copy the id.
+        copy(data?.client?.client_id || '', 'new-client');
+      }
     } catch (err) {
       setRegisterError(err.response?.data?.error || err.message);
     } finally {
@@ -2676,6 +2689,60 @@ function ChatGPTConnectorCard() {
           Full integration guide →
         </a>
       </div>
+
+      {/* One-time client_secret reveal modal */}
+      {newSecret && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={() => setNewSecret(null)}>
+          <div
+            className="bg-white rounded-2xl border border-[#e3e0db] shadow-2xl max-w-md w-full p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#dc2626]/10 border border-[#dc2626]/25 flex items-center justify-center text-lg">🔐</div>
+              <div>
+                <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">Save your client secret now</h3>
+                <p className="text-[#525252] text-[12px] mt-0.5">
+                  HIVEMIND only stores a SHA-256 hash. <b>This is the only time the raw secret will be shown.</b>
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              <div className="rounded-lg border border-[#e3e0db] bg-[#fafaf6] p-2.5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">Client ID</span>
+                  <button
+                    onClick={() => copy(newSecret.client_id, 'modal-id')}
+                    className="text-[10.5px] text-[#117dff] hover:underline font-semibold"
+                  >
+                    {copied === 'modal-id' ? '✓ copied' : 'Copy'}
+                  </button>
+                </div>
+                <code className="text-[11.5px] font-mono text-[#0a0a0a] break-all">{newSecret.client_id}</code>
+              </div>
+              <div className="rounded-lg border border-[#dc2626]/30 bg-[#dc2626]/[0.04] p-2.5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#dc2626]">Client Secret (one-time)</span>
+                  <button
+                    onClick={() => copy(newSecret.client_secret, 'modal-secret')}
+                    className="text-[10.5px] text-[#dc2626] hover:underline font-semibold"
+                  >
+                    {copied === 'modal-secret' ? '✓ copied' : 'Copy'}
+                  </button>
+                </div>
+                <code className="text-[11.5px] font-mono text-[#0a0a0a] break-all">{newSecret.client_secret}</code>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2 justify-end">
+              <button
+                onClick={() => setNewSecret(null)}
+                className="px-3 py-1.5 rounded-lg bg-[#0a0a0a] text-white text-[12px] font-semibold hover:bg-[#1a1a1a]"
+              >
+                I saved it — close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
