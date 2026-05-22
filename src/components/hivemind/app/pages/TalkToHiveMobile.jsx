@@ -567,17 +567,42 @@ export default function TalkToHiveMobile() {
     setTimeout(() => updateUpload(row.id, { status: 'processing' }), 700);
 
     try {
-      const result = await apiClient.uploadDocument(row.file, {
-        ...(activeProjectId ? { targetScope: 'project', containerTag: `project:${activeProjectId}` } : {}),
-        onUploadProgress: (evt) => {
-          if (!evt.total) return;
-          const pct = Math.round((evt.loaded / evt.total) * 100);
-          updateUpload(row.id, { progress: pct });
-        },
-      });
+      // Auto-route by MIME: image/* → Groq vision pipeline (uploadImage),
+      // everything else → docling-backed /v1/proxy/knowledge/upload.
+      const mime = (row.file.type || '').toLowerCase();
+      const isImage = /^image\/(png|jpe?g|webp|gif)$/.test(mime);
+
+      let result;
+      if (isImage) {
+        result = await apiClient.uploadImage(row.file, {
+          ...(activeProjectId ? { projectId: activeProjectId } : {}),
+          ...(row.hint ? { hint: row.hint } : {}),
+          onUploadProgress: (evt) => {
+            if (!evt.total) return;
+            const pct = Math.round((evt.loaded / evt.total) * 100);
+            updateUpload(row.id, { progress: pct });
+          },
+        });
+      } else {
+        result = await apiClient.uploadDocument(row.file, {
+          ...(activeProjectId ? { targetScope: 'project', containerTag: `project:${activeProjectId}` } : {}),
+          onUploadProgress: (evt) => {
+            if (!evt.total) return;
+            const pct = Math.round((evt.loaded / evt.total) * 100);
+            updateUpload(row.id, { progress: pct });
+          },
+        });
+      }
 
       const memId = result?.memory_id || result?.id || result?.memory?.id || null;
-      updateUpload(row.id, { status: 'done', progress: 100, memoryId: memId });
+      const previewTitle = result?.title || (isImage ? (result?.classification?.suggested_title || 'Image saved') : 'Document saved');
+      updateUpload(row.id, {
+        status: 'done',
+        progress: 100,
+        memoryId: memId,
+        previewTitle,
+        kind: result?.classification?.kind || null,
+      });
       // Auto-dismiss confirmed rows after 4s — quick, doesn't clutter chat.
       setTimeout(() => removeUpload(row.id), 4000);
     } catch (err) {

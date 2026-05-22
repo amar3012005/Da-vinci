@@ -1031,6 +1031,27 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Core: Image Ingestion (Groq vision pipeline) ─────────────
+  // Single .jpg / .png / .webp → classify + extract via Groq Llama 4 Scout,
+  // then route through the same ingest pipeline as text memories.
+  // Hint is an optional "what is this" string the user types at upload to
+  // bias the classifier (e.g. "Saturn receipt from Tuesday").
+  async uploadImage(file, options = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options.hint) formData.append('hint', options.hint);
+    if (options.projectId) formData.append('projectId', options.projectId);
+    const { data } = await this.controlPlane.post('/v1/proxy/ingest/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+      maxBodyLength: 25 * 1024 * 1024,
+      maxContentLength: 25 * 1024 * 1024,
+      onUploadProgress: options.onUploadProgress,
+      signal: options.signal,
+    });
+    return data;
+  }
+
   // ─── Core: Enterprise Upload ────────────────────────────────
 
   async enterpriseDetect(file) {
