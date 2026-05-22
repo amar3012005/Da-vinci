@@ -1,4 +1,18 @@
 {
+  "rewrites": [
+    {
+      "source": "/v1/chatgpt/:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/v1/chatgpt/:path*"
+    },
+    {
+      "source": "/oauth/:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/:path*"
+    },
+    {
+      "source": "/.well-known/oauth-:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

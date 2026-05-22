@@ -1530,15 +1530,15 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">OpenAPI spec</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/v1/chatgpt/openapi.yaml</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/v1/chatgpt/openapi.yaml</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Authorization URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/oauth/authorize</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/oauth/authorize</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Token URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/oauth/token</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/oauth/token</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Scopes</div>
@@ -1556,7 +1556,7 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
                 </ol>
               </div>
               <a
-                href="https://core.hivemind.davinciai.eu:8050/v1/chatgpt/openapi.yaml"
+                href="https://hivemind.davinciai.eu/v1/chatgpt/openapi.yaml"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"

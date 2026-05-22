@@ -2437,9 +2437,11 @@ function BrowserIntelligenceCard() {
 // ─── ChatGPT One-Click Connector card ────────────────────────────────────────
 
 function ChatGPTConnectorCard() {
-  const SPEC_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL
-    ? process.env.REACT_APP_CORE_API_URL
-    : 'https://core.hivemind.davinciai.eu:8050') + '/v1/chatgpt/openapi.yaml';
+  // Port-less origin so OpenAI GPT Actions validator accepts the server
+  // URL. Vercel rewrites /v1/chatgpt/*, /oauth/*, /.well-known/oauth-*
+  // to core on :8050 — see vercel.json.
+  const PUBLIC_ORIGIN = 'https://hivemind.davinciai.eu';
+  const SPEC_URL = PUBLIC_ORIGIN + '/v1/chatgpt/openapi.yaml';
   // Published HIVEMIND GPT URL. Platform team registers ONE OAuth client +
   // one GPT in OpenAI's editor; end users just open the GPT and click
   // "Connect to HIVEMIND" once. Until that env var is set, the CTA flips
@@ -2456,8 +2458,7 @@ function ChatGPTConnectorCard() {
       setTimeout(() => setCopied(null), 1500);
     } catch {}
   };
-  const baseUrl = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL)
-    || 'https://core.hivemind.davinciai.eu:8050';
+  const baseUrl = PUBLIC_ORIGIN;
 
   // OAuth clients list + register form
   const [clients, setClients] = useState([]);
