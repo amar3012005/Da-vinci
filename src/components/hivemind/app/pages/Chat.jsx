@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -387,6 +388,9 @@ export function ChatPanel({ isOpen, onClose }) {
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const textareaRef = useRef(null);
   const bottomRef = useRef(null);
+  // UI language from the navbar selector — passed to /api/chat so the
+  // ReAct agent replies in the user's chosen language end-to-end.
+  const { i18n } = useTranslation();
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -432,6 +436,7 @@ export function ChatPanel({ isOpen, onClose }) {
           message: trimmed,
           model: selectedModel,
           history: fullHistory,
+          language: (i18n.language || 'en').slice(0, 2).toLowerCase(),
         });
         const chatData = chatRes.data;
         responseContent = chatData.response || '';
@@ -472,7 +477,7 @@ export function ChatPanel({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, selectedModel, messages]);
+  }, [input, loading, selectedModel, messages, i18n.language]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
