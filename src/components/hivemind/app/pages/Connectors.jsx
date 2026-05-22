@@ -2440,7 +2440,13 @@ function ChatGPTConnectorCard() {
   const SPEC_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL
     ? process.env.REACT_APP_CORE_API_URL
     : 'https://core.hivemind.davinciai.eu:8050') + '/v1/chatgpt/openapi.yaml';
+  // Published HIVEMIND GPT URL. Platform team registers ONE OAuth client +
+  // one GPT in OpenAI's editor; end users just open the GPT and click
+  // "Connect to HIVEMIND" once.
+  const GPT_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_CHATGPT_GPT_URL)
+    || 'https://chatgpt.com/g/hivemind';
   const [copied, setCopied] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
   const copy = (text, key) => {
     try {
       navigator.clipboard.writeText(text);
@@ -2530,49 +2536,86 @@ function ChatGPTConnectorCard() {
         <div className="w-11 h-11 rounded-xl bg-[#10a37f]/12 border border-[#10a37f]/25 flex items-center justify-center text-xl">🤖</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">ChatGPT One-Click Connector</h3>
+            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">HIVEMIND for ChatGPT</h3>
             <span className="text-[9.5px] font-mono uppercase tracking-wider bg-[#10a37f]/12 text-[#10a37f] px-1.5 py-0.5 rounded">live</span>
           </div>
           <p className="text-[#525252] text-[12.5px] font-['Space_Grotesk'] mt-1">
-            Mount HIVEMIND inside any custom GPT or ChatGPT plugin. OAuth 2.0 + 5 narrow tools — searchMemory, saveMemory, listMemories, queryMemoryWithAI, webSearch.
+            One-click: open HIVEMIND in ChatGPT, click <b>Connect</b> inside the GPT once, your memory is wired in. Search · save · synthesize across every conversation.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3">
-        {[
-          { key: 'spec', label: 'OpenAPI spec URL', value: SPEC_URL },
-          { key: 'auth', label: 'Authorization URL', value: `${baseUrl}/oauth/authorize` },
-          { key: 'token', label: 'Token URL', value: `${baseUrl}/oauth/token` },
-          { key: 'scopes', label: 'Scopes', value: 'memory:read memory:write web:search' },
-        ].map((row) => (
-          <div key={row.key} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">{row.label}</div>
-              <code className="text-[11px] text-[#0a0a0a] break-all">{row.value}</code>
-            </div>
-            <button
-              onClick={() => copy(row.value, row.key)}
-              className="flex-shrink-0 px-2 py-1 rounded border border-[#e3e0db] text-[10px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
-            >
-              {copied === row.key ? '✓' : 'Copy'}
-            </button>
+      {/* Primary CTA — end-user one-click */}
+      <a
+        href={GPT_URL}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
+      >
+        Add HIVEMIND to ChatGPT →
+      </a>
+      <p className="text-[10.5px] text-[#a3a3a3] text-center mt-2 font-['Space_Grotesk']">
+        Opens our published GPT. Sign in to your HIVEMIND account once when prompted. No copy-paste, no setup.
+      </p>
+
+      {/* Admin section — collapsed by default. Platform team uses ONCE to
+          register the OAuth client + paste it into OpenAI's GPT editor. */}
+      <details
+        className="mt-4 rounded-xl border border-[#e3e0db] bg-[#fafaf6]"
+        open={showAdmin}
+        onToggle={(e) => setShowAdmin(e.target.open)}
+      >
+        <summary className="cursor-pointer px-3 py-2 text-[11px] font-semibold text-[#525252] font-['Space_Grotesk'] flex items-center justify-between">
+          <span>⚙ Admin · GPT publisher setup (one-time)</span>
+          <span className="text-[10px] text-[#a3a3a3]">{showAdmin ? 'hide' : 'show'}</span>
+        </summary>
+        <div className="px-3 pb-3 pt-1 space-y-3">
+          <p className="text-[11px] text-[#525252] font-['Space_Grotesk']">
+            Use this only when wiring HIVEMIND into a new ChatGPT GPT for the first time. End users do not need any of this.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              { key: 'spec', label: 'OpenAPI spec URL', value: SPEC_URL },
+              { key: 'auth', label: 'Authorization URL', value: `${baseUrl}/oauth/authorize` },
+              { key: 'token', label: 'Token URL', value: `${baseUrl}/oauth/token` },
+              { key: 'scopes', label: 'Scopes', value: 'memory:read memory:write web:search' },
+            ].map((row) => (
+              <div key={row.key} className="rounded-lg border border-[#e3e0db] bg-white px-2.5 py-1.5 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">{row.label}</div>
+                  <code className="text-[10.5px] text-[#0a0a0a] break-all">{row.value}</code>
+                </div>
+                <button
+                  onClick={() => copy(row.value, row.key)}
+                  className="flex-shrink-0 px-2 py-1 rounded border border-[#e3e0db] text-[10px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
+                >
+                  {copied === row.key ? '✓' : 'Copy'}
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="rounded-lg border border-[#e3e0db] bg-[#fafaf6] px-3 py-2.5">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1.5">Setup in OpenAI dev dashboard</div>
-        <ol className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] list-decimal pl-4 space-y-0.5">
-          <li>Create GPT → Configure → Actions → <b>Import from URL</b>; paste the spec URL.</li>
-          <li>Authentication → <b>OAuth</b> → paste Authorization + Token URLs and scopes.</li>
-          <li>OpenAI returns a redirect URI; register it as an allowed callback in HIVEMIND admin.</li>
-          <li>Publish the GPT. Users click <b>Connect to HIVEMIND</b> on first use.</li>
-        </ol>
-      </div>
+          <div className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1.5">Steps</div>
+            <ol className="text-[11px] text-[#525252] font-['Space_Grotesk'] list-decimal pl-4 space-y-0.5">
+              <li>Register one OAuth client below (Client name: <code>ChatGPT (production)</code>, redirect URIs from your GPT's callback).</li>
+              <li>Modal reveals <code>client_id</code> + <code>client_secret</code> — copy both.</li>
+              <li>OpenAI <b>My GPTs → Edit → Configure → Actions → Create new action</b>.</li>
+              <li>Schema → Import from URL → paste the OpenAPI URL above.</li>
+              <li>Auth → OAuth → paste id + secret + Authorization + Token URLs + scopes.</li>
+              <li>Save action → OpenAI shows the real callback URL → edit/recreate the client with that URL.</li>
+              <li>Publish the GPT. Set its public URL in <code>REACT_APP_CHATGPT_GPT_URL</code> env var so the CTA above points at it.</li>
+            </ol>
+          </div>
+        </div>
+      </details>
 
-      {/* OAuth client registry — register OpenAI's callback URL */}
-      <div className="mt-4 rounded-xl border border-[#e3e0db] bg-white">
+      {/* OAuth client registry — visible only under the admin expander.
+          Shown inline (not wrapped in another details) because it lives
+          inside actions taken by the platform team. */}
+      {showAdmin && (
+      <div className="mt-3 rounded-xl border border-[#e3e0db] bg-white">
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#f3f1ec]">
           <div>
             <div className="text-[12px] font-semibold text-[#0a0a0a]">Registered OAuth clients</div>
@@ -2672,6 +2715,7 @@ function ChatGPTConnectorCard() {
           ))}
         </div>
       </div>
+      )}
 
       <div className="mt-3 flex items-center gap-2">
         <a
