@@ -2434,6 +2434,94 @@ function BrowserIntelligenceCard() {
   );
 }
 
+// ─── ChatGPT One-Click Connector card ────────────────────────────────────────
+
+function ChatGPTConnectorCard() {
+  const SPEC_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL
+    ? process.env.REACT_APP_CORE_API_URL
+    : 'https://core.hivemind.davinciai.eu:8050') + '/v1/chatgpt/openapi.yaml';
+  const [copied, setCopied] = useState(null);
+  const copy = (text, key) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {}
+  };
+  const baseUrl = (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL)
+    || 'https://core.hivemind.davinciai.eu:8050';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 rounded-2xl border border-[#10a37f]/25 bg-gradient-to-br from-[#10a37f]/[0.04] via-white to-white p-5 shadow-[0_8px_24px_rgba(16,163,127,0.08)]"
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-11 h-11 rounded-xl bg-[#10a37f]/12 border border-[#10a37f]/25 flex items-center justify-center text-xl">🤖</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">ChatGPT One-Click Connector</h3>
+            <span className="text-[9.5px] font-mono uppercase tracking-wider bg-[#10a37f]/12 text-[#10a37f] px-1.5 py-0.5 rounded">live</span>
+          </div>
+          <p className="text-[#525252] text-[12.5px] font-['Space_Grotesk'] mt-1">
+            Mount HIVEMIND inside any custom GPT or ChatGPT plugin. OAuth 2.0 + 5 narrow tools — searchMemory, saveMemory, listMemories, queryMemoryWithAI, webSearch.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3">
+        {[
+          { key: 'spec', label: 'OpenAPI spec URL', value: SPEC_URL },
+          { key: 'auth', label: 'Authorization URL', value: `${baseUrl}/oauth/authorize` },
+          { key: 'token', label: 'Token URL', value: `${baseUrl}/oauth/token` },
+          { key: 'scopes', label: 'Scopes', value: 'memory:read memory:write web:search' },
+        ].map((row) => (
+          <div key={row.key} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">{row.label}</div>
+              <code className="text-[11px] text-[#0a0a0a] break-all">{row.value}</code>
+            </div>
+            <button
+              onClick={() => copy(row.value, row.key)}
+              className="flex-shrink-0 px-2 py-1 rounded border border-[#e3e0db] text-[10px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
+            >
+              {copied === row.key ? '✓' : 'Copy'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-[#e3e0db] bg-[#fafaf6] px-3 py-2.5">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1.5">Setup in OpenAI dev dashboard</div>
+        <ol className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] list-decimal pl-4 space-y-0.5">
+          <li>Create GPT → Configure → Actions → <b>Import from URL</b>; paste the spec URL.</li>
+          <li>Authentication → <b>OAuth</b> → paste Authorization + Token URLs and scopes.</li>
+          <li>OpenAI returns a redirect URI; register it as an allowed callback in HIVEMIND admin.</li>
+          <li>Publish the GPT. Users click <b>Connect to HIVEMIND</b> on first use.</li>
+        </ol>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <a
+          href={SPEC_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10a37f] text-white text-[11.5px] font-semibold hover:bg-[#0d8c6c] transition-colors"
+        >
+          View OpenAPI spec ↗
+        </a>
+        <a
+          href="/hivemind/app/mcp?tab=chatgpt"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white text-[#525252] text-[11.5px] font-semibold hover:bg-[#f3f1ec] transition-colors"
+        >
+          Full integration guide →
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function Connectors() {
@@ -3017,6 +3105,9 @@ export default function Connectors() {
 
       {/* Browser Intelligence — Chrome extension download */}
       <BrowserIntelligenceCard />
+
+      {/* ChatGPT One-Click Connector */}
+      <ChatGPTConnectorCard />
 
       {/* Stats */}
       <StatsRow connectors={mergedConnectors} endpoints={endpoints} />

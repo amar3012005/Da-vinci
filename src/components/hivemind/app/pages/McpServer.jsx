@@ -1498,6 +1498,7 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
             { id: 'web', label: 'Web Intelligence', count: WEB_TOOLS.length },
             { id: 'coding', label: 'Coding Intelligence', count: CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length },
             { id: 'temporal', label: 'Time Travel', count: TEMPORAL_TOOLS.length },
+            { id: 'chatgpt', label: 'ChatGPT', count: 5 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1514,11 +1515,93 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
         </div>
 
         {/* Tool cards */}
-        <motion.div variants={stagger} initial="initial" animate="animate" key={activeTab} className="space-y-2">
-          {(TAB_DATA[activeTab] || MEMORY_TOOLS).map(tool => (
-            <ToolCard key={tool.name} tool={tool} />
-          ))}
-        </motion.div>
+        {activeTab === 'chatgpt' ? (
+          <motion.div variants={stagger} initial="initial" animate="animate" key="chatgpt" className="space-y-3">
+            <div className="rounded-2xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-white p-5">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center text-lg">🤖</div>
+                <div>
+                  <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">ChatGPT One-Click Connector</h3>
+                  <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-1">
+                    Custom GPT &amp; ChatGPT plugin connector. OAuth 2.0 + 5 narrow tools mapped from your MCP surface.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">OpenAPI spec</div>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/v1/chatgpt/openapi.yaml</code>
+                </div>
+                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Authorization URL</div>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/oauth/authorize</code>
+                </div>
+                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Token URL</div>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">https://core.hivemind.davinciai.eu:8050/oauth/token</code>
+                </div>
+                <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Scopes</div>
+                  <code className="text-[11px] text-[#0a0a0a]">memory:read · memory:write · web:search</code>
+                </div>
+              </div>
+              <div className="mt-4 rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-3">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">Setup in OpenAI dev dashboard</div>
+                <ol className="text-[12px] text-[#525252] font-['Space_Grotesk'] space-y-1 list-decimal pl-4">
+                  <li>Create a new GPT → Configure → Actions → Import from URL</li>
+                  <li>Paste the OpenAPI spec URL above</li>
+                  <li>Set Authentication → OAuth → paste Authorization + Token URLs + scopes</li>
+                  <li>OpenAI gives you a redirect URI → register it in HIVEMIND admin (POST /oauth/clients)</li>
+                  <li>Publish &amp; click "Connect to HIVEMIND" in any chat</li>
+                </ol>
+              </div>
+              <a
+                href="https://core.hivemind.davinciai.eu:8050/v1/chatgpt/openapi.yaml"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"
+              >
+                View OpenAPI spec ↗
+              </a>
+            </div>
+
+            <div className="rounded-xl border border-[#e3e0db] bg-white p-4">
+              <div className="text-[12px] font-semibold text-[#0a0a0a] mb-2">Exposed Operations (5)</div>
+              <table className="w-full text-[11.5px]">
+                <thead>
+                  <tr className="text-[#a3a3a3] uppercase tracking-wider text-[10px]">
+                    <th className="text-left py-1.5 pr-3">operationId</th>
+                    <th className="text-left py-1.5 pr-3">Method</th>
+                    <th className="text-left py-1.5 pr-3">Path</th>
+                    <th className="text-left py-1.5">Maps to</th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  {[
+                    ['searchMemory',       'POST', '/v1/chatgpt/memory/search', 'hivemind_recall'],
+                    ['saveMemory',         'POST', '/v1/chatgpt/memory/save',   'hivemind_save_memory'],
+                    ['listMemories',       'GET',  '/v1/chatgpt/memory/list',   'hivemind_list_memories'],
+                    ['queryMemoryWithAI',  'POST', '/v1/chatgpt/memory/query',  'hivemind_query_with_ai'],
+                    ['webSearch',          'POST', '/v1/chatgpt/web/search',    'hivemind_web_search'],
+                  ].map(([opId, m, p, maps]) => (
+                    <tr key={opId} className="border-t border-[#f3f1ec]">
+                      <td className="py-1.5 pr-3 text-[#117dff]">{opId}</td>
+                      <td className="py-1.5 pr-3 text-[#525252]">{m}</td>
+                      <td className="py-1.5 pr-3 text-[#0a0a0a] break-all">{p}</td>
+                      <td className="py-1.5 text-[#525252]">{maps}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div variants={stagger} initial="initial" animate="animate" key={activeTab} className="space-y-2">
+            {(TAB_DATA[activeTab] || MEMORY_TOOLS).map(tool => (
+              <ToolCard key={tool.name} tool={tool} />
+            ))}
+          </motion.div>
+        )}
         </div>
 
         {/* Universal MCP schema — order 4 (below system prompt) */}
