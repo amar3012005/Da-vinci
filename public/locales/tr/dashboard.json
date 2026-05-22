@@ -18,7 +18,7 @@
     "playground": "Deneme Alanı",
     "webAdmin": "Web Yöneticisi",
     "profile": "Profil",
-    "billing": "Faturalama",
+    "billing": "Faturalandırma",
     "settings": "Ayarlar",
     "signOut": "Oturumu Kapat",
     "groups": {
@@ -48,7 +48,7 @@
       "hivemind.app.profile": "Profil",
       "hivemind.app.evaluation": "Değerlendirme",
       "hivemind.app.settings": "Ayarlar",
-      "hivemind.app.billing": "Faturalama",
+      "hivemind.app.billing": "Faturalandırma",
       "hivemind.app.web": "Web İstihbaratı",
       "hivemind.app.web-admin": "Web Yöneticisi",
       "hivemind.app.mcp": "MCP Sunucusu",
@@ -68,7 +68,7 @@
     "subtitle": "HIVEMIND bellek motorunuzun bir bakışı.",
     "recentMemories": "Son Anılar",
     "noMemories": "Henüz anı yok.",
-    "noMemoriesHint": "Anı almaya başlamak için bir MCP istemcisi bağlayın.",
+    "noMemoriesHint": "Anı toplamaya başlamak için bir MCP istemcisi bağlayın.",
     "quickSearch": "Hızlı Arama",
     "quickActions": "Hızlı İşlemler",
     "createApiKey": "API Anahtarı Oluştur",
@@ -86,7 +86,7 @@
     "delete": "Sil",
     "tags": "Etiketler",
     "type": "Tür",
-    "created": "Oluşturulma",
+    "created": "Oluşturuldu",
     "filterPlaceholder": "Etiket, tür veya metne göre filtrele…"
   },
   "settings": {
@@ -105,6 +105,6 @@
     "connect": "Bağlan",
     "connected": "Bağlandı",
     "disconnect": "Bağlantıyı Kes",
-    "needsReconnect": "Yeniden bağlanmalı"
+    "needsReconnect": "Yeniden bağlanması gerekiyor"
   }
 }

@@ -22,7 +22,7 @@
     "settings": "設定",
     "signOut": "サインアウト",
     "groups": {
-      "yourBrain": "あなたのブレイン",
+      "yourBrain": "あなたの脳",
       "aiFeatures": "AI 機能",
       "advanced": "高度な設定",
       "workspaceAdmin": "ワークスペース管理",
@@ -37,7 +37,7 @@
     }
   },
   "topbar": {
-    "searchMemories": "メモリ検索…",
+    "searchMemories": "メモリを検索…",
     "online": "オンライン",
     "offline": "オフライン",
     "titles": {
@@ -86,7 +86,7 @@
     "delete": "削除",
     "tags": "タグ",
     "type": "タイプ",
-    "created": "作成日",
+    "created": "作成日時",
     "filterPlaceholder": "タグ、タイプ、テキストでフィルタ…"
   },
   "settings": {
@@ -96,7 +96,7 @@
     "assistantName": "アシスタント名",
     "appearance": "外観",
     "theme": "テーマ",
-    "danger": "危険ゾーン",
+    "danger": "危険領域",
     "deleteAccount": "アカウント削除"
   },
   "connectors": {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import LangSwitcherDark from './LangSwitcherDark';
 
 const Navbar = () => {
   const location = useLocation();
@@ -80,6 +81,11 @@ const Navbar = () => {
                     ${activeSection === item.id ? 'w-full' : 'w-0 group-hover:w-full'}`} />
                 </Link>
               ))}
+            </div>
+
+            {/* Right cluster — language switcher + mobile menu */}
+            <div className="hidden md:flex items-center gap-2">
+              <LangSwitcherDark />
             </div>
 
             {/* Mobile Menu Button */}

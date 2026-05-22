@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "מוצר",
+    "features": "תכונות",
+    "pricing": "תמחור",
+    "docs": "תיעוד",
+    "about": "אודות",
+    "signIn": "התחבר",
+    "signUp": "הירשם",
+    "tryFree": "נסה בחינם"
+  },
+  "hero": {
+    "title": "הזיכרון המושלם של ה‑AI שלך.",
+    "subtitle": "HIVEMIND הופך מודלים גדולים ללא מצב לעוזרים מודעים להקשר עם זיכרון מושלם בכל סשן, מכונה ושיחה.",
+    "ctaPrimary": "נסה HIVEMIND בחינם",
+    "ctaSecondary": "קרא את התיעוד"
+  },
+  "footer": {
+    "privacy": "פרטיות",
+    "terms": "תנאים",
+    "contact": "צור קשר",
+    "sovereign": "EU Sovereign · Frankfurt, Germany"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "ภาพรวม",
+    "talkToHive": "คุยกับ HIVE",
+    "connectors": "ตัวเชื่อมต่อ",
+    "memories": "ความทรงจำ",
+    "graph3d": "กราฟความทรงจำ · 3D",
+    "graph2d": "กราฟความทรงจำ · 2D",
+    "knowledge": "ฐานความรู้",
+    "webIntel": "ข้อมูลเว็บ",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "ฝูงเอเจนต์",
+    "engine": "เอนจิน",
+    "mcpServer": "MCP Server",
+    "apiKeys": "คีย์ API",
+    "evaluation": "การประเมิน",
+    "workspaceAdmin": "ผู้ดูแลพื้นที่ทำงาน",
+    "playground": "สนามทดลอง",
+    "webAdmin": "ผู้ดูแลเว็บ",
+    "profile": "โปรไฟล์",
+    "billing": "การเรียกเก็บเงิน",
+    "settings": "การตั้งค่า",
+    "signOut": "ออกจากระบบ",
+    "groups": {
+      "yourBrain": "สมองของคุณ",
+      "aiFeatures": "ฟีเจอร์ AI",
+      "advanced": "ขั้นสูง",
+      "workspaceAdmin": "ผู้ดูแลพื้นที่ทำงาน",
+      "account": "บัญชี"
+    },
+    "planLabel": {
+      "free": "แผนฟรี",
+      "starter": "แผนเริ่มต้น",
+      "pro": "แผนโปร",
+      "team": "แผนทีม",
+      "enterprise": "แผนองค์กร"
+    }
+  },
+  "topbar": {
+    "searchMemories": "ค้นหาความทรงจำ…",
+    "online": "ออนไลน์",
+    "offline": "ออฟไลน์",
+    "titles": {
+      "hivemind.app.overview": "ภาพรวม",
+      "hivemind.app.memories": "ความทรงจำ",
+      "hivemind.app.keys": "คีย์ API",
+      "hivemind.app.connectors": "ตัวเชื่อมต่อ",
+      "hivemind.app.profile": "โปรไฟล์",
+      "hivemind.app.evaluation": "การประเมิน",
+      "hivemind.app.settings": "การตั้งค่า",
+      "hivemind.app.billing": "การเรียกเก็บเงิน",
+      "hivemind.app.web": "ข้อมูลเว็บ",
+      "hivemind.app.web-admin": "ผู้ดูแลเว็บ",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "กราฟความทรงจำ",
+      "hivemind.app.engine": "ข้อมูลเอนจิน",
+      "hivemind.app.team.members": "สมาชิกทีม",
+      "hivemind.app.team.projects": "โครงการทีม",
+      "hivemind.app.audit": "บันทึกการตรวจสอบ",
+      "hivemind.app.admin.users": "สมาชิกองค์กร",
+      "hivemind.app.admin.sso": "การตั้งค่า SSO",
+      "hivemind.app.employees": "พนักงานดิจิทัล",
+      "hivemind.app.workspace": "ผู้ดูแลพื้นที่ทำงาน"
+    }
+  },
+  "overview": {
+    "title": "ภาพรวม",
+    "subtitle": "เอนจินความทรงจำ HIVEMIND ของคุณในมุมมองรวดเร็ว.",
+    "recentMemories": "ความทรงจำล่าสุด",
+    "noMemories": "ยังไม่มีความทรงจำ.",
+    "noMemoriesHint": "เชื่อมต่อไคลเอนต์ MCP เพื่อเริ่มรับความทรงจำ.",
+    "quickSearch": "ค้นหาอย่างเร็ว",
+    "quickActions": "การกระทำด่วน",
+    "createApiKey": "สร้างคีย์ API",
+    "createApiKeyHint": "สร้างคีย์สำหรับไคลเอนต์ MCP",
+    "connectMcp": "เชื่อมต่อไคลเอนต์ MCP",
+    "connectMcpHint": "เชื่อมต่อ Claude, Cursor หรือไคลเอนต์ที่กำหนดเอง",
+    "browseMemories": "เรียกดูความทรงจำ",
+    "browseMemoriesHint": "สำรวจและจัดการความทรงจำที่เก็บไว้",
+    "coreApiHealth": "สถานะสุขภาพ Core API"
+  },
+  "memories": {
+    "title": "ความทรงจำ",
+    "empty": "ยังไม่มีความทรงจำที่บันทึก.",
+    "save": "บันทึกความทรงจำ",
+    "delete": "ลบ",
+    "tags": "แท็ก",
+    "type": "ประเภท",
+    "created": "สร้างเมื่อ",
+    "filterPlaceholder": "กรองตามแท็ก, ประเภท หรือข้อความ…"
+  },
+  "settings": {
+    "title": "การตั้งค่า",
+    "language": "ภาษา",
+    "voice": "เสียง",
+    "assistantName": "ชื่อผู้ช่วย",
+    "appearance": "รูปลักษณ์",
+    "theme": "ธีม",
+    "danger": "โซนอันตราย",
+    "deleteAccount": "ลบบัญชี"
+  },
+  "connectors": {
+    "title": "ตัวเชื่อมต่อ",
+    "subtitle": "เชื่อมต่อแหล่งข้อมูลของคุณเพื่อให้ HIVEMIND สามารถเรียกคืนบริบทข้ามเครื่องมือ.",
+    "connect": "เชื่อมต่อ",
+    "connected": "เชื่อมต่อแล้ว",
+    "disconnect": "ยกเลิกการเชื่อมต่อ",
+    "needsReconnect": "ต้องเชื่อมต่อใหม่"
+  }
+}

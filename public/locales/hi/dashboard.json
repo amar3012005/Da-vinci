@@ -14,18 +14,18 @@
     "mcpServer": "MCP Server",
     "apiKeys": "API कुंजियाँ",
     "evaluation": "मूल्यांकन",
-    "workspaceAdmin": "वर्कस्पेस व्यवस्थापक",
+    "workspaceAdmin": "वर्कस्पेस एडमिन",
     "playground": "प्लेग्राउंड",
-    "webAdmin": "वेब व्यवस्थापक",
+    "webAdmin": "वेब एडमिन",
     "profile": "प्रोफ़ाइल",
     "billing": "बिलिंग",
     "settings": "सेटिंग्स",
     "signOut": "साइन आउट",
     "groups": {
-      "yourBrain": "आपका मस्तिष्क",
+      "yourBrain": "आपका दिमाग",
       "aiFeatures": "AI सुविधाएँ",
       "advanced": "उन्नत",
-      "workspaceAdmin": "वर्कस्पेस व्यवस्थापक",
+      "workspaceAdmin": "वर्कस्पेस एडमिन",
       "account": "खाता"
     },
     "planLabel": {
@@ -50,8 +50,8 @@
       "hivemind.app.settings": "सेटिंग्स",
       "hivemind.app.billing": "बिलिंग",
       "hivemind.app.web": "वेब इंटेलिजेंस",
-      "hivemind.app.web-admin": "वेब व्यवस्थापक",
-      "hivemind.app.mcp": "MCP सर्वर",
+      "hivemind.app.web-admin": "वेब एडमिन",
+      "hivemind.app.mcp": "MCP Server",
       "hivemind.app.graph": "स्मृति ग्राफ",
       "hivemind.app.engine": "इंजन इंटेलिजेंस",
       "hivemind.app.team.members": "टीम सदस्य",
@@ -60,7 +60,7 @@
       "hivemind.app.admin.users": "संगठन सदस्य",
       "hivemind.app.admin.sso": "SSO कॉन्फ़िगरेशन",
       "hivemind.app.employees": "डिजिटल कर्मचारी",
-      "hivemind.app.workspace": "वर्कस्पेस व्यवस्थापक"
+      "hivemind.app.workspace": "वर्कस्पेस एडमिन"
     }
   },
   "overview": {
@@ -75,8 +75,8 @@
     "createApiKeyHint": "MCP क्लाइंट्स के लिए कुंजियाँ उत्पन्न करें",
     "connectMcp": "MCP क्लाइंट कनेक्ट करें",
     "connectMcpHint": "Claude, Cursor या कस्टम क्लाइंट्स को लिंक करें",
-    "browseMemories": "स्मृतियों को देखें",
-    "browseMemoriesHint": "संग्रहीत स्मृतियों का अन्वेषण और प्रबंधन करें",
+    "browseMemories": "स्मृतियों को ब्राउज़ करें",
+    "browseMemoriesHint": "संग्रहीत स्मृतियों को देखें और प्रबंधित करें",
     "coreApiHealth": "कोर API स्वास्थ्य"
   },
   "memories": {
@@ -92,8 +92,8 @@
   "settings": {
     "title": "सेटिंग्स",
     "language": "भाषा",
-    "voice": "वॉइस",
-    "assistantName": "सहायक नाम",
+    "voice": "वॉयस",
+    "assistantName": "सहायक का नाम",
     "appearance": "दिखावट",
     "theme": "थीम",
     "danger": "खतरे का क्षेत्र",
@@ -102,7 +102,7 @@
   "connectors": {
     "title": "कनेक्टर",
     "subtitle": "अपने डेटा स्रोत कनेक्ट करें ताकि HIVEMIND टूल्स में संदर्भ याद रख सके।",
-    "connect": "कनेक्ट",
+    "connect": "कनेक्ट करें",
     "connected": "कनेक्टेड",
     "disconnect": "डिस्कनेक्ट",
     "needsReconnect": "पुनः कनेक्शन आवश्यक"

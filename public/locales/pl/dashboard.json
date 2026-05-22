@@ -7,7 +7,7 @@
     "graph3d": "Wykres pamięci · 3D",
     "graph2d": "Wykres pamięci · 2D",
     "knowledge": "Baza wiedzy",
-    "webIntel": "Inteligencja sieciowa",
+    "webIntel": "Inteligencja internetowa",
     "tara": "TARA × HIVE",
     "agentSwarm": "Rój agentów",
     "engine": "Silnik",
@@ -15,7 +15,7 @@
     "apiKeys": "Klucze API",
     "evaluation": "Ocena",
     "workspaceAdmin": "Administrator przestrzeni",
-    "playground": "Plac zabaw",
+    "playground": "Strefa testowa",
     "webAdmin": "Administrator sieci",
     "profile": "Profil",
     "billing": "Rozliczenia",
@@ -37,7 +37,7 @@
     }
   },
   "topbar": {
-    "searchMemories": "Wyszukaj pamięci…",
+    "searchMemories": "Szukaj pamięci…",
     "online": "Online",
     "offline": "Offline",
     "titles": {

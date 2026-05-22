@@ -2,7 +2,7 @@
   "nav": {
     "product": "产品",
     "features": "功能",
-    "pricing": "定价",
+    "pricing": "价格",
     "docs": "文档",
     "about": "关于",
     "signIn": "登录",
@@ -11,7 +11,7 @@
   },
   "hero": {
     "title": "你的 AI 的完美记忆。",
-    "subtitle": "HIVEMIND 将无状态 LLM 转变为具备跨会话、跨设备、跨对话完美回忆的上下文感知助手。",
+    "subtitle": "HIVEMIND 将无状态的大语言模型转化为具备上下文感知的助手，能够在每个会话、设备和对话中实现完美回忆。",
     "ctaPrimary": "免费试用 HIVEMIND",
     "ctaSecondary": "阅读文档"
   },
@@ -19,6 +19,6 @@
     "privacy": "隐私",
     "terms": "条款",
     "contact": "联系",
-    "sovereign": "欧盟主权 · 德国法兰克福"
+    "sovereign": "EU 主权 · 法兰克福，德国"
   }
 }

@@ -1,6 +1,6 @@
 {
   "sidebar": {
-    "overview": "Aperçu",
+    "overview": "Vue d'ensemble",
     "talkToHive": "Parler à HIVE",
     "connectors": "Connecteurs",
     "memories": "Mémoires",
@@ -41,7 +41,7 @@
     "online": "En ligne",
     "offline": "Hors ligne",
     "titles": {
-      "hivemind.app.overview": "Aperçu",
+      "hivemind.app.overview": "Vue d'ensemble",
       "hivemind.app.memories": "Mémoires",
       "hivemind.app.keys": "Clés API",
       "hivemind.app.connectors": "Connecteurs",
@@ -53,7 +53,7 @@
       "hivemind.app.web-admin": "Admin Web",
       "hivemind.app.mcp": "Serveur MCP",
       "hivemind.app.graph": "Graphique Mémoire",
-      "hivemind.app.engine": "Intelligence Moteur",
+      "hivemind.app.engine": "Intelligence du moteur",
       "hivemind.app.team.members": "Membres de l'équipe",
       "hivemind.app.team.projects": "Projets d'équipe",
       "hivemind.app.audit": "Journal d'audit",
@@ -64,7 +64,7 @@
     }
   },
   "overview": {
-    "title": "Aperçu",
+    "title": "Vue d'ensemble",
     "subtitle": "Votre moteur de mémoire HIVEMIND en un coup d'œil.",
     "recentMemories": "Mémoires récentes",
     "noMemories": "Pas encore de mémoires.",
@@ -77,7 +77,7 @@
     "connectMcpHint": "Lier Claude, Cursor ou des clients personnalisés",
     "browseMemories": "Parcourir les mémoires",
     "browseMemoriesHint": "Explorer et gérer les mémoires stockées",
-    "coreApiHealth": "État de santé de l'API principale"
+    "coreApiHealth": "Santé de l'API principale"
   },
   "memories": {
     "title": "Mémoires",

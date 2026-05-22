@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Oversigt",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Forbindelser",
+    "memories": "Minder",
+    "graph3d": "Hukommelsesgraf · 3D",
+    "graph2d": "Hukommelsesgraf · 2D",
+    "knowledge": "Vidensbase",
+    "webIntel": "Web Intel",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Motor",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API-nøgler",
+    "evaluation": "Evaluering",
+    "workspaceAdmin": "Arbejdsområde Admin",
+    "playground": "Legeplads",
+    "webAdmin": "Web Admin",
+    "profile": "Profil",
+    "billing": "Fakturering",
+    "settings": "Indstillinger",
+    "signOut": "Log ud",
+    "groups": {
+      "yourBrain": "Din hjerne",
+      "aiFeatures": "AI-funktioner",
+      "advanced": "Avanceret",
+      "workspaceAdmin": "Arbejdsområde Admin",
+      "account": "Konto"
+    },
+    "planLabel": {
+      "free": "Gratis plan",
+      "starter": "Startplan",
+      "pro": "Pro-plan",
+      "team": "Teamplan",
+      "enterprise": "Enterprise-plan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Søg i minder…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Oversigt",
+      "hivemind.app.memories": "Minder",
+      "hivemind.app.keys": "API-nøgler",
+      "hivemind.app.connectors": "Forbindelser",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Evaluering",
+      "hivemind.app.settings": "Indstillinger",
+      "hivemind.app.billing": "Fakturering",
+      "hivemind.app.web": "Webintelligens",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Hukommelsesgraf",
+      "hivemind.app.engine": "Motorintelligens",
+      "hivemind.app.team.members": "Teammedlemmer",
+      "hivemind.app.team.projects": "Teamprojekter",
+      "hivemind.app.audit": "Auditlog",
+      "hivemind.app.admin.users": "Orgmedlemmer",
+      "hivemind.app.admin.sso": "SSO-konfiguration",
+      "hivemind.app.employees": "Digitale medarbejdere",
+      "hivemind.app.workspace": "Arbejdsområde Admin"
+    }
+  },
+  "overview": {
+    "title": "Oversigt",
+    "subtitle": "Dit HIVEMIND-hukommelsesmotor på et øjeblik.",
+    "recentMemories": "Seneste minder",
+    "noMemories": "Ingen minder endnu.",
+    "noMemoriesHint": "Tilslut en MCP-klient for at begynde at indsamle minder.",
+    "quickSearch": "Hurtig søgning",
+    "quickActions": "Hurtige handlinger",
+    "createApiKey": "Opret API-nøgle",
+    "createApiKeyHint": "Generer nøgler til MCP-klienter",
+    "connectMcp": "Tilslut MCP-klient",
+    "connectMcpHint": "Link Claude, Cursor eller tilpassede klienter",
+    "browseMemories": "Gennemse minder",
+    "browseMemoriesHint": "Udforsk og administrer gemte minder",
+    "coreApiHealth": "Core API-tilstand"
+  },
+  "memories": {
+    "title": "Minder",
+    "empty": "Ingen gemte minder endnu.",
+    "save": "Gem hukommelse",
+    "delete": "Slet",
+    "tags": "Tags",
+    "type": "Type",
+    "created": "Oprettet",
+    "filterPlaceholder": "Filtrer efter tag, type eller tekst…"
+  },
+  "settings": {
+    "title": "Indstillinger",
+    "language": "Sprog",
+    "voice": "Stemme",
+    "assistantName": "Assistentnavn",
+    "appearance": "Udseende",
+    "theme": "Tema",
+    "danger": "Farezone",
+    "deleteAccount": "Slet konto"
+  },
+  "connectors": {
+    "title": "Forbindelser",
+    "subtitle": "Forbind dine datakilder, så HIVEMIND kan huske kontekst på tværs af værktøjer.",
+    "connect": "Tilslut",
+    "connected": "Tilsluttet",
+    "disconnect": "Afbryd",
+    "needsReconnect": "Kræver genforbindelse"
+  }
+}

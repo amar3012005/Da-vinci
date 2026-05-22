@@ -7,7 +7,7 @@
     "graph3d": "Herinneringsgrafiek · 3D",
     "graph2d": "Herinneringsgrafiek · 2D",
     "knowledge": "Kennisbank",
-    "webIntel": "Webinzicht",
+    "webIntel": "Webintelligentie",
     "tara": "TARA × HIVE",
     "agentSwarm": "Agentzwerm",
     "engine": "Engine",
@@ -101,7 +101,7 @@
   },
   "connectors": {
     "title": "Connectoren",
-    "subtitle": "Verbind je gegevensbronnen zodat HIVEMIND context kan ophalen over tools.",
+    "subtitle": "Verbind je gegevensbronnen zodat HIVEMIND context kan ophalen over tools heen.",
     "connect": "Verbinden",
     "connected": "Verbonden",
     "disconnect": "Ontkoppelen",

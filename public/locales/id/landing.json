@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produk",
+    "features": "Fitur",
+    "pricing": "Harga",
+    "docs": "Dokumen",
+    "about": "Tentang",
+    "signIn": "Masuk",
+    "signUp": "Daftar",
+    "tryFree": "Coba gratis"
+  },
+  "hero": {
+    "title": "Memori sempurna AI Anda.",
+    "subtitle": "HIVEMIND mengubah LLM tanpa status menjadi asisten yang sadar konteks dengan ingatan sempurna di setiap sesi, mesin, dan percakapan.",
+    "ctaPrimary": "Coba HIVEMIND gratis",
+    "ctaSecondary": "Baca dokumen"
+  },
+  "footer": {
+    "privacy": "Privasi",
+    "terms": "Ketentuan",
+    "contact": "Kontak",
+    "sovereign": "EU Sovereign · Frankfurt, Jerman"
+  }
+}

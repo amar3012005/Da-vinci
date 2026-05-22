@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Áttekintés",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Csatlakozók",
+    "memories": "Emlékek",
+    "graph3d": "Memória gráf · 3D",
+    "graph2d": "Memória gráf · 2D",
+    "knowledge": "Tudásbázis",
+    "webIntel": "Web Intel",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Motor",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API kulcsok",
+    "evaluation": "Értékelés",
+    "workspaceAdmin": "Munkaterület admin",
+    "playground": "Játéktér",
+    "webAdmin": "Web admin",
+    "profile": "Profil",
+    "billing": "Számlázás",
+    "settings": "Beállítások",
+    "signOut": "Kijelentkezés",
+    "groups": {
+      "yourBrain": "A te agyad",
+      "aiFeatures": "AI funkciók",
+      "advanced": "Haladó",
+      "workspaceAdmin": "Munkaterület admin",
+      "account": "Fiók"
+    },
+    "planLabel": {
+      "free": "Ingyenes csomag",
+      "starter": "Starter csomag",
+      "pro": "Pro csomag",
+      "team": "Team csomag",
+      "enterprise": "Enterprise csomag"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Emlékek keresése…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Áttekintés",
+      "hivemind.app.memories": "Emlékek",
+      "hivemind.app.keys": "API kulcsok",
+      "hivemind.app.connectors": "Csatlakozók",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Értékelés",
+      "hivemind.app.settings": "Beállítások",
+      "hivemind.app.billing": "Számlázás",
+      "hivemind.app.web": "Web intelligencia",
+      "hivemind.app.web-admin": "Web admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Memória gráf",
+      "hivemind.app.engine": "Motor intelligencia",
+      "hivemind.app.team.members": "Csapattagok",
+      "hivemind.app.team.projects": "Csapat projektek",
+      "hivemind.app.audit": "Audit napló",
+      "hivemind.app.admin.users": "Szervezeti tagok",
+      "hivemind.app.admin.sso": "SSO beállítás",
+      "hivemind.app.employees": "Digitális alkalmazottak",
+      "hivemind.app.workspace": "Munkaterület admin"
+    }
+  },
+  "overview": {
+    "title": "Áttekintés",
+    "subtitle": "A HIVEMIND memória motorod egy pillantásra.",
+    "recentMemories": "Legújabb emlékek",
+    "noMemories": "Még nincsenek emlékek.",
+    "noMemoriesHint": "Csatlakoztass egy MCP klienst a memóriák begyűjtéséhez.",
+    "quickSearch": "Gyors keresés",
+    "quickActions": "Gyors műveletek",
+    "createApiKey": "API kulcs létrehozása",
+    "createApiKeyHint": "Kulcsok generálása MCP kliensekhez",
+    "connectMcp": "MCP kliens csatlakoztatása",
+    "connectMcpHint": "Kapcsold össze Claude‑t, Cursor‑t vagy egyedi klienseket",
+    "browseMemories": "Emlékek böngészése",
+    "browseMemoriesHint": "Fedezd fel és kezeld a tárolt emlékeket",
+    "coreApiHealth": "Core API állapot"
+  },
+  "memories": {
+    "title": "Emlékek",
+    "empty": "Még nincsenek mentett emlékek.",
+    "save": "Emlék mentése",
+    "delete": "Törlés",
+    "tags": "Címkék",
+    "type": "Típus",
+    "created": "Létrehozva",
+    "filterPlaceholder": "Szűrés címke, típus vagy szöveg alapján…"
+  },
+  "settings": {
+    "title": "Beállítások",
+    "language": "Nyelv",
+    "voice": "Hang",
+    "assistantName": "Asszisztens neve",
+    "appearance": "Megjelenés",
+    "theme": "Téma",
+    "danger": "Veszélyes zóna",
+    "deleteAccount": "Fiók törlése"
+  },
+  "connectors": {
+    "title": "Csatlakozók",
+    "subtitle": "Csatlakoztasd adatforrásaidat, hogy a HIVEMIND kontextust idézhessen fel az eszközök között.",
+    "connect": "Csatlakoztatás",
+    "connected": "Kapcsolódva",
+    "disconnect": "Szétkapcsolás",
+    "needsReconnect": "Újrakapcsolás szükséges"
+  }
+}

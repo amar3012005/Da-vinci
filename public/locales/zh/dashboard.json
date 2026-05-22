@@ -12,7 +12,7 @@
     "agentSwarm": "代理群",
     "engine": "引擎",
     "mcpServer": "MCP Server",
-    "apiKeys": "API Keys",
+    "apiKeys": "API 密钥",
     "evaluation": "评估",
     "workspaceAdmin": "工作区管理员",
     "playground": "实验场",
@@ -29,11 +29,11 @@
       "account": "账户"
     },
     "planLabel": {
-      "free": "免费计划",
-      "starter": "入门计划",
-      "pro": "专业计划",
-      "team": "团队计划",
-      "enterprise": "企业计划"
+      "free": "免费套餐",
+      "starter": "入门套餐",
+      "pro": "专业套餐",
+      "team": "团队套餐",
+      "enterprise": "企业套餐"
     }
   },
   "topbar": {
@@ -43,7 +43,7 @@
     "titles": {
       "hivemind.app.overview": "概览",
       "hivemind.app.memories": "记忆",
-      "hivemind.app.keys": "API Keys",
+      "hivemind.app.keys": "API 密钥",
       "hivemind.app.connectors": "连接器",
       "hivemind.app.profile": "个人资料",
       "hivemind.app.evaluation": "评估",

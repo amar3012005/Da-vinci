@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Prehľad",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Konektory",
+    "memories": "Spomienky",
+    "graph3d": "Pamäťový graf · 3D",
+    "graph2d": "Pamäťový graf · 2D",
+    "knowledge": "Znalostná báza",
+    "webIntel": "Webová inteligencia",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Engine",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API Keys",
+    "evaluation": "Vyhodnotenie",
+    "workspaceAdmin": "Správa pracoviska",
+    "playground": "Hracia plocha",
+    "webAdmin": "Web Admin",
+    "profile": "Profil",
+    "billing": "Fakturácia",
+    "settings": "Nastavenia",
+    "signOut": "Odhlásiť sa",
+    "groups": {
+      "yourBrain": "Tvoj mozog",
+      "aiFeatures": "AI funkcie",
+      "advanced": "Pokročilé",
+      "workspaceAdmin": "Správa pracoviska",
+      "account": "Účet"
+    },
+    "planLabel": {
+      "free": "Bezplatný plán",
+      "starter": "Začiatočný plán",
+      "pro": "Pro plán",
+      "team": "Tímový plán",
+      "enterprise": "Podnikový plán"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Hľadať spomienky…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Prehľad",
+      "hivemind.app.memories": "Spomienky",
+      "hivemind.app.keys": "API Keys",
+      "hivemind.app.connectors": "Konektory",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Vyhodnotenie",
+      "hivemind.app.settings": "Nastavenia",
+      "hivemind.app.billing": "Fakturácia",
+      "hivemind.app.web": "Webová inteligencia",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Pamäťový graf",
+      "hivemind.app.engine": "Engine Intelligence",
+      "hivemind.app.team.members": "Členovia tímu",
+      "hivemind.app.team.projects": "Projekty tímu",
+      "hivemind.app.audit": "Audit log",
+      "hivemind.app.admin.users": "Členovia organizácie",
+      "hivemind.app.admin.sso": "Konfigurácia SSO",
+      "hivemind.app.employees": "Digitálni zamestnanci",
+      "hivemind.app.workspace": "Správa pracoviska"
+    }
+  },
+  "overview": {
+    "title": "Prehľad",
+    "subtitle": "Váš pamäťový engine HIVEMIND na prvý pohľad.",
+    "recentMemories": "Nedávne spomienky",
+    "noMemories": "Zatiaľ žiadne spomienky.",
+    "noMemoriesHint": "Pripojte MCP klienta a začnite zaznamenávať spomienky.",
+    "quickSearch": "Rýchle vyhľadávanie",
+    "quickActions": "Rýchle akcie",
+    "createApiKey": "Vytvoriť API kľúč",
+    "createApiKeyHint": "Generovať kľúče pre MCP klientov",
+    "connectMcp": "Pripojiť MCP klienta",
+    "connectMcpHint": "Prepojte Claude, Cursor alebo vlastných klientov",
+    "browseMemories": "Prehliadať spomienky",
+    "browseMemoriesHint": "Preskúmajte a spravujte uložené spomienky",
+    "coreApiHealth": "Stav Core API"
+  },
+  "memories": {
+    "title": "Spomienky",
+    "empty": "Zatiaľ nie sú uložené žiadne spomienky.",
+    "save": "Uložiť spomienku",
+    "delete": "Vymazať",
+    "tags": "Značky",
+    "type": "Typ",
+    "created": "Vytvorené",
+    "filterPlaceholder": "Filtrovať podľa značky, typu alebo textu…"
+  },
+  "settings": {
+    "title": "Nastavenia",
+    "language": "Jazyk",
+    "voice": "Hlas",
+    "assistantName": "Meno asistenta",
+    "appearance": "Vzhľad",
+    "theme": "Téma",
+    "danger": "Nebezpečná zóna",
+    "deleteAccount": "Zmazať účet"
+  },
+  "connectors": {
+    "title": "Konektory",
+    "subtitle": "Pripojte svoje dátové zdroje, aby HIVEMIND mohol vyvolávať kontext naprieč nástrojmi.",
+    "connect": "Pripojiť",
+    "connected": "Pripojené",
+    "disconnect": "Odpojiť",
+    "needsReconnect": "Vyžaduje opätovné pripojenie"
+  }
+}

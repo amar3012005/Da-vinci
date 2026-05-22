@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "প্রোডাক্ট",
+    "features": "বৈশিষ্ট্য",
+    "pricing": "মূল্য",
+    "docs": "ডকস",
+    "about": "পরিচিতি",
+    "signIn": "সাইন ইন",
+    "signUp": "সাইন আপ",
+    "tryFree": "ফ্রি চেষ্টা করুন"
+  },
+  "hero": {
+    "title": "আপনার AI-এর নিখুঁত স্মৃতি।",
+    "subtitle": "HIVEMIND স্টেটলেস LLM-গুলোকে কন্টেক্সট-সচেতন সহকারীতে রূপান্তর করে, প্রতিটি সেশন, মেশিন এবং কথোপকথনে নিখুঁত রিকল সহ।",
+    "ctaPrimary": "ফ্রি HIVEMIND চেষ্টা করুন",
+    "ctaSecondary": "ডকস পড়ুন"
+  },
+  "footer": {
+    "privacy": "গোপনীয়তা",
+    "terms": "শর্তাবলী",
+    "contact": "যোগাযোগ",
+    "sovereign": "EU Sovereign · Frankfurt, Germany"
+  }
+}

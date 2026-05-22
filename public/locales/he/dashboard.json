@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "סקירה",
+    "talkToHive": "לדבר עם HIVE",
+    "connectors": "מחברים",
+    "memories": "זיכרונות",
+    "graph3d": "גרף זיכרון · 3D",
+    "graph2d": "גרף זיכרון · 2D",
+    "knowledge": "בסיס ידע",
+    "webIntel": "אינטליגנציה ברשת",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "קבוצת סוכנים",
+    "engine": "מנוע",
+    "mcpServer": "MCP Server",
+    "apiKeys": "מפתחות API",
+    "evaluation": "הערכה",
+    "workspaceAdmin": "מנהל סביבת עבודה",
+    "playground": "מרחב ניסוי",
+    "webAdmin": "מנהל רשת",
+    "profile": "פרופיל",
+    "billing": "חיוב",
+    "settings": "הגדרות",
+    "signOut": "התנתק",
+    "groups": {
+      "yourBrain": "המוח שלך",
+      "aiFeatures": "תכונות AI",
+      "advanced": "מתקדם",
+      "workspaceAdmin": "מנהל סביבת עבודה",
+      "account": "חשבון"
+    },
+    "planLabel": {
+      "free": "תוכנית חינם",
+      "starter": "תוכנית התחלתית",
+      "pro": "תוכנית פרו",
+      "team": "תוכנית צוות",
+      "enterprise": "תוכנית ארגונית"
+    }
+  },
+  "topbar": {
+    "searchMemories": "חפש זיכרונות…",
+    "online": "מחובר",
+    "offline": "לא מחובר",
+    "titles": {
+      "hivemind.app.overview": "סקירה",
+      "hivemind.app.memories": "זיכרונות",
+      "hivemind.app.keys": "מפתחות API",
+      "hivemind.app.connectors": "מחברים",
+      "hivemind.app.profile": "פרופיל",
+      "hivemind.app.evaluation": "הערכה",
+      "hivemind.app.settings": "הגדרות",
+      "hivemind.app.billing": "חיוב",
+      "hivemind.app.web": "אינטליגנציה ברשת",
+      "hivemind.app.web-admin": "מנהל רשת",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "גרף זיכרון",
+      "hivemind.app.engine": "אינטליגנציה מנוע",
+      "hivemind.app.team.members": "חברי צוות",
+      "hivemind.app.team.projects": "פרויקטי צוות",
+      "hivemind.app.audit": "יומן ביקורת",
+      "hivemind.app.admin.users": "חברי ארגון",
+      "hivemind.app.admin.sso": "הגדרת SSO",
+      "hivemind.app.employees": "עובדים דיגיטליים",
+      "hivemind.app.workspace": "מנהל סביבת עבודה"
+    }
+  },
+  "overview": {
+    "title": "סקירה",
+    "subtitle": "מנוע הזיכרון HIVEMIND שלך במבט אחד.",
+    "recentMemories": "זיכרונות אחרונים",
+    "noMemories": "אין עדיין זיכרונות.",
+    "noMemoriesHint": "חבר לקוח MCP כדי להתחיל לקלוט זיכרונות.",
+    "quickSearch": "חיפוש מהיר",
+    "quickActions": "פעולות מהירות",
+    "createApiKey": "צור מפתח API",
+    "createApiKeyHint": "צור מפתחות ללקוחות MCP",
+    "connectMcp": "חבר לקוח MCP",
+    "connectMcpHint": "קשר את Claude, Cursor או לקוחות מותאמים",
+    "browseMemories": "עיין בזיכרונות",
+    "browseMemoriesHint": "חקור וניהול זיכרונות שמורים",
+    "coreApiHealth": "בריאות API הליבה"
+  },
+  "memories": {
+    "title": "זיכרונות",
+    "empty": "לא נשמרו עדיין זיכרונות.",
+    "save": "שמור זיכרון",
+    "delete": "מחק",
+    "tags": "תגיות",
+    "type": "סוג",
+    "created": "נוצר",
+    "filterPlaceholder": "סנן לפי תג, סוג או טקסט…"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "language": "שפה",
+    "voice": "קול",
+    "assistantName": "שם העוזר",
+    "appearance": "מראה",
+    "theme": "נושא",
+    "danger": "אזור מסוכן",
+    "deleteAccount": "מחק חשבון"
+  },
+  "connectors": {
+    "title": "מחברים",
+    "subtitle": "חבר מקורות נתונים כדי ש-HIVEMIND יוכל לזכור הקשר בין כלים.",
+    "connect": "התחבר",
+    "connected": "מחובר",
+    "disconnect": "התנתק",
+    "needsReconnect": "דורש חיבור מחדש"
+  }
+}

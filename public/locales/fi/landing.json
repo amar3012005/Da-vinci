@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Tuote",
+    "features": "Ominaisuudet",
+    "pricing": "Hinnoittelu",
+    "docs": "Dokumentit",
+    "about": "Tietoa",
+    "signIn": "Kirjaudu sisään",
+    "signUp": "Rekisteröidy",
+    "tryFree": "Kokeile ilmaiseksi"
+  },
+  "hero": {
+    "title": "AI:si täydellinen muisti.",
+    "subtitle": "HIVEMIND muuttaa tilattomat LLM:t kontekstitietoisiksi avustajiksi, joilla on täydellinen muisti jokaisessa istunnossa, laitteessa ja keskustelussa.",
+    "ctaPrimary": "Kokeile HIVEMIND ilmaiseksi",
+    "ctaSecondary": "Lue dokumentit"
+  },
+  "footer": {
+    "privacy": "Tietosuoja",
+    "terms": "Ehdot",
+    "contact": "Yhteystiedot",
+    "sovereign": "EU Sovereign · Frankfurt, Saksa"
+  }
+}

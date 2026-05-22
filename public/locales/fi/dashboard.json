@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Yleiskatsaus",
+    "talkToHive": "Puhu HIVE:lle",
+    "connectors": "Liittimet",
+    "memories": "Muistot",
+    "graph3d": "Muistigrafi · 3D",
+    "graph2d": "Muistigrafi · 2D",
+    "knowledge": "Tietopohja",
+    "webIntel": "Web Intel",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agentti Parvi",
+    "engine": "Moottori",
+    "mcpServer": "MCP-palvelin",
+    "apiKeys": "API-avaimet",
+    "evaluation": "Arviointi",
+    "workspaceAdmin": "Työtilan hallinta",
+    "playground": "Kokeiluympäristö",
+    "webAdmin": "Web-hallinta",
+    "profile": "Profiili",
+    "billing": "Laskutus",
+    "settings": "Asetukset",
+    "signOut": "Kirjaudu ulos",
+    "groups": {
+      "yourBrain": "Aivot",
+      "aiFeatures": "AI-ominaisuudet",
+      "advanced": "Edistynyt",
+      "workspaceAdmin": "Työtilan hallinta",
+      "account": "Tili"
+    },
+    "planLabel": {
+      "free": "Ilmainen suunnitelma",
+      "starter": "Aloituspaketti",
+      "pro": "Pro-paketti",
+      "team": "Tiimipaketti",
+      "enterprise": "Yrityspaketti"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Etsi muistoja…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Yleiskatsaus",
+      "hivemind.app.memories": "Muistot",
+      "hivemind.app.keys": "API-avaimet",
+      "hivemind.app.connectors": "Liittimet",
+      "hivemind.app.profile": "Profiili",
+      "hivemind.app.evaluation": "Arviointi",
+      "hivemind.app.settings": "Asetukset",
+      "hivemind.app.billing": "Laskutus",
+      "hivemind.app.web": "Web-älykkyys",
+      "hivemind.app.web-admin": "Web-hallinta",
+      "hivemind.app.mcp": "MCP-palvelin",
+      "hivemind.app.graph": "Muistigrafi",
+      "hivemind.app.engine": "Moottori-älykkyys",
+      "hivemind.app.team.members": "Tiimin jäsenet",
+      "hivemind.app.team.projects": "Tiimin projektit",
+      "hivemind.app.audit": "Audit-loki",
+      "hivemind.app.admin.users": "Organisaation jäsenet",
+      "hivemind.app.admin.sso": "SSO-asetukset",
+      "hivemind.app.employees": "Digitaaliset työntekijät",
+      "hivemind.app.workspace": "Työtilan hallinta"
+    }
+  },
+  "overview": {
+    "title": "Yleiskatsaus",
+    "subtitle": "HIVEMIND-muistimoottorisi yhdellä silmäyksellä.",
+    "recentMemories": "Viimeisimmät muistot",
+    "noMemories": "Ei muistoja vielä.",
+    "noMemoriesHint": "Yhdistä MCP-asiakasohjelma aloittaaksesi muistojen keräämisen.",
+    "quickSearch": "Pikahaku",
+    "quickActions": "Pikatoiminnot",
+    "createApiKey": "Luo API-avain",
+    "createApiKeyHint": "Luo avaimia MCP-asiakkaille",
+    "connectMcp": "Yhdistä MCP-asiakas",
+    "connectMcpHint": "Yhdistä Claude, Cursor tai omat asiakasohjelmat",
+    "browseMemories": "Selaa muistoja",
+    "browseMemoriesHint": "Tutki ja hallitse tallennettuja muistoja",
+    "coreApiHealth": "Core API -terveys"
+  },
+  "memories": {
+    "title": "Muistot",
+    "empty": "Ei muistoja tallennettu vielä.",
+    "save": "Tallenna muisto",
+    "delete": "Poista",
+    "tags": "Tagit",
+    "type": "Tyyppi",
+    "created": "Luotu",
+    "filterPlaceholder": "Suodata tagin, tyypin tai tekstin mukaan…"
+  },
+  "settings": {
+    "title": "Asetukset",
+    "language": "Kieli",
+    "voice": "Ääni",
+    "assistantName": "Avustajan nimi",
+    "appearance": "Ulkoasu",
+    "theme": "Teema",
+    "danger": "Vaaravyöhyke",
+    "deleteAccount": "Poista tili"
+  },
+  "connectors": {
+    "title": "Liittimet",
+    "subtitle": "Yhdistä tietolähteesi, jotta HIVEMIND voi hakea kontekstia eri työkaluista.",
+    "connect": "Yhdistä",
+    "connected": "Yhdistetty",
+    "disconnect": "Katkaise yhteys",
+    "needsReconnect": "Tarvitsee uudelleenyhdistämisen"
+  }
+}

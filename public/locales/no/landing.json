@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produkt",
+    "features": "Funksjoner",
+    "pricing": "Priser",
+    "docs": "Dokumentasjon",
+    "about": "Om",
+    "signIn": "Logg inn",
+    "signUp": "Registrer deg",
+    "tryFree": "Prøv gratis"
+  },
+  "hero": {
+    "title": "Din AIs perfekte hukommelse.",
+    "subtitle": "HIVEMIND gjør statsløse LLM-er til kontekstbevisste assistenter med perfekt gjenkalling i hver økt, på hver maskin og i hver samtale.",
+    "ctaPrimary": "Prøv HIVEMIND gratis",
+    "ctaSecondary": "Les dokumentasjonen"
+  },
+  "footer": {
+    "privacy": "Personvern",
+    "terms": "Vilkår",
+    "contact": "Kontakt",
+    "sovereign": "EU Sovereign · Frankfurt, Tyskland"
+  }
+}

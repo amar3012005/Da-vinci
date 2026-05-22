@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Prezentare",
+    "talkToHive": "Vorbește cu HIVE",
+    "connectors": "Conectori",
+    "memories": "Memorii",
+    "graph3d": "Grafic Memorie · 3D",
+    "graph2d": "Grafic Memorie · 2D",
+    "knowledge": "Bază de Cunoștințe",
+    "webIntel": "Inteligență Web",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Swarm de Agenți",
+    "engine": "Motor",
+    "mcpServer": "Server MCP",
+    "apiKeys": "Chei API",
+    "evaluation": "Evaluare",
+    "workspaceAdmin": "Administrație Spațiu de Lucru",
+    "playground": "Sandbox",
+    "webAdmin": "Admin Web",
+    "profile": "Profil",
+    "billing": "Facturare",
+    "settings": "Setări",
+    "signOut": "Deconectare",
+    "groups": {
+      "yourBrain": "Creierul Tău",
+      "aiFeatures": "Funcții AI",
+      "advanced": "Avansat",
+      "workspaceAdmin": "Administrație Spațiu de Lucru",
+      "account": "Cont"
+    },
+    "planLabel": {
+      "free": "Plan Gratuit",
+      "starter": "Plan Starter",
+      "pro": "Plan Pro",
+      "team": "Plan Echipa",
+      "enterprise": "Plan Enterprise"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Caută memorii…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Prezentare",
+      "hivemind.app.memories": "Memorii",
+      "hivemind.app.keys": "Chei API",
+      "hivemind.app.connectors": "Conectori",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Evaluare",
+      "hivemind.app.settings": "Setări",
+      "hivemind.app.billing": "Facturare",
+      "hivemind.app.web": "Inteligență Web",
+      "hivemind.app.web-admin": "Admin Web",
+      "hivemind.app.mcp": "Server MCP",
+      "hivemind.app.graph": "Grafic Memorie",
+      "hivemind.app.engine": "Inteligență Motor",
+      "hivemind.app.team.members": "Membri Echipa",
+      "hivemind.app.team.projects": "Proiecte Echipa",
+      "hivemind.app.audit": "Jurnal Audit",
+      "hivemind.app.admin.users": "Membri Organizație",
+      "hivemind.app.admin.sso": "Configurare SSO",
+      "hivemind.app.employees": "Angajați Digitali",
+      "hivemind.app.workspace": "Administrație Spațiu de Lucru"
+    }
+  },
+  "overview": {
+    "title": "Prezentare",
+    "subtitle": "Motorul tău de memorie HIVEMIND într-o privire.",
+    "recentMemories": "Memorii Recente",
+    "noMemories": "Încă nu există memorii.",
+    "noMemoriesHint": "Conectează un client MCP pentru a începe să încarci memorii.",
+    "quickSearch": "Căutare Rapidă",
+    "quickActions": "Acțiuni Rapide",
+    "createApiKey": "Creează Cheie API",
+    "createApiKeyHint": "Generează chei pentru clienții MCP",
+    "connectMcp": "Conectează Client MCP",
+    "connectMcpHint": "Leagă Claude, Cursor sau clienți personalizați",
+    "browseMemories": "Răsfoiește Memorii",
+    "browseMemoriesHint": "Explorează și administrează memorii stocate",
+    "coreApiHealth": "Starea API-ului Central"
+  },
+  "memories": {
+    "title": "Memorii",
+    "empty": "Încă nu există memorii salvate.",
+    "save": "Salvează memorie",
+    "delete": "Șterge",
+    "tags": "Etichete",
+    "type": "Tip",
+    "created": "Creat",
+    "filterPlaceholder": "Filtrează după etichetă, tip sau text…"
+  },
+  "settings": {
+    "title": "Setări",
+    "language": "Limbă",
+    "voice": "Voce",
+    "assistantName": "Nume asistent",
+    "appearance": "Aspect",
+    "theme": "Temă",
+    "danger": "Zonă periculoasă",
+    "deleteAccount": "Șterge cont"
+  },
+  "connectors": {
+    "title": "Conectori",
+    "subtitle": "Conectează sursele tale de date pentru ca HIVEMIND să poată reaminti contextul între instrumente.",
+    "connect": "Conectează",
+    "connected": "Conectat",
+    "disconnect": "Deconectează",
+    "needsReconnect": "Necesită reconectare"
+  }
+}

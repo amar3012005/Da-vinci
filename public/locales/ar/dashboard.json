@@ -31,13 +31,13 @@
     "planLabel": {
       "free": "الخطة المجانية",
       "starter": "خطة البداية",
-      "pro": "خطة المحترفين",
+      "pro": "خطة احترافية",
       "team": "خطة الفريق",
       "enterprise": "خطة المؤسسة"
     }
   },
   "topbar": {
-    "searchMemories": "بحث في الذكريات…",
+    "searchMemories": "ابحث في الذكريات…",
     "online": "متصل",
     "offline": "غير متصل",
     "titles": {
@@ -65,7 +65,7 @@
   },
   "overview": {
     "title": "نظرة عامة",
-    "subtitle": "محرك الذاكرة HIVEMIND الخاص بك في لمحة.",
+    "subtitle": "محرك الذاكرة HIVEMIND الخاص بك بنظرة سريعة.",
     "recentMemories": "الذكريات الأخيرة",
     "noMemories": "لا توجد ذكريات بعد.",
     "noMemoriesHint": "قم بربط عميل MCP لبدء استيعاب الذكريات.",

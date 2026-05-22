@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Oversikt",
+    "talkToHive": "Snakk med HIVE",
+    "connectors": "Koblinger",
+    "memories": "Minner",
+    "graph3d": "Minnegraf · 3D",
+    "graph2d": "Minnegraf · 2D",
+    "knowledge": "Kunnskapsbase",
+    "webIntel": "Web‑intelligens",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent‑sværm",
+    "engine": "Motor",
+    "mcpServer": "MCP‑server",
+    "apiKeys": "API‑nøkler",
+    "evaluation": "Evaluering",
+    "workspaceAdmin": "Arbeidsområde‑admin",
+    "playground": "Lekeplass",
+    "webAdmin": "Web‑admin",
+    "profile": "Profil",
+    "billing": "Fakturering",
+    "settings": "Innstillinger",
+    "signOut": "Logg ut",
+    "groups": {
+      "yourBrain": "Din hjerne",
+      "aiFeatures": "AI‑funksjoner",
+      "advanced": "Avansert",
+      "workspaceAdmin": "Arbeidsområde‑admin",
+      "account": "Konto"
+    },
+    "planLabel": {
+      "free": "Gratis plan",
+      "starter": "Startplan",
+      "pro": "Pro‑plan",
+      "team": "Team‑plan",
+      "enterprise": "Enterprise‑plan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Søk i minner…",
+    "online": "Pålogget",
+    "offline": "Frakoblet",
+    "titles": {
+      "hivemind.app.overview": "Oversikt",
+      "hivemind.app.memories": "Minner",
+      "hivemind.app.keys": "API‑nøkler",
+      "hivemind.app.connectors": "Koblinger",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Evaluering",
+      "hivemind.app.settings": "Innstillinger",
+      "hivemind.app.billing": "Fakturering",
+      "hivemind.app.web": "Web‑intelligens",
+      "hivemind.app.web-admin": "Web‑admin",
+      "hivemind.app.mcp": "MCP‑server",
+      "hivemind.app.graph": "Minnegraf",
+      "hivemind.app.engine": "Motor‑intelligens",
+      "hivemind.app.team.members": "Team‑medlemmer",
+      "hivemind.app.team.projects": "Team‑prosjekter",
+      "hivemind.app.audit": "Revisjonslogg",
+      "hivemind.app.admin.users": "Organisasjonsmedlemmer",
+      "hivemind.app.admin.sso": "SSO‑konfigurasjon",
+      "hivemind.app.employees": "Digitale ansatte",
+      "hivemind.app.workspace": "Arbeidsområde‑admin"
+    }
+  },
+  "overview": {
+    "title": "Oversikt",
+    "subtitle": "Din HIVEMIND‑minnemotor på et øyeblikk.",
+    "recentMemories": "Siste minner",
+    "noMemories": "Ingen minner ennå.",
+    "noMemoriesHint": "Koble til en MCP‑klient for å begynne å hente minner.",
+    "quickSearch": "Raskt søk",
+    "quickActions": "Raske handlinger",
+    "createApiKey": "Opprett API‑nøkkel",
+    "createApiKeyHint": "Generer nøkler for MCP‑klienter",
+    "connectMcp": "Koble til MCP‑klient",
+    "connectMcpHint": "Koble Claude, Cursor eller egendefinerte klienter",
+    "browseMemories": "Bla gjennom minner",
+    "browseMemoriesHint": "Utforsk og administrer lagrede minner",
+    "coreApiHealth": "Core API‑helse"
+  },
+  "memories": {
+    "title": "Minner",
+    "empty": "Ingen minner lagret ennå.",
+    "save": "Lagre minne",
+    "delete": "Slett",
+    "tags": "Etiketter",
+    "type": "Type",
+    "created": "Opprettet",
+    "filterPlaceholder": "Filtrer etter etikett, type eller tekst…"
+  },
+  "settings": {
+    "title": "Innstillinger",
+    "language": "Språk",
+    "voice": "Stemme",
+    "assistantName": "Assistentnavn",
+    "appearance": "Utseende",
+    "theme": "Tema",
+    "danger": "Fareområde",
+    "deleteAccount": "Slett konto"
+  },
+  "connectors": {
+    "title": "Koblinger",
+    "subtitle": "Koble dine datakilder så HIVEMIND kan hente kontekst på tvers av verktøy.",
+    "connect": "Koble til",
+    "connected": "Tilkoblet",
+    "disconnect": "Koble fra",
+    "needsReconnect": "Må kobles til på nytt"
+  }
+}

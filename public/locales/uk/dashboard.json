@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Огляд",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Коннектори",
+    "memories": "Пам’яті",
+    "graph3d": "Граф пам’яті · 3D",
+    "graph2d": "Граф пам’яті · 2D",
+    "knowledge": "База знань",
+    "webIntel": "Web Intel",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Двигун",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API-ключі",
+    "evaluation": "Оцінка",
+    "workspaceAdmin": "Адмін робочого простору",
+    "playground": "Пісочниця",
+    "webAdmin": "Web Admin",
+    "profile": "Профіль",
+    "billing": "Оплата",
+    "settings": "Налаштування",
+    "signOut": "Вийти",
+    "groups": {
+      "yourBrain": "Ваш мозок",
+      "aiFeatures": "Функції ШІ",
+      "advanced": "Розширені",
+      "workspaceAdmin": "Адмін робочого простору",
+      "account": "Обліковий запис"
+    },
+    "planLabel": {
+      "free": "Безкоштовний план",
+      "starter": "Стартовий план",
+      "pro": "Pro план",
+      "team": "Командний план",
+      "enterprise": "Enterprise план"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Пошук пам’яті…",
+    "online": "Онлайн",
+    "offline": "Офлайн",
+    "titles": {
+      "hivemind.app.overview": "Огляд",
+      "hivemind.app.memories": "Пам’яті",
+      "hivemind.app.keys": "API-ключі",
+      "hivemind.app.connectors": "Коннектори",
+      "hivemind.app.profile": "Профіль",
+      "hivemind.app.evaluation": "Оцінка",
+      "hivemind.app.settings": "Налаштування",
+      "hivemind.app.billing": "Оплата",
+      "hivemind.app.web": "Web Intelligence",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Граф пам’яті",
+      "hivemind.app.engine": "Інтелект двигуна",
+      "hivemind.app.team.members": "Члени команди",
+      "hivemind.app.team.projects": "Проекти команди",
+      "hivemind.app.audit": "Журнал аудиту",
+      "hivemind.app.admin.users": "Члени організації",
+      "hivemind.app.admin.sso": "Налаштування SSO",
+      "hivemind.app.employees": "Цифрові співробітники",
+      "hivemind.app.workspace": "Адмін робочого простору"
+    }
+  },
+  "overview": {
+    "title": "Огляд",
+    "subtitle": "Ваш HIVEMIND‑двигун пам’яті в одному погляді.",
+    "recentMemories": "Останні пам’яті",
+    "noMemories": "Пам’яті ще немає.",
+    "noMemoriesHint": "Підключіть MCP‑клієнт, щоб почати збирати пам’яті.",
+    "quickSearch": "Швидкий пошук",
+    "quickActions": "Швидкі дії",
+    "createApiKey": "Створити API‑ключ",
+    "createApiKeyHint": "Генеруйте ключі для MCP‑клієнтів",
+    "connectMcp": "Підключити MCP‑клієнт",
+    "connectMcpHint": "З’єднайте Claude, Cursor або власні клієнти",
+    "browseMemories": "Переглянути пам’яті",
+    "browseMemoriesHint": "Досліджуйте та керуйте збереженими пам’ятями",
+    "coreApiHealth": "Стан Core API"
+  },
+  "memories": {
+    "title": "Пам’яті",
+    "empty": "Пам’яті ще не збережено.",
+    "save": "Зберегти пам’ять",
+    "delete": "Видалити",
+    "tags": "Теги",
+    "type": "Тип",
+    "created": "Створено",
+    "filterPlaceholder": "Фільтрувати за тегом, типом або текстом…"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "language": "Мова",
+    "voice": "Голос",
+    "assistantName": "Ім’я асистента",
+    "appearance": "Вигляд",
+    "theme": "Тема",
+    "danger": "Зона ризику",
+    "deleteAccount": "Видалити акаунт"
+  },
+  "connectors": {
+    "title": "Коннектори",
+    "subtitle": "Підключіть джерела даних, щоб HIVEMIND міг згадувати контекст між інструментами.",
+    "connect": "Підключити",
+    "connected": "Підключено",
+    "disconnect": "Відключити",
+    "needsReconnect": "Потрібно підключити знову"
+  }
+}

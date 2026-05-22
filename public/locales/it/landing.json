@@ -4,7 +4,7 @@
     "features": "Funzionalità",
     "pricing": "Prezzi",
     "docs": "Documentazione",
-    "about": "Informazioni",
+    "about": "Chi siamo",
     "signIn": "Accedi",
     "signUp": "Registrati",
     "tryFree": "Prova gratis"
@@ -18,7 +18,7 @@
   "footer": {
     "privacy": "Privacy",
     "terms": "Termini",
-    "contact": "Contatto",
+    "contact": "Contatti",
     "sovereign": "EU Sovereign · Francoforte, Germania"
   }
 }

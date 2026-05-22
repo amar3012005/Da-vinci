@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Ikhtisar",
+    "talkToHive": "Bicara dengan HIVE",
+    "connectors": "Konektor",
+    "memories": "Memori",
+    "graph3d": "Graf Memori · 3D",
+    "graph2d": "Graf Memori · 2D",
+    "knowledge": "Basis Pengetahuan",
+    "webIntel": "Intel Web",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Swarm Agen",
+    "engine": "Mesin",
+    "mcpServer": "MCP Server",
+    "apiKeys": "Kunci API",
+    "evaluation": "Evaluasi",
+    "workspaceAdmin": "Admin Ruang Kerja",
+    "playground": "Area Bermain",
+    "webAdmin": "Admin Web",
+    "profile": "Profil",
+    "billing": "Penagihan",
+    "settings": "Pengaturan",
+    "signOut": "Keluar",
+    "groups": {
+      "yourBrain": "Otak Anda",
+      "aiFeatures": "Fitur AI",
+      "advanced": "Lanjutan",
+      "workspaceAdmin": "Admin Ruang Kerja",
+      "account": "Akun"
+    },
+    "planLabel": {
+      "free": "Paket Gratis",
+      "starter": "Paket Starter",
+      "pro": "Paket Pro",
+      "team": "Paket Tim",
+      "enterprise": "Paket Enterprise"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Cari memori…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Ikhtisar",
+      "hivemind.app.memories": "Memori",
+      "hivemind.app.keys": "Kunci API",
+      "hivemind.app.connectors": "Konektor",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Evaluasi",
+      "hivemind.app.settings": "Pengaturan",
+      "hivemind.app.billing": "Penagihan",
+      "hivemind.app.web": "Intel Web",
+      "hivemind.app.web-admin": "Admin Web",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Graf Memori",
+      "hivemind.app.engine": "Intel Mesin",
+      "hivemind.app.team.members": "Anggota Tim",
+      "hivemind.app.team.projects": "Proyek Tim",
+      "hivemind.app.audit": "Log Audit",
+      "hivemind.app.admin.users": "Anggota Org",
+      "hivemind.app.admin.sso": "Konfigurasi SSO",
+      "hivemind.app.employees": "Karyawan Digital",
+      "hivemind.app.workspace": "Admin Ruang Kerja"
+    }
+  },
+  "overview": {
+    "title": "Ikhtisar",
+    "subtitle": "Mesin memori HIVEMIND Anda sekilas.",
+    "recentMemories": "Memori Terbaru",
+    "noMemories": "Belum ada memori.",
+    "noMemoriesHint": "Hubungkan klien MCP untuk mulai mengumpulkan memori.",
+    "quickSearch": "Pencarian Cepat",
+    "quickActions": "Aksi Cepat",
+    "createApiKey": "Buat Kunci API",
+    "createApiKeyHint": "Buat kunci untuk klien MCP",
+    "connectMcp": "Hubungkan Klien MCP",
+    "connectMcpHint": "Hubungkan Claude, Cursor, atau klien khusus",
+    "browseMemories": "Jelajahi Memori",
+    "browseMemoriesHint": "Jelajahi dan kelola memori yang tersimpan",
+    "coreApiHealth": "Kesehatan API Inti"
+  },
+  "memories": {
+    "title": "Memori",
+    "empty": "Belum ada memori yang disimpan.",
+    "save": "Simpan memori",
+    "delete": "Hapus",
+    "tags": "Tag",
+    "type": "Tipe",
+    "created": "Dibuat",
+    "filterPlaceholder": "Filter berdasarkan tag, tipe, atau teks…"
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "language": "Bahasa",
+    "voice": "Suara",
+    "assistantName": "Nama asisten",
+    "appearance": "Tampilan",
+    "theme": "Tema",
+    "danger": "Zona berbahaya",
+    "deleteAccount": "Hapus akun"
+  },
+  "connectors": {
+    "title": "Konektor",
+    "subtitle": "Hubungkan sumber data Anda agar HIVEMIND dapat mengingat konteks di semua alat.",
+    "connect": "Hubungkan",
+    "connected": "Terhubung",
+    "disconnect": "Putuskan",
+    "needsReconnect": "Perlu disambungkan kembali"
+  }
+}

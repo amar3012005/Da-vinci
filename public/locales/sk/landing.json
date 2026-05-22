@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produkt",
+    "features": "Funkcie",
+    "pricing": "Cenník",
+    "docs": "Dokumentácia",
+    "about": "O nás",
+    "signIn": "Prihlásiť sa",
+    "signUp": "Zaregistrovať sa",
+    "tryFree": "Vyskúšať zadarmo"
+  },
+  "hero": {
+    "title": "Perfekčná pamäť vašej AI.",
+    "subtitle": "HIVEMIND mení bezstavové LLM na asistentov s kontextom a dokonalou pamäťou naprieč každou reláciou, zariadením a konverzáciou.",
+    "ctaPrimary": "Vyskúšajte HIVEMIND zadarmo",
+    "ctaSecondary": "Prečítajte si dokumentáciu"
+  },
+  "footer": {
+    "privacy": "Ochrana súkromia",
+    "terms": "Podmienky",
+    "contact": "Kontakt",
+    "sovereign": "EU Sovereign · Frankfurt, Nemecko"
+  }
+}

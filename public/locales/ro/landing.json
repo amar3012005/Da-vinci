@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Produs",
+    "features": "Funcționalități",
+    "pricing": "Prețuri",
+    "docs": "Documentație",
+    "about": "Despre",
+    "signIn": "Autentificare",
+    "signUp": "Înregistrare",
+    "tryFree": "Încearcă gratuit"
+  },
+  "hero": {
+    "title": "Memoria perfectă a AI-ului tău.",
+    "subtitle": "HIVEMIND transformă modele LLM fără stare în asistenți conștienți de context, cu memorie perfectă în fiecare sesiune, dispozitiv și conversație.",
+    "ctaPrimary": "Încearcă HIVEMIND gratuit",
+    "ctaSecondary": "Citește documentația"
+  },
+  "footer": {
+    "privacy": "Confidențialitate",
+    "terms": "Termeni",
+    "contact": "Contact",
+    "sovereign": "UE Suveran · Frankfurt, Germania"
+  }
+}

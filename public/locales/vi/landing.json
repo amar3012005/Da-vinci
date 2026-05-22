@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Sản phẩm",
+    "features": "Tính năng",
+    "pricing": "Giá",
+    "docs": "Tài liệu",
+    "about": "Giới thiệu",
+    "signIn": "Đăng nhập",
+    "signUp": "Đăng ký",
+    "tryFree": "Dùng thử miễn phí"
+  },
+  "hero": {
+    "title": "Bộ nhớ hoàn hảo cho AI của bạn.",
+    "subtitle": "HIVEMIND biến các LLM không trạng thái thành trợ lý có nhận thức ngữ cảnh với khả năng nhớ hoàn hảo trong mọi phiên, máy và cuộc trò chuyện.",
+    "ctaPrimary": "Dùng thử HIVEMIND miễn phí",
+    "ctaSecondary": "Xem tài liệu"
+  },
+  "footer": {
+    "privacy": "Bảo mật",
+    "terms": "Điều khoản",
+    "contact": "Liên hệ",
+    "sovereign": "EU Sovereign · Frankfurt, Đức"
+  }
+}

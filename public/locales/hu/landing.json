@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "Termék",
+    "features": "Funkciók",
+    "pricing": "Árazás",
+    "docs": "Dokumentáció",
+    "about": "Rólunk",
+    "signIn": "Bejelentkezés",
+    "signUp": "Regisztráció",
+    "tryFree": "Próbáld ingyen"
+  },
+  "hero": {
+    "title": "Az AI-d tökéletes memóriája.",
+    "subtitle": "HIVEMIND stateless LLM-eket kontextus‑tudatos asszisztensekké alakít, tökéletes visszaidézéssel minden munkamenetben, gépen és beszélgetésben.",
+    "ctaPrimary": "Próbáld ki a HIVEMIND-ot ingyen",
+    "ctaSecondary": "Olvasd el a dokumentációt"
+  },
+  "footer": {
+    "privacy": "Adatvédelem",
+    "terms": "Feltételek",
+    "contact": "Kapcsolat",
+    "sovereign": "EU Sovereign · Frankfurt, Germany"
+  }
+}

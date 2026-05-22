@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "product": "ผลิตภัณฑ์",
+    "features": "คุณสมบัติ",
+    "pricing": "ราคา",
+    "docs": "เอกสาร",
+    "about": "เกี่ยวกับ",
+    "signIn": "เข้าสู่ระบบ",
+    "signUp": "สมัครสมาชิก",
+    "tryFree": "ลองฟรี"
+  },
+  "hero": {
+    "title": "ความจำที่สมบูรณ์แบบของ AI ของคุณ.",
+    "subtitle": "HIVEMIND ทำให้ LLM ที่ไม่มีสถานะกลายเป็นผู้ช่วยที่รับรู้บริบทด้วยความจำที่สมบูรณ์แบบในทุกเซสชัน, เครื่อง, และการสนทนา.",
+    "ctaPrimary": "ลอง HIVEMIND ฟรี",
+    "ctaSecondary": "อ่านเอกสาร"
+  },
+  "footer": {
+    "privacy": "ความเป็นส่วนตัว",
+    "terms": "เงื่อนไข",
+    "contact": "ติดต่อ",
+    "sovereign": "EU Sovereign · Frankfurt, Germany"
+  }
+}

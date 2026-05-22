@@ -1,7 +1,7 @@
 {
   "sidebar": {
     "overview": "Resumen",
-    "talkToHive": "Talk to HIVE",
+    "talkToHive": "Habla con HIVE",
     "connectors": "Conectores",
     "memories": "Memorias",
     "graph3d": "Gráfico de Memoria · 3D",
@@ -14,26 +14,26 @@
     "mcpServer": "Servidor MCP",
     "apiKeys": "Claves API",
     "evaluation": "Evaluación",
-    "workspaceAdmin": "Admin. del Espacio",
-    "playground": "Zona de Pruebas",
-    "webAdmin": "Admin. Web",
+    "workspaceAdmin": "Administrador de Espacio",
+    "playground": "Área de Pruebas",
+    "webAdmin": "Administrador Web",
     "profile": "Perfil",
     "billing": "Facturación",
     "settings": "Configuración",
     "signOut": "Cerrar sesión",
     "groups": {
       "yourBrain": "Tu Cerebro",
-      "aiFeatures": "Funciones IA",
+      "aiFeatures": "Funciones de IA",
       "advanced": "Avanzado",
-      "workspaceAdmin": "Admin. del Espacio",
+      "workspaceAdmin": "Administrador de Espacio",
       "account": "Cuenta"
     },
     "planLabel": {
       "free": "Plan Gratis",
-      "starter": "Plan Starter",
+      "starter": "Plan Inicial",
       "pro": "Plan Pro",
       "team": "Plan Equipo",
-      "enterprise": "Plan Enterprise"
+      "enterprise": "Plan Empresarial"
     }
   },
   "topbar": {
@@ -50,17 +50,17 @@
       "hivemind.app.settings": "Configuración",
       "hivemind.app.billing": "Facturación",
       "hivemind.app.web": "Inteligencia Web",
-      "hivemind.app.web-admin": "Admin. Web",
+      "hivemind.app.web-admin": "Administrador Web",
       "hivemind.app.mcp": "Servidor MCP",
       "hivemind.app.graph": "Gráfico de Memoria",
       "hivemind.app.engine": "Inteligencia del Motor",
       "hivemind.app.team.members": "Miembros del Equipo",
       "hivemind.app.team.projects": "Proyectos del Equipo",
       "hivemind.app.audit": "Registro de Auditoría",
-      "hivemind.app.admin.users": "Miembros de la Org",
+      "hivemind.app.admin.users": "Miembros de la Organización",
       "hivemind.app.admin.sso": "Configuración SSO",
       "hivemind.app.employees": "Empleados Digitales",
-      "hivemind.app.workspace": "Admin. del Espacio"
+      "hivemind.app.workspace": "Administrador de Espacio"
     }
   },
   "overview": {
@@ -71,13 +71,13 @@
     "noMemoriesHint": "Conecta un cliente MCP para comenzar a ingerir memorias.",
     "quickSearch": "Búsqueda Rápida",
     "quickActions": "Acciones Rápidas",
-    "createApiKey": "Crear Clave API",
+    "createApiKey": "Crear clave API",
     "createApiKeyHint": "Genera claves para clientes MCP",
-    "connectMcp": "Conectar Cliente MCP",
+    "connectMcp": "Conectar cliente MCP",
     "connectMcpHint": "Enlaza Claude, Cursor o clientes personalizados",
     "browseMemories": "Explorar Memorias",
     "browseMemoriesHint": "Explora y gestiona memorias almacenadas",
-    "coreApiHealth": "Salud de la API Central"
+    "coreApiHealth": "Estado de la API Central"
   },
   "memories": {
     "title": "Memorias",
@@ -101,7 +101,7 @@
   },
   "connectors": {
     "title": "Conectores",
-    "subtitle": "Conecta tus fuentes de datos para que HIVEMIND recuerde contexto entre herramientas.",
+    "subtitle": "Conecta tus fuentes de datos para que HIVEMIND recuerde el contexto entre herramientas.",
     "connect": "Conectar",
     "connected": "Conectado",
     "disconnect": "Desconectar",

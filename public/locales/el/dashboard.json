@@ -1,0 +1,120 @@
+[
+  {
+    "sidebar": {
+      "overview": "Επισκόπηση",
+      "talkToHive": "Talk to HIVE",
+      "connectors": "Συνδέσεις",
+      "memories": "Αναμνήσεις",
+      "graph3d": "Γράφημα Μνήμης · 3Δ",
+      "graph2d": "Γράφημα Μνήμης · 2Δ",
+      "knowledge": "Γνωσιακή Βάση",
+      "webIntel": "Web Intel",
+      "tara": "TARA × HIVE",
+      "agentSwarm": "Agent Swarm",
+      "engine": "Μηχανή",
+      "mcpServer": "MCP Server",
+      "apiKeys": "Κλειδιά API",
+      "evaluation": "Αξιολόγηση",
+      "workspaceAdmin": "Διαχειριστής Χώρου Εργασίας",
+      "playground": "Περιοχή Πειραμάτων",
+      "webAdmin": "Διαχειριστής Web",
+      "profile": "Προφίλ",
+      "billing": "Τιμολόγηση",
+      "settings": "Ρυθμίσεις",
+      "signOut": "Αποσύνδεση",
+      "groups": {
+        "yourBrain": "Ο Νους Σας",
+        "aiFeatures": "Λειτουργίες AI",
+        "advanced": "Για Προχωρημένους",
+        "workspaceAdmin": "Διαχειριστής Χώρου Εργασίας",
+        "account": "Λογαριασμός"
+      },
+      "planLabel": {
+        "free": "Δωρεάν Σχέδιο",
+        "starter": "Σχέδιο Εκκίνησης",
+        "pro": "Pro Σχέδιο",
+        "team": "Σχέδιο Ομάδας",
+        "enterprise": "Εταιρικό Σχέδιο"
+      }
+    },
+    "topbar": {
+      "searchMemories": "Αναζήτηση αναμνήσεων…",
+      "online": "Σε σύνδεση",
+      "offline": "Εκτός σύνδεσης",
+      "titles": {
+        "hivemind.app.overview": "Επισκόπηση",
+        "hivemind.app.memories": "Αναμνήσεις",
+        "hivemind.app.keys": "Κλειδιά API",
+        "hivemind.app.connectors": "Συνδέσεις",
+        "hivemind.app.profile": "Προφίλ",
+        "hivemind.app.evaluation": "Αξιολόγηση",
+        "hivemind.app.settings": "Ρυθμίσεις",
+        "hivemind.app.billing": "Τιμολόγηση",
+        "hivemind.app.web": "Web Intelligence",
+        "hivemind.app.web-admin": "Διαχειριστής Web",
+        "hivemind.app.mcp": "MCP Server",
+        "hivemind.app.graph": "Γράφημα Μνήμης",
+        "hivemind.app.engine": "Intelligence Μηχανής",
+        "hivemind.app.team.members": "Μέλη Ομάδας",
+        "hivemind.app.team.projects": "Έργα Ομάδας",
+        "hivemind.app.audit": "Αρχείο Ελέγχου",
+        "hivemind.app.admin.users": "Μέλη Οργανισμού",
+        "hivemind.app.admin.sso": "Διαμόρφωση SSO",
+        "hivemind.app.employees": "Ψηφιακοί Υπάλληλοι",
+        "hivemind.app.workspace": "Διαχειριστής Χώρου Εργασίας"
+      }
+    }
+  },
+  "overview",
+  ":",
+  {
+    "title": "Επισκόπηση",
+    "subtitle": "Η μηχανή μνήμης HIVEMIND σε μια ματιά.",
+    "recentMemories": "Πρόσφατες Αναμνήσεις",
+    "noMemories": "Καμία ανάμνηση ακόμη.",
+    "noMemoriesHint": "Συνδέστε έναν πελάτη MCP για να αρχίσετε να συλλέγετε αναμνήσεις.",
+    "quickSearch": "Γρήγορη Αναζήτηση",
+    "quickActions": "Γρήγορες Ενέργειες",
+    "createApiKey": "Δημιουργία Κλειδιού API",
+    "createApiKeyHint": "Δημιουργήστε κλειδιά για πελάτες MCP",
+    "connectMcp": "Σύνδεση Πελάτη MCP",
+    "connectMcpHint": "Συνδέστε Claude, Cursor ή προσαρμοσμένους πελάτες",
+    "browseMemories": "Περιήγηση στις Αναμνήσεις",
+    "browseMemoriesHint": "Εξερευνήστε και διαχειριστείτε τις αποθηκευμένες αναμνήσεις",
+    "coreApiHealth": "Κατάσταση Core API"
+  },
+  "memories",
+  ":",
+  {
+    "title": "Αναμνήσεις",
+    "empty": "Καμία αποθηκευμένη ανάμνηση ακόμη.",
+    "save": "Αποθήκευση ανάμνησης",
+    "delete": "Διαγραφή",
+    "tags": "Ετικέτες",
+    "type": "Τύπος",
+    "created": "Δημιουργήθηκε",
+    "filterPlaceholder": "Φίλτρο κατά ετικέτα, τύπο ή κείμενο…"
+  },
+  "settings",
+  ":",
+  {
+    "title": "Ρυθμίσεις",
+    "language": "Γλώσσα",
+    "voice": "Φωνή",
+    "assistantName": "Όνομα βοηθού",
+    "appearance": "Εμφάνιση",
+    "theme": "Θέμα",
+    "danger": "Ζώνη κινδύνου",
+    "deleteAccount": "Διαγραφή λογαριασμού"
+  },
+  "connectors",
+  ":",
+  {
+    "title": "Συνδέσεις",
+    "subtitle": "Συνδέστε τις πηγές δεδομένων ώστε το HIVEMIND να ανακαλεί το πλαίσιο μεταξύ εργαλείων.",
+    "connect": "Σύνδεση",
+    "connected": "Συνδεδεμένο",
+    "disconnect": "Αποσύνδεση",
+    "needsReconnect": "Απαιτεί επανασύνδεση"
+  }
+]

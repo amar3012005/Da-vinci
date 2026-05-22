@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Översikt",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Anslutningar",
+    "memories": "Minnen",
+    "graph3d": "Minnesgraf · 3D",
+    "graph2d": "Minnesgraf · 2D",
+    "knowledge": "Kunskapsbas",
+    "webIntel": "Web Intel",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Motor",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API-nycklar",
+    "evaluation": "Utvärdering",
+    "workspaceAdmin": "Arbetsytans admin",
+    "playground": "Lekplats",
+    "webAdmin": "Webbadmin",
+    "profile": "Profil",
+    "billing": "Fakturering",
+    "settings": "Inställningar",
+    "signOut": "Logga ut",
+    "groups": {
+      "yourBrain": "Din hjärna",
+      "aiFeatures": "AI-funktioner",
+      "advanced": "Avancerat",
+      "workspaceAdmin": "Arbetsytans admin",
+      "account": "Konto"
+    },
+    "planLabel": {
+      "free": "Gratis plan",
+      "starter": "Startplan",
+      "pro": "Pro-plan",
+      "team": "Teamplan",
+      "enterprise": "Företagsplan"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Sök minnen…",
+    "online": "Online",
+    "offline": "Offline",
+    "titles": {
+      "hivemind.app.overview": "Översikt",
+      "hivemind.app.memories": "Minnen",
+      "hivemind.app.keys": "API-nycklar",
+      "hivemind.app.connectors": "Anslutningar",
+      "hivemind.app.profile": "Profil",
+      "hivemind.app.evaluation": "Utvärdering",
+      "hivemind.app.settings": "Inställningar",
+      "hivemind.app.billing": "Fakturering",
+      "hivemind.app.web": "Webintelligens",
+      "hivemind.app.web-admin": "Webbadmin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Minnesgraf",
+      "hivemind.app.engine": "Motorintelligens",
+      "hivemind.app.team.members": "Teammedlemmar",
+      "hivemind.app.team.projects": "Teamprojekt",
+      "hivemind.app.audit": "Auditlogg",
+      "hivemind.app.admin.users": "Orgmedlemmar",
+      "hivemind.app.admin.sso": "SSO-konfiguration",
+      "hivemind.app.employees": "Digitala medarbetare",
+      "hivemind.app.workspace": "Arbetsytans admin"
+    }
+  },
+  "overview": {
+    "title": "Översikt",
+    "subtitle": "Din HIVEMIND-minnemotor i ett ögonkast.",
+    "recentMemories": "Senaste minnen",
+    "noMemories": "Inga minnen ännu.",
+    "noMemoriesHint": "Anslut en MCP-klient för att börja samla minnen.",
+    "quickSearch": "Snabbsök",
+    "quickActions": "Snabbåtgärder",
+    "createApiKey": "Skapa API-nyckel",
+    "createApiKeyHint": "Generera nycklar för MCP-klienter",
+    "connectMcp": "Anslut MCP-klient",
+    "connectMcpHint": "Koppla Claude, Cursor eller anpassade klienter",
+    "browseMemories": "Bläddra i minnen",
+    "browseMemoriesHint": "Utforska och hantera lagrade minnen",
+    "coreApiHealth": "Core API-hälsa"
+  },
+  "memories": {
+    "title": "Minnen",
+    "empty": "Inga minnen sparade ännu.",
+    "save": "Spara minne",
+    "delete": "Radera",
+    "tags": "Taggar",
+    "type": "Typ",
+    "created": "Skapad",
+    "filterPlaceholder": "Filtrera efter tagg, typ eller text…"
+  },
+  "settings": {
+    "title": "Inställningar",
+    "language": "Språk",
+    "voice": "Röst",
+    "assistantName": "Assistentnamn",
+    "appearance": "Utseende",
+    "theme": "Tema",
+    "danger": "Riskzon",
+    "deleteAccount": "Radera konto"
+  },
+  "connectors": {
+    "title": "Anslutningar",
+    "subtitle": "Anslut dina datakällor så att HIVEMIND kan återkalla kontext över verktyg.",
+    "connect": "Anslut",
+    "connected": "Ansluten",
+    "disconnect": "Koppla från",
+    "needsReconnect": "Behöver återanslutas"
+  }
+}

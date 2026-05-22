@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "نمای کلی",
+    "talkToHive": "صحبت با HIVE",
+    "connectors": "اتصالات",
+    "memories": "حافظه‌ها",
+    "graph3d": "نمودار حافظه · ۳ بعدی",
+    "graph2d": "نمودار حافظه · ۲ بعدی",
+    "knowledge": "پایگاه دانش",
+    "webIntel": "اطلاعات وب",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "گروه عامل‌ها",
+    "engine": "موتور",
+    "mcpServer": "سرور MCP",
+    "apiKeys": "کلیدهای API",
+    "evaluation": "ارزیابی",
+    "workspaceAdmin": "مدیر فضای کاری",
+    "playground": "محیط آزمایشی",
+    "webAdmin": "مدیر وب",
+    "profile": "پروفایل",
+    "billing": "صورتحساب",
+    "settings": "تنظیمات",
+    "signOut": "خروج",
+    "groups": {
+      "yourBrain": "مغز شما",
+      "aiFeatures": "ویژگی‌های هوش مصنوعی",
+      "advanced": "پیشرفته",
+      "workspaceAdmin": "مدیر فضای کاری",
+      "account": "حساب"
+    },
+    "planLabel": {
+      "free": "طرح رایگان",
+      "starter": "طرح شروع",
+      "pro": "طرح حرفه‌ای",
+      "team": "طرح تیمی",
+      "enterprise": "طرح سازمانی"
+    }
+  },
+  "topbar": {
+    "searchMemories": "جستجوی حافظه‌ها…",
+    "online": "آنلاین",
+    "offline": "آفلاین",
+    "titles": {
+      "hivemind.app.overview": "نمای کلی",
+      "hivemind.app.memories": "حافظه‌ها",
+      "hivemind.app.keys": "کلیدهای API",
+      "hivemind.app.connectors": "اتصالات",
+      "hivemind.app.profile": "پروفایل",
+      "hivemind.app.evaluation": "ارزیابی",
+      "hivemind.app.settings": "تنظیمات",
+      "hivemind.app.billing": "صورتحساب",
+      "hivemind.app.web": "هوش وب",
+      "hivemind.app.web-admin": "مدیر وب",
+      "hivemind.app.mcp": "سرور MCP",
+      "hivemind.app.graph": "نمودار حافظه",
+      "hivemind.app.engine": "هوش موتور",
+      "hivemind.app.team.members": "اعضای تیم",
+      "hivemind.app.team.projects": "پروژه‌های تیم",
+      "hivemind.app.audit": "ثبت حسابرسی",
+      "hivemind.app.admin.users": "اعضای سازمان",
+      "hivemind.app.admin.sso": "پیکربندی SSO",
+      "hivemind.app.employees": "کارمندان دیجیتال",
+      "hivemind.app.workspace": "مدیر فضای کاری"
+    }
+  },
+  "overview": {
+    "title": "نمای کلی",
+    "subtitle": "موتور حافظه HIVEMIND شما در یک نگاه.",
+    "recentMemories": "حافظه‌های اخیر",
+    "noMemories": "هنوز حافظه‌ای وجود ندارد.",
+    "noMemoriesHint": "برای شروع دریافت حافظه‌ها، یک کلاینت MCP متصل کنید.",
+    "quickSearch": "جستجوی سریع",
+    "quickActions": "اقدامات سریع",
+    "createApiKey": "ایجاد کلید API",
+    "createApiKeyHint": "کلیدها را برای کلاینت‌های MCP تولید کنید",
+    "connectMcp": "اتصال کلاینت MCP",
+    "connectMcpHint": "Claude، Cursor یا کلاینت‌های سفارشی را متصل کنید",
+    "browseMemories": "مرور حافظه‌ها",
+    "browseMemoriesHint": "حافظه‌های ذخیره‌شده را کاوش و مدیریت کنید",
+    "coreApiHealth": "وضعیت سلامت API اصلی"
+  },
+  "memories": {
+    "title": "حافظه‌ها",
+    "empty": "هنوز هیچ حافظه‌ای ذخیره نشده.",
+    "save": "ذخیره حافظه",
+    "delete": "حذف",
+    "tags": "برچسب‌ها",
+    "type": "نوع",
+    "created": "ایجاد شده",
+    "filterPlaceholder": "فیلتر بر اساس برچسب، نوع یا متن…"
+  },
+  "settings": {
+    "title": "تنظیمات",
+    "language": "زبان",
+    "voice": "صدا",
+    "assistantName": "نام دستیار",
+    "appearance": "ظاهر",
+    "theme": "تم",
+    "danger": "منطقه خطر",
+    "deleteAccount": "حذف حساب"
+  },
+  "connectors": {
+    "title": "اتصالات",
+    "subtitle": "منابع داده خود را متصل کنید تا HIVEMIND بتواند زمینه را در ابزارهای مختلف به یاد آورد.",
+    "connect": "اتصال",
+    "connected": "متصل شد",
+    "disconnect": "قطع اتصال",
+    "needsReconnect": "نیاز به اتصال مجدد"
+  }
+}

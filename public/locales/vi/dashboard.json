@@ -1,0 +1,110 @@
+{
+  "sidebar": {
+    "overview": "Tổng quan",
+    "talkToHive": "Talk to HIVE",
+    "connectors": "Kết nối",
+    "memories": "Ký ức",
+    "graph3d": "Đồ thị Ký ức · 3D",
+    "graph2d": "Đồ thị Ký ức · 2D",
+    "knowledge": "Cơ sở Kiến thức",
+    "webIntel": "Thông tin Web",
+    "tara": "TARA × HIVE",
+    "agentSwarm": "Agent Swarm",
+    "engine": "Engine",
+    "mcpServer": "MCP Server",
+    "apiKeys": "API Keys",
+    "evaluation": "Đánh giá",
+    "workspaceAdmin": "Quản trị Workspace",
+    "playground": "Playground",
+    "webAdmin": "Web Admin",
+    "profile": "Hồ sơ",
+    "billing": "Thanh toán",
+    "settings": "Cài đặt",
+    "signOut": "Đăng xuất",
+    "groups": {
+      "yourBrain": "Bộ não của bạn",
+      "aiFeatures": "Tính năng AI",
+      "advanced": "Nâng cao",
+      "workspaceAdmin": "Quản trị Workspace",
+      "account": "Tài khoản"
+    },
+    "planLabel": {
+      "free": "Gói miễn phí",
+      "starter": "Gói Starter",
+      "pro": "Gói Pro",
+      "team": "Gói Team",
+      "enterprise": "Gói Enterprise"
+    }
+  },
+  "topbar": {
+    "searchMemories": "Tìm kiếm ký ức…",
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "titles": {
+      "hivemind.app.overview": "Tổng quan",
+      "hivemind.app.memories": "Ký ức",
+      "hivemind.app.keys": "API Keys",
+      "hivemind.app.connectors": "Kết nối",
+      "hivemind.app.profile": "Hồ sơ",
+      "hivemind.app.evaluation": "Đánh giá",
+      "hivemind.app.settings": "Cài đặt",
+      "hivemind.app.billing": "Thanh toán",
+      "hivemind.app.web": "Web Intelligence",
+      "hivemind.app.web-admin": "Web Admin",
+      "hivemind.app.mcp": "MCP Server",
+      "hivemind.app.graph": "Đồ thị Ký ức",
+      "hivemind.app.engine": "Engine Intelligence",
+      "hivemind.app.team.members": "Thành viên Nhóm",
+      "hivemind.app.team.projects": "Dự án Nhóm",
+      "hivemind.app.audit": "Nhật ký Kiểm toán",
+      "hivemind.app.admin.users": "Thành viên Tổ chức",
+      "hivemind.app.admin.sso": "Cấu hình SSO",
+      "hivemind.app.employees": "Nhân viên Kỹ thuật số",
+      "hivemind.app.workspace": "Quản trị Workspace"
+    }
+  },
+  "overview": {
+    "title": "Tổng quan",
+    "subtitle": "Động cơ ký ức HIVEMIND của bạn trong một cái nhìn.",
+    "recentMemories": "Ký ức gần đây",
+    "noMemories": "Chưa có ký ức.",
+    "noMemoriesHint": "Kết nối client MCP để bắt đầu thu thập ký ức.",
+    "quickSearch": "Tìm nhanh",
+    "quickActions": "Hành động nhanh",
+    "createApiKey": "Tạo API Key",
+    "createApiKeyHint": "Tạo khóa cho client MCP",
+    "connectMcp": "Kết nối Client MCP",
+    "connectMcpHint": "Liên kết Claude, Cursor, hoặc client tùy chỉnh",
+    "browseMemories": "Duyệt Ký ức",
+    "browseMemoriesHint": "Khám phá và quản lý ký ức đã lưu",
+    "coreApiHealth": "Sức khỏe Core API"
+  },
+  "memories": {
+    "title": "Ký ức",
+    "empty": "Chưa có ký ức nào được lưu.",
+    "save": "Lưu ký ức",
+    "delete": "Xóa",
+    "tags": "Thẻ",
+    "type": "Loại",
+    "created": "Đã tạo",
+    "filterPlaceholder": "Lọc theo thẻ, loại, hoặc văn bản…"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "language": "Ngôn ngữ",
+    "voice": "Giọng nói",
+    "assistantName": "Tên trợ lý",
+    "appearance": "Giao diện",
+    "theme": "Chủ đề",
+    "danger": "Vùng nguy hiểm",
+    "deleteAccount": "Xóa tài khoản"
+  },
+  "connectors": {
+    "title": "Kết nối",
+    "subtitle": "Kết nối nguồn dữ liệu để HIVEMIND có thể nhớ ngữ cảnh qua các công cụ.",
+    "connect": "Kết nối",
+    "connected": "Đã kết nối",
+    "disconnect": "Ngắt kết nối",
+    "needsReconnect": "Cần kết nối lại"
+  }
+}
