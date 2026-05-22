@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2, ArrowLeft,
+  AlertTriangle, Loader2,
   Network, Shield, Crown, Lightbulb, MessageCircle,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -173,10 +173,10 @@ export default function HyperAgents() {
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
               <button
                 onClick={() => setViewMode('thread')}
-                className="p-1.5 text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded"
-                title="Back to room"
+                className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db]"
+                title="Back to active room"
               >
-                <ArrowLeft size={14} />
+                Back to Room
               </button>
               <span className="text-[13px] font-semibold text-[#0a0a0a]">Agent roster</span>
               <span className="text-[10px] text-[#a3a3a3] ml-auto">Browse + edit your hires</span>
@@ -281,6 +281,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const [liveLines, setLiveLines] = useState([]);
   const [draft, setDraft] = useState('');
   const [showPicker, setShowPicker] = useState(false);
+  const [dmAgent, setDmAgent] = useState(null);
   const threadEndRef = useRef(null);
 
   // Load room + history
@@ -414,10 +415,10 @@ function RoomThread({ roomId, onArchived, onBack }) {
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-1 text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded shrink-0"
-                title="Back to agent roster"
+                className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db] shrink-0"
+                title="Exit room — go to agent roster"
               >
-                <ArrowLeft size={14} />
+                Out of Room
               </button>
             )}
             <div className="min-w-0">
@@ -521,7 +522,11 @@ function RoomThread({ roomId, onArchived, onBack }) {
         </header>
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
           {participants.map(p => (
-            <ParticipantChip key={p.id} agent={p} canRemove={!archived}
+            <ParticipantChip
+              key={p.id}
+              agent={p}
+              canRemove={!archived}
+              onOpenDm={(emp) => setDmAgent(emp)}
               onRemove={() => handleParticipantsChange(
                 (room.participantIds || room.participant_ids || []).filter(id => id !== p.id)
               )}
@@ -539,6 +544,12 @@ function RoomThread({ roomId, onArchived, onBack }) {
             currentIds={room.participantIds || room.participant_ids || []}
             onClose={() => setShowPicker(false)}
             onPick={(ids) => { setShowPicker(false); handleParticipantsChange(ids); }}
+          />
+        )}
+        {dmAgent && (
+          <AgentDmModal
+            agent={dmAgent}
+            onClose={() => setDmAgent(null)}
           />
         )}
       </AnimatePresence>
@@ -784,17 +795,19 @@ function AgentBubble({ agent, content, kind, agreement, confidence }) {
 
 /* ─── Participant chip in right rail ─────────────────────────────────── */
 
-function ParticipantChip({ agent, canRemove, onRemove }) {
+function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
   const lane = agent?.lane || 'Communicator';
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
-  const [showRemove, setShowRemove] = useState(false);
+  const [hover, setHover] = useState(false);
 
   return (
     <div
-      onMouseEnter={() => setShowRemove(true)}
-      onMouseLeave={() => setShowRemove(false)}
-      className="bg-white border border-[#e3e0db] rounded-lg px-2.5 py-2 flex items-center gap-2 hover:border-[#d4d0ca] transition-colors"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="bg-white border border-[#e3e0db] rounded-lg px-2.5 py-2 flex items-center gap-2 hover:border-[#d4d0ca] cursor-pointer transition-colors"
+      onClick={() => onOpenDm?.(agent)}
+      title={`DM ${agent?.name || agent?.slug}`}
     >
       <div
         className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
@@ -810,12 +823,184 @@ function ParticipantChip({ agent, canRemove, onRemove }) {
           <Icon size={9} /> {meta.label}
         </div>
       </div>
-      {canRemove && showRemove && (
-        <button onClick={onRemove} className="text-[#a3a3a3] hover:text-red-600">
+      {canRemove && hover && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
+          className="text-[#a3a3a3] hover:text-red-600 shrink-0"
+        >
           <X size={11} />
         </button>
       )}
     </div>
+  );
+}
+
+/* ─── 1-on-1 DM modal (history persisted in localStorage) ───────────── */
+
+function AgentDmModal({ agent, onClose }) {
+  // Stable per-user-agent conversation id. Backend uses this to keep
+  // ReAct agent memory across turns within the same conversation; we
+  // also use it as the localStorage key so refresh / re-open re-hydrates
+  // the prior thread.
+  const convId = useMemo(() => `dm:${agent?.slug || agent?.id}`, [agent]);
+  const storageKey = useMemo(() => `hyper-agents:dm:${agent?.slug || agent?.id}`, [agent]);
+
+  const [messages, setMessages] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState(null);
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(storageKey, JSON.stringify(messages)); }
+    catch { /* storage may be disabled */ }
+  }, [messages, storageKey]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, sending]);
+
+  async function handleSend(e) {
+    e?.preventDefault?.();
+    const text = draft.trim();
+    if (!text || sending) return;
+    setErr(null);
+    setSending(true);
+    const userMsg = { role: 'user', content: text, ts: Date.now() };
+    setMessages(prev => [...prev, userMsg]);
+    setDraft('');
+    try {
+      const resp = await apiClient.controlPlane.post(
+        `/v1/employees/${agent.slug}/chat`,
+        { text, conversation_id: convId },
+      );
+      const reply = resp?.data?.reply || '(no reply)';
+      setMessages(prev => [...prev, { role: 'agent', content: reply, ts: Date.now() }]);
+    } catch (e2) {
+      setErr(e2.response?.data?.error || e2.message);
+      // Roll back user msg so they can retry without dupes? keep it for context
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function clearHistory() {
+    if (!window.confirm('Clear this DM history?')) return;
+    setMessages([]);
+    try { window.localStorage.removeItem(storageKey); } catch { /* noop */ }
+  }
+
+  if (!agent) return null;
+  const lane = agent.lane || 'Communicator';
+  const meta = LANE_META[lane] || LANE_META.Communicator;
+  const Icon = meta.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+        className="bg-white rounded-xl w-full max-w-[640px] h-[70vh] shadow-2xl overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-3 shrink-0">
+          <div
+            className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-[12px] font-semibold"
+            style={{ background: meta.bg, color: meta.color }}
+          >
+            {agent.avatarUrl
+              ? <img src={agent.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+              : (agent.name?.[0] || agent.slug?.[0] || '?').toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{agent.name || agent.slug}</div>
+            <div className="flex items-center gap-1 text-[10px] font-mono" style={{ color: meta.color }}>
+              <Icon size={10} /> {meta.label}
+            </div>
+          </div>
+          <button
+            onClick={clearHistory}
+            className="text-[10px] uppercase tracking-wider text-[#a3a3a3] hover:text-red-600 px-2 py-1 rounded"
+            title="Clear DM history"
+          >
+            Clear
+          </button>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] p-1" title="Close">
+            <X size={14} />
+          </button>
+        </header>
+
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-[#faf9f4]">
+          {messages.length === 0 && (
+            <div className="text-center text-[11px] text-[#a3a3a3] py-6">
+              Start a 1-on-1 with {agent.name || agent.slug}. History stays here across visits.
+            </div>
+          )}
+          {messages.map((m, i) => (
+            m.role === 'user'
+              ? (
+                <div key={i} className="flex justify-end">
+                  <div className="max-w-[78%] bg-violet-500 text-white text-[13px] rounded-2xl rounded-tr-md px-3 py-2 whitespace-pre-wrap break-words">
+                    {m.content}
+                  </div>
+                </div>
+              )
+              : (
+                <div key={i} className="flex gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
+                    style={{ background: meta.bg, color: meta.color }}
+                  >
+                    {(agent.name?.[0] || '?').toUpperCase()}
+                  </div>
+                  <div className="max-w-[78%] bg-white border border-[#e3e0db] rounded-2xl rounded-tl-md px-3 py-2 text-[13px] text-[#0a0a0a] whitespace-pre-wrap break-words">
+                    {m.content}
+                  </div>
+                </div>
+              )
+          ))}
+          {sending && (
+            <div className="text-[11px] text-[#a3a3a3] flex items-center gap-2 pl-2">
+              <Loader2 size={11} className="animate-spin" /> {agent.name || agent.slug} typing…
+            </div>
+          )}
+          {err && (
+            <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+              <AlertTriangle size={11} className="inline mr-1" /> {err}
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
+
+        <form onSubmit={handleSend} className="border-t border-[#e3e0db] bg-white px-3 py-3 flex items-end gap-2 shrink-0">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
+            rows={1}
+            placeholder={`Message ${agent.name || agent.slug}…`}
+            disabled={sending}
+            className="flex-1 bg-[#faf9f4] border border-[#e3e0db] rounded-xl px-3 py-2 text-[13px] text-[#0a0a0a] outline-none focus:border-violet-500 resize-none"
+          />
+          <button
+            type="submit"
+            disabled={!draft.trim() || sending}
+            className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
+          >
+            {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            Send
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }
 
