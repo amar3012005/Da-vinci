@@ -228,6 +228,7 @@ export default function TalkToHiveMobile() {
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // Upload pipeline state — one row per file.
   // status: 'queued' | 'uploading' | 'extracting' | 'making' | 'saving' | 'done' | 'error'
@@ -264,12 +265,31 @@ export default function TalkToHiveMobile() {
     setInput('');
     setLoading(true);
 
+    // Belt-and-braces language enforcement (mirror Chat.jsx + extension).
+    // Wraps the wire message with a strict directive when UI lang != EN so
+    // the LLM can't silently drift back to English. UI history keeps the
+    // clean user text; only the LLM sees the wrapped variant.
+    const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
+    const LANG_FULL = {
+      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
+      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
+      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
+      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
+      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
+      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
+      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
+    };
+    const langName = LANG_FULL[lang2] || 'English';
+    const wireMessage = lang2 === 'en'
+      ? trimmed
+      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
+
     try {
       const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
-        message: trimmed,
+        message: wireMessage,
         model: selectedModel,
         history: fullHistory,
-        language: (i18n.language || 'en').slice(0, 2).toLowerCase(),
+        language: lang2,
         ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
       });
       const data = chatRes.data;
@@ -439,6 +459,53 @@ export default function TalkToHiveMobile() {
                   <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Language chip — picks reply language. Persisted by i18next. */}
+        <div className="relative">
+          <button
+            onClick={() => setLangMenuOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#f3f1ec] border border-[#ece9e2] text-[11px] font-semibold text-[#0a0a0a]"
+            aria-label="Reply language"
+          >
+            <span className="text-[#117dff]">🌐</span>
+            <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
+            <ChevronDown size={11} className="text-[#a3a3a3]" />
+          </button>
+          {langMenuOpen && (
+            <div
+              className="absolute right-0 top-full mt-1.5 w-[180px] max-h-[280px] overflow-y-auto bg-white border border-[#ece9e2] rounded-xl shadow-lg z-30 py-1"
+              onClick={() => setLangMenuOpen(false)}
+            >
+              {[
+                { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
+                { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
+                { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
+                { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
+                { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
+                { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
+                { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
+                { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
+                { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
+                { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
+                { c: 'id', n: 'Indonesia' },
+              ].map((l) => {
+                const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
+                return (
+                  <button
+                    key={l.c}
+                    onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${
+                      active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'
+                    } active:bg-[#f3f1ec]`}
+                  >
+                    <span>{l.n}</span>
+                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
