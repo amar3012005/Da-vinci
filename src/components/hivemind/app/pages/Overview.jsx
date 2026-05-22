@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -204,6 +204,18 @@ export default function Overview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const healthy = useHealthStatus(30000);
+
+  // Auto-redirect to the dedicated mobile chat page on phones. The full
+  // Overview surface (graph stats, quick-actions grid, sidebar chrome) is
+  // bandwidth-heavy and hard to navigate one-handed; mobile users land on
+  // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    // Opt-out via ?desktop=1 if the user really wants the dashboard on mobile.
+    const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
+    if (isMobile && !optOut) navigate('/hivemind/m/chat', { replace: true });
+  }, [navigate]);
 
   // Profile / stats
   const { data: profileData, refetch: refetchProfile } = useApiQuery(

@@ -8,6 +8,7 @@ import AppShell from './layout/AppShell';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
+const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
 const Connectors = React.lazy(() => import('./pages/Connectors'));
@@ -61,6 +62,15 @@ export default function HiveMindApp() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="cli-verified" element={<CliVerified />} />
+        {/* Mobile dedicated chat — no AppShell chrome, full screen */}
+        <Route
+          path="m/chat"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><TalkToHiveMobile /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="join/:slug/:token"
           element={
