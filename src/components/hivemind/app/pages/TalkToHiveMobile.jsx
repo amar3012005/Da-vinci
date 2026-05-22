@@ -511,13 +511,18 @@ export default function TalkToHiveMobile() {
   // done. The chat surface itself doesn't care — server handles
   // everything once the file lands.
 
+  // Two-tier UX:
+  //   • `received` — instant optimistic ack the moment the file is picked.
+  //                  Shown as light-green ✓ "Sent to HIVE" so the user
+  //                  feels the action landed without waiting for HTTP.
+  //   • `processing` — background pipeline (extract → memories → save),
+  //                    animates softly under the row.
+  //   • `done` — confirmed by the server. Full green ✓ "Saved to memory".
+  //   • `error` — flips red w/ retry hint.
   const STAGE_LABEL = {
-    queued: 'Queued',
-    uploading: 'Uploading',
-    extracting: 'Extracting text',
-    making: 'Making memories',
-    saving: 'Saving',
-    done: 'Saved',
+    received: 'Sent to HIVE',
+    processing: 'Processing in background',
+    done: 'Saved to memory',
     error: 'Failed',
   };
 
@@ -529,13 +534,15 @@ export default function TalkToHiveMobile() {
     const files = Array.from(fileList || []).filter(Boolean);
     if (files.length === 0) return;
 
-    // Initial rows.
+    // Optimistic ack — every file is shown as "Sent to HIVE ✓" the
+    // moment the user picks it. Real upload + ingest run in the background.
+    // If the network call fails we flip the row to `error` w/ retry hint.
     const rows = files.map((f, idx) => ({
       id: `up-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
       file: f,
       name: f.name,
       size: f.size,
-      status: 'queued',
+      status: 'received',
       progress: 0,
       error: null,
       memoryId: null,
@@ -554,10 +561,12 @@ export default function TalkToHiveMobile() {
     setUploads((prev) => prev.filter((u) => u.id !== id));
 
   const uploadOne = async (row) => {
-    try {
-      updateUpload(row.id, { status: 'uploading', progress: 0 });
+    // Row is already shown as "received" (optimistic ✓). After a quick
+    // beat the row shifts to a soft "processing" state — server is doing
+    // the real work but we don't gate the UI on it.
+    setTimeout(() => updateUpload(row.id, { status: 'processing' }), 700);
 
-      // Stage 1 — upload bytes. Real progress drives this stage's %.
+    try {
       const result = await apiClient.uploadDocument(row.file, {
         ...(activeProjectId ? { targetScope: 'project', containerTag: `project:${activeProjectId}` } : {}),
         onUploadProgress: (evt) => {
@@ -567,25 +576,14 @@ export default function TalkToHiveMobile() {
         },
       });
 
-      // Server returns 200 once the file is queued for ingest. After that
-      // the canonical pipeline does extract → chunk → embed → save. We
-      // can't poll per-row cheaply, so we time-shift through synthetic
-      // stages so the user sees the work moving.
-      updateUpload(row.id, { status: 'extracting', progress: 100 });
-      await new Promise((r) => setTimeout(r, 700));
-      updateUpload(row.id, { status: 'making' });
-      await new Promise((r) => setTimeout(r, 900));
-      updateUpload(row.id, { status: 'saving' });
-      await new Promise((r) => setTimeout(r, 600));
-
       const memId = result?.memory_id || result?.id || result?.memory?.id || null;
-      updateUpload(row.id, { status: 'done', memoryId: memId });
-      // Auto-dismiss successful rows after 5s.
-      setTimeout(() => removeUpload(row.id), 5000);
+      updateUpload(row.id, { status: 'done', progress: 100, memoryId: memId });
+      // Auto-dismiss confirmed rows after 4s — quick, doesn't clutter chat.
+      setTimeout(() => removeUpload(row.id), 4000);
     } catch (err) {
       updateUpload(row.id, {
         status: 'error',
-        error: err?.response?.data?.detail || err?.message || 'Upload failed',
+        error: err?.response?.data?.detail || err?.message || 'Upload failed — tap to retry',
       });
     }
   };
@@ -777,36 +775,43 @@ export default function TalkToHiveMobile() {
           >
             <div className="flex flex-col gap-1.5">
               {uploads.map((u) => {
+                const isReceived = u.status === 'received';
+                const isProcessing = u.status === 'processing';
                 const isDone = u.status === 'done';
                 const isErr = u.status === 'error';
-                const isLive = !isDone && !isErr;
                 return (
                   <motion.div
                     key={u.id}
                     layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
+                    initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 28 }}
                     className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl border text-[12px] overflow-hidden ${
                       isDone
                         ? 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]'
                         : isErr
                           ? 'bg-[#fef2f2] border-[#fecaca] text-[#b91c1c]'
-                          : 'bg-white border-[#ece9e2] text-[#0a0a0a]'
+                          : isProcessing
+                            ? 'bg-[#fafff4] border-[#d4e8c4] text-[#365314]'
+                            : 'bg-[#f0fdf4] border-[#bbf7d0] text-[#15803d]'
                     }`}
                   >
-                    {/* Shimmer progress bar while live */}
-                    {isLive && (
+                    {/* Soft shimmer while processing */}
+                    {isProcessing && (
                       <motion.div
-                        className="absolute inset-y-0 left-0 bg-[#117dff]/10"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${u.status === 'uploading' ? u.progress || 8 : 100}%` }}
-                        transition={{ duration: 0.6 }}
+                        className="absolute inset-y-0 left-0 right-0 pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(17,125,255,0.06) 50%, transparent 100%)',
+                          backgroundSize: '200% 100%',
+                        }}
+                        animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
                       />
                     )}
                     <div className="relative flex-shrink-0">
-                      {isDone ? (
-                        <CheckCircle2 size={16} className="text-[#16a34a]" />
+                      {isDone || isReceived ? (
+                        <CheckCircle2 size={16} className={isDone ? 'text-[#16a34a]' : 'text-[#16a34a]'} />
                       ) : isErr ? (
                         <FileWarning size={16} className="text-[#dc2626]" />
                       ) : (
@@ -816,14 +821,20 @@ export default function TalkToHiveMobile() {
                     <div className="relative min-w-0 flex-1">
                       <div className="font-semibold truncate text-[12.5px] leading-tight">{u.name}</div>
                       <div className="text-[10.5px] mt-0.5 font-mono opacity-80">
-                        {isErr
-                          ? u.error
-                          : `${STAGE_LABEL[u.status] || u.status}${u.status === 'uploading' && u.progress ? ` · ${u.progress}%` : '…'}`}
+                        {isErr ? u.error : (STAGE_LABEL[u.status] || u.status)}
                       </div>
                     </div>
+                    {isErr ? (
+                      <button
+                        onClick={() => uploadOne(u)}
+                        className="relative px-2 py-1 rounded-md text-[10.5px] font-semibold border border-[#fecaca] bg-white text-[#b91c1c] active:bg-[#fef2f2] flex-shrink-0"
+                      >
+                        Retry
+                      </button>
+                    ) : null}
                     <button
                       onClick={() => removeUpload(u.id)}
-                      className="relative w-6 h-6 flex items-center justify-center rounded-md text-[#a3a3a3] active:bg-[#ece9e2]/60 flex-shrink-0"
+                      className="relative w-6 h-6 flex items-center justify-center rounded-md text-current opacity-60 active:opacity-100 active:bg-black/5 flex-shrink-0"
                       aria-label="Dismiss"
                     >
                       <X size={13} />
