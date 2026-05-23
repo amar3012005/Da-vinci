@@ -33,6 +33,7 @@ import {
   Download,
   Chrome,
   Puzzle,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -92,6 +93,17 @@ const CONNECTORS = [
       'Run the verify step here after saving the config to confirm the direct endpoint is reachable',
     ],
     configPath: 'Claude Code MCP setup',
+  },
+  {
+    id: 'chatgpt',
+    name: 'ChatGPT',
+    description: 'Add HIVEMIND to a custom GPT via GPT Actions OAuth setup',
+    icon: MessageSquare,
+    category: 'mcp_clients',
+    status: 'available',
+    color: '#10a37f',
+    configKey: 'chatgpt',
+    isChatGptSetup: true,
   },
   {
     id: 'claude',
@@ -644,6 +656,7 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // ─── Connector Card (Supermemory-style) ──────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars
 function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, onChangeScope, connecting, targetScope, selectedTeamId, onTargetScopeChange, onTeamChange, allowTeamScope, teams }) {
   const [expanded, setExpanded] = useState(false);
   const [changeScopeOpen, setChangeScopeOpen] = useState(false);
@@ -657,6 +670,28 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
   const isSetupOnly = connector.setupOnly === true;
   const canShowConfig = hasConfig && (isActive || isSetupOnly);
   const configStr = hasConfig ? JSON.stringify(config, null, 2) : null;
+  const isError = connector.status === 'error';
+  const isReauth = connector.status === 'needs_reauth';
+  const isAuthErr = isError && (() => {
+    const raw = String(connector.lastError || '').toLowerCase();
+    return /no nango connection|no valid access token|token (refresh )?failed|reauth|revoked|invalid_grant|insufficient|invalid auth|expected oauth 2|\b401\b|\b403\b|scope|missing.*permission/i.test(raw);
+  })();
+  const PROVIDER_ALIAS = {
+    outlook: 'microsoft365', ms365: 'microsoft365', msoffice: 'microsoft365',
+    jira: 'atlassian', confluence: 'atlassian',
+    drive: 'google-drive', docs: 'google-docs', sheets: 'google-sheets',
+    slides: 'google-slides', contacts: 'google-contacts', tasks: 'google-tasks',
+    chat: 'google-chat', calendar: 'google-calendar',
+  };
+  const rawId = connector.oauthProvider || connector.id;
+  const catalogId = PROVIDER_ALIAS[rawId] || rawId;
+  const cat = CONNECTOR_BY_ID[catalogId];
+  const modes = Array.isArray(cat?.mode) ? cat.mode : null;
+  const scopeLabel = (
+    targetScope === 'organization' ? 'Org' :
+    targetScope === 'team' ? 'Team' :
+    'My Space'
+  );
 
   const handleScopeChange = async () => {
     setScopeSaving(true);
@@ -672,174 +707,91 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`group rounded-xl border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
-        isActive
-          ? 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
-          : isComingSoon
+      className={`group relative rounded-xl border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
+        isComingSoon
           ? 'bg-white border-[#eae7e1] opacity-60'
           : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca]'
       }`}
     >
-      <div className="p-4">
-        {/* Top Row: Icon + Name + Status */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border"
-              style={{
-                backgroundColor: `${connector.color}10`,
-                borderColor: `${connector.color}20`,
-              }}
-            >
-              <Icon
-                size={20}
-                style={{ color: connector.color }}
-                strokeWidth={1.75}
-              />
-            </div>
-            <div>
-              <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] leading-tight">
-                {connector.name}
-              </h3>
-              <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk'] mt-0.5 leading-snug">
-                {connector.accountRef ? connector.accountRef : connector.description}
-              </p>
-              {/* Mode chips (ingestion / live) sourced from canonical
-                  connectors-catalog. Resolution: oauthProvider first, then id.
-                  Alias map handles legacy provider naming (outlook→microsoft365). */}
-              {(() => {
-                const PROVIDER_ALIAS = {
-                  outlook: 'microsoft365',
-                  ms365: 'microsoft365',
-                  msoffice: 'microsoft365',
-                  jira: 'atlassian',
-                  confluence: 'atlassian',
-                  drive: 'google-drive',
-                  docs: 'google-docs',
-                  sheets: 'google-sheets',
-                  slides: 'google-slides',
-                  contacts: 'google-contacts',
-                  tasks: 'google-tasks',
-                  chat: 'google-chat',
-                  calendar: 'google-calendar',
-                };
-                const rawId = connector.oauthProvider || connector.id;
-                const catalogId = PROVIDER_ALIAS[rawId] || rawId;
-                const cat = CONNECTOR_BY_ID[catalogId];
-                if (!cat || !Array.isArray(cat.mode)) return null;
-                return (
-                  <div className="flex items-center gap-1 mt-1">
-                    {cat.mode.map(m => (
-                      <span
-                        key={m}
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                          m === 'ingestion'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-violet-50 text-violet-700 border border-violet-200'
-                        }`}
-                        title={CONNECTOR_MODES[m]?.description || m}
-                      >
-                        {CONNECTOR_MODES[m]?.label || m}
-                      </span>
-                    ))}
-                  </div>
-                );
-              })()}
-              {connector.lastSyncAt && (
-                <p className="text-[#d4d0ca] text-[10px] font-mono mt-0.5">
-                  Last sync: {new Date(connector.lastSyncAt).toLocaleString()}
-                </p>
-              )}
-              {(connector.status === 'error' || connector.status === 'needs_reauth') && connector.lastError && (() => {
-                // Classify root cause so the user knows whether to Retry or Reconnect.
-                const raw = String(connector.lastError);
-                const lower = raw.toLowerCase();
-                let kind = 'transient';
-                let label = 'Sync failed';
-                if (/no nango connection|no valid access token|token (refresh )?failed|reauth|revoked|invalid_grant|insufficient permission|insufficient_authentication_credentials|invalid auth/i.test(lower)) {
-                  kind = 'reauth'; label = 'Sign-in expired';
-                } else if (/\b(401|403)\b|invalid authentication credentials|expected oauth 2 access token/i.test(lower)) {
-                  kind = 'reauth'; label = 'Token rejected';
-                } else if (/\b429\b|rate limit|quota exceeded/i.test(lower)) {
-                  kind = 'rate-limit'; label = 'Rate-limited by provider';
-                } else if (/\b5\d\d\b|timeout|ETIMEDOUT|ECONNRESET|network/i.test(lower)) {
-                  kind = 'transient'; label = 'Network error';
-                } else if (/scope|missing.*permission/i.test(lower)) {
-                  kind = 'reauth'; label = 'Missing scopes';
-                }
-                const tone = kind === 'reauth'
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : kind === 'rate-limit'
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-red-50 border-red-200 text-red-700';
-                return (
-                  <div className={`mt-2 px-2 py-1.5 rounded-md border text-[10px] font-mono leading-relaxed ${tone}`}>
-                    <span className="font-semibold">{label}</span>
-                    <span className="ml-1 opacity-80" title={raw}>
-                      — {raw.replace(/\s+/g, ' ').slice(0, 110)}{raw.length > 110 ? '…' : ''}
-                    </span>
-                    {kind === 'reauth' && (
-                      <span className="ml-1 opacity-80">→ click <strong>Reconnect</strong></span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-          <ConnectorStatusBadge status={connector.status} />
-        </div>
+      {/* Top-right corner indicator: scope chip + blinking green dot
+          when connected; small status text otherwise. Absolute-positioned
+          so it never grows the card height. */}
+      <div className="absolute top-3 right-3 flex items-center gap-2 pointer-events-none">
+        {isActive && (
+          <>
+            <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[#737373] bg-[#faf9f4] border border-[#e3e0db] rounded-full px-2 py-0.5">
+              {scopeLabel}
+            </span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+          </>
+        )}
+        {isReauth && (
+          <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+            Reauth
+          </span>
+        )}
+        {isError && (
+          <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+            Error
+          </span>
+        )}
+        {connector.status === 'available' && (
+          <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[#a3a3a3]">
+            Available
+          </span>
+        )}
+        {isComingSoon && (
+          <span className="text-[9px] font-mono uppercase tracking-[0.1em] text-[#a3a3a3]">
+            Soon
+          </span>
+        )}
+      </div>
 
-        {connector.oauthProvider && (
-          <div className="mb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">Sync to</span>
-              {[
-                { key: 'personal', label: 'My Space', disabled: false },
-                { key: 'team', label: 'Team', disabled: !allowTeamScope || !teams?.length },
-                { key: 'organization', label: 'Org-wide', disabled: !allowTeamScope },
-              ].map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  disabled={option.disabled}
-                  onClick={() => !option.disabled && onTargetScopeChange?.(option.key)}
-                  className={`rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.08em] ${
-                    targetScope === option.key
-                      ? 'border-[#117dff]/30 bg-[#117dff]/10 text-[#117dff]'
-                      : 'border-[#e3e0db] bg-[#faf9f4] text-[#737373]'
-                  } ${option.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  {option.label}
-                </button>
-              ))}
-              {/* Show current scope badge for connected connectors + change link */}
-              {isActive && (
-                <button
-                  type="button"
-                  onClick={() => { setPendingScope(targetScope); setPendingTeamId(selectedTeamId || null); setChangeScopeOpen(true); }}
-                  className="ml-auto text-[10px] font-mono text-[#117dff] hover:underline"
-                >
-                  Change scope
-                </button>
-              )}
-            </div>
-            {/* Team picker shown when scope=team and not yet connected */}
-            {targetScope === 'team' && !isActive && teams && teams.length > 0 && (
-              <div className="mt-2">
-                <select
-                  value={selectedTeamId || ''}
-                  onChange={e => onTeamChange?.(e.target.value || null)}
-                  className="w-full text-[11px] font-mono border border-[#e3e0db] rounded-lg px-2.5 py-1.5 bg-[#faf9f4] text-[#525252] focus:outline-none focus:border-[#117dff]"
-                >
-                  <option value="">Select team...</option>
-                  {teams.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+      <div className="p-4 pr-24">
+        {/* Top Row: Icon + Name (status moved to absolute corner above) */}
+        <div className="flex items-start gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border"
+            style={{
+              backgroundColor: `${connector.color}10`,
+              borderColor: `${connector.color}20`,
+            }}
+          >
+            <Icon
+              size={20}
+              style={{ color: connector.color }}
+              strokeWidth={1.75}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] leading-tight truncate">
+              {connector.name}
+            </h3>
+            <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk'] mt-0.5 leading-snug line-clamp-1">
+              {connector.accountRef ? connector.accountRef : connector.description}
+            </p>
+            {modes && (
+              <div className="flex items-center gap-1 mt-1">
+                {modes.map(m => (
+                  <span
+                    key={m}
+                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                      m === 'ingestion'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'bg-violet-50 text-violet-700 border border-violet-200'
+                    }`}
+                    title={CONNECTOR_MODES[m]?.description || m}
+                  >
+                    {CONNECTOR_MODES[m]?.label || m}
+                  </span>
+                ))}
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Change Scope Modal */}
         {changeScopeOpen && (
@@ -901,36 +853,20 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          {canShowConfig && (
-            <>
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] hover:text-[#525252] transition-all"
-              >
-                {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                Config
-              </button>
-              <CopyButton text={configStr} label="Copy Config" />
-            </>
-          )}
-
+        {/* Action Row — slim, uniform across states. Connected = Disconnect
+            text + Sync icon + Settings icon (gear). Available = Connect.
+            Error/reauth = Reconnect. No extra rows. */}
+        <div className="mt-3 flex items-center gap-1.5">
           {connector.status === 'available' && !isSetupOnly && (
             <button
               onClick={onConnect}
               disabled={connecting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
             >
-              {connecting ? (
-                <RefreshCw size={12} className="animate-spin" />
-              ) : (
-                <Plus size={12} />
-              )}
+              {connecting ? <RefreshCw size={12} className="animate-spin" /> : <Plus size={12} />}
               {connecting ? 'Connecting...' : 'Connect'}
             </button>
           )}
-
           {connector.status === 'available' && isSetupOnly && (
             <button
               onClick={() => setExpanded(!expanded)}
@@ -940,37 +876,49 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               {expanded ? 'Hide Setup' : 'Setup'}
             </button>
           )}
-
-          {isActive && connector.oauthProvider && (
+          {isActive && (
             <>
               <button
-                onClick={onResync}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] hover:text-[#525252] transition-all"
-              >
-                <RefreshCw size={12} />
-                Sync Now
-              </button>
-              <button
                 onClick={onDisconnect}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] text-[#dc2626]/70 hover:text-[#dc2626] hover:bg-red-50 transition-all"
               >
                 Disconnect
               </button>
+              {connector.oauthProvider && (
+                <button
+                  onClick={onResync}
+                  title="Sync now"
+                  className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              )}
+              {connector.oauthProvider && (
+                <button
+                  onClick={() => { setPendingScope(targetScope); setPendingTeamId(selectedTeamId || null); setChangeScopeOpen(true); }}
+                  title="Settings"
+                  className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
+                >
+                  <SettingsIcon size={13} />
+                </button>
+              )}
+              {canShowConfig && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  title="View config"
+                  className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
+                >
+                  {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                  Config
+                </button>
+              )}
             </>
           )}
-
-          {isComingSoon && (
-            <span className="text-[#d4d0ca] text-[11px] font-['Space_Grotesk'] flex items-center gap-1.5">
-              <Clock size={12} />
-              Coming soon
-            </span>
-          )}
-
-          {connector.status === 'needs_reauth' && connector.oauthProvider && (
+          {isReauth && connector.oauthProvider && (
             <>
               <button
                 onClick={onConnect}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20 transition-all"
               >
                 <RefreshCw size={12} />
                 Reconnect
@@ -983,59 +931,33 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               </button>
             </>
           )}
-
-          {connector.status === 'error' && connector.oauthProvider && (() => {
-            // Decide whether Retry or Reconnect is the primary CTA.
-            // Auth-shaped errors → Reconnect is primary (Retry pointless).
-            const raw = String(connector.lastError || '').toLowerCase();
-            const isAuth = /no nango connection|no valid access token|token (refresh )?failed|reauth|revoked|invalid_grant|insufficient|invalid auth|expected oauth 2|\b401\b|\b403\b|scope|missing.*permission/i.test(raw);
-            return (
-              <>
-                {isAuth ? (
-                  <>
-                    <button
-                      onClick={onConnect}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/15 text-amber-700 border border-amber-500/30 hover:bg-amber-500/25 transition-all"
-                    >
-                      <RefreshCw size={12} />
-                      Reconnect
-                    </button>
-                    <button
-                      onClick={onResync}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
-                      title="Re-running sync without a fresh sign-in usually won't help when the token is expired."
-                    >
-                      <RefreshCw size={12} />
-                      Retry anyway
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={onResync}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20 transition-all"
-                    >
-                      <RefreshCw size={12} />
-                      Retry
-                    </button>
-                    <button
-                      onClick={onConnect}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] hover:bg-[#eae7e1] transition-all"
-                    >
-                      <RefreshCw size={12} />
-                      Reconnect
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={onDisconnect}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
-                >
-                  Disconnect
-                </button>
-              </>
-            );
-          })()}
+          {isError && connector.oauthProvider && (
+            <>
+              <button
+                onClick={isAuthErr ? onConnect : onResync}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                  isAuthErr
+                    ? 'bg-amber-500/15 text-amber-700 border border-amber-500/30 hover:bg-amber-500/25'
+                    : 'bg-red-500/10 text-[#dc2626] border border-red-500/20 hover:bg-red-500/20'
+                }`}
+              >
+                <RefreshCw size={12} />
+                {isAuthErr ? 'Reconnect' : 'Retry'}
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
+              >
+                Disconnect
+              </button>
+            </>
+          )}
+          {isComingSoon && (
+            <span className="text-[#d4d0ca] text-[11px] font-['Space_Grotesk'] flex items-center gap-1.5">
+              <Clock size={12} />
+              Coming soon
+            </span>
+          )}
         </div>
       </div>
 
@@ -2887,6 +2809,7 @@ export default function Connectors() {
   const [selectedTeamIds, setSelectedTeamIds] = useState({});
   const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
   const [whatsappQRConnector, setWhatsappQRConnector] = useState(false);
+  const [chatgptSetupOpen, setChatgptSetupOpen] = useState(false);
   const [verifiedMcpEndpoints, setVerifiedMcpEndpoints] = useState({});
 
   // Detect org admin: user is org admin if their role is 'owner' or 'admin'
@@ -2919,6 +2842,7 @@ export default function Connectors() {
 
   const {
     data: jobs,
+    // eslint-disable-next-line no-unused-vars
     refetch: refetchJobs,
   } = useApiQuery(() => apiClient.listConnectorJobs(), []);
 
@@ -2929,6 +2853,7 @@ export default function Connectors() {
   } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
 
   const endpoints = useMemo(() => connectorStatus?.statuses || [], [connectorStatus]);
+  // eslint-disable-next-line no-unused-vars
   const jobList = useMemo(() => (Array.isArray(jobs) ? jobs : jobs?.jobs || []), [jobs]);
   const oauthList = useMemo(() => oauthConnectors?.connectors || [], [oauthConnectors]);
 
@@ -3424,9 +3349,6 @@ export default function Connectors() {
       {/* Browser Intelligence — Chrome extension download */}
       <BrowserIntelligenceCard />
 
-      {/* Stats */}
-      <StatsRow connectors={mergedConnectors} endpoints={endpoints} />
-
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         <button
@@ -3470,6 +3392,10 @@ export default function Connectors() {
             allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
             teams={teams}
             onConnect={() => {
+              if (connector.isChatGptSetup) {
+                setChatgptSetupOpen(true);
+                return;
+              }
               if (connector.isMcpClient) {
                 setMcpSetupConnector(connector);
                 return;
@@ -3568,67 +3494,7 @@ export default function Connectors() {
         </div>
       </div>
 
-      {/* Recent Jobs */}
-      {jobList.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
-              Recent Jobs
-            </h2>
-            <button
-              onClick={refetchJobs}
-              className="flex items-center gap-1.5 text-[#a3a3a3] hover:text-[#117dff] text-[11px] font-['Space_Grotesk'] transition-colors"
-            >
-              <RefreshCw size={11} />
-              Refresh
-            </button>
-          </div>
-          <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#e3e0db]">
-                  {['Job ID', 'Status', 'Endpoint', 'Time'].map((h) => (
-                    <th key={h} className="text-left text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider px-4 py-2.5">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {jobList.slice(0, 10).map((job, i) => (
-                  <tr key={job.id || i} className="border-b border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
-                    <td className="px-4 py-2.5 text-[#525252] font-mono text-[11px]">
-                      {(job.id || '').slice(0, 12)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border ${
-                          {
-                            pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                            running: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-                            completed: 'bg-emerald-500/10 text-[#16a34a] border-emerald-500/20',
-                            failed: 'bg-red-500/10 text-[#dc2626] border-red-500/20',
-                          }[job.status] || 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]'
-                        }`}
-                      >
-                        {job.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-[#525252] font-mono text-[11px] truncate max-w-[200px]">
-                      {job.endpoint || job.url || '-'}
-                    </td>
-                    <td className="px-4 py-2.5 text-[#d4d0ca] font-mono text-[10px]">
-                      {job.timestamp || job.created_at
-                        ? new Date(job.timestamp || job.created_at).toLocaleString()
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Recent Jobs removed — visual noise on this page. Surfaced in /jobs. */}
 
       {/* Google Workspace Intro Modal (one-time, before master OAuth) */}
       <AnimatePresence>
@@ -3751,6 +3617,41 @@ export default function Connectors() {
               refetchOAuth();
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ChatGPT GPT Actions setup — mounts the full setup card inside a
+          modal overlay so the connectors grid stays slim. */}
+      <AnimatePresence>
+        {chatgptSetupOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto"
+            onClick={() => setChatgptSetupOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-12"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-3 border-b border-[#eae7e1]">
+                <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Set up ChatGPT</h3>
+                <button
+                  onClick={() => setChatgptSetupOpen(false)}
+                  className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-5">
+                <ChatGPTConnectorCard />
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
