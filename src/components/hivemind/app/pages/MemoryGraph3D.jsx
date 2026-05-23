@@ -16,6 +16,23 @@ const DEFAULT_BG = "rgba(0,0,0,0)";
 // cosmic monochrome (deep black scene, near-white nodes, soft grey edges).
 // Switching themes only restyles the graph canvas, not the surrounding UI.
 const THEMES = {
+  atlas: {
+    name: "atlas",
+    bg: "#181715",
+    sceneClear: "#181715",
+    label: "#f6eee5",
+    labelDim: "#9f978f",
+    edgeLabelBg: "rgba(5,5,5,0.92)",
+    edgeLabelBorder: "rgba(255,237,222,0.16)",
+    nodeAccent: "#ff5b58",
+    nodeBase: "#d8cdc2",
+    nodeMuted: "#403b36",
+    nodeShell: "#332a27",
+    linkBase: "#d9c9bd",
+    linkDim: "#4a4741",
+    particle: "#ff736f",
+    haloOpacity: 0.11,
+  },
   day: {
     name: "day",
     bg: "rgba(0,0,0,0)",                // page bg shows through (warm paper)
@@ -108,6 +125,15 @@ function getLabelTexture(type, confidence, themeName) {
   // Pill background — type-colored when known (red Contradicts, purple Derives...)
   const typeColor = (() => {
     const lc = String(type).toLowerCase();
+    if (themeName === "atlas") {
+      if (lc === 'contradicts') return '#ff5754';
+      if (lc === 'updates') return '#ff6b63';
+      if (lc === 'derived_from' || lc === 'derives') return '#ead5c8';
+      if (lc === 'extends' || lc === 'supports' || lc === 'mentions') return '#c8c0b7';
+      if (lc === 'needs_revision') return '#d08a2e';
+      if (lc === 'peer_review') return '#8f8a82';
+      return '#bdb4aa';
+    }
     if (lc === 'contradicts') return '#ef4444';
     if (lc === 'derived_from' || lc === 'derives') return '#a78bfa';
     if (lc === 'supports' || lc === 'mentions') return '#10b981';
@@ -117,7 +143,7 @@ function getLabelTexture(type, confidence, themeName) {
     if (lc === 'peer_review') return '#64748b';
     return null;
   })();
-  ctx.fillStyle = typeColor ? typeColor + '22' : t.edgeLabelBg; // tinted bg with low alpha
+  ctx.fillStyle = themeName === "atlas" ? t.edgeLabelBg : (typeColor ? typeColor + '22' : t.edgeLabelBg);
   ctx.beginPath();
   ctx.moveTo(r, 0);
   ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, r);
@@ -127,17 +153,17 @@ function getLabelTexture(type, confidence, themeName) {
   ctx.closePath();
   ctx.fill();
   ctx.lineWidth = dpr;
-  ctx.strokeStyle = typeColor || t.edgeLabelBorder;
+  ctx.strokeStyle = themeName === "atlas" ? t.edgeLabelBorder : (typeColor || t.edgeLabelBorder);
   ctx.stroke();
   // Type label (colored when known type)
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  ctx.fillStyle = typeColor || t.label;
+  ctx.fillStyle = themeName === "atlas" ? t.label : (typeColor || t.label);
   ctx.textBaseline = "middle";
   ctx.fillText(type, padX, canvas.height / 2);
   // Confidence pill — muted mono
   if (confidence) {
     ctx.font = `500 ${confFontSize}px "JetBrains Mono", monospace`;
-    ctx.fillStyle = typeColor ? typeColor + 'cc' : t.label + 'cc';
+    ctx.fillStyle = themeName === "atlas" ? t.labelDim : (typeColor ? typeColor + 'cc' : t.label + 'cc');
     ctx.fillText(confidence, padX + typeW + gap, canvas.height / 2);
   }
   const tex = new THREE.CanvasTexture(canvas);
@@ -211,6 +237,11 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   const key = `${themeName}:${variant}:${text}`;
   if (nodeTagTextureCache.has(key)) return nodeTagTextureCache.get(key);
   const t = (() => {
+    if (themeName === "atlas") {
+      if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
+      if (variant === "focus") return { bg: "rgba(4,4,4,0.94)", border: "rgba(255,115,105,0.34)", fg: "#fff2e8", shadow: "rgba(255,84,80,0.18)" };
+      return { bg: "rgba(3,3,3,0.86)", border: "rgba(255,238,222,0.13)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
+    }
     if (themeName === "night") {
       if (variant === "selected") return { bg: "rgba(244,241,234,0.94)", border: "rgba(255,255,255,0.36)", fg: "#090909", shadow: "rgba(255,255,255,0.16)" };
       if (variant === "focus") return { bg: "rgba(18,18,20,0.92)", border: "rgba(244,241,234,0.34)", fg: "#f4f1ea", shadow: "rgba(0,0,0,0.28)" };
@@ -357,8 +388,46 @@ const LABEL_VIEWPORT_MARGIN = 0.9;
 const LABEL_CELL_WIDTH = 164;
 const LABEL_CELL_HEIGHT = 48;
 
+function getGraphSizeTier(count = 0) {
+  if (count > 1200) return "massive";
+  if (count > 650) return "large";
+  if (count > 260) return "medium";
+  return "small";
+}
+
+function getAdaptiveLabelLimit(mode, nodeCount) {
+  const base = LABEL_LIMITS[mode] ?? 0;
+  const tier = getGraphSizeTier(nodeCount);
+  if (tier === "massive") return Math.min(base, mode === "all" ? 26 : 10);
+  if (tier === "large") return Math.min(base, mode === "all" ? 36 : 14);
+  if (tier === "medium") return Math.min(base, mode === "all" ? 46 : 16);
+  return base;
+}
+
+function getAtlasNodeColor(node) {
+  const type = getNodeType(node);
+  const weight = getNodeWeight(node);
+  const factVariant = getFactVariant(node);
+
+  if (node?.kind === "document") return "#d08a2e";
+  if (node?.kind === "entity") return mixHex("#f5e3d5", "#ff6b63", Math.min(0.4, weight * 0.35));
+  if (type === "decision") return mixHex("#bf3836", "#ff6763", Math.min(1, 0.35 + weight * 0.55));
+  if (type === "event") return mixHex("#b08971", "#ead9ca", Math.min(1, 0.25 + weight * 0.45));
+  if (type === "fact") {
+    return factVariant === "extracted"
+      ? mixHex("#d9504d", "#ffd0c8", Math.min(1, 0.25 + weight * 0.45))
+      : mixHex("#d6c9bd", "#fff2e8", Math.min(1, 0.2 + weight * 0.55));
+  }
+  if (type === "relationship") return "#e7ddd2";
+  if (type === "goal") return mixHex("#b94a45", "#f0cabd", Math.min(1, 0.2 + weight * 0.45));
+  if (type === "preference") return mixHex("#b28d75", "#ead4c2", Math.min(1, 0.2 + weight * 0.45));
+  if (type === "lesson") return mixHex("#bfb3a8", "#f2e7dc", Math.min(1, 0.15 + weight * 0.45));
+  return mixHex("#8f8980", "#f2e6da", Math.min(1, 0.15 + weight * 0.65));
+}
+
 function getNodeRadius(node) {
   let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
+  const weight = getNodeWeight(node);
 
   if (node.clusterId === "_orphan") radius = Math.max(radius * 0.48, 1);
   else if (node.clusterRole === "hub") radius = Math.min(7.2, radius * 1.18);
@@ -369,7 +438,7 @@ function getNodeRadius(node) {
   if (node.nodeLayer === "tara") radius = Math.min(6.1, radius * 1.02);
   if (node.nodeLayer === "tara-insight") radius *= 1.04;
 
-  return radius;
+  return Math.min(8.2, radius * (0.88 + weight * 0.38));
 }
 
 function getNodeType(node) {
@@ -381,6 +450,7 @@ function getNodeType(node) {
 
 // Color overrides for non-memory node kinds
 function getKindColor(node) {
+  // Atlas mode resolves kind colors in getAtlasNodeColor().
   if (node?.kind === 'document') return '#f59e0b';  // amber — like the image
   if (node?.kind === 'entity') return '#10b981';     // emerald
   return null;
@@ -389,8 +459,19 @@ function getKindColor(node) {
 // Edge color by type (matches the image: purple=derived_from, red=contradicts, green=supports)
 // Edge palette parity with MemoryGraph.jsx EDGE_COLORS so the same edge
 // type reads the same color across 2D / 3D / detail views.
-function getEdgeColorByType(type) {
+function getEdgeColorByType(type, themeName = "day") {
   const t = String(type || '').toLowerCase();
+  if (themeName === "atlas") {
+    if (t === 'updates') return '#ff6560';
+    if (t === 'extends') return '#c4bdb4';
+    if (t === 'derives' || t === 'derived_from') return '#f1dfd1';
+    if (t === 'contradicts') return '#e3423f';
+    if (t === 'supports') return '#bfb8af';
+    if (t === 'mentions') return '#706d68';
+    if (t === 'needs_revision') return '#d08a2e';
+    if (t === 'peer_review') return '#8f8a82';
+    return null;
+  }
   if (t === 'updates')      return '#f59e0b'; // amber — supersession
   if (t === 'extends')      return '#22c55e'; // green — additive
   if (t === 'derives' || t === 'derived_from') return '#8b5cf6'; // violet — synthesis link
@@ -467,6 +548,10 @@ function getNodeColorBase(node) {
   return TYPE_COLORS[type] ? base : TYPE_COLORS.default;
 }
 
+function getThemeBackground(theme, fallback) {
+  return theme.name === "night" || theme.name === "atlas" ? theme.bg : fallback;
+}
+
 function hexToRgb(hex) {
   const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!match) return { r: 143, g: 138, b: 130 };
@@ -482,8 +567,10 @@ function makeMaterial(color, opacity = 0.96) {
     color,
     transparent: opacity < 1,
     opacity,
-    roughness: 0.42,
-    metalness: 0.03,
+    roughness: 0.38,
+    metalness: 0.06,
+    emissive: color,
+    emissiveIntensity: 0.025,
   });
 }
 
@@ -586,11 +673,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     width,
     height,
     backgroundColor = DEFAULT_BG,
-    theme: themeProp = "day",
+    theme: themeProp = "atlas",
   },
   ref,
 ) {
-  // Resolve active palette. theme prop accepts 'day' | 'night'.
+  // Resolve active palette. theme prop accepts 'atlas' | 'day' | 'night'.
   const theme = THEMES[themeProp] || THEMES.day;
   const themeRef = useRef(theme);
   themeRef.current = theme;
@@ -599,7 +686,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg) return;
-    fg.backgroundColor(theme.name === "night" ? theme.bg : backgroundColor);
+    fg.backgroundColor(getThemeBackground(theme, backgroundColor));
+    const scene = fg.scene?.();
+    if (scene) {
+      scene.fog = theme.name === "atlas" ? new THREE.FogExp2("#181715", 0.00085) : null;
+    }
     if (refreshHighlightRef.current) refreshHighlightRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themeProp]);
@@ -742,20 +833,24 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (labelMode === "focus" && !isImportant && node.clusterRole !== "hub") return "";
       if (!viewStateRef.current.labelNodeIds.has(node.id) && !isImportant) return "";
       const selected = selectedNodeRef.current?.id === node.id;
+      const t = themeRef.current;
+      const atlas = t.name === "atlas";
       return `
         <div style="
-          max-width:240px;
-          padding:${selected ? "7px 9px" : "5px 7px"};
-          border:${selected ? "1px solid rgba(17,17,17,0.72)" : "1px solid rgba(84,80,72,0.18)"};
-          border-radius:8px;
-          background:${selected ? "rgba(17,17,17,0.9)" : "rgba(255,252,245,0.88)"};
-          color:${selected ? "#fffaf2" : "#25231f"};
-          box-shadow:${selected ? "0 12px 28px rgba(0,0,0,0.16)" : "0 8px 22px rgba(38,35,30,0.08)"};
+          max-width:${atlas ? "260px" : "240px"};
+          padding:${selected ? "7px 10px" : "5px 8px"};
+          border:${atlas ? "1px solid rgba(255,235,220,0.14)" : (selected ? "1px solid rgba(17,17,17,0.72)" : "1px solid rgba(84,80,72,0.18)")};
+          border-radius:${atlas ? "2px" : "8px"};
+          background:${atlas ? (selected ? "rgba(255,84,80,0.92)" : "rgba(3,3,3,0.9)") : (selected ? "rgba(17,17,17,0.9)" : "rgba(255,252,245,0.88)")};
+          color:${atlas ? (selected ? "#140b0a" : "#fff0e5") : (selected ? "#fffaf2" : "#25231f")};
+          box-shadow:${atlas ? "0 10px 26px rgba(0,0,0,0.42)" : (selected ? "0 12px 28px rgba(0,0,0,0.16)" : "0 8px 22px rgba(38,35,30,0.08)")};
           font-family:'Space Grotesk',sans-serif;
-          font-size:${selected ? "12px" : "11px"};
-          font-weight:${selected ? "650" : "560"};
+          font-size:${selected ? "12px" : "10.5px"};
+          font-weight:${selected ? "720" : "620"};
           line-height:1.25;
           white-space:normal;
+          letter-spacing:${atlas ? "0.03em" : "0"};
+          text-transform:${atlas ? "uppercase" : "none"};
         ">${escapeHtml(getNodeDisplayLabel(node))}</div>
       `;
     },
@@ -834,19 +929,19 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
-      let baseColor = getNodeColorBase(node);
+      let baseColor = t.name === "atlas" ? getAtlasNodeColor(node) : getNodeColorBase(node);
       if (t.name === "night") {
         const rgb = hexToRgb(baseColor);
         baseColor = `rgb(${255 - rgb.r},${255 - rgb.g},${255 - rgb.b})`;
       }
       if (highlightedNodes.has(node.id)) {
-        return selectedNodeRef.current?.id === node.id
-          ? t.nodeAccent
-          : (t.name === "night" ? "#dcd6c9" : "#36332d");
+        if (selectedNodeRef.current?.id === node.id) return t.nodeAccent;
+        if (t.name === "atlas") return "#fff0e5";
+        return t.name === "night" ? "#dcd6c9" : "#36332d";
       }
       if (highlightNodesRef.current.size > 0 && !highlightNodesRef.current.has(node.id)) {
         const fallback = baseColor.startsWith("#") ? hexToRgb(baseColor) : { r: 136, g: 136, b: 136 };
-        return `rgba(${fallback.r},${fallback.g},${fallback.b},0.14)`;
+        return `rgba(${fallback.r},${fallback.g},${fallback.b},${t.name === "atlas" ? 0.18 : 0.14})`;
       }
       return baseColor;
     },
@@ -858,7 +953,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const activeCluster = clusterFilterRef.current;
     if (activeCluster && node.clusterId === activeCluster) return t.nodeAccent;
     if (selectedNodeRef.current?.clusterId && node.clusterId === selectedNodeRef.current.clusterId) return t.nodeAccent;
-    if (highlightNodesRef.current.has(node.id)) return t.name === "night" ? "#dcd6c9" : "#5a554c";
+    if (highlightNodesRef.current.has(node.id)) return t.name === "atlas" ? "#ff786f" : (t.name === "night" ? "#dcd6c9" : "#5a554c");
     return null;
   }, []);
 
@@ -869,20 +964,34 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     if (highlightedLinksRef.current.has(link)) return t.nodeAccent;
     // Type-specific colors take priority (Contradicts=red, derived_from=purple, etc.)
-    const typeColor = getEdgeColorByType(link?.type);
+    const typeColor = getEdgeColorByType(link?.type, t.name);
     if (typeColor) return typeColor;
     const style = RELATION_WEIGHTS[link?.type] || RELATION_WEIGHTS.default;
     return mixHex(t.linkBase, t.nodeAccent, 1 - style.weight);
   }, []);
 
   const getLinkWidth = useCallback((link) => {
+    const nodeCount = graphDataRef.current?.nodes?.length || 0;
+    const tier = getGraphSizeTier(nodeCount);
     const style = getRelationStyle(link);
-    return highlightedLinksRef.current.has(link) ? 1.22 : style.width;
+    if (highlightedLinksRef.current.has(link)) return themeRef.current.name === "atlas" ? 1.08 : 1.22;
+    if (themeRef.current.name === "atlas") {
+      if (tier === "massive") return 0.08;
+      if (tier === "large") return 0.1;
+      return Math.max(0.1, style.width * 0.72);
+    }
+    return style.width;
   }, []);
 
   const getLinkParticles = useCallback((link) => {
+    const nodeCount = graphDataRef.current?.nodes?.length || 0;
+    const tier = getGraphSizeTier(nodeCount);
+    if (themeRef.current.name === "atlas" && (tier === "massive" || tier === "large")) {
+      return highlightedLinksRef.current.has(link) ? 0 : 1;
+    }
     const style = getRelationStyle(link);
-    return highlightedLinksRef.current.has(link) ? 0 : style.particles;
+    if (highlightedLinksRef.current.has(link)) return 0;
+    return themeRef.current.name === "atlas" ? Math.min(2, style.particles) : style.particles;
   }, []);
 
   const getLinkParticleSpeed = useCallback((link) => {
@@ -893,17 +1002,27 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   }, []);
 
   const getLinkOpacity = useCallback((link) => {
+    const t = themeRef.current;
     const style = getRelationStyle(link);
-    return highlightedLinksRef.current.has(link) ? 0.82 : style.opacity;
+    if (highlightedLinksRef.current.has(link)) return t.name === "atlas" ? 0.72 : 0.82;
+    if (t.name === "atlas") return Math.max(0.045, style.opacity * 0.62);
+    return style.opacity;
   }, []);
 
   const updateNodeObjectAppearance = useCallback((node, object3d) => {
     if (!object3d?.userData?.primaryMaterial) return;
     const color = getNodeColorRef.current(node);
     const haloColor = getClusterHaloColor(node);
+    const t = themeRef.current;
     object3d.userData.primaryMaterial.color.set(color);
+    object3d.userData.primaryMaterial.emissive?.set?.(color);
+    object3d.userData.primaryMaterial.emissiveIntensity = t.name === "atlas" ? 0.045 : 0.025;
     object3d.userData.haloMaterial.color.set(haloColor || GRAPH_THEME.halo);
-    object3d.userData.haloMaterial.opacity = haloColor ? 0.24 : 0.08;
+    object3d.userData.haloMaterial.opacity = haloColor ? (t.name === "atlas" ? 0.28 : 0.24) : (t.name === "atlas" ? 0.055 : 0.08);
+    if (object3d.userData.fieldMaterial) {
+      object3d.userData.fieldMaterial.color.set(haloColor || color);
+      object3d.userData.fieldMaterial.opacity = haloColor ? (t.name === "atlas" ? 0.16 : 0.1) : (t.name === "atlas" ? 0.045 : 0.07);
+    }
   }, [getClusterHaloColor]);
 
   useEffect(() => {
@@ -988,11 +1107,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
     const fg = ForceGraph3D({ controlType: "orbit" })(containerRef.current)
       .graphData(graphDataRef.current)
-      .backgroundColor(themeRef.current.name === "night" ? themeRef.current.bg : backgroundColorRef.current)
+      .backgroundColor(getThemeBackground(themeRef.current, backgroundColorRef.current))
       .showNavInfo(false)
-      .nodeResolution(12)
+      .nodeResolution(themeRef.current.name === "atlas" ? 10 : 12)
       .nodeRelSize(1.65)
-      .nodeOpacity(0.9)
+      .nodeOpacity(themeRef.current.name === "atlas" ? 0.96 : 0.9)
       .nodeColor((node) => getNodeColorRef.current(node))
       .nodeVal((node) => getNodeRadius(node))
       .nodeThreeObject((node) => {
@@ -1017,7 +1136,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObjectExtend(false)
       .nodeVisibility((node) => isNodeVisibleRef.current(node))
       .linkOpacity((link) => getLinkOpacity(link))
-      .linkDirectionalParticleWidth(1.1)
+      .linkDirectionalParticleWidth(themeRef.current.name === "atlas" ? 0.7 : 1.1)
       .linkDirectionalParticles((link) => getLinkParticles(link))
       .linkDirectionalParticleSpeed((link) => getLinkParticleSpeed(link))
       .linkWidth((link) => getLinkWidth(link))
@@ -1123,7 +1242,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const scene = fg.scene?.();
     if (scene) {
       scene.background = null;
-      scene.fog = null;
+      scene.fog = themeRef.current.name === "atlas"
+        ? new THREE.FogExp2("#181715", 0.00085)
+        : null;
     }
 
     const camera = fg.camera?.();
@@ -1193,7 +1314,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const labelMode = distance > 520 ? "hidden" : distance > 240 ? "focus" : "all";
           const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
           const relationLabelMode = distance > RELATION_LABEL_DISTANCE ? "hidden" : distance > 180 ? "focus" : "all";
-          const labelBudget = LABEL_LIMITS[labelMode] ?? 0;
+          const nodeCount = graphDataRef.current.nodes?.length || 0;
+          const labelBudget = getAdaptiveLabelLimit(labelMode, nodeCount);
           const scoreLabelNode = (node) => {
             let value = (node.importanceScore || 0) * 10 + (node.val || 0) + (node.hubScore || 0) * 4;
             if (selectedNodeRef.current?.id === node.id) value += 1000;
@@ -1253,8 +1375,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
             else if (labelMode === 'hidden') opacity = 0;
-            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? 0.55 : 0;
-            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'night' ? 0.9 : 0.85) : 0;
+            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.72 : 0.55) : 0;
+            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.92 : themeName === 'night' ? 0.9 : 0.85) : 0;
             if (isSelected) variant = "selected";
             else if (isNeighbor || isHighlighted) variant = "focus";
             setNodeLabelSpriteVariant(sprite, variant, themeName);
@@ -1285,11 +1407,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       emitViewState();
     }
 
-    const ambientLight = new THREE.AmbientLight("#ffffff", 1.2);
-    const keyLight = new THREE.DirectionalLight("#ffffff", 0.55);
+    const ambientLight = new THREE.AmbientLight("#fff2e7", themeRef.current.name === "atlas" ? 1.38 : 1.2);
+    const keyLight = new THREE.DirectionalLight("#ffd6cc", themeRef.current.name === "atlas" ? 0.75 : 0.55);
     keyLight.position.set(0, 120, 180);
+    const rimLight = new THREE.DirectionalLight("#ff615a", themeRef.current.name === "atlas" ? 0.36 : 0);
+    rimLight.position.set(-180, 70, -120);
     scene?.add?.(ambientLight);
     scene?.add?.(keyLight);
+    scene?.add?.(rimLight);
 
     resizeObserverRef.current = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -1332,7 +1457,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const fg = fgRef.current;
     if (!fg) return;
     fg
-      .backgroundColor(themeRef.current.name === "night" ? themeRef.current.bg : backgroundColor)
+      .backgroundColor(getThemeBackground(themeRef.current, backgroundColor))
       .nodeColor((node) => getNodeColor(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
