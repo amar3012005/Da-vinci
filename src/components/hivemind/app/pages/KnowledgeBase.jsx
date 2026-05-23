@@ -805,7 +805,7 @@ export default function KnowledgeBase() {
     } finally {
       setDeletingDocId(null);
     }
-  }, [refetchKb]);
+  }, [refetchKb, setUploads]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1070,7 +1070,7 @@ export default function KnowledgeBase() {
       }
     });
     await Promise.all(workers);
-  }, [customTags, refetchKb, pickConcurrency, kbMemories]);
+  }, [customTags, refetchKb, pickConcurrency, kbMemories, setUploads]);
 
   // Cancel a queued/uploading entry
   const handleCancelUpload = useCallback((entryId) => {
@@ -1081,7 +1081,7 @@ export default function KnowledgeBase() {
       }
       return prev;
     });
-  }, []);
+  }, [setUploads]);
 
   // Cancel everything still in-flight
   const handleCancelAll = useCallback(() => {
@@ -1093,7 +1093,7 @@ export default function KnowledgeBase() {
       }
       return prev;
     });
-  }, []);
+  }, [setUploads]);
 
   const queueFilesForUpload = useCallback((files) => {
     if (!files?.length) return;
@@ -1156,7 +1156,7 @@ export default function KnowledgeBase() {
     } else {
       handleFiles(files, { targetScope: selectedScope, project });
     }
-  }, [handleFiles, pendingFiles, selectedProject, selectedScope, smartExtract]);
+  }, [handleFiles, pendingFiles, selectedProject, selectedScope, smartExtract, setUploads]);
 
   const handleCloseScopeModal = useCallback(() => {
     setScopeModalOpen(false);
@@ -1223,7 +1223,7 @@ export default function KnowledgeBase() {
     } finally {
       setEnterpriseIngesting(false);
     }
-  }, [detectionResult, customTags, selectedScope, selectedProject, refetchKb]);
+  }, [detectionResult, customTags, selectedScope, selectedProject, refetchKb, setUploads]);
 
   return (
     <div className="min-h-full">
