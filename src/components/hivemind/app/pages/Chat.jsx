@@ -376,6 +376,10 @@ function MessageBubble({ msg }) {
           )}
         </div>
         <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed text-[#0a0a0a] break-words shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          {/* Tool timeline rendered ABOVE the answer — matches chrome
+              extension treatment where the agent's tool calls are visible
+              before the synthesized reply. */}
+          <AgentSteps steps={msg.steps} />
           {msg.error ? (
             <div className="flex items-start gap-2 text-[#dc2626]">
               <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
@@ -389,7 +393,6 @@ function MessageBubble({ msg }) {
               Slack action pending · reply confirm
             </div>
           )}
-          <AgentSteps steps={msg.steps} />
           <Sources sources={msg.sources} />
           <TokenUsage usage={msg.usage} />
         </div>
@@ -404,35 +407,42 @@ function MessageBubble({ msg }) {
 // the per-step tool name + args summary + result. Mirrors the side-panel
 // chrome extension treatment.
 function AgentSteps({ steps }) {
-  const [open, setOpen] = useState(false);
   if (!Array.isArray(steps) || steps.length === 0) return null;
+  const primaryArg = (args) => {
+    if (!args || typeof args !== 'object') return '';
+    const keys = ['query', 'content', 'title', 'q', 'text', 'message'];
+    for (const k of keys) {
+      if (typeof args[k] === 'string' && args[k].trim()) return args[k];
+    }
+    const firstStr = Object.values(args).find(v => typeof v === 'string' && v.trim());
+    return firstStr || '';
+  };
   return (
-    <div className="mt-2 pt-2 border-t border-[#ece9e2]">
-      <button
-        onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 text-[10.5px] font-mono uppercase tracking-wider text-[#117dff] hover:text-[#0a5fcc]"
-        type="button"
-      >
-        <span>⚙</span>
-        Used {steps.length} tool{steps.length === 1 ? '' : 's'}
-        <span style={{ display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▸</span>
-      </button>
-      {open && (
-        <div className="mt-1.5 space-y-1">
-          {steps.map((s, i) => {
-            const argStr = (() => {
-              try { return JSON.stringify(s.args || {}).slice(0, 120); } catch { return ''; }
-            })();
-            return (
-              <div key={i} className="text-[11px] leading-snug pl-2 border-l-2 border-[#117dff]/30">
-                <div className="font-mono text-[#117dff]">{s.tool || '(unknown)'}</div>
-                {argStr && <div className="text-[#525252] truncate" title={argStr}>args: {argStr}</div>}
-                {s.result_summary && <div className="text-[#8a8a8a] truncate" title={s.result_summary}>→ {String(s.result_summary).slice(0, 140)}</div>}
+    <div className="mb-2 space-y-1.5">
+      {steps.map((s, i) => {
+        const arg = primaryArg(s.args);
+        return (
+          <div
+            key={i}
+            className="rounded-lg border border-[#e3e0db] bg-[#fafaf6] px-2.5 py-1.5 text-[11.5px] leading-snug"
+          >
+            <div className="flex items-center gap-1.5">
+              <span>🔧</span>
+              <span className="font-mono font-semibold text-[#0a0a0a]">{s.tool || 'tool'}</span>
+            </div>
+            {arg && (
+              <div className="mt-0.5 text-[#525252] italic truncate" title={arg}>
+                "{arg.slice(0, 120)}{arg.length > 120 ? '…' : ''}"
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+            {s.result_summary && (
+              <div className="mt-0.5 text-[#737373] truncate" title={String(s.result_summary)}>
+                → {String(s.result_summary).slice(0, 140)}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
