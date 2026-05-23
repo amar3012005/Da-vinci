@@ -8,6 +8,7 @@ import OnboardingFlow from '../pages/Onboarding';
 import { ChatPanel } from '../pages/Chat';
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
+import GlobalUploadStrip from './GlobalUploadStrip';
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -133,6 +134,10 @@ export default function AppShell() {
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
         <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen} />
+
+        {/* Global upload strip — survives KB unmount so users can browse
+            other pages while files are still uploading */}
+        <GlobalUploadStrip />
 
         {/* Chat Panel */}
         <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />

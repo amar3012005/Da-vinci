@@ -25,6 +25,7 @@ import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
 import { PageIndexViewer } from '../PageIndexViewer';
+import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-store';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -550,7 +551,12 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 
 export default function KnowledgeBase() {
   const { org } = useAuth();
-  const [uploads, setUploads] = useState([]);
+  // Uploads live in a module-level store so they survive navigation away
+  // from this page. `setUploads` here is a pass-through writer; the
+  // GlobalUploadStrip (mounted in AppShell) subscribes to the same store
+  // and keeps rendering the rows from any page.
+  const uploads = useUploads();
+  const setUploads = setGlobalUploads;
   const [dragActive, setDragActive] = useState(false);
   const [customTags, setCustomTags] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -783,7 +789,7 @@ export default function KnowledgeBase() {
         setUploads(prev => [...prev, {
           id: `del-${Date.now()}-${Math.random()}`,
           filename: `Deleted ${deletedCount} memor${deletedCount === 1 ? 'y' : 'ies'} (document + chunks + facts)`,
-          status: 'success',
+          status: 'success', _completedAt: Date.now(),
         }]);
       }
       refetchKb();
@@ -918,7 +924,7 @@ export default function KnowledgeBase() {
         if (existing) {
           setUploads((prev) => prev.map((u) =>
             u.id === uploadEntry.id
-              ? { ...u, status: 'success', progress: 100, deduped: true,
+              ? { ...u, status: 'success', _completedAt: Date.now(), progress: 100, deduped: true,
                   message: 'Already in knowledge base — skipped re-upload' }
               : u
           ));
@@ -987,7 +993,7 @@ export default function KnowledgeBase() {
         if (result?.deduped) {
           setUploads((prev) => prev.map((u) =>
             u.id === uploadEntry.id
-              ? { ...u, status: 'success', progress: 100, deduped: true,
+              ? { ...u, status: 'success', _completedAt: Date.now(), progress: 100, deduped: true,
                   message: result.message || 'Already in knowledge base — skipped re-upload',
                   existingMemoryId: result.existing_memory_id }
               : u
@@ -1006,7 +1012,7 @@ export default function KnowledgeBase() {
           u.id === uploadEntry.id
             ? {
                 ...u,
-                status: 'success',
+                status: 'success', _completedAt: Date.now(),
                 progress: 100,
                 mode: isPhase1 ? 'document_first' : 'legacy',
                 chunks: result.chunks ?? result.segmentCount ?? null,
@@ -1189,7 +1195,7 @@ export default function KnowledgeBase() {
       setUploads((prev) => [...prev, {
         id: Date.now(),
         filename: detectionResult.filename,
-        status: 'success',
+        status: 'success', _completedAt: Date.now(),
         chunks: result.memories_queued,
         documentType: options.confirmedType,
       }]);
@@ -1594,7 +1600,14 @@ export default function KnowledgeBase() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] truncate">
-                      {meta.document_title || doc.title || 'Untitled'}
+                      {meta.document_title
+                        || meta.filename
+                        || srcMeta.filename
+                        || meta.original_filename
+                        || srcMeta.original_filename
+                        || doc.title
+                        || (doc.tags || []).find((t) => t.startsWith('filename:'))?.split(':').slice(1).join(':')
+                        || 'Untitled'}
                     </p>
                     <div className="flex items-center gap-3 mt-0.5">
                       {/* Phase 1 evidence-backed stats (segments + memory_evidence_links) */}
