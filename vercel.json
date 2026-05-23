@@ -9,6 +9,22 @@
       "destination": "https://core.hivemind.davinciai.eu:8050/oauth/:path*"
     },
     {
+      "source": "/authorize",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/authorize"
+    },
+    {
+      "source": "/token",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/token"
+    },
+    {
+      "source": "/register",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/register"
+    },
+    {
+      "source": "/revoke",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/revoke"
+    },
+    {
       "source": "/.well-known/oauth-:path*",
       "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-:path*"
     },
