@@ -11,6 +11,18 @@
     {
       "source": "/.well-known/oauth-:path*",
       "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-:path*"
+    },
+    {
+      "source": "/api/mcp",
+      "destination": "https://core.hivemind.davinciai.eu:8050/api/mcp"
+    },
+    {
+      "source": "/api/mcp/:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/api/mcp/:path*"
+    },
+    {
+      "source": "/mcp/:token/sse",
+      "destination": "https://core.hivemind.davinciai.eu:8050/mcp/:token/sse"
     }
   ],
   "headers": [
