@@ -149,31 +149,93 @@ function getLabelTexture(type, confidence, themeName) {
   return entry;
 }
 
-// ─── Persistent on-node tags ────────────────────────────────────────
-// Short labels rendered as a THREE sprite above each node — e.g. "doc",
-// "gmail", "@rama", "slack". Distance-gated like link labels so they
-// don't pile up at far zoom; on click they surface for every neighbor
-// of the selected node regardless of distance.
+// ─── Persistent on-node labels ───────────────────────────────────────
+// Full memory-title labels rendered as THREE sprites above nodes. They are
+// camera-frustum ranked and screen-cell capped in the render loop so labels
+// only appear inside the visible viewport and do not pile up when zoomed out.
 
 const nodeTagTextureCache = new Map();
 
-function getNodeTagTexture(text, themeName) {
-  const key = `${themeName}:${text}`;
+function truncateLabel(text, max = 74) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  if (value.length <= max) return value;
+  return `${value.slice(0, max - 1).trim()}…`;
+}
+
+function splitLabelLines(text, maxChars = 32, maxLines = 2) {
+  const words = truncateLabel(text).split(" ").filter(Boolean);
+  const lines = [];
+  let current = "";
+
+  words.forEach((word) => {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  });
+
+  if (current) lines.push(current);
+  const visible = lines.slice(0, maxLines);
+  if (lines.length > maxLines && visible.length > 0) {
+    visible[visible.length - 1] = truncateLabel(visible[visible.length - 1], Math.max(10, maxChars - 1));
+  }
+  return visible.length ? visible : ["Untitled memory"];
+}
+
+function getNodeDisplayLabel(node) {
+  const meta = node?.metadata || node?.source_metadata || {};
+  return (
+    node?.title ||
+    node?.name ||
+    node?.summary ||
+    meta.title ||
+    meta.name ||
+    (typeof node?.content === "string" ? node.content : "") ||
+    "Untitled memory"
+  );
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getNodeTagTexture(text, themeName, variant = "normal") {
+  const key = `${themeName}:${variant}:${text}`;
   if (nodeTagTextureCache.has(key)) return nodeTagTextureCache.get(key);
-  const t = themeName === "night"
-    ? { bg: "rgba(20,20,22,0.78)", border: "rgba(170,170,180,0.35)", fg: "#ece9e3" }
-    : { bg: "rgba(255,253,247,0.82)", border: "rgba(38,35,30,0.25)", fg: "#1f1d1a" };
-  const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2, window.devicePixelRatio || 1)) : 1;
+  const t = (() => {
+    if (themeName === "night") {
+      if (variant === "selected") return { bg: "rgba(244,241,234,0.94)", border: "rgba(255,255,255,0.36)", fg: "#090909", shadow: "rgba(255,255,255,0.16)" };
+      if (variant === "focus") return { bg: "rgba(18,18,20,0.92)", border: "rgba(244,241,234,0.34)", fg: "#f4f1ea", shadow: "rgba(0,0,0,0.28)" };
+      return { bg: "rgba(18,18,20,0.74)", border: "rgba(244,241,234,0.18)", fg: "#e5e0d8", shadow: "rgba(0,0,0,0.22)" };
+    }
+    if (variant === "selected") return { bg: "rgba(16,15,13,0.94)", border: "rgba(16,15,13,0.64)", fg: "#fffaf2", shadow: "rgba(35,31,25,0.18)" };
+    if (variant === "focus") return { bg: "rgba(255,253,247,0.96)", border: "rgba(28,26,22,0.34)", fg: "#12110f", shadow: "rgba(35,31,25,0.14)" };
+    return { bg: "rgba(255,253,247,0.84)", border: "rgba(38,35,30,0.20)", fg: "#23211d", shadow: "rgba(35,31,25,0.10)" };
+  })();
+  const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2.5, window.devicePixelRatio || 1)) : 1;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const fontSize = 16 * dpr;
-  const padX = 8 * dpr;
-  const padY = 4 * dpr;
-  ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  const textW = ctx.measureText(text).width;
-  canvas.width = Math.ceil(textW + padX * 2);
-  canvas.height = Math.ceil(fontSize + padY * 2);
-  const r = canvas.height / 2;
+  const fontSize = (variant === "selected" ? 17 : 15) * dpr;
+  const lineHeight = fontSize * 1.18;
+  const padX = 11 * dpr;
+  const padY = 7 * dpr;
+  const lines = splitLabelLines(text);
+  ctx.font = `${variant === "selected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  const textW = Math.max(...lines.map((line) => ctx.measureText(line).width));
+  canvas.width = Math.ceil(Math.min(Math.max(textW + padX * 2, 96 * dpr), 270 * dpr));
+  canvas.height = Math.ceil(lines.length * lineHeight + padY * 2);
+  const r = 9 * dpr;
+  ctx.shadowColor = t.shadow;
+  ctx.shadowBlur = 18 * dpr;
+  ctx.shadowOffsetY = 6 * dpr;
   ctx.fillStyle = t.bg;
   ctx.beginPath();
   ctx.moveTo(r, 0);
@@ -183,13 +245,16 @@ function getNodeTagTexture(text, themeName) {
   ctx.arcTo(0, 0, canvas.width, 0, r);
   ctx.closePath();
   ctx.fill();
+  ctx.shadowColor = "transparent";
   ctx.lineWidth = dpr;
   ctx.strokeStyle = t.border;
   ctx.stroke();
-  ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  ctx.font = `${variant === "selected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.fillStyle = t.fg;
   ctx.textBaseline = "middle";
-  ctx.fillText(text, padX, canvas.height / 2);
+  lines.forEach((line, index) => {
+    ctx.fillText(line, padX, padY + lineHeight * index + lineHeight / 2);
+  });
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
@@ -199,63 +264,8 @@ function getNodeTagTexture(text, themeName) {
   return entry;
 }
 
-// Derive a short tag for a node from its source / platform / extracted
-// entity. Returns null if nothing usefully short exists — the sprite
-// is then skipped so the graph doesn't get noisy.
-function deriveNodeTag(node) {
-  if (!node) return null;
-  const meta = node.metadata || node.source_metadata || {};
-  const platform = (meta.source_platform || meta.platform || node.source_platform || node.platform || '').toString().toLowerCase();
-  const sourceType = (meta.source_type || node.source_type || node.memoryType || node.memory_type || '').toString().toLowerCase();
-  const tags = Array.isArray(node.tags) ? node.tags : [];
-
-  // Entity nodes — surface the entity name itself.
-  if (sourceType === 'entity' || node.memoryType === 'entity') {
-    const ent = tags.find(t => typeof t === 'string' && t.startsWith('entity:'))?.slice('entity:'.length)
-      || node.title || node.name;
-    if (ent) return `@${ent.length > 16 ? ent.slice(0, 15) + '…' : ent}`;
-  }
-
-  // Person extraction from entity tag if present
-  const entityTag = tags.find(t => typeof t === 'string' && t.startsWith('entity:'));
-  if (entityTag) {
-    const name = entityTag.slice('entity:'.length);
-    if (name && /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/.test(name)) {
-      return `@${name.length > 16 ? name.slice(0, 15) + '…' : name}`;
-    }
-  }
-
-  // Source platform → short tag
-  if (platform.includes('gmail')) return 'gmail';
-  if (platform.includes('slack')) return 'slack';
-  if (platform.includes('notion')) return 'notion';
-  if (platform.includes('linear')) return 'linear';
-  if (platform.includes('github')) return 'github';
-  if (platform.includes('drive')) return 'drive';
-  if (platform.includes('mcp')) return 'mcp';
-  if (platform.includes('claude')) return 'claude';
-  if (platform.includes('chatgpt') || platform.includes('openai')) return 'gpt';
-  if (platform.includes('cursor')) return 'cursor';
-  if (platform.includes('talk-to-hive')) return 'chat';
-  if (platform.includes('webapp') || platform.includes('chrome-ext')) return 'web';
-
-  // Source type → short tag
-  if (sourceType === 'document' || sourceType === 'documentation') return 'doc';
-  if (sourceType === 'code') return 'code';
-  if (sourceType === 'decision') return 'decision';
-  if (sourceType === 'preference') return 'preference';
-  if (sourceType === 'goal') return 'goal';
-  if (sourceType === 'conversation') return 'chat';
-
-  // Tag-driven hints
-  if (tags.some(t => /web-research|tavily/i.test(t))) return 'research';
-  if (tags.some(t => /web-crawl|web-search/i.test(t))) return 'web';
-
-  return null;
-}
-
-function makeNodeTagSprite(text, themeName) {
-  const { texture, w, h } = getNodeTagTexture(text, themeName);
+function makeNodeTagSprite(text, themeName, variant = "normal") {
+  const { texture, w, h } = getNodeTagTexture(text, themeName, variant);
   const mat = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
@@ -264,10 +274,21 @@ function makeNodeTagSprite(text, themeName) {
     depthWrite: false,
   });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(w * 0.16, h * 0.16, 1);
+  sprite.scale.set(w * 0.14, h * 0.14, 1);
   sprite.renderOrder = 998;
   sprite.userData.nodeTag = text;
+  sprite.userData.labelVariant = variant;
   return sprite;
+}
+
+function setNodeLabelSpriteVariant(sprite, variant, themeName) {
+  if (!sprite?.material || sprite.userData.labelVariant === variant) return;
+  const { texture, w, h } = getNodeTagTexture(sprite.userData.nodeTag, themeName, variant);
+  sprite.material.map = texture;
+  sprite.material.needsUpdate = true;
+  const scale = variant === "selected" ? 0.158 : variant === "focus" ? 0.148 : 0.14;
+  sprite.scale.set(w * scale, h * scale, 1);
+  sprite.userData.labelVariant = variant;
 }
 
 function makeLinkLabelSprite(link, themeName) {
@@ -328,10 +349,13 @@ const RELATION_STYLES = Object.fromEntries(
 const LABEL_LIMITS = {
   hidden: 0,
   focus: 18,
-  all: 42,
+  all: 54,
 };
 
 const RELATION_LABEL_DISTANCE = 260;
+const LABEL_VIEWPORT_MARGIN = 0.9;
+const LABEL_CELL_WIDTH = 164;
+const LABEL_CELL_HEIGHT = 48;
 
 function getNodeRadius(node) {
   let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
@@ -732,7 +756,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           font-weight:${selected ? "650" : "560"};
           line-height:1.25;
           white-space:normal;
-        ">${node.title || "Untitled"}</div>
+        ">${escapeHtml(getNodeDisplayLabel(node))}</div>
       `;
     },
     [],
@@ -974,15 +998,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
         const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint);
-        // Append a short-text tag sprite as a child of the node group so
-        // it tracks the node automatically. Sprite opacity is driven by
-        // the per-frame render loop based on zoom + selection.
-        const tag = deriveNodeTag(node);
+        // Append the memory-title label as a child of the node group so it
+        // tracks the node automatically. Sprite opacity is camera-ranked.
+        const tag = getNodeDisplayLabel(node);
         if (tag) {
           const sprite = makeNodeTagSprite(tag, themeRef.current.name);
           const radius = getNodeRadius(node);
           // Offset above the node so it doesn't overlap the shape.
-          sprite.position.set(0, radius * 1.9 + 1.4, 0);
+          sprite.position.set(0, radius * 2.05 + 1.6, 0);
           shape.add(sprite);
           nodeTagSpritesRef.current.set(node.id, sprite);
         } else {
@@ -1139,12 +1162,31 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           );
           frustum.setFromProjectionMatrix(projectionMatrix);
 
+          const viewport = containerRef.current?.getBoundingClientRect?.() || { width: 1, height: 1 };
           const inFrameNodeIds = new Set();
+          const projectedLabelNodes = [];
           (graphDataRef.current.nodes || []).forEach((node) => {
             if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.z)) return;
             const radius = getNodeRadius(node) * 1.8;
-            const sphere = new THREE.Sphere(new THREE.Vector3(node.x, node.y, node.z), radius);
-            if (frustum.intersectsSphere(sphere)) inFrameNodeIds.add(node.id);
+            const position = new THREE.Vector3(node.x, node.y, node.z);
+            const sphere = new THREE.Sphere(position, radius);
+            if (!frustum.intersectsSphere(sphere)) return;
+
+            inFrameNodeIds.add(node.id);
+
+            const projected = position.clone().project(cameraNow);
+            if (
+              projected.z >= -1 &&
+              projected.z <= 1 &&
+              Math.abs(projected.x) <= LABEL_VIEWPORT_MARGIN &&
+              Math.abs(projected.y) <= LABEL_VIEWPORT_MARGIN
+            ) {
+              projectedLabelNodes.push({
+                node,
+                screenX: (projected.x * 0.5 + 0.5) * viewport.width,
+                screenY: (-projected.y * 0.5 + 0.5) * viewport.height,
+              });
+            }
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
@@ -1152,22 +1194,32 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
           const relationLabelMode = distance > RELATION_LABEL_DISTANCE ? "hidden" : distance > 180 ? "focus" : "all";
           const labelBudget = LABEL_LIMITS[labelMode] ?? 0;
-          const rankedVisibleNodes = [...inFrameNodeIds]
-            .map((id) => nodeMapRef.current.get(id))
-            .filter(Boolean)
-            .sort((a, b) => {
-              const score = (node) => {
-                let value = (node.importanceScore || 0) * 10 + (node.val || 0) + (node.hubScore || 0) * 4;
-                if (selectedNodeRef.current?.id === node.id) value += 1000;
-                if (highlightNodesRef.current.has(node.id)) value += 500;
-                if (highlightedNodesRef.current.has(node.id)) value += 250;
-                if (node.clusterRole === "hub") value += 30;
-                return value;
-              };
-              return score(b) - score(a);
-            });
+          const scoreLabelNode = (node) => {
+            let value = (node.importanceScore || 0) * 10 + (node.val || 0) + (node.hubScore || 0) * 4;
+            if (selectedNodeRef.current?.id === node.id) value += 1000;
+            if (highlightNodesRef.current.has(node.id)) value += 500;
+            if (highlightedNodesRef.current.has(node.id)) value += 250;
+            if (node.clusterRole === "hub") value += 30;
+            return value;
+          };
+          const rankedVisibleNodes = projectedLabelNodes
+            .filter(({ node }) => nodeMapRef.current.has(node.id))
+            .sort((a, b) => scoreLabelNode(b.node) - scoreLabelNode(a.node));
+          const occupiedLabelCells = new Set();
+          const readableVisibleLabels = [];
+          rankedVisibleNodes.forEach((candidate) => {
+            const { node, screenX, screenY } = candidate;
+            const important =
+              selectedNodeRef.current?.id === node.id ||
+              highlightNodesRef.current.has(node.id) ||
+              highlightedNodesRef.current.has(node.id);
+            const cell = `${Math.round(screenX / LABEL_CELL_WIDTH)}:${Math.round(screenY / LABEL_CELL_HEIGHT)}`;
+            if (!important && occupiedLabelCells.has(cell)) return;
+            occupiedLabelCells.add(cell);
+            readableVisibleLabels.push(candidate);
+          });
           const labelNodeIds = new Set(
-            labelBudget > 0 ? rankedVisibleNodes.slice(0, labelBudget).map((node) => node.id) : [],
+            labelBudget > 0 ? readableVisibleLabels.slice(0, labelBudget).map(({ node }) => node.id) : [],
           );
           if (selectedNodeRef.current?.id) labelNodeIds.add(selectedNodeRef.current.id);
           highlightNodesRef.current.forEach((id) => labelNodeIds.add(id));
@@ -1196,12 +1248,16 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             const isHighlighted = highlightNodesRef.current.has(nid) || highlightedNodesRef.current.has(nid);
             const isLabeled = labelNodeIds.has(nid);
             let opacity = 0;
+            let variant = "normal";
             if (isSelected) opacity = 1;
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
             else if (labelMode === 'hidden') opacity = 0;
             else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? 0.55 : 0;
             else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'night' ? 0.9 : 0.85) : 0;
+            if (isSelected) variant = "selected";
+            else if (isNeighbor || isHighlighted) variant = "focus";
+            setNodeLabelSpriteVariant(sprite, variant, themeName);
             sprite.material.opacity = opacity;
             sprite.visible = opacity > 0.01;
           });
@@ -1281,11 +1337,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
         const object3d = makeNodeShape(node, getNodeColor(node), clusterTint);
-        const tag = deriveNodeTag(node);
+        const tag = getNodeDisplayLabel(node);
         if (tag) {
           const sprite = makeNodeTagSprite(tag, themeRef.current.name);
           const radius = getNodeRadius(node);
-          sprite.position.set(0, radius * 1.9 + 1.4, 0);
+          sprite.position.set(0, radius * 2.05 + 1.6, 0);
           object3d.add(sprite);
           nodeTagSpritesRef.current.set(node.id, sprite);
         } else {
