@@ -271,6 +271,79 @@ function UserBubble({ content }) {
   );
 }
 
+// Mobile draft-approval cards. Same backend contract as desktop:
+// fetches pending_writes by id, surfaces Approve/Cancel buttons.
+function MobileDraftCards({ draftIds }) {
+  const [drafts, setDrafts] = useState([]);
+  const [busy, setBusy] = useState(null);
+  useEffect(() => {
+    if (!Array.isArray(draftIds) || draftIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10').catch(() => ({ data: null }));
+        const matched = (data?.drafts || []).filter(d => draftIds.includes(d.id));
+        if (!cancelled) setDrafts(matched);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [draftIds]);
+  const act = async (id, action) => {
+    setBusy(id);
+    try {
+      const { data } = await apiClient.controlPlane.post(`/v1/proxy/pending-writes/${id}/${action}`, {});
+      setDrafts(prev => prev.map(d => d.id === id ? (data?.draft || { ...d, status: data?.status || d.status }) : d));
+    } catch (err) {
+      setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', errorMsg: err?.message } : d));
+    } finally { setBusy(null); }
+  };
+  if (drafts.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      {drafts.map(d => {
+        const sent = d.status === 'sent';
+        const cancelled = d.status === 'cancelled';
+        const failed = d.status === 'failed';
+        const pending = d.status === 'draft' || d.status === 'approved';
+        const tone = sent ? 'border-emerald-200 bg-emerald-50' :
+                     cancelled ? 'border-[#e3e0db] bg-[#fafaf6] opacity-70' :
+                     failed ? 'border-red-200 bg-red-50' :
+                     'border-amber-200 bg-amber-50';
+        return (
+          <div key={d.id} className={`rounded-xl border ${tone} p-3 text-[12.5px]`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#525252]">{d.provider}/{d.toolName}</span>
+              <span className={`text-[9.5px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                sent ? 'bg-emerald-500/15 text-emerald-700' :
+                cancelled ? 'bg-[#a3a3a3]/15 text-[#525252]' :
+                failed ? 'bg-red-500/15 text-red-700' :
+                'bg-amber-500/15 text-amber-700'
+              }`}>{d.status}</span>
+            </div>
+            <div className="text-[#525252] leading-snug break-words">{d.preview || JSON.stringify(d.toolArgs)}</div>
+            {failed && d.errorMsg && (
+              <div className="mt-1.5 text-[11.5px] text-red-700">Error: {d.errorMsg}</div>
+            )}
+            {pending && (
+              <div className="mt-2 flex items-center gap-2">
+                <button onClick={() => act(d.id, 'approve')} disabled={busy === d.id}
+                  className="flex-1 py-2 rounded-lg text-[12px] font-semibold bg-[#0a0a0a] text-white active:bg-[#262626] disabled:opacity-50">
+                  {busy === d.id ? 'Sending…' : 'Approve & Send'}
+                </button>
+                <button onClick={() => act(d.id, 'cancel')} disabled={busy === d.id}
+                  className="flex-1 py-2 rounded-lg text-[12px] font-medium border border-[#e3e0db] text-[#525252] active:bg-[#f3f1ec] disabled:opacity-50">
+                  Cancel
+                </button>
+              </div>
+            )}
+            {sent && <div className="mt-1 text-[11.5px] text-emerald-700">✓ Sent successfully.</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AiBubble({ msg, model }) {
   const [showSteps, setShowSteps] = useState(false);
   const [showSources, setShowSources] = useState(false);
@@ -297,6 +370,7 @@ function AiBubble({ msg, model }) {
         <div className="text-[15px] leading-relaxed text-[#0a0a0a] break-words space-y-0.5">
           {renderMarkdownMobile(msg.content)}
         </div>
+        <MobileDraftCards draftIds={msg.draft_ids} />
 
         {(hasSteps || hasSources || msg.usage) && (
           <>
@@ -489,6 +563,8 @@ export default function TalkToHiveMobile() {
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: data.usage || null,
         steps: Array.isArray(data.steps) ? data.steps : [],
+        draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
+        trace: data.trace || null,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
