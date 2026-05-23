@@ -884,7 +884,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               >
                 Disconnect
               </button>
-              {connector.oauthProvider && (
+              {(connector.oauthProvider || connector.nangoProvider) && (
                 <button
                   onClick={onResync}
                   title="Sync now"
@@ -893,7 +893,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                   <RefreshCw size={13} />
                 </button>
               )}
-              {connector.oauthProvider && (
+              {(connector.oauthProvider || connector.nangoProvider) && (
                 <button
                   onClick={() => { setPendingScope(targetScope); setPendingTeamId(selectedTeamId || null); setChangeScopeOpen(true); }}
                   title="Settings"
@@ -914,7 +914,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               )}
             </>
           )}
-          {isReauth && connector.oauthProvider && (
+          {isReauth && (connector.oauthProvider || connector.nangoProvider) && (
             <>
               <button
                 onClick={onConnect}
@@ -931,7 +931,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               </button>
             </>
           )}
-          {isError && connector.oauthProvider && (
+          {isError && (connector.oauthProvider || connector.nangoProvider) && (
             <>
               <button
                 onClick={isAuthErr ? onConnect : onResync}
@@ -3339,12 +3339,26 @@ export default function Connectors() {
       const live = oauthList.find(
         (o) => o.provider === c.id || o.provider === c.nangoProvider
       );
-      if (live && live.status === 'connected') {
+      if (live) {
+        const derivedStatus = live.status === 'connected'
+          ? 'connected'
+          : live.status === 'syncing'
+            ? 'syncing'
+            : live.status === 'error'
+              ? 'error'
+              : live.status === 'reauth_required'
+                ? 'needs_reauth'
+                : live.status === 'degraded'
+                  ? 'error'
+                  // disconnected / idle / unknown → fall back to catalog default
+                  // (status='available') so the Connect button stays clickable.
+                  : c.status;
         return {
           ...c,
-          status: 'connected',
+          status: derivedStatus,
           accountRef: live.account_ref || null,
           lastSyncAt: live.last_sync_at || null,
+          lastError: live.last_error || null,
         };
       }
       return c;
@@ -3518,9 +3532,13 @@ export default function Connectors() {
       onDisconnect={() => {
         if (connector.isQrSetup) {
           handleWhatsAppDisconnect();
-        } else if (connector.oauthProvider) {
-          handleDisconnect(connector.oauthProvider);
+          return;
         }
+        // Both legacy OAuth + Nango-bridged connectors hit the same control-
+        // plane endpoint /v1/connectors/:provider/disconnect. Provider key
+        // resolution: oauthProvider → nangoProvider → connector.id.
+        const provider = connector.oauthProvider || connector.nangoProvider || connector.id;
+        if (provider) handleDisconnect(provider);
       }}
       onResync={() => {
         const isGoogleSvc = connector.category === 'google_workspace'
@@ -3547,11 +3565,10 @@ export default function Connectors() {
           }
           return;
         }
-        if (connector.oauthProvider) {
-          handleResync(connector.oauthProvider);
-        }
+        const provider = connector.oauthProvider || connector.nangoProvider || connector.id;
+        if (provider) handleResync(provider);
       }}
-      connecting={connectingProvider === connector.oauthProvider || connectingProvider === connector.id}
+      connecting={connectingProvider === connector.oauthProvider || connectingProvider === connector.nangoProvider || connectingProvider === connector.id}
     />
   );
 
