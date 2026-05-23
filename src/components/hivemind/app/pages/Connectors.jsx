@@ -44,7 +44,6 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
 // eslint-disable-next-line no-unused-vars
-// eslint-disable-next-line no-unused-vars
 const CONNECTOR_CATEGORIES = [
   {
     key: 'google_workspace',
@@ -1075,7 +1074,6 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
 
 // ─── Stats Row ───────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line no-unused-vars
 // eslint-disable-next-line no-unused-vars
 function StatsRow({ connectors, endpoints }) {
   const connected = connectors.filter(c => c.status === 'connected').length;
@@ -3143,7 +3141,6 @@ export default function Connectors() {
   const { org, user } = useAuth();
   const { teams } = useTeamContext();
   // eslint-disable-next-line no-unused-vars
-  // eslint-disable-next-line no-unused-vars
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
@@ -3701,30 +3698,38 @@ export default function Connectors() {
       {/* Browser Intelligence — Chrome extension download */}
       <BrowserIntelligenceCard />
 
-      {/* ── Minimal connector stack ─────────────────────────────────────
-          Compact rows for the most-used connectors. Click "Connect" →
-          popup with platform-specific OAuth/MCP details + paste-ready
-          copy buttons. Replaces the legacy grid + stats + category tabs.
-      */}
-      <MinimalConnectorStack
-        baseUrl={process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050'}
-        mergedConnectors={mergedConnectors}
-        connectingProvider={connectingProvider}
-        onSlackConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'slack'))}
-        onNotionConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'notion'))}
-        onGithubConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'github'))}
-        onLinearConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'linear'))}
-        onAtlassianConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'atlassian-jira-confluence' || c.id === 'jira'))}
-        onWhatsAppConnect={() => setWhatsappQRConnector(true)}
-        onGoogleConnect={() => {
-          const master = mergedConnectors.find((c) => c.id === 'google-workspace');
-          if (master?.oauthProvider) handleOAuthConnect(master.oauthProvider, { services: 'all', isMaster: true });
-        }}
-      />
+      {/* Stats */}
+      <StatsRow connectors={mergedConnectors} endpoints={endpoints} />
 
-      {/* Legacy grid + stats + tabs kept disabled below — surfaces moved
-          into the minimal stack above. Re-enable by flipping the flag. */}
-      {false && (
+      {/* Category Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
+            !activeCategory
+              ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
+              : 'text-[#525252] hover:text-[#525252] border border-transparent'
+          }`}
+        >
+          All Connectors
+        </button>
+        {CONNECTOR_CATEGORIES.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => setActiveCategory(cat.key)}
+            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
+              activeCategory === cat.key
+                ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
+                : 'text-[#525252] hover:text-[#525252] border border-transparent'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Connector Grid — restored to legacy 2-col layout w/ themed brand
+          icons (ConnectorCard renders each connector's color + SVG logo). */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredConnectors.map((connector) => (
           <ConnectorCard
@@ -3817,10 +3822,8 @@ export default function Connectors() {
           />
         ))}
       </div>
-      )}
 
-      {/* MCP Endpoints — legacy block hidden below. */}
-      {false && (
+      {/* MCP Endpoints */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
@@ -3839,10 +3842,8 @@ export default function Connectors() {
         </div>
       </div>
 
-      )}
-
-      {/* Recent Jobs — legacy block hidden. */}
-      {false && jobList.length > 0 && (
+      {/* Recent Jobs */}
+      {jobList.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
