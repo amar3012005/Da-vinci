@@ -2851,6 +2851,286 @@ function ChatGPTConnectorCard() {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
+// ─── Minimal connector stack + popup ───────────────────────────────────────
+// Compact row-list of supported connectors. Click "Connect" → popup with
+// platform-specific setup details (OAuth URL, paste-ready instructions,
+// copy buttons). Replaces the legacy stats grid + category tabs + 2-col
+// card layout with a single clean stack.
+
+function ConnectorRow({ icon, name, tagline, status, onConnect }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-[#f3f1ec] last:border-b-0 hover:bg-[#faf9f4] transition-colors">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-7 h-7 rounded-md bg-[#faf9f4] border border-[#e3e0db] flex items-center justify-center text-[14px] flex-shrink-0">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate">{name}</div>
+          <div className="text-[10.5px] text-[#a3a3a3] truncate">{tagline}</div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {status === 'connected' && (
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#16a34a] bg-[#16a34a]/10 border border-[#16a34a]/25 rounded px-1.5 py-0.5">Connected</span>
+        )}
+        <button
+          onClick={onConnect}
+          className="px-2.5 py-1 rounded border border-[#e3e0db] bg-white text-[#117dff] text-[11px] font-semibold hover:bg-[#117dff]/[0.06] hover:border-[#117dff]/30"
+        >
+          {status === 'connected' ? 'Manage' : 'Connect'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ConnectorDetailsModal({ platform, onClose }) {
+  const [copied, setCopied] = useState(null);
+  const copy = (text, key) => {
+    try { navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(null), 1500); } catch {}
+  };
+  if (!platform) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl border border-[#e3e0db] shadow-2xl max-w-md w-full p-5 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center text-lg flex-shrink-0">
+            {platform.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">{platform.name}</h3>
+            <p className="text-[#525252] text-[12px] mt-0.5">{platform.tagline}</p>
+          </div>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Setup steps */}
+        {platform.steps && (
+          <div className="rounded-lg border border-[#e3e0db] bg-[#fafaf6] p-3 mb-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1.5">Setup</div>
+            <ol className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] list-decimal pl-4 space-y-1">
+              {platform.steps.map((s, i) => (
+                <li key={i} dangerouslySetInnerHTML={{ __html: s }} />
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* Copyable fields */}
+        {(platform.fields || []).map((f) => (
+          <div key={f.key} className="rounded-lg border border-[#e3e0db] bg-white px-3 py-2 mb-2 flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">{f.label}</div>
+              <code className="text-[11px] text-[#0a0a0a] break-all">{f.value}</code>
+            </div>
+            <button
+              onClick={() => copy(f.value, f.key)}
+              className="flex-shrink-0 px-2 py-1 rounded border border-[#e3e0db] text-[10px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
+            >
+              {copied === f.key ? '✓' : 'Copy'}
+            </button>
+          </div>
+        ))}
+
+        {/* Primary action */}
+        {platform.primaryAction && (
+          <button
+            onClick={() => { platform.primaryAction.onClick(); onClose(); }}
+            className="w-full mt-3 px-4 py-2.5 rounded-lg bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0]"
+          >
+            {platform.primaryAction.label}
+          </button>
+        )}
+        {platform.secondaryLink && (
+          <a
+            href={platform.secondaryLink.href}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="block w-full mt-2 text-center px-4 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#525252] text-[12px] font-semibold hover:bg-[#f3f1ec]"
+          >
+            {platform.secondaryLink.label} ↗
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MinimalConnectorStack({
+  baseUrl, mergedConnectors, connectingProvider,
+  onSlackConnect, onNotionConnect, onGithubConnect, onLinearConnect,
+  onAtlassianConnect, onWhatsAppConnect, onGoogleConnect,
+}) {
+  const [openPlatform, setOpenPlatform] = useState(null);
+
+  const isConnected = (id) => {
+    const c = mergedConnectors.find((m) => m.id === id);
+    return c?.status === 'connected' || c?.connected === true;
+  };
+
+  // PKCE OAuth URL builder for in-product re-auth on Claude / ChatGPT.
+  const buildOAuthUrl = async (redirectUri) => {
+    const verifier = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(48))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    const challenge = btoa(String.fromCharCode(...new Uint8Array(hashBuf)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const state = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: 'hmc_b8a3740e48be648d82633115',
+      redirect_uri: redirectUri,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      state,
+    });
+    return `${baseUrl}/authorize?${params.toString()}`;
+  };
+
+  const platforms = [
+    {
+      id: 'claude',
+      icon: '🧠',
+      name: 'Claude',
+      tagline: 'Custom MCP connector for claude.ai',
+      steps: [
+        'In <b>claude.ai → Settings → Connectors → Add custom connector</b>.',
+        'Paste the <b>MCP server URL</b> below as the connector URL.',
+        'Paste the <b>OAuth Client ID</b> (leave Client Secret blank — public PKCE flow).',
+        'Click <b>Connect</b> inside claude.ai and approve consent.',
+      ],
+      fields: [
+        { key: 'mcp', label: 'MCP server URL', value: 'https://hivemind.davinciai.eu/api/mcp' },
+        { key: 'cid', label: 'OAuth Client ID', value: 'hmc_b8a3740e48be648d82633115' },
+      ],
+      primaryAction: {
+        label: 'Re-authorize now',
+        onClick: async () => {
+          const url = await buildOAuthUrl('https://claude.ai/api/mcp/auth_callback');
+          window.open(url, '_blank', 'noreferrer');
+        },
+      },
+      secondaryLink: { label: 'Open claude.ai Connectors', href: 'https://claude.ai/settings/connectors' },
+    },
+    {
+      id: 'chatgpt',
+      icon: '🤖',
+      name: 'ChatGPT',
+      tagline: 'Custom GPT Action for chatgpt.com',
+      steps: [
+        'In <b>chatgpt.com → My GPTs → Edit → Configure → Actions → Create new action</b>.',
+        'Schema: <b>Import from URL</b> → paste the OpenAPI spec below.',
+        'Authentication: <b>OAuth</b> → paste Client ID, Authorization URL, Token URL, Scope.',
+        'Save action — OpenAI shows the real callback URL → tell HIVEMIND admin to register it.',
+      ],
+      fields: [
+        { key: 'spec', label: 'OpenAPI spec', value: `${baseUrl}/v1/chatgpt/openapi.yaml` },
+        { key: 'cid', label: 'OAuth Client ID', value: 'hmc_b8a3740e48be648d82633115' },
+        { key: 'auth', label: 'Authorization URL', value: `${baseUrl}/oauth/authorize` },
+        { key: 'tok', label: 'Token URL', value: `${baseUrl}/oauth/token` },
+        { key: 'scp', label: 'Scope', value: 'memory:read memory:write web:search' },
+      ],
+      primaryAction: {
+        label: 'Re-authorize now',
+        onClick: async () => {
+          const url = await buildOAuthUrl('https://chatgpt.com/aip/g-placeholder/oauth/callback');
+          window.open(url, '_blank', 'noreferrer');
+        },
+      },
+    },
+    {
+      id: 'google-workspace',
+      icon: 'G',
+      name: 'Google Workspace',
+      tagline: 'Gmail · Drive · Calendar · Docs',
+      steps: [
+        'One-click OAuth — grants HIVEMIND read access to the services you pick.',
+        'After consent, fine-tune which services sync from this page.',
+      ],
+      primaryAction: { label: 'Connect with Google', onClick: () => onGoogleConnect && onGoogleConnect() },
+    },
+    {
+      id: 'slack',
+      icon: '#',
+      name: 'Slack',
+      tagline: 'Channels · DMs · threads → memory',
+      steps: ['Sign in with your Slack workspace via OAuth.', 'Pick which channels to ingest.'],
+      primaryAction: { label: 'Connect Slack', onClick: () => onSlackConnect && onSlackConnect() },
+    },
+    {
+      id: 'notion',
+      icon: 'N',
+      name: 'Notion',
+      tagline: 'Pages · databases · workspace',
+      steps: ['OAuth into your Notion workspace.', 'Pick pages / databases to sync.'],
+      primaryAction: { label: 'Connect Notion', onClick: () => onNotionConnect && onNotionConnect() },
+    },
+    {
+      id: 'github',
+      icon: '⬢',
+      name: 'GitHub',
+      tagline: 'Repos · issues · PRs · discussions',
+      steps: ['OAuth into your GitHub account.', 'Pick repos to index.'],
+      primaryAction: { label: 'Connect GitHub', onClick: () => onGithubConnect && onGithubConnect() },
+    },
+    {
+      id: 'linear',
+      icon: 'L',
+      name: 'Linear',
+      tagline: 'Issues · projects · roadmaps',
+      steps: ['OAuth into your Linear workspace.'],
+      primaryAction: { label: 'Connect Linear', onClick: () => onLinearConnect && onLinearConnect() },
+    },
+    {
+      id: 'atlassian-jira-confluence',
+      icon: 'J',
+      name: 'Atlassian (Jira + Confluence)',
+      tagline: 'Jira issues + Confluence pages',
+      steps: ['OAuth into your Atlassian site.', 'Pick projects / spaces.'],
+      primaryAction: { label: 'Connect Atlassian', onClick: () => onAtlassianConnect && onAtlassianConnect() },
+    },
+    {
+      id: 'whatsapp',
+      icon: '💬',
+      name: 'WhatsApp',
+      tagline: 'Pair via QR code',
+      steps: ['Scan the QR code from your phone WhatsApp.', 'Messages stream into HIVEMIND in real time.'],
+      primaryAction: { label: 'Pair WhatsApp', onClick: () => onWhatsAppConnect && onWhatsAppConnect() },
+    },
+  ];
+
+  return (
+    <>
+      <div className="rounded-2xl border border-[#e3e0db] bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="px-3 py-2.5 border-b border-[#e3e0db] bg-[#fafaf6]">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#525252]">Connectors</div>
+          <div className="text-[10.5px] text-[#a3a3a3]">Click <b>Connect</b> on any row for setup details.</div>
+        </div>
+        {platforms.map((p) => (
+          <ConnectorRow
+            key={p.id}
+            icon={p.icon}
+            name={p.name}
+            tagline={p.tagline}
+            status={isConnected(p.id) ? 'connected' : 'available'}
+            onConnect={() => setOpenPlatform(p)}
+          />
+        ))}
+      </div>
+
+      {openPlatform && (
+        <ConnectorDetailsModal platform={openPlatform} onClose={() => setOpenPlatform(null)} />
+      )}
+    </>
+  );
+}
+
 export default function Connectors() {
   const { org, user } = useAuth();
   const { teams } = useTeamContext();
@@ -3403,70 +3683,36 @@ export default function Connectors() {
       {/* API Key prompt — shown only if user has no key yet */}
       <ApiKeyPrompt feature="connecting external clients" />
 
-      {/* Quick Install Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#117dff]/[0.06] to-transparent border border-[#117dff]/15 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-            <Terminal size={16} className="text-[#117dff]" />
-          </div>
-          <div>
-            <h2 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
-              Quick Install
-            </h2>
-            <p className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk']">
-              Add the direct HIVEMIND HTTP MCP server in one command
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <code className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg px-3.5 py-2 text-[12px] text-[#117dff] font-mono select-all">
-            {npxCommand}
-          </code>
-          <CopyButton text={npxCommand} label="Copy" />
-        </div>
-      </motion.div>
+      {/* Quick Install banner removed — replaced by per-connector popup
+          modal triggered from the connectors stack below. */}
 
       {/* Browser Intelligence — Chrome extension download */}
       <BrowserIntelligenceCard />
 
-      {/* ChatGPT One-Click Connector */}
-      <ChatGPTConnectorCard />
+      {/* ── Minimal connector stack ─────────────────────────────────────
+          Compact rows for the most-used connectors. Click "Connect" →
+          popup with platform-specific OAuth/MCP details + paste-ready
+          copy buttons. Replaces the legacy grid + stats + category tabs.
+      */}
+      <MinimalConnectorStack
+        baseUrl={process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050'}
+        mergedConnectors={mergedConnectors}
+        connectingProvider={connectingProvider}
+        onSlackConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'slack'))}
+        onNotionConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'notion'))}
+        onGithubConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'github'))}
+        onLinearConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'linear'))}
+        onAtlassianConnect={() => handleNangoConnect(mergedConnectors.find((c) => c.id === 'atlassian-jira-confluence' || c.id === 'jira'))}
+        onWhatsAppConnect={() => setWhatsappQRConnector(true)}
+        onGoogleConnect={() => {
+          const master = mergedConnectors.find((c) => c.id === 'google-workspace');
+          if (master?.oauthProvider) handleOAuthConnect(master.oauthProvider, { services: 'all', isMaster: true });
+        }}
+      />
 
-      {/* Stats */}
-      <StatsRow connectors={mergedConnectors} endpoints={endpoints} />
-
-      {/* Category Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        <button
-          onClick={() => setActiveCategory(null)}
-          className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
-            !activeCategory
-              ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
-              : 'text-[#525252] hover:text-[#525252] border border-transparent'
-          }`}
-        >
-          All Connectors
-        </button>
-        {CONNECTOR_CATEGORIES.map((cat) => (
-          <button
-            key={cat.key}
-            onClick={() => setActiveCategory(cat.key)}
-            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-medium font-['Space_Grotesk'] transition-all whitespace-nowrap ${
-              activeCategory === cat.key
-                ? 'bg-[#f3f1ec] text-[#0a0a0a] border border-[#d4d0ca]'
-                : 'text-[#525252] hover:text-[#525252] border border-transparent'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Connector Grid */}
+      {/* Legacy grid + stats + tabs kept disabled below — surfaces moved
+          into the minimal stack above. Re-enable by flipping the flag. */}
+      {false && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredConnectors.map((connector) => (
           <ConnectorCard
@@ -3559,8 +3805,10 @@ export default function Connectors() {
           />
         ))}
       </div>
+      )}
 
-      {/* MCP Endpoints */}
+      {/* MCP Endpoints — legacy block hidden below. */}
+      {false && (
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
@@ -3579,8 +3827,10 @@ export default function Connectors() {
         </div>
       </div>
 
-      {/* Recent Jobs */}
-      {jobList.length > 0 && (
+      )}
+
+      {/* Recent Jobs — legacy block hidden. */}
+      {false && jobList.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
