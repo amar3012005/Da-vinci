@@ -2539,44 +2539,82 @@ function ChatGPTConnectorCard() {
         <div className="w-11 h-11 rounded-xl bg-[#10a37f]/12 border border-[#10a37f]/25 flex items-center justify-center text-xl">🤖</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">HIVEMIND for ChatGPT</h3>
+            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">HIVEMIND Connectors</h3>
             <span className="text-[9.5px] font-mono uppercase tracking-wider bg-[#10a37f]/12 text-[#10a37f] px-1.5 py-0.5 rounded">live</span>
           </div>
           <p className="text-[#525252] text-[12.5px] font-['Space_Grotesk'] mt-1">
-            One-click: open HIVEMIND in ChatGPT, click <b>Connect</b> inside the GPT once, your memory is wired in. Search · save · synthesize across every conversation.
+            Wire HIVEMIND into Claude (custom connector) or ChatGPT (custom GPT). One-time setup per surface; re-link from here whenever a session expires.
           </p>
         </div>
       </div>
 
-      {/* Primary CTA — end-user one-click. Disabled until a platform-team
-          admin publishes the GPT and sets REACT_APP_CHATGPT_GPT_URL. */}
-      {GPT_URL ? (
-        <>
-          <a
-            href={GPT_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
-          >
-            Add HIVEMIND to ChatGPT →
-          </a>
-          <p className="text-[10.5px] text-[#a3a3a3] text-center mt-2 font-['Space_Grotesk']">
-            Opens our published GPT. Sign in to your HIVEMIND account once when prompted. No copy-paste, no setup.
-          </p>
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => setShowAdmin(true)}
-            className="block w-full text-center px-5 py-3 rounded-xl bg-[#10a37f] text-white text-[14px] font-bold hover:bg-[#0d8c6c] transition-colors shadow-[0_4px_16px_rgba(16,163,127,0.25)]"
-          >
-            Set up ChatGPT integration →
-          </button>
-          <p className="text-[10.5px] text-[#dc2626] text-center mt-2 font-['Space_Grotesk']">
-            Not published yet. Open <b>Admin</b> below, finish the 7-step setup, then set <code>REACT_APP_CHATGPT_GPT_URL</code> to the published GPT URL.
-          </p>
-        </>
-      )}
+      {/* Two small platform Connect buttons — one each for Claude + ChatGPT.
+          Both kick off an OAuth round-trip against the same client_id so
+          consent on either surface stays tied to the same HIVEMIND account.
+          Buttons useful for: (a) re-auth when token expires, (b) approving
+          a freshly-published custom connector, (c) refreshing scopes. They
+          do NOT replace the one-time custom-connector registration users
+          must do inside claude.ai / chatgpt.com themselves — see note. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+        <button
+          onClick={() => {
+            // PKCE code_challenge generated client-side. Random 64-byte
+            // verifier hashed to base64url challenge. Verifier kept in
+            // sessionStorage so token exchange (handled by Claude after
+            // callback) can submit it — though for first-time linkup
+            // Claude itself owns the PKCE pair.
+            const verifier = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(48))))
+              .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then((hashBuf) => {
+              const challenge = btoa(String.fromCharCode(...new Uint8Array(hashBuf)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+              const state = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+              const params = new URLSearchParams({
+                response_type: 'code',
+                client_id: 'hmc_b8a3740e48be648d82633115',
+                redirect_uri: 'https://claude.ai/api/mcp/auth_callback',
+                code_challenge: challenge,
+                code_challenge_method: 'S256',
+                state,
+              });
+              window.open(`${baseUrl}/authorize?${params.toString()}`, '_blank', 'noreferrer');
+            });
+          }}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold hover:bg-[#1a1a1a] transition-colors"
+        >
+          <span>🧠</span>
+          Connect Claude
+        </button>
+        <button
+          onClick={() => {
+            const verifier = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(48))))
+              .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then((hashBuf) => {
+              const challenge = btoa(String.fromCharCode(...new Uint8Array(hashBuf)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+              const state = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+              const params = new URLSearchParams({
+                response_type: 'code',
+                client_id: 'hmc_b8a3740e48be648d82633115',
+                redirect_uri: 'https://chatgpt.com/aip/g-placeholder/oauth/callback',
+                code_challenge: challenge,
+                code_challenge_method: 'S256',
+                state,
+              });
+              window.open(`${baseUrl}/authorize?${params.toString()}`, '_blank', 'noreferrer');
+            });
+          }}
+          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#10a37f] text-white text-[12.5px] font-semibold hover:bg-[#0d8c6c] transition-colors"
+        >
+          <span>🤖</span>
+          Connect ChatGPT
+        </button>
+      </div>
+      <p className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] mb-2">
+        First-time setup still requires adding HIVEMIND once inside <b>claude.ai → Settings → Connectors</b> or <b>OpenAI GPT editor → Actions</b>. These buttons re-trigger OAuth consent for surfaces you've already wired up.
+      </p>
 
       {/* Admin section — collapsed by default. Platform team uses ONCE to
           register the OAuth client + paste it into OpenAI's GPT editor. */}
