@@ -393,6 +393,7 @@ function MessageBubble({ msg }) {
               Slack action pending · reply confirm
             </div>
           )}
+          <DraftCards draftIds={msg.draft_ids} />
           <Sources sources={msg.sources} />
           <TokenUsage usage={msg.usage} />
         </div>
@@ -406,6 +407,106 @@ function MessageBubble({ msg }) {
 // response. Render as a compact "Used N tools" pill that expands to show
 // the per-step tool name + args summary + result. Mirrors the side-panel
 // chrome extension treatment.
+// ─── DraftCards ──────────────────────────────────────────────────────────────
+// Renders pending_writes drafts created by the agent's write-intent branch.
+// Polls /api/pending-writes once on mount to get current state, surfaces
+// Approve / Cancel buttons. On approve → POST /:id/approve → MCP tool fires.
+
+function DraftCards({ draftIds }) {
+  const [drafts, setDrafts] = useState([]);
+  const [busy, setBusy] = useState(null); // draft_id while approving/cancelling
+
+  useEffect(() => {
+    if (!Array.isArray(draftIds) || draftIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = [];
+        for (const id of draftIds) {
+          const { data } = await apiClient.controlPlane.get('/v1/proxy/pending-writes?limit=10').catch(() => ({ data: null }));
+          const row = (data?.drafts || []).find(d => d.id === id);
+          if (row) all.push(row);
+        }
+        if (!cancelled) setDrafts(all);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [draftIds]);
+
+  const act = async (id, action) => {
+    setBusy(id);
+    try {
+      const { data } = await apiClient.controlPlane.post(`/v1/proxy/pending-writes/${id}/${action}`, {});
+      setDrafts(prev => prev.map(d => d.id === id ? (data?.draft || { ...d, status: data?.status || d.status }) : d));
+    } catch (err) {
+      setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', errorMsg: err?.response?.data?.error || err?.message } : d));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (drafts.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      {drafts.map(d => {
+        const sent = d.status === 'sent';
+        const cancelled = d.status === 'cancelled';
+        const failed = d.status === 'failed';
+        const pending = d.status === 'draft' || d.status === 'approved';
+        const tone = sent
+          ? 'border-emerald-200 bg-emerald-50'
+          : cancelled
+            ? 'border-[#e3e0db] bg-[#fafaf6] opacity-70'
+            : failed
+              ? 'border-red-200 bg-red-50'
+              : 'border-amber-200 bg-amber-50';
+        return (
+          <div key={d.id} className={`rounded-lg border ${tone} px-3 py-2 text-[12px]`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#525252]">
+                {d.provider}/{d.toolName}
+              </span>
+              <span className={`text-[9.5px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                sent ? 'bg-emerald-500/15 text-emerald-700' :
+                cancelled ? 'bg-[#a3a3a3]/15 text-[#525252]' :
+                failed ? 'bg-red-500/15 text-red-700' :
+                'bg-amber-500/15 text-amber-700'
+              }`}>
+                {d.status}
+              </span>
+            </div>
+            <div className="text-[#525252] leading-snug break-words">{d.preview || JSON.stringify(d.toolArgs)}</div>
+            {failed && d.errorMsg && (
+              <div className="mt-1.5 text-[11px] text-red-700">Error: {d.errorMsg}</div>
+            )}
+            {pending && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <button
+                  onClick={() => act(d.id, 'approve')}
+                  disabled={busy === d.id}
+                  className="px-3 py-1 rounded-md text-[11px] font-semibold bg-[#0a0a0a] text-white hover:bg-[#262626] disabled:opacity-50"
+                >
+                  {busy === d.id ? 'Sending…' : 'Approve & Send'}
+                </button>
+                <button
+                  onClick={() => act(d.id, 'cancel')}
+                  disabled={busy === d.id}
+                  className="px-3 py-1 rounded-md text-[11px] font-medium border border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {sent && (
+              <div className="mt-1 text-[11px] text-emerald-700">✓ Sent successfully.</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AgentSteps({ steps }) {
   if (!Array.isArray(steps) || steps.length === 0) return null;
   const primaryArg = (args) => {
@@ -665,6 +766,7 @@ export function ChatPanel({ isOpen, onClose }) {
       let responseContent = '';
       let usage = null;
       let steps = [];
+      let draftIds = [];
 
       // Belt-and-braces language enforcement: when UI language is anything
       // other than English, prepend a strict directive to the outgoing
@@ -704,6 +806,7 @@ export function ChatPanel({ isOpen, onClose }) {
         //   { tool: 'hivemind_recall', args: {...}, result_summary: '9 memories' }
         // Render below the response as a collapsible "Used N tools" strip.
         steps = Array.isArray(chatData.steps) ? chatData.steps : [];
+        draftIds = Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [];
       } catch (chatErr) {
         console.warn('[Chat] chat failed:', chatErr?.message);
         responseContent = "I couldn't process your request right now. Please try again.";
@@ -717,6 +820,7 @@ export function ChatPanel({ isOpen, onClose }) {
         model: MODELS.find((m) => m.id === selectedModel)?.label || selectedModel,
         usage: usage,
         steps,
+        draft_ids: draftIds,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
