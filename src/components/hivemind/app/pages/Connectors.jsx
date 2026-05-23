@@ -44,6 +44,7 @@ import WhatsAppQRModal from './WhatsAppQRModal';
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
 // eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line no-unused-vars
 const CONNECTOR_CATEGORIES = [
   {
     key: 'google_workspace',
@@ -1074,6 +1075,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
 
 // ─── Stats Row ───────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars
 // eslint-disable-next-line no-unused-vars
 function StatsRow({ connectors, endpoints }) {
   const connected = connectors.filter(c => c.status === 'connected').length;
@@ -2439,6 +2441,7 @@ function BrowserIntelligenceCard() {
 // ─── ChatGPT One-Click Connector card ────────────────────────────────────────
 
 // eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line no-unused-vars
 function ChatGPTConnectorCard() {
   // Port-less origin so OpenAI GPT Actions validator accepts the server
   // URL. Vercel rewrites /v1/chatgpt/*, /oauth/*, /.well-known/oauth-*
@@ -2451,6 +2454,7 @@ function ChatGPTConnectorCard() {
   // to "Set up ChatGPT" and opens the admin expander.
   const GPT_URL_ENV = (typeof process !== 'undefined' && process.env?.REACT_APP_CHATGPT_GPT_URL) || '';
   const GPT_URL_CONFIGURED = /^https:\/\/(chatgpt|chat\.openai)\.com\/g\//.test(GPT_URL_ENV);
+  // eslint-disable-next-line no-unused-vars
   // eslint-disable-next-line no-unused-vars
   const GPT_URL = GPT_URL_CONFIGURED ? GPT_URL_ENV : null;
   const [copied, setCopied] = useState(null);
@@ -3139,6 +3143,7 @@ export default function Connectors() {
   const { org, user } = useAuth();
   const { teams } = useTeamContext();
   // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const [activeCategory, setActiveCategory] = useState(null);
   const [connectingProvider, setConnectingProvider] = useState(null);
   const [gmailSettingsOpen, setGmailSettingsOpen] = useState(false);
@@ -3520,6 +3525,7 @@ export default function Connectors() {
     }
   }, [refetchOAuth]);
 
+  // eslint-disable-next-line no-unused-vars
   // eslint-disable-next-line no-unused-vars
   const npxCommand = 'claude mcp add --transport http --scope user hivemind "https://core.hivemind.davinciai.eu:8050/api/mcp" --header "Authorization: Bearer YOUR_API_KEY"';
 
