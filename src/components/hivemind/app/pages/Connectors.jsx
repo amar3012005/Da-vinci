@@ -2777,6 +2777,152 @@ function ChatGPTConnectorCard() {
   );
 }
 
+// ─── Themed ChatGPT setup modal (Step1 / Step2 / Step3) ──────────────────────
+// Slim, theme-matched modal replacing the legacy ChatGPTConnectorCard for the
+// connectors page. Shows: (1) endpoint URLs + client_id + scopes, (2) paste
+// fields inside ChatGPT GPT Builder Auth, (3) save + verify. Same visual
+// language as McpSetupModal (Step pill, two-column body, footer button).
+
+function ChatGptSetupModal({ onClose }) {
+  const PUBLIC_ORIGIN = 'https://hivemind.davinciai.eu';
+  const SPEC_URL = PUBLIC_ORIGIN + '/v1/chatgpt/openapi.yaml';
+  const CLIENT_ID = 'hmc_b8a3740e48be648d82633115';
+  const AUTH_URL = `${PUBLIC_ORIGIN}/oauth/authorize`;
+  const TOKEN_URL = `${PUBLIC_ORIGIN}/oauth/token`;
+  const SCOPES = 'memory:read memory:write web:search';
+  const [copied, setCopied] = useState(null);
+  const copy = (text, key) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {}
+  };
+
+  const fields = [
+    { key: 'spec',   label: 'OpenAPI spec URL',  value: SPEC_URL },
+    { key: 'auth',   label: 'Authorization URL', value: AUTH_URL },
+    { key: 'token',  label: 'Token URL',         value: TOKEN_URL },
+    { key: 'client', label: 'Client ID',         value: CLIENT_ID },
+    { key: 'scopes', label: 'Scopes',            value: SCOPES },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        onClick={e => e.stopPropagation()}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-[#f3f1ec] shrink-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0" style={{ backgroundColor: '#10a37f10', borderColor: '#10a37f25' }}>
+            <MessageSquare size={18} style={{ color: '#10a37f' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight truncate">
+              Connect ChatGPT
+            </h2>
+            <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug truncate">
+              Copy endpoints · paste into GPT Builder · save action
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-1 w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
+            aria-label="Close"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Body — two columns */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.95fr)] overflow-y-auto">
+          {/* LEFT — Step 1: endpoints + client id */}
+          <div className="p-5 flex flex-col gap-3 min-h-0 border-r border-[#f3f1ec]">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#0a0a0a] text-white text-[10px] font-bold flex items-center justify-center">1</span>
+              <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+                Copy these values
+              </p>
+            </div>
+            <div className="space-y-2">
+              {fields.map(row => (
+                <div key={row.key} className="rounded-lg border border-[#e3e0db] bg-white px-2.5 py-2 flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">{row.label}</div>
+                    <code className="text-[10.5px] text-[#0a0a0a] break-all">{row.value}</code>
+                  </div>
+                  <button
+                    onClick={() => copy(row.value, row.key)}
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded border border-[#e3e0db] text-[10px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
+                  >
+                    {copied === row.key ? <Check size={10} /> : <Copy size={10} />}
+                    {copied === row.key ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-start gap-2 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-200">
+              <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-700 font-['Space_Grotesk'] leading-snug">
+                Client Secret is shown once at registration. Ask platform admin if you don't have it cached.
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT — Step 2 + Step 3 */}
+          <div className="p-5 flex flex-col gap-3 bg-[#fafaf7] min-h-0">
+            <div className="rounded-lg border border-[#10a37f]/25 bg-[#10a37f]/[0.04] p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-[#10a37f] text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">In GPT Builder</p>
+              </div>
+              <ol className="text-[11px] text-[#525252] font-['Space_Grotesk'] list-decimal pl-4 space-y-0.5">
+                <li>Open <b>My GPTs → Edit → Configure → Actions → Create new action</b>.</li>
+                <li>Schema → <b>Import from URL</b> → paste the OpenAPI URL.</li>
+                <li>Authentication → <b>OAuth</b> → paste Client ID + Secret + URLs + Scopes.</li>
+                <li>Token Exchange Method: <b>Default (POST)</b>.</li>
+              </ol>
+            </div>
+            <div className="rounded-lg border border-[#e3e0db] bg-white p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-[#117dff] text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Save + register callback</p>
+              </div>
+              <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-snug">
+                After saving, ChatGPT shows the real callback URL. Send it to platform admin to add to the OAuth client (or use the registry UI).
+              </p>
+            </div>
+            <a
+              href={SPEC_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#10a37f] text-white text-[12px] font-semibold hover:bg-[#0d8c6c] transition-colors"
+            >
+              <ExternalLink size={12} />
+              View OpenAPI spec
+            </a>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#f3f1ec] flex items-center justify-end shrink-0 bg-white">
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg text-[12px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 // ─── Minimal connector stack + popup ───────────────────────────────────────
@@ -3311,10 +3457,102 @@ export default function Connectors() {
     return (a.name || '').localeCompare(b.name || '');
   });
 
+  // Claude Code + ChatGPT are pinned to a featured row at the top of the
+  // page. Strip them from the main grid so they don't show twice.
+  const FEATURED_IDS = new Set(['claude-code', 'chatgpt']);
+  const featuredConnectors = sortConnectors(
+    mergedConnectors.filter(c => FEATURED_IDS.has(c.id))
+  );
   const filteredConnectors = sortConnectors(
-    activeCategory
+    (activeCategory
       ? mergedConnectors.filter((c) => c.category === activeCategory)
       : mergedConnectors
+    ).filter(c => !FEATURED_IDS.has(c.id))
+  );
+
+  const renderConnectorCard = (connector) => (
+    <ConnectorCard
+      key={connector.id}
+      connector={connector}
+      config={descriptors?.[connector.configKey]}
+      targetScope={targetScopes[connector.oauthProvider] || connector.target_scope || 'personal'}
+      selectedTeamId={selectedTeamIds[connector.oauthProvider] || null}
+      onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
+      onTeamChange={(teamId) => connector.oauthProvider && setSelectedTeamIds((prev) => ({ ...prev, [connector.oauthProvider]: teamId }))}
+      onChangeScope={(newScope, teamId) => connector.oauthProvider && handleChangeScope(connector.oauthProvider, newScope, teamId)}
+      allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
+      teams={teams}
+      onConnect={() => {
+        if (connector.isChatGptSetup) {
+          setChatgptSetupOpen(true);
+          return;
+        }
+        if (connector.isMcpClient) {
+          setMcpSetupConnector(connector);
+          return;
+        }
+        if (connector.isQrSetup) {
+          setWhatsappQRConnector(true);
+          return;
+        }
+        const controlPlane =
+          process.env.REACT_APP_CONTROL_PLANE_URL ||
+          'https://api.hivemind.davinciai.eu:8040';
+        if (connector.isOauthConnect) {
+          const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
+          const clientId = connector.oauthClientId || connector.id;
+          window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
+          return;
+        }
+        if (connector.nangoProvider) {
+          handleNangoConnect(connector);
+          return;
+        }
+        if (connector.oauthProvider) {
+          handleOAuthConnect(connector.oauthProvider, {
+            services: connector.googleService,
+            isMaster: connector.isMaster,
+          });
+        }
+      }}
+      onDisconnect={() => {
+        if (connector.isQrSetup) {
+          handleWhatsAppDisconnect();
+        } else if (connector.oauthProvider) {
+          handleDisconnect(connector.oauthProvider);
+        }
+      }}
+      onResync={() => {
+        const isGoogleSvc = connector.category === 'google_workspace'
+          && connector.id !== 'google-workspace';
+        if (isGoogleSvc) {
+          const providerMap = {
+            'gmail':            'gmail',
+            'google-drive':     'google_drive',
+            'google-calendar':  'google_calendar',
+            'google-docs':      'google_docs',
+            'google-sheets':    'google_sheets',
+            'google-slides':    'google_slides',
+            'google-contacts':  'google_contacts',
+            'google-chat':      'google_chat',
+            'google-tasks':     'google_tasks',
+            'google-forms':     'google_forms',
+          };
+          const backendProvider = providerMap[connector.id];
+          if (backendProvider === 'gmail') {
+            setGmailEmail(connector.accountRef || null);
+            setGmailSettingsOpen(true);
+          } else if (backendProvider) {
+            setStandaloneConfigProvider(backendProvider);
+          }
+          return;
+        }
+        if (connector.oauthProvider) {
+          handleResync(connector.oauthProvider);
+        }
+      }}
+      connecting={connectingProvider === connector.oauthProvider || connectingProvider === connector.id}
+    />
   );
 
   return (
@@ -3349,6 +3587,18 @@ export default function Connectors() {
       {/* Browser Intelligence — Chrome extension download */}
       <BrowserIntelligenceCard />
 
+      {/* Featured AI assistants — pinned at top, always visible */}
+      {featuredConnectors.length > 0 && (
+        <div>
+          <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-3">
+            AI Assistants
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {featuredConnectors.map(renderConnectorCard)}
+          </div>
+        </div>
+      )}
+
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         <button
@@ -3376,103 +3626,10 @@ export default function Connectors() {
         ))}
       </div>
 
-      {/* Connector Grid — restored to legacy 2-col layout w/ themed brand
-          icons (ConnectorCard renders each connector's color + SVG logo). */}
+      {/* Connector Grid — 2-col layout w/ themed brand icons. Featured
+          AI assistants render above; this grid is everything else. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {filteredConnectors.map((connector) => (
-          <ConnectorCard
-            key={connector.id}
-            connector={connector}
-            config={descriptors?.[connector.configKey]}
-            targetScope={targetScopes[connector.oauthProvider] || connector.target_scope || 'personal'}
-            selectedTeamId={selectedTeamIds[connector.oauthProvider] || null}
-            onTargetScopeChange={(scope) => connector.oauthProvider && setTargetScopes((prev) => ({ ...prev, [connector.oauthProvider]: scope }))}
-            onTeamChange={(teamId) => connector.oauthProvider && setSelectedTeamIds((prev) => ({ ...prev, [connector.oauthProvider]: teamId }))}
-            onChangeScope={(newScope, teamId) => connector.oauthProvider && handleChangeScope(connector.oauthProvider, newScope, teamId)}
-            allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
-            teams={teams}
-            onConnect={() => {
-              if (connector.isChatGptSetup) {
-                setChatgptSetupOpen(true);
-                return;
-              }
-              if (connector.isMcpClient) {
-                setMcpSetupConnector(connector);
-                return;
-              }
-              if (connector.isQrSetup) {
-                setWhatsappQRConnector(true);
-                return;
-              }
-              const controlPlane =
-                process.env.REACT_APP_CONTROL_PLANE_URL ||
-                'https://api.hivemind.davinciai.eu:8040';
-              if (connector.isOauthConnect) {
-                const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
-                const clientId = connector.oauthClientId || connector.id;
-                window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
-                return;
-              }
-              // Nango-bridged connectors (slack, notion, github, linear, jira,
-              // confluence, etc.) — opens Nango popup instead of legacy OAuth.
-              if (connector.nangoProvider) {
-                handleNangoConnect(connector);
-                return;
-              }
-              if (connector.oauthProvider) {
-                // Google service tiles pass their `googleService` to scope OAuth
-                // to only the selected services. master "Google Workspace" tile
-                // passes 'all' which means default = every available service.
-                handleOAuthConnect(connector.oauthProvider, {
-                  services: connector.googleService,
-                  isMaster: connector.isMaster,
-                });
-              }
-            }}
-            onDisconnect={() => {
-              if (connector.isQrSetup) {
-                handleWhatsAppDisconnect();
-              } else if (connector.oauthProvider) {
-                handleDisconnect(connector.oauthProvider);
-              }
-            }}
-            onResync={() => {
-              // Google service tile → open per-service config modal with
-              // the right schema (Drive shows Drive options, Calendar shows
-              // Calendar options, etc.) — NOT the generic Gmail one.
-              const isGoogleSvc = connector.category === 'google_workspace'
-                && connector.id !== 'google-workspace';
-              if (isGoogleSvc) {
-                // Map FE service id → backend platformType
-                const providerMap = {
-                  'gmail':            'gmail',
-                  'google-drive':     'google_drive',
-                  'google-calendar':  'google_calendar',
-                  'google-docs':      'google_docs',
-                  'google-sheets':    'google_sheets',
-                  'google-slides':    'google_slides',
-                  'google-contacts':  'google_contacts',
-                  'google-chat':      'google_chat',
-                  'google-tasks':     'google_tasks',
-                  'google-forms':     'google_forms',
-                };
-                const backendProvider = providerMap[connector.id];
-                if (backendProvider === 'gmail') {
-                  // Gmail has its own dedicated modal w/ exclude_categories etc.
-                  setGmailEmail(connector.accountRef || null);
-                  setGmailSettingsOpen(true);
-                } else if (backendProvider) {
-                  setStandaloneConfigProvider(backendProvider);
-                }
-                return;
-              }
-              if (connector.oauthProvider) {
-                handleResync(connector.oauthProvider);
-              }
-            }}
-            connecting={connectingProvider === connector.oauthProvider || connectingProvider === connector.id}
-          />
-        ))}
+        {filteredConnectors.map(renderConnectorCard)}
       </div>
 
       {/* MCP Endpoints */}
@@ -3620,38 +3777,10 @@ export default function Connectors() {
         )}
       </AnimatePresence>
 
-      {/* ChatGPT GPT Actions setup — mounts the full setup card inside a
-          modal overlay so the connectors grid stays slim. */}
+      {/* ChatGPT GPT Actions setup — themed Step1/Step2/Step3 modal. */}
       <AnimatePresence>
         {chatgptSetupOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto"
-            onClick={() => setChatgptSetupOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-12"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#eae7e1]">
-                <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Set up ChatGPT</h3>
-                <button
-                  onClick={() => setChatgptSetupOpen(false)}
-                  className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="p-5">
-                <ChatGPTConnectorCard />
-              </div>
-            </motion.div>
-          </motion.div>
+          <ChatGptSetupModal onClose={() => setChatgptSetupOpen(false)} />
         )}
       </AnimatePresence>
     </div>
