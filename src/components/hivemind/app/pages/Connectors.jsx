@@ -636,6 +636,7 @@ function colorize(line) {
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars
 function CopyButton({ text, label = 'Copy' }) {
   const { copied, copy } = useCopyToClipboard();
 
@@ -669,7 +670,6 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
   const hasConfig = config && connector.configKey;
   const isSetupOnly = connector.setupOnly === true;
   const canShowConfig = hasConfig && (isActive || isSetupOnly);
-  const configStr = hasConfig ? JSON.stringify(config, null, 2) : null;
   const isError = connector.status === 'error';
   const isReauth = connector.status === 'needs_reauth';
   const isAuthErr = isError && (() => {
