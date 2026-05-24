@@ -106,6 +106,17 @@ const CONNECTORS = [
     isChatGptSetup: true,
   },
   {
+    id: 'gemini-paste',
+    name: 'Gemini',
+    description: 'Paste a Google Gemini chat to ingest it as a structured memory tree (session + turns) with operator graph',
+    icon: MessageSquare,
+    category: 'mcp_clients',
+    status: 'available',
+    color: '#4285f4',
+    configKey: 'gemini-paste',
+    isGeminiPaste: true,
+  },
+  {
     id: 'claude',
     name: 'Claude Desktop',
     description: 'Run one terminal setup command, restart Claude Desktop, then paste the HIVEMIND AI prompt',
@@ -2777,6 +2788,120 @@ function ChatGPTConnectorCard() {
   );
 }
 
+// ─── Gemini bulk-paste modal ─────────────────────────────────────────────────
+//
+// Paste a Gemini transcript (or paste structured JSON) → POST to
+// /v1/proxy/connectors/gemini/ingest-paste → server normalizes via
+// GeminiAdapter → tree → engine.ingestMemoryTree. Returns turn_count.
+
+function GeminiPasteModal({ onClose, onSuccess }) {
+  const [transcript, setTranscript] = useState('');
+  const [title, setTitle] = useState('');
+  const [model, setModel] = useState('gemini-2.0-pro');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const submit = async () => {
+    const trimmed = transcript.trim();
+    if (!trimmed) { setError('Paste a transcript first'); return; }
+    setError(null);
+    setSubmitting(true);
+    try {
+      const { data } = await apiClient.controlPlane.post('/v1/proxy/connectors/gemini/ingest-paste', {
+        title: title || undefined,
+        model,
+        transcript: trimmed,
+      });
+      if (data?.success) {
+        onSuccess?.(data);
+      } else {
+        setError(data?.error || 'Import failed');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message || 'Import failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-[#e3e0db] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-[#ece9e2] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#4285f4' }}>
+              <MessageSquare size={18} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Paste a Gemini chat</div>
+              <div className="text-[12px] text-[#737373]">Session + turns → operator graph</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] p-1.5">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4285f4]/30"
+            />
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="Model (gemini-2.0-pro)"
+              className="px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-[#4285f4]/30"
+            />
+          </div>
+          <textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder={`Paste the conversation. Each turn on its own line:\n\nUser: …\nAssistant: …\nUser: …\nAssistant: …`}
+            rows={14}
+            className="w-full px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[13px] leading-relaxed font-mono focus:outline-none focus:ring-2 focus:ring-[#4285f4]/30 resize-none"
+          />
+          {error && (
+            <div className="px-3 py-2 rounded-lg bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c] text-[12px]">
+              {error}
+            </div>
+          )}
+          <div className="text-[11px] text-[#737373] leading-relaxed">
+            <strong>Tip:</strong> Prefix each line with <code className="bg-[#fafaf6] px-1 rounded">User:</code> or <code className="bg-[#fafaf6] px-1 rounded">Assistant:</code>.
+            HIVEMIND emits one parent (Session) + one child per turn, runs entity + temporal + operator LLM, and links cross-session memories automatically.
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t border-[#ece9e2] flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#525252] hover:bg-[#fafaf6]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting || !transcript.trim()}
+            className="px-4 py-2 rounded-lg text-[13px] font-medium text-white bg-[#4285f4] hover:bg-[#3b78dc] disabled:opacity-50"
+          >
+            {submitting ? 'Importing…' : 'Import to HIVEMIND'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Themed ChatGPT setup modal (Step1 / Step2 / Step3) ──────────────────────
 // Slim, theme-matched modal replacing the legacy ChatGPTConnectorCard for the
 // connectors page. Shows: (1) endpoint URLs + client_id + scopes, (2) paste
@@ -2956,6 +3081,7 @@ export default function Connectors() {
   const [mcpSetupConnector, setMcpSetupConnector] = useState(null);
   const [whatsappQRConnector, setWhatsappQRConnector] = useState(false);
   const [chatgptSetupOpen, setChatgptSetupOpen] = useState(false);
+  const [geminiPasteOpen, setGeminiPasteOpen] = useState(false);
   const [verifiedMcpEndpoints, setVerifiedMcpEndpoints] = useState({});
 
   // Detect org admin: user is org admin if their role is 'owner' or 'admin'
@@ -3497,6 +3623,10 @@ export default function Connectors() {
       allowTeamScope={allowTeamScope && (isOrgAdmin || targetScopes[connector.oauthProvider] !== 'organization')}
       teams={teams}
       onConnect={() => {
+        if (connector.isGeminiPaste) {
+          setGeminiPasteOpen(true);
+          return;
+        }
         if (connector.isChatGptSetup) {
           setChatgptSetupOpen(true);
           return;
@@ -3798,6 +3928,19 @@ export default function Connectors() {
       <AnimatePresence>
         {chatgptSetupOpen && (
           <ChatGptSetupModal onClose={() => setChatgptSetupOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Gemini bulk-paste — paste a chat transcript, ingest as tree. */}
+      <AnimatePresence>
+        {geminiPasteOpen && (
+          <GeminiPasteModal
+            onClose={() => setGeminiPasteOpen(false)}
+            onSuccess={(info) => {
+              setGeminiPasteOpen(false);
+              setToastMessage({ type: 'success', text: `Imported ${info.turn_count} Gemini turns` });
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
