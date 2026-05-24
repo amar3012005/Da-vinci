@@ -237,11 +237,11 @@ const CONNECTORS = [
     setupHint: 'Set SALESFORCE_CLIENT_ID + SALESFORCE_CLIENT_SECRET on the control plane',
   },
   // ── Google services via Nango ──
-  // Legacy workspace-mcp tiles (gmail / drive / calendar / docs / sheets /
-  // slides / contacts / tasks / chat / forms / master master tile) were
-  // removed 2026-05-24. All Google connectors now flow through Nango.
-  // The Nango-routed entries live below in the // Code section so they
-  // sit next to the other Nango-routed cards (slack/notion/github/linear).
+  // Legacy workspace-mcp tiles removed 2026-05-24. nangoProvider values
+  // MUST match the unique_key in Nango's _nango_configs table — those
+  // are the integrations the user has registered in Nango dashboard.
+  // Currently registered: gmail, google-docs, google-gemini. Add more
+  // tiles only after the matching integration exists in Nango.
   {
     id: 'gmail',
     name: 'Gmail',
@@ -252,7 +252,7 @@ const CONNECTORS = [
     color: '#ea4335',
     priority: 1,
     oauthProvider: 'gmail',
-    nangoProvider: 'google-mail',
+    nangoProvider: 'gmail',
   },
   {
     id: 'google-docs',
@@ -265,54 +265,6 @@ const CONNECTORS = [
     priority: 2,
     oauthProvider: 'google-docs',
     nangoProvider: 'google-docs',
-  },
-  {
-    id: 'google-drive',
-    name: 'Google Drive',
-    description: 'File index + on-demand search via Nango.',
-    icon: HardDrive,
-    category: 'google_workspace',
-    status: 'available',
-    color: '#f59e0b',
-    priority: 2,
-    oauthProvider: 'google-drive',
-    nangoProvider: 'google-drive',
-  },
-  {
-    id: 'google-calendar',
-    name: 'Google Calendar',
-    description: 'Events as memory. Live-query future events via Nango.',
-    icon: Calendar,
-    category: 'google_workspace',
-    status: 'available',
-    color: '#3b82f6',
-    priority: 2,
-    oauthProvider: 'google-calendar',
-    nangoProvider: 'google-calendar',
-  },
-  {
-    id: 'google-sheets',
-    name: 'Google Sheets',
-    description: 'On-demand range read via Nango.',
-    icon: HardDrive,
-    category: 'google_workspace',
-    status: 'available',
-    color: '#16a34a',
-    priority: 3,
-    oauthProvider: 'google-sheets',
-    nangoProvider: 'google-sheets',
-  },
-  {
-    id: 'google-contacts',
-    name: 'Google Contacts',
-    description: 'Contact directory via Nango.',
-    icon: Mail,
-    category: 'google_workspace',
-    status: 'available',
-    color: '#9333ea',
-    priority: 3,
-    oauthProvider: 'google-contacts',
-    nangoProvider: 'google-contacts',
   },
   {
     id: 'google-gemini',
