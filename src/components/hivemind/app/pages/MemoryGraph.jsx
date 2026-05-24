@@ -29,6 +29,8 @@ import {
   Layers,
   BookOpen,
   Radio,
+  Moon,
+  Sun,
 } from "lucide-react";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
@@ -414,6 +416,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   useEffect(() => {
     try { localStorage.setItem('hivemind:graphDim', graphDim); } catch {}
   }, [graphDim]);
+  const [graphTheme, setGraphTheme] = useState(() => {
+    const stored = safeStorageGet("hm-graph-theme");
+    return stored === "day" ? "day" : "night";
+  });
+  useEffect(() => {
+    safeStorageSet("hm-graph-theme", graphTheme);
+  }, [graphTheme]);
   const { org } = useAuth();
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -958,6 +967,35 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           ))}
         </div>
 
+        {/* Day / Night graph theme */}
+        <div className="shrink-0 inline-flex items-center rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5">
+          {[
+            { key: "night", label: "Night", icon: Moon },
+            { key: "day", label: "Day", icon: Sun },
+          ].map((option) => {
+            const Icon = option.icon;
+            const active = graphTheme === option.key;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setGraphTheme(option.key)}
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                  active
+                    ? option.key === "night"
+                      ? "bg-[#0a0a0a] text-[#fff7ed]"
+                      : "bg-[#efe9dd] text-[#0a0a0a]"
+                    : "text-[#737373] hover:text-[#0a0a0a]"
+                }`}
+                title={`${option.label} graph mode`}
+              >
+                <Icon size={10} />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
         <button
           onClick={() => setShowLegend((v) => !v)}
           className={`shrink-0 p-1.5 rounded-lg border text-[#525252] ${
@@ -1017,9 +1055,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background:
-              "radial-gradient(circle at center, rgba(255,252,245,0) 0%, rgba(255,252,245,0.16) 70%, rgba(235,229,218,0.26) 100%)",
-            mixBlendMode: "normal",
+            background: graphTheme === "night"
+              ? "radial-gradient(circle at 44% 32%, rgba(255,91,88,0.09) 0%, rgba(24,23,21,0) 26%), radial-gradient(circle at 74% 70%, rgba(255,238,222,0.05) 0%, rgba(24,23,21,0) 34%), radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.24) 100%)"
+              : "radial-gradient(circle at center, rgba(255,252,245,0) 0%, rgba(255,252,245,0.16) 70%, rgba(235,229,218,0.26) 100%)",
+            mixBlendMode: graphTheme === "night" ? "screen" : "normal",
           }}
         />
         {loading && graphData.nodes.length === 0 && (
@@ -1062,6 +1101,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             }}
             onViewStateChange={undefined}
             backgroundColor="rgba(0,0,0,0)"
+            theme={graphTheme === "night" ? "atlas" : "day"}
             width={
               typeof window !== "undefined"
                 ? window.innerWidth - (selectedNode ? 340 : 0) - 260
