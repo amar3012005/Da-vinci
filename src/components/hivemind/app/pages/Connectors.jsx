@@ -76,23 +76,15 @@ const CONNECTOR_CATEGORIES = [
 const CONNECTORS = [
   // MCP Clients (already working)
   {
-    id: 'claude-code',
-    name: 'Claude Code',
-    description: 'Add HIVEMIND with the direct one-line HTTP MCP setup and keep it enabled by default',
-    icon: Terminal,
+    id: 'claude-web',
+    name: 'Claude',
+    description: 'Add HIVEMIND as a remote MCP server in claude.ai Settings → Connectors',
+    icon: MessageSquare,
     category: 'mcp_clients',
     status: 'available',
-    color: '#117dff',
-    configKey: 'claude-code',
-    mcpEndpointName: 'claude-code',
-    isMcpClient: true,
-    setupTitle: 'Set up Claude Code MCP',
-    setupSteps: [
-      'Copy the direct HTTP MCP setup below into Claude Code',
-      'Enable HIVEMIND as a default MCP server for your sessions',
-      'Run the verify step here after saving the config to confirm the direct endpoint is reachable',
-    ],
-    configPath: 'Claude Code MCP setup',
+    color: '#cc785c',
+    configKey: 'claude-web',
+    isClaudeWebSetup: true,
   },
   {
     id: 'chatgpt',
@@ -2953,6 +2945,183 @@ function ChatGptSetupModal({ onClose }) {
   );
 }
 
+// ─── Claude.ai custom-connector setup — 2-step modal ─────────────────────────
+// Step 1: name + remote MCP URL → user pastes into claude.ai connectors form
+// Step 2: navigate to /mcp-server page to copy the HIVEMIND AI agent prompt
+function ClaudeWebSetupModal({ onClose, apiKey, userId }) {
+  const NAME = 'HIVEMIND';
+  const MCP_URL = 'https://hivemind.davinciai.eu/api/mcp';
+  const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector';
+  const [copied, setCopied] = useState(null);
+  const [step, setStep] = useState(1);
+
+  const copy = (text, key) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {}
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-[#f3f1ec] shrink-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0" style={{ backgroundColor: '#cc785c10', borderColor: '#cc785c25' }}>
+            <MessageSquare size={18} style={{ color: '#cc785c' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight truncate">
+              Connect Claude
+            </h2>
+            <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug truncate">
+              Add HIVEMIND as a custom connector in claude.ai
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-1 w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
+            aria-label="Close"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Step pills */}
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#f3f1ec] bg-[#fafaf6] shrink-0">
+          {[1, 2].map((n) => (
+            <button
+              key={n}
+              onClick={() => setStep(n)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-colors ${
+                step === n ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#737373] border border-[#e3e0db] hover:bg-[#f3f1ec]'
+              }`}
+            >
+              Step {n}
+            </button>
+          ))}
+          <span className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] ml-1">
+            {step === 1 ? 'Add custom connector' : 'Paste HIVEMIND prompt'}
+          </span>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-4">
+          {step === 1 && (
+            <>
+              <div className="text-[12.5px] text-[#0a0a0a] font-['Space_Grotesk'] leading-relaxed">
+                Open the Claude connector form in a new tab. Paste the values below into
+                <b> Name</b> and <b>Remote MCP server URL</b>. Claude handles the OAuth
+                handshake itself — sign in with your HIVEMIND account when prompted.
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {[
+                  { key: 'name', label: 'Name', value: NAME },
+                  { key: 'url',  label: 'Remote MCP server URL', value: MCP_URL },
+                ].map((f) => (
+                  <div key={f.key} className="rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-3">
+                    <div className="text-[10.5px] font-bold uppercase tracking-wide text-[#737373] font-['Space_Grotesk'] mb-1.5">
+                      {f.label}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-[12.5px] text-[#0a0a0a] font-mono break-all">{f.value}</code>
+                      <button
+                        onClick={() => copy(f.value, f.key)}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#0a0a0a] text-white text-[11px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a] flex items-center gap-1.5"
+                      >
+                        {copied === f.key ? <Check size={12} /> : <Copy size={12} />}
+                        {copied === f.key ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 mt-1">
+                <a
+                  href={CLAUDE_CONNECTORS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#cc785c] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#b86a4d] transition-colors"
+                >
+                  Open Claude Connectors
+                </a>
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a] transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+
+              <div className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug mt-1">
+                After saving the connector in Claude, you'll be redirected through HIVEMIND OAuth.
+                Approve the consent screen, then come back here for Step 2.
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <div className="text-[12.5px] text-[#0a0a0a] font-['Space_Grotesk'] leading-relaxed">
+                Last step: copy the HIVEMIND AI agent prompt and paste it as a Project instruction
+                or System prompt in Claude. This tells Claude how to use HIVEMIND tools by default —
+                recall before responding, save what's durable.
+              </div>
+
+              <div className="rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-4">
+                <div className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mb-1">
+                  Open the prompt page
+                </div>
+                <div className="text-[11px] text-[#737373] font-['Space_Grotesk'] mb-3 leading-snug">
+                  The MCP Server page has the full agent prompt with copy-to-clipboard. Click the
+                  copy button there, then paste into Claude's Project Instructions or System Prompt
+                  field.
+                </div>
+                <a
+                  href={`/hivemind/app/mcp-server?source=connectors&connector=claude-web&prompt=agent`}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a] transition-colors"
+                >
+                  Open AI Agent Prompt →
+                </a>
+              </div>
+
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-3 py-2.5 rounded-lg bg-white border border-[#e3e0db] text-[#0a0a0a] text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#f3f1ec] transition-colors"
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-3 py-2.5 rounded-lg bg-[#cc785c] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#b86a4d] transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+
+              <div className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug mt-1">
+                Tip: pin HIVEMIND as a default-enabled connector in Claude so every new chat
+                gets memory recall + save reflexes without re-toggling.
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 // ─── Minimal connector stack + popup ───────────────────────────────────────
@@ -2987,6 +3156,7 @@ export default function Connectors() {
   const [whatsappQRConnector, setWhatsappQRConnector] = useState(false);
   const [chatgptSetupOpen, setChatgptSetupOpen] = useState(false);
   const [geminiPasteOpen, setGeminiPasteOpen] = useState(false);
+  const [claudeWebOpen, setClaudeWebOpen] = useState(false);
   const [verifiedMcpEndpoints, setVerifiedMcpEndpoints] = useState({});
 
   // Detect org admin: user is org admin if their role is 'owner' or 'admin'
@@ -3504,7 +3674,7 @@ export default function Connectors() {
 
   // Claude Code + ChatGPT are pinned to a featured row at the top of the
   // page. Strip them from the main grid so they don't show twice.
-  const FEATURED_IDS = new Set(['claude-code', 'chatgpt']);
+  const FEATURED_IDS = new Set(['claude-web', 'chatgpt']);
   const featuredConnectors = sortConnectors(
     mergedConnectors.filter(c => FEATURED_IDS.has(c.id))
   );
@@ -3534,6 +3704,10 @@ export default function Connectors() {
         }
         if (connector.isChatGptSetup) {
           setChatgptSetupOpen(true);
+          return;
+        }
+        if (connector.isClaudeWebSetup) {
+          setClaudeWebOpen(true);
           return;
         }
         if (connector.isMcpClient) {
@@ -3833,6 +4007,13 @@ export default function Connectors() {
       <AnimatePresence>
         {chatgptSetupOpen && (
           <ChatGptSetupModal onClose={() => setChatgptSetupOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Claude.ai custom-connector setup — 2-step modal. */}
+      <AnimatePresence>
+        {claudeWebOpen && (
+          <ClaudeWebSetupModal onClose={() => setClaudeWebOpen(false)} apiKey={config?.apiKey} userId={config?.userId} />
         )}
       </AnimatePresence>
 
