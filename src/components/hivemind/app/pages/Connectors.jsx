@@ -227,14 +227,14 @@ const CONNECTORS = [
   {
     id: 'salesforce',
     name: 'Salesforce',
-    description: 'Accounts, Opportunities, Cases, Contacts via Salesforce Connected App',
+    description: 'Accounts, Contacts, Opportunities, Cases, Activities → CRM-aware memory layer with bi-temporal versioning + entity resolution.',
     icon: Cable,
     category: 'workspace',
-    status: 'needs_oauth_setup',
+    status: 'available',
     color: '#00a1e0',
     priority: 1,
-    oauthProvider: 'salesforce',
-    setupHint: 'Set SALESFORCE_CLIENT_ID + SALESFORCE_CLIENT_SECRET on the control plane',
+    nangoProvider: 'salesforce',
+    setupHint: 'Connect via Nango. Sync runs every 15 minutes; CDC delivers <6min lag for stage changes.',
   },
   // ── Google services via Nango ──
   // Legacy workspace-mcp tiles removed 2026-05-24. nangoProvider values
