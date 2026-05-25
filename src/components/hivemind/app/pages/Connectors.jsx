@@ -1099,55 +1099,87 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   const categoryOptions = ['promotions', 'social', 'updates', 'forums'];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        className="bg-white rounded-[20px] shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-            <Mail size={18} className="text-[#ef4444]" />
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 bg-white border-b border-[#f3f1ec] px-7 py-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] flex items-center justify-center shadow-inner">
+            <Mail size={22} className="text-[#ef4444]" />
           </div>
-          <div>
-            <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">Configure Gmail Sync</h3>
-            {email && <p className="text-[#a3a3a3] text-xs font-mono">{email}</p>}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[#0a0a0a] text-[17px] font-bold font-['Space_Grotesk'] leading-tight">Configure Gmail Sync</h2>
+            <p className="text-[#a3a3a3] text-[11px] font-mono leading-snug mt-0.5">
+              {email ? <>Account · <span className="text-[#525252]">{email}</span></> : 'Pick threads → preview → approve'}
+            </p>
           </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Date Range */}
-        <div className="mb-4">
-          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Date Range</label>
-          <div className="flex flex-wrap gap-2">
-            {dateOptions.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setDateRange(opt.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
-                  dateRange === opt.value
-                    ? 'bg-[#117dff] text-white'
-                    : 'bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+        <div className="px-7 py-6">
+        {/* Top grid: Date Range + Max Emails side-by-side on md+ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+          <div>
+            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Date Range</label>
+            <div className="flex flex-wrap gap-2">
+              {dateOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDateRange(opt.value)}
+                  className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
+                    dateRange === opt.value
+                      ? 'bg-[#117dff] text-white shadow-sm shadow-[#117dff]/25'
+                      : 'bg-[#f9f8f3] text-[#525252] border border-[#e3e0db] hover:border-[#117dff]/40 hover:bg-white'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] flex items-center justify-between mb-2.5">
+              <span>Max Emails</span>
+              <span className="text-[#117dff] text-[14px] font-mono normal-case tracking-normal">{maxEmails}</span>
+            </label>
+            <input
+              type="range"
+              min={50}
+              max={2000}
+              step={50}
+              value={maxEmails}
+              onChange={e => setMaxEmails(Number(e.target.value))}
+              className="w-full accent-[#117dff] h-2"
+            />
+            <div className="flex justify-between text-[10px] text-[#a3a3a3] font-mono mt-1.5">
+              <span>50</span><span>500</span><span>1000</span><span>2000</span>
+            </div>
           </div>
         </div>
 
         {/* Folders */}
-        <div className="mb-4">
-          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Folders to Sync</label>
+        <div className="mb-5">
+          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Folders to Sync</label>
           <div className="flex flex-wrap gap-2">
             {folderOptions.map(f => (
               <button
                 key={f}
                 onClick={() => toggleFolder(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
                   folders.includes(f)
-                    ? 'bg-[#22c55e]/10 text-[#16a34a] border border-[#bbf7d0]'
-                    : 'bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]'
+                    ? 'bg-[#16a34a] text-white shadow-sm shadow-[#16a34a]/25'
+                    : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e3e0db] hover:border-[#16a34a]/40 hover:text-[#525252]'
                 }`}
               >
                 {f.toLowerCase()}
@@ -1157,17 +1189,17 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         </div>
 
         {/* Exclude Categories */}
-        <div className="mb-4">
-          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">Exclude Categories</label>
+        <div className="mb-6">
+          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Exclude Categories</label>
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map(c => (
               <button
                 key={c}
                 onClick={() => toggleExclude(c)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
+                className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
                   excludeCategories.includes(c)
-                    ? 'bg-[#ef4444]/10 text-[#dc2626] border border-[#fecaca]'
-                    : 'bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]'
+                    ? 'bg-[#dc2626] text-white shadow-sm shadow-[#dc2626]/25'
+                    : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e3e0db] hover:border-[#dc2626]/40 hover:text-[#525252]'
                 }`}
               >
                 {c}
@@ -1176,74 +1208,66 @@ function GmailSyncSettings({ email, onSync, onClose }) {
           </div>
         </div>
 
-        {/* Max Emails */}
-        <div className="mb-6">
-          <label className="text-[#525252] text-xs font-semibold font-['Space_Grotesk'] block mb-2">
-            Max Emails: <span className="text-[#117dff]">{maxEmails}</span>
-          </label>
-          <input
-            type="range"
-            min={50}
-            max={2000}
-            step={50}
-            value={maxEmails}
-            onChange={e => setMaxEmails(Number(e.target.value))}
-            className="w-full accent-[#117dff]"
-          />
-          <div className="flex justify-between text-[10px] text-[#a3a3a3] font-mono mt-1">
-            <span>50</span><span>500</span><span>1000</span><span>2000</span>
-          </div>
-        </div>
-
         {/* Preview list (shown after Preview pressed) */}
         {step === 'preview' && (
-          <div className="mb-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] overflow-hidden">
-            <div className="px-3 py-2 flex items-center justify-between border-b border-[#e3e0db]">
-              <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#525252]">
-                Approve threads ({selectedIds.size} / {previews.length})
-              </p>
-              <div className="flex items-center gap-1.5">
+          <div className="mb-5 rounded-2xl border border-[#e3e0db] bg-[#faf9f4] overflow-hidden">
+            <div className="px-4 py-3 flex items-center justify-between border-b border-[#e3e0db] bg-white">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#525252] font-['Space_Grotesk']">
+                  Approve threads
+                </p>
+                <p className="text-[12.5px] font-mono text-[#0a0a0a] mt-0.5">
+                  <span className="text-[#117dff]">{selectedIds.size}</span> / {previews.length} selected
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedIds(new Set(previews.map(p => p.thread_id)))}
-                  className="text-[10px] font-mono text-[#117dff] hover:underline"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff]/10 text-[#117dff] hover:bg-[#117dff]/15 transition-colors"
                 >
-                  All
+                  Select all
                 </button>
-                <span className="text-[10px] text-[#a3a3a3]">·</span>
                 <button
                   onClick={() => setSelectedIds(new Set())}
-                  className="text-[10px] font-mono text-[#737373] hover:underline"
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#737373] hover:bg-[#eae7e1] transition-colors"
                 >
                   None
                 </button>
               </div>
             </div>
-            <div className="max-h-[40vh] overflow-y-auto">
+            <div className="max-h-[52vh] overflow-y-auto">
               {previews.map(p => {
                 const sel = selectedIds.has(p.thread_id);
                 return (
                   <button
                     key={p.thread_id}
                     onClick={() => toggleSelected(p.thread_id)}
-                    className={`w-full text-left px-3 py-2 border-b border-[#f3f1ec] last:border-b-0 transition-colors ${
-                      sel ? 'bg-[#117dff]/[0.04]' : 'hover:bg-[#f3f1ec]'
+                    className={`w-full text-left px-4 py-3 border-b border-[#f3f1ec] last:border-b-0 transition-colors ${
+                      sel ? 'bg-[#117dff]/[0.05]' : 'hover:bg-white'
                     }`}
                   >
-                    <div className="flex items-start gap-2.5">
-                      <span className={`mt-0.5 w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                        sel ? 'border-[#117dff] bg-[#117dff]' : 'border-[#c4c1bb]'
+                    <div className="flex items-start gap-3">
+                      <span className={`mt-1 w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all ${
+                        sel ? 'border-[#117dff] bg-[#117dff] shadow-sm shadow-[#117dff]/30' : 'border-[#c4c1bb] bg-white'
                       }`}>
-                        {sel && <Check size={9} className="text-white" strokeWidth={3} />}
+                        {sel && <Check size={11} className="text-white" strokeWidth={3} />}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">
-                          {p.subject || '(no subject)'}
-                        </p>
-                        <p className="text-[10.5px] text-[#737373] font-mono truncate">
-                          {p.from} {p.message_count > 1 ? `· ${p.message_count} msgs` : ''} · {p.date || ''}
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate flex-1">
+                            {p.subject || '(no subject)'}
+                          </p>
+                          {p.message_count > 1 && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-[#f3f1ec] text-[#525252] text-[10px] font-mono">
+                              {p.message_count}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#737373] font-mono truncate mt-0.5">
+                          {p.from}{p.date ? ` · ${p.date}` : ''}
                         </p>
                         {p.snippet && (
-                          <p className="text-[10.5px] text-[#a3a3a3] line-clamp-1 mt-0.5">{p.snippet}</p>
+                          <p className="text-[11.5px] text-[#a3a3a3] line-clamp-2 mt-1 leading-relaxed">{p.snippet}</p>
                         )}
                       </div>
                     </div>
@@ -1251,7 +1275,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 );
               })}
               {previews.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3] font-mono">
+                <div className="px-4 py-10 text-center text-[12px] text-[#a3a3a3] font-mono">
                   No threads matched the filter.
                 </div>
               )}
@@ -1271,39 +1295,39 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         )}
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 mt-1">
           {step === 'config' && (
             <>
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
+                className="px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePreview}
                 disabled={previewing || folders.length === 0}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-white border border-[#117dff] text-[#117dff] hover:bg-[#117dff]/5 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-white border border-[#117dff] text-[#117dff] hover:bg-[#117dff]/5 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
               >
                 {previewing ? (
                   <div className="w-4 h-4 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Filter size={14} />
-                    Preview & Approve
+                    <Filter size={15} />
+                    Preview &amp; Approve
                   </>
                 )}
               </button>
               <button
                 onClick={handleStart}
                 disabled={syncing || folders.length === 0}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-sm shadow-[#117dff]/30"
               >
                 {syncing ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Zap size={14} />
+                    <Zap size={15} />
                     Sync All
                   </>
                 )}
@@ -1314,21 +1338,21 @@ function GmailSyncSettings({ email, onSync, onClose }) {
             <>
               <button
                 onClick={() => setStep('config')}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
+                className="px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
               >
                 Back
               </button>
               <button
                 onClick={handleIngestSelected}
                 disabled={ingesting || selectedIds.size === 0}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#16a34a] text-white hover:bg-[#15803d] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#16a34a] text-white hover:bg-[#15803d] disabled:opacity-40 transition-all flex items-center justify-center gap-2 shadow-sm shadow-[#16a34a]/30"
               >
                 {ingesting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Check size={14} />
-                    Ingest {selectedIds.size}
+                    <Check size={15} />
+                    Ingest {selectedIds.size} {selectedIds.size === 1 ? 'thread' : 'threads'}
                   </>
                 )}
               </button>
@@ -1337,7 +1361,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
           {step === 'flushing' && flushed !== null && (
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-all"
+              className="flex-1 px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-all"
             >
               Done
             </button>
@@ -1346,18 +1370,19 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 
         {/* Danger zone */}
         {step === 'config' && (
-          <div className="mt-4 pt-3 border-t border-[#f3f1ec] flex items-center justify-between">
-            <p className="text-[10.5px] text-[#a3a3a3] font-mono">
+          <div className="mt-5 pt-4 border-t border-[#f3f1ec] flex items-center justify-between">
+            <p className="text-[11px] text-[#a3a3a3] font-mono">
               Memory graph polluted? Start fresh.
             </p>
             <button
               onClick={handleFlush}
-              className="text-[10.5px] font-mono text-[#dc2626] hover:text-[#b91c1c] hover:underline transition-colors"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
             >
               Flush all Gmail memories
             </button>
           </div>
         )}
+        </div>
       </motion.div>
     </div>
   );
