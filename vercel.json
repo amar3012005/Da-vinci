@@ -5,6 +5,10 @@
       "destination": "https://core.hivemind.davinciai.eu:8050/v1/chatgpt/:path*"
     },
     {
+      "source": "/oauth/logo.png",
+      "destination": "https://core.hivemind.davinciai.eu:8050/oauth/logo.png"
+    },
+    {
       "source": "/oauth/:path*",
       "destination": "https://core.hivemind.davinciai.eu:8050/oauth/:path*"
     },
