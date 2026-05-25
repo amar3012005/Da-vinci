@@ -1065,25 +1065,87 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         />
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-            <div className="flex flex-col items-center gap-5 px-7 py-6 rounded-2xl bg-white/85 backdrop-blur-md border border-[#e3e0db] shadow-2xl">
-              <div className="relative w-16 h-16">
-                <img
-                  src="/oauth/logo.png"
-                  alt="HIVEMIND"
-                  className="w-16 h-16 rounded-2xl object-cover"
-                  style={{ animation: 'hm-pulse 1.6s ease-in-out infinite' }}
+            <div
+              className={`flex flex-col items-center gap-5 px-7 py-6 rounded-[22px] border ${
+                graphTheme === "night"
+                  ? "bg-[#080808]/86 border-[#2f2925]"
+                  : "bg-white/88 border-[#e3e0db]"
+              }`}
+              style={{
+                backdropFilter: "blur(14px)",
+                boxShadow: graphTheme === "night"
+                  ? "0 28px 72px rgba(0,0,0,0.42)"
+                  : "0 24px 60px rgba(37,32,27,0.12)",
+              }}
+            >
+              <div className="relative w-[88px] h-[88px]">
+                <div
+                  className={`absolute inset-0 rounded-full ${
+                    graphTheme === "night"
+                      ? "bg-[radial-gradient(circle_at_35%_35%,rgba(255,238,222,0.82),rgba(255,91,88,0.68)_42%,rgba(118,33,28,0.18)_74%,transparent_100%)]"
+                      : "bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.94),rgba(72,66,59,0.34)_48%,rgba(72,66,59,0.08)_76%,transparent_100%)]"
+                  }`}
+                  style={{ animation: "hm-pulse 2.1s ease-in-out infinite" }}
                 />
                 <div
-                  className="absolute inset-[-6px] rounded-2xl border-2 border-transparent border-t-[#0a0a0a] border-r-[#0a0a0a]/30"
-                  style={{ animation: 'hm-spin 1.4s linear infinite' }}
+                  className="absolute left-[14px] top-[24px] w-[60px] h-px origin-left"
+                  style={{
+                    background: graphTheme === "night"
+                      ? "linear-gradient(90deg, rgba(255,120,111,0.88), rgba(255,231,214,0.32))"
+                      : "linear-gradient(90deg, rgba(10,10,10,0.78), rgba(10,10,10,0.22))",
+                    transform: "rotate(24deg)",
+                  }}
+                />
+                <div
+                  className="absolute left-[18px] top-[26px] w-[44px] h-px origin-left"
+                  style={{
+                    background: graphTheme === "night"
+                      ? "linear-gradient(90deg, rgba(255,231,214,0.74), rgba(255,120,111,0.16))"
+                      : "linear-gradient(90deg, rgba(10,10,10,0.58), rgba(10,10,10,0.14))",
+                    transform: "rotate(-38deg)",
+                  }}
+                />
+                <div
+                  className={`absolute left-[13px] top-[48px] w-3 h-3 rounded-full ${
+                    graphTheme === "night" ? "bg-[#ff6d67]" : "bg-[#1f1d1a]"
+                  }`}
+                  style={{ animation: "hm-float-a 1.8s ease-in-out infinite" }}
+                />
+                <div
+                  className={`absolute left-[42px] top-[18px] w-4 h-4 rounded-full ${
+                    graphTheme === "night" ? "bg-[#fff0e5]" : "bg-[#8b857d]"
+                  }`}
+                  style={{ animation: "hm-float-b 2s ease-in-out infinite" }}
+                />
+                <div
+                  className={`absolute left-[56px] top-[54px] w-2.5 h-2.5 rounded-full ${
+                    graphTheme === "night" ? "bg-[#d4c3b5]" : "bg-[#53504a]"
+                  }`}
+                  style={{ animation: "hm-float-c 1.65s ease-in-out infinite" }}
+                />
+                <div
+                  className={`absolute inset-[8px] rounded-full border ${
+                    graphTheme === "night"
+                      ? "border-[#ff8f86]/28"
+                      : "border-[#0a0a0a]/14"
+                  }`}
+                  style={{ animation: "hm-spin 4.4s linear infinite" }}
                 />
               </div>
               <div className="text-center">
-                <div className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">
-                  {graphData.nodes.length === 0 ? 'Loading memory graph' : 'Refreshing'}
+                <div
+                  className={`text-[13px] font-bold font-['Space_Grotesk'] tracking-tight ${
+                    graphTheme === "night" ? "text-[#fff1e6]" : "text-[#0a0a0a]"
+                  }`}
+                >
+                  {graphData.nodes.length === 0 ? "Loading memory graph" : "Refreshing graph"}
                 </div>
-                <div className="text-[10.5px] text-[#a3a3a3] font-mono mt-0.5 uppercase tracking-[0.12em]">
-                  building cluster atlas
+                <div
+                  className={`text-[10.5px] font-mono mt-0.5 uppercase tracking-[0.16em] ${
+                    graphTheme === "night" ? "text-[#b8aea4]" : "text-[#8b857d]"
+                  }`}
+                >
+                  resolving nodes and relations
                 </div>
               </div>
               <style>{`
@@ -1093,6 +1155,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 }
                 @keyframes hm-spin {
                   to { transform: rotate(360deg); }
+                }
+                @keyframes hm-float-a {
+                  0%, 100% { transform: translate3d(0, 0, 0); }
+                  50% { transform: translate3d(-2px, -4px, 0); }
+                }
+                @keyframes hm-float-b {
+                  0%, 100% { transform: translate3d(0, 0, 0); }
+                  50% { transform: translate3d(2px, 3px, 0); }
+                }
+                @keyframes hm-float-c {
+                  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.92; }
+                  50% { transform: translate3d(-1px, -3px, 0); opacity: 1; }
                 }
               `}</style>
             </div>

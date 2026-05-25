@@ -1067,7 +1067,12 @@ function DataPrivacySection() {
         await logout();
       }, 1500);
     } catch (err) {
-      setDeleteMsg(err.message || 'Deletion failed');
+      const serverErr = err.response?.data?.error;
+      const blockingOrg = err.response?.data?.org;
+      const friendly = blockingOrg && serverErr
+        ? `${serverErr} (Org: ${blockingOrg.name})`
+        : serverErr || err.message || 'Deletion failed';
+      setDeleteMsg(friendly);
       setDeleteProgress(0);
       setDeleteStep('');
     } finally {
