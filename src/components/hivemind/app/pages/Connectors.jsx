@@ -2948,7 +2948,7 @@ function ChatGptSetupModal({ onClose }) {
 // ─── Claude.ai custom-connector setup — 2-step modal ─────────────────────────
 // Step 1: name + remote MCP URL → user pastes into claude.ai connectors form
 // Step 2: navigate to /mcp-server page to copy the HIVEMIND AI agent prompt
-function ClaudeWebSetupModal({ onClose, apiKey, userId }) {
+function ClaudeWebSetupModal({ onClose }) {
   const NAME = 'HIVEMIND';
   const MCP_URL = 'https://hivemind.davinciai.eu/api/mcp';
   const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector';
@@ -4013,7 +4013,7 @@ export default function Connectors() {
       {/* Claude.ai custom-connector setup — 2-step modal. */}
       <AnimatePresence>
         {claudeWebOpen && (
-          <ClaudeWebSetupModal onClose={() => setClaudeWebOpen(false)} apiKey={config?.apiKey} userId={config?.userId} />
+          <ClaudeWebSetupModal onClose={() => setClaudeWebOpen(false)} />
         )}
       </AnimatePresence>
 
