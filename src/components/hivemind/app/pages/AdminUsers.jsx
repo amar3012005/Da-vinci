@@ -8,6 +8,7 @@ import {
   UserCheck,
   ExternalLink,
   AlertCircle,
+  Trash2,
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -154,6 +155,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editTarget, setEditTarget] = useState(null);   // member row being role-edited
+  const [removeTarget, setRemoveTarget] = useState(null); // member row pending removal
   const [showInvite, setShowInvite] = useState(false);
   const [actionError, setActionError] = useState(null);
 
@@ -194,6 +196,17 @@ export default function AdminUsers() {
     setActionError(null);
     try {
       await apiClient.reactivateMember(org.id, member.user_id);
+      await fetchMembers();
+    } catch (err) {
+      setActionError(err.response?.data?.error || err.message);
+    }
+  }
+
+  async function handleRemove(member) {
+    setActionError(null);
+    try {
+      await apiClient.removeMember(org.id, member.user_id);
+      setRemoveTarget(null);
       await fetchMembers();
     } catch (err) {
       setActionError(err.response?.data?.error || err.message);
@@ -341,6 +354,15 @@ export default function AdminUsers() {
                         <UserCheck size={14} />
                       </button>
                     )}
+
+                    {/* Remove from org (hard removal, frees seat) */}
+                    <button
+                      onClick={() => setRemoveTarget(member)}
+                      title="Remove from organization"
+                      className="p-1.5 text-[#737373] hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -369,6 +391,44 @@ export default function AdminUsers() {
         orgId={org?.id}
         contextLabel={org?.name || 'workspace'}
       />
+
+      {/* Remove member confirmation */}
+      {removeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl border border-[#e3e0db] w-full max-w-md p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-red-50 rounded-lg">
+                <AlertCircle size={20} className="text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-[15px] font-semibold text-[#0a0a0a]">Remove from organization?</h3>
+                <p className="text-[13px] text-[#525252] mt-1">
+                  This permanently removes <span className="font-medium">{removeTarget.display_name || removeTarget.email}</span>{' '}
+                  from the org. They lose access immediately. Their data stays with the org unless they delete their account.
+                </p>
+              </div>
+              <button onClick={() => setRemoveTarget(null)} className="text-[#737373] hover:text-[#0a0a0a]">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => setRemoveTarget(null)}
+                className="px-3 py-2 text-[12px] text-[#525252] border border-[#e3e0db] rounded-lg hover:bg-[#f3f1ec] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRemove(removeTarget)}
+                className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Trash2 size={13} />
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
