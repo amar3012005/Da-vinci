@@ -486,8 +486,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   // LocalStorage key for graph snapshot — keyed by query params so different
   // scope/project/limit combos cache independently.
+  // v2 cache key — bumped after backend started excluding 'extracted-fact'
+  // children so stale localStorage doesn't keep showing the inflated counts.
   const cacheKey = useMemo(
-    () => `hm:graph:${scope}:${projectFilter || ""}:${nodeLimit}`,
+    () => `hm:graph:v2:${scope}:${projectFilter || ""}:${nodeLimit}`,
     [scope, projectFilter, nodeLimit]
   );
 
@@ -1061,13 +1063,38 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             mixBlendMode: graphTheme === "night" ? "screen" : "normal",
           }}
         />
-        {loading && graphData.nodes.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">
-                Loading memory graph...
-              </span>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+            <div className="flex flex-col items-center gap-5 px-7 py-6 rounded-2xl bg-white/85 backdrop-blur-md border border-[#e3e0db] shadow-2xl">
+              <div className="relative w-16 h-16">
+                <img
+                  src="/oauth/logo.png"
+                  alt="HIVEMIND"
+                  className="w-16 h-16 rounded-2xl object-cover"
+                  style={{ animation: 'hm-pulse 1.6s ease-in-out infinite' }}
+                />
+                <div
+                  className="absolute inset-[-6px] rounded-2xl border-2 border-transparent border-t-[#0a0a0a] border-r-[#0a0a0a]/30"
+                  style={{ animation: 'hm-spin 1.4s linear infinite' }}
+                />
+              </div>
+              <div className="text-center">
+                <div className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">
+                  {graphData.nodes.length === 0 ? 'Loading memory graph' : 'Refreshing'}
+                </div>
+                <div className="text-[10.5px] text-[#a3a3a3] font-mono mt-0.5 uppercase tracking-[0.12em]">
+                  building cluster atlas
+                </div>
+              </div>
+              <style>{`
+                @keyframes hm-pulse {
+                  0%, 100% { transform: scale(1); opacity: 0.92; }
+                  50% { transform: scale(1.06); opacity: 1; }
+                }
+                @keyframes hm-spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
             </div>
           </div>
         )}
