@@ -1128,6 +1128,17 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Claude.ai remote-MCP connector status + disconnect ────
+  async claudeWebStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/claude-web/status');
+    return data;
+  }
+
+  async claudeWebDisconnect() {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/claude-web/disconnect', {});
+    return data;
+  }
+
   // ─── Gmail v2: preview / ingest-selected / flush ────────────
   // Approval flow: caller fetches a preview with filter config applied,
   // user picks threads, caller posts thread_ids to /ingest-selected.

@@ -3147,6 +3147,123 @@ function ClaudeWebSetupModal({ onClose }) {
   );
 }
 
+// ─── Claude.ai disconnect modal — dual-step (revoke local + remove on claude.ai) ──
+function ClaudeWebDisconnectModal({ onClose, onRevoked }) {
+  const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors';
+  const [revoking, setRevoking] = useState(false);
+  const [revoked, setRevoked] = useState(null);
+
+  const handleRevoke = async () => {
+    setRevoking(true);
+    try {
+      const r = await apiClient.claudeWebDisconnect();
+      setRevoked(r?.revoked ?? 0);
+    } catch (e) {
+      alert(e?.response?.data?.error || e.message || 'Revoke failed');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#f3f1ec]">
+          <div className="w-10 h-10 rounded-xl bg-[#fef2f2] flex items-center justify-center">
+            <MessageSquare size={18} style={{ color: '#cc785c' }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">Disconnect Claude</h2>
+            <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug truncate">Two places to remove — local tokens + claude.ai connector</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec]" aria-label="Close"><X size={14} /></button>
+        </div>
+
+        <div className="p-5 flex flex-col gap-4">
+          <div className="text-[12.5px] text-[#0a0a0a] font-['Space_Grotesk'] leading-relaxed">
+            Claude stores the connector configuration on its side (claude.ai), and HIVEMIND stores
+            the OAuth access token issued during connect. Full disconnect = both must go.
+          </div>
+
+          {/* Step 1 — revoke local tokens */}
+          <div className="rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#0a0a0a] text-white text-[10px] font-bold flex items-center justify-center font-['Space_Grotesk']">1</span>
+              <div className="text-[12.5px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Revoke HIVEMIND tokens</div>
+            </div>
+            <p className="text-[11.5px] text-[#737373] font-['Space_Grotesk'] mb-3 leading-snug">
+              Invalidates every OAuth access + refresh token issued to Claude.ai for your account.
+              Claude will see 401 on the next MCP call and prompt re-auth.
+            </p>
+            {revoked === null ? (
+              <button
+                onClick={handleRevoke}
+                disabled={revoking}
+                className="px-3.5 py-2 rounded-lg bg-[#dc2626] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#b91c1c] disabled:opacity-40 transition-colors flex items-center gap-2"
+              >
+                {revoking ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Revoking…</>
+                ) : (
+                  <>Revoke local tokens</>
+                )}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 text-[12.5px] font-semibold text-[#16a34a] font-['Space_Grotesk']">
+                <Check size={14} strokeWidth={3} />
+                Revoked {revoked} {revoked === 1 ? 'token' : 'tokens'}
+              </div>
+            )}
+          </div>
+
+          {/* Step 2 — remove on claude.ai */}
+          <div className="rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-5 h-5 rounded-full bg-[#0a0a0a] text-white text-[10px] font-bold flex items-center justify-center font-['Space_Grotesk']">2</span>
+              <div className="text-[12.5px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Remove HIVEMIND on claude.ai</div>
+            </div>
+            <p className="text-[11.5px] text-[#737373] font-['Space_Grotesk'] mb-3 leading-snug">
+              Open the Claude connectors page → find HIVEMIND → click <b>Remove</b>. Without this
+              step, Claude keeps showing the connector even though it's dead.
+            </p>
+            <a
+              href={CLAUDE_CONNECTORS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-[#cc785c] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#b86a4d] transition-colors"
+            >
+              Open Claude Connectors →
+            </a>
+          </div>
+
+          {/* Footer actions */}
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={onClose}
+              className="px-3 py-2.5 rounded-lg bg-white border border-[#e3e0db] text-[#0a0a0a] text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#f3f1ec]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { if (revoked !== null && onRevoked) onRevoked(); else onClose(); }}
+              className="flex-1 px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a]"
+            >
+              {revoked !== null ? 'Done' : 'Close'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 // ─── Minimal connector stack + popup ───────────────────────────────────────
@@ -3223,6 +3340,14 @@ export default function Connectors() {
     data: oauthConnectors,
     refetch: refetchOAuth,
   } = useApiQuery(() => apiClient.listOAuthConnectors().catch(() => null), []);
+
+  // Claude.ai remote-MCP connector status — separate poll because it lives
+  // in the apiKey/oauth_access_token registry, not the Nango oauth list.
+  const {
+    data: claudeWebStatus,
+    refetch: refetchClaudeWeb,
+  } = useApiQuery(() => apiClient.claudeWebStatus().catch(() => null), []);
+  const [claudeDisconnectOpen, setClaudeDisconnectOpen] = useState(false);
 
   const endpoints = useMemo(() => connectorStatus?.statuses || [], [connectorStatus]);
   // eslint-disable-next-line no-unused-vars
@@ -3646,7 +3771,7 @@ export default function Connectors() {
         };
       }
     } else if (c.mcpEndpointName) {
-      // MCP Client connectors (Claude, VS Code, Antigravity)
+      // MCP Client connectors (Claude Desktop, VS Code, Antigravity — stdio bridge)
       const live = verifiedMcpEndpoints[c.id];
 
       if (live) {
@@ -3660,6 +3785,18 @@ export default function Connectors() {
           description: legacyNeedsRefresh
             ? `${c.description} — rerun setup to switch this client to the direct HTTP MCP endpoint.`
             : c.description,
+        };
+      }
+    } else if (c.isClaudeWebSetup) {
+      // Claude.ai remote MCP via /oauth/* + /api/mcp. Status comes from
+      // active oauth_access_token rows whose client_id maps to a
+      // claude.ai/anthropic.com redirect_uri.
+      if (claudeWebStatus?.connected) {
+        return {
+          ...c,
+          status: 'connected',
+          accountRef: 'claude.ai · remote MCP',
+          lastSyncAt: claudeWebStatus.last_used_at || null,
         };
       }
     }
@@ -3766,6 +3903,13 @@ export default function Connectors() {
       onDisconnect={() => {
         if (connector.isQrSetup) {
           handleWhatsAppDisconnect();
+          return;
+        }
+        if (connector.isClaudeWebSetup) {
+          // Disconnect happens in two places: locally (revoke OAuth tokens)
+          // + on claude.ai (user manually removes the connector). Open the
+          // dual-step modal that handles both.
+          setClaudeDisconnectOpen(true);
           return;
         }
         // Both legacy OAuth + Nango-bridged connectors hit the same control-
@@ -4039,6 +4183,19 @@ export default function Connectors() {
       <AnimatePresence>
         {claudeWebOpen && (
           <ClaudeWebSetupModal onClose={() => setClaudeWebOpen(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Claude.ai disconnect — revoke local tokens + send user to claude.ai to remove the connector. */}
+      <AnimatePresence>
+        {claudeDisconnectOpen && (
+          <ClaudeWebDisconnectModal
+            onClose={() => setClaudeDisconnectOpen(false)}
+            onRevoked={() => {
+              refetchClaudeWeb();
+              setClaudeDisconnectOpen(false);
+            }}
+          />
         )}
       </AnimatePresence>
 
