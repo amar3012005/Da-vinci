@@ -1310,11 +1310,15 @@ class HiveMindApiClient {
 
   // ─── Core: Memory Graph ─────────────────────────────────────
 
-  async getGraph({ project, limit, scope } = {}) {
+  async getGraph({ project, limit, scope, includeSuperseded = true } = {}) {
     const params = new URLSearchParams();
     if (project) params.set('project', project);
     if (typeof limit === 'number') params.set('limit', String(limit));
     if (scope) params.set('scope', scope);
+    // Default ON: include superseded nodes so Updates chains render both
+    // endpoints. FE dims is_latest=false rows + draws the Updates edge so
+    // users see the full timeline instead of only the current revision.
+    if (includeSuperseded) params.set('include_superseded', 'true');
     const qs = params.toString();
     const { data } = await this.controlPlane.get(`/v1/proxy/graph${qs ? `?${qs}` : ''}`);
     return data;

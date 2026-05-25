@@ -862,7 +862,11 @@ export default function Memories() {
       ...(activeTag || activeEntity
         ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
         : {}),
-      ...(showSuperseded ? { is_latest: 'false' } : {}),
+      // Tri-state: showSuperseded=true → only superseded; false → include
+      // BOTH latest + superseded (server tri-state). Superseded rows render
+      // with a "Superseded" badge + Updates-target link so the timeline is
+      // visible inline instead of hidden.
+      is_latest: showSuperseded ? 'false' : 'all',
     }),
     [activeType, activeTag, activeEntity, showSuperseded],
   );
@@ -1217,7 +1221,11 @@ function MemoriesTab({
       ...(activeTag || activeEntity
         ? { tags: [activeTag, activeEntity].filter(Boolean).join(',') }
         : {}),
-      ...(showSuperseded ? { is_latest: 'false' } : {}),
+      // Tri-state: showSuperseded=true → only superseded; false → include
+      // BOTH latest + superseded (server tri-state). Superseded rows render
+      // with a "Superseded" badge + Updates-target link so the timeline is
+      // visible inline instead of hidden.
+      is_latest: showSuperseded ? 'false' : 'all',
     }),
     [activeType, activeTag, activeEntity, showSuperseded],
   );

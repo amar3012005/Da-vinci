@@ -467,7 +467,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   useEffect(() => { safeStorageSet("hm-graph-intelligent", String(intelligentMode)); }, [intelligentMode]);
   // Canonical-only toggle — hides superseded nodes (is_latest=false) so the
   // graph reflects the current state of knowledge after drift-compaction.
-  const [canonicalOnly, setCanonicalOnly] = useState(() => safeStorageGet("hm-graph-canonical") !== "false");
+  // Default OFF: show full timeline (superseded nodes dimmed + Updates edges
+  // visible). Was previously ON by default which hid every memory the user
+  // had revised, surprising users who saved multiple drafts.
+  const [canonicalOnly, setCanonicalOnly] = useState(() => safeStorageGet("hm-graph-canonical") === "true");
   useEffect(() => { safeStorageSet("hm-graph-canonical", String(canonicalOnly)); }, [canonicalOnly]);
   // Relationship type filter chips (Updates, Extends, Derives, Contradicts, supports, mentions)
   const [edgeTypeFilter, setEdgeTypeFilter] = useState(new Set()); // empty = all
