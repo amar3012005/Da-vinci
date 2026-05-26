@@ -8,6 +8,7 @@ import React, {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Network,
+  ArrowLeft,
   X,
   Search,
   // eslint-disable-next-line no-unused-vars
@@ -35,6 +36,7 @@ import {
   Pause,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 import LangSwitcher from "../layout/LangSwitcher";

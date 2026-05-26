@@ -30,9 +30,7 @@ import {
   ExternalLink,
   X,
   Filter,
-  Download,
   Chrome,
-  Puzzle,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -2112,32 +2110,20 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
 }
 
 // ─── Browser Intelligence card ───────────────────────────────────────────────
+// Official Chrome Web Store listing. Auto-install is impossible — Google
+// killed inline install in 2018; only the Web Store "Add to Chrome" button
+// installs an extension. Best UX: single CTA opens the store page in a new
+// tab, the user clicks the green Add button there once.
 
-const EXTENSION_DOWNLOAD_URL =
-  (typeof process !== 'undefined' && process.env?.REACT_APP_CORE_API_URL
-    ? process.env.REACT_APP_CORE_API_URL
-    : 'https://core.hivemind.davinciai.eu:8050') + '/install/chrome-extension.zip';
+const CHROME_WEBSTORE_URL =
+  'https://chromewebstore.google.com/detail/hivemind-%E2%80%94-persistent-mem/fblojngccegocehklbpambblncakmlle';
 
 function BrowserIntelligenceCard() {
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState(false);
-  const [showSteps, setShowSteps] = useState(false);
+  const [opened, setOpened] = useState(false);
 
-  const handleDownload = async () => {
-    setDownloading(true);
-    try {
-      // Trigger native browser download — same UX as a regular file link.
-      const a = document.createElement('a');
-      a.href = EXTENSION_DOWNLOAD_URL;
-      a.download = 'hivemind-chrome-extension.zip';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setDownloaded(true);
-      setShowSteps(true);
-    } finally {
-      setTimeout(() => setDownloading(false), 800);
-    }
+  const handleInstall = () => {
+    window.open(CHROME_WEBSTORE_URL, '_blank', 'noopener,noreferrer');
+    setOpened(true);
   };
 
   return (
@@ -2158,8 +2144,8 @@ function BrowserIntelligenceCard() {
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">
                 Browser Intelligence
               </h3>
-              <span className="text-[9.5px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
-                Beta
+              <span className="text-[9.5px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Official
               </span>
             </div>
             <p className="text-[#525252] text-[13px] leading-relaxed">
@@ -2175,118 +2161,51 @@ function BrowserIntelligenceCard() {
           </div>
         </div>
 
-        {/* Right — download button */}
+        {/* Right — install button (opens Chrome Web Store) */}
         <div className="flex flex-col items-stretch gap-2 sm:items-end flex-shrink-0">
           <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white text-[13px] font-semibold rounded-xl transition-all shadow-[0_2px_10px_rgba(17,125,255,0.3)]"
+            onClick={handleInstall}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#117dff] hover:bg-[#0066e0] text-white text-[13px] font-semibold rounded-xl transition-all shadow-[0_2px_10px_rgba(17,125,255,0.3)]"
           >
-            {downloading ? (
-              <>
-                <RefreshCw size={14} className="animate-spin" />
-                Preparing…
-              </>
-            ) : downloaded ? (
+            {opened ? (
               <>
                 <Check size={14} />
-                Downloaded — see steps below
+                Opened Chrome Web Store
               </>
             ) : (
               <>
-                <Download size={14} />
-                Download Chrome Extension
+                <Chrome size={14} />
+                Add to Chrome
               </>
             )}
           </button>
-          <button
-            onClick={() => setShowSteps((v) => !v)}
-            className="text-[11px] text-[#117dff] hover:underline self-center sm:self-end"
-          >
-            {showSteps ? 'Hide install steps' : 'How to install'}
-          </button>
+          <p className="text-[10.5px] text-[#737373] sm:text-right max-w-[220px]">
+            One-click install from the official Chrome Web Store. Click
+            "Add to Chrome" on the page that opens.
+          </p>
         </div>
       </div>
 
-      {/* Install steps drawer */}
-      <AnimatePresence>
-        {showSteps && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4]"
-          >
-            <div className="p-5 sm:p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Puzzle size={14} className="text-[#117dff]" />
-                <h4 className="text-[12px] font-bold font-['Space_Grotesk'] uppercase tracking-wide text-[#0a0a0a]">
-                  Load unpacked in Chrome
-                </h4>
-              </div>
-              <ol className="space-y-3 text-[13px] text-[#525252] leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-[11px] font-mono font-bold flex items-center justify-center">1</span>
-                  <span>
-                    <strong className="text-[#0a0a0a]">Unzip</strong> the downloaded
-                    <code className="mx-1 px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded text-[11px] font-mono text-[#117dff]">hivemind-chrome-extension.zip</code>
-                    anywhere on your machine (e.g. your Documents folder).
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-[11px] font-mono font-bold flex items-center justify-center">2</span>
-                  <span>
-                    Open
-                    <code className="mx-1 px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded text-[11px] font-mono">chrome://extensions</code>
-                    (or
-                    <code className="mx-1 px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded text-[11px] font-mono">edge://extensions</code>
-                    on Edge). Toggle
-                    <strong className="text-[#0a0a0a]"> Developer mode </strong>
-                    on (top right).
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-[11px] font-mono font-bold flex items-center justify-center">3</span>
-                  <span>
-                    Click
-                    <strong className="text-[#0a0a0a]"> Load unpacked </strong>
-                    and pick the folder you just unzipped (the one containing
-                    <code className="mx-1 px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded text-[11px] font-mono">manifest.json</code>).
-                  </span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#117dff]/10 text-[#117dff] text-[11px] font-mono font-bold flex items-center justify-center">4</span>
-                  <span>
-                    Click the 🧩 puzzle icon in the toolbar →
-                    <strong className="text-[#0a0a0a]"> pin HIVEMIND </strong>
-                    so it stays visible. Click the icon →
-                    <strong className="text-[#0a0a0a]"> Sign in with browser </strong>
-                    to connect to your HIVEMIND account.
-                  </span>
-                </li>
-              </ol>
-
-              <div className="mt-5 p-3 bg-[#fff8f3] border border-[#d8c7bb] rounded-xl flex items-start gap-2">
-                <AlertTriangle size={14} className="text-[#a16207] flex-shrink-0 mt-0.5" />
-                <p className="text-[11.5px] text-[#4a3328] leading-relaxed">
-                  This is the developer-mode build. We're submitting to the
-                  Chrome Web Store — when approved you'll be able to install
-                  with one click from there.
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-[#737373]">
-                <span>Keyboard shortcut once installed:</span>
-                <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono">⌘</kbd>
-                <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono">⇧</kbd>
-                <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono">H</kbd>
-                <span className="text-[#a3a3a3]">to open Talk to HIVE</span>
-              </div>
+      {/* Post-install hint */}
+      {opened && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4]"
+        >
+          <div className="p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-[#525252]">
+              <strong className="text-[#0a0a0a]">After install:</strong>
+              <span>click the 🧩 puzzle icon in the toolbar, pin HIVEMIND, then use</span>
+              <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono text-[11px]">⌘</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono text-[11px]">⇧</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white border border-[#e3e0db] rounded font-mono text-[11px]">H</kbd>
+              <span>to open Talk to HIVE on any tab.</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
