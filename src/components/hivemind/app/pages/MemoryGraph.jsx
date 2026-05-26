@@ -8,7 +8,6 @@ import React, {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Network,
-  ArrowLeft,
   X,
   Search,
   // eslint-disable-next-line no-unused-vars
@@ -36,7 +35,6 @@ import {
   Pause,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 import LangSwitcher from "../layout/LangSwitcher";
@@ -399,6 +397,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
   // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
   // the inline pill in the toolbar. Persisted to localStorage so the choice
   // sticks across reloads.
@@ -798,8 +797,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   }, [graphData.nodes, layerFilter, temporalFilteredNodes, canonicalOnly]);
 
   const toolbarControlClass = graphTheme === "night"
-    ? "border-[#2f2925] bg-[#080808]/78 text-[#d5c8bc]"
-    : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]";
+    ? "border-[#382f2a] bg-[#0b0a09]/72 text-[#d5c8bc] shadow-[inset_0_1px_0_rgba(255,240,229,0.06)]"
+    : "border-[#ded8ce] bg-[#fffdf8]/78 text-[#525252] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]";
   const toolbarActiveClass = graphTheme === "night"
     ? "bg-[#fff0e5] text-[#080808]"
     : "bg-[#0a0a0a] text-white";
@@ -813,6 +812,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
     : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
+  const floatingButtonClass = graphTheme === "night"
+    ? "border-[#382f2a] bg-[#080808]/72 text-[#e6d8cb] hover:bg-[#fff0e5] hover:text-[#080808] shadow-[0_18px_48px_rgba(0,0,0,0.34)]"
+    : "border-[#ded8ce] bg-[#fffdf8]/82 text-[#2f2a24] hover:bg-[#0a0a0a] hover:text-white shadow-[0_18px_48px_rgba(37,32,27,0.10)]";
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
@@ -820,14 +822,28 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       <div
         className={`shrink-0 border-b px-4 py-2 flex items-center gap-2 z-20 overflow-x-auto ${
           graphTheme === "night"
-            ? "border-[#2f2925] bg-[#11100f]/92"
-            : "border-[#e3e0db] bg-[#faf9f4]/94"
+            ? "border-[#2f2925] bg-[linear-gradient(90deg,rgba(8,8,8,0.96),rgba(24,18,16,0.92)_48%,rgba(8,8,8,0.96))]"
+            : "border-[#e3e0db] bg-[linear-gradient(90deg,rgba(250,249,244,0.98),rgba(255,253,248,0.94)_50%,rgba(244,240,232,0.96))]"
         }`}
-        style={{ backdropFilter: "blur(18px)" }}
+        style={{
+          backdropFilter: "blur(18px) saturate(150%)",
+          boxShadow: graphTheme === "night"
+            ? "0 14px 52px rgba(0,0,0,0.32), inset 0 -1px 0 rgba(255,240,229,0.03)"
+            : "0 12px 42px rgba(37,32,27,0.07), inset 0 -1px 0 rgba(255,255,255,0.75)",
+        }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Network size={15} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#0a0a0a]"} />
+        <div className={`flex items-center gap-2 shrink-0 rounded-xl border px-2.5 py-1.5 ${toolbarControlClass}`}>
+          <span
+            className="grid h-5 w-5 place-items-center rounded-lg"
+            style={{
+              background: graphTheme === "night"
+                ? "radial-gradient(circle at 35% 30%, rgba(255,240,229,0.22), rgba(255,105,97,0.18) 48%, rgba(255,105,97,0.04))"
+                : "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(10,10,10,0.08) 52%, rgba(10,10,10,0.03))",
+            }}
+          >
+            <Network size={13} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#0a0a0a]"} />
+          </span>
           <span className={`text-[13px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#0a0a0a]"}`}>
             {t('memoryGraph.title', 'Memory Graph')}
           </span>
