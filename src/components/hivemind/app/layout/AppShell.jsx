@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -100,8 +100,10 @@ function TalkToHiveFAB({ onOpen, hidden }) {
  */
 export default function AppShell() {
   const { needsOnboarding } = useAuth();
+  const location = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
 
   // Track sidebar state for dynamic margin
   useEffect(() => {
@@ -124,16 +126,19 @@ export default function AppShell() {
   return (
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        <Sidebar />
-        <div className={`ml-[260px] transition-all duration-300 ${sidebarCollapsed ? 'sidebar-content-expanded' : ''}`} style={{ marginLeft: sidebarCollapsed ? '0px' : '260px' }}>
-          <TopBar />
-          <main className="flex-1 p-6 overflow-y-auto">
+        {!graphFullscreen && <Sidebar />}
+        <div
+          className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen ? 'sidebar-content-expanded' : ''}`}
+          style={{ marginLeft: sidebarCollapsed || graphFullscreen ? '0px' : '260px' }}
+        >
+          {!graphFullscreen && <TopBar />}
+          <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen} />
+        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen} />
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}

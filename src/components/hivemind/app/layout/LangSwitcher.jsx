@@ -11,7 +11,7 @@ import { Globe, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n';
 
-export default function LangSwitcher({ compact = false }) {
+export default function LangSwitcher({ compact = false, theme = 'light' }) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
@@ -36,6 +36,7 @@ export default function LangSwitcher({ compact = false }) {
   const current = (i18n.language || 'en').split('-')[0];
   const currentMeta =
     SUPPORTED_LANGUAGES.find((l) => l.code === current) || SUPPORTED_LANGUAGES[0];
+  const dark = theme === 'night' || theme === 'dark';
 
   const pickLanguage = async (code) => {
     try {
@@ -51,7 +52,11 @@ export default function LangSwitcher({ compact = false }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f5f3ee] transition-colors text-[12px] font-medium text-[#525252] ${
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-colors text-[12px] font-medium ${
+          dark
+            ? 'border-[#2f2925] bg-[#080808]/78 text-[#d5c8bc] hover:text-[#fff0e5]'
+            : 'border-[#e3e0db] bg-white text-[#525252] hover:bg-[#f5f3ee]'
+        } ${
           compact ? '' : 'min-w-[68px] justify-center'
         }`}
         title={t('common.language', 'Language')}
@@ -67,9 +72,13 @@ export default function LangSwitcher({ compact = false }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-[220px] max-h-[360px] overflow-y-auto rounded-xl border border-[#e3e0db] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100]"
+          className={`absolute right-0 mt-2 w-[220px] max-h-[360px] overflow-y-auto rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1.5 z-[100] ${
+            dark
+              ? 'border-[#2f2925] bg-[#080808] shadow-[0_18px_48px_rgba(0,0,0,0.46)]'
+              : 'border-[#e3e0db] bg-white'
+          }`}
         >
-          <div className="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a] font-semibold">
+          <div className={`px-3 py-2 text-[10px] uppercase tracking-[0.08em] font-semibold ${dark ? 'text-[#9d9288]' : 'text-[#8a8a8a]'}`}>
             {t('common.languageHeader', 'Choose language')}
           </div>
           {SUPPORTED_LANGUAGES.map((lng) => {
@@ -80,13 +89,17 @@ export default function LangSwitcher({ compact = false }) {
                 role="menuitemradio"
                 aria-checked={active}
                 onClick={() => pickLanguage(lng.code)}
-                className={`w-full text-left flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#f5f3ee] transition-colors ${
-                  active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'
+                className={`w-full text-left flex items-center gap-2 px-3 py-2 text-[13px] transition-colors ${
+                  dark ? 'hover:bg-[#151312]' : 'hover:bg-[#f5f3ee]'
+                } ${
+                  active
+                    ? dark ? 'text-[#fff0e5] font-semibold' : 'text-[#117dff] font-semibold'
+                    : dark ? 'text-[#d5c8bc]' : 'text-[#0a0a0a]'
                 }`}
               >
                 <span className="flex-1">
                   <span>{lng.native}</span>
-                  <span className="ml-2 text-[10px] text-[#8a8a8a] font-mono uppercase">
+                  <span className={`ml-2 text-[10px] font-mono uppercase ${dark ? 'text-[#8f8378]' : 'text-[#8a8a8a]'}`}>
                     {lng.code}
                   </span>
                 </span>

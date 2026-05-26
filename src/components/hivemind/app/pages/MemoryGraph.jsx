@@ -31,9 +31,13 @@ import {
   Radio,
   Moon,
   Sun,
+  Play,
+  Pause,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
+import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
@@ -80,16 +84,6 @@ const TYPE_LEGEND = [
   { key: "relationship", label: "Relationship", shape: "ring" },
 ];
 
-// Layer filter definitions for UI
-const LAYER_FILTERS = [
-  { key: "all", label: "All", icon: null },
-  { key: "fact", label: "Facts", icon: "◆", color: "#5f5b53" },
-  { key: "tara", label: "TARA", icon: "⬡", color: "#4a4640" },
-  { key: "tara-insight", label: "Insights", icon: "★", color: "#24221f" },
-  { key: "promoted", label: "Risks", icon: "△", color: "#36332d" },
-  { key: "verified", label: "Verified", icon: "✓", color: "#5c5851" },
-  { key: "observation", label: "Obs", icon: "▢", color: "#7a746b" },
-];
 const USER_COLORS = [
   "#1f1f1f",
   "#36332d",
@@ -402,6 +396,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph({ dimension = '3d' } = {}) {
+  const { t } = useTranslation('dashboard');
   // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
   // the inline pill in the toolbar. Persisted to localStorage so the choice
   // sticks across reloads.
@@ -439,7 +434,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [scope, setScope] = useState("personal");
   // eslint-disable-next-line no-unused-vars
   const [showFilters, setShowFilters] = useState(false);
-  const [layerFilter, setLayerFilter] = useState("all");
+  const [layerFilter] = useState("all");
   const [hoveredNode, setHoveredNode] = useState(null);
   const [clusterFilter, setClusterFilter] = useState(null); // null = all; else clusterId
   const [showClusterPanel, setShowClusterPanel] = useState(false); // Phase 8 sidebar
@@ -463,17 +458,17 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return Number.isFinite(parsed) ? parsed : 0;
   });
   // Intelligent graph (docs + entities + typed edges) toggle
-  const [intelligentMode, setIntelligentMode] = useState(() => safeStorageGet("hm-graph-intelligent") === "true");
+  const [intelligentMode] = useState(() => safeStorageGet("hm-graph-intelligent") === "true");
   useEffect(() => { safeStorageSet("hm-graph-intelligent", String(intelligentMode)); }, [intelligentMode]);
   // Canonical-only toggle — hides superseded nodes (is_latest=false) so the
   // graph reflects the current state of knowledge after drift-compaction.
   // Default OFF: show full timeline (superseded nodes dimmed + Updates edges
   // visible). Was previously ON by default which hid every memory the user
   // had revised, surprising users who saved multiple drafts.
-  const [canonicalOnly, setCanonicalOnly] = useState(() => safeStorageGet("hm-graph-canonical") === "true");
+  const [canonicalOnly] = useState(() => safeStorageGet("hm-graph-canonical") === "true");
   useEffect(() => { safeStorageSet("hm-graph-canonical", String(canonicalOnly)); }, [canonicalOnly]);
   // Relationship type filter chips (Updates, Extends, Derives, Contradicts, supports, mentions)
-  const [edgeTypeFilter, setEdgeTypeFilter] = useState(new Set()); // empty = all
+  const [edgeTypeFilter] = useState(new Set()); // empty = all
   useEffect(() => {
     safeStorageSet("hm-graph-limit", String(nodeLimit));
   }, [nodeLimit]);
@@ -800,17 +795,43 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return matches;
   }, [graphData.nodes, layerFilter, temporalFilteredNodes, canonicalOnly]);
 
+  const toolbarControlClass = graphTheme === "night"
+    ? "border-[#2f2925] bg-[#080808]/78 text-[#d5c8bc]"
+    : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]";
+  const toolbarActiveClass = graphTheme === "night"
+    ? "bg-[#fff0e5] text-[#080808]"
+    : "bg-[#0a0a0a] text-white";
+  const toolbarMutedClass = graphTheme === "night"
+    ? "text-[#8f8378] hover:text-[#fff0e5]"
+    : "text-[#737373] hover:text-[#0a0a0a]";
+  const panelClass = graphTheme === "night"
+    ? "border-[#2f2925] bg-[#080808]/82 text-[#e8dbcf] shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
+    : "border-[#e3e0db] bg-[#fffdf8]/86 text-[#2f2a24] shadow-[0_18px_58px_rgba(37,32,27,0.10)]";
+  const panelMutedText = graphTheme === "night" ? "text-[#9d9288]" : "text-[#8b857d]";
+  const panelSoftButton = graphTheme === "night"
+    ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
+    : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
+
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
-      <div className="shrink-0 mx-3 mt-3 rounded-2xl border border-[#e3e0db]/80 bg-white/90 backdrop-blur-xl px-3 py-2 flex items-center gap-1.5 z-10 shadow-[0_4px_16px_rgba(0,0,0,0.04)] overflow-x-auto">
+      <div
+        className={`shrink-0 border-b px-4 py-2 flex items-center gap-2 z-20 overflow-x-auto ${
+          graphTheme === "night"
+            ? "border-[#2f2925] bg-[#11100f]/92"
+            : "border-[#e3e0db] bg-[#faf9f4]/94"
+        }`}
+        style={{ backdropFilter: "blur(18px)" }}
+      >
         {/* Brand */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Network size={14} className="text-[#0a0a0a]" />
-          <span className="text-xs font-bold font-['Space_Grotesk'] text-[#0a0a0a] whitespace-nowrap">Memory Graph</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <Network size={15} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#0a0a0a]"} />
+          <span className={`text-[13px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#0a0a0a]"}`}>
+            {t('memoryGraph.title', 'Memory Graph')}
+          </span>
         </div>
 
-        <div className="h-5 w-px bg-[#e3e0db] mx-1" />
+        <div className={`h-5 w-px mx-1 shrink-0 ${graphTheme === "night" ? "bg-[#2f2925]" : "bg-[#e3e0db]"}`} />
 
         {/* Search */}
         <div className="relative shrink-0" style={{ minWidth: 180, maxWidth: 240 }}>
@@ -819,99 +840,17 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={matchCount > 0 ? `${matchCount} match${matchCount === 1 ? '' : 'es'}` : "Search…"}
-            className="w-full pl-7 pr-2 py-1.5 border border-[#e3e0db] rounded-lg text-[11px] font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#0a0a0a]/35 bg-[#faf9f4]"
+            placeholder={matchCount > 0 ? t('memoryGraph.matches', '{{count}} matches', { count: matchCount }) : t('memoryGraph.search', 'Search memories')}
+            className={`w-full pl-7 pr-2 py-1.5 border rounded-lg text-[11px] font-['Space_Grotesk'] focus:outline-none ${
+              graphTheme === "night"
+                ? "border-[#2f2925] bg-[#080808] text-[#fff0e5] placeholder:text-[#746b63] focus:border-[#ff746d]/50"
+                : "border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:border-[#0a0a0a]/35"
+            }`}
           />
         </div>
 
-        {/* Intelligent toggle + edge type filters (only in intelligent mode) */}
-        <button
-          type="button"
-          onClick={() => setIntelligentMode(v => !v)}
-          className={`shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-mono uppercase tracking-[0.06em] border ${
-            intelligentMode
-              ? "bg-[#117dff]/10 border-[#117dff]/40 text-[#117dff]"
-              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
-          }`}
-          title="Show documents + entities + typed edges"
-        >
-          ◆ Intelligent
-        </button>
-
-        {/* Canonical-only toggle — hides superseded nodes post drift-compaction */}
-        <button
-          type="button"
-          onClick={() => setCanonicalOnly(v => !v)}
-          className={`shrink-0 rounded-lg px-2 py-1.5 text-[10px] font-mono uppercase tracking-[0.06em] border ${
-            canonicalOnly
-              ? "bg-[#10b981]/10 border-[#10b981]/40 text-[#10b981]"
-              : "border-[#e3e0db] bg-[#faf9f4] text-[#525252]"
-          }`}
-          title={canonicalOnly
-            ? "Canonical-only — hides superseded versions (is_latest=false). Click to show full history."
-            : "Showing full history. Click to hide superseded versions."}
-        >
-          ✓ Canonical
-        </button>
-        {intelligentMode && (
-          <div className="flex items-center gap-1 shrink-0">
-            {[
-              // Palette matches EDGE_COLORS at top of file
-              { key: 'updates',      label: 'Upd',  color: '#f59e0b' },
-              { key: 'extends',      label: 'Ext',  color: '#22c55e' },
-              { key: 'derives',      label: 'Der',  color: '#8b5cf6' },
-              { key: 'derived_from', label: 'Evid', color: '#3b82f6' },
-              { key: 'contradicts',  label: 'Conf', color: '#ef4444' },
-              { key: 'mentions',     label: 'Ent',  color: '#94a3b8' },
-            ].map((opt) => {
-              const active = edgeTypeFilter.has(opt.key);
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => {
-                    setEdgeTypeFilter(prev => {
-                      const next = new Set(prev);
-                      if (next.has(opt.key)) next.delete(opt.key); else next.add(opt.key);
-                      return next;
-                    });
-                  }}
-                  style={active ? { borderColor: opt.color, color: opt.color, background: opt.color + '14' } : undefined}
-                  className={`rounded-lg px-1.5 py-1 text-[10px] font-mono border ${
-                    active ? "" : "border-[#e3e0db] text-[#737373] bg-[#faf9f4]"
-                  }`}
-                  title={opt.key}
-                >
-                  <span style={{ color: opt.color }}>●</span> {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="h-5 w-px bg-[#e3e0db] mx-1 shrink-0" />
-
-        {/* Layer pill — replace floating Graph Controls */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
-          {LAYER_FILTERS.slice(0, 4).map((layer) => (
-            <button
-              key={layer.key}
-              type="button"
-              onClick={() => setLayerFilter(layer.key)}
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
-                layerFilter === layer.key
-                  ? "bg-[#0a0a0a]/8 text-[#0a0a0a]"
-                  : "text-[#737373]"
-              }`}
-              title={layer.label}
-            >
-              {layer.icon ? <span style={{ color: layer.color }}>{layer.icon}</span> : layer.label}
-            </button>
-          ))}
-        </div>
-
         {/* Node budget */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
+        <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
           {[
             { key: 300, label: '300' },
             { key: 1000, label: '1K' },
@@ -923,7 +862,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               type="button"
               onClick={() => setNodeLimit(o.key)}
               className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
-                nodeLimit === o.key ? "bg-[#0a0a0a]/8 text-[#0a0a0a]" : "text-[#737373]"
+                nodeLimit === o.key ? toolbarActiveClass : toolbarMutedClass
               }`}
             >
               {o.label}
@@ -932,7 +871,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         </div>
 
         {/* Scope */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5 shrink-0">
+        <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
           {[
             { key: "personal", label: "My" },
             { key: "team", label: "Team", disabled: org?.plan !== "enterprise" },
@@ -944,7 +883,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               disabled={option.disabled}
               onClick={() => !option.disabled && setScope(option.key)}
               className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
-                scope === option.key ? "bg-[#0a0a0a]/8 text-[#0a0a0a]" : "text-[#737373]"
+                scope === option.key ? toolbarActiveClass : toolbarMutedClass
               } ${option.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
             >
               {option.label}
@@ -955,15 +894,15 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Action buttons */}
 
         {/* 3D / 2D toggle — segmented pill */}
-        <div className="shrink-0 inline-flex items-center rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5">
+        <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
           {['3d', '2d'].map((dim) => (
             <button
               key={dim}
               onClick={() => setGraphDim(dim)}
               className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide transition-colors ${
                 graphDim === dim
-                  ? 'bg-[#0a0a0a] text-white'
-                  : 'text-[#737373] hover:text-[#0a0a0a]'
+                  ? toolbarActiveClass
+                  : toolbarMutedClass
               }`}
               title={dim === '3d' ? '3D force graph' : '2D force graph'}
             >
@@ -973,7 +912,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         </div>
 
         {/* Day / Night graph theme */}
-        <div className="shrink-0 inline-flex items-center rounded-lg border border-[#e3e0db] bg-[#faf9f4] p-0.5">
+        <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
           {[
             { key: "night", label: "Night", icon: Moon },
             { key: "day", label: "Day", icon: Sun },
@@ -990,7 +929,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                     ? option.key === "night"
                       ? "bg-[#0a0a0a] text-[#fff7ed]"
                       : "bg-[#efe9dd] text-[#0a0a0a]"
-                    : "text-[#737373] hover:text-[#0a0a0a]"
+                    : toolbarMutedClass
                 }`}
                 title={`${option.label} graph mode`}
               >
@@ -1003,8 +942,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
         <button
           onClick={() => setShowLegend((v) => !v)}
-          className={`shrink-0 p-1.5 rounded-lg border text-[#525252] ${
-            showLegend ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/8 text-[#0a0a0a]" : "border-[#e3e0db] bg-[#faf9f4]"
+          className={`shrink-0 p-1.5 rounded-lg border ${
+            showLegend ? toolbarActiveClass : toolbarControlClass
           }`}
           title="Toggle legend"
         >
@@ -1014,8 +953,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           onClick={() => setIsLiveMode((v) => !v)}
           className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono border ${
             isLiveMode
-              ? "border-[#10b981]/40 bg-[#10b981]/10 text-[#059669]"
-              : "border-[#e3e0db] bg-[#faf9f4] text-[#737373]"
+              ? "border-[#5e7c62]/45 bg-[#5e7c62]/14 text-[#6fb879]"
+              : toolbarControlClass
           }`}
           title={isLiveMode ? "Live updates on" : "Paused"}
         >
@@ -1025,21 +964,21 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         <button
           onClick={fetchGraph}
           disabled={loading}
-          className="shrink-0 p-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#0a0a0a]/20 disabled:opacity-40"
+          className={`shrink-0 p-1.5 rounded-lg border disabled:opacity-40 ${toolbarControlClass}`}
           title="Refresh"
         >
           <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => graphRef.current?.fitView?.(400)}
-          className="shrink-0 p-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:border-[#0a0a0a]/20"
+          className={`shrink-0 p-1.5 rounded-lg border ${toolbarControlClass}`}
           title="Fit to view"
         >
           <Maximize2 size={12} />
         </button>
         <button
           onClick={() => { setPageIndexRefreshKey(k => k + 1); setPageIndexModalOpen(true); }}
-          className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#0a0a0a] text-white text-[10px] font-mono font-semibold hover:bg-[#262626]"
+          className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono font-semibold ${toolbarActiveClass}`}
           title="Memory Map"
         >
           <MapIcon size={10} />
@@ -1047,8 +986,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         </button>
 
         {/* Stats */}
+        <div className="ml-auto shrink-0">
+          <LangSwitcher compact theme={graphTheme} />
+        </div>
+
         {stats && (
-          <div className="ml-auto shrink-0 flex items-center gap-2 text-[10px] font-mono text-[#8b857d] pl-2 border-l border-[#e3e0db]">
+          <div className={`shrink-0 flex items-center gap-2 text-[10px] font-mono pl-2 border-l ${panelMutedText} ${graphTheme === "night" ? "border-[#2f2925]" : "border-[#e3e0db]"}`}>
             <span>{filteredNodes.size}/{stats.nodes} nodes</span>
             <span>· {stats.edges} edges</span>
           </div>
@@ -1208,7 +1151,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             theme={graphTheme === "night" ? "atlas" : "day"}
             width={
               typeof window !== "undefined"
-                ? window.innerWidth - (selectedNode ? 340 : 0) - 260
+                ? window.innerWidth - (selectedNode ? 340 : 0)
                 : 800
             }
             height={
@@ -1243,7 +1186,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               backgroundColor="rgba(0,0,0,0)"
               width={
                 typeof window !== "undefined"
-                  ? window.innerWidth - (selectedNode ? 340 : 0) - 260
+                  ? window.innerWidth - (selectedNode ? 340 : 0)
                   : 800
               }
               height={
@@ -1270,59 +1213,53 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Legend */}
         <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 max-w-[420px]">
           {showLegend && (
-            <div className="bg-white/82 backdrop-blur-xl border border-[#e3e0db] rounded-2xl px-3 py-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+            <div className={`${panelClass} backdrop-blur-xl rounded-[20px] border px-3.5 py-3`}>
               <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[10px] font-mono text-[#8b857d] uppercase tracking-[0.14em]">
-                  Legend
+                <p className={`text-[10px] font-mono uppercase tracking-[0.16em] ${panelMutedText}`}>
+                  {t('memoryGraph.legend', 'Legend')}
                 </p>
                 <button
                   onClick={() => setShowLegend(false)}
-                  className="text-[#a3a3a3] hover:text-[#525252]"
+                  className={graphTheme === "night" ? "text-[#756a61] hover:text-[#fff0e5]" : "text-[#a3a3a3] hover:text-[#525252]"}
                 >
                   <X size={12} />
                 </button>
               </div>
-              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">
-                Relationships
+              <p className={`text-[9px] font-mono uppercase tracking-wider mb-1.5 ${panelMutedText}`}>
+                {t('memoryGraph.relationships', 'Relationships')}
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                {Object.entries(EDGE_COLORS).map(([type, color]) => (
+                {Object.entries(EDGE_COLORS).slice(0, 5).map(([type, color]) => (
                   <div key={type} className="flex items-center gap-1.5">
                     <div
-                      className="w-4 h-0.5 rounded-full"
+                      className="w-5 h-0 border-t"
                       style={{
-                        backgroundColor: color,
-                        opacity: type === "Derives" ? 0.7 : 1,
+                        borderColor: graphTheme === "night" ? "#c9b8ab" : color,
+                        borderTopStyle: type === "Updates" ? "solid" : "dashed",
+                        opacity: type === "Derives" ? 0.52 : 0.72,
                       }}
                     />
-                    <span className="text-[10px] font-['Space_Grotesk'] text-[#525252]">
+                    <span className={`text-[10px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#cabdb1]" : "text-[#525252]"}`}>
                       {EDGE_LABELS[type]}
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-                Node Type
+              <p className={`text-[9px] font-mono uppercase tracking-wider mt-2.5 mb-1.5 ${panelMutedText}`}>
+                {t('memoryGraph.nodeTypes', 'Node Types')}
               </p>
               <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-                {TYPE_LEGEND.map((item) => (
+                {TYPE_LEGEND.slice(0, 7).map((item) => (
                   <div key={item.key} className="flex items-center gap-1.5">
-                    <LegendShape shape={item.shape} color={TYPE_COLORS[item.key]} />
-                    <span className="text-[10px] text-[#525252] font-['Space_Grotesk']">
+                    <LegendShape
+                      shape={item.shape}
+                      color={graphTheme === "night" ? (item.key === "decision" ? "#d2514d" : "#d6cabf") : TYPE_COLORS[item.key]}
+                    />
+                    <span className={`text-[10px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#cabdb1]" : "text-[#525252]"}`}>
                       {item.label}
                     </span>
                   </div>
                 ))}
-              </div>
-              <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">
-                Reading The Graph
-              </p>
-              <div className="space-y-1 text-[10px] text-[#525252] font-['Space_Grotesk']">
-                <p>Size = importance and recall weight.</p>
-                <p>Color + shape = memory type.</p>
-                <p>Cluster glow appears only when that group is focused.</p>
-                <p>Labels appear only when you zoom in and only for the visible top-ranked nodes.</p>
-                <p>Time rail reveals memories from earliest to latest.</p>
               </div>
             </div>
           )}
@@ -1331,14 +1268,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Zoom + cluster panel controls */}
         <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
           {temporalBounds && (
-            <div className="rounded-2xl border border-[#e3e0db] bg-white/88 backdrop-blur-xl px-3 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.04)] w-[290px]">
+            <div className={`${panelClass} rounded-[22px] border backdrop-blur-xl px-3 py-3 w-[268px]`}>
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
-                    Temporal Explorer
+                  <p className={`text-[10px] font-mono uppercase tracking-[0.16em] ${panelMutedText}`}>
+                    {t('memoryGraph.time', 'Time')}
                   </p>
-                  <p className="text-[11px] text-[#525252] font-['Space_Grotesk']">
-                    Bi-temporal time travel and diff
+                  <p className={`text-[11px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#eaded2]" : "text-[#24221f]"}`}>
+                    {temporalCutoff ? new Date(temporalCutoff).toLocaleDateString() : t('memoryGraph.allTime', 'All time')}
                   </p>
                 </div>
                 <button
@@ -1346,9 +1283,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                     setTemporalProgress(1);
                     setIsLiveMode(true);
                   }}
-                  className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-1 text-[10px] font-mono text-[#525252]"
+                  className={`rounded-lg border px-2.5 py-1 text-[10px] font-mono ${panelSoftButton}`}
                 >
-                  Now
+                  {t('memoryGraph.now', 'Now')}
                 </button>
               </div>
               <div className="flex items-center gap-1.5 mb-2">
@@ -1356,18 +1293,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   onClick={() => setTemporalMode('travel')}
                   className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
                     temporalMode === 'travel'
-                      ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
-                      : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
+                      ? toolbarActiveClass
+                      : panelSoftButton
                   }`}
                 >
-                  Time Travel
+                  {t('memoryGraph.travel', 'Travel')}
                 </button>
                 <button
                   onClick={() => setTemporalMode('diff')}
                   className={`px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border transition-colors ${
                     temporalMode === 'diff'
-                      ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
-                      : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db] hover:bg-[#f3f1ec]'
+                      ? toolbarActiveClass
+                      : panelSoftButton
                   }`}
                 >
                   Diff
@@ -1377,14 +1314,15 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                     if (temporalProgress >= 0.999) setTemporalProgress(0);
                     setTemporalPlaying((p) => !p);
                   }}
-                  className="ml-auto px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] bg-[#0a0a0a] text-white border border-[#0a0a0a] hover:bg-[#262626]"
+                  className={`ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.12em] border ${toolbarActiveClass}`}
                   aria-label={temporalPlaying ? 'Pause' : 'Play'}
                 >
-                  {temporalPlaying ? '⏸ Pause' : '▶ Play'}
+                  {temporalPlaying ? <Pause size={10} /> : <Play size={10} />}
+                  {temporalPlaying ? t('memoryGraph.pause', 'Pause') : t('memoryGraph.play', 'Play')}
                 </button>
                 <button
                   onClick={() => setTemporalSpeed((s) => (s >= 4 ? 1 : s * 2))}
-                  className="px-1.5 py-1 rounded-lg text-[10px] font-mono bg-[#faf9f4] text-[#525252] border border-[#e3e0db]"
+                  className={`px-1.5 py-1 rounded-lg text-[10px] font-mono border ${panelSoftButton}`}
                   title="Playback speed"
                 >
                   {temporalSpeed}×
@@ -1403,45 +1341,50 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                     setIsLiveMode(next >= 0.999);
                     if (temporalPlaying) setTemporalPlaying(false);
                   }}
-                  className="w-full h-2 appearance-none bg-[#f2eee7] rounded-full cursor-pointer temporal-slider-horizontal"
+                  className={`w-full h-2 appearance-none rounded-full cursor-pointer temporal-slider-horizontal ${graphTheme === "night" ? "bg-[#1d1a18]" : "bg-[#f2eee7]"}`}
                   aria-label="Temporal memory formation scrubber"
                 />
                 {/* Progress bar underlay — animated fill mirrors temporalProgress */}
                 <div
-                  className="pointer-events-none absolute left-0 top-0 h-2 rounded-full bg-gradient-to-r from-[#0a0a0a] to-[#777168] opacity-55 transition-[width] duration-100"
-                  style={{ width: `${Math.round(temporalProgress * 100)}%` }}
+                  className="pointer-events-none absolute left-0 top-0 h-2 rounded-full opacity-65 transition-[width] duration-100"
+                  style={{
+                    width: `${Math.round(temporalProgress * 100)}%`,
+                    background: graphTheme === "night"
+                      ? "linear-gradient(90deg, #ff6961, #f2d8c2)"
+                      : "linear-gradient(90deg, #0a0a0a, #777168)",
+                  }}
                 />
               </div>
-              <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-[#8b857d]">
+              <div className={`mt-2 flex items-center justify-between text-[10px] font-mono ${panelMutedText}`}>
                 <span>{new Date(temporalBounds.min).toLocaleDateString()}</span>
                 <span>{new Date(temporalBounds.max).toLocaleDateString()}</span>
               </div>
-              <div className="mt-2 flex items-center justify-between border-t border-[#eee9e1] pt-2">
+              <div className={`mt-2 flex items-center justify-between border-t pt-2 ${graphTheme === "night" ? "border-[#2f2925]" : "border-[#eee9e1]"}`}>
                 <div>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
-                    {temporalMode === 'diff' ? 'Cutoff' : 'Visible Window'}
+                  <p className={`text-[10px] font-mono uppercase tracking-[0.14em] ${panelMutedText}`}>
+                    {temporalMode === 'diff' ? t('memoryGraph.cutoff', 'Cutoff') : t('memoryGraph.window', 'Window')}
                   </p>
-                  <p className="mt-1 text-xs text-[#0a0a0a] font-['Space_Grotesk']">
+                  <p className={`mt-1 text-xs font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#0a0a0a]"}`}>
                     {temporalCutoff ? new Date(temporalCutoff).toLocaleString() : 'All time'}
                   </p>
                 </div>
                 <div className="text-right">
                   {temporalMode === 'diff' ? (
                     <>
-                      <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                      <p className={`text-[10px] font-mono uppercase tracking-[0.14em] ${panelMutedText}`}>
                         Δ Added
                       </p>
-                      <p className="text-xs text-[#0a0a0a] font-['Space_Grotesk'] font-semibold">
+                      <p className={`text-xs font-['Space_Grotesk'] font-semibold ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#0a0a0a]"}`}>
                         {temporalDiffNodes ? temporalDiffNodes.size : 0}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-[#8b857d]">
+                      <p className={`text-[10px] font-mono uppercase tracking-[0.14em] ${panelMutedText}`}>
                         Live
                       </p>
-                      <p className="text-xs text-[#36332d] font-['Space_Grotesk']">
-                        {isLiveMode ? 'On' : 'Paused'}
+                      <p className={`text-xs font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#f2d8c2]" : "text-[#36332d]"}`}>
+                        {isLiveMode ? t('memoryGraph.on', 'On') : t('memoryGraph.paused', 'Paused')}
                       </p>
                     </>
                   )}
@@ -1449,7 +1392,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               </div>
               {temporalMode === 'diff' && (
                 <div className="mt-2 flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#8b857d]">Δ window</span>
+                  <span className={`text-[10px] font-mono uppercase tracking-[0.12em] ${panelMutedText}`}>Δ window</span>
                   {[
                     { label: '1h', ms: 60 * 60 * 1000 },
                     { label: '1d', ms: 24 * 60 * 60 * 1000 },
@@ -1461,8 +1404,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                       onClick={() => setDiffWindowMs(opt.ms)}
                       className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors ${
                         diffWindowMs === opt.ms
-                          ? 'bg-[#0a0a0a]/8 text-[#0a0a0a] border-[#0a0a0a]/15'
-                          : 'bg-[#faf9f4] text-[#737373] border-[#e3e0db]'
+                          ? toolbarActiveClass
+                          : panelSoftButton
                       }`}
                     >
                       {opt.label}

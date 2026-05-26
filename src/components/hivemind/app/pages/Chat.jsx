@@ -154,24 +154,50 @@ function Sources({ sources }) {
             className="overflow-hidden"
           >
             <div className="mt-2 space-y-1.5">
-              {sources.map((src, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db]"
-                >
-                  <Brain size={11} className="text-[#117dff] mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] text-[#0a0a0a] font-medium truncate leading-tight">
-                      {src.title || src.content?.slice(0, 60) || `Memory ${i + 1}`}
-                    </p>
-                    {src.score != null && (
-                      <p className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
-                        score {src.score.toFixed(3)}
+              {sources.map((src, i) => {
+                const trace = src.rank_trace || {};
+                const chips = [];
+                if (trace.is_synthesis) {
+                  const label = trace.synthesis_type === 'synthesis-bridge' ? 'BRIDGE' : 'CANONICAL';
+                  const conf = trace.synthesis_confidence != null ? ` ${(trace.synthesis_confidence).toFixed(2)}` : '';
+                  const rev = trace.synthesis_revision && trace.synthesis_revision > 1 ? ` rev${trace.synthesis_revision}` : '';
+                  chips.push({ label: `SYNTH/${label}${conf}${rev}`, color: 'bg-purple-100 text-purple-700 border-purple-200' });
+                }
+                if (trace.cross_cluster_boost && trace.cross_cluster_boost > 1.0) {
+                  chips.push({ label: `×${trace.cross_cluster_boost.toFixed(2)} cluster`, color: 'bg-amber-100 text-amber-700 border-amber-200' });
+                }
+                if (src.memory_type && !trace.is_synthesis) {
+                  chips.push({ label: src.memory_type, color: 'bg-blue-100 text-blue-700 border-blue-200' });
+                }
+                return (
+                  <div
+                    key={i}
+                    className="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db]"
+                  >
+                    <Brain size={11} className={`mt-0.5 flex-shrink-0 ${trace.is_synthesis ? 'text-purple-600' : 'text-[#117dff]'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] text-[#0a0a0a] font-medium truncate leading-tight">
+                        {src.title || src.content?.slice(0, 60) || `Memory ${i + 1}`}
                       </p>
-                    )}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {chips.map((c, ci) => (
+                          <span
+                            key={ci}
+                            className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${c.color}`}
+                          >
+                            {c.label}
+                          </span>
+                        ))}
+                        {src.score != null && (
+                          <span className="text-[10px] text-[#a3a3a3] font-mono">
+                            score {src.score.toFixed(3)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </motion.div>
         )}
