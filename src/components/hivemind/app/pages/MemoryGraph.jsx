@@ -811,9 +811,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
     : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
-  const floatingButtonClass = graphTheme === "night"
-    ? "border-[#382f2a] bg-[#080808]/72 text-[#e6d8cb] hover:bg-[#fff0e5] hover:text-[#080808] shadow-[0_18px_48px_rgba(0,0,0,0.34)]"
-    : "border-[#ded8ce] bg-[#fffdf8]/82 text-[#2f2a24] hover:bg-[#0a0a0a] hover:text-white shadow-[0_18px_48px_rgba(37,32,27,0.10)]";
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
