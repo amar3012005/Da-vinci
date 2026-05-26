@@ -397,7 +397,6 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { t } = useTranslation('dashboard');
-  const navigate = useNavigate();
   // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
   // the inline pill in the toolbar. Persisted to localStorage so the choice
   // sticks across reloads.
