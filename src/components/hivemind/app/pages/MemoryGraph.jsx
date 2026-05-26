@@ -8,6 +8,7 @@ import React, {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Network,
+  ArrowLeft,
   X,
   Search,
   // eslint-disable-next-line no-unused-vars
@@ -35,6 +36,7 @@ import {
   Pause,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
 import LangSwitcher from "../layout/LangSwitcher";
@@ -397,6 +399,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
   // dimension: '3d' (default) | '2d' — initial mode, then user toggles via
   // the inline pill in the toolbar. Persisted to localStorage so the choice
   // sticks across reloads.
@@ -812,6 +815,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
     : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
 
+  // Floating back button — themed pill that floats just below the toolbar
+  // at the top-left of the canvas area. Matches graphTheme (night = warm
+  // black with coral accent; day = cream/charcoal).
+  const floatingButtonClass = graphTheme === "night"
+    ? "border-[#3a2e28] bg-[#0a0807]/85 text-[#fff0e5] hover:border-[#ff746d]/45 hover:bg-[#171110]/92 hover:text-[#ff8f7a] shadow-[0_18px_44px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,240,229,0.05)]"
+    : "border-[#d8d2c6] bg-[#fffdf8]/88 text-[#2a2520] hover:border-[#1a1410] hover:bg-[#0a0a0a] hover:text-white shadow-[0_18px_44px_rgba(37,32,27,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]";
+
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
@@ -1014,6 +1024,23 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
       {/* Graph canvas */}
       <div className="flex-1 relative">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate("/hivemind/app/overview");
+            }
+          }}
+          className={`absolute left-4 top-4 z-30 inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-mono uppercase tracking-[0.12em] backdrop-blur-xl transition-all ${floatingButtonClass}`}
+          title={t('memoryGraph.back', 'Back')}
+          aria-label={t('memoryGraph.back', 'Back')}
+        >
+          <ArrowLeft size={13} />
+          {t('memoryGraph.back', 'Back')}
+        </button>
+
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
