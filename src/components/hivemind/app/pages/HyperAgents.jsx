@@ -574,6 +574,7 @@ function TurnView({ turn, participants, liveLines }) {
   const revise = lines.find(l => l.t === 'revise');
   const validate = lines.find(l => l.t === 'validate');
   const seal = lines.find(l => l.t === 'seal');
+  const errorLine = lines.find(l => l.t === 'error');
   const typing = lines.filter(l => l.t === 'typing').slice(-2);
 
   return (
@@ -649,7 +650,9 @@ function TurnView({ turn, participants, liveLines }) {
 
       {seal && (
         <div className="text-[9px] uppercase tracking-wider text-[#a3a3a3] font-mono text-center py-1">
-          ─── sealed · {seal.cost_tokens || 0} tok ───
+          {errorLine
+            ? `─── failed: ${errorLine.message || 'unknown error'} ───`
+            : `─── sealed · ${seal.cost_tokens || 0} tok ───`}
         </div>
       )}
     </div>
