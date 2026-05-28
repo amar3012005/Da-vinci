@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce, useHealthStatus } from '../shared/hooks';
+import { useTeamContext } from '../shared/team-context';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -227,16 +228,19 @@ export default function Overview() {
     if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
   }, [navigate]);
 
+  // Project scope from TeamSwitcher.
+  const { activeProjectId } = useTeamContext() || {};
+
   // Profile / stats
   const { data: profileData, refetch: refetchProfile } = useApiQuery(
     () => apiClient.getProfile(),
     []
   );
 
-  // Recent memories
+  // Recent memories — project-scoped when TeamSwitcher set.
   const { data: recentMemories, loading: memoriesLoading } = useApiQuery(
-    () => apiClient.listMemories({ limit: 5 }),
-    []
+    () => apiClient.listMemories({ limit: 5, ...(activeProjectId ? { project_id: activeProjectId } : {}) }),
+    [activeProjectId]
   );
 
   // Connector status

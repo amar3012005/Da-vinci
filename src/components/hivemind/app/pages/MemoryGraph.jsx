@@ -39,6 +39,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../shared/api-client";
 import { useAuth } from "../auth/AuthProvider";
+import { useTeamContext } from "../shared/team-context";
 import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
@@ -435,6 +436,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // eslint-disable-next-line no-unused-vars
   const [projectFilter, setProjectFilter] = useState("");
   const [scope, setScope] = useState("personal");
+  // Sync graph project filter with TeamSwitcher's active project so the
+  // 3D atlas reflects the same scope as Chat / Memories / Overview.
+  const { activeProject } = useTeamContext() || {};
+  useEffect(() => {
+    if (activeProject) setProjectFilter(activeProject.slug || activeProject.name || "");
+    else setProjectFilter("");
+  }, [activeProject]);
   // eslint-disable-next-line no-unused-vars
   const [showFilters, setShowFilters] = useState(false);
   const [layerFilter] = useState("all");
@@ -523,7 +531,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     try {
       const data = intelligentMode
         ? await apiClient.getIntelligentGraph({ limit: Math.max(nodeLimit || 0, 500) || 500 })
-        : await apiClient.getGraph({ project: projectFilter || undefined, limit: nodeLimit, scope });
+        : await apiClient.getGraph({
+            project: projectFilter || undefined,
+            project_id: activeProject?.id || undefined,
+            limit: nodeLimit,
+            scope,
+          });
       let nodes, links;
       if (intelligentMode) {
         // edges have `source/target/type/confidence`; normalize to links

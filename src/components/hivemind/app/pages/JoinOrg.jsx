@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Hexagon } from 'lucide-react';
+import { ArrowRight, CheckCircle2, FolderKanban, Hexagon, Users, XCircle, Loader2 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -8,47 +8,63 @@ export default function JoinOrg() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
   const { refresh: refreshAuth } = useAuth() || {};
-  const [state, setState] = useState({ loading: true, error: '', org: null, alreadyMember: false });
 
+  // Phases: loading | consent | accepting | success | declined | error
+  const [phase, setPhase] = useState('loading');
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState('');
+  const [acceptedOrg, setAcceptedOrg] = useState(null);
+
+  // Fetch preview (does NOT accept).
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       try {
-        const data = await apiClient.acceptInvite(token);
+        const data = await apiClient.getInvitePreview(token);
         if (cancelled) return;
-        // Refresh bootstrap so AppShell stops asking for org setup —
-        // without this, after accepting the invite the user is bounced
-        // to the Onboarding screen and ends up creating a SECOND
-        // personal org instead of landing in the invited one.
-        try { await (refreshAuth ? refreshAuth() : Promise.resolve()); } catch {}
-        if (cancelled) return;
-        setState({
-          loading: false,
-          error: '',
-          org: data.organization || null,
-          alreadyMember: !!data.already_member,
-        });
-        // If they were already a member (re-visit to invite link),
-        // skip the success screen entirely and bounce to /overview.
-        if (data.already_member) {
+        if (data.status === 'accepted') {
+          // already accepted — bounce in
+          try { await (refreshAuth ? refreshAuth() : Promise.resolve()); } catch {}
           navigate('/hivemind/app/overview', { replace: true });
+          return;
         }
+        if (data.status === 'expired' || data.status === 'revoked') {
+          setError(`Invite ${data.status}`);
+          setPhase('error');
+          return;
+        }
+        setPreview(data);
+        setPhase('consent');
       } catch (err) {
         if (cancelled) return;
-        setState({
-          loading: false,
-          error: err.response?.data?.error || err.message,
-          org: null,
-          alreadyMember: false,
-        });
+        setError(err.response?.data?.error || err.message);
+        setPhase('error');
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, navigate, refreshAuth]);
+
+  async function handleAccept() {
+    setPhase('accepting');
+    try {
+      const data = await apiClient.acceptInvite(token);
+      try { await (refreshAuth ? refreshAuth() : Promise.resolve()); } catch {}
+      setAcceptedOrg(data.organization || null);
+      setPhase('success');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+      setPhase('error');
+    }
+  }
+
+  async function handleDecline() {
+    try { await apiClient.declineInvite(token); } catch { /* best-effort */ }
+    setPhase('declined');
+  }
+
+  const projects = preview?.projects || [];
+  const teams    = preview?.teams    || [];
+  const orgName  = preview?.organization?.name || slug;
 
   return (
     <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4">
@@ -60,32 +76,103 @@ export default function JoinOrg() {
           <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">HIVEMIND</span>
         </div>
 
-        {state.loading ? (
+        {phase === 'loading' && (
           <>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Joining workspace</h1>
-            <p className="text-sm text-[#525252]">Accepting invite for <span className="font-mono">{slug}</span>…</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Loading invite</h1>
+            <p className="text-sm text-[#525252]">Fetching details for <span className="font-mono">{slug}</span>…</p>
           </>
-        ) : state.error ? (
+        )}
+
+        {phase === 'consent' && preview && (
           <>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Invite could not be accepted</h1>
-            <p className="text-sm text-[#525252] mb-6">{state.error}</p>
-            <button
-              type="button"
-              onClick={() => navigate('/hivemind/app/overview')}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              Return to overview
-              <ArrowRight size={16} />
-            </button>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">
+              You're invited to {orgName}
+            </h1>
+            {preview.inviter && (
+              <p className="text-sm text-[#525252] mb-5">
+                Invited by <span className="font-medium text-[#0a0a0a]">
+                  {preview.inviter.displayName || preview.inviter.email}
+                </span>
+              </p>
+            )}
+
+            {projects.length > 0 && (
+              <section className="mb-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2">
+                  Projects you'll join
+                </div>
+                <div className="space-y-2">
+                  {projects.map(p => (
+                    <div key={p.id} className="flex items-start gap-2 p-3 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4]">
+                      <FolderKanban size={14} className="text-emerald-700 mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-[#0a0a0a]">{p.name}</div>
+                        {p.description && (
+                          <div className="text-[12px] text-[#525252] mt-0.5">{p.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {teams.length > 0 && (
+              <section className="mb-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2">
+                  Teams
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {teams.map(t => (
+                    <span key={t.id} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-[11px] text-blue-700">
+                      <Users size={10} /> {t.name}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="mb-6 p-3 rounded-[8px] bg-[#fafaf9] border border-[#eae7e1] text-[12px] text-[#525252]">
+              By accepting, you'll get read + write access to the memories scoped to
+              the projects above. Your user id will be added as a project member.
+            </section>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAccept}
+                className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0066e0]"
+              >
+                Accept and join
+                <ArrowRight size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={handleDecline}
+                className="rounded-[8px] border border-[#e3e0db] bg-white px-4 py-2.5 text-sm font-semibold text-[#525252] hover:bg-[#faf9f4]"
+              >
+                Decline
+              </button>
+            </div>
           </>
-        ) : (
+        )}
+
+        {phase === 'accepting' && (
+          <>
+            <Loader2 size={22} className="animate-spin text-[#117dff] mb-3" />
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Joining…</h1>
+            <p className="text-sm text-[#525252]">Provisioning access to projects.</p>
+          </>
+        )}
+
+        {phase === 'success' && (
           <>
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#16a34a]/10 text-[#16a34a] mb-4">
               <CheckCircle2 size={22} />
             </div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Workspace joined</h1>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">You're in</h1>
             <p className="text-sm text-[#525252] mb-6">
-              You now have access to <span className="font-semibold text-[#0a0a0a]">{state.org?.name || slug}</span>.
+              Welcome to <span className="font-semibold text-[#0a0a0a]">{acceptedOrg?.name || orgName}</span>.
             </p>
             <button
               type="button"
@@ -93,6 +180,31 @@ export default function JoinOrg() {
               className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white"
             >
               Open workspace
+              <ArrowRight size={16} />
+            </button>
+          </>
+        )}
+
+        {phase === 'declined' && (
+          <>
+            <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#737373]/10 text-[#737373] mb-4">
+              <XCircle size={22} />
+            </div>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Invite declined</h1>
+            <p className="text-sm text-[#525252]">You can close this tab.</p>
+          </>
+        )}
+
+        {phase === 'error' && (
+          <>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Invite could not be opened</h1>
+            <p className="text-sm text-[#525252] mb-6">{error}</p>
+            <button
+              type="button"
+              onClick={() => navigate('/hivemind/app/overview')}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white"
+            >
+              Return to overview
               <ArrowRight size={16} />
             </button>
           </>

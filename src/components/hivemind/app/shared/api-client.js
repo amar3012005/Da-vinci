@@ -353,6 +353,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async updateProjectMemberRole(projectId, userId, role) {
+    const { data } = await this.controlPlane.patch(`/v1/projects/${projectId}/members/${userId}`, { role });
+    return data;
+  }
+
   async addProjectMember(projectId, payload) {
     const { data } = await this.controlPlane.post(`/v1/projects/${projectId}/members`, payload);
     return data;

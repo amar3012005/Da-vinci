@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
+import { useTeamContext } from '../shared/team-context';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -798,9 +799,13 @@ function EmptyState({ hasFilters }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Memories() {
+  // Project scope from TeamSwitcher — pages without project filter previously
+  // showed org-wide rows even when a project was selected. activeProjectId is
+  // included in listParams so backend recall returns only project-scoped rows.
+  const { activeProjectId } = useTeamContext() || {};
   // Tab state
   const [activeTab, setActiveTab] = useState('memories');
-  
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState(null);
@@ -867,8 +872,9 @@ export default function Memories() {
       // with a "Superseded" badge + Updates-target link so the timeline is
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
+      ...(activeProjectId ? { project_id: activeProjectId } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId],
   );
 
   // List-mode fetch
@@ -1211,6 +1217,7 @@ function MemoriesTab({
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
 
+  const { activeProjectId } = useTeamContext() || {};
   const isSearching = debouncedQuery.trim().length > 0;
 
   const listParams = useMemo(
@@ -1226,8 +1233,11 @@ function MemoriesTab({
       // with a "Superseded" badge + Updates-target link so the timeline is
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
+      // Project scope from TeamSwitcher — when active, backend filters to
+      // memories whose projectId matches OR whose legacy project string matches.
+      ...(activeProjectId ? { project_id: activeProjectId } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId],
   );
 
   // List-mode fetch
