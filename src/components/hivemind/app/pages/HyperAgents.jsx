@@ -331,8 +331,12 @@ function RoomThread({ roomId, onArchived, onBack }) {
         // ignore
       }
     };
-    ['router', 'typing', 'line', 'react', 'revise', 'validate', 'seal', 'error', 'heartbeat']
-      .forEach(name => es.addEventListener(name, onAny));
+    [
+      'router', 'typing', 'line', 'react', 'revise', 'validate',
+      'seal', 'error', 'heartbeat',
+      // New backend events from cognitive upgrades (Phase 4):
+      'decision_required', 'decision_saved',
+    ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
     });
@@ -570,12 +574,22 @@ function TurnView({ turn, participants, liveLines }) {
 
   const router = lines.find(l => l.t === 'router');
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
+  const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
+  const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
   const reactions = lines.filter(l => l.t === 'react' && l.agreement !== 'abstain');
-  const revise = lines.find(l => l.t === 'revise');
-  const validate = lines.find(l => l.t === 'validate');
+  // Multi-round debate: collect all revises + validates (was single).
+  const revises = lines.filter(l => l.t === 'revise');
+  const validates = lines.filter(l => l.t === 'validate');
   const seal = lines.find(l => l.t === 'seal');
   const errorLine = lines.find(l => l.t === 'error');
   const typing = lines.filter(l => l.t === 'typing').slice(-2);
+  // Phase 4 events:
+  const decisionRequired = lines.find(l => l.t === 'decision_required');
+  const decisionSaved = lines.find(l => l.t === 'decision_saved');
+  const trustDeltas = seal?.trust || {};
+  const template = router?.template || 'debate';
+  const sealStatus = seal?.status || 'complete';
+  const qualityLow = seal?.quality_low;
 
   return (
     <div className="space-y-2">
@@ -591,6 +605,11 @@ function TurnView({ turn, participants, liveLines }) {
           → lead: <span className="text-[#525252]">{router.lead}</span>
           {(router.reactors || []).length > 0 && (
             <> · reactors: <span className="text-[#525252]">{router.reactors.join(', ')}</span></>
+          )}
+          {template && template !== 'debate' && (
+            <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9px] uppercase tracking-wider">
+              {template}
+            </span>
           )}
         </div>
       )}
@@ -614,27 +633,67 @@ function TurnView({ turn, participants, liveLines }) {
         />
       ))}
 
-      {revise && (
-        <div className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
-          <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">Revision · round 2</div>
+      {synthLine && (
+        <AgentBubble
+          agent={participants[synthLine.agent] || { slug: synthLine.agent, lane: 'Communicator' }}
+          content={synthLine.content}
+          kind="synthesis"
+        />
+      )}
+
+      {revises.map((rev, i) => (
+        <div key={`revise-${i}`} className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
+          <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">
+            Revision · round {rev.round || (i + 2)}
+          </div>
           <AgentBubble
-            agent={participants[revise.agent] || { slug: revise.agent, lane: 'Communicator' }}
-            content={revise.content}
+            agent={participants[rev.agent] || { slug: rev.agent, lane: 'Communicator' }}
+            content={rev.content}
             kind="revise"
+          />
+          {validates[i] && (
+            <div className="mt-1.5">
+              <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">
+                Verdict · {validates[i].verdict || 'resolved'}
+              </div>
+              <AgentBubble
+                agent={participants[validates[i].agent] || { slug: validates[i].agent, lane: 'Communicator' }}
+                content={validates[i].content}
+                kind="validate"
+              />
+            </div>
+          )}
+        </div>
+      ))}
+
+      {rescueLine && (
+        <div className="border-l-2 border-amber-400 ml-3 pl-3 bg-amber-50/50 rounded-r-md">
+          <div className="text-[9px] uppercase tracking-wider text-amber-700 font-mono mb-0.5">
+            Rescue · concrete answer
+          </div>
+          <AgentBubble
+            agent={participants[rescueLine.agent] || { slug: rescueLine.agent, lane: 'Communicator' }}
+            content={rescueLine.content}
+            kind="rescue"
           />
         </div>
       )}
 
-      {validate && (
-        <div className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
-          <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">
-            Verdict · {validate.verdict || 'resolved'}
+      {decisionRequired && (
+        <div className="mx-2 my-2 p-3 rounded-md border border-amber-300 bg-amber-50 text-[12px]">
+          <div className="text-[9px] uppercase tracking-wider text-amber-700 font-mono mb-1">
+            ⚠ Decision required · escalated after {decisionRequired.rounds_run || '?'} rounds
           </div>
-          <AgentBubble
-            agent={participants[validate.agent] || { slug: validate.agent, lane: 'Communicator' }}
-            content={validate.content}
-            kind="validate"
-          />
+          <div className="text-[#525252]">{decisionRequired.open_question}</div>
+          {decisionRequired.raised_by && (
+            <div className="text-[10px] text-[#737373] mt-1">raised by: {decisionRequired.raised_by}</div>
+          )}
+        </div>
+      )}
+
+      {decisionSaved && (
+        <div className="mx-2 text-[10px] text-emerald-700 font-mono pl-2">
+          ✓ saved to memory · trigger: {decisionSaved.trigger} · id: {(decisionSaved.memory_id || '').slice(0, 8)}
         </div>
       )}
 
@@ -649,10 +708,30 @@ function TurnView({ turn, participants, liveLines }) {
       )}
 
       {seal && (
-        <div className="text-[9px] uppercase tracking-wider text-[#a3a3a3] font-mono text-center py-1">
-          {errorLine
-            ? `─── failed: ${errorLine.message || 'unknown error'} ───`
-            : `─── sealed · ${seal.cost_tokens || 0} tok ───`}
+        <div className="space-y-1 py-1">
+          <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${
+            sealStatus === 'escalated' ? 'text-amber-700' :
+            sealStatus === 'failed' ? 'text-red-600' :
+            qualityLow ? 'text-amber-600' :
+            'text-[#a3a3a3]'
+          }`}>
+            {errorLine
+              ? `─── failed: ${errorLine.message || 'unknown error'} ───`
+              : sealStatus === 'escalated'
+                ? `─── escalated · ${seal.cost_tokens || 0} tok ───`
+                : qualityLow
+                  ? `─── sealed (low quality) · ${seal.cost_tokens || 0} tok ───`
+                  : `─── sealed · ${seal.cost_tokens || 0} tok ───`}
+          </div>
+          {Object.keys(trustDeltas).length > 0 && (
+            <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2">
+              {Object.entries(trustDeltas).map(([slug, score]) => (
+                <span key={slug} className="px-1.5 py-0.5 rounded bg-[#f3f1ec]">
+                  {slug}: trust {(Number(score) * 100).toFixed(0)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -824,6 +903,14 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
         <div className="text-[11px] font-semibold text-[#0a0a0a] truncate">{agent?.name || agent?.slug}</div>
         <div className="flex items-center gap-1 text-[9px] font-mono" style={{ color: meta.color }}>
           <Icon size={9} /> {meta.label}
+          {typeof agent?.trustScore === 'number' && (
+            <span
+              className="ml-1 px-1 rounded bg-[#f3f1ec] text-[#525252]"
+              title={`Trust score (display-only, ${agent.trustWins || 0}W / ${agent.trustLosses || 0}L)`}
+            >
+              t{Math.round(agent.trustScore * 100)}
+            </span>
+          )}
         </div>
       </div>
       {canRemove && hover && (
@@ -1011,6 +1098,7 @@ function AgentDmModal({ agent, onClose }) {
 
 function CreateRoomModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
+  const [template, setTemplate] = useState('debate');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [busy, setBusy] = useState(false);
@@ -1038,6 +1126,7 @@ function CreateRoomModal({ onClose, onCreated }) {
       const resp = await apiClient.createHyperRoom({
         name: name.trim(),
         participant_ids: Array.from(picked),
+        template,
       });
       onCreated?.(resp.room);
     } catch (e2) {
@@ -1073,6 +1162,30 @@ function CreateRoomModal({ onClose, onCreated }) {
               className="w-full h-9 px-3 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
             />
           </div>
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">Template</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: 'debate', label: 'Debate', desc: 'Full CSI: lead → reactors → synth → revise loop' },
+                { key: 'decision', label: 'Decision', desc: 'DACI: lead commits, save as memory, skip debate' },
+              ].map((t) => (
+                <button
+                  type="button"
+                  key={t.key}
+                  onClick={() => setTemplate(t.key)}
+                  className={`text-left px-2 py-2 rounded-lg border text-[11px] transition-colors ${
+                    template === t.key
+                      ? 'border-violet-500 bg-violet-50'
+                      : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+                  }`}
+                >
+                  <div className="font-semibold text-[#0a0a0a]">{t.label}</div>
+                  <div className="text-[10px] text-[#737373] mt-0.5">{t.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
               Add agents ({picked.size} selected)
