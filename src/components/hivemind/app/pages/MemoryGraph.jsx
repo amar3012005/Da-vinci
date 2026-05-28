@@ -576,7 +576,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter]);
+  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter, activeProject?.id]);
 
   const userColorMap = useMemo(() => {
     const ids = [
