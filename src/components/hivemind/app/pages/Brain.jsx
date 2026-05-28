@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
+import { useTeamContext } from '../shared/team-context';
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 const DARK_EDGE_COLORS = {
@@ -273,12 +274,25 @@ export default function Brain() {
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showScopeMenu, setShowScopeMenu] = useState(false);
 
+  // Sync local projectFilter with TeamSwitcher active project (parity with
+  // Chat, Memories, Overview, MemoryGraph). Pages now share one scope source.
+  const { activeProject } = useTeamContext() || {};
+  useEffect(() => {
+    if (activeProject) setProjectFilter(activeProject.slug || activeProject.name || '');
+    else setProjectFilter('');
+  }, [activeProject]);
+
   /* ─── Fetch graph data ─────────────────────────────────────────── */
   const fetchGraph = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getGraph({ project: projectFilter || undefined, limit: 300, scope });
+      const data = await apiClient.getGraph({
+        project: projectFilter || undefined,
+        project_id: activeProject?.id || undefined,
+        limit: 300,
+        scope,
+      });
       const nodes = (data.nodes || []).map(n => ({
         ...n,
         val: Math.max(2, (n.importanceScore || 0.5) * 8 + (n.recallCount || 0) * 0.5),
@@ -299,7 +313,7 @@ export default function Brain() {
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope]);
+  }, [projectFilter, scope, activeProject?.id]);
 
   useEffect(() => { fetchGraph(); }, [fetchGraph]);
 

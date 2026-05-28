@@ -358,6 +358,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listProjectMembers(projectId) {
+    const { data } = await this.controlPlane.get(`/v1/projects/${projectId}/members`);
+    return data;
+  }
+
   async addProjectMember(projectId, payload) {
     const { data } = await this.controlPlane.post(`/v1/projects/${projectId}/members`, payload);
     return data;

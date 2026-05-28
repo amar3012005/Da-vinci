@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus, X, UserMinus } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -22,6 +22,8 @@ export default function TeamProjects() {
   const [newPolicy, setNewPolicy] = useState('private');
   // ShareInviteModal target — { projectId, projectName } or null.
   const [inviteTarget, setInviteTarget] = useState(null);
+  // Project-members modal target — { projectId, projectName } or null.
+  const [membersTarget, setMembersTarget] = useState(null);
 
   const fetchProjects = useCallback(async () => {
     if (!activeTeamId) return;
@@ -141,6 +143,13 @@ export default function TeamProjects() {
               </div>
               <div className="flex items-center gap-1">
                 <button
+                  onClick={() => setMembersTarget({ projectId: p.id, projectName: p.name })}
+                  className="text-[#a3a3a3] hover:text-[#16a34a] transition-colors p-1"
+                  title="Manage members + roles"
+                >
+                  <Users size={13} />
+                </button>
+                <button
                   onClick={() => setInviteTarget({ projectId: p.id, projectName: p.name })}
                   className="text-[#a3a3a3] hover:text-[#117dff] transition-colors p-1"
                   title="Invite to this project"
@@ -184,6 +193,14 @@ export default function TeamProjects() {
         defaultTeamIds={activeTeamId ? [activeTeamId] : []}
         contextLabel={inviteTarget ? `${inviteTarget.projectName} (project)` : 'project'}
       />
+
+      {membersTarget && (
+        <ProjectMembersModal
+          projectId={membersTarget.projectId}
+          projectName={membersTarget.projectName}
+          onClose={() => setMembersTarget(null)}
+        />
+      )}
 
       {createOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setCreateOpen(false)}>
@@ -268,6 +285,107 @@ export default function TeamProjects() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ─── ProjectMembersModal — manage role + remove ────────────────────────────
+function ProjectMembersModal({ projectId, projectName, onClose }) {
+  const [members, setMembers] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState(null);
+  const [busyId, setBusyId] = React.useState(null);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const data = await apiClient.listProjectMembers(projectId);
+      setMembers(data.members || []);
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  async function changeRole(userId, role) {
+    setBusyId(userId);
+    setErr(null);
+    try {
+      await apiClient.updateProjectMemberRole(projectId, userId, role);
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeMember(userId) {
+    if (!window.confirm("Remove this member from project?")) return;
+    setBusyId(userId);
+    setErr(null);
+    try {
+      await apiClient.removeProjectMember(projectId, userId);
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-[8px] p-5 w-[520px] max-h-[80vh] overflow-y-auto shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">Members — {projectName}</h2>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={16} /></button>
+        </div>
+        {err && (
+          <div className="mb-3 p-2 bg-[#fee] border border-[#fbb] rounded-[4px] text-[12px] text-[#dc2626] flex items-center gap-2">
+            <AlertCircle size={12} /> {err}
+          </div>
+        )}
+        {loading ? (
+          <div className="py-8 text-center text-[12px] text-[#a3a3a3]">Loading…</div>
+        ) : members.length === 0 ? (
+          <div className="py-8 text-center text-[12px] text-[#a3a3a3]">No members yet. Use Invite icon to add.</div>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m) => (
+              <div key={m.user_id || m.userId} className="flex items-center justify-between p-2 border border-[#e3e0db] rounded-[4px] hover:bg-[#faf9f4]">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] text-[#0a0a0a] truncate">{m.display_name || m.email || (m.user_id || m.userId).slice(0, 8)}</div>
+                  {m.email && <div className="text-[10px] text-[#737373] truncate">{m.email}</div>}
+                </div>
+                <select
+                  value={m.role || "contributor"}
+                  disabled={busyId === (m.user_id || m.userId)}
+                  onChange={(e) => changeRole(m.user_id || m.userId, e.target.value)}
+                  className="text-[11px] px-2 py-1 border border-[#e3e0db] rounded-[4px] bg-white mr-2"
+                >
+                  <option value="owner">Owner</option>
+                  <option value="contributor">Contributor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button
+                  onClick={() => removeMember(m.user_id || m.userId)}
+                  disabled={busyId === (m.user_id || m.userId)}
+                  className="text-[#a3a3a3] hover:text-[#dc2626] p-1 disabled:opacity-50"
+                  title="Remove from project"
+                >
+                  <UserMinus size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
