@@ -334,8 +334,12 @@ function RoomThread({ roomId, onArchived, onBack }) {
     [
       'router', 'typing', 'line', 'react', 'revise', 'validate',
       'seal', 'error', 'heartbeat',
-      // New backend events from cognitive upgrades (Phase 4):
+      // Phase 4 cognitive upgrades:
       'decision_required', 'decision_saved',
+      // Phase 4 swarm (R1-R5):
+      'round_start', 'round_end',
+      'hypothesis', 'peer_review', 'chain_of_thought',
+      'skeptic_challenge', 'vote', 'swarm_verdict',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -591,6 +595,16 @@ function TurnView({ turn, participants, liveLines }) {
   const sealStatus = seal?.status || 'complete';
   const qualityLow = seal?.quality_low;
 
+  // Phase 4 swarm events (R1-R5):
+  const hypotheses = lines.filter(l => l.t === 'hypothesis');
+  const peerReviews = lines.filter(l => l.t === 'peer_review');
+  const chains = lines.filter(l => l.t === 'chain_of_thought');
+  const skepticChallenge = lines.find(l => l.t === 'skeptic_challenge');
+  const votes = lines.filter(l => l.t === 'vote');
+  const swarmVerdict = lines.find(l => l.t === 'swarm_verdict');
+  const isSwarm = template === 'swarm' || hypotheses.length > 0;
+  const roundStarts = lines.filter(l => l.t === 'round_start');
+
   return (
     <div className="space-y-2">
       {/* User bubble */}
@@ -614,7 +628,21 @@ function TurnView({ turn, participants, liveLines }) {
         </div>
       )}
 
-      {leadLine && (
+      {/* Phase 4 — swarm R1-R5 rendering. Only shown for swarm template. */}
+      {isSwarm && (
+        <SwarmRounds
+          participants={participants}
+          hypotheses={hypotheses}
+          peerReviews={peerReviews}
+          chains={chains}
+          skepticChallenge={skepticChallenge}
+          votes={votes}
+          swarmVerdict={swarmVerdict}
+          roundStarts={roundStarts}
+        />
+      )}
+
+      {leadLine && !isSwarm && (
         <AgentBubble
           agent={participants[leadLine.agent] || { slug: leadLine.agent, lane: 'Communicator' }}
           content={leadLine.content}
@@ -820,6 +848,205 @@ function renderMarkdownLite(raw) {
     blocks.push(<p key={key++} className="my-1 leading-relaxed">{inline(para.join(' '))}</p>);
   }
   return blocks;
+}
+
+/* ─── Swarm R1-R5 renderer (Phase 4) ──────────────────────────────────── */
+
+function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts }) {
+  const reviewsByTarget = useMemo(() => {
+    const out = {};
+    for (const r of peerReviews || []) {
+      const k = r.target_hypothesis_id;
+      if (!k) continue;
+      (out[k] = out[k] || []).push(r);
+    }
+    return out;
+  }, [peerReviews]);
+  const chainByAgent = useMemo(() => {
+    const out = {};
+    for (const c of chains || []) out[c.id || c.agent] = c;
+    return out;
+  }, [chains]);
+
+  const roundHeader = (round, label) => (
+    <div className="flex items-center gap-2 pt-3 pb-1 pl-2">
+      <span className="text-[9px] uppercase tracking-wider font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+        R{round}
+      </span>
+      <span className="text-[11px] text-[#525252] font-mono">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-1">
+      {/* R1 — Independent Hypotheses */}
+      {hypotheses.length > 0 && (
+        <>
+          {roundHeader(1, 'Independent Hypotheses')}
+          {hypotheses.map((h) => {
+            const agent = participants[h.agent] || { slug: h.agent, lane: h.lane || 'Communicator' };
+            const childReviews = reviewsByTarget[h.id] || [];
+            const refined = chainByAgent[h.id];
+            return (
+              <div key={h.id} className="ml-2 border-l-2 border-violet-200 pl-3">
+                <AgentBubble agent={agent} content={h.content} kind="hypothesis" confidence={h.confidence} />
+                {(h.evidence_memory_ids || []).length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1 ml-1">
+                    {h.evidence_memory_ids.map((mid) => (
+                      <span key={mid} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252]">
+                        m·{mid.slice(0, 8)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* R2 — peer reviews for this hypothesis */}
+                {childReviews.length > 0 && (
+                  <div className="ml-3 mt-2 space-y-1 border-l border-dashed border-[#d4d0ca] pl-2">
+                    <div className="text-[9px] uppercase tracking-wider font-mono text-[#737373]">R2 · Peer review</div>
+                    {childReviews.map((r, i) => {
+                      const reviewerAgent = participants[r.reviewer] || { slug: r.reviewer, lane: 'Communicator' };
+                      const agreeColor =
+                        r.agreement === 'support' ? 'text-emerald-700' :
+                        r.agreement === 'challenge' ? 'text-amber-700' : 'text-blue-700';
+                      return (
+                        <div key={i} className="text-[12px]">
+                          <span className={`text-[10px] font-mono ${agreeColor}`}>[{r.agreement}]</span>{' '}
+                          <span className="font-semibold text-[#0a0a0a]">{reviewerAgent.name || r.reviewer}:</span>{' '}
+                          <span className="text-[#525252]">{r.content}</span>
+                          {(r.evidence_memory_ids || []).length > 0 && (
+                            <span className="ml-1 text-[9px] font-mono text-[#a3a3a3]">
+                              · {r.evidence_memory_ids.map((m) => `m·${m.slice(0, 6)}`).join(' ')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* R3 — refined hypothesis + chain of thought */}
+                {refined && (
+                  <details className="ml-3 mt-2 text-[12px]">
+                    <summary className="cursor-pointer text-[9px] uppercase tracking-wider font-mono text-emerald-700">
+                      R3 · Refined hypothesis + {(refined.steps || []).length} chain-of-thought steps
+                    </summary>
+                    <div className="mt-1 pl-2 border-l border-emerald-200 space-y-1">
+                      <div className="text-[12px] text-[#0a0a0a]">{refined.refined_hypothesis}</div>
+                      {(refined.steps || []).map((s, i) => (
+                        <div key={i} className="text-[10px] font-mono text-[#737373]">→ {s}</div>
+                      ))}
+                      {refined.lane_specific_finding && (
+                        <div className="text-[11px] italic text-violet-700 mt-1">
+                          {refined.lane_specific_finding}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* R4 — Skeptic challenge */}
+      {skepticChallenge && (
+        <>
+          {roundHeader(4, 'Skeptic — unorthodox + hidden assumptions')}
+          <div className="ml-2 border-l-2 border-red-400 pl-3 bg-red-50/30 rounded-r-md py-2">
+            <div className="text-[10px] font-mono text-red-700 mb-1">
+              {skepticChallenge.agent} (permanent Skeptic)
+            </div>
+            {(skepticChallenge.challenges || []).map((c, i) => (
+              <div key={`c-${i}`} className="text-[12px] mb-1">
+                <span className="text-[9px] font-mono text-amber-700 mr-1">[challenges {c.target_hypothesis_id}]</span>
+                {c.challenge}
+                {(c.evidence_memory_ids || []).length > 0 && (
+                  <span className="ml-1 text-[9px] font-mono text-[#a3a3a3]">
+                    · {c.evidence_memory_ids.map((m) => `m·${m.slice(0, 6)}`).join(' ')}
+                  </span>
+                )}
+              </div>
+            ))}
+            {(skepticChallenge.unorthodox_alternatives || []).map((u, i) => (
+              <div key={`u-${i}`} className="text-[12px] mb-1">
+                <span className="text-[9px] font-mono text-violet-700 mr-1">[unorthodox-{i + 1}]</span>
+                {u.angle}
+              </div>
+            ))}
+            {(skepticChallenge.hidden_assumptions || []).length > 0 && (
+              <div className="text-[11px] italic text-[#525252] mt-1">
+                Hidden assumptions: {skepticChallenge.hidden_assumptions.join(' · ')}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* R5 — Vote grid */}
+      {votes.length > 0 && (
+        <>
+          {roundHeader(5, 'Convergence vote')}
+          <div className="ml-2 overflow-x-auto">
+            <table className="text-[11px] min-w-full">
+              <thead>
+                <tr className="text-[#737373] border-b border-[#e3e0db]">
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Voter</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">For</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Score</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Conditions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {votes.map((v, i) => (
+                  <tr key={i} className="border-b border-[#f3f1ec]">
+                    <td className="pr-3 py-1 font-semibold">{v.voter}</td>
+                    <td className="pr-3 py-1 font-mono text-[10px]">{v.vote_for_hypothesis_id}</td>
+                    <td className="pr-3 py-1">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        v.score >= 4 ? 'bg-emerald-100 text-emerald-700' :
+                        v.score >= 3 ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{v.score}</span>
+                    </td>
+                    <td className="pr-3 py-1 text-[10px] text-[#525252]">
+                      {(v.conditions || []).join('; ') || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Swarm verdict banner */}
+      {swarmVerdict && (
+        <div className={`mx-2 mt-3 p-3 rounded-md border ${
+          swarmVerdict.verdict === 'AGREED' ? 'border-emerald-300 bg-emerald-50' :
+          swarmVerdict.verdict === 'CONDITIONAL' ? 'border-amber-300 bg-amber-50' :
+          'border-red-300 bg-red-50'
+        }`}>
+          <div className="text-[10px] uppercase font-mono mb-1 tracking-wider">
+            ⛬ Verdict · <span className="font-bold">{swarmVerdict.verdict}</span>
+            <span className="ml-2 text-[#737373]">
+              weighted {swarmVerdict.weighted_score} · {swarmVerdict.vote_count} votes
+            </span>
+          </div>
+          <div className="text-[12px] text-[#0a0a0a]">
+            Winner: <span className="font-mono">{swarmVerdict.winning_hypothesis_id || 'none'}</span>
+          </div>
+          {(swarmVerdict.action_items || []).length > 0 && (
+            <div className="mt-1.5 text-[11px]">
+              <div className="text-[9px] uppercase font-mono text-[#737373]">Action items</div>
+              <ul className="list-disc list-inside text-[#525252]">
+                {swarmVerdict.action_items.map((a, i) => <li key={i}>{a}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── Bubble ─────────────────────────────────────────────────────────── */
@@ -1168,6 +1395,7 @@ function CreateRoomModal({ onClose, onCreated }) {
               {[
                 { key: 'debate', label: 'Debate', desc: 'Full CSI: lead → reactors → synth → revise loop' },
                 { key: 'decision', label: 'Decision', desc: 'DACI: lead commits, save as memory, skip debate' },
+                { key: 'swarm', label: 'Swarm', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
               ].map((t) => (
                 <button
                   type="button"
