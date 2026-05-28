@@ -83,6 +83,29 @@ function TypeBadge({ type }) {
   );
 }
 
+// Cognitive-layer badge — shown when a memory was produced by the
+// governance cognitive layer (canonical / bridge / compression). Distinct
+// colour scheme + 'COG·' prefix so it stands apart from memory_type.
+const COGNITIVE_ROLE_COLORS = {
+  canonical:   '#8b5cf6',
+  bridge:      '#f97316',
+  compression: '#0ea5e9',
+  reflection:  '#94a3b8',
+};
+function CognitiveBadge({ role }) {
+  if (!role) return null;
+  const color = COGNITIVE_ROLE_COLORS[role] || '#525252';
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold font-['Space_Grotesk'] uppercase tracking-wider"
+      style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
+      title={`Cognitive layer: ${role}`}
+    >
+      COG·{role}
+    </span>
+  );
+}
+
 function TagPill({ label }) {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252] text-[10px] font-mono">
@@ -268,6 +291,7 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       {/* Type + Source + Provenance */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {memory.memory_type && <TypeBadge type={memory.memory_type} />}
+        {memory.cognitive_layer_role && <CognitiveBadge role={memory.cognitive_layer_role} />}
         {memory.source && <SourceBadge source={memory.source} />}
         <RelationshipIndicator memory={memory} />
         <EntityChips memory={memory} />
@@ -572,6 +596,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {/* Meta row */}
           <div className="flex items-center gap-2 flex-wrap">
             {memory.memory_type && <TypeBadge type={memory.memory_type} />}
+        {memory.cognitive_layer_role && <CognitiveBadge role={memory.cognitive_layer_role} />}
             {memory.source && <SourceBadge source={memory.source} />}
             <RelationshipIndicator memory={memory} />
             {(() => {
@@ -810,6 +835,10 @@ export default function Memories() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  // Cognitive layer filter (canonical / bridge / compression / reflection)
+  // Backed by client-side filter on the cognitive_layer_role field returned
+  // from /api/memories — no extra backend param required.
+  const [activeCognitiveRole, setActiveCognitiveRole] = useState(null);
   // is_latest toggle — when false, include superseded memories (post drift-compaction)
   const [showSuperseded, setShowSuperseded] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -907,16 +936,23 @@ export default function Memories() {
     const base = listData?.memories || listData?.results || listData || [];
     const arr = Array.isArray(base) ? base : [];
     // Merge for "load more"
+    let result;
     if (allMemories.length > 0 && offset > 0) {
       const ids = new Set(allMemories.map((m) => m.id));
       const merged = [...allMemories];
       arr.forEach((m) => {
         if (!ids.has(m.id)) merged.push(m);
       });
-      return merged;
+      result = merged;
+    } else {
+      result = arr;
     }
-    return arr;
-  }, [isSearching, searchData, listData, allMemories, offset]);
+    // Apply client-side cognitive-role filter when active.
+    if (activeCognitiveRole) {
+      result = result.filter((m) => m.cognitive_layer_role === activeCognitiveRole);
+    }
+    return result;
+  }, [isSearching, searchData, listData, allMemories, offset, activeCognitiveRole]);
 
   // Total count from API pagination (server-side truth), not client array length
   // eslint-disable-next-line no-unused-vars
@@ -1151,6 +1187,8 @@ export default function Memories() {
             setOffset={setOffset}
             allMemories={allMemories}
             setAllMemories={setAllMemories}
+            activeCognitiveRole={activeCognitiveRole}
+            setActiveCognitiveRole={setActiveCognitiveRole}
             hasMore={hasMore}
             setHasMore={setHasMore}
             selectedMemory={selectedMemory}
@@ -1214,6 +1252,8 @@ function MemoriesTab({
   clearFilters,
   hasFilters,
   setActiveTab,
+  activeCognitiveRole,
+  setActiveCognitiveRole,
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
 
@@ -1270,16 +1310,23 @@ function MemoriesTab({
     const base = listData?.memories || listData?.results || listData || [];
     const arr = Array.isArray(base) ? base : [];
     // Merge for "load more"
+    let result;
     if (allMemories.length > 0 && offset > 0) {
       const ids = new Set(allMemories.map((m) => m.id));
       const merged = [...allMemories];
       arr.forEach((m) => {
         if (!ids.has(m.id)) merged.push(m);
       });
-      return merged;
+      result = merged;
+    } else {
+      result = arr;
     }
-    return arr;
-  }, [isSearching, searchData, listData, allMemories, offset]);
+    // Apply client-side cognitive-role filter when active.
+    if (activeCognitiveRole) {
+      result = result.filter((m) => m.cognitive_layer_role === activeCognitiveRole);
+    }
+    return result;
+  }, [isSearching, searchData, listData, allMemories, offset, activeCognitiveRole]);
 
   // Total count from API pagination (server-side truth), not client array length
   const totalCount = useMemo(() => {
@@ -1443,6 +1490,36 @@ function MemoriesTab({
                       style={activeType === t.key ? { color: t.color, backgroundColor: `${t.color}15`, borderColor: `${t.color}40` } : {}}
                     >
                       {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cognitive layer filter — canonical / bridge / compression / reflection */}
+              <div className="mb-3">
+                <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                  Cognitive Layer
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: 'canonical',   label: 'Canonical',   color: '#8b5cf6' },
+                    { key: 'bridge',      label: 'Bridge',      color: '#f97316' },
+                    { key: 'compression', label: 'Compression', color: '#0ea5e9' },
+                    { key: 'reflection',  label: 'Reflection',  color: '#94a3b8' },
+                  ].map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => {
+                        setActiveCognitiveRole(activeCognitiveRole === r.key ? null : r.key);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        activeCognitiveRole === r.key
+                          ? 'border-current'
+                          : 'border-[#e3e0db] text-[#525252] hover:text-[#525252] hover:border-[#d4d0ca]'
+                      }`}
+                      style={activeCognitiveRole === r.key ? { color: r.color, backgroundColor: `${r.color}15`, borderColor: `${r.color}40` } : {}}
+                    >
+                      COG·{r.label}
                     </button>
                   ))}
                 </div>
