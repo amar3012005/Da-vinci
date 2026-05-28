@@ -25,6 +25,7 @@ const DeepResearch = React.lazy(() => import('./pages/DeepResearch'));
 const Engine = React.lazy(() => import('./pages/Engine'));
 const KnowledgeBase = React.lazy(() => import('./pages/KnowledgeBase'));
 const AgentSwarm = React.lazy(() => import('./pages/AgentSwarm'));
+const SwarmGovernance = React.lazy(() => import('./pages/SwarmGovernance'));
 const TaraConfig = React.lazy(() => import('./pages/TaraConfig'));
 const TeamMembers = React.lazy(() => import('./pages/TeamMembers'));
 const TeamProjects = React.lazy(() => import('./pages/TeamProjects'));
@@ -110,6 +111,7 @@ export default function HiveMindApp() {
           <Route path="engine" element={<PageSuspense><Engine /></PageSuspense>} />
           <Route path="knowledge" element={<PageSuspense><KnowledgeBase /></PageSuspense>} />
           <Route path="swarm" element={<PageSuspense><AgentSwarm /></PageSuspense>} />
+          <Route path="governance" element={<PageSuspense><SwarmGovernance /></PageSuspense>} />
           <Route path="tara" element={<PageSuspense><TaraConfig /></PageSuspense>} />
           <Route path="workspace" element={<PageSuspense><WorkspaceAdmin /></PageSuspense>} />
           <Route path="team/members" element={<PageSuspense><TeamMembers /></PageSuspense>} />

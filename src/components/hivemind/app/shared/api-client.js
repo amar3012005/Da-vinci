@@ -251,6 +251,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getInvitePreview(token) {
+    const { data } = await this.controlPlane.get(`/v1/join/${token}`);
+    return data;
+  }
+
+  async declineInvite(token) {
+    const { data } = await this.controlPlane.post(`/v1/join/${token}/decline`);
+    return data;
+  }
+
   async listProjects(orgId) {
     const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/projects`);
     return data;
@@ -809,6 +819,41 @@ class HiveMindApiClient {
 
   async cancelResidentRun(runId) {
     const { data } = await this.controlPlane.post(`/v1/proxy/swarm/resident/runs/${runId}/cancel`);
+    return data;
+  }
+
+  // ─── Core: Governance (Phase 2+3) ────────────────────────────
+
+  async runGovernanceCycle(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/proxy/swarm/resident/cycle', payload);
+    return data;
+  }
+
+  async getGovernanceMetrics(days = 7) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/governance/metrics?days=${days}`);
+    return data;
+  }
+
+  async getGovernanceActionLog({ status, limit = 50 } = {}) {
+    const q = [];
+    if (status) q.push(`status=${encodeURIComponent(status)}`);
+    q.push(`limit=${limit}`);
+    const { data } = await this.controlPlane.get(`/v1/proxy/governance/action-log?${q.join('&')}`);
+    return data;
+  }
+
+  async approveGovernanceAction(actionId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/governance/actions/${actionId}/approve`);
+    return data;
+  }
+
+  async rejectGovernanceAction(actionId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/governance/actions/${actionId}/reject`);
+    return data;
+  }
+
+  async rollbackGovernanceBatch(batchId) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/governance/rollback/${batchId}`);
     return data;
   }
 
