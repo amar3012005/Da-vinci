@@ -46,6 +46,10 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
     { to: '/hivemind/app/employees', icon: Bot,      label: tt('hyperAgents', 'Hyper Agents') },
   ];
 
+  // Order is skill-graded: no-code-friendly groups first (Your Brain →
+  // Workspace/Agents → AI Features), technical groups (Advanced) near the
+  // bottom, Account last. Workspace Admin sits just below Your Brain so the
+  // agents people actually run are reachable in one glance.
   const sections = [
     {
       label: null,
@@ -63,6 +67,10 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
       ],
     },
     {
+      label: tt('groups.workspaceAdmin', 'Workspace Admin'),
+      items: adminItems,
+    },
+    {
       label: tt('groups.aiFeatures', 'AI Features'),
       items: [
         { to: '/hivemind/app/web',  icon: Globe, label: tt('webIntel', 'Web Intel') },
@@ -72,10 +80,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
     {
       label: tt('groups.advanced', 'Advanced'),
       items: advancedItems,
-    },
-    {
-      label: tt('groups.workspaceAdmin', 'Workspace Admin'),
-      items: adminItems,
     },
     {
       label: tt('groups.account', 'Account'),
