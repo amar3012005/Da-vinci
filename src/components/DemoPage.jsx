@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
+import Seo from './Seo';
 import DemoPortal from './ui/demo-request-modal';
 
 const DemoPage = () => {
     const [isDemoOpen, setIsDemoOpen] = useState(true);
 
     return (
+        <>
+        <Seo
+            title="TARA & HIVEMIND Demo — Da'vinci Solutions"
+            description="See TARA conversational voice AI and HIVEMIND memory engine in action."
+            canonical="https://www.davinciai.eu/demo"
+        />
         <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8">
             {/* Background elements to match the site aesthetic */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -28,6 +35,7 @@ const DemoPage = () => {
 
             <DemoPortal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
         </div>
+        </>
     );
 };
 

@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import Seo from './Seo';
 
 const Terms = () => {
-  useEffect(() => {
-    document.title = "Terms & Conditions — Da'vinci Solutions";
-  }, []);
-
   return (
+    <>
+      <Seo
+        title="Terms of Service — Da'vinci Solutions"
+        canonical="https://www.davinciai.eu/terms"
+      />
     <div className="terms-content">
       {/* Grid Background */}
       <div className="absolute inset-0">
@@ -80,6 +82,7 @@ const Terms = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

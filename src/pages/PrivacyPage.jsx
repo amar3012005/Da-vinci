@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import Seo from '../components/Seo';
 
 const SectionCard = ({ title, children }) => (
   <section className="border border-white/10 bg-black/90 p-6 mb-6">
@@ -8,11 +9,12 @@ const SectionCard = ({ title, children }) => (
 );
 
 const PrivacyPage = () => {
-  useEffect(() => {
-    document.title = "Privacy Policy — HIVEMIND";
-  }, []);
-
   return (
+    <>
+      <Seo
+        title="Privacy Policy — Da'vinci Solutions"
+        canonical="https://www.davinciai.eu/privacy"
+      />
     <div className="min-h-screen bg-[#0a0a0a] text-white relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24px,rgba(255,255,255,0.04)_1px),linear-gradient(transparent_24px,rgba(255,255,255,0.04)_1px)] bg-[size:25px_25px]" />
@@ -207,6 +209,7 @@ const PrivacyPage = () => {
         </SectionCard>
       </div>
     </div>
+    </>
   );
 };
 

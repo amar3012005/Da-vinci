@@ -64,13 +64,16 @@
     "name": "Da'vinci Solutions",
     "url": "https://www.davinciai.eu",
     "logo": "https://www.davinciai.eu/logo.svg",
-    "description": "AI-powered enterprise automation systems for small and medium enterprises. Sovereign, GDPR-compliant agentic intelligence.",
+    "description": "Da'vinci Solutions builds sovereign, GDPR-compliant AI automation systems for small and medium European enterprises — TARA conversational voice AI and HIVEMIND, a graph-based enterprise memory engine.",
+    "areaServed": "EU",
+    "knowsLanguage": ["en","de","fr","es","it","nl","pl","cs","sk"],
     "contactPoint": {
       "@type": "ContactPoint",
       "email": "enterprise@davinciai.eu",
-      "contactType": "sales"
+      "contactType": "sales",
+      "availableLanguage": ["English","German"]
     },
-    "sameAs": []
+    "sameAs": ["https://www.linkedin.com/company/davinci-solutions","https://www.youtube.com/@davinciai"]
   }
   </script>
 
@@ -80,7 +83,9 @@
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Da'vinci Solutions",
-    "url": "https://www.davinciai.eu"
+    "url": "https://www.davinciai.eu",
+    "publisher": { "@type": "Organization", "name": "Da'vinci Solutions" },
+    "inLanguage": "en"
   }
   </script>
 
@@ -91,15 +96,11 @@
     "@type": "SoftwareApplication",
     "name": "TARA",
     "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Conversational Voice AI",
     "operatingSystem": "Web",
-    "description": "Conversational AI voice agent for enterprise automation. Handles customer interactions, scheduling, and support with natural language understanding.",
     "url": "https://www.davinciai.eu/",
-    "offers": {
-      "@type": "AggregateOffer",
-      "priceCurrency": "EUR",
-      "lowPrice": "0",
-      "offerCount": "3"
-    },
+    "description": "TARA is a conversational AI voice agent for enterprise automation. It handles customer interactions, scheduling, and support with multilingual natural language understanding.",
+    "featureList": ["Multilingual voice conversations","Appointment scheduling","Customer support automation","Natural language understanding"],
     "creator": {
       "@type": "Organization",
       "name": "Da'vinci Solutions"
@@ -114,13 +115,28 @@
     "@type": "SoftwareApplication",
     "name": "HIVEMIND",
     "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "AI Memory Engine",
     "operatingSystem": "Web",
-    "description": "Sovereign enterprise memory engine with GDPR-compliant graph-based knowledge storage, semantic recall, and cross-agent memory sharing.",
     "url": "https://hivemind.davinciai.eu/",
+    "description": "HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine that gives AI agents persistent long-term memory through graph-based knowledge storage, semantic recall, and cross-agent memory sharing.",
+    "featureList": ["Graph-based knowledge storage","Semantic recall across sessions","Cross-agent memory sharing","MCP integration for AI assistants","GDPR and DPDP compliant data residency"],
     "creator": {
       "@type": "Organization",
       "name": "Da'vinci Solutions"
     }
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {"@type":"Question","name":"What is HIVEMIND?","acceptedAnswer":{"@type":"Answer","text":"HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine. It gives AI agents persistent, graph-based long-term memory with semantic recall and cross-agent memory sharing, so assistants remember facts, decisions, and context across sessions. It is built by Da'vinci Solutions for small and medium European enterprises and complies with GDPR and DPDP regulations."}},
+      {"@type":"Question","name":"What is TARA?","acceptedAnswer":{"@type":"Answer","text":"TARA is a conversational AI voice agent from Da'vinci Solutions. It handles customer interactions, appointment scheduling, and support using natural language understanding, supports multilingual conversations, and automates routine business operations for SMEs."}},
+      {"@type":"Question","name":"Is Da'vinci Solutions GDPR compliant?","acceptedAnswer":{"@type":"Answer","text":"Yes. Da'vinci Solutions builds sovereign AI systems that are GDPR and DPDP compliant. Data is stored within compliant infrastructure, giving European businesses control and data residency over their conversational AI and memory data."}}
+    ]
   }
   </script>
 </head>

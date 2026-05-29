@@ -7,7 +7,17 @@ Da'vinci Solutions builds sovereign, GDPR-compliant AI systems that help busines
 ## Products
 
 - [TARA](https://www.davinciai.eu/): Conversational AI voice agent for customer interactions, scheduling, and business automation. Supports multilingual conversations with natural language understanding.
-- [HIVEMIND](https://hivemind.davinciai.eu/): Enterprise memory engine with graph-based knowledge storage, semantic recall, and cross-agent memory sharing. GDPR and DPDP compliant.
+- [HIVEMIND](https://hivemind.davinciai.eu/): Enterprise memory engine with graph-based knowledge storage, semantic recall, and cross-agent memory sharing. GDPR and DPDP compliant. Capabilities: graph-based memory storage, semantic recall across sessions, cross-agent memory sharing, MCP integration for AI assistants.
+
+The platform supports 31 languages and multilingual conversations.
+
+## Capabilities
+
+- Graph-based memory storage — entities, relationships, and knowledge graphs persisted across sessions.
+- Semantic recall — retrieve relevant memories by meaning, not keywords.
+- Cross-agent memory sharing — multiple AI agents share a common memory cortex.
+- MCP integration — expose memory to any MCP-compatible AI assistant (Claude, etc.).
+- Sovereign, GDPR/DPDP-compliant data residency — data stays in compliant EU infrastructure.
 
 ## Key Pages
 
@@ -15,6 +25,17 @@ Da'vinci Solutions builds sovereign, GDPR-compliant AI systems that help busines
 - [About](https://www.davinciai.eu/about): Company information
 - [Demo](https://www.davinciai.eu/demo): Product demonstration
 - [Terms](https://www.davinciai.eu/terms): Terms of service
+
+## FAQ
+
+### What is HIVEMIND?
+HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine that gives AI agents persistent, graph-based long-term memory with semantic recall and cross-agent memory sharing, built by Da'vinci Solutions for small and medium European enterprises.
+
+### What is TARA?
+TARA is a conversational AI voice agent from Da'vinci Solutions that handles customer interactions, appointment scheduling, and support with multilingual natural language understanding.
+
+### Is Da'vinci Solutions GDPR compliant?
+Yes. Da'vinci Solutions builds sovereign AI systems that are GDPR and DPDP compliant, with data residency for European businesses.
 
 ## Contact
 

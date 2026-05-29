@@ -7,5 +7,46 @@ Disallow: /enterprise/
 Disallow: /prometheus/
 Disallow: /underprogress
 
+# AI crawlers — explicitly allowed (same private-route protections apply)
+User-agent: GPTBot
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /hivemind/app/
+Disallow: /hivemind/login
+Disallow: /enterprise/
+Disallow: /prometheus/
+Disallow: /underprogress
+
 # Sitemap
 Sitemap: https://www.davinciai.eu/sitemap.xml

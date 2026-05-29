@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Seo from './Seo';
 import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import {
@@ -871,6 +872,12 @@ const ResearchPage = () => {
   }, []);
 
   return (
+    <>
+    <Seo
+      title="Research — Da'vinci Solutions"
+      description="Research behind sovereign AI memory and conversational agents."
+      canonical="https://www.davinciai.eu/research"
+    />
     <div className="min-h-screen bg-[#faf9f4] relative">
       <ResearchNavbar />
 
@@ -1485,6 +1492,7 @@ const ResearchPage = () => {
         </div>
       </footer>
     </div>
+    </>
   );
 };
 
