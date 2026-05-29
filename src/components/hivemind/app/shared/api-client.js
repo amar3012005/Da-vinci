@@ -1398,12 +1398,13 @@ class HiveMindApiClient {
   }
 
   // Intelligent graph: memories + documents + entities + typed edges
-  async getIntelligentGraph({ limit = 500, entity, memoryType, documentId } = {}) {
+  async getIntelligentGraph({ limit = 500, entity, memoryType, documentId, project } = {}) {
     const params = new URLSearchParams();
     params.set('limit', String(limit));
     if (entity) params.set('entity', entity);
     if (memoryType) params.set('memory_type', memoryType);
     if (documentId) params.set('document_id', documentId);
+    if (project) params.set('project', project);
     const { data } = await this.controlPlane.get(`/v1/proxy/graph/intelligent?${params.toString()}`);
     return data;
   }

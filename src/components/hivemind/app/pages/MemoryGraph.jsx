@@ -530,7 +530,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     setError(null);
     try {
       const data = intelligentMode
-        ? await apiClient.getIntelligentGraph({ limit: Math.max(nodeLimit || 0, 500) || 500 })
+        ? await apiClient.getIntelligentGraph({
+            limit: Math.max(nodeLimit || 0, 500) || 500,
+            project: projectFilter || undefined,
+          })
         : await apiClient.getGraph({
             project: projectFilter || undefined,
             project_id: activeProject?.id || undefined,
