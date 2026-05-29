@@ -716,7 +716,10 @@ export default function KnowledgeBase() {
     // memories, re-uploads) into one — key by doc-hash, else filename, else id.
     const seen = new Map();
     for (const d of combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))) {
-      const key = getDocHashTag(d) || docFilename(d) || d.id;
+      // filename FIRST so the document-summary parent (no doc-hash tag) and its
+      // promoted children (doc-hash tag) collapse into ONE row. doc-hash/id are
+      // fallbacks for rows lacking a filename.
+      const key = docFilename(d) || getDocHashTag(d) || d.id;
       if (!seen.has(key)) seen.set(key, d);
     }
     return [...seen.values()];
