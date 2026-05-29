@@ -237,62 +237,49 @@ export default function OverviewTour({ onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev, onClose]);
 
+  // Spotlight: lift the active target ABOVE the dim backdrop (z > tour) and
+  // give it a glowing ring, so it stays crisp and unmistakable. The sidebar
+  // NavLinks are position:relative (and the FAB is fixed), so z-index applies.
+  // Styles are saved and restored on step change / unmount.
+  useEffect(() => {
+    const el = document.querySelector(`[data-tour-id="${step.to}"]`);
+    if (!el) return undefined;
+    const saved = {
+      zIndex: el.style.zIndex,
+      boxShadow: el.style.boxShadow,
+      borderRadius: el.style.borderRadius,
+      transition: el.style.transition,
+    };
+    el.style.zIndex = '131';
+    el.style.borderRadius = '8px';
+    el.style.transition = 'box-shadow 0.25s ease';
+    el.style.boxShadow =
+      '0 0 0 2px #117dff, 0 0 0 5px rgba(17,125,255,0.28), 0 0 22px rgba(17,125,255,0.6)';
+    return () => {
+      el.style.zIndex = saved.zIndex;
+      el.style.boxShadow = saved.boxShadow;
+      el.style.borderRadius = saved.borderRadius;
+      el.style.transition = saved.transition;
+    };
+  }, [step.to]);
+
   const activeTarget = targets.find((t) => t.to === step.to) || null;
-
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
-
-  // Spotlight hole around the active target so it stays crisp (un-blurred)
-  // while everything else is glass. Four panels carry the blur + tint around
-  // the clear rectangle.
-  const PAD = 6;
-  const hole = activeTarget
-    ? {
-        x: Math.max(0, activeTarget.rect.left - PAD),
-        y: Math.max(0, activeTarget.rect.top - PAD),
-        w: activeTarget.rect.width + PAD * 2,
-        h: activeTarget.rect.height + PAD * 2,
-      }
-    : null;
-
-  const GLASS = {
-    background: 'rgba(26,24,20,0.30)',
-    backdropFilter: 'blur(7px) saturate(120%)',
-    WebkitBackdropFilter: 'blur(7px) saturate(120%)',
-  };
-
-  const panels = hole
-    ? [
-        { key: 't', left: 0, top: 0, width: vw, height: hole.y },
-        { key: 'b', left: 0, top: hole.y + hole.h, width: vw, height: Math.max(0, vh - (hole.y + hole.h)) },
-        { key: 'l', left: 0, top: hole.y, width: hole.x, height: hole.h },
-        { key: 'r', left: hole.x + hole.w, top: hole.y, width: Math.max(0, vw - (hole.x + hole.w)), height: hole.h },
-      ]
-    : [];
 
   return (
     <div className="fixed inset-0 z-[130]">
-      {/* Glass-morphism backdrop with a crisp spotlight cutout */}
-      {hole ? (
-        panels.map((p) => (
-          <motion.div
-            key={p.key}
-            className="absolute"
-            initial={false}
-            animate={{ left: p.left, top: p.top, width: p.width, height: p.height }}
-            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-            style={GLASS}
-          />
-        ))
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0"
-          style={GLASS}
-        />
-      )}
+      {/* Dim + blur backdrop. The active sidebar item is lifted above this
+          (z 131) so it stays crisp and glowing — see the elevation effect. */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(20,18,15,0.34)',
+          backdropFilter: 'blur(4px) saturate(115%)',
+          WebkitBackdropFilter: 'blur(4px) saturate(115%)',
+        }}
+      />
 
       {/* SVG connector overlay */}
       {cardRect && (
@@ -303,19 +290,12 @@ export default function OverviewTour({ onClose }) {
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="7"
-              markerHeight="7"
+              markerWidth="8"
+              markerHeight="8"
               orient="auto-start-reverse"
             >
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" />
             </marker>
-            <filter id="ovt-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="b" />
-              <feMerge>
-                <feMergeNode in="b" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
 
           {/* Faint connectors to every target */}
@@ -326,52 +306,31 @@ export default function OverviewTour({ onClose }) {
                 key={t.to}
                 d={elbowPath(from, to)}
                 fill="none"
-                stroke="rgba(255,255,255,0.22)"
-                strokeWidth="1"
+                stroke="rgba(255,255,255,0.28)"
+                strokeWidth="1.25"
                 strokeDasharray="3 5"
               />
             );
           })}
 
-          {/* Active connector — white, glowing, animated draw + arrowhead */}
+          {/* Active connector — dark halo underlay (visible on any bg) + crisp
+              white line + arrowhead. Fades in (no pathLength — that was the
+              cause of the invisible arrow). */}
           {activeTarget && (() => {
             const { from, to } = geomFor(cardRect, activeTarget.rect);
+            const d = elbowPath(from, to);
             return (
-              <motion.path
+              <motion.g
                 key={`active-${step.to}`}
-                d={elbowPath(from, to)}
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                markerEnd="url(#ovt-arrow)"
-                filter="url(#ovt-glow)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              />
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <path d={d} fill="none" stroke="rgba(8,12,20,0.45)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" markerEnd="url(#ovt-arrow)" />
+              </motion.g>
             );
           })()}
-
-          {/* Spotlight ring around the active target (white glow) */}
-          {activeTarget && (
-            <motion.rect
-              key={`ring-${step.to}`}
-              x={activeTarget.rect.left - PAD}
-              y={activeTarget.rect.top - PAD}
-              width={activeTarget.rect.width + PAD * 2}
-              height={activeTarget.rect.height + PAD * 2}
-              rx="10"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="1.8"
-              filter="url(#ovt-glow)"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
         </svg>
       )}
 

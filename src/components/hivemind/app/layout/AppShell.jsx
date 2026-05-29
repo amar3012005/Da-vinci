@@ -9,7 +9,6 @@ import { ChatPanel } from '../pages/Chat';
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
-import Walkthrough, { useWalkthrough, DEFAULT_STEPS } from '../shared/Walkthrough';
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -104,8 +103,6 @@ export default function AppShell() {
   const { needsOnboarding } = useAuth();
   const location = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
-  // First-run walkthrough. Bump the version to re-announce on a new feature.
-  const walkthrough = useWalkthrough('onboarding', { version: 1 });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
 
@@ -150,17 +147,6 @@ export default function AppShell() {
 
         {/* Chat Panel */}
         <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
-
-        {/* First-run / feature-announcement walkthrough */}
-        <AnimatePresence>
-          {walkthrough.open && (
-            <Walkthrough
-              steps={DEFAULT_STEPS}
-              onClose={walkthrough.dismiss}
-              onComplete={walkthrough.complete}
-            />
-          )}
-        </AnimatePresence>
       </div>
     </TeamProvider>
   );
