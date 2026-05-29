@@ -88,6 +88,24 @@ function getDocHashTag(doc) {
   return hit ? hit.split(':')[1] : null;
 }
 
+// Filename for a doc — from a `filename:` tag, else the title. Used to dedup
+// the past-docs list (segments/re-uploads of the same file collapse to one).
+function docFilename(doc) {
+  const tags = doc?.tags || [];
+  const hit = tags.find((t) => typeof t === 'string' && t.startsWith('filename:'));
+  if (hit) return hit.slice('filename:'.length).toLowerCase();
+  return (doc?.title || '').trim().toLowerCase() || null;
+}
+
+// Project label for a doc (project string or projectId), for the past-docs chip.
+function docProject(doc) {
+  if (doc?.project) return doc.project;
+  if (doc?.project_id || doc?.projectId) return doc.project_id || doc.projectId;
+  const tags = doc?.tags || [];
+  const hit = tags.find((t) => typeof t === 'string' && t.startsWith('project:'));
+  return hit ? hit.slice('project:'.length) : null;
+}
+
 const TYPE_LABELS = {
   invoice: 'Invoice / Purchase Order',
   contract: 'Contract / Legal',
@@ -694,7 +712,14 @@ export default function KnowledgeBase() {
 
     // Combine and sort by date
     const combined = [...kbMemories, ...pendingUploads];
-    return combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Dedup: collapse multiple rows of the same document (segment-promoted
+    // memories, re-uploads) into one — key by doc-hash, else filename, else id.
+    const seen = new Map();
+    for (const d of combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))) {
+      const key = getDocHashTag(d) || docFilename(d) || d.id;
+      if (!seen.has(key)) seen.set(key, d);
+    }
+    return [...seen.values()];
   }, [kbMemories, justUploadedDocs]);
 
   // Filter documents by type
@@ -794,14 +819,22 @@ export default function KnowledgeBase() {
       }
       refetchKb();
     } catch (err) {
-      console.error('Delete failed:', err);
-      const serverMsg = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'Unknown error';
-      setUploads(prev => [...prev, {
-        id: `del-err-${Date.now()}`,
-        filename: 'Delete failed',
-        status: 'error',
-        error: serverMsg,
-      }]);
+      // 404 = already gone (stale list). Treat as success: drop it + refetch,
+      // don't show a scary error.
+      if (err?.response?.status === 404) {
+        setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
+        setDeleteConfirmId(null);
+        refetchKb();
+      } else {
+        console.error('Delete failed:', err);
+        const serverMsg = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'Unknown error';
+        setUploads(prev => [...prev, {
+          id: `del-err-${Date.now()}`,
+          filename: 'Delete failed',
+          status: 'error',
+          error: serverMsg,
+        }]);
+      }
     } finally {
       setDeletingDocId(null);
     }
@@ -1626,6 +1659,14 @@ export default function KnowledgeBase() {
                       })()}
                       {meta.total_chunks && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
+                      )}
+                      {docProject(doc) && (
+                        <span
+                          className="text-[#7c3aed] text-[10px] font-mono bg-[#7c3aed]/8 border border-[#7c3aed]/20 rounded px-1.5 py-0.5"
+                          title="Project scope"
+                        >
+                          {docProject(doc)}
+                        </span>
                       )}
                       {/* Relationship counts from canonical buildRoutedIngestPayloads pipeline */}
                       {(() => {
