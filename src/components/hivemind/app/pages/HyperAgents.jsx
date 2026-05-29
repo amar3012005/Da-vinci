@@ -340,6 +340,8 @@ function RoomThread({ roomId, onArchived, onBack }) {
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
       'skeptic_challenge', 'vote', 'swarm_verdict',
+      // Prod hardening events (cost cap / wall-clock deadline / role warnings):
+      'cost_cap_hit', 'deadline_hit', 'warning',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -606,6 +608,10 @@ function TurnView({ turn, participants, liveLines }) {
   const swarmVerdict = lines.find(l => l.t === 'swarm_verdict');
   const isSwarm = template === 'swarm' || hypotheses.length > 0;
   const roundStarts = lines.filter(l => l.t === 'round_start');
+  // Prod hardening signals — surfaced so a truncated/degraded turn isn't silent.
+  const costCapHit = lines.find(l => l.t === 'cost_cap_hit') || lines.find(l => l.t === 'seal' && l.cost_cap_hit);
+  const deadlineHit = lines.find(l => l.t === 'deadline_hit');
+  const roomWarnings = lines.filter(l => l.t === 'warning');
 
   // Phase 4 polish — clickable evidence chips open this memory modal.
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
@@ -990,7 +996,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                     {childReviews.map((r, i) => {
                       const reviewerAgent = participants[r.reviewer] || { slug: r.reviewer, lane: 'Communicator' };
                       const agreeColor =
-                        r.agreement === 'support' ? 'text-emerald-700' :
+                        (r.agreement === 'agree' || r.agreement === 'support') ? 'text-emerald-700' :
                         r.agreement === 'challenge' ? 'text-amber-700' : 'text-blue-700';
                       return (
                         <div key={i} className="text-[12px]">
@@ -1105,6 +1111,31 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
             </table>
           </div>
         </>
+      )}
+
+      {/* Prod hardening notices — truncation + role warnings (never silent) */}
+      {(costCapHit || deadlineHit || roomWarnings.length > 0) && (
+        <div className="mx-2 mt-3 space-y-1">
+          {costCapHit && (
+            <div className="p-2 rounded-md border border-amber-300 bg-amber-50 text-[11px] text-amber-800">
+              ⚠ Turn truncated at the tool-call budget — synthesis ran on the rounds completed so far.
+            </div>
+          )}
+          {deadlineHit && (
+            <div className="p-2 rounded-md border border-amber-300 bg-amber-50 text-[11px] text-amber-800">
+              ⏱ Turn hit the time limit ({deadlineHit.cap_s || '—'}s) — sealed early from round {deadlineHit.skipped_from_round || '?'}.
+            </div>
+          )}
+          {roomWarnings.map((w, i) => (
+            <div key={i} className="p-2 rounded-md border border-blue-200 bg-blue-50 text-[11px] text-blue-800">
+              {w.code === 'configured_skeptic_absent'
+                ? `ℹ Configured Skeptic absent this turn — a stand-in${w.stand_in_skeptic ? ` (${w.stand_in_skeptic})` : ''} challenged instead.`
+                : w.code === 'lead_skeptic_collision'
+                ? `ℹ Lead and Skeptic resolved to the same agent${w.slug ? ` (${w.slug})` : ''} — Skeptic dropped for this turn.`
+                : `ℹ ${w.code || 'notice'}`}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Swarm verdict banner */}
