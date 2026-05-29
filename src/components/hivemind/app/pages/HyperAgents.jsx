@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
+import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
 
@@ -88,6 +89,7 @@ export default function HyperAgents() {
   if (!loading && liveRooms.length === 0) {
     return (
       <div className="max-w-[1200px] mx-auto">
+        <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
         <div className="mb-5 bg-gradient-to-br from-[#faf9f4] to-white border border-[#e3e0db] rounded-xl p-5 flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
             <Sparkles size={20} className="text-violet-500" />
@@ -131,6 +133,7 @@ export default function HyperAgents() {
   // ── WhatsApp layout (post-first-room) ──────────────────────────────
   return (
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
+      <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
       <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">

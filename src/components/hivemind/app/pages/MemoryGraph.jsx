@@ -45,6 +45,7 @@ import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
+import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
 // Edge palette — semantically distinct hues so self-evolution chains are
@@ -874,6 +875,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
+      <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
         className={`shrink-0 border-b px-4 py-2 flex items-center gap-2 z-20 overflow-x-auto ${

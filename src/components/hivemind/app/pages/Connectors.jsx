@@ -39,6 +39,7 @@ import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
+import { PageWalkthrough, CONNECTORS_STEPS } from '../shared/Walkthrough';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -3871,6 +3872,7 @@ export default function Connectors() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <PageWalkthrough pageKey="connectors" steps={CONNECTORS_STEPS} />
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
