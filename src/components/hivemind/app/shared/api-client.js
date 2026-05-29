@@ -166,6 +166,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * Fire the post-login welcome email. Recipient is resolved server-side from
+   * the session (never client-supplied). Idempotent per login session and
+   * fire-and-forget — safe to call on every Overview mount.
+   */
+  async sendWelcomeEmail() {
+    const { data } = await this.controlPlane.post('/v1/notifications/welcome', {});
+    return data;
+  }
+
   async logout() {
     await this.controlPlane.post('/auth/logout');
   }
