@@ -594,6 +594,8 @@ function TurnView({ turn, participants, liveLines }) {
   const template = router?.template || 'debate';
   const sealStatus = seal?.status || 'complete';
   const qualityLow = seal?.quality_low;
+  const toolCallCounts = seal?.tool_call_counts || {};
+  const toolCallTotal = seal?.tool_call_total || 0;
 
   // Phase 4 swarm events (R1-R5):
   const hypotheses = lines.filter(l => l.t === 'hypothesis');
@@ -604,6 +606,9 @@ function TurnView({ turn, participants, liveLines }) {
   const swarmVerdict = lines.find(l => l.t === 'swarm_verdict');
   const isSwarm = template === 'swarm' || hypotheses.length > 0;
   const roundStarts = lines.filter(l => l.t === 'round_start');
+
+  // Phase 4 polish — clickable evidence chips open this memory modal.
+  const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
 
   return (
     <div className="space-y-2">
@@ -639,6 +644,14 @@ function TurnView({ turn, participants, liveLines }) {
           votes={votes}
           swarmVerdict={swarmVerdict}
           roundStarts={roundStarts}
+          onOpenEvidence={setEvidenceMemoryId}
+        />
+      )}
+
+      {evidenceMemoryId && (
+        <EvidenceModal
+          memoryId={evidenceMemoryId}
+          onClose={() => setEvidenceMemoryId(null)}
         />
       )}
 
@@ -760,6 +773,20 @@ function TurnView({ turn, participants, liveLines }) {
               ))}
             </div>
           )}
+          {toolCallTotal > 0 && (
+            <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2 mt-1">
+              <span className="px-1.5 py-0.5 rounded bg-violet-50 text-violet-700">
+                {toolCallTotal} tool calls
+              </span>
+              {Object.entries(toolCallCounts).map(([slug, count]) => (
+                count > 0 && (
+                  <span key={slug} className="px-1.5 py-0.5 rounded bg-[#f3f1ec]">
+                    {slug}: {count}
+                  </span>
+                )
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -852,7 +879,66 @@ function renderMarkdownLite(raw) {
 
 /* ─── Swarm R1-R5 renderer (Phase 4) ──────────────────────────────────── */
 
-function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts }) {
+function EvidenceChip({ id, onClick }) {
+  if (!id) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick?.(id)}
+      className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252] hover:bg-violet-100 hover:text-violet-700 transition-colors cursor-pointer"
+      title={`Open memory ${id}`}
+    >
+      m·{String(id).slice(0, 8)}
+    </button>
+  );
+}
+
+function EvidenceModal({ memoryId, onClose }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setErr(null); setData(null);
+    apiClient.getMemory(memoryId)
+      .then((res) => { if (!cancelled) setData(res?.memory || res); })
+      .catch((e) => { if (!cancelled) setErr(e?.response?.data?.error || e?.message || 'load failed'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [memoryId]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-[640px] max-h-[80vh] overflow-y-auto shadow-2xl"
+           onClick={(e) => e.stopPropagation()}>
+        <header className="px-5 py-3 border-b border-[#e3e0db] flex items-center justify-between sticky top-0 bg-white">
+          <div className="text-[10px] font-mono text-[#737373]">memory · {memoryId}</div>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
+        </header>
+        <div className="px-5 py-4 space-y-3">
+          {loading && <div className="text-[12px] text-[#a3a3a3]">Loading…</div>}
+          {err && <div className="text-[12px] text-red-600">{err}</div>}
+          {data && (
+            <>
+              <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{data.title || '(untitled)'}</h3>
+              <div className="text-[10px] font-mono text-[#737373] flex flex-wrap gap-1">
+                {(data.tags || []).slice(0, 20).map((t) => (
+                  <span key={t} className="px-1.5 py-0.5 rounded bg-[#f3f1ec]">{t}</span>
+                ))}
+              </div>
+              <div className="text-[12px] whitespace-pre-wrap text-[#0a0a0a] leading-relaxed">
+                {data.content || '(empty)'}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts, onOpenEvidence }) {
   const reviewsByTarget = useMemo(() => {
     const out = {};
     for (const r of peerReviews || []) {
@@ -893,9 +979,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                 {(h.evidence_memory_ids || []).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1 ml-1">
                     {h.evidence_memory_ids.map((mid) => (
-                      <span key={mid} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252]">
-                        m·{mid.slice(0, 8)}
-                      </span>
+                      <EvidenceChip key={mid} id={mid} onClick={onOpenEvidence} />
                     ))}
                   </div>
                 )}
@@ -914,8 +998,10 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                           <span className="font-semibold text-[#0a0a0a]">{reviewerAgent.name || r.reviewer}:</span>{' '}
                           <span className="text-[#525252]">{r.content}</span>
                           {(r.evidence_memory_ids || []).length > 0 && (
-                            <span className="ml-1 text-[9px] font-mono text-[#a3a3a3]">
-                              · {r.evidence_memory_ids.map((m) => `m·${m.slice(0, 6)}`).join(' ')}
+                            <span className="ml-1 inline-flex flex-wrap gap-1">
+                              {r.evidence_memory_ids.map((m) => (
+                                <EvidenceChip key={m} id={m} onClick={onOpenEvidence} />
+                              ))}
                             </span>
                           )}
                         </div>
@@ -961,8 +1047,10 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                 <span className="text-[9px] font-mono text-amber-700 mr-1">[challenges {c.target_hypothesis_id}]</span>
                 {c.challenge}
                 {(c.evidence_memory_ids || []).length > 0 && (
-                  <span className="ml-1 text-[9px] font-mono text-[#a3a3a3]">
-                    · {c.evidence_memory_ids.map((m) => `m·${m.slice(0, 6)}`).join(' ')}
+                  <span className="ml-1 inline-flex flex-wrap gap-1">
+                    {c.evidence_memory_ids.map((m) => (
+                      <EvidenceChip key={m} id={m} onClick={onOpenEvidence} />
+                    ))}
                   </span>
                 )}
               </div>
@@ -1391,11 +1479,18 @@ function CreateRoomModal({ onClose, onCreated }) {
           </div>
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">Template</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
               {[
+                { key: 'auto', label: 'Auto', desc: 'Pick template from query keywords' },
                 { key: 'debate', label: 'Debate', desc: 'Full CSI: lead → reactors → synth → revise loop' },
                 { key: 'decision', label: 'Decision', desc: 'DACI: lead commits, save as memory, skip debate' },
                 { key: 'swarm', label: 'Swarm', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
+                { key: 'brainstorm', label: 'Brainstorm', desc: 'Generative-only. Top 5-8 ideas. No premature pick.' },
+                { key: 'council', label: 'Council', desc: 'Majority vote (3/5+). APPROVED / CONDITIONAL / REJECTED.' },
+                { key: 'lean_coffee', label: 'Lean Coffee', desc: 'Rotate 2-3 sub-topics, time-boxed. Light exploration.' },
+                { key: 'retrospective', label: 'Retrospective', desc: "What worked / What didn't / What to change." },
+                { key: 'review', label: 'Review', desc: 'Score per dimension. PASS / NEEDS_WORK / FAIL.' },
+                { key: 'standup', label: 'Standup', desc: 'Yesterday / Today / Blockers status report.' },
               ].map((t) => (
                 <button
                   type="button"
