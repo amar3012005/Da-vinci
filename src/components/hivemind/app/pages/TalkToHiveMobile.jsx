@@ -445,9 +445,46 @@ function AiBubble({ msg, model }) {
                 </motion.div>
               )}
             </AnimatePresence>
+            {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Project picker (mobile) — Org-wide + each project; click → silent scoped save.
+function MobileProjectChoice({ choice }) {
+  const [saved, setSaved] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const projects = choice?.projects || [];
+  const draft = choice?.draft || null;
+  if (!draft) return null;
+  const save = async (label, extra) => {
+    if (busy || saved) return;
+    setBusy(true); setErr(null);
+    try {
+      await apiClient.createMemory({
+        title: draft.title, content: draft.content, tags: draft.tags || [],
+        memory_type: draft.memory_type || 'fact', ...extra,
+      });
+      setSaved(label);
+    } catch (e) { setErr(e.response?.data?.error || e.message); }
+    finally { setBusy(false); }
+  };
+  if (saved) return <div className="mt-2 text-[12px] font-medium text-emerald-700">✓ Saved to {saved}</div>;
+  const btn = 'px-3 py-1.5 text-[12px] rounded-full border border-[#e3e0db] active:border-[#117dff] active:text-[#117dff] disabled:opacity-50';
+  return (
+    <div className="mt-2">
+      <div className="text-[12px] text-[#737373] mb-1.5">Save this to:</div>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
+        {projects.map((p) => (
+          <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>
+        ))}
+      </div>
+      {err && <div className="text-[11px] text-red-600 mt-1">{err}</div>}
     </div>
   );
 }
@@ -565,6 +602,7 @@ export default function TalkToHiveMobile() {
         steps: Array.isArray(data.steps) ? data.steps : [],
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         trace: data.trace || null,
+        project_choice: data.project_choice || null,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {

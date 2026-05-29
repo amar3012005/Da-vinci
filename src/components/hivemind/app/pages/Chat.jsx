@@ -419,6 +419,7 @@ function MessageBubble({ msg }) {
               Slack action pending · reply confirm
             </div>
           )}
+          {msg.project_choice && <ProjectChoiceButtons choice={msg.project_choice} />}
           <DraftCards draftIds={msg.draft_ids} />
           <Sources sources={msg.sources} />
           <TokenUsage usage={msg.usage} />
@@ -529,6 +530,51 @@ function DraftCards({ draftIds }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Project picker rendered when the agent deferred a save for project choice.
+// Buttons: Org-wide + each accessible project. Click → silent scoped save.
+function ProjectChoiceButtons({ choice }) {
+  const [saved, setSaved] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const projects = choice?.projects || [];
+  const draft = choice?.draft || null;
+  if (!draft) return null;
+
+  const save = async (label, extra) => {
+    if (busy || saved) return;
+    setBusy(true); setErr(null);
+    try {
+      await apiClient.createMemory({
+        title: draft.title,
+        content: draft.content,
+        tags: draft.tags || [],
+        memory_type: draft.memory_type || 'fact',
+        ...extra,
+      });
+      setSaved(label);
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message);
+    } finally { setBusy(false); }
+  };
+
+  if (saved) {
+    return <div className="mt-2 text-[11px] font-medium text-emerald-700">✓ Saved to {saved}</div>;
+  }
+  const btn = 'px-2.5 py-1 text-[11px] rounded-full border border-[#e3e0db] hover:border-[#117dff] hover:text-[#117dff] disabled:opacity-50 transition-colors';
+  return (
+    <div className="mt-2">
+      <div className="text-[11px] text-[#737373] mb-1.5">Save this to:</div>
+      <div className="flex flex-wrap gap-1.5">
+        <button type="button" onClick={() => save('Org-wide', { scope: 'organization' })} disabled={busy} className={btn}>🌐 Org-wide</button>
+        {projects.map((p) => (
+          <button key={p.id} type="button" onClick={() => save(p.name, { project_id: p.id })} disabled={busy} className={btn}>{p.name}</button>
+        ))}
+      </div>
+      {err && <div className="text-[10px] text-red-600 mt-1">{err}</div>}
     </div>
   );
 }
@@ -793,6 +839,7 @@ export function ChatPanel({ isOpen, onClose }) {
       let usage = null;
       let steps = [];
       let draftIds = [];
+      let projectChoice = null;
 
       // Belt-and-braces language enforcement: when UI language is anything
       // other than English, prepend a strict directive to the outgoing
@@ -833,6 +880,7 @@ export function ChatPanel({ isOpen, onClose }) {
         // Render below the response as a collapsible "Used N tools" strip.
         steps = Array.isArray(chatData.steps) ? chatData.steps : [];
         draftIds = Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [];
+        projectChoice = chatData.project_choice || null;
       } catch (chatErr) {
         console.warn('[Chat] chat failed:', chatErr?.message);
         responseContent = "I couldn't process your request right now. Please try again.";
@@ -847,6 +895,7 @@ export function ChatPanel({ isOpen, onClose }) {
         usage: usage,
         steps,
         draft_ids: draftIds,
+        project_choice: projectChoice,
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
