@@ -2,17 +2,22 @@ import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Building2, Hexagon, Lock, Users } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import { useTranslation } from 'react-i18next';
 
 const ORG_MODES = {
   personal: {
-    title: 'Personal',
-    description: 'Start with a private workspace for your own memories, connectors, and experiments.',
+    titleKey: 'onboarding.modePersonalTitle',
+    titleDefault: 'Personal',
+    descriptionKey: 'onboarding.modePersonalDesc',
+    descriptionDefault: 'Start with a private workspace for your own memories, connectors, and experiments.',
     icon: Lock,
     plan: 'free',
   },
   enterprise: {
-    title: 'Enterprise',
-    description: 'Set up a shared workspace with an org slug, member invites, and team-level memory.',
+    titleKey: 'onboarding.modeEnterpriseTitle',
+    titleDefault: 'Enterprise',
+    descriptionKey: 'onboarding.modeEnterpriseDesc',
+    descriptionDefault: 'Set up a shared workspace with an org slug, member invites, and team-level memory.',
     icon: Users,
     plan: 'enterprise',
   },
@@ -27,6 +32,7 @@ function deriveSlug(name) {
 }
 
 export default function OnboardingFlow() {
+  const { t } = useTranslation('dashboard');
   const { user, createOrg } = useAuth();
   const [mode, setMode] = useState('personal');
   const [orgName, setOrgName] = useState('');
@@ -76,10 +82,10 @@ export default function OnboardingFlow() {
           </div>
 
           <h2 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] mb-2">
-            Choose your workspace
+            {t('onboarding.chooseWorkspace', 'Choose your workspace')}
           </h2>
           <p className="text-[#525252] text-sm mb-8 max-w-2xl">
-            Welcome, {user?.display_name || user?.email || 'there'}. Start with a private workspace or create an enterprise org for shared memory and team connectors.
+            {t('onboarding.welcomeMsg', 'Welcome, {{name}}. Start with a private workspace or create an enterprise org for shared memory and team connectors.', { name: user?.display_name || user?.email || t('onboarding.there', 'there') })}
           </p>
 
           <div className="grid gap-4 md:grid-cols-2 mb-8">
@@ -106,10 +112,10 @@ export default function OnboardingFlow() {
                     </span>
                   </div>
                   <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk'] mb-2">
-                    {option.title}
+                    {t(option.titleKey, option.titleDefault)}
                   </h3>
                   <p className="text-[#525252] text-sm leading-relaxed">
-                    {option.description}
+                    {t(option.descriptionKey, option.descriptionDefault)}
                   </p>
                 </button>
               );
@@ -119,7 +125,7 @@ export default function OnboardingFlow() {
           <form onSubmit={handleCreate} className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
             <div>
               <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">
-                Workspace Name
+                {t('onboarding.workspaceName', 'Workspace Name')}
               </label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
@@ -127,7 +133,7 @@ export default function OnboardingFlow() {
                   type="text"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  placeholder={mode === 'enterprise' ? 'e.g. Acme Research' : 'e.g. Amar Workspace'}
+                  placeholder={mode === 'enterprise' ? t('onboarding.placeholderEnterprise', 'e.g. Acme Research') : t('onboarding.placeholderPersonal', 'e.g. Amar Workspace')}
                   className="w-full bg-transparent border border-[#e3e0db] rounded-[8px] py-3 pl-10 pr-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]/40 transition-colors"
                   autoFocus
                 />
@@ -136,32 +142,32 @@ export default function OnboardingFlow() {
 
             <div>
               <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">
-                Org Slug
+                {t('onboarding.orgSlug', 'Org Slug')}
               </label>
               <input
                 type="text"
                 value={mode === 'enterprise' ? slug : derivedSlug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder={mode === 'enterprise' ? 'e.g. acme-research' : 'Auto-generated'}
+                placeholder={mode === 'enterprise' ? t('onboarding.placeholderSlugEnterprise', 'e.g. acme-research') : t('onboarding.placeholderSlugAuto', 'Auto-generated')}
                 disabled={mode !== 'enterprise'}
                 className="w-full bg-transparent border border-[#e3e0db] rounded-[8px] py-3 px-4 text-[#0a0a0a] text-sm font-mono placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]/40 transition-colors disabled:bg-[#f7f5ef] disabled:text-[#a3a3a3]"
               />
               <p className="text-[#a3a3a3] text-[11px] font-mono mt-2">
                 {mode === 'enterprise'
-                  ? `Join URL will use /join/${effectiveSlug || 'your-org'}/...`
-                  : 'Personal workspaces use the free plan and do not require a custom join slug.'}
+                  ? t('onboarding.joinUrlHint', 'Join URL will use /join/{{slug}}/...', { slug: effectiveSlug || 'your-org' })
+                  : t('onboarding.personalSlugHint', 'Personal workspaces use the free plan and do not require a custom join slug.')}
               </p>
             </div>
 
             <div className="md:col-span-2 flex items-center justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">
               <div>
                 <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
-                  {selectedMode.title} workspace
+                  {t(selectedMode.titleKey, selectedMode.titleDefault)} {t('onboarding.workspace', 'workspace')}
                 </p>
                 <p className="text-[#525252] text-sm">
                   {mode === 'enterprise'
-                    ? 'Creates an enterprise org with a shareable slug and team-ready memory model.'
-                    : 'Creates a private org on the free plan so you can start immediately.'}
+                    ? t('onboarding.enterpriseSummary', 'Creates an enterprise org with a shareable slug and team-ready memory model.')
+                    : t('onboarding.personalSummary', 'Creates a private org on the free plan so you can start immediately.')}
                 </p>
               </div>
 
@@ -174,7 +180,7 @@ export default function OnboardingFlow() {
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    Create {selectedMode.title}
+                    {t('onboarding.createBtn', 'Create {{mode}}', { mode: t(selectedMode.titleKey, selectedMode.titleDefault) })}
                     <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                   </>
                 )}

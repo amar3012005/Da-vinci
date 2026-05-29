@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Check, Copy, Terminal, AlertTriangle, ArrowLeft, Sparkles, FileText } from 'lucide-react';
 
 /**
@@ -138,6 +139,7 @@ function resolvePlatform(client) {
 }
 
 export default function McpConnectCallback() {
+  const { t } = useTranslation('dashboard');
   const [search] = useSearchParams();
   const [copied, setCopied] = useState(false);
 
@@ -178,14 +180,14 @@ export default function McpConnectCallback() {
         >
           <div className="flex items-center gap-3 mb-3">
             <AlertTriangle className="text-red-500" size={20} />
-            <h1 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Connection failed</h1>
+            <h1 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t('mcpconnectcallback.connectionFailed', 'Connection failed')}</h1>
           </div>
           <p className="text-sm text-[#525252] font-['Space_Grotesk'] mb-4">{error}</p>
           <Link
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#117dff] hover:underline"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('mcpconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
         </motion.div>
       </div>
@@ -196,16 +198,15 @@ export default function McpConnectCallback() {
     return (
       <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center p-6">
         <div className="bg-white border border-amber-200 rounded-2xl p-8 max-w-lg w-full">
-          <h1 className="text-lg font-bold text-[#0a0a0a] mb-2 font-['Space_Grotesk']">Missing parameters</h1>
+          <h1 className="text-lg font-bold text-[#0a0a0a] mb-2 font-['Space_Grotesk']">{t('mcpconnectcallback.missingParams', 'Missing parameters')}</h1>
           <p className="text-sm text-[#525252] mb-4 font-['Space_Grotesk']">
-            This page expects ?apikey= and ?user_id= from the OAuth callback.
-            Start the flow from the Connectors page.
+            {t('mcpconnectcallback.missingParamsDesc', 'This page expects ?apikey= and ?user_id= from the OAuth callback. Start the flow from the Connectors page.')}
           </p>
           <Link
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#117dff] hover:underline"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('mcpconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
         </div>
       </div>
@@ -225,17 +226,27 @@ export default function McpConnectCallback() {
               <Check className="text-emerald-600" size={20} />
             </div>
             <h1 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">
-              Connected to {platform.name}. {platform.primary === 'cli' ? 'One command left.' : 'Almost done.'}
+              {t('mcpconnectcallback.connectedTitle', 'Connected to {{name}}. {{next}}', {
+                name: platform.name,
+                next: platform.primary === 'cli'
+                  ? t('mcpconnectcallback.oneCommandLeft', 'One command left.')
+                  : t('mcpconnectcallback.almostDone', 'Almost done.'),
+              })}
             </h1>
           </div>
           <p className="text-sm text-[#525252] font-['Space_Grotesk'] ml-[52px]">
-            Paste the {platform.primary === 'cli' ? 'command' : platform.primary === 'json' ? 'JSON' : 'config'} below
-            into{' '}
+            {t('mcpconnectcallback.pasteInstruction', 'Paste the {{type}} below into', {
+              type: platform.primary === 'cli'
+                ? t('mcpconnectcallback.typeCommand', 'command')
+                : platform.primary === 'json'
+                  ? t('mcpconnectcallback.typeJson', 'JSON')
+                  : t('mcpconnectcallback.typeConfig', 'config'),
+            })}{' '}
             <span className="font-mono text-[#117dff] text-xs">{platform.pasteTarget}</span>
             {platform.pasteTargetWin && (
-              <> (Windows: <span className="font-mono text-[#117dff] text-xs">{platform.pasteTargetWin}</span>)</>
+              <> ({t('mcpconnectcallback.windows', 'Windows')}: <span className="font-mono text-[#117dff] text-xs">{platform.pasteTargetWin}</span>)</>
             )}
-            . Then restart {platform.name} — all 22 HIVEMIND tools become available.
+            . {t('mcpconnectcallback.restartHint', 'Then restart {{name}} — all 22 HIVEMIND tools become available.', { name: platform.name })}
           </p>
         </motion.div>
 
@@ -246,7 +257,7 @@ export default function McpConnectCallback() {
             transition={{ delay: 0.05 }}
             className="bg-white border border-[#e3e0db] rounded-2xl p-5 mb-5"
           >
-            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-3">Steps</p>
+            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-3">{t('mcpconnectcallback.steps', 'Steps')}</p>
             <ol className="space-y-2">
               {platform.instructions.map((step, i) => (
                 <li key={i} className="flex gap-3">
@@ -268,10 +279,16 @@ export default function McpConnectCallback() {
             <div className="flex items-center gap-2">
               {platform.primary === 'cli' ? <Terminal size={14} className="text-[#525252]" /> : <FileText size={14} className="text-[#525252]" />}
               <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
-                {platform.primary === 'cli' ? 'Run this command' : platform.primary === 'json' ? 'Paste this JSON' : 'Use this config'}
+                {platform.primary === 'cli'
+                  ? t('mcpconnectcallback.runCommand', 'Run this command')
+                  : platform.primary === 'json'
+                    ? t('mcpconnectcallback.pasteJson', 'Paste this JSON')
+                    : t('mcpconnectcallback.useConfig', 'Use this config')}
               </p>
               <span className="text-[10px] text-emerald-600 font-mono">
-                {copied ? 'copied just now' : 'auto-copied to clipboard'}
+                {copied
+                  ? t('mcpconnectcallback.copiedJustNow', 'copied just now')
+                  : t('mcpconnectcallback.autoCopied', 'auto-copied to clipboard')}
               </span>
             </div>
             <button
@@ -283,7 +300,7 @@ export default function McpConnectCallback() {
               }`}
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('mcpconnectcallback.copied', 'Copied') : t('mcpconnectcallback.copy', 'Copy')}
             </button>
           </div>
           <pre className="px-5 py-4 text-[12px] font-mono text-[#cdd6f4] bg-[#0a0a0a] overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
@@ -301,7 +318,7 @@ export default function McpConnectCallback() {
             <Check className="text-emerald-600 shrink-0 mt-0.5" size={16} />
             <div>
               <p className="text-xs font-semibold text-emerald-700 font-['Space_Grotesk'] mb-1">
-                Verify after pasting
+                {t('mcpconnectcallback.verifyAfterPasting', 'Verify after pasting')}
               </p>
               <pre className="text-[11px] font-mono text-emerald-800 bg-white/50 rounded px-2 py-1.5">
                 {platform.verifyCmd}
@@ -319,7 +336,7 @@ export default function McpConnectCallback() {
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={14} className="text-[#117dff]" />
             <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
-              22 tools you'll have available
+              {t('mcpconnectcallback.toolsAvailable', "22 tools you'll have available")}
             </p>
           </div>
           <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed">
@@ -335,13 +352,13 @@ export default function McpConnectCallback() {
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#525252] hover:text-[#117dff] font-['Space_Grotesk']"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('mcpconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
           <Link
             to="/hivemind/app/mcp"
             className="text-sm font-semibold text-[#117dff] hover:underline font-['Space_Grotesk']"
           >
-            View all 22 tools →
+            {t('mcpconnectcallback.viewAllTools', 'View all 22 tools →')}
           </Link>
         </div>
       </div>

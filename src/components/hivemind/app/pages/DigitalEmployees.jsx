@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bot,
   Plus,
@@ -225,7 +226,15 @@ const STATUS_STYLES = {
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_STYLES[status] || STATUS_STYLES.draft;
+  const { t } = useTranslation('dashboard');
+  const STATUS_STYLES_I18N = {
+    draft:     { bg: 'bg-[#f3f1ec]',         text: 'text-[#525252]', dot: 'bg-[#a3a3a3]', label: t('digitalemployees.statusDraft', 'Draft') },
+    deploying: { bg: 'bg-blue-500/10',       text: 'text-blue-700',  dot: 'bg-blue-500 animate-pulse', label: t('digitalemployees.statusDeploying', 'Deploying') },
+    running:   { bg: 'bg-emerald-500/10',    text: 'text-[#16a34a]', dot: 'bg-[#16a34a]', label: t('digitalemployees.statusRunning', 'Running') },
+    paused:    { bg: 'bg-amber-500/10',      text: 'text-amber-700', dot: 'bg-amber-500', label: t('digitalemployees.statusPaused', 'Paused') },
+    error:     { bg: 'bg-red-500/10',        text: 'text-[#dc2626]', dot: 'bg-[#dc2626]', label: t('digitalemployees.statusError', 'Error') },
+  };
+  const s = STATUS_STYLES_I18N[status] || STATUS_STYLES_I18N.draft;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.bg} ${s.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -253,6 +262,7 @@ function HyperStateBadge({ hyper }) {
 }
 
 function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectable, selected, onToggleSelect }) {
+  const { t } = useTranslation('dashboard');
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const msgs = employee.metricsLast24h?.messages || 0;
@@ -301,14 +311,14 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
       <div className="mb-3 rounded-[10px] border border-[#ece8e1] bg-[#fbfaf7] p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#8b857c]">Hyper Agent</p>
-            <p className="mt-1 text-[12px] font-semibold text-[#0a0a0a]">{versionLabel} active prompt</p>
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#8b857c]">{t('digitalemployees.hyperAgent', 'Hyper Agent')}</p>
+            <p className="mt-1 text-[12px] font-semibold text-[#0a0a0a]">{t('digitalemployees.activePrompt', '{{version}} active prompt', { version: versionLabel })}</p>
           </div>
           <HyperStateBadge hyper={hyper} />
         </div>
         <div className="mt-3 flex items-center justify-between text-[10px] text-[#737373] font-mono">
-          <span>{evalCount}/{threshold} evals</span>
-          <span>{hyper?.source === 'prompt_tune' ? 'tuned prompt live' : 'seed prompt live'}</span>
+          <span>{t('digitalemployees.evals', '{{count}}/{{threshold}} evals', { count: evalCount, threshold })}</span>
+          <span>{hyper?.source === 'prompt_tune' ? t('digitalemployees.tunedPromptLive', 'tuned prompt live') : t('digitalemployees.seedPromptLive', 'seed prompt live')}</span>
         </div>
         <div className="mt-2 h-1.5 rounded-full bg-[#ece8e1] overflow-hidden">
           <div
@@ -331,22 +341,22 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
           {isRunning && (
             <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
               className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-amber-700 hover:bg-amber-500/10">
-              <Pause size={11} /> Pause
+              <Pause size={11} /> {t('digitalemployees.pause', 'Pause')}
             </button>
           )}
           {isPaused && (
             <button onClick={(e) => { e.stopPropagation(); onResume(employee); }}
               className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#16a34a] hover:bg-emerald-500/10">
-              <Play size={11} /> Resume
+              <Play size={11} /> {t('digitalemployees.resume', 'Resume')}
             </button>
           )}
           <button onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
             className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#525252] hover:bg-[#f3f1ec] ml-auto">
-            Details <ChevronRight size={11} />
+            {t('digitalemployees.details', 'Details')} <ChevronRight size={11} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); onArchive(employee); }}
             className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50"
-            title="Archive">
+            title={t('digitalemployees.archive', 'Archive')}>
             <Trash2 size={11} />
           </button>
         </div>
@@ -421,6 +431,7 @@ function PreviewWindow({ title, subtitle, onClose, children }) {
 }
 
 function EmployeeChatPreview({ employee, onClose }) {
+  const { t } = useTranslation('dashboard');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -450,12 +461,12 @@ function EmployeeChatPreview({ employee, onClose }) {
     <PreviewWindow title={`${employee.name} DM`} subtitle={`1-on-1 employee chat · ${employee.slug}`} onClose={onClose}>
       <div className="space-y-3 p-4">
         <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-[11px] text-[#525252]">
-          Chat directly with this employee using its current prompt version {employee.active_prompt_version?.version_label || employee.hyper?.active_prompt_version?.version_label || 'v0'}, tools, and in-sidecar conversation memory.
+          {t('digitalemployees.chatDirectly', 'Chat directly with this employee using its current prompt version {{version}}, tools, and in-sidecar conversation memory.', { version: employee.active_prompt_version?.version_label || employee.hyper?.active_prompt_version?.version_label || 'v0' })}
         </div>
         <div className="space-y-2 min-h-[280px]">
           {messages.length === 0 ? (
             <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-[#e3e0db] bg-[#faf9f4] px-8 text-center text-[12px] text-[#a3a3a3]">
-              Send a message to start a persistent employee conversation.
+              {t('digitalemployees.sendMessageToStart', 'Send a message to start a persistent employee conversation.')}
             </div>
           ) : messages.map(msg => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -464,7 +475,7 @@ function EmployeeChatPreview({ employee, onClose }) {
               </div>
             </div>
           ))}
-          {loading && <div className="text-[11px] text-[#a3a3a3]">Employee is thinking...</div>}
+          {loading && <div className="text-[11px] text-[#a3a3a3]">{t('digitalemployees.employeeThinking', 'Employee is thinking...')}</div>}
         </div>
         <div className="flex items-end gap-2 rounded-2xl border border-[#e3e0db] bg-[#faf9f4] p-3">
           <textarea
@@ -477,7 +488,7 @@ function EmployeeChatPreview({ employee, onClose }) {
               }
             }}
             rows={2}
-            placeholder={`Message ${employee.name}...`}
+            placeholder={t('digitalemployees.messagePlaceholder', 'Message {{name}}...', { name: employee.name })}
             className="min-h-[44px] flex-1 resize-none bg-transparent text-[12px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
           />
           <button onClick={sendMessage} disabled={loading || !input.trim()} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50">
@@ -490,6 +501,7 @@ function EmployeeChatPreview({ employee, onClose }) {
 }
 
 function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity }) {
+  const { t } = useTranslation('dashboard');
   const runningEmployees = useMemo(() => employees.filter(emp => emp.status === 'running'), [employees]);
   const preferredRoster = useMemo(() => {
     const seeded = runningEmployees.filter((emp) => SEEDED_PERSONA_SLUGS.includes(emp.slug));
@@ -679,8 +691,8 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#eae7e1] bg-[#faf9f4]">
           <div>
-            <p className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">New Workspace Run</p>
-            <p className="text-[11px] text-[#737373]">Select agents and describe the task</p>
+            <p className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('digitalemployees.newWorkspaceRun', 'New Workspace Run')}</p>
+            <p className="text-[11px] text-[#737373]">{t('digitalemployees.selectAgentsDesc', 'Select agents and describe the task')}</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-[#525252] hover:bg-[#e3e0db]/60">
             <X size={16} />
@@ -691,7 +703,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-3">
-              Select Agents <span className="text-[#117dff]">({selectedSlugs.length} selected)</span>
+              {t('digitalemployees.selectAgents', 'Select Agents')} <span className="text-[#117dff]">({t('digitalemployees.selectedCount', '{{count}} selected', { count: selectedSlugs.length })})</span>
             </p>
             <div className="space-y-2">
               {runningEmployees.map(emp => (
@@ -715,7 +727,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
                       <p className="text-[10px] text-[#a3a3a3]">{emp.role_archetype || 'generalist'}</p>
                     </div>
                     {selectedSlugs.includes(emp.slug) && (
-                      <span className="rounded-full bg-[#117dff] px-2 py-1 text-[10px] font-semibold text-white">selected</span>
+                      <span className="rounded-full bg-[#117dff] px-2 py-1 text-[10px] font-semibold text-white">{t('digitalemployees.selected', 'selected')}</span>
                     )}
                   </div>
                   {SEEDED_PERSONA_SLUGS.includes(emp.slug) && (
@@ -728,7 +740,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
 
           {/* Task Brief */}
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">Task Brief</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">{t('digitalemployees.taskBrief', 'Task Brief')}</p>
             <div className="flex flex-wrap gap-1.5 mb-3">
               {TASK_TEMPLATES.map((template, i) => (
                 <button
@@ -744,7 +756,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
               value={brief}
               onChange={(e) => setBrief(e.target.value)}
               rows={4}
-              placeholder="Describe what the team should investigate, debate, and decide..."
+              placeholder={t('digitalemployees.briefPlaceholder', 'Describe what the team should investigate, debate, and decide...')}
               className="w-full resize-none rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-[12px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3] focus:border-[#117dff]"
             />
           </div>
@@ -754,7 +766,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         <div className="border-t border-[#eae7e1] px-5 py-4 bg-[#faf9f4]">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] text-[#a3a3a3]">
-              {selectedSlugs.length < 2 ? 'Select at least 2 agents' : `${selectedSlugs.length} agents ready`}
+              {selectedSlugs.length < 2 ? t('digitalemployees.selectAtLeast2', 'Select at least 2 agents') : t('digitalemployees.agentsReady', '{{count}} agents ready', { count: selectedSlugs.length })}
             </p>
             {selectedSlugs.length >= 2 && (
               <p className="text-[10px] text-[#737373]">
@@ -768,9 +780,9 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#117dff] px-4 py-3 text-[13px] font-semibold text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
           >
             {loading ? (
-              <><RefreshCw size={14} className="animate-spin" /> Starting...</>
+              <><RefreshCw size={14} className="animate-spin" /> {t('digitalemployees.starting', 'Starting...')}</>
             ) : (
-              <><Zap size={14} /> Run Task</>
+              <><Zap size={14} /> {t('digitalemployees.runTask', 'Run Task')}</>
             )}
           </button>
         </div>
@@ -799,7 +811,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-semibold text-[#111b21] truncate font-['Space_Grotesk']">{headerTitle}</p>
           <p className="text-[11px] text-[#667781]">
-            {isRunning ? `${selectedSlugs.length} agents collaborating...` : isCompleted ? 'Task completed' : taskStatus?.status || 'preparing...'}
+            {isRunning ? t('digitalemployees.agentsCollaborating', '{{count}} agents collaborating...', { count: selectedSlugs.length }) : isCompleted ? t('digitalemployees.taskCompleted', 'Task completed') : taskStatus?.status || t('digitalemployees.preparing', 'preparing...')}
           </p>
         </div>
         <button onClick={onClose} className="rounded-lg p-2 text-[#525252] hover:bg-[#f3f1ec]">
@@ -818,7 +830,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
               <div className="w-16 h-16 rounded-full bg-[#117dff]/10 mx-auto mb-3 flex items-center justify-center">
                 <MessageCircle size={28} className="text-[#117dff]" />
               </div>
-              <p className="text-[13px] text-[#667781]">Task is starting. Messages will appear here as the team works through it.</p>
+              <p className="text-[13px] text-[#667781]">{t('digitalemployees.taskStarting', 'Task is starting. Messages will appear here as the team works through it.')}</p>
             </div>
           </div>
         )}
@@ -847,17 +859,17 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
               return null;
             }
             const actionLabel = {
-              read_memory: 'Checked memory',
-              search_context: 'Searched context',
-              read_history: 'Read transcript',
-              post_update: 'Shared update',
-              write_memory: 'Saved memory',
+              read_memory: t('digitalemployees.actionReadMemory', 'Checked memory'),
+              search_context: t('digitalemployees.actionSearchContext', 'Searched context'),
+              read_history: t('digitalemployees.actionReadHistory', 'Read transcript'),
+              post_update: t('digitalemployees.actionPostUpdate', 'Shared update'),
+              write_memory: t('digitalemployees.actionWriteMemory', 'Saved memory'),
             }[metadata.action_label] || msg.content;
             return (
               <div key={msg.msg_id || `${msg.ts}-${msg.sender_name}`} className="flex justify-center">
                 <button
                   type="button"
-                  onClick={() => setThinkingMessage({ senderName, label: 'Tool activity', detail: msg.content })}
+                  onClick={() => setThinkingMessage({ senderName, label: t('digitalemployees.toolActivity', 'Tool activity'), detail: msg.content })}
                   className="rounded-full border border-[#d6e3ff] bg-white/90 px-3 py-1 text-[10px] text-[#2457a6] italic hover:border-[#117dff]"
                 >
                   {senderName} · {actionLabel}
@@ -941,7 +953,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
             <div className="w-7 h-7 rounded-full bg-[#f3f1ec] flex items-center justify-center">
               <span className="text-[10px] text-[#667781]">✨</span>
             </div>
-            <span className="text-[11px] text-[#667781] italic">Team is thinking through the next move...</span>
+            <span className="text-[11px] text-[#667781] italic">{t('digitalemployees.teamThinking', 'Team is thinking through the next move...')}</span>
           </div>
         )}
 
@@ -952,7 +964,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
         <div className="mx-5 mb-3 rounded-[22px] border border-[#dbe8ff] bg-white px-4 py-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 size={14} className="text-[#117dff]" />
-            <span className="text-[11px] font-semibold text-[#117dff]">Team Decision</span>
+            <span className="text-[11px] font-semibold text-[#117dff]">{t('digitalemployees.teamDecision', 'Team Decision')}</span>
           </div>
           <p className="text-[12px] leading-relaxed text-[#253041]">{taskStatus.final_answer}</p>
         </div>
@@ -975,7 +987,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
               }
             }}
             rows={1}
-            placeholder={isRunning ? 'Team is working...' : isCompleted ? 'Ask the team a follow-up...' : 'What should the team work on next?'}
+            placeholder={isRunning ? t('digitalemployees.teamWorking', 'Team is working...') : isCompleted ? t('digitalemployees.askFollowUp', 'Ask the team a follow-up...') : t('digitalemployees.teamNextTask', 'What should the team work on next?')}
             disabled={isRunning}
             className="w-full resize-none bg-transparent text-[13px] text-[#111b21] outline-none placeholder:text-[#8a8f98] disabled:opacity-50"
           />
@@ -1019,6 +1031,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
 }
 
 function TaskHistoryCard({ task, onResume }) {
+  const { t } = useTranslation('dashboard');
   const isActive = task.status === 'running';
   return (
     <button
@@ -1038,10 +1051,10 @@ function TaskHistoryCard({ task, onResume }) {
         </span>
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-[#5d6674] line-clamp-2">
-        {task.final_answer || 'Open this session to review the transcript and continue the conversation.'}
+        {task.final_answer || t('digitalemployees.openSessionHint', 'Open this session to review the transcript and continue the conversation.')}
       </p>
       <div className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-[#117dff]">
-        Resume session <ChevronRight size={12} />
+        {t('digitalemployees.resumeSession', 'Resume session')} <ChevronRight size={12} />
       </div>
     </button>
   );
@@ -1053,6 +1066,7 @@ function TaskHistoryCard({ task, onResume }) {
 // Model + max_tokens are NOT exposed — they default to the platform's tuned
 // values and can be adjusted from the employee detail view later.
 function CreateWizard({ open, onClose, onCreate, teams }) {
+  const { t } = useTranslation('dashboard');
   const ROLE_ARCHETYPES = [
     { id: 'generalist',   label: 'Generalist' },
     { id: 'coordinator',  label: 'Coordinator' },
@@ -1162,8 +1176,8 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         {/* Header */}
         <div className="p-5 border-b border-[#eae7e1] flex items-start justify-between">
           <div>
-            <h2 className="text-[16px] font-semibold text-[#0a0a0a]">Create Digital Employee</h2>
-            <p className="text-[11px] text-[#a3a3a3] mt-0.5">Describe them in one line — we build the persona.</p>
+            <h2 className="text-[16px] font-semibold text-[#0a0a0a]">{t('digitalemployees.createTitle', 'Create Digital Employee')}</h2>
+            <p className="text-[11px] text-[#a3a3a3] mt-0.5">{t('digitalemployees.createSubtitle', 'Describe them in one line — we build the persona.')}</p>
           </div>
           <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#525252]"><X size={16} /></button>
         </div>
@@ -1171,24 +1185,24 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         {/* Body */}
         <div className="p-5 space-y-4">
           <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">Name</span>
+            <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldName', 'Name')}</span>
             <input autoFocus value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Maya Ortiz"
+              placeholder={t('digitalemployees.namePlaceholder', 'e.g. Maya Ortiz')}
               className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] focus:outline-none focus:border-[#117dff]" />
           </label>
 
           <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">Brief / what should they do?</span>
+            <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldBrief', 'Brief / what should they do?')}</span>
             <textarea value={form.brief} onChange={e => setForm({ ...form, brief: e.target.value })}
               rows={3}
-              placeholder="e.g. Calm operations lead who turns chaos into clear plans and keeps the team honest about owners and blockers."
+              placeholder={t('digitalemployees.briefLongPlaceholder', 'e.g. Calm operations lead who turns chaos into clear plans and keeps the team honest about owners and blockers.')}
               className="w-full px-3 py-2 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px] resize-y focus:outline-none focus:border-[#117dff]" />
-            <span className="text-[10px] text-[#a3a3a3]">One sentence is enough — we expand this into a full persona.</span>
+            <span className="text-[10px] text-[#a3a3a3]">{t('digitalemployees.briefHint', 'One sentence is enough — we expand this into a full persona.')}</span>
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">Role</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldRole', 'Role')}</span>
               <select value={form.role_archetype} onChange={e => setForm({ ...form, role_archetype: e.target.value })}
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
                 {ROLE_ARCHETYPES.map(r => (
@@ -1197,7 +1211,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </select>
             </label>
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">Team</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldTeam', 'Team')}</span>
               <select value={form.team_id} onChange={e => setForm({ ...form, team_id: e.target.value })}
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
                 <option value="">— select team —</option>
@@ -1208,25 +1222,25 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
 
           <div className="grid grid-cols-3 gap-3">
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">Age</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldAge', 'Age')}</span>
               <input type="number" min={18} max={99} value={form.age}
                 onChange={e => setForm({ ...form, age: e.target.value })}
                 placeholder="32"
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
             </label>
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">Gender</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldGender', 'Gender')}</span>
               <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
                 <option value="">—</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="unspecified">Unspecified</option>
+                <option value="female">{t('digitalemployees.genderFemale', 'Female')}</option>
+                <option value="male">{t('digitalemployees.genderMale', 'Male')}</option>
+                <option value="non-binary">{t('digitalemployees.genderNonBinary', 'Non-binary')}</option>
+                <option value="unspecified">{t('digitalemployees.genderUnspecified', 'Unspecified')}</option>
               </select>
             </label>
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">Experience (yrs)</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldExperience', 'Experience (yrs)')}</span>
               <input type="number" min={0} max={60} value={form.experience_years}
                 onChange={e => setForm({ ...form, experience_years: e.target.value })}
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
@@ -1237,19 +1251,19 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
           <div className="rounded-[8px] border border-[#eae7e1] bg-[#faf9f4] p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] uppercase tracking-[0.08em] text-[#737373] font-semibold">
-                Generated persona
+                {t('digitalemployees.generatedPersona', 'Generated persona')}
               </span>
               <button onClick={optimize}
                 disabled={!form.brief.trim() || optimizing}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-[6px] bg-white border border-[#e3e0db] hover:border-[#117dff] hover:text-[#117dff] disabled:opacity-40">
                 {optimizing ? <RefreshCw size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                {persona ? 'Regenerate' : 'Preview'}
+                {persona ? t('digitalemployees.regenerate', 'Regenerate') : t('digitalemployees.preview', 'Preview')}
               </button>
             </div>
             {persona ? (
               <p className="mt-2 text-[12px] leading-relaxed text-[#0a0a0a] whitespace-pre-wrap">{persona}</p>
             ) : (
-              <p className="mt-2 text-[11px] text-[#a3a3a3] italic">Optional. Auto-generated on create if you skip preview.</p>
+              <p className="mt-2 text-[11px] text-[#a3a3a3] italic">{t('digitalemployees.personaHint', 'Optional. Auto-generated on create if you skip preview.')}</p>
             )}
           </div>
 
@@ -1265,12 +1279,12 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         <div className="p-5 border-t border-[#eae7e1] flex items-center justify-end gap-2">
           <button onClick={onClose}
             className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded">
-            Cancel
+            {t('digitalemployees.cancel', 'Cancel')}
           </button>
           <button onClick={submit} disabled={submitting || !canSubmit}
             className="flex items-center gap-1.5 px-4 py-2 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50">
             {submitting ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            Create
+            {t('digitalemployees.create', 'Create')}
           </button>
         </div>
       </div>
@@ -1279,6 +1293,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
 }
 
 export default function DigitalEmployees() {
+  const { t } = useTranslation('dashboard');
   const { teams } = useTeamContext();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1327,7 +1342,7 @@ export default function DigitalEmployees() {
   async function handlePause(emp)   { await apiClient.pauseEmployee(emp.id); await fetch(); }
   async function handleResume(emp)  { await apiClient.resumeEmployee(emp.id); await fetch(); }
   async function handleArchive(emp) {
-    if (!window.confirm(`Archive "${emp.name}"? Container will be stopped.`)) return;
+    if (!window.confirm(t('digitalemployees.archiveConfirm', 'Archive "{{name}}"? Container will be stopped.', { name: emp.name }))) return;
     await apiClient.archiveEmployee(emp.id);
     await fetch();
   }
@@ -1335,7 +1350,7 @@ export default function DigitalEmployees() {
     const existingSlugs = new Set(employees.map((emp) => emp.slug));
     const pending = PERSONA_PRESETS.filter((preset) => !existingSlugs.has(slugifyName(preset.name)));
     if (!pending.length) {
-      setError('All sample personas already exist.');
+      setError(t('digitalemployees.allPersonasExist', 'All sample personas already exist.'));
       return;
     }
     setSeeding(true);
@@ -1393,13 +1408,13 @@ export default function DigitalEmployees() {
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-            Digital Employees
+            {t('digitalemployees.pageTitle', 'Digital Employees')}
           </h1>
           <p className="text-[12px] text-[#a3a3a3] mt-1">
-            Autonomous AI agents with HIVEMIND memory + Slack access. {employees.length} total · {running} running · {paused} paused · {draft} draft.
+            {t('digitalemployees.pageSubtitle', 'Autonomous AI agents with HIVEMIND memory + Slack access. {{total}} total · {{running}} running · {{paused}} paused · {{draft}} draft.', { total: employees.length, running, paused, draft })}
           </p>
           <p className="text-[11px] text-[#737373] mt-1">
-            Hyper status: {optimized} optimized · {readyForTuning} ready for tuning.
+            {t('digitalemployees.hyperStatus', 'Hyper status: {{optimized}} optimized · {{readyForTuning}} ready for tuning.', { optimized, readyForTuning })}
           </p>
         </div>
         {/* Employee/Workspace toggle removed per UX cleanup —
@@ -1410,18 +1425,18 @@ export default function DigitalEmployees() {
           {isWorkspaceMode && (
             <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
               <Users size={13} />
-              {slidePanelOpen ? 'Workspace open' : 'Workspace panel'}
+              {slidePanelOpen ? t('digitalemployees.workspaceOpen', 'Workspace open') : t('digitalemployees.workspacePanel', 'Workspace panel')}
             </button>
           )}
           <button onClick={fetch} disabled={loading}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            {t('digitalemployees.refresh', 'Refresh')}
           </button>
           <button onClick={handleSeedPersonas} disabled={seeding}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white text-[12px] hover:bg-[#faf9f4] disabled:opacity-50">
             <Users size={13} />
-            {seeding ? 'Seeding...' : 'Seed Human Team'}
+            {seeding ? t('digitalemployees.seeding', 'Seeding...') : t('digitalemployees.seedHumanTeam', 'Seed Human Team')}
           </button>
           {isWorkspaceMode ? (
             <button
@@ -1432,13 +1447,13 @@ export default function DigitalEmployees() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
             >
               <Zap size={13} />
-              Run Task
+              {t('digitalemployees.runTask', 'Run Task')}
             </button>
           ) : (
             <button onClick={() => setCreateOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]">
               <Plus size={13} />
-              New Employee
+              {t('digitalemployees.newEmployee', 'New Employee')}
             </button>
           )}
         </div>
@@ -1453,13 +1468,13 @@ export default function DigitalEmployees() {
       {employees.length === 0 && !loading ? (
         <div className="bg-white border border-dashed border-[#e3e0db] rounded-[10px] p-12 text-center">
           <Bot size={32} className="text-[#a3a3a3] mx-auto mb-3" />
-          <h2 className="text-[#0a0a0a] font-semibold mb-1">No Digital Employees yet</h2>
+          <h2 className="text-[#0a0a0a] font-semibold mb-1">{t('digitalemployees.emptyTitle', 'No Digital Employees yet')}</h2>
           <p className="text-[12px] text-[#a3a3a3] mb-4">
-            Create your first AI agent — give it a persona, connect Slack, define what tools it can use.
+            {t('digitalemployees.emptyHint', 'Create your first AI agent — give it a persona, connect Slack, define what tools it can use.')}
           </p>
           <button onClick={() => setCreateOpen(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]">
-            <Plus size={13} /> Create your first employee
+            <Plus size={13} /> {t('digitalemployees.createFirst', 'Create your first employee')}
           </button>
         </div>
       ) : (
@@ -1468,15 +1483,15 @@ export default function DigitalEmployees() {
             <section className="rounded-[16px] border border-[#e3e0db] bg-[#fbfaf7] p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Workspace Tasks</h2>
-                  <p className="mt-1 text-[12px] text-[#737373]">Run and resume team sessions here. Agent selection happens inside the workspace panel.</p>
+                  <h2 className="text-[16px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('digitalemployees.workspaceTasks', 'Workspace Tasks')}</h2>
+                  <p className="mt-1 text-[12px] text-[#737373]">{t('digitalemployees.workspaceTasksHint', 'Run and resume team sessions here. Agent selection happens inside the workspace panel.')}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={loadRecentTasks} className="rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#525252] hover:bg-[#faf9f4]">
-                    {tasksLoading ? 'Loading...' : 'Refresh tasks'}
+                    {tasksLoading ? t('digitalemployees.loading', 'Loading...') : t('digitalemployees.refreshTasks', 'Refresh tasks')}
                   </button>
                   <button onClick={() => setSlidePanelOpen(true)} className="rounded-[8px] bg-[#117dff] px-3 py-2 text-[12px] text-white hover:bg-[#0066e0]">
-                    Open workspace
+                    {t('digitalemployees.openWorkspace', 'Open workspace')}
                   </button>
                 </div>
               </div>
@@ -1485,7 +1500,7 @@ export default function DigitalEmployees() {
                   <TaskHistoryCard key={task.task_id} task={task} onResume={handleResumeTask} />
                 )) : (
                   <div className="rounded-[12px] border border-dashed border-[#ddd6c9] bg-white px-4 py-8 text-center text-[12px] text-[#8a8a8a]">
-                    {tasksLoading ? 'Loading workspace tasks...' : 'No workspace sessions yet. Run a task from Workspace mode and it will appear here.'}
+                    {tasksLoading ? t('digitalemployees.loadingTasks', 'Loading workspace tasks...') : t('digitalemployees.noWorkspaceSessions', 'No workspace sessions yet. Run a task from Workspace mode and it will appear here.')}
                   </div>
                 )}
               </div>

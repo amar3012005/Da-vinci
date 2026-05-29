@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiKeyPrompt from '../shared/ApiKeyPrompt';
 import {
@@ -15,7 +16,10 @@ const fadeUp = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }
 const stagger = { animate: { transition: { staggerChildren: 0.04 } } };
 
 /* ─── Copy button ────────────────────────────────────────────────── */
-function CopyButton({ text, label = 'Copy' }) {
+function CopyButton({ text, label }) {
+  const { t } = useTranslation('dashboard');
+  const defaultLabel = t('mcpserver.copy', 'Copy');
+  const displayLabel = label !== undefined ? label : defaultLabel;
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
@@ -27,13 +31,14 @@ function CopyButton({ text, label = 'Copy' }) {
       onClick={handleCopy}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-['Space_Grotesk'] font-medium transition-all border border-[#e3e0db] hover:border-[#117dff]/30 bg-white text-[#525252] hover:text-[#117dff]"
     >
-      {copied ? <><Check size={12} className="text-[#16a34a]" /> Copied</> : <><Copy size={12} /> {label}</>}
+      {copied ? <><Check size={12} className="text-[#16a34a]" /> {t('mcpserver.copied', 'Copied')}</> : <><Copy size={12} /> {displayLabel}</>}
     </button>
   );
 }
 
 /* ─── Tool card ──────────────────────────────────────────────────── */
 function ToolCard({ tool }) {
+  const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(false);
   const Icon = tool.icon;
   return (
@@ -70,7 +75,7 @@ function ToolCard({ tool }) {
               <p className="text-xs text-[#525252] font-['Space_Grotesk'] mt-3 leading-relaxed">{tool.description}</p>
               {tool.params && (
                 <div className="mt-3">
-                  <p className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1.5">Parameters</p>
+                  <p className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1.5">{t('mcpserver.parameters', 'Parameters')}</p>
                   <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3 space-y-1.5">
                     {tool.params.map(p => (
                       <div key={p.name} className="flex items-start gap-2">
@@ -84,7 +89,7 @@ function ToolCard({ tool }) {
               )}
               {tool.example && (
                 <div className="mt-3">
-                  <p className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1.5">Example</p>
+                  <p className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1.5">{t('mcpserver.example', 'Example')}</p>
                   <div className="relative">
                     <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-[11px] font-mono rounded-lg p-3 overflow-x-auto leading-relaxed">
                       {tool.example}
@@ -985,6 +990,7 @@ this conversation is gone.`;
 // No per-platform JSON snippets shown here — that's what
 // UniversalSchemaCard handles further down for power users.
 function InstallCommandCard() {
+  const { t } = useTranslation('dashboard');
   const [copied, setCopied] = useState(false);
   const command = 'curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh | bash';
   const onCopy = async () => {
@@ -1003,15 +1009,15 @@ function InstallCommandCard() {
               <Terminal size={14} className="text-[#117dff]" />
             </div>
             <div>
-              <p className="text-sm font-semibold font-['Space_Grotesk']">Install HIVEMIND in one command</p>
-              <p className="text-[11px] text-white/50 font-['Space_Grotesk']">Picks Claude Code / Desktop / Cursor / VS Code / Codex / Antigravity. Browser sign-in, no API key paste.</p>
+              <p className="text-sm font-semibold font-['Space_Grotesk']">{t('mcpserver.installTitle', 'Install HIVEMIND in one command')}</p>
+              <p className="text-[11px] text-white/50 font-['Space_Grotesk']">{t('mcpserver.installSubtitle', 'Picks Claude Code / Desktop / Cursor / VS Code / Codex / Antigravity. Browser sign-in, no API key paste.')}</p>
             </div>
           </div>
           <button
             onClick={onCopy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/15 bg-white/5 hover:bg-white/10 transition"
           >
-            {copied ? <><Check size={12} className="text-emerald-400" /> Copied</> : <><Copy size={12} /> Copy</>}
+            {copied ? <><Check size={12} className="text-emerald-400" /> {t('mcpserver.copied', 'Copied')}</> : <><Copy size={12} /> {t('mcpserver.copy', 'Copy')}</>}
           </button>
         </div>
         <pre className="px-5 py-4 text-[12.5px] font-mono whitespace-pre-wrap break-all text-emerald-300">
@@ -1027,6 +1033,7 @@ function InstallCommandCard() {
 // long per-client Quick Setup grid that used to live above. Power users
 // who want to hand-edit their config still get the canonical snippet.
 function UniversalSchemaCard() {
+  const { t } = useTranslation('dashboard');
   const [tab, setTab] = useState('http');
   const [copied, setCopied] = useState(false);
   const SNIPPETS = {
@@ -1075,8 +1082,8 @@ function UniversalSchemaCard() {
     <motion.div {...fadeUp} transition={{ delay: 0.15 }} className="mb-8">
       <div className="bg-white border border-[#e3e0db] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
         <div className="px-5 py-3 border-b border-[#e3e0db]/50">
-          <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">Universal MCP schema</p>
-          <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Manual paste for clients the installer can't reach. Click a transport to view its JSON.</p>
+          <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{t('mcpserver.universalSchemaTitle', 'Universal MCP schema')}</p>
+          <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">{t('mcpserver.universalSchemaSubtitle', "Manual paste for clients the installer can't reach. Click a transport to view its JSON.")}</p>
         </div>
         <div className="flex gap-1.5 px-5 pt-3 pb-2">
           {Object.entries(SNIPPETS).map(([id, s]) => (
@@ -1097,7 +1104,7 @@ function UniversalSchemaCard() {
             onClick={onCopy}
             className="absolute right-3 top-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#e3e0db] bg-white hover:border-[#117dff]/30 text-[#525252]"
           >
-            {copied ? <><Check size={11} className="text-emerald-600" /> Copied</> : <><Copy size={11} /> Copy</>}
+            {copied ? <><Check size={11} className="text-emerald-600" /> {t('mcpserver.copied', 'Copied')}</> : <><Copy size={11} /> {t('mcpserver.copy', 'Copy')}</>}
           </button>
           <pre className="px-5 py-4 text-[11px] font-mono text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[420px] overflow-y-auto">
             {SNIPPETS[tab].body}
@@ -1109,6 +1116,7 @@ function UniversalSchemaCard() {
 }
 
 export default function McpServer() {
+  const { t } = useTranslation('dashboard');
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('tools');
   const [promptVariant, setPromptVariant] = useState('coding');
@@ -1170,13 +1178,13 @@ export default function McpServer() {
         {isGuidedWalkthrough && (
           <motion.div {...fadeUp} className="relative z-20 mb-6 rounded-2xl border border-[#117dff]/20 bg-[#f7fbff] p-5 shadow-[0_10px_30px_rgba(17,125,255,0.12)]">
             <div className="flex items-center gap-3 mb-2">
-              <span className="rounded-full bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">Step 2 of 2</span>
-              <span className="text-xs text-[#525252] font-['Space_Grotesk']">Pick the recommended prompt, copy it, then paste it into your client instructions.</span>
+              <span className="rounded-full bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">{t('mcpserver.step2of2', 'Step 2 of 2')}</span>
+              <span className="text-xs text-[#525252] font-['Space_Grotesk']">{t('mcpserver.guidedHint', 'Pick the recommended prompt, copy it, then paste it into your client instructions.')}</span>
             </div>
             <p className="text-sm text-[#525252] font-['Space_Grotesk'] leading-relaxed">
               {connector === 'claude-code'
-                ? 'For Claude Code, use the AI Coding Assistant prompt below. After copying it, paste it into your Claude Code session instructions so HIVEMIND is used by default.'
-                : 'Choose the prompt that matches your client, copy it, then paste it into the client instructions before you return to verify the connection.'}
+                ? t('mcpserver.guidedClaudeCode', 'For Claude Code, use the AI Coding Assistant prompt below. After copying it, paste it into your Claude Code session instructions so HIVEMIND is used by default.')
+                : t('mcpserver.guidedGeneric', 'Choose the prompt that matches your client, copy it, then paste it into the client instructions before you return to verify the connection.')}
             </p>
           </motion.div>
         )}
@@ -1187,10 +1195,10 @@ export default function McpServer() {
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <Server size={20} className="text-[#117dff]" />
             </div>
-            <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">MCP Server</h1>
+            <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">{t('mcpserver.title', 'MCP Server')}</h1>
           </div>
           <p className="text-[#525252] text-sm font-['Space_Grotesk'] ml-[52px]">
-            HIVEMIND exposes {TOTAL_TOOLS} MCP tools — persistent memory, semantic search, knowledge-graph traversal, live web intelligence, coding intelligence, and bi-temporal time-travel queries.
+            {t('mcpserver.subtitle', 'HIVEMIND exposes {{count}} MCP tools — persistent memory, semantic search, knowledge-graph traversal, live web intelligence, coding intelligence, and bi-temporal time-travel queries.', { count: TOTAL_TOOLS })}
           </p>
         </motion.div>
 
@@ -1218,8 +1226,8 @@ export default function McpServer() {
                   <Clipboard size={14} className="text-[#d97706]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">System Prompt</p>
-                  <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">Copy and paste into your AI platform's system instructions</p>
+                  <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{t('mcpserver.systemPrompt', 'System Prompt')}</p>
+                  <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">{t('mcpserver.systemPromptHint', "Copy and paste into your AI platform's system instructions")}</p>
                 </div>
               </div>
               <div className="relative">
@@ -1232,12 +1240,12 @@ export default function McpServer() {
                       : 'border-[#e3e0db] hover:border-[#117dff]/30'
                   }`}
                 >
-                  {promptCopied ? <><Check size={12} className="text-[#16a34a]" /> Copied</> : <><Copy size={12} /> Copy Prompt</>}
+                  {promptCopied ? <><Check size={12} className="text-[#16a34a]" /> {t('mcpserver.copied', 'Copied')}</> : <><Copy size={12} /> {t('mcpserver.copyPrompt', 'Copy Prompt')}</>}
                 </button>
                 {isGuidedWalkthrough && !promptCopied && (
                   <div className="absolute left-1/2 top-[calc(100%+12px)] z-30 w-56 -translate-x-1/2 rounded-2xl border border-[#117dff]/20 bg-[#117dff] px-3 py-2 text-xs font-semibold text-white shadow-[0_16px_36px_rgba(17,125,255,0.28)]">
                     <div className="absolute left-1/2 top-[-6px] h-3 w-3 -translate-x-1/2 rotate-45 bg-[#117dff]" />
-                    Copy this prompt first.
+                    {t('mcpserver.copyPromptFirst', 'Copy this prompt first.')}
                   </div>
                 )}
               </div>
@@ -1246,8 +1254,8 @@ export default function McpServer() {
             {/* Variant selector */}
             <div className="px-5 pt-3 pb-2 border-b border-[#e3e0db]/50 flex gap-1.5">
               {[
-                { id: 'coding', label: 'AI Coding Assistant', desc: 'Cursor / Claude Code / Copilot' },
-                { id: 'agent', label: 'AI Agent', desc: 'Claude / ChatGPT / general agents' },
+                { id: 'coding', label: t('mcpserver.promptCoding', 'AI Coding Assistant'), desc: t('mcpserver.promptCodingDesc', 'Cursor / Claude Code / Copilot') },
+                { id: 'agent', label: t('mcpserver.promptAgent', 'AI Agent'), desc: t('mcpserver.promptAgentDesc', 'Claude / ChatGPT / general agents') },
               ].map(opt => (
                 <button
                   key={opt.id}
@@ -1264,7 +1272,7 @@ export default function McpServer() {
                   <p className="text-[10px] text-[#a3a3a3] font-['Space_Grotesk']">{opt.desc}</p>
                   {isGuidedWalkthrough && recommendedPrompt === opt.id && (
                     <span className="mt-1 inline-flex rounded-full bg-[#117dff]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#117dff]">
-                      Recommended
+                      {t('mcpserver.recommended', 'Recommended')}
                     </span>
                   )}
                 </button>
@@ -1277,7 +1285,9 @@ export default function McpServer() {
                   Next
                 </div>
                 <p className="text-sm text-emerald-700 font-['Space_Grotesk'] leading-relaxed">
-                  Prompt copied. Now paste it into your {connector === 'claude-code' ? 'Claude Code session instructions' : 'Claude Code or co-worker AI instructions'} and keep HIVEMIND on by default. Then return to the Connectors page and run Verify Connection.
+                  {connector === 'claude-code'
+                    ? t('mcpserver.promptCopiedClaudeCode', 'Prompt copied. Now paste it into your Claude Code session instructions and keep HIVEMIND on by default. Then return to the Connectors page and run Verify Connection.')
+                    : t('mcpserver.promptCopiedGeneric', 'Prompt copied. Now paste it into your Claude Code or co-worker AI instructions and keep HIVEMIND on by default. Then return to the Connectors page and run Verify Connection.')}
                 </p>
               </div>
             )}
@@ -1293,7 +1303,7 @@ export default function McpServer() {
             grid used to. Keep source tree intact in case we restore the
             per-platform view via a feature flag. */}
         <motion.div {...fadeUp} transition={{ delay: 0.1 }} className="mb-8" style={{ display: 'none' }}>
-          <h2 className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Quick Setup</h2>
+          <h2 className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">{t('mcpserver.quickSetup', 'Quick Setup')}</h2>
           <p className="text-[10.5px] text-[#a3a3a3] font-['Space_Grotesk'] mb-3 leading-relaxed">
             One endpoint, three wire formats. Pick the card matching your client. See <code className="text-[#117dff] bg-[#117dff]/5 px-1 rounded">core/docs/MCP_SERVER.md</code> for the full matrix.
           </p>
@@ -1494,11 +1504,11 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
         <div style={{ order: 2 }}>
         <div className="flex gap-1 mb-4 bg-white border border-[#e3e0db] rounded-xl p-1 w-fit flex-wrap">
           {[
-            { id: 'tools', label: 'Memory', count: MEMORY_TOOLS.length },
-            { id: 'web', label: 'Web Intelligence', count: WEB_TOOLS.length },
-            { id: 'coding', label: 'Coding Intelligence', count: CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length },
-            { id: 'temporal', label: 'Time Travel', count: TEMPORAL_TOOLS.length },
-            { id: 'chatgpt', label: 'ChatGPT', count: 5 },
+            { id: 'tools', label: t('mcpserver.tabMemory', 'Memory'), count: MEMORY_TOOLS.length },
+            { id: 'web', label: t('mcpserver.tabWeb', 'Web Intelligence'), count: WEB_TOOLS.length },
+            { id: 'coding', label: t('mcpserver.tabCoding', 'Coding Intelligence'), count: CODING_TOOLS.length + CODE_TEMPORAL_TOOLS.length },
+            { id: 'temporal', label: t('mcpserver.tabTemporal', 'Time Travel'), count: TEMPORAL_TOOLS.length },
+            { id: 'chatgpt', label: t('mcpserver.tabChatgpt', 'ChatGPT'), count: 5 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1521,9 +1531,9 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center text-lg">🤖</div>
                 <div>
-                  <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">ChatGPT One-Click Connector</h3>
+                  <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk']">{t('mcpserver.chatgptTitle', 'ChatGPT One-Click Connector')}</h3>
                   <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-1">
-                    Custom GPT &amp; ChatGPT plugin connector. OAuth 2.0 + 5 narrow tools mapped from your MCP surface.
+                    {t('mcpserver.chatgptDesc', 'Custom GPT & ChatGPT plugin connector. OAuth 2.0 + 5 narrow tools mapped from your MCP surface.')}
                   </p>
                 </div>
               </div>
@@ -1546,13 +1556,13 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
                 </div>
               </div>
               <div className="mt-4 rounded-xl border border-[#e3e0db] bg-[#fafaf6] p-3">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">Setup in OpenAI dev dashboard</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">{t('mcpserver.chatgptSetupTitle', 'Setup in OpenAI dev dashboard')}</div>
                 <ol className="text-[12px] text-[#525252] font-['Space_Grotesk'] space-y-1 list-decimal pl-4">
-                  <li>Create a new GPT → Configure → Actions → Import from URL</li>
-                  <li>Paste the OpenAPI spec URL above</li>
-                  <li>Set Authentication → OAuth → paste Authorization + Token URLs + scopes</li>
-                  <li>OpenAI gives you a redirect URI → register it in HIVEMIND admin (POST /oauth/clients)</li>
-                  <li>Publish &amp; click "Connect to HIVEMIND" in any chat</li>
+                  <li>{t('mcpserver.chatgptStep1', 'Create a new GPT → Configure → Actions → Import from URL')}</li>
+                  <li>{t('mcpserver.chatgptStep2', 'Paste the OpenAPI spec URL above')}</li>
+                  <li>{t('mcpserver.chatgptStep3', 'Set Authentication → OAuth → paste Authorization + Token URLs + scopes')}</li>
+                  <li>{t('mcpserver.chatgptStep4', 'OpenAI gives you a redirect URI → register it in HIVEMIND admin (POST /oauth/clients)')}</li>
+                  <li>{t('mcpserver.chatgptStep5', 'Publish & click "Connect to HIVEMIND" in any chat')}</li>
                 </ol>
               </div>
               <a
@@ -1561,19 +1571,19 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"
               >
-                View OpenAPI spec ↗
+                {t('mcpserver.viewOpenApiSpec', 'View OpenAPI spec ↗')}
               </a>
             </div>
 
             <div className="rounded-xl border border-[#e3e0db] bg-white p-4">
-              <div className="text-[12px] font-semibold text-[#0a0a0a] mb-2">Exposed Operations (5)</div>
+              <div className="text-[12px] font-semibold text-[#0a0a0a] mb-2">{t('mcpserver.exposedOps', 'Exposed Operations (5)')}</div>
               <table className="w-full text-[11.5px]">
                 <thead>
                   <tr className="text-[#a3a3a3] uppercase tracking-wider text-[10px]">
-                    <th className="text-left py-1.5 pr-3">operationId</th>
-                    <th className="text-left py-1.5 pr-3">Method</th>
-                    <th className="text-left py-1.5 pr-3">Path</th>
-                    <th className="text-left py-1.5">Maps to</th>
+                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colOperationId', 'operationId')}</th>
+                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colMethod', 'Method')}</th>
+                    <th className="text-left py-1.5 pr-3">{t('mcpserver.colPath', 'Path')}</th>
+                    <th className="text-left py-1.5">{t('mcpserver.colMapsTo', 'Maps to')}</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">
@@ -1613,28 +1623,28 @@ curl -fsSL https://hivemind.davinciai.eu/install/notebooklm.sh \\
         <motion.div {...fadeUp} transition={{ delay: 0.2 }} className="mt-8" style={{ order: 9 }}>
           <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a] mb-4 flex items-center gap-2">
-              <Zap size={14} className="text-[#d97706]" /> Decision Flowchart
+              <Zap size={14} className="text-[#d97706]" /> {t('mcpserver.decisionFlowchart', 'Decision Flowchart')}
             </h3>
             <div className="space-y-3 text-xs font-['Space_Grotesk'] text-[#525252]">
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#117dff]/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#117dff]">1</div>
-                <div><span className="font-semibold text-[#0a0a0a]">User asks a question</span> → Call <code className="text-[#117dff] bg-[#117dff]/5 px-1 rounded">hivemind_recall</code> first to check stored knowledge</div>
+                <div><span className="font-semibold text-[#0a0a0a]">{t('mcpserver.flowStep1Label', 'User asks a question')}</span> → {t('mcpserver.flowStep1Body', 'Call')} <code className="text-[#117dff] bg-[#117dff]/5 px-1 rounded">hivemind_recall</code> {t('mcpserver.flowStep1Trail', 'first to check stored knowledge')}</div>
               </div>
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#16a34a]/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#16a34a]">2</div>
-                <div><span className="font-semibold text-[#0a0a0a]">Needs live data?</span> → <code className="text-[#16a34a] bg-[#16a34a]/5 px-1 rounded">hivemind_web_search</code> or <code className="text-[#16a34a] bg-[#16a34a]/5 px-1 rounded">hivemind_web_crawl</code></div>
+                <div><span className="font-semibold text-[#0a0a0a]">{t('mcpserver.flowStep2Label', 'Needs live data?')}</span> → <code className="text-[#16a34a] bg-[#16a34a]/5 px-1 rounded">hivemind_web_search</code> {t('mcpserver.or', 'or')} <code className="text-[#16a34a] bg-[#16a34a]/5 px-1 rounded">hivemind_web_crawl</code></div>
               </div>
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#d97706]/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#d97706]">3</div>
-                <div><span className="font-semibold text-[#0a0a0a]">Complex synthesis?</span> → <code className="text-[#d97706] bg-[#d97706]/5 px-1 rounded">hivemind_query_with_ai</code></div>
+                <div><span className="font-semibold text-[#0a0a0a]">{t('mcpserver.flowStep3Label', 'Complex synthesis?')}</span> → <code className="text-[#d97706] bg-[#d97706]/5 px-1 rounded">hivemind_query_with_ai</code></div>
               </div>
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#8b5cf6]/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#8b5cf6]">4</div>
-                <div><span className="font-semibold text-[#0a0a0a]">Worth remembering?</span> → <code className="text-[#8b5cf6] bg-[#8b5cf6]/5 px-1 rounded">hivemind_save_memory</code> after responding</div>
+                <div><span className="font-semibold text-[#0a0a0a]">{t('mcpserver.flowStep4Label', 'Worth remembering?')}</span> → <code className="text-[#8b5cf6] bg-[#8b5cf6]/5 px-1 rounded">hivemind_save_memory</code> {t('mcpserver.flowStep4Trail', 'after responding')}</div>
               </div>
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-[#16a34a]/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#16a34a]">5</div>
-                <div><span className="font-semibold text-[#0a0a0a]">Web results useful?</span> → Offer to save to memory with source URL tags</div>
+                <div><span className="font-semibold text-[#0a0a0a]">{t('mcpserver.flowStep5Label', 'Web results useful?')}</span> → {t('mcpserver.flowStep5Body', 'Offer to save to memory with source URL tags')}</div>
               </div>
             </div>
           </div>

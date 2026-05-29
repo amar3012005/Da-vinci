@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   Cpu, Brain, Clock, Shield, GitBranch, Zap,
@@ -55,6 +56,7 @@ function SectionHeader({ icon: Icon, title, description }) {
 /* ─── Cognitive Frame Viewer ─────────────────────────────────── */
 
 function CognitiveFramePanel() {
+  const { t } = useTranslation('dashboard');
   const [query, setQuery] = useState('');
   const [frame, setFrame] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,18 +77,18 @@ function CognitiveFramePanel() {
 
   return (
     <Card>
-      <SectionHeader icon={Brain} title="Cognitive Frame" description="Intent detection + tiered memory assembly" />
+      <SectionHeader icon={Brain} title={t('engine.cognitiveFrameTitle', 'Cognitive Frame')} description={t('engine.cognitiveFrameDesc', 'Intent detection + tiered memory assembly')} />
       <div className="flex gap-2 mb-4">
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && fetchFrame()}
-          placeholder="Enter a query to assemble cognitive frame..."
+          placeholder={t('engine.cognitiveFramePlaceholder', 'Enter a query to assemble cognitive frame...')}
           className="flex-1 bg-transparent border border-[#e3e0db] rounded-lg py-2 px-3 text-xs focus:border-[#117dff]/40 focus:outline-none"
         />
         <button onClick={fetchFrame} disabled={loading} className="bg-[#117dff] hover:bg-[#0066e0] text-white text-xs font-semibold py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-1.5">
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-          Assemble
+          {t('engine.assemble', 'Assemble')}
         </button>
       </div>
 
@@ -141,6 +143,7 @@ function CognitiveFramePanel() {
 /* ─── Temporal Explorer ──────────────────────────────────────── */
 
 function TemporalExplorer() {
+  const { t } = useTranslation('dashboard');
   const [mode, setMode] = useState('diff');
   const [timeA, setTimeA] = useState('');
   const [timeB, setTimeB] = useState('');
@@ -175,28 +178,28 @@ function TemporalExplorer() {
 
   return (
     <Card>
-      <SectionHeader icon={Clock} title="Temporal Explorer" description="Bi-temporal time-travel queries" />
+      <SectionHeader icon={Clock} title={t('engine.temporalExplorerTitle', 'Temporal Explorer')} description={t('engine.temporalExplorerDesc', 'Bi-temporal time-travel queries')} />
       <div className="flex gap-2 mb-3">
         <button onClick={() => setMode('diff')} className={`text-[11px] px-3 py-1.5 rounded-lg font-medium ${mode === 'diff' ? 'bg-[#117dff] text-white' : 'bg-[#f3f1ec] text-[#525252]'}`}>
-          Temporal Diff
+          {t('engine.temporalDiff', 'Temporal Diff')}
         </button>
         <button onClick={() => setMode('snapshot')} className={`text-[11px] px-3 py-1.5 rounded-lg font-medium ${mode === 'snapshot' ? 'bg-[#117dff] text-white' : 'bg-[#f3f1ec] text-[#525252]'}`}>
-          Time Travel
+          {t('engine.timeTravel', 'Time Travel')}
         </button>
       </div>
 
       <div className="flex gap-2 mb-3 items-end">
         <div className="flex-1">
-          <label className="text-[10px] text-[#a3a3a3] font-mono mb-1 block">{mode === 'diff' ? 'From' : 'Transaction Time'}</label>
+          <label className="text-[10px] text-[#a3a3a3] font-mono mb-1 block">{mode === 'diff' ? t('engine.from', 'From') : t('engine.transactionTime', 'Transaction Time')}</label>
           <input type="datetime-local" value={timeA} onChange={e => setTimeA(e.target.value)} className="w-full bg-transparent border border-[#e3e0db] rounded-lg py-1.5 px-2 text-[11px] focus:border-[#117dff]/40 focus:outline-none font-mono" />
         </div>
         <div className="flex-1">
-          <label className="text-[10px] text-[#a3a3a3] font-mono mb-1 block">{mode === 'diff' ? 'To' : 'Valid Time (optional)'}</label>
+          <label className="text-[10px] text-[#a3a3a3] font-mono mb-1 block">{mode === 'diff' ? t('engine.to', 'To') : t('engine.validTimeOptional', 'Valid Time (optional)')}</label>
           <input type="datetime-local" value={timeB} onChange={e => setTimeB(e.target.value)} className="w-full bg-transparent border border-[#e3e0db] rounded-lg py-1.5 px-2 text-[11px] focus:border-[#117dff]/40 focus:outline-none font-mono" />
         </div>
         <button onClick={runQuery} disabled={loading} className="bg-[#117dff] hover:bg-[#0066e0] text-white text-xs font-semibold py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-1.5 shrink-0">
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-          Query
+          {t('engine.query', 'Query')}
         </button>
       </div>
 
@@ -219,7 +222,7 @@ function TemporalExplorer() {
 
       {result?.type === 'snapshot' && result.data && (
         <div className="space-y-2">
-          <span className="text-[11px] font-mono text-[#a3a3a3]">{result.data.count} memories at this point in time</span>
+          <span className="text-[11px] font-mono text-[#a3a3a3]">{t('engine.memoriesAtPoint', '{{count}} memories at this point in time', { count: result.data.count })}</span>
           {(result.data.memories || []).slice(0, 5).map((m, i) => (
             <div key={i} className="text-[11px] bg-[#f3f1ec] rounded px-2.5 py-1.5 flex items-center gap-2">
               <Badge>{m.memory_type}</Badge>
@@ -236,6 +239,7 @@ function TemporalExplorer() {
 /* ─── Consensus Evaluator ────────────────────────────────────── */
 
 function ConsensusEvaluator() {
+  const { t } = useTranslation('dashboard');
   const [content, setContent] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -256,18 +260,18 @@ function ConsensusEvaluator() {
 
   return (
     <Card>
-      <SectionHeader icon={Shield} title="Byzantine Consensus" description="Multi-voter evaluation for memory integrity" />
+      <SectionHeader icon={Shield} title={t('engine.byzantineConsensusTitle', 'Byzantine Consensus')} description={t('engine.byzantineConsensusDesc', 'Multi-voter evaluation for memory integrity')} />
       <div className="flex gap-2 mb-4">
         <input
           value={content}
           onChange={e => setContent(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && evaluate()}
-          placeholder="Enter memory content to evaluate..."
+          placeholder={t('engine.consensusPlaceholder', 'Enter memory content to evaluate...')}
           className="flex-1 bg-transparent border border-[#e3e0db] rounded-lg py-2 px-3 text-xs focus:border-[#117dff]/40 focus:outline-none"
         />
         <button onClick={evaluate} disabled={loading} className="bg-[#117dff] hover:bg-[#0066e0] text-white text-xs font-semibold py-2 px-4 rounded-lg disabled:opacity-50 flex items-center gap-1.5">
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Shield size={13} />}
-          Evaluate
+          {t('engine.evaluate', 'Evaluate')}
         </button>
       </div>
 
@@ -277,12 +281,12 @@ function ConsensusEvaluator() {
             {result.shouldCommit ? (
               <div className="flex items-center gap-1.5 text-emerald-600">
                 <CheckCircle2 size={16} />
-                <span className="text-xs font-semibold">COMMIT APPROVED</span>
+                <span className="text-xs font-semibold">{t('engine.commitApproved', 'COMMIT APPROVED')}</span>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 text-red-500">
                 <XCircle size={16} />
-                <span className="text-xs font-semibold">COMMIT REJECTED</span>
+                <span className="text-xs font-semibold">{t('engine.commitRejected', 'COMMIT REJECTED')}</span>
               </div>
             )}
             <span className="text-[10px] text-[#a3a3a3] font-mono">{result.voterCount} voters, {result.outliers?.length || 0} outliers</span>
@@ -291,10 +295,10 @@ function ConsensusEvaluator() {
           {result.consensusScores && (
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'Factuality', value: result.consensusScores.factuality },
-                { label: 'Relevance', value: result.consensusScores.relevance },
-                { label: 'Consistency', value: result.consensusScores.consistency },
-                { label: 'Average', value: result.consensusScores.average },
+                { label: t('engine.factuality', 'Factuality'), value: result.consensusScores.factuality },
+                { label: t('engine.relevance', 'Relevance'), value: result.consensusScores.relevance },
+                { label: t('engine.consistency', 'Consistency'), value: result.consensusScores.consistency },
+                { label: t('engine.average', 'Average'), value: result.consensusScores.average },
               ].map(({ label, value }) => (
                 <div key={label} className="text-center">
                   <div className={`text-lg font-bold font-mono ${scoreColor(value || 0)}`}>{(value || 0).toFixed(1)}</div>
@@ -314,6 +318,7 @@ function ConsensusEvaluator() {
 /* ─── Swarm Activity ─────────────────────────────────────────── */
 
 function SwarmActivity() {
+  const { t } = useTranslation('dashboard');
   const [traces, setTraces] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -333,7 +338,7 @@ function SwarmActivity() {
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <SectionHeader icon={Network} title="Swarm Activity" description="Stigmergic agent coordination traces" />
+        <SectionHeader icon={Network} title={t('engine.swarmActivityTitle', 'Swarm Activity')} description={t('engine.swarmActivityDesc', 'Stigmergic agent coordination traces')} />
         <button onClick={fetchTraces} className="text-[#a3a3a3] hover:text-[#117dff] transition-colors">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -351,7 +356,7 @@ function SwarmActivity() {
             <div className="border border-[#117dff]/20 bg-[#117dff]/5 rounded-lg p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <Zap size={12} className="text-[#117dff]" />
-                <span className="text-[10px] font-semibold text-[#117dff]">Current Head</span>
+                <span className="text-[10px] font-semibold text-[#117dff]">{t('engine.currentHead', 'Current Head')}</span>
               </div>
               <p className="text-[11px] text-[#525252] line-clamp-2">{(traces.currentHead.content || '').slice(0, 200)}</p>
             </div>
@@ -372,7 +377,7 @@ function SwarmActivity() {
           ))}
 
           {!traces.totalTraces && (
-            <p className="text-[11px] text-[#a3a3a3] text-center py-4">No active swarm traces. Agents leave traces when they reason collaboratively.</p>
+            <p className="text-[11px] text-[#a3a3a3] text-center py-4">{t('engine.noSwarmTraces', 'No active swarm traces. Agents leave traces when they reason collaboratively.')}</p>
           )}
         </div>
       )}
@@ -383,6 +388,7 @@ function SwarmActivity() {
 /* ─── Main Engine Page ───────────────────────────────────────── */
 
 function CognitionLoopPanel() {
+  const { t } = useTranslation('dashboard');
   const [status, setStatus] = useState(null);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -465,8 +471,8 @@ function CognitionLoopPanel() {
       <div className="flex items-start justify-between mb-4">
         <SectionHeader
           icon={Sparkles}
-          title="Cognition Loop"
-          description="Hourly synthesis + drift compaction — the 'thinking' cron"
+          title={t('engine.cognitionLoopTitle', 'Cognition Loop')}
+          description={t('engine.cognitionLoopDesc', "Hourly synthesis + drift compaction — the 'thinking' cron")}
         />
         <button
           onClick={triggerNow}
@@ -474,7 +480,7 @@ function CognitionLoopPanel() {
           className="text-[11px] font-mono px-3 py-1.5 rounded-md bg-[#117dff] text-white hover:bg-[#0a5fcc] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
         >
           {triggering ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}
-          {triggering ? 'Running...' : 'Run now'}
+          {triggering ? t('engine.running', 'Running...') : t('engine.runNow', 'Run now')}
         </button>
       </div>
 
@@ -484,19 +490,19 @@ function CognitionLoopPanel() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-[#faf9f4] rounded-lg p-3">
-              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Status</div>
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">{t('engine.status', 'Status')}</div>
               <div className="flex items-center gap-1.5">
                 {status.enabled === true ? (
                   status.running
-                    ? <><Loader2 size={12} className="animate-spin text-[#117dff]" /><span className="text-xs font-semibold text-[#117dff]">running</span></>
-                    : <><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-emerald-700">idle</span></>
+                    ? <><Loader2 size={12} className="animate-spin text-[#117dff]" /><span className="text-xs font-semibold text-[#117dff]">{t('engine.statusRunning', 'running')}</span></>
+                    : <><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-semibold text-emerald-700">{t('engine.statusIdle', 'idle')}</span></>
                 ) : status.enabled === false ? (
-                  <><XCircle size={12} className="text-amber-600" /><span className="text-xs font-semibold text-amber-700">disabled</span></>
+                  <><XCircle size={12} className="text-amber-600" /><span className="text-xs font-semibold text-amber-700">{t('engine.statusDisabled', 'disabled')}</span></>
                 ) : (
                   // enabled === null (or undefined) → status fetch failed; show
                   // a neutral "unknown" pill plus the underlying error so the
                   // user can act on it (auth, network, env) instead of guessing.
-                  <><XCircle size={12} className="text-slate-500" /><span className="text-xs font-semibold text-slate-600" title={status.error || ''}>unknown{status.statusCode ? ` (${status.statusCode})` : ''}</span></>
+                  <><XCircle size={12} className="text-slate-500" /><span className="text-xs font-semibold text-slate-600" title={status.error || ''}>{t('engine.statusUnknown', 'unknown')}{status.statusCode ? ` (${status.statusCode})` : ''}</span></>
                 )}
               </div>
               {status.enabled !== true && status.error && (
@@ -504,17 +510,17 @@ function CognitionLoopPanel() {
               )}
             </div>
             <div className="bg-[#faf9f4] rounded-lg p-3">
-              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Last run</div>
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">{t('engine.lastRun', 'Last run')}</div>
               <div className="text-xs font-semibold text-[#0a0a0a]">{fmtDate(status.last_run_at)}</div>
               {status.last_run_ms && <div className="text-[10px] text-[#a3a3a3]">{(status.last_run_ms / 1000).toFixed(1)}s</div>}
             </div>
             <div className="bg-[#faf9f4] rounded-lg p-3">
-              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Next run</div>
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">{t('engine.nextRun', 'Next run')}</div>
               <div className="text-xs font-semibold text-[#0a0a0a]">{fmtDate(status.next_run_at)}</div>
               <div className="text-[10px] text-[#a3a3a3]">every {Math.round((status.interval_ms || 0) / 60000)}m</div>
             </div>
             <div className="bg-[#faf9f4] rounded-lg p-3">
-              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">Last output</div>
+              <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-1">{t('engine.lastOutput', 'Last output')}</div>
               <div className="text-xs font-semibold text-[#0a0a0a]">
                 {status.last_synthesis_count ?? 0} synth · {status.last_compaction_count ?? 0} compact
               </div>
@@ -523,19 +529,19 @@ function CognitionLoopPanel() {
 
           <div className="border-t border-[#ece8de] pt-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] font-mono">
             <div>
-              <div className="text-[#a3a3a3]">Lookback</div>
+              <div className="text-[#a3a3a3]">{t('engine.lookback', 'Lookback')}</div>
               <div className="text-[#0a0a0a] font-semibold">{status.lookback_hours}h</div>
             </div>
             <div>
-              <div className="text-[#a3a3a3]">Cluster range</div>
+              <div className="text-[#a3a3a3]">{t('engine.clusterRange', 'Cluster range')}</div>
               <div className="text-[#0a0a0a] font-semibold">{status.cluster_min}–{status.cluster_max}</div>
             </div>
             <div>
-              <div className="text-[#a3a3a3]">Drift threshold</div>
+              <div className="text-[#a3a3a3]">{t('engine.driftThreshold', 'Drift threshold')}</div>
               <div className="text-[#0a0a0a] font-semibold">≥{status.drift_threshold}</div>
             </div>
             <div>
-              <div className="text-[#a3a3a3]">Model</div>
+              <div className="text-[#a3a3a3]">{t('engine.model', 'Model')}</div>
               <div className="text-[#0a0a0a] font-semibold truncate">{status.model}</div>
             </div>
           </div>
@@ -543,7 +549,7 @@ function CognitionLoopPanel() {
           <div className="mt-3 p-3 bg-[#f0f7ff] border border-[#117dff]/15 rounded-lg text-[11px] text-[#0a0a0a] leading-relaxed">
             <div className="font-semibold mb-1 flex items-center gap-1.5">
               <Activity size={11} className="text-[#117dff]" />
-              How it works
+              {t('engine.howItWorks', 'How it works')}
             </div>
             <p>Every {Math.round((status.interval_ms || 0) / 60000)} minutes the loop walks memories created in the last {status.lookback_hours}h, groups them by primary tag, and asks the LLM to emit ONE emergent insight per cluster (saved as a <span className="font-mono bg-white px-1 rounded">synthesis</span> memory with <span className="font-mono bg-white px-1 rounded">Derives</span> edges to its sources). When a topic cluster grows past {status.drift_threshold} memories, the second pass compresses it into a canonical "as-of-today" summary and supersedes the older granular memories — keeping recall fast and preventing graph bloat.</p>
           </div>
@@ -552,7 +558,7 @@ function CognitionLoopPanel() {
             <div className="mt-4 border-t border-[#ece8de] pt-3">
               <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wide mb-2 font-semibold flex items-center gap-1.5">
                 <Sparkles size={10} className="text-[#117dff]" />
-                Recent output ({recent.length})
+                {t('engine.recentOutput', 'Recent output ({{count}})', { count: recent.length })}
               </div>
               <div className="space-y-2">
                 {recent.map((r) => (
@@ -573,7 +579,7 @@ function CognitionLoopPanel() {
 
           {status.errors && status.errors.length > 0 && (
             <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-[10px] font-mono">
-              <div className="font-semibold text-amber-700 mb-1">Recent errors</div>
+              <div className="font-semibold text-amber-700 mb-1">{t('engine.recentErrors', 'Recent errors')}</div>
               {status.errors.slice(-3).map((e, i) => (
                 <div key={i} className="text-amber-800 truncate">{e.at?.slice(11, 19)} {e.error}</div>
               ))}
@@ -592,32 +598,33 @@ function CognitionLoopPanel() {
 }
 
 export default function Engine() {
+  const { t } = useTranslation('dashboard');
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6 max-w-6xl">
       <motion.div variants={fadeUp}>
         <h2 className="text-lg font-bold text-[#0a0a0a] flex items-center gap-2" style={{ fontFamily: 'Space Grotesk' }}>
           <Cpu size={20} className="text-[#117dff]" />
-          Memory Engine Intelligence
+          {t('engine.pageTitle', 'Memory Engine Intelligence')}
         </h2>
         <p className="text-xs text-[#a3a3a3] mt-1">
-          6 SOTA features powering your memory engine: predict-calibrate extraction, cognitive framing, context autopilot, bi-temporal queries, stigmergic reasoning, and Byzantine consensus.
+          {t('engine.pageSubtitle', '6 SOTA features powering your memory engine: predict-calibrate extraction, cognitive framing, context autopilot, bi-temporal queries, stigmergic reasoning, and Byzantine consensus.')}
         </p>
       </motion.div>
 
       {/* Feature status bar */}
       <motion.div variants={fadeUp} className="flex gap-2 flex-wrap">
         {[
-          { icon: Zap, label: 'Predict-Calibrate', color: 'blue' },
-          { icon: Brain, label: 'Cognitive Frame', color: 'purple' },
-          { icon: RefreshCw, label: 'Context Autopilot', color: 'cyan' },
-          { icon: Clock, label: 'Bi-Temporal', color: 'amber' },
-          { icon: GitBranch, label: 'Stigmergic CoT', color: 'green' },
-          { icon: Shield, label: 'Byzantine Consensus', color: 'red' },
-        ].map(({ icon: Icon, label, color }) => (
-          <div key={label} className="flex items-center gap-1.5 bg-white border border-[#e3e0db] rounded-lg px-3 py-1.5">
+          { icon: Zap, key: 'predict-calibrate', label: t('engine.featurePredictCalibrate', 'Predict-Calibrate'), color: 'blue' },
+          { icon: Brain, key: 'cognitive-frame', label: t('engine.featureCognitiveFrame', 'Cognitive Frame'), color: 'purple' },
+          { icon: RefreshCw, key: 'context-autopilot', label: t('engine.featureContextAutopilot', 'Context Autopilot'), color: 'cyan' },
+          { icon: Clock, key: 'bi-temporal', label: t('engine.featureBiTemporal', 'Bi-Temporal'), color: 'amber' },
+          { icon: GitBranch, key: 'stigmergic-cot', label: t('engine.featureStigmergicCoT', 'Stigmergic CoT'), color: 'green' },
+          { icon: Shield, key: 'byzantine-consensus', label: t('engine.featureByzantineConsensus', 'Byzantine Consensus'), color: 'red' },
+        ].map(({ icon: Icon, key, label, color }) => (
+          <div key={key} className="flex items-center gap-1.5 bg-white border border-[#e3e0db] rounded-lg px-3 py-1.5">
             <Icon size={12} className="text-[#117dff]" />
             <span className="text-[11px] font-medium text-[#0a0a0a]">{label}</span>
-            <Badge color={color}>active</Badge>
+            <Badge color={color}>{t('engine.active', 'active')}</Badge>
           </div>
         ))}
       </motion.div>

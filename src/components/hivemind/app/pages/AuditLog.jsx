@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Download, RefreshCw, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 
 const ACTION_COLORS = {
@@ -20,6 +21,7 @@ function ActionBadge({ action }) {
 }
 
 export default function AuditLogPage() {
+  const { t } = useTranslation('dashboard');
   const [logs, setLogs] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -65,10 +67,10 @@ export default function AuditLogPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-            Audit Log
+            {t('auditlog.title', 'Audit Log')}
           </h1>
           <p className="text-[12px] text-[#a3a3a3] mt-1">
-            Immutable trail of every mutating action. SOC2 + GDPR ready.
+            {t('auditlog.subtitle', 'Immutable trail of every mutating action. SOC2 + GDPR ready.')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -78,14 +80,14 @@ export default function AuditLogPage() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            {t('auditlog.refresh', 'Refresh')}
           </button>
           <button
             onClick={exportCsv}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
           >
             <Download size={13} />
-            Export CSV
+            {t('auditlog.exportCsv', 'Export CSV')}
           </button>
         </div>
       </header>
@@ -93,7 +95,7 @@ export default function AuditLogPage() {
       {/* Filters */}
       <div className="grid grid-cols-5 gap-2 p-3 bg-white border border-[#e3e0db] rounded-[8px]">
         <input
-          placeholder="user_id"
+          placeholder={t('auditlog.filterUserId', 'user_id')}
           value={filters.user_id}
           onChange={e => setFilters({ ...filters, user_id: e.target.value })}
           className="h-8 px-2 text-[12px] border border-[#e3e0db] rounded-[4px]"
@@ -103,25 +105,25 @@ export default function AuditLogPage() {
           onChange={e => setFilters({ ...filters, action: e.target.value })}
           className="h-8 px-2 text-[12px] border border-[#e3e0db] rounded-[4px]"
         >
-          <option value="">All actions</option>
-          <option value="create">create</option>
-          <option value="update">update</option>
-          <option value="delete">delete</option>
-          <option value="read">read</option>
-          <option value="export">export</option>
+          <option value="">{t('auditlog.allActions', 'All actions')}</option>
+          <option value="create">{t('auditlog.actionCreate', 'create')}</option>
+          <option value="update">{t('auditlog.actionUpdate', 'update')}</option>
+          <option value="delete">{t('auditlog.actionDelete', 'delete')}</option>
+          <option value="read">{t('auditlog.actionRead', 'read')}</option>
+          <option value="export">{t('auditlog.actionExport', 'export')}</option>
         </select>
         <select
           value={filters.category}
           onChange={e => setFilters({ ...filters, category: e.target.value })}
           className="h-8 px-2 text-[12px] border border-[#e3e0db] rounded-[4px]"
         >
-          <option value="">All categories</option>
-          <option value="memory">memory</option>
-          <option value="team">team</option>
-          <option value="project">project</option>
-          <option value="connector">connector</option>
-          <option value="compliance">compliance</option>
-          <option value="auth">auth</option>
+          <option value="">{t('auditlog.allCategories', 'All categories')}</option>
+          <option value="memory">{t('auditlog.categoryMemory', 'memory')}</option>
+          <option value="team">{t('auditlog.categoryTeam', 'team')}</option>
+          <option value="project">{t('auditlog.categoryProject', 'project')}</option>
+          <option value="connector">{t('auditlog.categoryConnector', 'connector')}</option>
+          <option value="compliance">{t('auditlog.categoryCompliance', 'compliance')}</option>
+          <option value="auth">{t('auditlog.categoryAuth', 'auth')}</option>
         </select>
         <input
           type="date"
@@ -144,7 +146,7 @@ export default function AuditLogPage() {
       )}
 
       <div className="text-[11px] text-[#a3a3a3]">
-        {total} {total === 1 ? 'event' : 'events'}
+        {total} {total === 1 ? t('auditlog.eventSingular', 'event') : t('auditlog.eventPlural', 'events')}
       </div>
 
       {/* Table */}
@@ -152,19 +154,19 @@ export default function AuditLogPage() {
         <table className="w-full text-[12px]">
           <thead className="bg-[#faf9f4] border-b border-[#e3e0db]">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">When</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Actor</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Event</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Action</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Resource</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">IP</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colWhen', 'When')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colActor', 'Actor')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colEvent', 'Event')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colAction', 'Action')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colResource', 'Resource')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('auditlog.colIp', 'IP')}</th>
             </tr>
           </thead>
           <tbody>
             {logs.length === 0 && !loading && (
               <tr>
                 <td colSpan={6} className="text-center py-8 text-[#a3a3a3]">
-                  No events yet
+                  {t('auditlog.noEvents', 'No events yet')}
                 </td>
               </tr>
             )}

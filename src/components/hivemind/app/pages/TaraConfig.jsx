@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   Mic,
   Settings2,
@@ -26,6 +27,7 @@ const fadeUp = {
 // ─── Config Editor ──────────────────────────────────────────────────────────
 
 function ConfigEditor({ config, onSave, saving }) {
+  const { t } = useTranslation('dashboard');
   const [systemPrompt, setSystemPrompt] = useState(config?.system_prompt || '');
   const [model, setModel] = useState(config?.model || 'openai/gpt-oss-120b');
   const [temperature, setTemperature] = useState(config?.temperature ?? 0.7);
@@ -64,7 +66,7 @@ function ConfigEditor({ config, onSave, saving }) {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Settings2 size={16} className="text-[#117dff]" />
-          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">System Prompt</h3>
+          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('taraconfig.systemPromptHeading', 'System Prompt')}</h3>
         </div>
         <button
           onClick={handleSave}
@@ -72,7 +74,7 @@ function ConfigEditor({ config, onSave, saving }) {
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-['Space_Grotesk'] font-semibold bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors disabled:opacity-50"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? t('taraconfig.btnSaving', 'Saving...') : t('taraconfig.btnSave', 'Save')}
         </button>
       </div>
 
@@ -81,18 +83,18 @@ function ConfigEditor({ config, onSave, saving }) {
         onChange={(e) => setSystemPrompt(e.target.value)}
         rows={8}
         className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/10 resize-y"
-        placeholder="Enter the system prompt for your voice agent..."
+        placeholder={t('taraconfig.systemPromptPlaceholder', 'Enter the system prompt for your voice agent...')}
       />
 
       {/* Clinical Reasoning Prompt (optional) */}
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">
-            Clinical Reasoning Prompt (optional — enables background analysis)
+            {t('taraconfig.clinicalPromptLabel', 'Clinical Reasoning Prompt (optional — enables background analysis)')}
           </label>
           {clinicalPrompt && (
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
-              Active
+              {t('taraconfig.clinicalPromptActive', 'Active')}
             </span>
           )}
         </div>
@@ -101,26 +103,26 @@ function ConfigEditor({ config, onSave, saving }) {
           onChange={(e) => setClinicalPrompt(e.target.value)}
           rows={5}
           className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-purple-400/40 focus:ring-2 focus:ring-purple-400/10 resize-y"
-          placeholder="Leave empty to disable clinical reasoning. When set, a background reasoning model analyzes each turn and provides strategic insights to the main agent..."
+          placeholder={t('taraconfig.clinicalPromptPlaceholder', 'Leave empty to disable clinical reasoning. When set, a background reasoning model analyzes each turn and provides strategic insights to the main agent...')}
         />
         {clinicalPrompt && (
           <div className="mt-3">
-            <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">Reasoning Model</label>
+            <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">{t('taraconfig.reasoningModelLabel', 'Reasoning Model')}</label>
             <select
               value={clinicalModel}
               onChange={(e) => setClinicalModel(e.target.value)}
               className="w-full md:w-1/2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50/30 text-[#0a0a0a] text-xs font-mono focus:outline-none focus:border-purple-400/40"
             >
-              <option value="">Same as main model</option>
-              <optgroup label="Reasoning (recommended for clinical)">
-                <option value="openai/gpt-oss-120b">GPT-OSS 120B (reasoning)</option>
-                <option value="openai/gpt-oss-20b">GPT-OSS 20B (fast reasoning)</option>
+              <option value="">{t('taraconfig.reasoningModelSameAsMain', 'Same as main model')}</option>
+              <optgroup label={t('taraconfig.reasoningGroupRecommended', 'Reasoning (recommended for clinical)')}>
+                <option value="openai/gpt-oss-120b">{t('taraconfig.modelGptOss120b', 'GPT-OSS 120B (reasoning)')}</option>
+                <option value="openai/gpt-oss-20b">{t('taraconfig.modelGptOss20b', 'GPT-OSS 20B (fast reasoning)')}</option>
               </optgroup>
-              <optgroup label="Groq Models">
+              <optgroup label={t('taraconfig.reasoningGroupGroq', 'Groq Models')}>
                 <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
                 <option value="qwen/qwen3-32b">Qwen3-32B</option>
-                <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest)</option>
-                <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama-4 Scout 17B</option>
+                <option value="llama-3.1-8b-instant">{t('taraconfig.modelLlamaInstant', 'llama-3.1-8b-instant (fastest)')}</option>
+                <option value="meta-llama/llama-4-scout-17b-16e-instruct">{t('taraconfig.modelLlama4Scout', 'Llama-4 Scout 17B')}</option>
               </optgroup>
             </select>
           </div>
@@ -129,7 +131,7 @@ function ConfigEditor({ config, onSave, saving }) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
         <div>
-          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">Model</label>
+          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">{t('taraconfig.labelModel', 'Model')}</label>
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
@@ -139,7 +141,7 @@ function ConfigEditor({ config, onSave, saving }) {
           </select>
         </div>
         <div>
-          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">Temperature</label>
+          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">{t('taraconfig.labelTemperature', 'Temperature')}</label>
           <input
             type="number"
             value={temperature}
@@ -149,7 +151,7 @@ function ConfigEditor({ config, onSave, saving }) {
           />
         </div>
         <div>
-          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">Max Tokens</label>
+          <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1 block">{t('taraconfig.labelMaxTokens', 'Max Tokens')}</label>
           <input
             type="number"
             value={maxTokens}
@@ -166,7 +168,7 @@ function ConfigEditor({ config, onSave, saving }) {
               onChange={(e) => setVoiceOptimized(e.target.checked)}
               className="rounded border-[#e3e0db]"
             />
-            <span className="text-[#525252] text-xs font-['Space_Grotesk']">Voice optimized</span>
+            <span className="text-[#525252] text-xs font-['Space_Grotesk']">{t('taraconfig.labelVoiceOptimized', 'Voice optimized')}</span>
           </label>
         </div>
       </div>
@@ -177,6 +179,7 @@ function ConfigEditor({ config, onSave, saving }) {
 // ─── Live Test ──────────────────────────────────────────────────────────────
 
 function LiveTest() {
+  const { t } = useTranslation('dashboard');
   const [query, setQuery] = useState('');
   const [sessionId] = useState(() => `test_${Date.now()}`);
   const [streaming, setStreaming] = useState(false);
@@ -277,8 +280,8 @@ function LiveTest() {
     <motion.div variants={fadeUp} className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-2 mb-5">
         <Play size={16} className="text-[#117dff]" />
-        <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Live Test</h3>
-        <span className="text-[#a3a3a3] text-xs font-mono ml-auto">Session: {sessionId.slice(0, 15)}...</span>
+        <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('taraconfig.liveTestHeading', 'Live Test')}</h3>
+        <span className="text-[#a3a3a3] text-xs font-mono ml-auto">{t('taraconfig.liveTestSession', 'Session: {{id}}...', { id: sessionId.slice(0, 15) })}</span>
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -286,7 +289,7 @@ function LiveTest() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleTest()}
-          placeholder="Type a message to test stream_tara..."
+          placeholder={t('taraconfig.liveTestPlaceholder', 'Type a message to test stream_tara...')}
           className="flex-1 px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/10"
         />
         <button
@@ -295,7 +298,7 @@ function LiveTest() {
           className="px-4 py-2.5 rounded-xl bg-[#117dff] text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-[#0066e0] transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           {streaming ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-          {streaming ? 'Streaming...' : 'Send'}
+          {streaming ? t('taraconfig.btnStreaming', 'Streaming...') : t('taraconfig.btnSend', 'Send')}
         </button>
       </div>
 
@@ -325,10 +328,10 @@ function LiveTest() {
       {metrics && (
         <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-[#e3e0db]">
           {[
-            { label: 'TTFB', value: `${metrics.ttfb_ms}ms`, icon: Zap },
-            { label: 'Total', value: `${metrics.latency_ms}ms`, icon: Clock },
-            { label: 'Memories', value: metrics.recall_count, icon: Brain },
-            { label: 'Turns', value: metrics.session_turns, icon: MessageSquare },
+            { label: t('taraconfig.metricTtfb', 'TTFB'), value: `${metrics.ttfb_ms}ms`, icon: Zap },
+            { label: t('taraconfig.metricTotal', 'Total'), value: `${metrics.latency_ms}ms`, icon: Clock },
+            { label: t('taraconfig.metricMemories', 'Memories'), value: metrics.recall_count, icon: Brain },
+            { label: t('taraconfig.metricTurns', 'Turns'), value: metrics.session_turns, icon: MessageSquare },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex items-center gap-1.5">
               <Icon size={12} className="text-[#a3a3a3]" />
@@ -348,7 +351,7 @@ function LiveTest() {
             className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {analyzing ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
-            {analyzing ? 'Running Analytics...' : 'End Session & Run Analytics'}
+            {analyzing ? t('taraconfig.btnRunningAnalytics', 'Running Analytics...') : t('taraconfig.btnEndSession', 'End Session & Run Analytics')}
           </button>
         </div>
       )}
@@ -358,7 +361,7 @@ function LiveTest() {
         <div className="mt-5 p-4 rounded-xl bg-[#faf9f4] border border-[#e3e0db]">
           <div className="flex items-center gap-2 mb-3">
             <Brain size={16} className="text-purple-600" />
-            <h4 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Session Analytics Report</h4>
+            <h4 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">{t('taraconfig.analyticsReportHeading', 'Session Analytics Report')}</h4>
           </div>
 
           {analytics.error ? (
@@ -367,14 +370,14 @@ function LiveTest() {
             <div className="space-y-3">
               {/* Brief Context */}
               <div>
-                <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">Context</span>
+                <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.analyticsContext', 'Context')}</span>
                 <p className="text-[#0a0a0a] text-sm mt-1">{analytics.brief_context}</p>
               </div>
 
               {/* Analysis */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-2 rounded-lg bg-white border border-[#e3e0db]">
-                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">Sentiment</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.analyticsSentiment', 'Sentiment')}</span>
                   <p className={`text-lg font-bold mt-1 ${
                     analytics.analysis?.overall_sentiment > 0.3 ? 'text-green-600' :
                     analytics.analysis?.overall_sentiment < -0.3 ? 'text-red-600' : 'text-[#a3a3a3]'
@@ -383,11 +386,11 @@ function LiveTest() {
                   </p>
                 </div>
                 <div className="p-2 rounded-lg bg-white border border-[#e3e0db]">
-                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">Resolution</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.analyticsResolution', 'Resolution')}</span>
                   <p className="text-lg font-bold mt-1 capitalize">{analytics.analysis?.resolution_status ?? 'N/A'}</p>
                 </div>
                 <div className="p-2 rounded-lg bg-white border border-[#e3e0db]">
-                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">Agent IQ</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.analyticsAgentIq', 'Agent IQ')}</span>
                   <p className="text-lg font-bold mt-1">{analytics.metrics?.agent_iq ?? 'N/A'}</p>
                 </div>
               </div>
@@ -396,12 +399,12 @@ function LiveTest() {
               <div className="flex flex-wrap gap-2">
                 {analytics.business_signals?.is_hot_lead && (
                   <span className="px-2 py-1 rounded-full text-[10px] font-mono bg-green-100 text-green-700 border border-green-200">
-                    Hot Lead
+                    {t('taraconfig.signalHotLead', 'Hot Lead')}
                   </span>
                 )}
                 {analytics.business_signals?.is_churn_risk && (
                   <span className="px-2 py-1 rounded-full text-[10px] font-mono bg-red-100 text-red-700 border border-red-200">
-                    Churn Risk
+                    {t('taraconfig.signalChurnRisk', 'Churn Risk')}
                   </span>
                 )}
                 <span className={`px-2 py-1 rounded-full text-[10px] font-mono border ${
@@ -409,18 +412,18 @@ function LiveTest() {
                   analytics.business_signals?.priority_level === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
                   'bg-gray-100 text-gray-700 border-gray-200'
                 }`}>
-                  Priority: {analytics.business_signals?.priority_level ?? 'N/A'}
+                  {t('taraconfig.signalPriority', 'Priority: {{level}}', { level: analytics.business_signals?.priority_level ?? 'N/A' })}
                 </span>
               </div>
 
               {/* Memory Stats */}
               {analytics.hivemind_updates && (
                 <div className="pt-2 border-t border-[#e3e0db]">
-                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">HIVEMIND Updates</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.hivemindUpdates', 'HIVEMIND Updates')}</span>
                   <div className="flex gap-4 mt-1">
-                    <span className="text-xs font-mono">Saved: <strong>{analytics.hivemind_updates.chunks_saved || 0}</strong></span>
-                    <span className="text-xs font-mono">Candidates: <strong>{analytics.hivemind_updates.chunks_candidates || 0}</strong></span>
-                    <span className="text-xs font-mono">Skipped: <strong>{analytics.hivemind_updates.chunks_skipped || 0}</strong></span>
+                    <span className="text-xs font-mono">{t('taraconfig.updatesSaved', 'Saved:')} <strong>{analytics.hivemind_updates.chunks_saved || 0}</strong></span>
+                    <span className="text-xs font-mono">{t('taraconfig.updatesCandidates', 'Candidates:')} <strong>{analytics.hivemind_updates.chunks_candidates || 0}</strong></span>
+                    <span className="text-xs font-mono">{t('taraconfig.updatesSkipped', 'Skipped:')} <strong>{analytics.hivemind_updates.chunks_skipped || 0}</strong></span>
                   </div>
                 </div>
               )}
@@ -428,7 +431,7 @@ function LiveTest() {
               {/* Pain Points */}
               {analytics.analysis?.customer_pain_points?.length > 0 && (
                 <div className="pt-2 border-t border-[#e3e0db]">
-                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">Pain Points</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono uppercase">{t('taraconfig.analyticsPainPoints', 'Pain Points')}</span>
                   <ul className="list-disc list-inside text-sm mt-1 text-[#525252]">
                     {analytics.analysis.customer_pain_points.map((p, i) => (
                       <li key={i}>{p}</li>
@@ -447,6 +450,7 @@ function LiveTest() {
 // ─── Active Sessions ────────────────────────────────────────────────────────
 
 function ActiveSessions() {
+  const { t } = useTranslation('dashboard');
   const { data: sessions, loading } = useApiQuery(
     () => apiClient.controlPlane.get('/v1/proxy/tara/sessions').then(r => r.data?.sessions || []).catch(() => []),
     []
@@ -459,8 +463,8 @@ function ActiveSessions() {
     <motion.div variants={fadeUp} className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-2 mb-4">
         <MessageSquare size={16} className="text-[#525252]" />
-        <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Active Sessions</h3>
-        <span className="text-[#a3a3a3] text-xs font-mono ml-auto">{sessions.length} sessions</span>
+        <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('taraconfig.activeSessionsHeading', 'Active Sessions')}</h3>
+        <span className="text-[#a3a3a3] text-xs font-mono ml-auto">{t('taraconfig.activeSessionsCount', '{{count}} sessions', { count: sessions.length })}</span>
       </div>
       <div className="space-y-2">
         {sessions.slice(0, 10).map((s, i) => (
@@ -472,7 +476,7 @@ function ActiveSessions() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[#a3a3a3] text-[10px] font-mono">{s.turn_count} turns</span>
+              <span className="text-[#a3a3a3] text-[10px] font-mono">{t('taraconfig.sessionTurns', '{{count}} turns', { count: s.turn_count })}</span>
               {s.language && (
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
                   {s.language}
@@ -489,6 +493,7 @@ function ActiveSessions() {
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function TaraConfig() {
+  const { t } = useTranslation('dashboard');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
@@ -507,7 +512,6 @@ export default function TaraConfig() {
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (err) {
       setSaveStatus('error');
-      console.error('Save failed:', err);
     } finally {
       setSaving(false);
     }
@@ -528,17 +532,17 @@ export default function TaraConfig() {
           </div>
           <div>
             <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk']">TARA × HIVEMIND</h1>
-            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">Voice agent conversational runtime</p>
+            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">{t('taraconfig.subtitle', 'Voice agent conversational runtime')}</p>
           </div>
         </div>
         {saveStatus === 'saved' && (
           <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-['Space_Grotesk'] font-semibold">
-            <CheckCircle size={14} /> Saved
+            <CheckCircle size={14} /> {t('taraconfig.saveStatusSaved', 'Saved')}
           </span>
         )}
         {saveStatus === 'error' && (
           <span className="flex items-center gap-1.5 text-red-500 text-xs font-['Space_Grotesk'] font-semibold">
-            <AlertTriangle size={14} /> Save failed
+            <AlertTriangle size={14} /> {t('taraconfig.saveStatusError', 'Save failed')}
           </span>
         )}
       </motion.div>

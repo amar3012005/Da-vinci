@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Users, FolderKanban, UserCog, Send, ScrollText, KeyRound,
   LayoutDashboard, Activity, ArrowUpRight, Building2, RefreshCw, Loader2,
@@ -31,6 +32,7 @@ const TABS = [
 ];
 
 export default function WorkspaceAdmin() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
@@ -55,10 +57,10 @@ export default function WorkspaceAdmin() {
           {org?.slug || org?.id?.slice(0, 8) || 'workspace'}
         </div>
         <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-          Workspace Admin
+          {t('workspaceadmin.title', 'Workspace Admin')}
         </h1>
         <p className="text-[12px] text-[#737373] mt-1">
-          {org?.name || 'Your organization'} · members, teams, projects, invitations, security and compliance — all in one place.
+          {org?.name || t('workspaceadmin.yourOrg', 'Your organization')} · {t('workspaceadmin.subtitle', 'members, teams, projects, invitations, security and compliance — all in one place.')}
         </p>
       </header>
 
@@ -67,13 +69,13 @@ export default function WorkspaceAdmin() {
 
       {/* Tab nav */}
       <nav className="mt-5 mb-4 border-b border-[#e3e0db] flex items-center gap-0.5 overflow-x-auto">
-        {TABS.map(t => {
-          const Icon = t.icon;
-          const active = t.id === activeTab;
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          const active = tab.id === activeTab;
           return (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tab.id}
+              onClick={() => setTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
                 active
                   ? 'border-[#0a0a0a] text-[#0a0a0a]'
@@ -81,7 +83,7 @@ export default function WorkspaceAdmin() {
               }`}
             >
               <Icon size={13} />
-              {t.label}
+              {t(`workspaceadmin.tab.${tab.id}`, tab.label)}
             </button>
           );
         })}
@@ -110,6 +112,7 @@ export default function WorkspaceAdmin() {
 /* ─── Metrics ───────────────────────────────────────────────────────────── */
 
 function MetricsStrip({ orgId }) {
+  const { t } = useTranslation('dashboard');
   const [data, setData] = useState({ members: 0, teams: 0, projects: 0, pending: 0, accepted: 0, loading: true });
 
   const refresh = useCallback(async () => {
@@ -139,11 +142,11 @@ function MetricsStrip({ orgId }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const cards = [
-    { id: 'members',  label: 'Org members',     value: data.members,  Icon: UserCog,      color: '#117dff' },
-    { id: 'teams',    label: 'Active teams',    value: data.teams,    Icon: Users,        color: '#0A66C2' },
-    { id: 'projects', label: 'Live projects',   value: data.projects, Icon: FolderKanban, color: '#10b981' },
-    { id: 'pending',  label: 'Pending invites', value: data.pending,  Icon: Clock,        color: '#f59e0b' },
-    { id: 'accepted', label: 'Joined via invite', value: data.accepted, Icon: CheckCircle2, color: '#0a0a0a' },
+    { id: 'members',  label: t('workspaceadmin.metric.orgMembers', 'Org members'),      value: data.members,  Icon: UserCog,      color: '#117dff' },
+    { id: 'teams',    label: t('workspaceadmin.metric.activeTeams', 'Active teams'),    value: data.teams,    Icon: Users,        color: '#0A66C2' },
+    { id: 'projects', label: t('workspaceadmin.metric.liveProjects', 'Live projects'),  value: data.projects, Icon: FolderKanban, color: '#10b981' },
+    { id: 'pending',  label: t('workspaceadmin.metric.pendingInvites', 'Pending invites'), value: data.pending, Icon: Clock,       color: '#f59e0b' },
+    { id: 'accepted', label: t('workspaceadmin.metric.joinedViaInvite', 'Joined via invite'), value: data.accepted, Icon: CheckCircle2, color: '#0a0a0a' },
   ];
 
   return (
@@ -172,6 +175,7 @@ function MetricsStrip({ orgId }) {
 /* ─── Overview tab ──────────────────────────────────────────────────────── */
 
 function OverviewTab({ orgId, setTab }) {
+  const { t } = useTranslation('dashboard');
   const [recentInvites, setRecentInvites] = useState([]);
   const [recentAudit, setRecentAudit] = useState([]);
 
@@ -192,17 +196,17 @@ function OverviewTab({ orgId, setTab }) {
   }, [orgId]);
 
   const quickActions = [
-    { label: 'Invite a teammate', sub: 'Email + share link',         tab: 'invites',  Icon: Send,         color: '#117dff' },
-    { label: 'Add a new project', sub: 'Spin up a scoped HIVEMIND',  tab: 'projects', Icon: FolderKanban, color: '#10b981' },
-    { label: 'Configure SSO',     sub: 'Zitadel / SAML / OIDC',      tab: 'sso',      Icon: KeyRound,     color: '#0a0a0a' },
-    { label: 'Review audit log',  sub: 'Last 24h of admin actions',  tab: 'audit',    Icon: ScrollText,   color: '#737373' },
+    { label: t('workspaceadmin.action.inviteTeammate', 'Invite a teammate'), sub: t('workspaceadmin.action.inviteTeammateSub', 'Email + share link'),        tab: 'invites',  Icon: Send,         color: '#117dff' },
+    { label: t('workspaceadmin.action.addProject', 'Add a new project'),     sub: t('workspaceadmin.action.addProjectSub', 'Spin up a scoped HIVEMIND'),     tab: 'projects', Icon: FolderKanban, color: '#10b981' },
+    { label: t('workspaceadmin.action.configureSso', 'Configure SSO'),       sub: t('workspaceadmin.action.configureSsoSub', 'Zitadel / SAML / OIDC'),       tab: 'sso',      Icon: KeyRound,     color: '#0a0a0a' },
+    { label: t('workspaceadmin.action.reviewAudit', 'Review audit log'),     sub: t('workspaceadmin.action.reviewAuditSub', 'Last 24h of admin actions'),    tab: 'audit',    Icon: ScrollText,   color: '#737373' },
   ];
 
   return (
     <div className="space-y-5">
       {/* Quick actions */}
       <div>
-        <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Quick actions</h3>
+        <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">{t('workspaceadmin.quickActions', 'Quick actions')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {quickActions.map(a => (
             <button
@@ -223,16 +227,16 @@ function OverviewTab({ orgId, setTab }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent invites */}
-        <Card title="Recent invitations" actionLabel="View all" onAction={() => setTab('invites')}>
+        <Card title={t('workspaceadmin.recentInvitations', 'Recent invitations')} actionLabel={t('workspaceadmin.viewAll', 'View all')} onAction={() => setTab('invites')}>
           {recentInvites.length === 0 ? (
-            <Empty text="No invitations yet — click 'Invite a teammate' above." />
+            <Empty text={t('workspaceadmin.noInvitations', "No invitations yet — click 'Invite a teammate' above.")} />
           ) : (
             <ul className="divide-y divide-[#eae7e1] text-[12px]">
               {recentInvites.map(inv => (
                 <li key={inv.id} className="py-2 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-[#0a0a0a] truncate">
-                      {inv.email || <span className="text-[#a3a3a3]">link-only</span>}
+                      {inv.email || <span className="text-[#a3a3a3]">{t('workspaceadmin.linkOnly', 'link-only')}</span>}
                     </div>
                     <div className="text-[10px] text-[#a3a3a3]">{inv.role}</div>
                   </div>
@@ -244,9 +248,9 @@ function OverviewTab({ orgId, setTab }) {
         </Card>
 
         {/* Audit activity */}
-        <Card title="Recent activity" actionLabel="Open audit log" onAction={() => setTab('audit')}>
+        <Card title={t('workspaceadmin.recentActivity', 'Recent activity')} actionLabel={t('workspaceadmin.openAuditLog', 'Open audit log')} onAction={() => setTab('audit')}>
           {recentAudit.length === 0 ? (
-            <Empty text="No recent events." />
+            <Empty text={t('workspaceadmin.noRecentEvents', 'No recent events.')} />
           ) : (
             <ul className="divide-y divide-[#eae7e1] text-[12px]">
               {recentAudit.slice(0, 6).map((e, i) => (
@@ -273,6 +277,7 @@ function OverviewTab({ orgId, setTab }) {
 /* ─── Invites tab (full-page status list + share modal) ────────────────── */
 
 function InvitesTab({ orgId, orgName }) {
+  const { t } = useTranslation('dashboard');
   const [invites, setInvites] = useState([]);
   const [status, setStatus] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -324,7 +329,7 @@ function InvitesTab({ orgId, orgName }) {
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
           >
             <Send size={13} />
-            New invite
+            {t('workspaceadmin.newInvite', 'New invite')}
           </button>
         </div>
       </div>
@@ -333,24 +338,24 @@ function InvitesTab({ orgId, orgName }) {
         <table className="w-full text-[12px]">
           <thead className="bg-[#faf9f4] border-b border-[#e3e0db] text-[10px] uppercase tracking-wider text-[#737373]">
             <tr>
-              <th className="text-left px-3 py-2 font-medium">Recipient</th>
-              <th className="text-left px-3 py-2 font-medium">Role</th>
-              <th className="text-left px-3 py-2 font-medium">Scope</th>
-              <th className="text-left px-3 py-2 font-medium">Status</th>
-              <th className="text-left px-3 py-2 font-medium">Sent</th>
-              <th className="text-left px-3 py-2 font-medium">Expires / Joined</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.recipient', 'Recipient')}</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.role', 'Role')}</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.scope', 'Scope')}</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.status', 'Status')}</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.sent', 'Sent')}</th>
+              <th className="text-left px-3 py-2 font-medium">{t('workspaceadmin.col.expiresJoined', 'Expires / Joined')}</th>
             </tr>
           </thead>
           <tbody>
             {invites.length === 0 && !loading && (
-              <tr><td colSpan={6} className="text-center py-8 text-[#a3a3a3] text-[11px]">No {status === 'all' ? '' : status} invitations.</td></tr>
+              <tr><td colSpan={6} className="text-center py-8 text-[#a3a3a3] text-[11px]">{t('workspaceadmin.noInvitationsFilter', 'No {{status}} invitations.', { status: status === 'all' ? '' : status }).trim()}</td></tr>
             )}
             {invites.map(inv => (
               <tr key={inv.id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]">
                 <td className="px-3 py-2">
-                  <div className="font-medium text-[#0a0a0a]">{inv.email || <span className="text-[#a3a3a3]">link-only</span>}</div>
+                  <div className="font-medium text-[#0a0a0a]">{inv.email || <span className="text-[#a3a3a3]">{t('workspaceadmin.linkOnly', 'link-only')}</span>}</div>
                   {inv.inviter?.email && (
-                    <div className="text-[10px] text-[#a3a3a3]">by {inv.inviter.email}</div>
+                    <div className="text-[10px] text-[#a3a3a3]">{t('workspaceadmin.by', 'by')} {inv.inviter.email}</div>
                   )}
                 </td>
                 <td className="px-3 py-2 text-[#525252]">{inv.role}</td>
@@ -367,7 +372,7 @@ function InvitesTab({ orgId, orgName }) {
                       </span>
                     ))}
                     {(!inv.projects?.length && !inv.teams?.length) && (
-                      <span className="text-[10px] text-[#a3a3a3]">org-wide</span>
+                      <span className="text-[10px] text-[#a3a3a3]">{t('workspaceadmin.orgWide', 'org-wide')}</span>
                     )}
                   </div>
                 </td>
@@ -401,11 +406,12 @@ function InvitesTab({ orgId, orgName }) {
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
 
 function StatusPill({ status }) {
+  const { t } = useTranslation('dashboard');
   const BADGE = {
-    pending:  { label: 'Pending',  cls: 'text-amber-700 bg-amber-50 border-amber-200',         Icon: Clock },
-    accepted: { label: 'Joined',   cls: 'text-emerald-700 bg-emerald-50 border-emerald-200',    Icon: CheckCircle2 },
-    expired:  { label: 'Expired',  cls: 'text-[#737373] bg-[#f3f1ec] border-[#e3e0db]',        Icon: Clock },
-    revoked:  { label: 'Revoked',  cls: 'text-red-700 bg-red-50 border-red-200',               Icon: XCircle },
+    pending:  { label: t('workspaceadmin.status.pending', 'Pending'),  cls: 'text-amber-700 bg-amber-50 border-amber-200',      Icon: Clock },
+    accepted: { label: t('workspaceadmin.status.joined', 'Joined'),    cls: 'text-emerald-700 bg-emerald-50 border-emerald-200', Icon: CheckCircle2 },
+    expired:  { label: t('workspaceadmin.status.expired', 'Expired'),  cls: 'text-[#737373] bg-[#f3f1ec] border-[#e3e0db]',     Icon: Clock },
+    revoked:  { label: t('workspaceadmin.status.revoked', 'Revoked'),  cls: 'text-red-700 bg-red-50 border-red-200',            Icon: XCircle },
   };
   const b = BADGE[status] || BADGE.pending;
   return (

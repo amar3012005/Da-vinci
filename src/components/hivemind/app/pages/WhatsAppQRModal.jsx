@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { MessageSquare, RefreshCw, X, Check, WifiOff, Smartphone, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 
 /**
@@ -14,6 +15,7 @@ import apiClient from '../shared/api-client';
  */
 
 export default function WhatsAppQRModal({ onClose, onSuccess }) {
+  const { t } = useTranslation('dashboard');
   const [qr, setQr] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | qr_ready | paired | error | timeout
   const [phoneNumber, setPhoneNumber] = useState(null);
@@ -181,13 +183,13 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
               <MessageSquare size={20} className="text-[#25d366]" />
             </div>
             <div>
-              <h2 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Pair WhatsApp</h2>
+              <h2 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">{t('whatsappqrmodal.pairWhatsApp', 'Pair WhatsApp')}</h2>
               <p className="text-[#a3a3a3] text-[10px] font-mono">
-                {status === 'loading' && 'Generating QR...'}
-                {status === 'qr_ready' && 'Scan with your phone'}
-                {status === 'paired' && 'Connected!'}
-                {status === 'timeout' && 'Session expired'}
-                {status === 'error' && 'Connection failed'}
+                {status === 'loading' && t('whatsappqrmodal.generatingQr', 'Generating QR...')}
+                {status === 'qr_ready' && t('whatsappqrmodal.scanWithPhone', 'Scan with your phone')}
+                {status === 'paired' && t('whatsappqrmodal.connected', 'Connected!')}
+                {status === 'timeout' && t('whatsappqrmodal.sessionExpired', 'Session expired')}
+                {status === 'error' && t('whatsappqrmodal.connectionFailed', 'Connection failed')}
               </p>
             </div>
           </div>
@@ -201,25 +203,25 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
           {status !== 'paired' && (
             <div className="w-full mb-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-left">
               <p className="text-[#0a0a0a] text-[11px] font-semibold font-['Space_Grotesk']">
-                WhatsApp setup for HIVEMIND
+                {t('whatsappqrmodal.setupTitle', 'WhatsApp setup for HIVEMIND')}
               </p>
               <p className="mt-1 text-[#525252] text-[11px] font-['Space_Grotesk'] leading-5">
-                This pairs a real WhatsApp account through WhatsApp Web. No Meta Business API account is required.
+                {t('whatsappqrmodal.setupDesc', 'This pairs a real WhatsApp account through WhatsApp Web. No Meta Business API account is required.')}
               </p>
               <div className="mt-3 grid gap-2 text-[11px] text-[#525252] font-['Space_Grotesk']">
                 <div>
-                  <span className="font-semibold text-[#0a0a0a]">Recommended:</span> use a dedicated number for the bot.
+                  <span className="font-semibold text-[#0a0a0a]">{t('whatsappqrmodal.recommended', 'Recommended:')} </span>{t('whatsappqrmodal.recommendedDesc', 'use a dedicated number for the bot.')}
                 </div>
                 <div>
-                  <span className="font-semibold text-[#0a0a0a]">Testing:</span> pair your own account and message yourself.
+                  <span className="font-semibold text-[#0a0a0a]">{t('whatsappqrmodal.testing', 'Testing:')} </span>{t('whatsappqrmodal.testingDesc', 'pair your own account and message yourself.')}
                 </div>
                 <div>
-                  <span className="font-semibold text-[#0a0a0a]">Usage:</span> keep it conversational and avoid bulk outbound messaging.
+                  <span className="font-semibold text-[#0a0a0a]">{t('whatsappqrmodal.usage', 'Usage:')} </span>{t('whatsappqrmodal.usageDesc', 'keep it conversational and avoid bulk outbound messaging.')}
                 </div>
               </div>
               <div className="mt-4 grid gap-3">
                 <div>
-                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">Mode</p>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">{t('whatsappqrmodal.modeLabel', 'Mode')}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -230,8 +232,8 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                           : 'border-[#e3e0db] bg-[#f8f6f1] text-[#525252]'
                       }`}
                     >
-                      <div className="font-semibold">Bot number</div>
-                      <div className="mt-1 text-[10px] leading-4 opacity-80">Best for a shared assistant line.</div>
+                      <div className="font-semibold">{t('whatsappqrmodal.botNumber', 'Bot number')}</div>
+                      <div className="mt-1 text-[10px] leading-4 opacity-80">{t('whatsappqrmodal.botNumberDesc', 'Best for a shared assistant line.')}</div>
                     </button>
                     <button
                       type="button"
@@ -242,14 +244,14 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                           : 'border-[#e3e0db] bg-[#f8f6f1] text-[#525252]'
                       }`}
                     >
-                      <div className="font-semibold">Self-chat</div>
-                      <div className="mt-1 text-[10px] leading-4 opacity-80">Only your own number can talk to HIVE.</div>
+                      <div className="font-semibold">{t('whatsappqrmodal.selfChat', 'Self-chat')}</div>
+                      <div className="mt-1 text-[10px] leading-4 opacity-80">{t('whatsappqrmodal.selfChatDesc', 'Only your own number can talk to HIVE.')}</div>
                     </button>
                   </div>
                 </div>
                 {mode === 'self_chat' && (
                   <label className="block">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">Your WhatsApp number</p>
+                    <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8b857c]">{t('whatsappqrmodal.yourNumber', 'Your WhatsApp number')}</p>
                     <input
                       type="tel"
                       value={selfChatPhone}
@@ -258,7 +260,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                       className="mt-2 w-full rounded-xl border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#0a0a0a] outline-none transition focus:border-[#0a0a0a]"
                     />
                     <p className="mt-1 text-[10px] text-[#8b857c] font-['Space_Grotesk']">
-                      Used to reject other chats after pairing.
+                      {t('whatsappqrmodal.numberHint', 'Used to reject other chats after pairing.')}
                     </p>
                   </label>
                 )}
@@ -285,16 +287,16 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
               </div>
               <div className="flex items-center gap-2 text-[#525252] text-[12px] font-['Space_Grotesk']">
                 <Smartphone size={14} className="text-[#25d366]" />
-                <span>Open WhatsApp → Linked Devices → Scan QR</span>
+                <span>{t('whatsappqrmodal.scanInstruction', 'Open WhatsApp → Linked Devices → Scan QR')}</span>
               </div>
               <p className="text-[#a3a3a3] text-[10px] font-mono mt-1">
-                Expires in {TIMEOUT_S - elapsed}s
+                {t('whatsappqrmodal.expiresIn', 'Expires in {{seconds}}s', { seconds: TIMEOUT_S - elapsed })}
               </p>
               <div className="mt-4 w-full rounded-lg border border-amber-200 bg-amber-50 p-3">
                 <div className="flex items-start gap-2">
                   <AlertTriangle size={14} className="text-amber-600 mt-0.5" />
                   <p className="text-[10px] leading-5 text-amber-800 font-['Space_Grotesk']">
-                    This uses an unofficial WhatsApp Web integration. For lower risk, use a dedicated phone number and avoid spammy or unsolicited outbound messaging.
+                    {t('whatsappqrmodal.unofficialWarning', 'This uses an unofficial WhatsApp Web integration. For lower risk, use a dedicated phone number and avoid spammy or unsolicited outbound messaging.')}
                   </p>
                 </div>
               </div>
@@ -307,7 +309,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                 <Check size={28} className="text-[#16a34a]" />
               </div>
               <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">
-                WhatsApp Connected
+                {t('whatsappqrmodal.whatsAppConnected', 'WhatsApp Connected')}
               </h3>
               {phoneNumber && (
                 <p className="text-[#a3a3a3] text-[11px] font-mono mt-1">{phoneNumber}</p>
@@ -316,7 +318,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                 onClick={onClose}
                 className="mt-4 px-5 py-2 rounded-lg text-xs font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0]"
               >
-                Done
+                {t('whatsappqrmodal.done', 'Done')}
               </button>
             </div>
           )}
@@ -327,17 +329,17 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                 <WifiOff size={28} className="text-amber-500" />
               </div>
               <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">
-                QR Code Expired
+                {t('whatsappqrmodal.qrExpired', 'QR Code Expired')}
               </h3>
               <p className="text-[#a3a3a3] text-[11px] font-mono mt-1 text-center">
-                The pairing window timed out. Generate a new QR code.
+                {t('whatsappqrmodal.qrExpiredDesc', 'The pairing window timed out. Generate a new QR code.')}
               </p>
               <button
                 onClick={handleRegenerate}
                 className="mt-4 px-5 py-2 rounded-lg text-xs font-semibold font-['Space_Grotesk'] bg-[#25d366] text-white hover:bg-[#1ea952] flex items-center gap-1.5"
               >
                 <RefreshCw size={12} />
-                Generate New QR
+                {t('whatsappqrmodal.generateNewQr', 'Generate New QR')}
               </button>
             </div>
           )}
@@ -348,16 +350,16 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
                 <X size={28} className="text-[#dc2626]" />
               </div>
               <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">
-                Connection Failed
+                {t('whatsappqrmodal.connectionFailedTitle', 'Connection Failed')}
               </h3>
               <p className="text-[#a3a3a3] text-[11px] font-mono mt-1 text-center max-w-[240px]">
-                {errorMessage || 'An error occurred'}
+                {errorMessage || t('whatsappqrmodal.errorOccurred', 'An error occurred')}
               </p>
               <button
                 onClick={handleRegenerate}
                 className="mt-4 px-5 py-2 rounded-lg text-xs font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0]"
               >
-                Try Again
+                {t('whatsappqrmodal.tryAgain', 'Try Again')}
               </button>
             </div>
           )}
@@ -368,7 +370,7 @@ export default function WhatsAppQRModal({ onClose, onSuccess }) {
               onClick={onClose}
               className="mt-4 text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] hover:text-[#dc2626] hover:underline"
             >
-              Cancel
+              {t('whatsappqrmodal.cancel', 'Cancel')}
             </button>
           )}
         </div>

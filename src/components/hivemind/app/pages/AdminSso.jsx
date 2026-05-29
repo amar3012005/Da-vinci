@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, RefreshCw, Copy, Trash2, AlertTriangle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
+import { useTranslation } from 'react-i18next';
 
 const SSO_TYPES = [
   { value: 'zitadel_oidc', label: 'Zitadel OIDC (default)' },
@@ -70,6 +71,7 @@ function Toggle({ checked, onChange, label }) {
 }
 
 export default function AdminSso() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const orgId = org?.id;
 
@@ -151,7 +153,7 @@ export default function AdminSso() {
         default_role: form.default_role,
         default_team_id: form.default_team_id || null,
       });
-      setSuccess('SSO configuration saved.');
+      setSuccess(t('adminsso.saveSuccess', 'SSO configuration saved.'));
       await loadConfig();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -175,12 +177,12 @@ export default function AdminSso() {
 
   async function handleRevokeToken() {
     if (!orgId) return;
-    if (!window.confirm('Revoke SCIM token? Any IdP using it will stop provisioning immediately.')) return;
+    if (!window.confirm(t('adminsso.revokeConfirm', 'Revoke SCIM token? Any IdP using it will stop provisioning immediately.'))) return;
     setError(null);
     try {
       await apiClient.revokeScimToken(orgId);
       setGeneratedToken(null);
-      setSuccess('SCIM token revoked.');
+      setSuccess(t('adminsso.revokeSuccess', 'SCIM token revoked.'));
       await loadConfig();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -218,10 +220,10 @@ export default function AdminSso() {
         <div>
           <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] flex items-center gap-2">
             <Shield size={20} className="text-[#117dff]" />
-            SSO Config
+            {t('adminsso.title', 'SSO Config')}
           </h1>
           <p className="text-[12px] text-[#a3a3a3] mt-1">
-            Configure SAML / OIDC identity provider and SCIM 2.0 user provisioning.
+            {t('adminsso.subtitle', 'Configure SAML / OIDC identity provider and SCIM 2.0 user provisioning.')}
           </p>
         </div>
         <button
@@ -229,7 +231,7 @@ export default function AdminSso() {
           className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]"
         >
           <RefreshCw size={13} />
-          Refresh
+          {t('adminsso.refresh', 'Refresh')}
         </button>
       </header>
 
@@ -252,7 +254,7 @@ export default function AdminSso() {
         <div className="rounded-[10px] border-2 border-amber-400 bg-amber-50 p-4 space-y-3">
           <div className="flex items-center gap-2 text-amber-800 font-semibold text-[13px]">
             <AlertTriangle size={16} className="text-amber-500" />
-            Save this token now — it will not be shown again.
+            {t('adminsso.tokenWarning', 'Save this token now — it will not be shown again.')}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1 font-mono text-[12px] bg-white border border-amber-300 rounded-[6px] px-3 py-2 text-[#0a0a0a] truncate">
@@ -261,7 +263,7 @@ export default function AdminSso() {
             <button
               onClick={() => setTokenVisible(v => !v)}
               className="p-2 rounded-[6px] border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252]"
-              title={tokenVisible ? 'Hide token' : 'Show token'}
+              title={tokenVisible ? t('adminsso.hideToken', 'Hide token') : t('adminsso.showToken', 'Show token')}
             >
               {tokenVisible ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -270,14 +272,14 @@ export default function AdminSso() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[12px] text-[#525252]"
             >
               <Copy size={13} />
-              {tokenCopied ? 'Copied!' : 'Copy'}
+              {tokenCopied ? t('adminsso.copied', 'Copied!') : t('adminsso.copy', 'Copy')}
             </button>
           </div>
           <button
             onClick={() => setGeneratedToken(null)}
             className="text-[11px] text-amber-700 underline"
           >
-            I have saved this token — dismiss
+            {t('adminsso.tokenDismiss', 'I have saved this token — dismiss')}
           </button>
         </div>
       )}
@@ -287,17 +289,17 @@ export default function AdminSso() {
 
         {/* Basic SSO settings */}
         <section className="p-5 space-y-4">
-          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">Identity Provider Settings</h2>
+          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">{t('adminsso.idpSettingsHeading', 'Identity Provider Settings')}</h2>
 
-          <Field label="SSO Type" hint="How your users authenticate.">
+          <Field label={t('adminsso.ssoTypeLabel', 'SSO Type')} hint={t('adminsso.ssoTypeHint', 'How your users authenticate.')}>
             <Select value={form.sso_type} onChange={setField('sso_type')}>
-              {SSO_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {SSO_TYPES.map(tp => <option key={tp.value} value={tp.value}>{tp.label}</option>)}
             </Select>
           </Field>
 
           <Field
-            label="Subdomain"
-            hint="Customers access HIVEMIND at <subdomain>.hivemind.davinciai.eu"
+            label={t('adminsso.subdomainLabel', 'Subdomain')}
+            hint={t('adminsso.subdomainHint', 'Customers access HIVEMIND at <subdomain>.hivemind.davinciai.eu')}
           >
             <div className="flex items-center gap-2">
               <Input
@@ -311,8 +313,8 @@ export default function AdminSso() {
           </Field>
 
           <Field
-            label="Zitadel Project ID"
-            hint="The Zitadel project configured for this org's OIDC / SAML client."
+            label={t('adminsso.zitadelProjectIdLabel', 'Zitadel Project ID')}
+            hint={t('adminsso.zitadelProjectIdHint', "The Zitadel project configured for this org's OIDC / SAML client.")}
           >
             <Input
               value={form.zitadel_project_id}
@@ -323,8 +325,8 @@ export default function AdminSso() {
 
           {form.sso_type === 'saml' && (
             <Field
-              label="SAML IdP Metadata URL"
-              hint="Paste the XML metadata URL from Okta / Azure AD / Google Workspace."
+              label={t('adminsso.samlMetadataUrlLabel', 'SAML IdP Metadata URL')}
+              hint={t('adminsso.samlMetadataUrlHint', 'Paste the XML metadata URL from Okta / Azure AD / Google Workspace.')}
             >
               <Input
                 value={form.saml_idp_metadata_url}
@@ -336,8 +338,8 @@ export default function AdminSso() {
 
           {acsUrl && (
             <Field
-              label="ACS URL (copy into your IdP)"
-              hint="Paste this into Okta / Azure AD as the SAML Assertion Consumer Service URL."
+              label={t('adminsso.acsUrlLabel', 'ACS URL (copy into your IdP)')}
+              hint={t('adminsso.acsUrlHint', 'Paste this into Okta / Azure AD as the SAML Assertion Consumer Service URL.')}
             >
               <div className="flex items-center gap-2">
                 <Input value={acsUrl} readOnly />
@@ -356,34 +358,34 @@ export default function AdminSso() {
             <Toggle
               checked={form.enabled}
               onChange={v => setForm(f => ({ ...f, enabled: v }))}
-              label="SSO Enabled"
+              label={t('adminsso.ssoEnabledLabel', 'SSO Enabled')}
             />
             <Toggle
               checked={form.jit_provisioning}
               onChange={v => setForm(f => ({ ...f, jit_provisioning: v }))}
-              label="JIT Provisioning"
+              label={t('adminsso.jitProvisioningLabel', 'JIT Provisioning')}
             />
           </div>
         </section>
 
         {/* Provisioning defaults */}
         <section className="p-5 space-y-4">
-          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">Provisioning Defaults</h2>
+          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">{t('adminsso.provisioningDefaultsHeading', 'Provisioning Defaults')}</h2>
           <p className="text-[11px] text-[#a3a3a3]">
-            Applied when SCIM creates a user or JIT provisioning fires on first login.
+            {t('adminsso.provisioningDefaultsHint', 'Applied when SCIM creates a user or JIT provisioning fires on first login.')}
           </p>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Default Role">
+            <Field label={t('adminsso.defaultRoleLabel', 'Default Role')}>
               <Select value={form.default_role} onChange={setField('default_role')}>
                 {DEFAULT_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </Select>
             </Field>
 
-            <Field label="Default Team" hint="Optional. Auto-add new SCIM users to this team.">
+            <Field label={t('adminsso.defaultTeamLabel', 'Default Team')} hint={t('adminsso.defaultTeamHint', 'Optional. Auto-add new SCIM users to this team.')}>
               <Select value={form.default_team_id} onChange={setField('default_team_id')}>
-                <option value="">— none —</option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <option value="">{t('adminsso.noTeam', '— none —')}</option>
+                {teams.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
               </Select>
             </Field>
           </div>
@@ -397,7 +399,7 @@ export default function AdminSso() {
             className="flex items-center gap-2 px-5 py-2.5 rounded-[8px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] disabled:opacity-50 transition-colors"
           >
             {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            {saving ? 'Saving…' : 'Save Configuration'}
+            {saving ? t('adminsso.saving', 'Saving…') : t('adminsso.saveButton', 'Save Configuration')}
           </button>
         </div>
       </form>
@@ -405,9 +407,9 @@ export default function AdminSso() {
       {/* SCIM token section */}
       <div className="bg-white rounded-[12px] border border-[#e3e0db] p-5 space-y-4">
         <div>
-          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">SCIM 2.0 Token</h2>
+          <h2 className="text-[14px] font-semibold text-[#0a0a0a]">{t('adminsso.scimTokenHeading', 'SCIM 2.0 Token')}</h2>
           <p className="text-[11px] text-[#a3a3a3] mt-1">
-            Used by your IdP (Okta / Azure AD) to call{' '}
+            {t('adminsso.scimTokenHint', 'Used by your IdP (Okta / Azure AD) to call')}{' '}
             <code className="font-mono bg-[#f3f1ec] px-1 rounded text-[10px]">
               {apiClient.controlPlane.defaults.baseURL}/scim/v2/
             </code>
@@ -419,21 +421,21 @@ export default function AdminSso() {
             <>
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-700">
                 <CheckCircle size={12} />
-                Token active (ID: {config.scim_token_id || 'unknown'})
+                {t('adminsso.tokenActive', 'Token active (ID: {{id}})', { id: config.scim_token_id || 'unknown' })}
               </div>
               <button
                 onClick={handleGenerateToken}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-[#f3f1ec] text-[12px] hover:bg-[#eae7e1] text-[#525252]"
               >
                 <RefreshCw size={12} />
-                Rotate token
+                {t('adminsso.rotateToken', 'Rotate token')}
               </button>
               <button
                 onClick={handleRevokeToken}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-red-200 bg-red-50 text-[12px] text-red-700 hover:bg-red-100"
               >
                 <Trash2 size={12} />
-                Revoke
+                {t('adminsso.revokeToken', 'Revoke')}
               </button>
             </>
           ) : (
@@ -441,16 +443,16 @@ export default function AdminSso() {
               onClick={handleGenerateToken}
               className="flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] transition-colors"
             >
-              Generate SCIM Token
+              {t('adminsso.generateToken', 'Generate SCIM Token')}
             </button>
           )}
         </div>
 
         <div className="rounded-[8px] bg-[#f8f7f4] border border-[#e3e0db] p-3 space-y-1 text-[11px] text-[#525252]">
-          <p className="font-medium text-[#0a0a0a]">SCIM endpoint configuration</p>
-          <p>Base URL: <code className="font-mono">{apiClient.controlPlane.defaults.baseURL}/scim/v2</code></p>
-          <p>Auth: Bearer token (generated above)</p>
-          <p>Supported: Users CRUD, Groups (Teams) CRUD, ServiceProviderConfig</p>
+          <p className="font-medium text-[#0a0a0a]">{t('adminsso.scimEndpointHeading', 'SCIM endpoint configuration')}</p>
+          <p>{t('adminsso.scimBaseUrl', 'Base URL:')}{' '}<code className="font-mono">{apiClient.controlPlane.defaults.baseURL}/scim/v2</code></p>
+          <p>{t('adminsso.scimAuth', 'Auth: Bearer token (generated above)')}</p>
+          <p>{t('adminsso.scimSupported', 'Supported: Users CRUD, Groups (Teams) CRUD, ServiceProviderConfig')}</p>
         </div>
       </div>
     </div>

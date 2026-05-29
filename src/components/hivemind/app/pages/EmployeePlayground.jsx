@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Send,
@@ -114,6 +115,7 @@ function StatusBadge({ status, gateReason }) {
 
 // ── Group session panel ────────────────────────────────────────
 function GroupSessionPanel({ employees }) {
+  const { t } = useTranslation('dashboard');
   const [selectedSlugs, setSelectedSlugs] = useState([]);
   const [brief, setBrief] = useState('');
   const [maxRounds, setMaxRounds] = useState(2);
@@ -141,7 +143,7 @@ function GroupSessionPanel({ employees }) {
 
   const runTask = useCallback(async () => {
     if (!brief.trim() || selectedSlugs.length < 2) {
-      setError('Pick at least 2 employees and type a brief.');
+      setError(t('employeeplayground.pickAtLeast2', 'Pick at least 2 employees and type a brief.'));
       return;
     }
     setError(null);
@@ -201,8 +203,8 @@ function GroupSessionPanel({ employees }) {
   const rosterPicker = (
     <div className="border border-[#eae7e1] rounded-[8px] p-3 bg-[#faf9f4]">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-semibold text-[#525252] uppercase tracking-wide">Roster</span>
-        <span className="text-[10px] text-[#a3a3a3]">{selectedSlugs.length} selected</span>
+        <span className="text-[11px] font-semibold text-[#525252] uppercase tracking-wide">{t('employeeplayground.roster', 'Roster')}</span>
+        <span className="text-[10px] text-[#a3a3a3]">{t('employeeplayground.selectedCount', '{{count}} selected', { count: selectedSlugs.length })}</span>
       </div>
       <div className="grid grid-cols-2 gap-1.5 max-h-[180px] overflow-y-auto">
         {employees.map(emp => {
@@ -236,7 +238,7 @@ function GroupSessionPanel({ employees }) {
       <div className="px-5 py-3 border-b border-[#eae7e1] bg-white flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-[#525252]" />
-          <span className="text-[14px] font-semibold text-[#0a0a0a]">#team-playground</span>
+          <span className="text-[14px] font-semibold text-[#0a0a0a]">{t('employeeplayground.channelName', '#team-playground')}</span>
           {status && <StatusBadge status={status.status} gateReason={status.gate_reason} />}
         </div>
         {status?.status === 'completed' && (
@@ -255,15 +257,15 @@ function GroupSessionPanel({ employees }) {
           {transcript.length === 0 && !creating && (
             <div className="flex flex-col items-center justify-center h-full px-6 text-center text-[#a3a3a3]">
               <Sparkles size={28} className="mb-2" />
-              <p className="text-[13px]">Pick 2+ employees → type a brief → hit Run.</p>
-              <p className="text-[11px] mt-1">Watch them investigate, propose, debate, and converge.</p>
+              <p className="text-[13px]">{t('employeeplayground.emptyHint', 'Pick 2+ employees → type a brief → hit Run.')}</p>
+              <p className="text-[11px] mt-1">{t('employeeplayground.emptyHint2', 'Watch them investigate, propose, debate, and converge.')}</p>
             </div>
           )}
           {transcript.map(m => <MessageBubble key={m.msg_id} msg={m} />)}
           {status?.status === 'completed' && status.final_answer && (
             <div className="px-4 py-2.5 border-t border-[#eae7e1] bg-[#f0fdf4]">
               <div className="text-[11px] uppercase tracking-wide text-[#15803d] font-semibold mb-1">
-                Final answer
+                {t('employeeplayground.finalAnswer', 'Final answer')}
               </div>
               <div className="text-[13px] text-[#0a0a0a] whitespace-pre-wrap">{status.final_answer}</div>
             </div>
@@ -274,7 +276,7 @@ function GroupSessionPanel({ employees }) {
         <div className="w-[300px] border-l border-[#eae7e1] p-4 bg-[#faf9f4] space-y-3 overflow-y-auto">
           {rosterPicker}
           <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">Max rounds</span>
+            <span className="text-[11px] text-[#525252] font-medium">{t('employeeplayground.maxRounds', 'Max rounds')}</span>
             <input
               type="number"
               min={1}
@@ -285,12 +287,12 @@ function GroupSessionPanel({ employees }) {
             />
           </label>
           <label className="block">
-            <span className="text-[11px] text-[#525252] font-medium">Brief</span>
+            <span className="text-[11px] text-[#525252] font-medium">{t('employeeplayground.brief', 'Brief')}</span>
             <textarea
               value={brief}
               onChange={e => setBrief(e.target.value)}
               rows={5}
-              placeholder="Plan Q3 EU launch timeline including DPIA review and GTM milestones..."
+              placeholder={t('employeeplayground.briefPlaceholder', 'Plan Q3 EU launch timeline including DPIA review and GTM milestones...')}
               className="w-full px-2 py-1.5 mt-1 text-[12px] border border-[#e3e0db] rounded-[6px] resize-y"
             />
           </label>
@@ -305,9 +307,9 @@ function GroupSessionPanel({ employees }) {
             className="w-full flex items-center justify-center gap-1.5 h-9 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50"
           >
             {status?.status === 'running' ? (
-              <><RefreshCw size={12} className="animate-spin" /> Running…</>
+              <><RefreshCw size={12} className="animate-spin" /> {t('employeeplayground.running', 'Running…')}</>
             ) : (
-              <><Play size={12} /> Run team task</>
+              <><Play size={12} /> {t('employeeplayground.runTeamTask', 'Run team task')}</>
             )}
           </button>
         </div>
@@ -319,6 +321,7 @@ function GroupSessionPanel({ employees }) {
 
 // ── DM chat panel (1-on-1) ─────────────────────────────────────
 function DmPanel({ employee, onBack }) {
+  const { t } = useTranslation('dashboard');
   const [history, setHistory] = useState([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -360,13 +363,13 @@ function DmPanel({ employee, onBack }) {
         </div>
         <div>
           <div className="text-[14px] font-semibold text-[#0a0a0a]">{employee.name}</div>
-          <div className="text-[10px] text-[#a3a3a3]">DM · {role} · {employee.model}</div>
+          <div className="text-[10px] text-[#a3a3a3]">{t('employeeplayground.dmLabel', 'DM')} · {role} · {employee.model}</div>
         </div>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white p-4 space-y-2">
         {history.length === 0 && (
           <div className="text-center text-[12px] text-[#a3a3a3] py-8">
-            Start the conversation. Memory persists across messages in this session.
+            {t('employeeplayground.startConversation', 'Start the conversation. Memory persists across messages in this session.')}
           </div>
         )}
         {history.map((m, i) => (
@@ -381,7 +384,7 @@ function DmPanel({ employee, onBack }) {
         {sending && (
           <div className="flex justify-start">
             <div className="px-3 py-2 rounded-[10px] text-[12px] text-[#a3a3a3] bg-[#faf9f4] border border-[#eae7e1]">
-              <RefreshCw size={12} className="inline animate-spin mr-1" /> thinking…
+              <RefreshCw size={12} className="inline animate-spin mr-1" /> {t('employeeplayground.thinking', 'thinking…')}
             </div>
           </div>
         )}
@@ -396,7 +399,7 @@ function DmPanel({ employee, onBack }) {
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-          placeholder={`Message ${employee.name}…`}
+          placeholder={t('employeeplayground.messagePlaceholder', 'Message {{name}}…', { name: employee.name })}
           className="flex-1 h-9 px-3 text-[13px] border border-[#e3e0db] rounded-[6px] focus:outline-none focus:border-[#117dff]"
         />
         <button
@@ -404,7 +407,7 @@ function DmPanel({ employee, onBack }) {
           disabled={sending || !draft.trim()}
           className="flex items-center gap-1.5 h-9 px-3 text-[12px] bg-[#117dff] text-white rounded hover:bg-[#0066e0] disabled:opacity-50"
         >
-          <Send size={12} /> Send
+          <Send size={12} /> {t('employeeplayground.send', 'Send')}
         </button>
       </div>
     </div>
@@ -414,6 +417,7 @@ function DmPanel({ employee, onBack }) {
 
 // ── Top-level page ─────────────────────────────────────────────
 export default function EmployeePlayground() {
+  const { t } = useTranslation('dashboard');
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -437,10 +441,10 @@ export default function EmployeePlayground() {
   const sidebar = useMemo(() => (
     <aside className="w-[260px] border-r border-[#eae7e1] bg-[#faf9f4] flex flex-col">
       <div className="px-4 py-3 border-b border-[#eae7e1] flex items-center justify-between">
-        <span className="text-[12px] font-semibold text-[#0a0a0a]">Playground</span>
+        <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('employeeplayground.sidebarTitle', 'Playground')}</span>
         <button onClick={fetch}
           className="text-[#525252] hover:bg-[#f3f1ec] p-1 rounded"
-          title="Refresh">
+          title={t('employeeplayground.refresh', 'Refresh')}>
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
@@ -452,15 +456,15 @@ export default function EmployeePlayground() {
             : 'text-[#525252] hover:bg-[#f3f1ec]'
         }`}
       >
-        <Users size={14} /> Group session
+        <Users size={14} /> {t('employeeplayground.groupSession', 'Group session')}
       </button>
       <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wide text-[#a3a3a3] font-semibold">
-        Direct messages
+        {t('employeeplayground.directMessages', 'Direct messages')}
       </div>
       <div className="flex-1 overflow-y-auto">
         {employees.length === 0 && !loading && (
           <div className="px-4 py-3 text-[11px] text-[#a3a3a3]">
-            No running employees. Create + deploy one first.
+            {t('employeeplayground.noRunningEmployees', 'No running employees. Create + deploy one first.')}
           </div>
         )}
         {employees.map(emp => {

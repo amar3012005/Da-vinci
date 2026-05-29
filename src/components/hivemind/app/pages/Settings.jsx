@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
+import { useTranslation } from 'react-i18next';
 
 const HIVEMIND_VERSION = '1.0.0';
 
@@ -29,12 +30,13 @@ const fadeUp = {
 
 // ─── Copy button with per-field tracking ────────────────────────────────────
 function CopyButton({ value, field, copiedField, onCopy }) {
+  const { t } = useTranslation('dashboard');
   const isCopied = copiedField === field;
   return (
     <button
       onClick={() => onCopy(value, field)}
       className="ml-2 p-1.5 rounded-lg hover:bg-[#117dff]/10 transition-colors group flex-shrink-0"
-      title="Copy to clipboard"
+      title={t('settings.copyToClipboard', 'Copy to clipboard')}
     >
       {isCopied ? (
         <Check size={14} className="text-[#117dff]" />
@@ -54,7 +56,7 @@ function ReadOnlyField({ label, value, field, copiedField, onCopy }) {
       </label>
       <div className="flex items-center bg-[#faf9f4] border border-[#e3e0db] rounded-xl px-3 py-2.5">
         <span className="text-[#525252] text-sm font-mono truncate flex-1 select-all">
-          {value || '\u2014'}
+          {value || '—'}
         </span>
         {value && (
           <CopyButton
@@ -99,6 +101,7 @@ function SectionHeader({ icon: Icon, title, description }) {
 
 // ─── Main component ─────────────────────────────────────────────────────────
 export default function Settings() {
+  const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
   const [copiedField, setCopiedField] = useState(null);
   const [revoking, setRevoking] = useState(false);
@@ -185,7 +188,43 @@ export default function Settings() {
         month: 'long',
         day: 'numeric',
       })
-    : '\u2014';
+    : '—';
+
+  const projectPolicyOptions = [
+    {
+      value: 'private',
+      label: t('settings.policyPrivateLabel', 'Private (default)'),
+      description: t('settings.policyPrivateDesc', 'Creator + explicitly invited members only'),
+    },
+    {
+      value: 'team_inherited',
+      label: t('settings.policyTeamInheritedLabel', 'Team Inherited'),
+      description: t('settings.policyTeamInheritedDesc', 'All team members auto-granted access when project has a team'),
+    },
+    {
+      value: 'org_visible',
+      label: t('settings.policyOrgVisibleLabel', 'Org Visible'),
+      description: t('settings.policyOrgVisibleDesc', 'Discoverable by all org members, access on request'),
+    },
+  ];
+
+  const memoryPolicyOptions = [
+    {
+      v: 'private',
+      t: t('settings.memPolicyPrivateLabel', 'Private (default)'),
+      d: t('settings.memPolicyPrivateDesc', 'Save to caller default project; falls through to org-wide.'),
+    },
+    {
+      v: 'org-wide',
+      t: t('settings.memPolicyOrgWideLabel', 'Org-wide'),
+      d: t('settings.memPolicyOrgWideDesc', 'Always saves org-wide unless project explicitly passed.'),
+    },
+    {
+      v: 'ask',
+      t: t('settings.memPolicyAskLabel', 'Ask'),
+      d: t('settings.memPolicyAskDesc', 'Server hints Claude to ask the user which project on every save.'),
+    },
+  ];
 
   return (
     <div className="min-h-full">
@@ -193,10 +232,10 @@ export default function Settings() {
       <div className="mb-8">
         <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] flex items-center gap-2.5">
           <SettingsIcon size={24} className="text-[#117dff]" />
-          Settings
+          {t('settings.title', 'Settings')}
         </h1>
         <p className="text-[#525252] text-sm mt-1 font-['Space_Grotesk']">
-          Workspace configuration and connection details
+          {t('settings.subtitle', 'Workspace configuration and connection details')}
         </p>
       </div>
 
@@ -210,21 +249,21 @@ export default function Settings() {
         <SectionCard>
           <SectionHeader
             icon={Building2}
-            title="Workspace Info"
-            description="Your organization and workspace details"
+            title={t('settings.workspaceInfo', 'Workspace Info')}
+            description={t('settings.workspaceInfoDesc', 'Your organization and workspace details')}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                Organization
+                {t('settings.labelOrganization', 'Organization')}
               </label>
               <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">
-                {org?.name || '\u2014'}
+                {org?.name || '—'}
               </p>
             </div>
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                Created
+                {t('settings.labelCreated', 'Created')}
               </label>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
                 {createdDate}
@@ -232,7 +271,7 @@ export default function Settings() {
             </div>
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                Your Role
+                {t('settings.labelYourRole', 'Your Role')}
               </label>
               <span className="inline-block text-[#117dff] text-xs font-mono bg-[#117dff]/10 border border-[#117dff]/20 rounded-md px-2 py-1">
                 {user?.role || 'owner'}
@@ -240,10 +279,10 @@ export default function Settings() {
             </div>
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                Core API URL
+                {t('settings.labelCoreApiUrl', 'Core API URL')}
               </label>
               <p className="text-[#525252] text-sm font-mono truncate" title={coreApiUrl}>
-                {coreApiUrl || '\u2014'}
+                {coreApiUrl || '—'}
               </p>
             </div>
           </div>
@@ -253,33 +292,33 @@ export default function Settings() {
         <SectionCard>
           <SectionHeader
             icon={Globe}
-            title="Connection Details"
-            description="Use these values to configure API clients and integrations"
+            title={t('settings.connectionDetails', 'Connection Details')}
+            description={t('settings.connectionDetailsDesc', 'Use these values to configure API clients and integrations')}
           />
           <div className="space-y-3">
             <ReadOnlyField
-              label="Control Plane URL"
+              label={t('settings.labelControlPlaneUrl', 'Control Plane URL')}
               value={controlPlaneUrl}
               field="controlPlane"
               copiedField={copiedField}
               onCopy={handleCopy}
             />
             <ReadOnlyField
-              label="Core API Base URL"
+              label={t('settings.labelCoreApiBaseUrl', 'Core API Base URL')}
               value={coreApiUrl}
               field="coreApi"
               copiedField={copiedField}
               onCopy={handleCopy}
             />
             <ReadOnlyField
-              label="User ID"
+              label={t('settings.labelUserId', 'User ID')}
               value={user?.id}
               field="userId"
               copiedField={copiedField}
               onCopy={handleCopy}
             />
             <ReadOnlyField
-              label="Org ID"
+              label={t('settings.labelOrgId', 'Org ID')}
               value={org?.id}
               field="orgId"
               copiedField={copiedField}
@@ -293,75 +332,39 @@ export default function Settings() {
           <SectionCard>
             <SectionHeader
               icon={Shield}
-              title="Project Access Policy"
-              description="Default access control for new projects"
+              title={t('settings.projectAccessPolicy', 'Project Access Policy')}
+              description={t('settings.projectAccessPolicyDesc', 'Default access control for new projects')}
             />
             <div className="space-y-3">
               <div className="space-y-2">
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
-                  <input
-                    type="radio"
-                    name="projectPolicy"
-                    value="private"
-                    checked={projectPolicy === 'private'}
-                    onChange={(e) => setProjectPolicy(e.target.value)}
-                    className="w-4 h-4 text-[#117dff]"
-                  />
-                  <div>
-                    <div className="text-[#0a0a0a] text-sm font-medium">Private (default)</div>
-                    <div className="text-[#a3a3a3] text-xs mt-0.5">
-                      Creator + explicitly invited members only
+                {projectPolicyOptions.map(({ value, label, description }) => (
+                  <label key={value} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
+                    <input
+                      type="radio"
+                      name="projectPolicy"
+                      value={value}
+                      checked={projectPolicy === value}
+                      onChange={(e) => setProjectPolicy(e.target.value)}
+                      className="w-4 h-4 text-[#117dff]"
+                    />
+                    <div>
+                      <div className="text-[#0a0a0a] text-sm font-medium">{label}</div>
+                      <div className="text-[#a3a3a3] text-xs mt-0.5">{description}</div>
                     </div>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
-                  <input
-                    type="radio"
-                    name="projectPolicy"
-                    value="team_inherited"
-                    checked={projectPolicy === 'team_inherited'}
-                    onChange={(e) => setProjectPolicy(e.target.value)}
-                    className="w-4 h-4 text-[#117dff]"
-                  />
-                  <div>
-                    <div className="text-[#0a0a0a] text-sm font-medium">Team Inherited</div>
-                    <div className="text-[#a3a3a3] text-xs mt-0.5">
-                      All team members auto-granted access when project has a team
-                    </div>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
-                  <input
-                    type="radio"
-                    name="projectPolicy"
-                    value="org_visible"
-                    checked={projectPolicy === 'org_visible'}
-                    onChange={(e) => setProjectPolicy(e.target.value)}
-                    className="w-4 h-4 text-[#117dff]"
-                  />
-                  <div>
-                    <div className="text-[#0a0a0a] text-sm font-medium">Org Visible</div>
-                    <div className="text-[#a3a3a3] text-xs mt-0.5">
-                      Discoverable by all org members, access on request
-                    </div>
-                  </div>
-                </label>
+                  </label>
+                ))}
               </div>
 
               {/* Memory-save policy — separate axis from project provisioning */}
               <div className="pt-4 mt-2 border-t border-[#ece8de]">
                 <div className="text-[11px] text-[#a3a3a3] uppercase tracking-wide mb-2 font-semibold">
-                  Memory save policy
+                  {t('settings.memorySavePolicy', 'Memory save policy')}
                 </div>
                 <p className="text-[11px] text-[#a3a3a3] mb-3">
-                  Where MCP <code className="font-mono text-[10px] bg-[#faf9f4] px-1 rounded">save_memory</code> routes when the caller omits a project.
+                  {t('settings.memorySavePolicyDesc', 'Where MCP')} <code className="font-mono text-[10px] bg-[#faf9f4] px-1 rounded">save_memory</code> {t('settings.memorySavePolicyDesc2', 'routes when the caller omits a project.')}
                 </p>
                 <div className="space-y-2">
-                  {[
-                    { v: 'private',  t: 'Private (default)', d: 'Save to caller default project; falls through to org-wide.' },
-                    { v: 'org-wide', t: 'Org-wide',           d: 'Always saves org-wide unless project explicitly passed.' },
-                    { v: 'ask',      t: 'Ask',                d: 'Server hints Claude to ask the user which project on every save.' },
-                  ].map(({ v, t, d }) => (
+                  {memoryPolicyOptions.map(({ v, t: label, d }) => (
                     <label key={v} className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-[#faf9f4] transition-colors">
                       <input
                         type="radio"
@@ -372,7 +375,7 @@ export default function Settings() {
                         className="w-4 h-4 text-[#117dff]"
                       />
                       <div>
-                        <div className="text-[#0a0a0a] text-sm font-medium">{t}</div>
+                        <div className="text-[#0a0a0a] text-sm font-medium">{label}</div>
                         <div className="text-[#a3a3a3] text-xs mt-0.5">{d}</div>
                       </div>
                     </label>
@@ -389,10 +392,10 @@ export default function Settings() {
                 ) : policySaved ? (
                   <>
                     <Check size={14} />
-                    Saved
+                    {t('settings.saved', 'Saved')}
                   </>
                 ) : (
-                  'Save Policy'
+                  t('settings.savePolicy', 'Save Policy')
                 )}
               </button>
             </div>
@@ -407,10 +410,10 @@ export default function Settings() {
             </div>
             <div>
               <h3 className="text-[#dc2626] text-base font-semibold font-['Space_Grotesk']">
-                Danger Zone
+                {t('settings.dangerZone', 'Danger Zone')}
               </h3>
               <p className="text-[#525252] text-sm mt-0.5">
-                These actions are destructive and cannot be undone.
+                {t('settings.dangerZoneDesc', 'These actions are destructive and cannot be undone.')}
               </p>
             </div>
           </div>
@@ -420,17 +423,17 @@ export default function Settings() {
             <div className="flex items-center justify-between bg-white border border-red-200 rounded-xl px-4 py-3">
               <div>
                 <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">
-                  Sign Out of All Sessions
+                  {t('settings.signOutAllSessions', 'Sign Out of All Sessions')}
                 </p>
                 <p className="text-[#a3a3a3] text-xs mt-0.5">
-                  Invalidates all active sessions across devices.
+                  {t('settings.signOutAllDesc', 'Invalidates all active sessions across devices.')}
                 </p>
               </div>
               <button
                 onClick={handleSignOutAll}
                 className="flex items-center gap-1.5 text-[#dc2626] hover:text-[#dc2626] text-xs font-mono bg-red-500/10 hover:bg-red-50 border border-red-200 rounded-lg px-3 py-2 transition-colors flex-shrink-0 ml-4"
               >
-                Sign Out
+                {t('settings.signOutBtn', 'Sign Out')}
               </button>
             </div>
 
@@ -438,10 +441,10 @@ export default function Settings() {
             <div className="flex items-center justify-between bg-white border border-red-200 rounded-xl px-4 py-3">
               <div>
                 <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">
-                  Revoke All API Keys
+                  {t('settings.revokeAllKeys', 'Revoke All API Keys')}
                 </p>
                 <p className="text-[#a3a3a3] text-xs mt-0.5">
-                  All existing API keys will stop working immediately.
+                  {t('settings.revokeAllKeysDesc', 'All existing API keys will stop working immediately.')}
                 </p>
               </div>
               {showRevokeConfirm ? (
@@ -450,7 +453,7 @@ export default function Settings() {
                     onClick={() => setShowRevokeConfirm(false)}
                     className="text-[#525252] hover:text-[#525252] text-xs font-mono px-3 py-2 transition-colors"
                   >
-                    Cancel
+                    {t('settings.cancel', 'Cancel')}
                   </button>
                   <button
                     onClick={handleRevokeAllKeys}
@@ -462,7 +465,7 @@ export default function Settings() {
                     ) : (
                       <Trash2 size={12} />
                     )}
-                    Confirm Revoke
+                    {t('settings.confirmRevoke', 'Confirm Revoke')}
                   </button>
                 </div>
               ) : (
@@ -471,7 +474,7 @@ export default function Settings() {
                   className="flex items-center gap-1.5 text-[#dc2626] hover:text-[#dc2626] text-xs font-mono bg-red-500/10 hover:bg-red-50 border border-red-200 rounded-lg px-3 py-2 transition-colors flex-shrink-0 ml-4"
                 >
                   <Trash2 size={12} />
-                  Revoke All
+                  {t('settings.revokeAll', 'Revoke All')}
                 </button>
               )}
             </div>
@@ -482,21 +485,19 @@ export default function Settings() {
         <SectionCard>
           <SectionHeader
             icon={Info}
-            title="About HIVEMIND"
-            description="Persistent memory engine for AI agents"
+            title={t('settings.aboutTitle', 'About HIVEMIND')}
+            description={t('settings.aboutDesc', 'Persistent memory engine for AI agents')}
           />
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">
-                Version
+                {t('settings.version', 'Version')}
               </span>
               <span className="text-[#525252] text-sm font-mono">{HIVEMIND_VERSION}</span>
             </div>
             <div className="border-t border-[#eae7e1] pt-3">
               <p className="text-[#a3a3a3] text-sm leading-relaxed mb-4">
-                HIVEMIND is a persistent memory engine that gives AI agents long-term recall,
-                semantic search, and cross-session context. Memories are stored, versioned,
-                and retrievable across all connected clients.
+                {t('settings.aboutBody', 'HIVEMIND is a persistent memory engine that gives AI agents long-term recall, semantic search, and cross-session context. Memories are stored, versioned, and retrievable across all connected clients.')}
               </p>
               <div className="flex items-center gap-4">
                 <a
@@ -505,7 +506,7 @@ export default function Settings() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-[#117dff] hover:text-[#0066e0] text-xs font-mono transition-colors"
                 >
-                  Documentation
+                  {t('settings.documentation', 'Documentation')}
                   <ExternalLink size={11} />
                 </a>
                 <a
@@ -514,7 +515,7 @@ export default function Settings() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-[#117dff] hover:text-[#0066e0] text-xs font-mono transition-colors"
                 >
-                  Support
+                  {t('settings.support', 'Support')}
                   <ExternalLink size={11} />
                 </a>
               </div>

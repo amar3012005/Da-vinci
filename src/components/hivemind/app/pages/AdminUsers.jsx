@@ -14,6 +14,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import ShareInviteModal from '../components/ShareInviteModal';
+import { useTranslation } from 'react-i18next';
 
 // Roles available for assignment — mirrors ROLES set in backend permissions.js
 const ALL_ROLES = [
@@ -46,6 +47,7 @@ function RoleChip({ role }) {
 }
 
 function StatusBadge({ isActive }) {
+  const { t } = useTranslation('dashboard');
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
@@ -55,7 +57,7 @@ function StatusBadge({ isActive }) {
       }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
-      {isActive ? 'Active' : 'Inactive'}
+      {isActive ? t('adminusers.statusActive', 'Active') : t('adminusers.statusInactive', 'Inactive')}
     </span>
   );
 }
@@ -68,6 +70,7 @@ function formatDate(iso) {
 // ─── Edit Roles Modal ─────────────────────────────────────────────────────────
 
 function EditRolesModal({ member, onClose, onSave }) {
+  const { t } = useTranslation('dashboard');
   const [selected, setSelected] = useState(member.roles || []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -80,7 +83,7 @@ function EditRolesModal({ member, onClose, onSave }) {
 
   async function handleSave() {
     if (selected.length === 0) {
-      setError('At least one role must be selected');
+      setError(t('adminusers.editRolesAtLeastOne', 'At least one role must be selected'));
       return;
     }
     setSaving(true);
@@ -99,7 +102,7 @@ function EditRolesModal({ member, onClose, onSave }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">Edit Roles</h2>
+          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">{t('adminusers.editRolesTitle', 'Edit Roles')}</h2>
           <button onClick={onClose} className="text-[#737373] hover:text-[#0a0a0a]">
             <X size={18} />
           </button>
@@ -132,14 +135,14 @@ function EditRolesModal({ member, onClose, onSave }) {
             onClick={onClose}
             className="px-4 py-2 text-[13px] text-[#525252] hover:bg-[#f3f1ec] rounded-lg transition-colors"
           >
-            Cancel
+            {t('adminusers.cancel', 'Cancel')}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="px-4 py-2 text-[13px] font-medium bg-[#117dff] text-white rounded-lg hover:bg-[#0e6de0] transition-colors disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('adminusers.saving', 'Saving…') : t('adminusers.save', 'Save')}
           </button>
         </div>
       </div>
@@ -150,6 +153,7 @@ function EditRolesModal({ member, onClose, onSave }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminUsers() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -220,10 +224,10 @@ export default function AdminUsers() {
         <div>
           <h1 className="text-[20px] font-semibold text-[#0a0a0a] flex items-center gap-2">
             <Users size={20} className="text-[#117dff]" />
-            Admin Users
+            {t('adminusers.title', 'Admin Users')}
           </h1>
           <p className="text-[13px] text-[#737373] mt-0.5">
-            Manage organization members, roles, and access control.
+            {t('adminusers.subtitle', 'Manage organization members, roles, and access control.')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -232,14 +236,14 @@ export default function AdminUsers() {
             className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-[#525252] border border-[#e3e0db] rounded-lg hover:bg-[#f3f1ec] transition-colors"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            {t('adminusers.refresh', 'Refresh')}
           </button>
           <button
             onClick={() => setShowInvite(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium bg-[#117dff] text-white rounded-lg hover:bg-[#0e6de0] transition-colors"
           >
             <UserPlus size={14} />
-            Invite
+            {t('adminusers.invite', 'Invite')}
           </button>
         </div>
       </div>
@@ -258,19 +262,19 @@ export default function AdminUsers() {
           <thead>
             <tr className="border-b border-[#e3e0db] bg-[#faf9f4]">
               <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#737373] uppercase tracking-wide">
-                Member
+                {t('adminusers.colMember', 'Member')}
               </th>
               <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#737373] uppercase tracking-wide">
-                Roles
+                {t('adminusers.colRoles', 'Roles')}
               </th>
               <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#737373] uppercase tracking-wide">
-                Status
+                {t('adminusers.colStatus', 'Status')}
               </th>
               <th className="text-left px-4 py-3 text-[11px] font-semibold text-[#737373] uppercase tracking-wide">
-                Last Active
+                {t('adminusers.colLastActive', 'Last Active')}
               </th>
               <th className="text-right px-4 py-3 text-[11px] font-semibold text-[#737373] uppercase tracking-wide">
-                Actions
+                {t('adminusers.colActions', 'Actions')}
               </th>
             </tr>
           </thead>
@@ -278,14 +282,14 @@ export default function AdminUsers() {
             {loading && members.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-[#737373]">
-                  Loading…
+                  {t('adminusers.loading', 'Loading…')}
                 </td>
               </tr>
             )}
             {!loading && members.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-[#737373]">
-                  No members found.
+                  {t('adminusers.noMembers', 'No members found.')}
                 </td>
               </tr>
             )}
@@ -319,7 +323,7 @@ export default function AdminUsers() {
                     {/* Edit roles */}
                     <button
                       onClick={() => setEditTarget(member)}
-                      title="Edit roles"
+                      title={t('adminusers.editRolesTitle', 'Edit roles')}
                       className="p-1.5 text-[#737373] hover:text-[#117dff] hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Edit2 size={14} />
@@ -328,7 +332,7 @@ export default function AdminUsers() {
                     {/* View audit activity */}
                     <a
                       href={`/hivemind/app/audit?user_id=${member.user_id}`}
-                      title="View activity"
+                      title={t('adminusers.viewActivity', 'View activity')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 text-[#737373] hover:text-[#117dff] hover:bg-blue-50 rounded-lg transition-colors"
@@ -340,7 +344,7 @@ export default function AdminUsers() {
                     {member.is_active !== false ? (
                       <button
                         onClick={() => handleDeactivate(member)}
-                        title="Deactivate"
+                        title={t('adminusers.deactivate', 'Deactivate')}
                         className="p-1.5 text-[#737373] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <UserX size={14} />
@@ -348,7 +352,7 @@ export default function AdminUsers() {
                     ) : (
                       <button
                         onClick={() => handleReactivate(member)}
-                        title="Reactivate"
+                        title={t('adminusers.reactivate', 'Reactivate')}
                         className="p-1.5 text-[#737373] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                       >
                         <UserCheck size={14} />
@@ -358,7 +362,7 @@ export default function AdminUsers() {
                     {/* Remove from org (hard removal, frees seat) */}
                     <button
                       onClick={() => setRemoveTarget(member)}
-                      title="Remove from organization"
+                      title={t('adminusers.removeFromOrg', 'Remove from organization')}
                       className="p-1.5 text-[#737373] hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={14} />
@@ -372,7 +376,8 @@ export default function AdminUsers() {
       </div>
 
       <p className="text-[11px] text-[#737373]">
-        {members.length} member{members.length !== 1 ? 's' : ''}
+        {t('adminusers.memberCount', '{{count}} member', { count: members.length })}
+        {members.length !== 1 ? t('adminusers.memberCountPlural', 's') : ''}
       </p>
 
       {/* Edit roles modal */}
@@ -401,10 +406,10 @@ export default function AdminUsers() {
                 <AlertCircle size={20} className="text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-[15px] font-semibold text-[#0a0a0a]">Remove from organization?</h3>
+                <h3 className="text-[15px] font-semibold text-[#0a0a0a]">{t('adminusers.removeConfirmTitle', 'Remove from organization?')}</h3>
                 <p className="text-[13px] text-[#525252] mt-1">
-                  This permanently removes <span className="font-medium">{removeTarget.display_name || removeTarget.email}</span>{' '}
-                  from the org. They lose access immediately. Their data stays with the org unless they delete their account.
+                  {t('adminusers.removeConfirmBody', 'This permanently removes')} <span className="font-medium">{removeTarget.display_name || removeTarget.email}</span>{' '}
+                  {t('adminusers.removeConfirmBodySuffix', 'from the org. They lose access immediately. Their data stays with the org unless they delete their account.')}
                 </p>
               </div>
               <button onClick={() => setRemoveTarget(null)} className="text-[#737373] hover:text-[#0a0a0a]">
@@ -416,14 +421,14 @@ export default function AdminUsers() {
                 onClick={() => setRemoveTarget(null)}
                 className="px-3 py-2 text-[12px] text-[#525252] border border-[#e3e0db] rounded-lg hover:bg-[#f3f1ec] transition-colors"
               >
-                Cancel
+                {t('adminusers.cancel', 'Cancel')}
               </button>
               <button
                 onClick={() => handleRemove(removeTarget)}
                 className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 <Trash2 size={13} />
-                Remove
+                {t('adminusers.removeButton', 'Remove')}
               </button>
             </div>
           </div>

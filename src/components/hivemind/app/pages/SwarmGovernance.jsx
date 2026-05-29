@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 
 const STATUS_COLORS = {
@@ -13,6 +14,7 @@ const STATUS_COLORS = {
 function fmt(n) { return (n ?? 0).toLocaleString(); }
 
 export default function SwarmGovernance() {
+  const { t } = useTranslation('dashboard');
   const [metrics, setMetrics] = useState(null);
   const [actions, setActions] = useState([]);
   const [statusFilter, setStatusFilter] = useState('proposed');
@@ -31,9 +33,9 @@ export default function SwarmGovernance() {
       ]);
       setMetrics(m); setActions(log.actions || []);
     } catch (err) {
-      setError(err?.response?.data?.error || err?.message || 'load failed');
+      setError(err?.response?.data?.error || err?.message || t('swarmgovernance.loadFailed', 'load failed'));
     } finally { setLoading(false); }
-  }, [windowDays, statusFilter]);
+  }, [windowDays, statusFilter, t]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -45,7 +47,7 @@ export default function SwarmGovernance() {
       setTimeout(() => setToast(null), 4000);
       refresh();
     } catch (err) {
-      setError(err?.response?.data?.error || err?.message || 'cycle failed');
+      setError(err?.response?.data?.error || err?.message || t('swarmgovernance.cycleFailed', 'cycle failed'));
     } finally { setLoading(false); }
   };
 
@@ -57,7 +59,7 @@ export default function SwarmGovernance() {
       setTimeout(() => setToast(null), 4000);
       refresh();
     } catch (err) {
-      setError(err?.response?.data?.error || 'approve failed');
+      setError(err?.response?.data?.error || t('swarmgovernance.approveFailed', 'approve failed'));
     } finally { setPendingActionId(null); }
   };
 
@@ -65,41 +67,50 @@ export default function SwarmGovernance() {
     setPendingActionId(id);
     try {
       await apiClient.rejectGovernanceAction(id);
-      setToast('rejected');
+      setToast(t('swarmgovernance.toastRejected', 'rejected'));
       setTimeout(() => setToast(null), 4000);
       refresh();
     } catch (err) {
-      setError(err?.response?.data?.error || 'reject failed');
+      setError(err?.response?.data?.error || t('swarmgovernance.rejectFailed', 'reject failed'));
     } finally { setPendingActionId(null); }
   };
 
   const rollback = async (batchId) => {
-    if (!window.confirm(`Rollback every applied action in batch ${batchId.slice(0,8)}?`)) return;
+    if (!window.confirm(t('swarmgovernance.rollbackConfirm', 'Rollback every applied action in batch {{id}}?', { id: batchId.slice(0,8) }))) return;
     setLoading(true);
     try {
       const r = await apiClient.rollbackGovernanceBatch(batchId);
-      setToast(`reverted ${r.reverted}/${r.attempted}`);
+      setToast(t('swarmgovernance.toastReverted', 'reverted {{reverted}}/{{attempted}}', { reverted: r.reverted, attempted: r.attempted }));
       setTimeout(() => setToast(null), 4000);
       refresh();
     } catch (err) {
-      setError(err?.response?.data?.error || 'rollback failed');
+      setError(err?.response?.data?.error || t('swarmgovernance.rollbackFailed', 'rollback failed'));
     } finally { setLoading(false); }
   };
 
-  const t = metrics?.totals || {};
+  const totals = metrics?.totals || {};
+  const statCards = [
+    [t('swarmgovernance.statusProposed', 'Proposed'), totals.actions_proposed, STATUS_COLORS.proposed],
+    [t('swarmgovernance.statusApproved', 'Approved'), totals.actions_approved, STATUS_COLORS.approved],
+    [t('swarmgovernance.statusApplied',  'Applied'),  totals.actions_applied,  STATUS_COLORS.applied],
+    [t('swarmgovernance.statusReverted', 'Reverted'), totals.actions_reverted, STATUS_COLORS.reverted],
+    [t('swarmgovernance.statusRejected', 'Rejected'), totals.actions_rejected, STATUS_COLORS.rejected],
+    [t('swarmgovernance.statusFailed',   'Failed'),   totals.actions_failed,   STATUS_COLORS.failed],
+  ];
+
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', color: '#222', maxWidth: 1200 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Governance</h2>
+        <h2 style={{ margin: 0 }}>{t('swarmgovernance.title', 'Governance')}</h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <select value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
-            <option value={1}>1 day</option>
-            <option value={7}>7 days</option>
-            <option value={30}>30 days</option>
+            <option value={1}>{t('swarmgovernance.window1Day', '1 day')}</option>
+            <option value={7}>{t('swarmgovernance.window7Days', '7 days')}</option>
+            <option value={30}>{t('swarmgovernance.window30Days', '30 days')}</option>
           </select>
-          <button onClick={refresh} disabled={loading}>Refresh</button>
+          <button onClick={refresh} disabled={loading}>{t('swarmgovernance.btnRefresh', 'Refresh')}</button>
           <button onClick={triggerCycle} disabled={loading} style={{ background: '#3c7', color: '#fff', padding: '4px 12px', border: 'none', borderRadius: 4 }}>
-            Run cycle
+            {t('swarmgovernance.btnRunCycle', 'Run cycle')}
           </button>
         </div>
       </div>
@@ -116,14 +127,7 @@ export default function SwarmGovernance() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 20 }}>
-        {[
-          ['Proposed', t.actions_proposed, STATUS_COLORS.proposed],
-          ['Approved', t.actions_approved, STATUS_COLORS.approved],
-          ['Applied',  t.actions_applied,  STATUS_COLORS.applied],
-          ['Reverted', t.actions_reverted, STATUS_COLORS.reverted],
-          ['Rejected', t.actions_rejected, STATUS_COLORS.rejected],
-          ['Failed',   t.actions_failed,   STATUS_COLORS.failed],
-        ].map(([label, n, color]) => (
+        {statCards.map(([label, n, color]) => (
           <div key={label} style={{ background: '#fafafa', border: `1px solid ${color}`, padding: 12, borderRadius: 6 }}>
             <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase' }}>{label}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color }}>{fmt(n)}</div>
@@ -133,15 +137,15 @@ export default function SwarmGovernance() {
 
       {metrics?.agent_state?.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 14, color: '#666' }}>Agent state</h3>
+          <h3 style={{ fontSize: 14, color: '#666' }}>{t('swarmgovernance.agentStateHeading', 'Agent state')}</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f0f0f0' }}>
-                <th style={{ textAlign: 'left', padding: 6 }}>Agent</th>
-                <th style={{ textAlign: 'left', padding: 6 }}>Last run</th>
-                <th style={{ textAlign: 'right', padding: 6 }}>Tokens today</th>
-                <th style={{ textAlign: 'right', padding: 6 }}>Daily budget</th>
-                <th style={{ textAlign: 'left', padding: 6 }}>Circuit-breaker</th>
+                <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colAgent', 'Agent')}</th>
+                <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colLastRun', 'Last run')}</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>{t('swarmgovernance.colTokensToday', 'Tokens today')}</th>
+                <th style={{ textAlign: 'right', padding: 6 }}>{t('swarmgovernance.colDailyBudget', 'Daily budget')}</th>
+                <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colCircuitBreaker', 'Circuit-breaker')}</th>
               </tr>
             </thead>
             <tbody>
@@ -160,26 +164,26 @@ export default function SwarmGovernance() {
       )}
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
-        <h3 style={{ margin: 0 }}>Action log</h3>
+        <h3 style={{ margin: 0 }}>{t('swarmgovernance.actionLogHeading', 'Action log')}</h3>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="proposed">proposed</option>
-          <option value="approved">approved</option>
-          <option value="applied">applied</option>
-          <option value="reverted">reverted</option>
-          <option value="rejected">rejected</option>
-          <option value="failed">failed</option>
+          <option value="proposed">{t('swarmgovernance.statusProposed', 'Proposed')}</option>
+          <option value="approved">{t('swarmgovernance.statusApproved', 'Approved')}</option>
+          <option value="applied">{t('swarmgovernance.statusApplied', 'Applied')}</option>
+          <option value="reverted">{t('swarmgovernance.statusReverted', 'Reverted')}</option>
+          <option value="rejected">{t('swarmgovernance.statusRejected', 'Rejected')}</option>
+          <option value="failed">{t('swarmgovernance.statusFailed', 'Failed')}</option>
         </select>
       </div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ background: '#f0f0f0' }}>
-            <th style={{ textAlign: 'left', padding: 6 }}>Agent</th>
-            <th style={{ textAlign: 'left', padding: 6 }}>Action</th>
-            <th style={{ textAlign: 'right', padding: 6 }}>Confidence</th>
-            <th style={{ textAlign: 'left', padding: 6 }}>Batch</th>
-            <th style={{ textAlign: 'left', padding: 6 }}>Created</th>
-            <th style={{ textAlign: 'right', padding: 6 }}>Controls</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colAgent', 'Agent')}</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colAction', 'Action')}</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>{t('swarmgovernance.colConfidence', 'Confidence')}</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colBatch', 'Batch')}</th>
+            <th style={{ textAlign: 'left', padding: 6 }}>{t('swarmgovernance.colCreated', 'Created')}</th>
+            <th style={{ textAlign: 'right', padding: 6 }}>{t('swarmgovernance.colControls', 'Controls')}</th>
           </tr>
         </thead>
         <tbody>
@@ -193,35 +197,35 @@ export default function SwarmGovernance() {
               <td style={{ padding: 6, textAlign: 'right' }}>
                 {a.status === 'proposed' && (
                   <>
-                    <button disabled={pendingActionId === a.id} onClick={() => approve(a.id)} style={{ marginRight: 4, background: '#3c7', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>Approve</button>
-                    <button disabled={pendingActionId === a.id} onClick={() => reject(a.id)} style={{ background: '#a55', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>Reject</button>
+                    <button disabled={pendingActionId === a.id} onClick={() => approve(a.id)} style={{ marginRight: 4, background: '#3c7', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>{t('swarmgovernance.btnApprove', 'Approve')}</button>
+                    <button disabled={pendingActionId === a.id} onClick={() => reject(a.id)} style={{ background: '#a55', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>{t('swarmgovernance.btnReject', 'Reject')}</button>
                   </>
                 )}
                 {a.status === 'applied' && (
-                  <button onClick={() => rollback(a.batch_id)} style={{ background: '#c80', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>Rollback batch</button>
+                  <button onClick={() => rollback(a.batch_id)} style={{ background: '#c80', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: 3, cursor: 'pointer' }}>{t('swarmgovernance.btnRollbackBatch', 'Rollback batch')}</button>
                 )}
                 <span style={{ marginLeft: 8, color: STATUS_COLORS[a.status], fontWeight: 600, textTransform: 'uppercase', fontSize: 10 }}>{a.status}</span>
               </td>
             </tr>
           ))}
           {actions.length === 0 && (
-            <tr><td colSpan={6} style={{ padding: 12, color: '#888', textAlign: 'center' }}>no actions in this state</td></tr>
+            <tr><td colSpan={6} style={{ padding: 12, color: '#888', textAlign: 'center' }}>{t('swarmgovernance.noActionsInState', 'no actions in this state')}</td></tr>
           )}
         </tbody>
       </table>
 
       {metrics?.by_day?.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <h3 style={{ fontSize: 14, color: '#666' }}>Daily breakdown</h3>
+          <h3 style={{ fontSize: 14, color: '#666' }}>{t('swarmgovernance.dailyBreakdownHeading', 'Daily breakdown')}</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#f0f0f0' }}>
-                <th style={{ textAlign: 'left', padding: 4 }}>Day</th>
-                <th style={{ textAlign: 'left', padding: 4 }}>Agent</th>
-                <th style={{ textAlign: 'right', padding: 4 }}>Proposed</th>
-                <th style={{ textAlign: 'right', padding: 4 }}>Applied</th>
-                <th style={{ textAlign: 'right', padding: 4 }}>Reverted</th>
-                <th style={{ textAlign: 'right', padding: 4 }}>Latency p95</th>
+                <th style={{ textAlign: 'left', padding: 4 }}>{t('swarmgovernance.colDay', 'Day')}</th>
+                <th style={{ textAlign: 'left', padding: 4 }}>{t('swarmgovernance.colAgent', 'Agent')}</th>
+                <th style={{ textAlign: 'right', padding: 4 }}>{t('swarmgovernance.statusProposed', 'Proposed')}</th>
+                <th style={{ textAlign: 'right', padding: 4 }}>{t('swarmgovernance.statusApplied', 'Applied')}</th>
+                <th style={{ textAlign: 'right', padding: 4 }}>{t('swarmgovernance.statusReverted', 'Reverted')}</th>
+                <th style={{ textAlign: 'right', padding: 4 }}>{t('swarmgovernance.colLatencyP95', 'Latency p95')}</th>
               </tr>
             </thead>
             <tbody>

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
@@ -137,6 +138,8 @@ function UploadScopeModal({
   onConfirm,
   onClose,
 }) {
+  const { t } = useTranslation('dashboard');
+
   if (!open) return null;
 
   const requiresProject = selectedScope === 'organization' && projects.length > 0;
@@ -161,9 +164,9 @@ function UploadScopeModal({
         >
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">Save uploaded memories to</h3>
+              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">{t('knowledgebase.scopeModalTitle', 'Save uploaded memories to')}</h3>
               <p className="text-[#525252] text-sm mt-1">
-                Choose where these files should live before upload starts.
+                {t('knowledgebase.scopeModalSubtitle', 'Choose where these files should live before upload starts.')}
               </p>
             </div>
             <button
@@ -177,7 +180,7 @@ function UploadScopeModal({
 
           <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
             <p className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">
-              Upload batch
+              {t('knowledgebase.uploadBatch', 'Upload batch')}
             </p>
             <div className="space-y-1">
               {files.map((file) => (
@@ -204,8 +207,8 @@ function UploadScopeModal({
                   <User size={16} className="text-[#117dff]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">My Space</p>
-                  <p className="text-xs text-[#525252]">Private memories only visible in your personal workspace.</p>
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopePersonalLabel', 'My Space')}</p>
+                  <p className="text-xs text-[#525252]">{t('knowledgebase.scopePersonalDesc', 'Private memories only visible in your personal workspace.')}</p>
                 </div>
               </div>
             </button>
@@ -225,9 +228,11 @@ function UploadScopeModal({
                   <Users size={16} className="text-[#117dff]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Team Workspace</p>
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeTeamLabel', 'Team Workspace')}</p>
                   <p className="text-xs text-[#525252]">
-                    Shared with your org{org?.name ? `: ${org.name}` : ''}.
+                    {org?.name
+                      ? t('knowledgebase.scopeTeamDescNamed', 'Shared with your org: {{name}}', { name: org.name })
+                      : t('knowledgebase.scopeTeamDesc', 'Shared with your org.')}
                   </p>
                 </div>
               </div>
@@ -238,10 +243,10 @@ function UploadScopeModal({
             <div className="mt-5">
               <div className="flex items-center gap-2 mb-2">
                 <FolderKanban size={14} className="text-[#525252]" />
-                <p className="text-xs font-mono uppercase tracking-[0.08em] text-[#525252]">Project</p>
+                <p className="text-xs font-mono uppercase tracking-[0.08em] text-[#525252]">{t('knowledgebase.project', 'Project')}</p>
               </div>
               {loadingProjects ? (
-                <p className="text-xs text-[#a3a3a3]">Loading projects...</p>
+                <p className="text-xs text-[#a3a3a3]">{t('knowledgebase.loadingProjects', 'Loading projects...')}</p>
               ) : projects.length > 0 ? (
                 <>
                   <select
@@ -249,7 +254,7 @@ function UploadScopeModal({
                     onChange={(e) => onProjectChange(e.target.value)}
                     className="w-full rounded-[8px] border border-[#e3e0db] px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
                   >
-                    <option value="">Select a team project</option>
+                    <option value="">{t('knowledgebase.selectTeamProject', 'Select a team project')}</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.slug}>
                         {project.name} ({project.slug})
@@ -257,12 +262,12 @@ function UploadScopeModal({
                     ))}
                   </select>
                   <p className="mt-2 text-[11px] text-[#a3a3a3]">
-                    Team uploads should be attached to a project when projects exist.
+                    {t('knowledgebase.teamUploadsHint', 'Team uploads should be attached to a project when projects exist.')}
                   </p>
                 </>
               ) : (
                 <p className="text-xs text-[#a3a3a3]">
-                  No team projects yet. This upload will be shared to the team workspace without a project bucket.
+                  {t('knowledgebase.noTeamProjects', 'No team projects yet. This upload will be shared to the team workspace without a project bucket.')}
                 </p>
               )}
             </div>
@@ -274,7 +279,7 @@ function UploadScopeModal({
               onClick={onClose}
               className="rounded-[8px] border border-[#e3e0db] px-4 py-2.5 text-sm font-semibold text-[#525252]"
             >
-              Cancel
+              {t('knowledgebase.cancel', 'Cancel')}
             </button>
             <button
               type="button"
@@ -283,7 +288,7 @@ function UploadScopeModal({
               className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e6fe0] disabled:opacity-50"
             >
               <Upload size={14} />
-              Upload files
+              {t('knowledgebase.uploadFiles', 'Upload files')}
             </button>
           </div>
         </motion.div>
@@ -337,6 +342,8 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
     }
   }, [detectionResult]);
 
+  const { t } = useTranslation('dashboard');
+
   if (!open || !detectionResult) return null;
 
   const handleSubmit = () => {
@@ -369,7 +376,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {/* Header */}
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">Document Analysis</h3>
+              <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk']">{t('knowledgebase.documentAnalysis', 'Document Analysis')}</h3>
               <p className="text-[#525252] text-sm mt-1 truncate max-w-[340px]">
                 {detectionResult.filename}
               </p>
@@ -396,7 +403,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {/* Detected type */}
           <div className="mb-5">
             <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
-              Detected Type
+              {t('knowledgebase.detectedType', 'Detected Type')}
             </label>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs text-[#525252] font-['Space_Grotesk']">
@@ -424,7 +431,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {sheetConfigs.length > 0 && (
             <div className="mb-5">
               <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
-                Sheets
+                {t('knowledgebase.sheets', 'Sheets')}
               </label>
               <div className="space-y-2">
                 {sheetConfigs.map((sheet, idx) => (
@@ -478,7 +485,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {/* Tags input */}
           <div className="mb-5">
             <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
-              Tags
+              {t('knowledgebase.tags', 'Tags')}
             </label>
             <div className="flex items-center gap-2">
               <Tag size={12} className="text-[#a3a3a3]" />
@@ -486,7 +493,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
                 type="text"
                 value={modalTags}
                 onChange={(e) => setModalTags(e.target.value)}
-                placeholder="Optional tags (comma-separated)"
+                placeholder={t('knowledgebase.tagsPlaceholder', 'Optional tags (comma-separated)')}
                 className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
               />
             </div>
@@ -495,7 +502,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {/* Scope toggle */}
           <div className="mb-6">
             <label className="text-[11px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2 block">
-              Scope
+              {t('knowledgebase.scope', 'Scope')}
             </label>
             <div className="flex gap-2">
               <button
@@ -508,7 +515,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
                 }`}
               >
                 <User size={12} />
-                Personal
+                {t('knowledgebase.scopePersonal', 'Personal')}
               </button>
               <button
                 type="button"
@@ -520,7 +527,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
                 }`}
               >
                 <Users size={12} />
-                Team
+                {t('knowledgebase.scopeTeam', 'Team')}
               </button>
             </div>
           </div>
@@ -528,7 +535,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
           {/* Reasoning */}
           {detectionResult.reasoning && (
             <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-4 py-3 mb-5">
-              <p className="text-[10px] font-mono text-[#a3a3a3] mb-1">Analysis reasoning</p>
+              <p className="text-[10px] font-mono text-[#a3a3a3] mb-1">{t('knowledgebase.analysisReasoning', 'Analysis reasoning')}</p>
               <p className="text-xs text-[#525252] font-['Space_Grotesk']">{detectionResult.reasoning}</p>
             </div>
           )}
@@ -540,7 +547,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
               onClick={onClose}
               className="rounded-[8px] border border-[#e3e0db] px-4 py-2.5 text-sm font-semibold text-[#525252]"
             >
-              Cancel
+              {t('knowledgebase.cancel', 'Cancel')}
             </button>
             <button
               type="button"
@@ -551,12 +558,12 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
               {ingesting ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Extracting...
+                  {t('knowledgebase.extracting', 'Extracting...')}
                 </>
               ) : (
                 <>
                   <Sparkles size={14} />
-                  Extract &amp; Ingest
+                  {t('knowledgebase.extractAndIngest', 'Extract & Ingest')}
                 </>
               )}
             </button>
@@ -568,6 +575,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 }
 
 export default function KnowledgeBase() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   // Uploads live in a module-level store so they survive navigation away
   // from this page. `setUploads` here is a pass-through writer; the
@@ -1265,9 +1273,9 @@ export default function KnowledgeBase() {
     <div className="min-h-full">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Knowledge Base</h1>
+          <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('knowledgebase.title', 'Knowledge Base')}</h1>
           <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-            Upload documents to create structured, searchable memories
+            {t('knowledgebase.subtitle', 'Upload documents to create structured, searchable memories')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -1278,10 +1286,10 @@ export default function KnowledgeBase() {
           <button
             onClick={() => setPageIndexModalOpen(true)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#117dff] text-white text-xs font-semibold font-['Space_Grotesk'] hover:bg-[#0d5fcc] transition-colors"
-            title="View memory hierarchy map"
+            title={t('knowledgebase.memoryMapTitle', 'View memory hierarchy map')}
           >
             <MapIcon size={14} />
-            Memory Map
+            {t('knowledgebase.memoryMap', 'Memory Map')}
           </button>
         </div>
       </motion.div>
@@ -1324,20 +1332,20 @@ export default function KnowledgeBase() {
           />
           <Upload size={32} className={`mx-auto mb-3 ${dragActive ? 'text-[#117dff]' : 'text-[#d4d0ca]'}`} />
           <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
-            Drop files or folder here, or click to upload
+            {t('knowledgebase.dropZoneLabel', 'Drop files or folder here, or click to upload')}
           </p>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); folderInputRef.current?.click(); }}
             className="mt-2 text-[11px] text-[#117dff] hover:text-[#0a5fcc] underline underline-offset-2"
           >
-            Pick a folder instead
+            {t('knowledgebase.pickFolder', 'Pick a folder instead')}
           </button>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
-            PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file
+            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file')}
           </p>
           <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
-            Files are chunked into semantic sections and stored as searchable memories
+            {t('knowledgebase.chunkedHint', 'Files are chunked into semantic sections and stored as searchable memories')}
           </p>
         </div>
 
@@ -1347,7 +1355,7 @@ export default function KnowledgeBase() {
             type="text"
             value={customTags}
             onChange={(e) => setCustomTags(e.target.value)}
-            placeholder="Optional tags (comma-separated): project-docs, research, notes..."
+            placeholder={t('knowledgebase.tagsFullPlaceholder', 'Optional tags (comma-separated): project-docs, research, notes...')}
             className="flex-1 text-xs font-mono px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[#0a0a0a] placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]"
           />
           <button
@@ -1358,10 +1366,10 @@ export default function KnowledgeBase() {
                 ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/30'
                 : 'bg-white text-[#a3a3a3] border border-[#e3e0db] hover:text-[#525252] hover:border-[#d4d0ca]'
             }`}
-            title="Smart Extract: auto-detect document type, extract structured data from invoices, contracts, spreadsheets"
+            title={t('knowledgebase.smartExtractTitle', 'Smart Extract: auto-detect document type, extract structured data from invoices, contracts, spreadsheets')}
           >
             <Sparkles size={12} />
-            Smart Extract
+            {t('knowledgebase.smartExtract', 'Smart Extract')}
             <div className={`relative w-7 h-4 rounded-full transition-colors ${smartExtract ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${smartExtract ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
             </div>
@@ -1370,7 +1378,7 @@ export default function KnowledgeBase() {
         {detecting && (
           <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-[#117dff]/5 border border-[#117dff]/20">
             <Loader2 size={12} className="text-[#117dff] animate-spin" />
-            <span className="text-xs font-['Space_Grotesk'] text-[#117dff]">Analyzing document type...</span>
+            <span className="text-xs font-['Space_Grotesk'] text-[#117dff]">{t('knowledgebase.analyzing', 'Analyzing document type...')}</span>
           </div>
         )}
       </motion.div>
@@ -1417,10 +1425,10 @@ export default function KnowledgeBase() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-[#92400e]">
-                        Don't close this page yet — {inFlight} file{inFlight === 1 ? '' : 's'} still uploading.
+                        {t('knowledgebase.uploadingWarning', "Don't close this page yet — {{count}} file{{plural}} still uploading.", { count: inFlight, plural: inFlight === 1 ? '' : 's' })}
                       </div>
                       <div className="text-[#a16207] text-[11.5px] mt-0.5">
-                        Once every row shows <span className="font-semibold">Uploaded</span>, you're safe to leave — the server takes over and your new memories surface in 2–5 minutes.
+                        {t('knowledgebase.uploadingHint', 'Once every row shows Uploaded, you\'re safe to leave — the server takes over and your new memories surface in 2–5 minutes.')}
                       </div>
                     </div>
                   </div>
@@ -1434,10 +1442,10 @@ export default function KnowledgeBase() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-[#166534]">
-                        All uploads complete — safe to close this page.
+                        {t('knowledgebase.allUploadsComplete', 'All uploads complete — safe to close this page.')}
                       </div>
                       <div className="text-[#15803d] text-[11.5px] mt-0.5">
-                        The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.
+                        {t('knowledgebase.allUploadsHint', 'The server is now extracting + indexing. New memories will appear in 2–5 minutes on the Memories page.')}
                       </div>
                     </div>
                   </div>
@@ -1476,7 +1484,7 @@ export default function KnowledgeBase() {
                       onClick={handleCancelAll}
                       className="text-[#dc2626] hover:text-[#b91c1c] transition-colors"
                     >
-                      Cancel all
+                      {t('knowledgebase.cancelAll', 'Cancel all')}
                     </button>
                   )}
                 </div>
@@ -1553,12 +1561,12 @@ export default function KnowledgeBase() {
                     <span className="text-[#16a34a]">{u.chunks} chunks</span>
                   )}
                   {u.error && <span className="text-[#dc2626] truncate max-w-[200px]">{u.error}</span>}
-                  {u.status === 'queued' && <span className="text-[#a3a3a3]">Waiting...</span>}
+                  {u.status === 'queued' && <span className="text-[#a3a3a3]">{t('knowledgebase.waiting', 'Waiting...')}</span>}
                   {(u.status === 'queued' || u.status === 'uploading') && u.controller && (
                     <button
                       onClick={() => handleCancelUpload(u.id)}
                       className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors"
-                      title="Cancel this upload"
+                      title={t('knowledgebase.cancelUpload', 'Cancel this upload')}
                     >
                       <X size={12} />
                     </button>
@@ -1571,7 +1579,7 @@ export default function KnowledgeBase() {
                 onClick={() => setUploads((prev) => prev.filter((u) => u.status === 'uploading' || u.status === 'queued'))}
                 className="text-[#a3a3a3] text-[10px] font-mono hover:text-[#525252] transition-colors"
               >
-                Clear completed
+                {t('knowledgebase.clearCompleted', 'Clear completed')}
               </button>
             )}
           </motion.div>
@@ -1582,7 +1590,7 @@ export default function KnowledgeBase() {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-[#525252]" />
-            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Documents</h3>
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('knowledgebase.documents', 'Documents')}</h3>
           </div>
           <div className="relative">
             <select
@@ -1590,7 +1598,7 @@ export default function KnowledgeBase() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="appearance-none rounded-lg border border-[#e3e0db] bg-white pl-3 pr-7 py-1.5 text-xs font-['Space_Grotesk'] text-[#525252] focus:outline-none focus:border-[#117dff]/40 cursor-pointer"
             >
-              <option value="all">All Types</option>
+              <option value="all">{t('knowledgebase.allTypes', 'All Types')}</option>
               {Object.entries(TYPE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
@@ -1731,7 +1739,7 @@ export default function KnowledgeBase() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
                         className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete document + every chunk + every fact + Qdrant vectors"
+                        title={t('knowledgebase.deleteDocTitle', 'Delete document + every chunk + every fact + Qdrant vectors')}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1747,20 +1755,20 @@ export default function KnowledgeBase() {
             {typeFilter !== 'all' && documents.length > 0 ? (
               <>
                 <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">
-                  No {TYPE_LABELS[typeFilter] || typeFilter} documents found
+                  {t('knowledgebase.noTypeDocuments', 'No {{type}} documents found', { type: TYPE_LABELS[typeFilter] || typeFilter })}
                 </p>
                 <button
                   onClick={() => setTypeFilter('all')}
                   className="text-[#117dff] text-xs font-['Space_Grotesk'] hover:underline mt-1"
                 >
-                  Show all documents
+                  {t('knowledgebase.showAllDocuments', 'Show all documents')}
                 </button>
               </>
             ) : (
               <>
-                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">No documents uploaded yet</p>
+                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">{t('knowledgebase.noDocuments', 'No documents uploaded yet')}</p>
                 <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-                  Upload PDFs, documents, or text files to build your knowledge base
+                  {t('knowledgebase.noDocumentsHint', 'Upload PDFs, documents, or text files to build your knowledge base')}
                 </p>
               </>
             )}
@@ -1791,14 +1799,14 @@ export default function KnowledgeBase() {
                 <div className="flex items-center gap-3">
                   <MapIcon size={18} className="text-[#117dff]" />
                   <div>
-                    <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Memory Map</h3>
-                    <p className="text-xs text-[#666]">Visual hierarchy of your organized memories</p>
+                    <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.memoryMap', 'Memory Map')}</h3>
+                    <p className="text-xs text-[#666]">{t('knowledgebase.memoryMapDesc', 'Visual hierarchy of your organized memories')}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setPageIndexModalOpen(false)}
                   className="p-2 rounded-lg hover:bg-[#e3e0db] transition-colors"
-                  title="Close"
+                  title={t('knowledgebase.close', 'Close')}
                 >
                   <X size={18} className="text-[#525252]" />
                 </button>
@@ -1839,7 +1847,7 @@ export default function KnowledgeBase() {
               disabled={bulkDeleting}
               className="text-[11px] font-mono text-[#525252] hover:text-[#0a0a0a] disabled:opacity-40"
             >
-              Clear
+              {t('knowledgebase.clear', 'Clear')}
             </button>
             <div className="h-4 w-px bg-[#e3e0db]" />
             <button
@@ -1850,10 +1858,10 @@ export default function KnowledgeBase() {
               {bulkDeleting ? (
                 <>
                   <Loader2 size={11} className="animate-spin" />
-                  Deleting…
+                  {t('knowledgebase.deleting', 'Deleting…')}
                 </>
               ) : (
-                <>Delete {bulkSelected.size}</>
+                <>{t('knowledgebase.deleteCount', 'Delete {{count}}', { count: bulkSelected.size })}</>
               )}
             </button>
           </motion.div>

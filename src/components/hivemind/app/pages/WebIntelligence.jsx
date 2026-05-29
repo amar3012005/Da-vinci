@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   Globe,
   Search,
@@ -92,6 +93,7 @@ function quotaTextColor(used, limit) {
 /* ─── Sub-Components ─────────────────────────────────────────────── */
 
 function UsageCard({ label, used, limit, icon: Icon, period }) {
+  const { t } = useTranslation('dashboard');
   const pct = limit ? Math.min((used / limit) * 100, 100) : 0;
   const isWarning = pct >= 80;
   return (
@@ -109,7 +111,7 @@ function UsageCard({ label, used, limit, icon: Icon, period }) {
         <span className={`text-lg font-bold font-mono ${quotaTextColor(used ?? 0, limit)}`}>
           {used ?? 0}
         </span>
-        <span className="text-[#d4d0ca] text-sm font-mono">/ {limit ?? '\u221e'}</span>
+        <span className="text-[#d4d0ca] text-sm font-mono">/ {limit ?? '∞'}</span>
         <span className="text-[#a3a3a3] text-[10px] font-['Space_Grotesk'] ml-1">
           {label.toLowerCase()}
         </span>
@@ -125,7 +127,7 @@ function UsageCard({ label, used, limit, icon: Icon, period }) {
       {isWarning && (
         <div className="flex items-center gap-1 mt-2">
           <AlertTriangle size={10} className="text-amber-500" />
-          <span className="text-amber-600 text-[10px] font-['Space_Grotesk']">Soft limit approaching</span>
+          <span className="text-amber-600 text-[10px] font-['Space_Grotesk']">{t('webintelligence.softLimitApproaching', 'Soft limit approaching')}</span>
         </div>
       )}
     </div>
@@ -171,22 +173,24 @@ function ErrorDetail({ errorType }) {
 }
 
 function PartialBadge({ pagesProcessed, totalPages }) {
+  const { t } = useTranslation('dashboard');
   if (!totalPages || !pagesProcessed || pagesProcessed >= totalPages) return null;
   return (
     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-50 text-amber-600 border border-amber-200">
-      Partial ({pagesProcessed}/{totalPages} pages)
+      {t('webintelligence.partial', 'Partial ({{processed}}/{{total}} pages)', { processed: pagesProcessed, total: totalPages })}
     </span>
   );
 }
 
 function DomainPolicyBadge({ policy }) {
+  const { t } = useTranslation('dashboard');
   if (!policy) return null;
   if (policy.blocked) {
     return (
       <motion.div variants={fadeIn} initial="hidden" animate="visible" className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-2">
         <Ban size={12} className="text-red-500 shrink-0" />
         <span className="text-red-600 text-[11px] font-['Space_Grotesk']">
-          This domain is blocked: {policy.reason || 'policy restriction'}
+          {t('webintelligence.domainBlocked', 'This domain is blocked: {{reason}}', { reason: policy.reason || t('webintelligence.policyRestriction', 'policy restriction') })}
         </span>
       </motion.div>
     );
@@ -205,7 +209,7 @@ function DomainPolicyBadge({ policy }) {
     return (
       <motion.div variants={fadeIn} initial="hidden" animate="visible" className="flex items-center gap-1.5 mt-2">
         <ShieldCheck size={11} className="text-emerald-500" />
-        <span className="text-emerald-600 text-[10px] font-['Space_Grotesk']">Domain policy: OK</span>
+        <span className="text-emerald-600 text-[10px] font-['Space_Grotesk']">{t('webintelligence.domainPolicyOk', 'Domain policy: OK')}</span>
       </motion.div>
     );
   }
@@ -234,6 +238,7 @@ function InlineToast({ message, type = 'success' }) {
 /* ─── Result Preview Components ──────────────────────────────────── */
 
 function SearchResultCard({ result, jobId, index, onSave, onClick, runtime, fallback }) {
+  const { t } = useTranslation('dashboard');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -274,7 +279,7 @@ function SearchResultCard({ result, jobId, index, onSave, onClick, runtime, fall
           onClick={handleSave}
           disabled={saving || saved}
           className={`shrink-0 ${saved ? 'text-emerald-500' : 'text-[#a3a3a3] hover:text-[#117dff]'} transition-colors`}
-          title={saved ? 'Saved' : 'Save this result'}
+          title={saved ? t('webintelligence.saved', 'Saved') : t('webintelligence.saveResult', 'Save this result')}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <BookmarkPlus size={14} />}
         </button>
@@ -284,6 +289,7 @@ function SearchResultCard({ result, jobId, index, onSave, onClick, runtime, fall
 }
 
 function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallback }) {
+  const { t } = useTranslation('dashboard');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -327,7 +333,7 @@ function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallb
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
           {result.word_count != null && (
             <span className="text-[9px] font-mono text-[#a3a3a3] bg-[#f3f1ec] px-1.5 py-0.5 rounded">
-              {result.word_count.toLocaleString()} words
+              {result.word_count.toLocaleString()} {t('webintelligence.words', 'words')}
             </span>
           )}
           {charCount > 0 && (
@@ -335,14 +341,14 @@ function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallb
               onClick={handlePreviewToggle}
               className="text-[10px] font-mono text-[#117dff] hover:text-[#0066e0] px-1.5 py-0.5 rounded bg-[#117dff]/5 hover:bg-[#117dff]/10 transition-colors"
             >
-              {showContent ? 'Hide' : 'Preview'} ({charCount > 1000 ? `${(charCount/1000).toFixed(1)}k` : charCount} chars)
+              {showContent ? t('webintelligence.hide', 'Hide') : t('webintelligence.preview', 'Preview')} ({charCount > 1000 ? `${(charCount/1000).toFixed(1)}k` : charCount} chars)
             </button>
           )}
           <button
             onClick={handleSave}
             disabled={saving || saved}
             className={`${saved ? 'text-emerald-500' : 'text-[#a3a3a3] hover:text-[#117dff]'} transition-colors`}
-            title={saved ? 'Saved' : 'Save this result'}
+            title={saved ? t('webintelligence.saved', 'Saved') : t('webintelligence.saveResult', 'Save this result')}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <BookmarkPlus size={14} />}
           </button>
@@ -358,7 +364,7 @@ function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallb
           >
             <div className="px-3 pb-3 pt-1 border-t border-[#f3f1ec]">
               <pre className="text-[11px] text-[#525252] font-['Space_Grotesk'] whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto bg-[#faf9f4] rounded-lg p-3">
-                {content.slice(0, 3000)}{content.length > 3000 ? '\n\n... (truncated)' : ''}
+                {content.slice(0, 3000)}{content.length > 3000 ? t('webintelligence.truncated', '\n\n... (truncated)') : ''}
               </pre>
             </div>
           </motion.div>
@@ -371,6 +377,7 @@ function CrawlResultCard({ result, jobId, index, onSave, onClick, runtime, fallb
 /* ─── Expandable Job Row ─────────────────────────────────────────── */
 
 function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
+  const { t } = useTranslation('dashboard');
   const [expanded, setExpanded] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryToast, setRetryToast] = useState(null);
@@ -387,10 +394,10 @@ function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
     setRetryToast(null);
     try {
       await apiClient.retryWebJob(job.id);
-      setRetryToast({ type: 'success', message: 'Job re-queued' });
+      setRetryToast({ type: 'success', message: t('webintelligence.jobRequeued', 'Job re-queued') });
       if (onRetry) onRetry();
     } catch (err) {
-      setRetryToast({ type: 'error', message: err.response?.data?.error || 'Retry failed' });
+      setRetryToast({ type: 'error', message: err.response?.data?.error || t('webintelligence.retryFailed', 'Retry failed') });
     } finally {
       setRetrying(false);
       setTimeout(() => setRetryToast(null), 3000);
@@ -406,10 +413,10 @@ function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
         title: job.query || job.urls?.[0] || `Web ${job.type} results`,
         tags: [`web-${job.type}`],
       });
-      setSaveToast({ type: 'success', message: 'Saved to memory' });
+      setSaveToast({ type: 'success', message: t('webintelligence.savedToMemory', 'Saved to memory') });
       if (onSaveAll) onSaveAll();
     } catch (err) {
-      setSaveToast({ type: 'error', message: err.response?.data?.error || 'Save failed' });
+      setSaveToast({ type: 'error', message: err.response?.data?.error || t('webintelligence.saveFailed', 'Save failed') });
     } finally {
       setSavingAll(false);
       setTimeout(() => setSaveToast(null), 3000);
@@ -448,12 +455,12 @@ function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
         <td className="py-2.5">
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             {job.status === 'failed' && (
-              <button onClick={handleRetry} disabled={retrying} className={BTN_GHOST} title="Retry">
+              <button onClick={handleRetry} disabled={retrying} className={BTN_GHOST} title={t('webintelligence.retry', 'Retry')}>
                 {retrying ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
               </button>
             )}
             {(job.status === 'succeeded' || hasResults) && (
-              <button onClick={handleSaveAll} disabled={savingAll} className={BTN_GHOST} title="Save to Memory">
+              <button onClick={handleSaveAll} disabled={savingAll} className={BTN_GHOST} title={t('webintelligence.saveToMemory', 'Save to Memory')}>
                 {savingAll ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
               </button>
             )}
@@ -513,6 +520,7 @@ function JobRow({ job, onRetry, onSaveAll, pollingJobId, onResultClick }) {
 /* ─── Locked Overlay ─────────────────────────────────────────────── */
 
 function LockedOverlay() {
+  const { t } = useTranslation('dashboard');
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -524,17 +532,17 @@ function LockedOverlay() {
           <Lock size={24} className="text-[#a3a3a3]" />
         </div>
         <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-2">
-          Web Intelligence is Locked
+          {t('webintelligence.lockedTitle', 'Web Intelligence is Locked')}
         </h3>
         <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-5">
-          Upgrade your plan to unlock web search, crawling, and page intelligence features.
+          {t('webintelligence.lockedBody', 'Upgrade your plan to unlock web search, crawling, and page intelligence features.')}
         </p>
         <a
           href="/hivemind/app/billing"
           className="inline-flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-all font-['Space_Grotesk']"
         >
           <Lock size={14} />
-          Upgrade to unlock Web Intelligence
+          {t('webintelligence.upgradeBtn', 'Upgrade to unlock Web Intelligence')}
         </a>
       </div>
     </motion.div>
@@ -546,6 +554,8 @@ function LockedOverlay() {
 /* ═══════════════════════════════════════════════════════════════════ */
 
 export default function WebIntelligence() {
+  const { t } = useTranslation('dashboard');
+
   // ─── Core state ────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
   const [crawlUrl, setCrawlUrl] = useState('');
@@ -673,7 +683,7 @@ export default function WebIntelligence() {
       }
       setSubmitError(
         isFeatureNotEnabledError(err) || err?.response?.data?.code === 'feature_not_enabled'
-          ? 'Web Search is not enabled on your plan. Upgrade to access.'
+          ? t('webintelligence.searchNotEnabled', 'Web Search is not enabled on your plan. Upgrade to access.')
           : msg
       );
     } finally {
@@ -705,7 +715,7 @@ export default function WebIntelligence() {
       }
       setSubmitError(
         isFeatureNotEnabledError(err) || err?.response?.data?.code === 'feature_not_enabled'
-          ? 'Web Crawl is not enabled on your plan. Upgrade to access.'
+          ? t('webintelligence.crawlNotEnabled', 'Web Crawl is not enabled on your plan. Upgrade to access.')
           : msg
       );
     } finally {
@@ -721,15 +731,15 @@ export default function WebIntelligence() {
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <Globe size={20} className="text-[#117dff]" />
-          <h1 className="text-[#0a0a0a] text-2xl font-bold">Web Intelligence</h1>
-          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-2 py-0.5 rounded uppercase">Add-on</span>
+          <h1 className="text-[#0a0a0a] text-2xl font-bold">{t('webintelligence.title', 'Web Intelligence')}</h1>
+          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-2 py-0.5 rounded uppercase">{t('webintelligence.addonBadge', 'Add-on')}</span>
           {featureLocked && (
             <span className="text-[9px] font-mono bg-red-50 text-red-500 px-2 py-0.5 rounded uppercase border border-red-200 flex items-center gap-1">
-              <Lock size={8} /> Locked
+              <Lock size={8} /> {t('webintelligence.lockedBadge', 'Locked')}
             </span>
           )}
         </div>
-        <p className="text-[#525252] text-sm ml-8">Search the web and crawl pages as async jobs.</p>
+        <p className="text-[#525252] text-sm ml-8">{t('webintelligence.subtitle', 'Search the web and crawl pages as async jobs.')}</p>
       </motion.div>
 
       {/* Global submit error */}
@@ -763,32 +773,32 @@ export default function WebIntelligence() {
           {/* ─── Quota Section ──────────────────────────── */}
           <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <UsageCard
-              label="Searches today"
+              label={t('webintelligence.searchesToday', 'Searches today')}
               used={usage?.web_search_requests?.used}
               limit={usage?.web_search_requests?.limit}
               icon={Search}
-              period="Daily"
+              period={t('webintelligence.periodDaily', 'Daily')}
             />
             <UsageCard
-              label="Crawl pages today"
+              label={t('webintelligence.crawlPagesToday', 'Crawl pages today')}
               used={usage?.web_crawl_pages?.used}
               limit={usage?.web_crawl_pages?.limit}
               icon={FileText}
-              period="Daily"
+              period={t('webintelligence.periodDaily', 'Daily')}
             />
             <UsageCard
-              label="Searches this month"
+              label={t('webintelligence.searchesThisMonth', 'Searches this month')}
               used={monthlyUsage?.web_search_requests?.used}
               limit={monthlyUsage?.web_search_requests?.limit}
               icon={Search}
-              period="Monthly"
+              period={t('webintelligence.periodMonthly', 'Monthly')}
             />
             <UsageCard
-              label="Crawl pages this month"
+              label={t('webintelligence.crawlPagesThisMonth', 'Crawl pages this month')}
               used={monthlyUsage?.web_crawl_pages?.used}
               limit={monthlyUsage?.web_crawl_pages?.limit}
               icon={FileText}
-              period="Monthly"
+              period={t('webintelligence.periodMonthly', 'Monthly')}
             />
           </motion.div>
 
@@ -798,7 +808,7 @@ export default function WebIntelligence() {
             <div className={CARD + ' p-5'}>
               <div className="flex items-center gap-2 mb-3">
                 <Search size={15} className="text-[#117dff]" />
-                <h3 className="text-[#0a0a0a] text-sm font-semibold">Web Search</h3>
+                <h3 className="text-[#0a0a0a] text-sm font-semibold">{t('webintelligence.webSearch', 'Web Search')}</h3>
               </div>
               <div className="flex gap-2">
                 <input
@@ -806,7 +816,7 @@ export default function WebIntelligence() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search query..."
+                  placeholder={t('webintelligence.searchPlaceholder', 'Search query...')}
                   className={INPUT + ' flex-1'}
                 />
                 <button
@@ -815,7 +825,7 @@ export default function WebIntelligence() {
                   className={BTN_PRIMARY}
                 >
                   {submitting === 'search' ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-                  Search
+                  {t('webintelligence.searchBtn', 'Search')}
                 </button>
               </div>
             </div>
@@ -824,7 +834,7 @@ export default function WebIntelligence() {
             <div className={CARD + ' p-5'}>
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={15} className="text-[#525252]" />
-                <h3 className="text-[#0a0a0a] text-sm font-semibold">Web Crawl</h3>
+                <h3 className="text-[#0a0a0a] text-sm font-semibold">{t('webintelligence.webCrawl', 'Web Crawl')}</h3>
               </div>
               <div className="flex gap-2">
                 <input
@@ -842,14 +852,14 @@ export default function WebIntelligence() {
                   className={BTN_PRIMARY}
                 >
                   {submitting === 'crawl' ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-                  Crawl
+                  {t('webintelligence.crawlBtn', 'Crawl')}
                 </button>
               </div>
 
               {/* Domain policy feedback */}
               {checkingPolicy && (
                 <div className="flex items-center gap-1.5 mt-2 text-[#a3a3a3] text-[10px]">
-                  <Loader2 size={10} className="animate-spin" /> Checking domain policy...
+                  <Loader2 size={10} className="animate-spin" /> {t('webintelligence.checkingPolicy', 'Checking domain policy...')}
                 </div>
               )}
               <DomainPolicyBadge policy={domainPolicy} />
@@ -857,7 +867,7 @@ export default function WebIntelligence() {
               {/* Crawl options */}
               <div className="flex items-center gap-4 mt-3">
                 <div className="flex items-center gap-2">
-                  <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">Depth</label>
+                  <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">{t('webintelligence.depthLabel', 'Depth')}</label>
                   <select
                     value={crawlDepth}
                     onChange={(e) => setCrawlDepth(Number(e.target.value))}
@@ -869,7 +879,7 @@ export default function WebIntelligence() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">Page Limit</label>
+                  <label className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">{t('webintelligence.pageLimitLabel', 'Page Limit')}</label>
                   <input
                     type="number"
                     min={1}
@@ -895,7 +905,7 @@ export default function WebIntelligence() {
                 <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                   <Loader2 size={14} className="animate-spin text-blue-500" />
                   <span className="text-blue-700 text-xs">
-                    Job <span className="font-mono">{pollingJobId?.slice(0, 8)}</span> is running... Polling for updates.
+                    {t('webintelligence.pollingMessage', 'Job {{jobId}} is running... Polling for updates.', { jobId: <span className="font-mono">{pollingJobId?.slice(0, 8)}</span> })}
                   </span>
                 </div>
               </motion.div>
@@ -907,17 +917,17 @@ export default function WebIntelligence() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock size={15} className="text-[#a3a3a3]" />
-                <h3 className="text-[#0a0a0a] text-sm font-semibold">Job History</h3>
+                <h3 className="text-[#0a0a0a] text-sm font-semibold">{t('webintelligence.jobHistory', 'Job History')}</h3>
                 {jobList.length > 0 && (
                   <span className="text-[9px] font-mono bg-[#f3f1ec] text-[#a3a3a3] px-1.5 py-0.5 rounded">
-                    {jobList.length} jobs
+                    {jobList.length} {t('webintelligence.jobsLabel', 'jobs')}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => { refetchJobs(); refetchUsage(); refetchMonthly(); }}
                 className="text-[#a3a3a3] hover:text-[#117dff] transition-colors"
-                title="Refresh"
+                title={t('webintelligence.refreshTitle', 'Refresh')}
               >
                 <RefreshCw size={14} />
               </button>
@@ -928,7 +938,16 @@ export default function WebIntelligence() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-[#e3e0db]">
-                      {['Job ID', 'Type', 'Status', 'Runtime', 'Pages', 'Duration', 'Created', 'Actions'].map((h) => (
+                      {[
+                        t('webintelligence.colJobId', 'Job ID'),
+                        t('webintelligence.colType', 'Type'),
+                        t('webintelligence.colStatus', 'Status'),
+                        t('webintelligence.colRuntime', 'Runtime'),
+                        t('webintelligence.colPages', 'Pages'),
+                        t('webintelligence.colDuration', 'Duration'),
+                        t('webintelligence.colCreated', 'Created'),
+                        t('webintelligence.colActions', 'Actions'),
+                      ].map((h) => (
                         <th key={h} className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider pb-2.5 pr-3">{h}</th>
                       ))}
                     </tr>
@@ -950,8 +969,8 @@ export default function WebIntelligence() {
             ) : (
               <div className="text-center py-10">
                 <Globe size={28} className="text-[#e3e0db] mx-auto mb-3" />
-                <p className="text-[#a3a3a3] text-sm mb-1">No web jobs yet</p>
-                <p className="text-[#d4d0ca] text-xs">Submit a search or crawl above to get started.</p>
+                <p className="text-[#a3a3a3] text-sm mb-1">{t('webintelligence.noJobs', 'No web jobs yet')}</p>
+                <p className="text-[#d4d0ca] text-xs">{t('webintelligence.noJobsHint', 'Submit a search or crawl above to get started.')}</p>
               </div>
             )}
           </motion.div>

@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
@@ -45,6 +46,7 @@ const AGREEMENT_META = {
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
 export default function HyperAgents() {
+  const { t } = useTranslation('dashboard');
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -72,7 +74,7 @@ export default function HyperAgents() {
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
   const handleDeleteRoom = useCallback(async (room) => {
-    if (!window.confirm(`Permanently delete #${room.name}? This removes the room and all its discussion. Cannot be undone.`)) return;
+    if (!window.confirm(t('hyperAgents.confirmDeleteRoom', 'Permanently delete #{{name}}? This removes the room and all its discussion. Cannot be undone.', { name: room.name }))) return;
     try {
       await apiClient.deleteHyperRoom(room.id);
       setRooms(prev => prev.filter(r => r.id !== room.id));
@@ -96,18 +98,17 @@ export default function HyperAgents() {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-              Hyper Agents — Cognitive Swarm Intelligence on HIVEMIND
+              {t('hyperAgents.title', 'Hyper Agents — Cognitive Swarm Intelligence on HIVEMIND')}
             </h2>
             <p className="text-[12px] text-[#525252] mt-1">
-              Build a room. Your agents talk to each other under WhatsApp-style threads, debate when their roles
-              clash, and self-evolve from your conversations over time.
+              {t('hyperAgents.emptyStateDesc', 'Build a room. Your agents talk to each other under WhatsApp-style threads, debate when their roles clash, and self-evolve from your conversations over time.')}
             </p>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="shrink-0 flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3.5 py-2 rounded-lg"
           >
-            <Plus size={13} /> New room
+            <Plus size={13} /> {t('hyperAgents.newRoom', 'New room')}
           </button>
         </div>
 
@@ -139,12 +140,12 @@ export default function HyperAgents() {
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
-            <span className="text-[12px] font-semibold text-[#0a0a0a]">Rooms</span>
+            <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('hyperAgents.rooms', 'Rooms')}</span>
           </div>
           <button
             onClick={() => setShowCreate(true)}
             className="text-[#525252] hover:text-[#0a0a0a]"
-            title="New room"
+            title={t('hyperAgents.newRoom', 'New room')}
           >
             <Plus size={14} />
           </button>
@@ -190,12 +191,12 @@ export default function HyperAgents() {
               <button
                 onClick={() => setViewMode('thread')}
                 className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db]"
-                title="Back to active room"
+                title={t('hyperAgents.backToActiveRoom', 'Back to active room')}
               >
-                Back to Room
+                {t('hyperAgents.backToRoom', 'Back to Room')}
               </button>
-              <span className="text-[13px] font-semibold text-[#0a0a0a]">Agent roster</span>
-              <span className="text-[10px] text-[#a3a3a3] ml-auto">Browse + edit your hires</span>
+              <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('hyperAgents.agentRoster', 'Agent roster')}</span>
+              <span className="text-[10px] text-[#a3a3a3] ml-auto">{t('hyperAgents.browseEditHires', 'Browse + edit your hires')}</span>
             </div>
             <div className="p-4">
               <DigitalEmployees />
@@ -210,12 +211,12 @@ export default function HyperAgents() {
           />
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
-            <span>Pick a room from the left.</span>
+            <span>{t('hyperAgents.pickRoom', 'Pick a room from the left.')}</span>
             <button
               onClick={() => setViewMode('roster')}
               className="text-[11px] text-[#117dff] hover:underline"
             >
-              Or browse the agent roster →
+              {t('hyperAgents.browseRoster', 'Or browse the agent roster →')}
             </button>
           </div>
         )}
@@ -251,6 +252,7 @@ export default function HyperAgents() {
 /* ─── Room row in the left rail ──────────────────────────────────────── */
 
 function RoomRow({ room, active, onClick, archived, onDelete }) {
+  const { t } = useTranslation('dashboard');
   const participants = room.participants || [];
   return (
     <div
@@ -289,7 +291,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(room); }}
           className="opacity-0 group-hover:opacity-100 text-[#a3a3a3] hover:text-red-500 shrink-0 transition-opacity p-1"
-          title="Delete room permanently"
+          title={t('hyperAgents.deleteRoomPermanently', 'Delete room permanently')}
         >
           <Trash2 size={12} />
         </button>
@@ -301,6 +303,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
 function RoomThread({ roomId, onArchived, onBack }) {
+  const { t } = useTranslation('dashboard');
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -411,7 +414,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
   }
 
   async function handleArchive() {
-    if (!window.confirm(`Archive #${room?.name}? Transcript distills into a memory.`)) return;
+    if (!window.confirm(t('hyperAgents.confirmArchive', 'Archive #{{name}}? Transcript distills into a memory.', { name: room?.name }))) return;
     try {
       await apiClient.archiveHyperRoom(roomId);
       onArchived?.();
@@ -421,7 +424,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
   }
 
   async function handleClearDiscussion() {
-    if (!window.confirm(`Clear the entire discussion in #${room?.name}? Every turn and all agent activity will be deleted. The room itself stays. Cannot be undone.`)) return;
+    if (!window.confirm(t('hyperAgents.confirmClearDiscussion', 'Clear the entire discussion in #{{name}}? Every turn and all agent activity will be deleted. The room itself stays. Cannot be undone.', { name: room?.name }))) return;
     try {
       await apiClient.clearHyperRoomTurns(roomId);
       setActiveTurnId(null);
@@ -450,7 +453,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
     );
   }
   if (!room) {
-    return <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3]">Room not found.</div>;
+    return <div className="flex-1 flex items-center justify-center text-[12px] text-[#a3a3a3]">{t('hyperAgents.roomNotFound', 'Room not found.')}</div>;
   }
 
   const participants = room.participants || [];
@@ -467,9 +470,9 @@ function RoomThread({ roomId, onArchived, onBack }) {
               <button
                 onClick={onBack}
                 className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db] shrink-0"
-                title="Exit room — go to agent roster"
+                title={t('hyperAgents.exitRoom', 'Exit room — go to agent roster')}
               >
-                Out of Room
+                {t('hyperAgents.outOfRoom', 'Out of Room')}
               </button>
             )}
             <div className="min-w-0">
@@ -478,12 +481,12 @@ function RoomThread({ roomId, onArchived, onBack }) {
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
               {archived && (
                 <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
-                  archived
+                  {t('hyperAgents.archived', 'archived')}
                 </span>
               )}
             </div>
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
-              {participants.length} participant{participants.length !== 1 ? 's' : ''} · {turns.length} turn{turns.length !== 1 ? 's' : ''}
+              {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
             </div>
           </div>
@@ -492,7 +495,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
               <button
                 onClick={handleClearDiscussion}
                 className="p-1.5 text-[#a3a3a3] hover:text-red-600 rounded hover:bg-[#faf9f4]"
-                title="Clear discussion — delete all turns + agent activity (keeps the room)"
+                title={t('hyperAgents.clearDiscussionTitle', 'Clear discussion — delete all turns + agent activity (keeps the room)')}
               >
                 <Eraser size={13} />
               </button>
@@ -501,7 +504,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
               <button
                 onClick={handleArchive}
                 className="p-1.5 text-[#a3a3a3] hover:text-red-600 rounded hover:bg-[#faf9f4]"
-                title="Archive room (distills into 1 memory)"
+                title={t('hyperAgents.archiveRoomTitle', 'Archive room (distills into 1 memory)')}
               >
                 <Archive size={13} />
               </button>
@@ -513,7 +516,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
         <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {turns.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
-              Start the conversation — ask your team anything.
+              {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>
           )}
           {turns.map(turn => (
@@ -544,7 +547,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); }
                   }}
                   rows={1}
-                  placeholder="Message the team…  use @slug to address one agent"
+                  placeholder={t('hyperAgents.composerPlaceholder', 'Message the team…  use @slug to address one agent')}
                   disabled={submitting}
                   className="w-full bg-transparent resize-none outline-none text-[13px] text-[#0a0a0a] placeholder:text-[#a3a3a3]"
                 />
@@ -555,10 +558,10 @@ function RoomThread({ roomId, onArchived, onBack }) {
                 className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
               >
                 {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                Send
+                {t('hyperAgents.send', 'Send')}
               </button>
             </div>
-            <div className="text-[9px] text-[#a3a3a3] mt-1 font-mono">Enter to send · Shift+Enter newline · @slug to force lead</div>
+            <div className="text-[9px] text-[#a3a3a3] mt-1 font-mono">{t('hyperAgents.composerHint', 'Enter to send · Shift+Enter newline · @slug to force lead')}</div>
           </form>
         )}
       </section>
@@ -568,13 +571,13 @@ function RoomThread({ roomId, onArchived, onBack }) {
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Users size={12} className="text-[#525252]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">Participants</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('hyperAgents.participants', 'Participants')}</span>
           </div>
           {!archived && (
             <button
               onClick={() => setShowPicker(true)}
               className="text-[#525252] hover:text-[#0a0a0a]"
-              title="Add agent"
+              title={t('hyperAgents.addAgent', 'Add agent')}
             >
               <Plus size={13} />
             </button>
@@ -593,7 +596,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
             />
           ))}
           {participants.length === 0 && (
-            <p className="text-[11px] text-[#a3a3a3]">No agents yet. Add one to start.</p>
+            <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
         </div>
       </aside>
@@ -620,6 +623,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
 /* ─── Per-turn render ────────────────────────────────────────────────── */
 
 function TurnView({ turn, participants, liveLines }) {
+  const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
     const base = Array.isArray(turn.lines) ? turn.lines : [];
@@ -744,7 +748,7 @@ function TurnView({ turn, participants, liveLines }) {
       {revises.map((rev, i) => (
         <div key={`revise-${i}`} className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
           <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">
-            Revision · round {rev.round || (i + 2)}
+            {t('hyperAgents.revision', 'Revision · round {{n}}', { n: rev.round || (i + 2) })}
           </div>
           <AgentBubble
             agent={participants[rev.agent] || { slug: rev.agent, lane: 'Communicator' }}
@@ -754,7 +758,7 @@ function TurnView({ turn, participants, liveLines }) {
           {validates[i] && (
             <div className="mt-1.5">
               <div className="text-[9px] uppercase tracking-wider text-[#737373] font-mono mb-0.5">
-                Verdict · {validates[i].verdict || 'resolved'}
+                {t('hyperAgents.verdict', 'Verdict · {{v}}', { v: validates[i].verdict || t('hyperAgents.resolved', 'resolved') })}
               </div>
               <AgentBubble
                 agent={participants[validates[i].agent] || { slug: validates[i].agent, lane: 'Communicator' }}
@@ -769,7 +773,7 @@ function TurnView({ turn, participants, liveLines }) {
       {rescueLine && (
         <div className="border-l-2 border-amber-400 ml-3 pl-3 bg-amber-50/50 rounded-r-md">
           <div className="text-[9px] uppercase tracking-wider text-amber-700 font-mono mb-0.5">
-            Rescue · concrete answer
+            {t('hyperAgents.rescue', 'Rescue · concrete answer')}
           </div>
           <AgentBubble
             agent={participants[rescueLine.agent] || { slug: rescueLine.agent, lane: 'Communicator' }}
@@ -782,26 +786,26 @@ function TurnView({ turn, participants, liveLines }) {
       {decisionRequired && (
         <div className="mx-2 my-2 p-3 rounded-md border border-amber-300 bg-amber-50 text-[12px]">
           <div className="text-[9px] uppercase tracking-wider text-amber-700 font-mono mb-1">
-            ⚠ Decision required · escalated after {decisionRequired.rounds_run || '?'} rounds
+            {t('hyperAgents.decisionRequired', '⚠ Decision required · escalated after {{n}} rounds', { n: decisionRequired.rounds_run || '?' })}
           </div>
           <div className="text-[#525252]">{decisionRequired.open_question}</div>
           {decisionRequired.raised_by && (
-            <div className="text-[10px] text-[#737373] mt-1">raised by: {decisionRequired.raised_by}</div>
+            <div className="text-[10px] text-[#737373] mt-1">{t('hyperAgents.raisedBy', 'raised by: {{who}}', { who: decisionRequired.raised_by })}</div>
           )}
         </div>
       )}
 
       {decisionSaved && (
         <div className="mx-2 text-[10px] text-emerald-700 font-mono pl-2">
-          ✓ saved to memory · trigger: {decisionSaved.trigger} · id: {(decisionSaved.memory_id || '').slice(0, 8)}
+          {t('hyperAgents.savedToMemory', '✓ saved to memory · trigger: {{trigger}} · id: {{id}}', { trigger: decisionSaved.trigger, id: (decisionSaved.memory_id || '').slice(0, 8) })}
         </div>
       )}
 
       {!seal && typing.length > 0 && (
         <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
-          {typing.map((t, i) => (
+          {typing.map((typingLine, i) => (
             <span key={i} className="flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" /> {t.agent} typing…
+              <Loader2 size={10} className="animate-spin" /> {t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
             </span>
           ))}
         </div>
@@ -816,12 +820,12 @@ function TurnView({ turn, participants, liveLines }) {
             'text-[#a3a3a3]'
           }`}>
             {errorLine
-              ? `─── failed: ${errorLine.message || 'unknown error'} ───`
+              ? t('hyperAgents.sealFailed', '─── failed: {{msg}} ───', { msg: errorLine.message || t('hyperAgents.unknownError', 'unknown error') })
               : sealStatus === 'escalated'
-                ? `─── escalated · ${seal.cost_tokens || 0} tok ───`
+                ? t('hyperAgents.sealEscalated', '─── escalated · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
                 : qualityLow
-                  ? `─── sealed (low quality) · ${seal.cost_tokens || 0} tok ───`
-                  : `─── sealed · ${seal.cost_tokens || 0} tok ───`}
+                  ? t('hyperAgents.sealLowQuality', '─── sealed (low quality) · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
+                  : t('hyperAgents.sealComplete', '─── sealed · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })}
           </div>
           {Object.keys(trustDeltas).length > 0 && (
             <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2">
@@ -939,13 +943,14 @@ function renderMarkdownLite(raw) {
 /* ─── Swarm R1-R5 renderer (Phase 4) ──────────────────────────────────── */
 
 function EvidenceChip({ id, onClick }) {
+  const { t } = useTranslation('dashboard');
   if (!id) return null;
   return (
     <button
       type="button"
       onClick={() => onClick?.(id)}
       className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252] hover:bg-violet-100 hover:text-violet-700 transition-colors cursor-pointer"
-      title={`Open memory ${id}`}
+      title={t('hyperAgents.openMemory', 'Open memory {{id}}', { id })}
     >
       m·{String(id).slice(0, 8)}
     </button>
@@ -953,6 +958,7 @@ function EvidenceChip({ id, onClick }) {
 }
 
 function EvidenceModal({ memoryId, onClose }) {
+  const { t } = useTranslation('dashboard');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -976,7 +982,7 @@ function EvidenceModal({ memoryId, onClose }) {
           <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
         </header>
         <div className="px-5 py-4 space-y-3">
-          {loading && <div className="text-[12px] text-[#a3a3a3]">Loading…</div>}
+          {loading && <div className="text-[12px] text-[#a3a3a3]">{t('hyperAgents.loading', 'Loading…')}</div>}
           {err && <div className="text-[12px] text-red-600">{err}</div>}
           {data && (
             <>
@@ -998,6 +1004,7 @@ function EvidenceModal({ memoryId, onClose }) {
 }
 
 function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts, costCapHit, deadlineHit, roomWarnings = [], onOpenEvidence }) {
+  const { t } = useTranslation('dashboard');
   const reviewsByTarget = useMemo(() => {
     const out = {};
     for (const r of peerReviews || []) {
@@ -1027,7 +1034,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
       {/* R1 — Independent Hypotheses */}
       {hypotheses.length > 0 && (
         <>
-          {roundHeader(1, 'Independent Hypotheses')}
+          {roundHeader(1, t('hyperAgents.independentHypotheses', 'Independent Hypotheses'))}
           {hypotheses.map((h) => {
             const agent = participants[h.agent] || { slug: h.agent, lane: h.lane || 'Communicator' };
             const childReviews = reviewsByTarget[h.id] || [];
@@ -1045,7 +1052,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                 {/* R2 — peer reviews for this hypothesis */}
                 {childReviews.length > 0 && (
                   <div className="ml-3 mt-2 space-y-1 border-l border-dashed border-[#d4d0ca] pl-2">
-                    <div className="text-[9px] uppercase tracking-wider font-mono text-[#737373]">R2 · Peer review</div>
+                    <div className="text-[9px] uppercase tracking-wider font-mono text-[#737373]">{t('hyperAgents.r2PeerReview', 'R2 · Peer review')}</div>
                     {childReviews.map((r, i) => {
                       const reviewerAgent = participants[r.reviewer] || { slug: r.reviewer, lane: 'Communicator' };
                       const agreeColor =
@@ -1072,7 +1079,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                 {refined && (
                   <details className="ml-3 mt-2 text-[12px]">
                     <summary className="cursor-pointer text-[9px] uppercase tracking-wider font-mono text-emerald-700">
-                      R3 · Refined hypothesis + {(refined.steps || []).length} chain-of-thought steps
+                      {t('hyperAgents.r3Refined', 'R3 · Refined hypothesis + {{n}} chain-of-thought steps', { n: (refined.steps || []).length })}
                     </summary>
                     <div className="mt-1 pl-2 border-l border-emerald-200 space-y-1">
                       <div className="text-[12px] text-[#0a0a0a]">{refined.refined_hypothesis}</div>
@@ -1096,7 +1103,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
       {/* R4 — Skeptic challenge */}
       {skepticChallenge && (
         <>
-          {roundHeader(4, 'Skeptic — unorthodox + hidden assumptions')}
+          {roundHeader(4, t('hyperAgents.r4Skeptic', 'Skeptic — unorthodox + hidden assumptions'))}
           <div className="ml-2 border-l-2 border-red-400 pl-3 bg-red-50/30 rounded-r-md py-2">
             <div className="text-[10px] font-mono text-red-700 mb-1">
               {skepticChallenge.agent} (permanent Skeptic)
@@ -1122,7 +1129,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
             ))}
             {(skepticChallenge.hidden_assumptions || []).length > 0 && (
               <div className="text-[11px] italic text-[#525252] mt-1">
-                Hidden assumptions: {skepticChallenge.hidden_assumptions.join(' · ')}
+                {t('hyperAgents.hiddenAssumptions', 'Hidden assumptions: {{list}}', { list: skepticChallenge.hidden_assumptions.join(' · ') })}
               </div>
             )}
           </div>
@@ -1132,15 +1139,15 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
       {/* R5 — Vote grid */}
       {votes.length > 0 && (
         <>
-          {roundHeader(5, 'Convergence vote')}
+          {roundHeader(5, t('hyperAgents.r5ConvergenceVote', 'Convergence vote'))}
           <div className="ml-2 overflow-x-auto">
             <table className="text-[11px] min-w-full">
               <thead>
                 <tr className="text-[#737373] border-b border-[#e3e0db]">
-                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Voter</th>
-                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">For</th>
-                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Score</th>
-                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">Conditions</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">{t('hyperAgents.voter', 'Voter')}</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">{t('hyperAgents.for', 'For')}</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">{t('hyperAgents.score', 'Score')}</th>
+                  <th className="text-left pr-3 py-1 font-mono uppercase text-[9px]">{t('hyperAgents.conditions', 'Conditions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1171,21 +1178,21 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
         <div className="mx-2 mt-3 space-y-1">
           {costCapHit && (
             <div className="p-2 rounded-md border border-amber-300 bg-amber-50 text-[11px] text-amber-800">
-              ⚠ Turn truncated at the tool-call budget — synthesis ran on the rounds completed so far.
+              {t('hyperAgents.costCapHit', '⚠ Turn truncated at the tool-call budget — synthesis ran on the rounds completed so far.')}
             </div>
           )}
           {deadlineHit && (
             <div className="p-2 rounded-md border border-amber-300 bg-amber-50 text-[11px] text-amber-800">
-              ⏱ Turn hit the time limit ({deadlineHit.cap_s || '—'}s) — sealed early from round {deadlineHit.skipped_from_round || '?'}.
+              {t('hyperAgents.deadlineHit', '⏱ Turn hit the time limit ({{cap}}s) — sealed early from round {{round}}.', { cap: deadlineHit.cap_s || '—', round: deadlineHit.skipped_from_round || '?' })}
             </div>
           )}
           {roomWarnings.map((w, i) => (
             <div key={i} className="p-2 rounded-md border border-blue-200 bg-blue-50 text-[11px] text-blue-800">
               {w.code === 'configured_skeptic_absent'
-                ? `ℹ Configured Skeptic absent this turn — a stand-in${w.stand_in_skeptic ? ` (${w.stand_in_skeptic})` : ''} challenged instead.`
+                ? t('hyperAgents.skepticAbsent', 'ℹ Configured Skeptic absent this turn — a stand-in{{standin}} challenged instead.', { standin: w.stand_in_skeptic ? ` (${w.stand_in_skeptic})` : '' })
                 : w.code === 'lead_skeptic_collision'
-                ? `ℹ Lead and Skeptic resolved to the same agent${w.slug ? ` (${w.slug})` : ''} — Skeptic dropped for this turn.`
-                : `ℹ ${w.code || 'notice'}`}
+                ? t('hyperAgents.leadSkepticCollision', 'ℹ Lead and Skeptic resolved to the same agent{{slug}} — Skeptic dropped for this turn.', { slug: w.slug ? ` (${w.slug})` : '' })
+                : `ℹ ${w.code || t('hyperAgents.notice', 'notice')}`}
             </div>
           ))}
         </div>
@@ -1205,11 +1212,11 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
             </span>
           </div>
           <div className="text-[12px] text-[#0a0a0a]">
-            Winner: <span className="font-mono">{swarmVerdict.winning_hypothesis_id || 'none'}</span>
+            {t('hyperAgents.winner', 'Winner:')} <span className="font-mono">{swarmVerdict.winning_hypothesis_id || t('hyperAgents.none', 'none')}</span>
           </div>
           {(swarmVerdict.action_items || []).length > 0 && (
             <div className="mt-1.5 text-[11px]">
-              <div className="text-[9px] uppercase font-mono text-[#737373]">Action items</div>
+              <div className="text-[9px] uppercase font-mono text-[#737373]">{t('hyperAgents.actionItems', 'Action items')}</div>
               <ul className="list-disc list-inside text-[#525252]">
                 {swarmVerdict.action_items.map((a, i) => <li key={i}>{a}</li>)}
               </ul>
@@ -1277,6 +1284,7 @@ function AgentBubble({ agent, content, kind, agreement, confidence }) {
 /* ─── Participant chip in right rail ─────────────────────────────────── */
 
 function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
+  const { t } = useTranslation('dashboard');
   const lane = agent?.lane || 'Communicator';
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
@@ -1288,7 +1296,7 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
       onMouseLeave={() => setHover(false)}
       className="bg-white border border-[#e3e0db] rounded-lg px-2.5 py-2 flex items-center gap-2 hover:border-[#d4d0ca] cursor-pointer transition-colors"
       onClick={() => onOpenDm?.(agent)}
-      title={`DM ${agent?.name || agent?.slug}`}
+      title={t('hyperAgents.dmAgent', 'DM {{name}}', { name: agent?.name || agent?.slug })}
     >
       <div
         className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
@@ -1305,7 +1313,7 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
           {typeof agent?.trustScore === 'number' && (
             <span
               className="ml-1 px-1 rounded bg-[#f3f1ec] text-[#525252]"
-              title={`Trust score (display-only, ${agent.trustWins || 0}W / ${agent.trustLosses || 0}L)`}
+              title={t('hyperAgents.trustScore', 'Trust score (display-only, {{w}}W / {{l}}L)', { w: agent.trustWins || 0, l: agent.trustLosses || 0 })}
             >
               t{Math.round(agent.trustScore * 100)}
             </span>
@@ -1327,6 +1335,7 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
 /* ─── 1-on-1 DM modal (history persisted in localStorage) ───────────── */
 
 function AgentDmModal({ agent, onClose }) {
+  const { t } = useTranslation('dashboard');
   // Stable per-user-agent conversation id. Backend uses this to keep
   // ReAct agent memory across turns within the same conversation; we
   // also use it as the localStorage key so refresh / re-open re-hydrates
@@ -1379,7 +1388,7 @@ function AgentDmModal({ agent, onClose }) {
   }
 
   function clearHistory() {
-    if (!window.confirm('Clear this DM history?')) return;
+    if (!window.confirm(t('hyperAgents.confirmClearDm', 'Clear this DM history?'))) return;
     setMessages([]);
     try { window.localStorage.removeItem(storageKey); } catch { /* noop */ }
   }
@@ -1418,11 +1427,11 @@ function AgentDmModal({ agent, onClose }) {
           <button
             onClick={clearHistory}
             className="text-[10px] uppercase tracking-wider text-[#a3a3a3] hover:text-red-600 px-2 py-1 rounded"
-            title="Clear DM history"
+            title={t('hyperAgents.clearDmHistory', 'Clear DM history')}
           >
-            Clear
+            {t('hyperAgents.clear', 'Clear')}
           </button>
-          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] p-1" title="Close">
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] p-1" title={t('hyperAgents.close', 'Close')}>
             <X size={14} />
           </button>
         </header>
@@ -1430,7 +1439,7 @@ function AgentDmModal({ agent, onClose }) {
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-[#faf9f4]">
           {messages.length === 0 && (
             <div className="text-center text-[11px] text-[#a3a3a3] py-6">
-              Start a 1-on-1 with {agent.name || agent.slug}. History stays here across visits.
+              {t('hyperAgents.dmEmptyState', 'Start a 1-on-1 with {{name}}. History stays here across visits.', { name: agent.name || agent.slug })}
             </div>
           )}
           {messages.map((m, i) => (
@@ -1458,7 +1467,7 @@ function AgentDmModal({ agent, onClose }) {
           ))}
           {sending && (
             <div className="text-[11px] text-[#a3a3a3] flex items-center gap-2 pl-2">
-              <Loader2 size={11} className="animate-spin" /> {agent.name || agent.slug} typing…
+              <Loader2 size={11} className="animate-spin" /> {t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: agent.name || agent.slug })}
             </div>
           )}
           {err && (
@@ -1475,7 +1484,7 @@ function AgentDmModal({ agent, onClose }) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
             rows={1}
-            placeholder={`Message ${agent.name || agent.slug}…`}
+            placeholder={t('hyperAgents.dmPlaceholder', 'Message {{name}}…', { name: agent.name || agent.slug })}
             disabled={sending}
             className="flex-1 bg-[#faf9f4] border border-[#e3e0db] rounded-xl px-3 py-2 text-[13px] text-[#0a0a0a] outline-none focus:border-violet-500 resize-none"
           />
@@ -1485,7 +1494,7 @@ function AgentDmModal({ agent, onClose }) {
             className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
           >
             {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-            Send
+            {t('hyperAgents.send', 'Send')}
           </button>
         </form>
       </motion.div>
@@ -1496,6 +1505,7 @@ function AgentDmModal({ agent, onClose }) {
 /* ─── Create-room modal ──────────────────────────────────────────────── */
 
 function CreateRoomModal({ onClose, onCreated }) {
+  const { t } = useTranslation('dashboard');
   const [name, setName] = useState('');
   // Default to Smart (auto) — the orchestrator picks the best format from the
   // first question. No-code users never have to understand the 10 templates.
@@ -1555,17 +1565,17 @@ function CreateRoomModal({ onClose, onCreated }) {
         onClick={e => e.stopPropagation()}
       >
         <header className="px-5 py-4 border-b border-[#e3e0db] flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">New room</h2>
+          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
           <button type="button" onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
         </header>
         <div className="px-5 py-4 space-y-3">
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">Name</label>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">{t('hyperAgents.nameLbl', 'Name')}</label>
             <input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Q2 planning"
+              placeholder={t('hyperAgents.namePlaceholder', 'Q2 planning')}
               className="w-full h-9 px-3 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
             />
           </div>
@@ -1578,10 +1588,10 @@ function CreateRoomModal({ onClose, onCreated }) {
               className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a]"
             >
               {showAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              Customize format
+              {t('hyperAgents.customizeFormat', 'Customize format')}
               {!showAdvanced && (
                 <span className="text-[10px] text-[#a3a3a3] normal-case font-sans tracking-normal ml-1">
-                  · Smart — picks the best format for your question
+                  · {t('hyperAgents.smartHint', 'Smart — picks the best format for your question')}
                 </span>
               )}
             </button>
@@ -1590,32 +1600,32 @@ function CreateRoomModal({ onClose, onCreated }) {
           {showAdvanced && (
           <>
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">Template</label>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">{t('hyperAgents.templateLbl', 'Template')}</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
               {[
-                { key: 'auto', label: 'Smart (Auto)', desc: 'Picks the best format from your question. Recommended.' },
-                { key: 'debate', label: 'Debate', desc: 'Full CSI: lead → reactors → synth → revise loop' },
-                { key: 'decision', label: 'Decision', desc: 'DACI: lead commits, save as memory, skip debate' },
-                { key: 'swarm', label: 'Swarm', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
-                { key: 'brainstorm', label: 'Brainstorm', desc: 'Generative-only. Top 5-8 ideas. No premature pick.' },
-                { key: 'council', label: 'Council', desc: 'Majority vote (3/5+). APPROVED / CONDITIONAL / REJECTED.' },
-                { key: 'lean_coffee', label: 'Lean Coffee', desc: 'Rotate 2-3 sub-topics, time-boxed. Light exploration.' },
-                { key: 'retrospective', label: 'Retrospective', desc: "What worked / What didn't / What to change." },
-                { key: 'review', label: 'Review', desc: 'Score per dimension. PASS / NEEDS_WORK / FAIL.' },
-                { key: 'standup', label: 'Standup', desc: 'Yesterday / Today / Blockers status report.' },
-              ].map((t) => (
+                { key: 'auto', labelKey: 'hyperAgents.tmplAutoLabel', label: 'Smart (Auto)', descKey: 'hyperAgents.tmplAutoDesc', desc: 'Picks the best format from your question. Recommended.' },
+                { key: 'debate', labelKey: 'hyperAgents.tmplDebateLabel', label: 'Debate', descKey: 'hyperAgents.tmplDebateDesc', desc: 'Full CSI: lead → reactors → synth → revise loop' },
+                { key: 'decision', labelKey: 'hyperAgents.tmplDecisionLabel', label: 'Decision', descKey: 'hyperAgents.tmplDecisionDesc', desc: 'DACI: lead commits, save as memory, skip debate' },
+                { key: 'swarm', labelKey: 'hyperAgents.tmplSwarmLabel', label: 'Swarm', descKey: 'hyperAgents.tmplSwarmDesc', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
+                { key: 'brainstorm', labelKey: 'hyperAgents.tmplBrainstormLabel', label: 'Brainstorm', descKey: 'hyperAgents.tmplBrainstormDesc', desc: 'Generative-only. Top 5-8 ideas. No premature pick.' },
+                { key: 'council', labelKey: 'hyperAgents.tmplCouncilLabel', label: 'Council', descKey: 'hyperAgents.tmplCouncilDesc', desc: 'Majority vote (3/5+). APPROVED / CONDITIONAL / REJECTED.' },
+                { key: 'lean_coffee', labelKey: 'hyperAgents.tmplLeanCoffeeLabel', label: 'Lean Coffee', descKey: 'hyperAgents.tmplLeanCoffeeDesc', desc: 'Rotate 2-3 sub-topics, time-boxed. Light exploration.' },
+                { key: 'retrospective', labelKey: 'hyperAgents.tmplRetroLabel', label: 'Retrospective', descKey: 'hyperAgents.tmplRetroDesc', desc: "What worked / What didn't / What to change." },
+                { key: 'review', labelKey: 'hyperAgents.tmplReviewLabel', label: 'Review', descKey: 'hyperAgents.tmplReviewDesc', desc: 'Score per dimension. PASS / NEEDS_WORK / FAIL.' },
+                { key: 'standup', labelKey: 'hyperAgents.tmplStandupLabel', label: 'Standup', descKey: 'hyperAgents.tmplStandupDesc', desc: 'Yesterday / Today / Blockers status report.' },
+              ].map((tmpl) => (
                 <button
                   type="button"
-                  key={t.key}
-                  onClick={() => setTemplate(t.key)}
+                  key={tmpl.key}
+                  onClick={() => setTemplate(tmpl.key)}
                   className={`text-left px-2 py-2 rounded-lg border text-[11px] transition-colors ${
-                    template === t.key
+                    template === tmpl.key
                       ? 'border-violet-500 bg-violet-50'
                       : 'border-[#e3e0db] hover:border-[#d4d0ca]'
                   }`}
                 >
-                  <div className="font-semibold text-[#0a0a0a]">{t.label}</div>
-                  <div className="text-[10px] text-[#737373] mt-0.5">{t.desc}</div>
+                  <div className="font-semibold text-[#0a0a0a]">{t(tmpl.labelKey, tmpl.label)}</div>
+                  <div className="text-[10px] text-[#737373] mt-0.5">{t(tmpl.descKey, tmpl.desc)}</div>
                 </button>
               ))}
             </div>
@@ -1625,14 +1635,14 @@ function CreateRoomModal({ onClose, onCreated }) {
           {template === 'swarm' && (
             <div>
               <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
-                Permanent Skeptic (silent R1-R3, mandatory R4)
+                {t('hyperAgents.permanentSkepticLbl', 'Permanent Skeptic (silent R1-R3, mandatory R4)')}
               </label>
               <select
                 value={skepticId}
                 onChange={(e) => setSkepticId(e.target.value)}
                 className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
               >
-                <option value="">— auto-pick (first Skeptic-lane participant) —</option>
+                <option value="">{t('hyperAgents.skepticAutoPick', '— auto-pick (first Skeptic-lane participant) —')}</option>
                 {employees
                   .filter((emp) => picked.has(emp.id))
                   .map((emp) => {
@@ -1645,7 +1655,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                   })}
               </select>
               <div className="text-[10px] text-[#a3a3a3] mt-1 font-mono">
-                Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.
+                {t('hyperAgents.skepticHint', 'Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.')}
               </div>
             </div>
           )}
@@ -1654,11 +1664,11 @@ function CreateRoomModal({ onClose, onCreated }) {
 
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
-              Add agents ({picked.size} selected)
+              {t('hyperAgents.addAgentsLbl', 'Add agents ({{n}} selected)', { n: picked.size })}
             </label>
             <div className="max-h-[260px] overflow-y-auto border border-[#e3e0db] rounded-lg divide-y divide-[#f3f1ec]">
               {employees.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">No employees yet.</div>
+                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">{t('hyperAgents.noEmployeesYet', 'No employees yet.')}</div>
               )}
               {employees.map(emp => {
                 const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
@@ -1692,7 +1702,7 @@ function CreateRoomModal({ onClose, onCreated }) {
         </div>
         <footer className="px-5 py-3 border-t border-[#e3e0db] bg-[#faf9f4] flex items-center justify-end gap-2">
           <button type="button" onClick={onClose} className="text-[12px] text-[#525252] hover:text-[#0a0a0a] px-3 py-1.5">
-            Cancel
+            {t('hyperAgents.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
@@ -1700,7 +1710,7 @@ function CreateRoomModal({ onClose, onCreated }) {
             className="bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
           >
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-            Create room
+            {t('hyperAgents.createRoom', 'Create room')}
           </button>
         </footer>
       </motion.form>
@@ -1711,6 +1721,7 @@ function CreateRoomModal({ onClose, onCreated }) {
 /* ─── Agent picker modal (add to room) ───────────────────────────────── */
 
 function AgentPickerModal({ currentIds, onClose, onPick }) {
+  const { t } = useTranslation('dashboard');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set(currentIds || []));
 
@@ -1740,7 +1751,7 @@ function AgentPickerModal({ currentIds, onClose, onPick }) {
         onClick={e => e.stopPropagation()}
       >
         <header className="px-5 py-4 border-b border-[#e3e0db] flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">Add agents to room</h2>
+          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">{t('hyperAgents.addAgentsToRoom', 'Add agents to room')}</h2>
           <button type="button" onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
         </header>
         <div className="max-h-[400px] overflow-y-auto divide-y divide-[#f3f1ec]">
@@ -1766,13 +1777,13 @@ function AgentPickerModal({ currentIds, onClose, onPick }) {
         </div>
         <footer className="px-5 py-3 border-t border-[#e3e0db] bg-[#faf9f4] flex items-center justify-end gap-2">
           <button type="button" onClick={onClose} className="text-[12px] text-[#525252] hover:text-[#0a0a0a] px-3 py-1.5">
-            Cancel
+            {t('hyperAgents.cancel', 'Cancel')}
           </button>
           <button
             onClick={() => onPick(Array.from(picked))}
             className="bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg"
           >
-            Save
+            {t('hyperAgents.save', 'Save')}
           </button>
         </footer>
       </motion.div>

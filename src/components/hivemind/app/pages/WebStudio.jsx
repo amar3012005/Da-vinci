@@ -7,6 +7,7 @@ import {
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
   ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Brain, ArrowUpRight,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import WebResultModal from '../components/WebResultModal';
@@ -52,6 +53,7 @@ function isFeatureLocked(err) {
 /* ─── Page ─────────────────────────────────────────────────────────── */
 
 export default function WebStudio() {
+  const { t } = useTranslation('dashboard');
   const [searchParams, setSearchParams] = useSearchParams();
   const initialHealthOpen = searchParams.get('view') === 'health';
 
@@ -230,7 +232,7 @@ export default function WebStudio() {
     } catch (err) {
       if (isFeatureLocked(err)) {
         setFeatureLocked(true);
-        setSubmitError('This capability is not enabled on your plan. Upgrade to unlock.');
+        setSubmitError(t('webstudio.featureLockedError', 'This capability is not enabled on your plan. Upgrade to unlock.'));
       } else {
         setSubmitError(err.response?.data?.error || err.message);
       }
@@ -309,16 +311,16 @@ export default function WebStudio() {
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Globe size={16} className="text-[#117dff]" />
-            <h1 className="text-[18px] font-semibold text-[#0a0a0a]">Web Studio</h1>
-            <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-2 py-0.5 rounded uppercase tracking-wider">Add-on</span>
+            <h1 className="text-[18px] font-semibold text-[#0a0a0a]">{t('webstudio.title', 'Web Studio')}</h1>
+            <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-2 py-0.5 rounded uppercase tracking-wider">{t('webstudio.addonBadge', 'Add-on')}</span>
             {featureLocked && (
               <span className="text-[9px] font-mono bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
-                <Lock size={8} /> Locked
+                <Lock size={8} /> {t('webstudio.locked', 'Locked')}
               </span>
             )}
           </div>
           <p className="text-[11px] text-[#737373]">
-            Ask the web. Live progress streams here. Saves to HIVEMIND through the same canonical pipeline as Knowledge Base uploads.
+            {t('webstudio.subtitle', 'Ask the web. Live progress streams here. Saves to HIVEMIND through the same canonical pipeline as Knowledge Base uploads.')}
           </p>
         </div>
         <UsageRings usage={usage} monthly={monthly} />
@@ -346,9 +348,9 @@ export default function WebStudio() {
         {nonResearchJobs.length > 0 && (
           <section className="mt-5">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">Search & Crawl runs</h3>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.searchCrawlRuns', 'Search & Crawl runs')}</h3>
               <button onClick={refetchJobs} className="text-[10px] text-[#a3a3a3] hover:text-[#0a0a0a] flex items-center gap-1">
-                <RefreshCw size={11} /> Refresh
+                <RefreshCw size={11} /> {t('webstudio.refresh', 'Refresh')}
               </button>
             </div>
             <div className="border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec] max-h-[420px] overflow-y-auto">
@@ -387,7 +389,7 @@ export default function WebStudio() {
             <button onClick={toggleHealth} className="w-full flex items-center justify-between text-left">
               <div className="flex items-center gap-2">
                 <Activity size={13} className="text-[#525252]" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">System Health</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('webstudio.systemHealth', 'System Health')}</span>
               </div>
               {healthOpen ? <ChevronUp size={13} className="text-[#a3a3a3]" /> : <ChevronDown size={13} className="text-[#a3a3a3]" />}
             </button>
@@ -466,6 +468,7 @@ export default function WebStudio() {
 /* ─── Live research panel (running) ──────────────────────────────── */
 
 function LiveResearchPanel({ job }) {
+  const { t } = useTranslation('dashboard');
   const ref = useRef(null);
   // Auto-scroll the panel as new content streams in.
   useEffect(() => {
@@ -479,7 +482,7 @@ function LiveResearchPanel({ job }) {
         <header className="px-4 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4] flex items-center gap-2">
           <Sparkles size={14} className="text-violet-500" />
           <span className="text-[12px] font-semibold text-[#0a0a0a]">{job.params?.input || 'Research'}</span>
-          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">streaming · {job.params?.model || 'auto'}</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{t('webstudio.streaming', 'streaming')} · {job.params?.model || 'auto'}</span>
           <Loader2 size={12} className="text-violet-500 animate-spin" />
         </header>
         <div className="p-4">
@@ -493,6 +496,7 @@ function LiveResearchPanel({ job }) {
 /* ─── Past research toggle + list ────────────────────────────────── */
 
 function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = {} }) {
+  const { t } = useTranslation('dashboard');
   if (locked) return <EmptyState locked={true} />;
 
   return (
@@ -504,9 +508,9 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
       >
         <div className="flex items-center gap-2">
           <Sparkles size={14} className="text-violet-500" />
-          <span className="text-[13px] font-semibold text-[#0a0a0a]">Past research</span>
+          <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('webstudio.pastResearch', 'Past research')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3]">
-            {jobs.length === 0 ? 'no runs yet' : `${jobs.length} report${jobs.length !== 1 ? 's' : ''}`}
+            {jobs.length === 0 ? t('webstudio.noRunsYet', 'no runs yet') : t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}
           </span>
         </div>
         {open ? <ChevronUp size={14} className="text-[#a3a3a3]" /> : <ChevronDown size={14} className="text-[#a3a3a3]" />}
@@ -523,8 +527,8 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
             {jobs.length === 0 ? (
               <div className="bg-white border border-[#e3e0db] rounded-xl p-6 text-center">
                 <Sparkles size={18} className="text-[#117dff] mx-auto mb-2" />
-                <p className="text-[12px] text-[#0a0a0a] font-semibold">No past research yet</p>
-                <p className="text-[10px] text-[#737373] mt-1">Type a question in the chat bar below to start.</p>
+                <p className="text-[12px] text-[#0a0a0a] font-semibold">{t('webstudio.noPastResearch', 'No past research yet')}</p>
+                <p className="text-[10px] text-[#737373] mt-1">{t('webstudio.noPastResearchHint', 'Type a question in the chat bar below to start.')}</p>
               </div>
             ) : (
               <div className="border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec] max-h-[460px] overflow-y-auto">
@@ -545,7 +549,7 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
                           <span className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</span>
                           {saved && (
                             <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                              <CheckCircle2 size={8} /> saved
+                              <CheckCircle2 size={8} /> {t('webstudio.saved', 'saved')}
                             </span>
                           )}
                         </div>
@@ -571,7 +575,7 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
       {/* Quiet hint when nothing else fills the area */}
       {!open && jobs.length === 0 && (
         <div className="mt-6 text-center text-[11px] text-[#a3a3a3]">
-          Ask the web — type below. e.g. <code className="font-mono bg-[#f3f1ec] px-1 rounded">compare vector DBs for 1M-row RAG</code>
+          {t('webstudio.askWebHint', 'Ask the web — type below. e.g.')} <code className="font-mono bg-[#f3f1ec] px-1 rounded">compare vector DBs for 1M-row RAG</code>
         </div>
       )}
     </div>
@@ -581,6 +585,7 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
 /* ─── Past research preview modal (with one-click save) ──────────── */
 
 function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
+  const { t } = useTranslation('dashboard');
   const result = Array.isArray(job.results) ? job.results[0] : null;
   const title = deriveJobTitle(job, job.results || []);
 
@@ -688,7 +693,7 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
               {saving ? <Loader2 size={12} className="animate-spin" />
                 : saved ? <CheckCircle2 size={12} />
                 : <Save size={12} />}
-              {saving ? 'Saving' : saved ? 'Saved' : 'Save to HIVEMIND'}
+              {saving ? t('webstudio.saving', 'Saving') : saved ? t('webstudio.savedBtn', 'Saved') : t('webstudio.saveToHivemind', 'Save to HIVEMIND')}
             </button>
             <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-[#faf9f4]">
               <X size={14} />
@@ -706,7 +711,7 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
 
           {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
           {!result && (
-            <div className="text-[12px] text-[#a3a3a3]">No report content available.</div>
+            <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
           )}
         </div>
       </motion.div>
@@ -717,25 +722,26 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
 /* ─── After-upload graph tree (segments → memories → relations) ─── */
 
 function PostUploadGraphTree({ saved, relations }) {
+  const { t } = useTranslation('dashboard');
   const totalRelations = Object.values(relations).reduce((acc, r) => acc + (r?.counts?.total || (r?.out?.length || 0) + (r?.in?.length || 0)), 0);
   return (
     <div className="mb-4 bg-violet-50 border border-violet-200 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
         <CheckCircle2 size={14} className="text-emerald-600" />
-        <span className="text-[12px] font-semibold text-[#0a0a0a]">Saved to HIVEMIND</span>
+        <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('webstudio.savedToHivemind', 'Saved to HIVEMIND')}</span>
         <span className="text-[10px] text-[#737373] font-mono ml-auto">
           docId: <code>{(saved.documentId || '').slice(0, 8)}…</code>
         </span>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-3">
-        <Stat label="Segments" value={saved.segmentCount ?? 0} />
-        <Stat label="Memories" value={saved.promotedCount ?? saved.promotedMemoryIds?.length ?? 0} />
-        <Stat label="Relations" value={totalRelations} />
+        <Stat label={t('webstudio.segments', 'Segments')} value={saved.segmentCount ?? 0} />
+        <Stat label={t('webstudio.memories', 'Memories')} value={saved.promotedCount ?? saved.promotedMemoryIds?.length ?? 0} />
+        <Stat label={t('webstudio.relations', 'Relations')} value={totalRelations} />
       </div>
       {Array.isArray(saved.promotedMemoryIds) && saved.promotedMemoryIds.length > 0 && (
         <details>
           <summary className="text-[10px] uppercase tracking-wider font-mono text-[#737373] cursor-pointer">
-            Memory tree
+            {t('webstudio.memoryTree', 'Memory tree')}
           </summary>
           <ul className="mt-2 space-y-1.5">
             {saved.promotedMemoryIds.slice(0, 8).map(mid => {
@@ -762,7 +768,7 @@ function PostUploadGraphTree({ saved, relations }) {
               );
             })}
             {saved.promotedMemoryIds.length > 8 && (
-              <li className="text-[10px] text-[#a3a3a3]">+{saved.promotedMemoryIds.length - 8} more memories</li>
+              <li className="text-[10px] text-[#a3a3a3]">{t('webstudio.moreMemories', '+{{count}} more memories', { count: saved.promotedMemoryIds.length - 8 })}</li>
             )}
           </ul>
         </details>
@@ -789,25 +795,26 @@ function PromptBar({
   researchModel, setResearchModel, citationFormat, setCitationFormat,
   domainPolicy, checkingPolicy, locked,
 }) {
+  const { t } = useTranslation('dashboard');
   const ModeIcon = mode === 'crawl' ? LinkIcon
     : mode === 'research' ? Sparkles
     : Search;
   const modeColor = mode === 'crawl' ? 'text-amber-500'
     : mode === 'research' ? 'text-violet-500'
     : 'text-[#117dff]';
-  const modeLabel = mode === 'crawl' ? 'Crawl mode'
-    : mode === 'research' ? 'Research mode'
-    : 'Search mode';
+  const modeLabel = mode === 'crawl' ? t('webstudio.mode.crawl', 'Crawl mode')
+    : mode === 'research' ? t('webstudio.mode.research', 'Research mode')
+    : t('webstudio.mode.search', 'Search mode');
   const modeHint = mode === 'crawl'
-    ? 'Auto-detected from URL · /search or /research to override'
+    ? t('webstudio.modeHint.crawl', 'Auto-detected from URL · /search or /research to override')
     : mode === 'research'
-      ? 'Tavily compiles multi-source report with citations · /search for raw results'
-      : 'Raw 10 results · /research for comprehensive report';
+      ? t('webstudio.modeHint.research', 'Tavily compiles multi-source report with citations · /search for raw results')
+      : t('webstudio.modeHint.search', 'Raw 10 results · /research for comprehensive report');
   const placeholder = mode === 'crawl'
-    ? 'Paste a URL to crawl…'
+    ? t('webstudio.placeholder.crawl', 'Paste a URL to crawl…')
     : mode === 'research'
-      ? 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"'
-      : 'Search the web…  e.g. "milvus vs qdrant benchmarks"';
+      ? t('webstudio.placeholder.research', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"')
+      : t('webstudio.placeholder.search', 'Search the web…  e.g. "milvus vs qdrant benchmarks"');
 
   // Cycle force: research → search → crawl → null (auto)
   const cycleForce = () => {
@@ -824,8 +831,8 @@ function PromptBar({
         <ModeIcon size={12} className={modeColor} />
         <span className="text-[10px] font-mono uppercase tracking-wider text-[#737373]">{modeLabel}</span>
         {forcedMode && (
-          <button onClick={() => setForcedMode(null)} className="text-[9px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]" title="Clear forced mode">
-            (forced — clear)
+          <button onClick={() => setForcedMode(null)} className="text-[9px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]" title={t('webstudio.clearForcedMode', 'Clear forced mode')}>
+            {t('webstudio.forcedClear', '(forced — clear)')}
           </button>
         )}
         <span className="text-[9px] text-[#a3a3a3] ml-auto">{modeHint}</span>
@@ -845,7 +852,7 @@ function PromptBar({
       {/* Research knobs — depth (model) + citation format */}
       {mode === 'research' && (
         <div className="px-4 py-2 border-t border-[#f3f1ec] flex flex-wrap items-center gap-3 text-[11px] text-[#525252]">
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">depth</span>
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
           <div className="flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-md p-0.5">
             {['mini', 'auto', 'pro'].map(opt => (
               <button
@@ -857,13 +864,13 @@ function PromptBar({
                     ? 'bg-violet-500 text-white'
                     : 'text-[#525252] hover:bg-white'
                 }`}
-                title={opt === 'mini' ? 'Targeted, fast (single-angle)' : opt === 'pro' ? 'Comprehensive, multi-subtopic' : 'Auto-pick best for query'}
+                title={opt === 'mini' ? t('webstudio.modelMiniTitle', 'Targeted, fast (single-angle)') : opt === 'pro' ? t('webstudio.modelProTitle', 'Comprehensive, multi-subtopic') : t('webstudio.modelAutoTitle', 'Auto-pick best for query')}
               >
                 {opt}
               </button>
             ))}
           </div>
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">cite</span>
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.cite', 'cite')}</span>
           <select
             value={citationFormat}
             onChange={e => setCitationFormat(e.target.value)}
@@ -875,7 +882,7 @@ function PromptBar({
             <option value="chicago">chicago</option>
           </select>
           <span className="ml-auto text-[10px] text-[#a3a3a3] font-mono">
-            {researchModel === 'pro' ? '~60-180s · multi-subtopic' : researchModel === 'mini' ? '~15-40s · targeted' : 'auto-picked'}
+            {researchModel === 'pro' ? t('webstudio.proTiming', '~60-180s · multi-subtopic') : researchModel === 'mini' ? t('webstudio.miniTiming', '~15-40s · targeted') : t('webstudio.autoPicked', 'auto-picked')}
           </span>
         </div>
       )}
@@ -883,21 +890,21 @@ function PromptBar({
       {/* Crawl knobs */}
       {mode === 'crawl' && (
         <div className="px-4 py-2 border-t border-[#f3f1ec] flex items-center gap-3 text-[11px] text-[#525252]">
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">depth</span>
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3]">{t('webstudio.depth', 'depth')}</span>
           <input type="number" min={1} max={3} value={depth} onChange={e => setDepth(Math.max(1, Math.min(3, Number(e.target.value))))}
             className="w-12 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
-          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">pages</span>
+          <span className="font-mono uppercase tracking-wider text-[10px] text-[#a3a3a3] ml-2">{t('webstudio.pages', 'pages')}</span>
           <input type="number" min={1} max={50} value={pageLimit} onChange={e => setPageLimit(Math.max(1, Math.min(50, Number(e.target.value))))}
             className="w-14 px-1.5 py-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded text-center font-mono" />
-          {checkingPolicy && <span className="ml-auto text-[10px] text-[#a3a3a3] flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> checking domain…</span>}
+          {checkingPolicy && <span className="ml-auto text-[10px] text-[#a3a3a3] flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> {t('webstudio.checkingDomain', 'checking domain…')}</span>}
           {domainPolicy?.blocked && (
             <span className="ml-auto text-[10px] text-red-600 flex items-center gap-1">
-              <Ban size={10} /> blocked: {domainPolicy.reason || 'policy denial'}
+              <Ban size={10} /> {t('webstudio.blocked', 'blocked: {{reason}}', { reason: domainPolicy.reason || t('webstudio.policyDenial', 'policy denial') })}
             </span>
           )}
           {domainPolicy && !domainPolicy.blocked && (
             <span className="ml-auto text-[10px] text-emerald-600 flex items-center gap-1">
-              <ShieldCheck size={10} /> allowed
+              <ShieldCheck size={10} /> {t('webstudio.allowed', 'allowed')}
             </span>
           )}
         </div>
@@ -909,11 +916,11 @@ function PromptBar({
           <button
             onClick={cycleForce}
             className="text-[10px] text-[#525252] hover:text-[#0a0a0a] px-2 py-1 rounded hover:bg-white border border-transparent hover:border-[#e3e0db]"
-            title="Cycle: auto → search → crawl → research"
+            title={t('webstudio.cycleTitle', 'Cycle: auto → search → crawl → research')}
           >
-            ↔ {forcedMode ? `forced: ${forcedMode}` : `auto · click to force`}
+            ↔ {forcedMode ? t('webstudio.forced', 'forced: {{mode}}', { mode: forcedMode }) : t('webstudio.autoClickToForce', 'auto · click to force')}
           </button>
-          <span className="text-[10px] text-[#a3a3a3] ml-1">Enter to send · Shift+Enter newline</span>
+          <span className="text-[10px] text-[#a3a3a3] ml-1">{t('webstudio.enterHint', 'Enter to send · Shift+Enter newline')}</span>
         </div>
         <button
           onClick={onSubmit}
@@ -921,7 +928,7 @@ function PromptBar({
           className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-lg transition-all"
         >
           {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-          {submitting ? 'Submitting' : 'Send'}
+          {submitting ? t('webstudio.submitting', 'Submitting') : t('webstudio.send', 'Send')}
         </button>
       </div>
 
@@ -929,8 +936,8 @@ function PromptBar({
         <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px] flex items-center justify-center">
           <div className="text-center px-4">
             <Lock size={22} className="text-red-500 mx-auto mb-2" />
-            <p className="text-[13px] font-semibold text-[#0a0a0a]">Web intelligence is not enabled</p>
-            <p className="text-[11px] text-[#737373] mt-1">Upgrade your plan to enable web search + crawl.</p>
+            <p className="text-[13px] font-semibold text-[#0a0a0a]">{t('webstudio.notEnabled', 'Web intelligence is not enabled')}</p>
+            <p className="text-[11px] text-[#737373] mt-1">{t('webstudio.upgradeHint', 'Upgrade your plan to enable web search + crawl.')}</p>
           </div>
         </div>
       )}
@@ -1041,6 +1048,7 @@ function JobRow({ job, active, isPolling, onClick }) {
 /* ─── Expanded job detail (no height cap; page scrolls) ──────────── */
 
 function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
+  const { t } = useTranslation('dashboard');
   const jobType = job.type || (job.urls ? 'crawl' : 'search');
   const status = job.status || 'queued';
   const results = Array.isArray(job.results) ? job.results : (job.results?.results || job.results?.items || []);
@@ -1084,16 +1092,16 @@ function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {status === 'failed' && (
-            <button onClick={handleRetry} disabled={retrying} className="p-1.5 text-[#525252] hover:text-[#117dff] rounded hover:bg-white" title="Retry">
+            <button onClick={handleRetry} disabled={retrying} className="p-1.5 text-[#525252] hover:text-[#117dff] rounded hover:bg-white" title={t('webstudio.retry', 'Retry')}>
               {retrying ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
             </button>
           )}
           {status === 'succeeded' && results.length > 0 && (
-            <button onClick={handleSaveAll} disabled={savingAll || saved} className={`p-1.5 rounded hover:bg-white ${saved ? 'text-emerald-600' : 'text-[#525252] hover:text-emerald-600'}`} title="Save report to memory">
+            <button onClick={handleSaveAll} disabled={savingAll || saved} className={`p-1.5 rounded hover:bg-white ${saved ? 'text-emerald-600' : 'text-[#525252] hover:text-emerald-600'}`} title={t('webstudio.saveReportToMemory', 'Save report to memory')}>
               {savingAll ? <Loader2 size={13} className="animate-spin" /> : saved ? <CheckCircle2 size={13} /> : <Save size={13} />}
             </button>
           )}
-          <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-white" title="Collapse">
+          <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-white" title={t('webstudio.collapse', 'Collapse')}>
             <X size={13} />
           </button>
         </div>
@@ -1109,7 +1117,7 @@ function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
         {(status === 'queued' || status === 'running') && jobType !== 'research' && (
           <div className="text-[12px] text-[#737373] flex items-center gap-2 py-3">
             <Loader2 size={13} className="animate-spin" />
-            Waiting for results…
+            {t('webstudio.waitingForResults', 'Waiting for results…')}
           </div>
         )}
 
@@ -1140,6 +1148,7 @@ function ExpandedJobView({ job, onClose, onResultClick, onMutate }) {
 /* ─── Research live view (during streaming) ─────────────────────── */
 
 function ResearchLiveView({ job }) {
+  const { t } = useTranslation('dashboard');
   const partialContent = job.partial_content || '';
   const partialSources = Array.isArray(job.partial_sources) ? job.partial_sources : [];
 
@@ -1183,7 +1192,7 @@ function ResearchLiveView({ job }) {
         <div>
           <div className="text-[10px] uppercase tracking-wider font-mono text-[#737373] mb-1.5 flex items-center gap-1.5">
             <Sparkles size={11} className="text-violet-500" />
-            Report — streaming
+            {t('webstudio.reportStreaming', 'Report — streaming')}
             <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
           </div>
           <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
@@ -1195,7 +1204,7 @@ function ResearchLiveView({ job }) {
       {!hasAny && (
         <div className="text-[12px] text-[#737373] flex items-center gap-2 py-3">
           <Loader2 size={13} className="animate-spin" />
-          Tavily Research starting…
+          {t('webstudio.researchStarting', 'Tavily Research starting…')}
         </div>
       )}
     </div>
@@ -1262,6 +1271,7 @@ function ResearchStep({ step }) {
 /* ─── Research report renderer ───────────────────────────────────── */
 
 function ResearchReport({ result, fallbackProgress }) {
+  const { t } = useTranslation('dashboard');
   if (!result) return null;
   const text = typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2);
   const sources = Array.isArray(result.sources) ? result.sources : [];
@@ -1284,7 +1294,7 @@ function ResearchReport({ result, fallbackProgress }) {
       {sources.length > 0 && (
         <section className="mt-6 pt-4 border-t border-[#e3e0db]">
           <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2 flex items-center gap-1.5">
-            <FileText size={11} /> Sources ({sources.length})
+            <FileText size={11} /> {t('webstudio.sources', 'Sources ({{count}})', { count: sources.length })}
           </h4>
           <ol className="space-y-1.5 list-decimal pl-5 text-[12px]">
             {sources.map((s, i) => (
@@ -1311,7 +1321,8 @@ function ResearchReport({ result, fallbackProgress }) {
 }
 
 function RawResultList({ results, jobId, jobType, runtime, fallback, onResultClick, onSaved }) {
-  if (results.length === 0) return <div className="text-[12px] text-[#a3a3a3] py-2">No results returned.</div>;
+  const { t } = useTranslation('dashboard');
+  if (results.length === 0) return <div className="text-[12px] text-[#a3a3a3] py-2">{t('webstudio.noResults', 'No results returned.')}</div>;
   return (
     <div className="space-y-1">
       {results.map((r, i) => (
@@ -1345,6 +1356,7 @@ function StatusBadge({ status, polling }) {
 }
 
 function ResultLine({ result, type, jobId, index, runtime, fallback, onClick, onSaved }) {
+  const { t } = useTranslation('dashboard');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -1384,7 +1396,7 @@ function ResultLine({ result, type, jobId, index, runtime, fallback, onClick, on
         onClick={handleSave}
         disabled={saving || saved}
         className={`p-1 ${saved ? 'text-emerald-500' : 'text-[#a3a3a3] hover:text-[#117dff]'} transition-colors`}
-        title={saved ? 'Saved' : 'Save to memory'}
+        title={saved ? t('webstudio.savedTitle', 'Saved') : t('webstudio.saveToMemory', 'Save to memory')}
       >
         {saving ? <Loader2 size={11} className="animate-spin" /> : saved ? <CheckCircle2 size={11} /> : <BookmarkPlus size={11} />}
       </button>
@@ -1395,12 +1407,13 @@ function ResultLine({ result, type, jobId, index, runtime, fallback, onClick, on
 /* ─── Empty state ──────────────────────────────────────────────────── */
 
 function EmptyState({ locked }) {
+  const { t } = useTranslation('dashboard');
   if (locked) return null;
   return (
     <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center">
       <Sparkles size={20} className="text-[#117dff] mx-auto mb-2" />
-      <p className="text-[13px] text-[#0a0a0a] font-semibold">No runs yet</p>
-      <p className="text-[11px] text-[#737373] mt-1">Try <code className="font-mono bg-[#f3f1ec] px-1 rounded">best vector DBs for RAG</code> or paste a URL.</p>
+      <p className="text-[13px] text-[#0a0a0a] font-semibold">{t('webstudio.noRunsYetTitle', 'No runs yet')}</p>
+      <p className="text-[11px] text-[#737373] mt-1">{t('webstudio.noRunsHint', 'Try')} <code className="font-mono bg-[#f3f1ec] px-1 rounded">best vector DBs for RAG</code> {t('webstudio.orPasteUrl', 'or paste a URL.')}</p>
     </div>
   );
 }
@@ -1408,6 +1421,7 @@ function EmptyState({ locked }) {
 /* ─── Health panel (collapsible) ──────────────────────────────────── */
 
 function HealthPanel({ metrics, onRefresh }) {
+  const { t } = useTranslation('dashboard');
   const m = metrics || {};
   const totalJobs = m.total_jobs ?? 0;
   const succeeded = m.succeeded ?? 0;
@@ -1424,33 +1438,33 @@ function HealthPanel({ metrics, onRefresh }) {
   return (
     <div className="pt-4 space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-[#737373]">Auto-refresh every 30s</span>
+        <span className="text-[11px] text-[#737373]">{t('webstudio.autoRefresh', 'Auto-refresh every 30s')}</span>
         <button onClick={onRefresh} className="text-[11px] text-[#525252] hover:text-[#0a0a0a] flex items-center gap-1">
-          <RefreshCw size={11} /> Refresh
+          <RefreshCw size={11} /> {t('webstudio.refresh', 'Refresh')}
         </button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        <Metric label="Total jobs"    value={totalJobs.toLocaleString()}                                          Icon={Layers} />
-        <Metric label="Success rate"  value={`${successRate.toFixed(1)}%`} color={successRate >= 90 ? '#16a34a' : successRate >= 70 ? '#f59e0b' : '#dc2626'} Icon={CheckCircle2} />
-        <Metric label="Avg duration"  value={formatMs(m.avg_duration_ms)}                                        Icon={Activity} />
-        <Metric label="P95 duration"  value={formatMs(m.p95_duration_ms)}                                        Icon={TrendingUp} />
-        <Metric label="Queue depth"   value={(queued + running).toLocaleString()}                                Icon={Activity} color={(queued + running) > 50 ? '#f59e0b' : '#0a0a0a'} />
-        <Metric label="Jobs · 24h"    value={(m.jobs_last_24h ?? 0).toLocaleString()}                            Icon={Zap} />
+        <Metric label={t('webstudio.metric.totalJobs', 'Total jobs')}    value={totalJobs.toLocaleString()}                                          Icon={Layers} />
+        <Metric label={t('webstudio.metric.successRate', 'Success rate')}  value={`${successRate.toFixed(1)}%`} color={successRate >= 90 ? '#16a34a' : successRate >= 70 ? '#f59e0b' : '#dc2626'} Icon={CheckCircle2} />
+        <Metric label={t('webstudio.metric.avgDuration', 'Avg duration')}  value={formatMs(m.avg_duration_ms)}                                        Icon={Activity} />
+        <Metric label={t('webstudio.metric.p95Duration', 'P95 duration')}  value={formatMs(m.p95_duration_ms)}                                        Icon={TrendingUp} />
+        <Metric label={t('webstudio.metric.queueDepth', 'Queue depth')}   value={(queued + running).toLocaleString()}                                Icon={Activity} color={(queued + running) > 50 ? '#f59e0b' : '#0a0a0a'} />
+        <Metric label={t('webstudio.metric.jobs24h', 'Jobs · 24h')}    value={(m.jobs_last_24h ?? 0).toLocaleString()}                            Icon={Zap} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white border border-[#e3e0db] rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Activity size={12} className="text-[#525252]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">Runtime distribution</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('webstudio.runtimeDistribution', 'Runtime distribution')}</span>
           </div>
           {runtimeTotal === 0 ? (
-            <p className="text-[10px] text-[#a3a3a3] text-center py-2 font-mono">No data</p>
+            <p className="text-[10px] text-[#a3a3a3] text-center py-2 font-mono">{t('webstudio.noData', 'No data')}</p>
           ) : (
             <div className="space-y-2">
-              <RuntimeBar label="Lightpanda" count={lightpanda} total={runtimeTotal} color="#117dff" />
-              <RuntimeBar label="Fetch fallback" count={fetchN} total={runtimeTotal} color="#f59e0b" />
+              <RuntimeBar label={t('webstudio.lightpanda', 'Lightpanda')} count={lightpanda} total={runtimeTotal} color="#117dff" />
+              <RuntimeBar label={t('webstudio.fetchFallback', 'Fetch fallback')} count={fetchN} total={runtimeTotal} color="#f59e0b" />
             </div>
           )}
         </div>
@@ -1458,16 +1472,16 @@ function HealthPanel({ metrics, onRefresh }) {
         <div className="bg-white border border-[#e3e0db] rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Info size={12} className="text-[#525252]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">Telemetry</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('webstudio.telemetry', 'Telemetry')}</span>
           </div>
           {Object.keys(telemetry).length === 0 ? (
-            <p className="text-[10px] text-[#a3a3a3] text-center py-2 font-mono">No telemetry</p>
+            <p className="text-[10px] text-[#a3a3a3] text-center py-2 font-mono">{t('webstudio.noTelemetry', 'No telemetry')}</p>
           ) : (
             <div className="grid grid-cols-2 gap-x-3 text-[11px]">
-              <TelemetryRow label="Lightpanda OK" value={telemetry.lightpanda_success ?? 0} />
-              <TelemetryRow label="Lightpanda fail" value={telemetry.lightpanda_failure ?? 0} warn={(telemetry.lightpanda_failure ?? 0) > 0} />
-              <TelemetryRow label="Fetch fallback" value={telemetry.fetch_fallback ?? 0} />
-              <TelemetryRow label="Domain blocks" value={telemetry.domain_blocks ?? 0} warn={(telemetry.domain_blocks ?? 0) > 0} />
+              <TelemetryRow label={t('webstudio.lightpandaOk', 'Lightpanda OK')} value={telemetry.lightpanda_success ?? 0} />
+              <TelemetryRow label={t('webstudio.lightpandaFail', 'Lightpanda fail')} value={telemetry.lightpanda_failure ?? 0} warn={(telemetry.lightpanda_failure ?? 0) > 0} />
+              <TelemetryRow label={t('webstudio.fetchFallback', 'Fetch fallback')} value={telemetry.fetch_fallback ?? 0} />
+              <TelemetryRow label={t('webstudio.domainBlocks', 'Domain blocks')} value={telemetry.domain_blocks ?? 0} warn={(telemetry.domain_blocks ?? 0) > 0} />
             </div>
           )}
         </div>
@@ -1477,7 +1491,7 @@ function HealthPanel({ metrics, onRefresh }) {
         <div className="bg-white border border-[#e3e0db] rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <ShieldAlert size={12} className="text-amber-500" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">Top errors</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('webstudio.topErrors', 'Top errors')}</span>
           </div>
           <ul className="space-y-1 text-[11px] text-[#525252]">
             {topErrors.slice(0, 5).map((e, i) => (
@@ -1525,6 +1539,7 @@ function RuntimeBar({ label, count, total, color }) {
 /* ─── Collapsible progress timeline (completed runs) ────────────── */
 
 function CollapsibleProgress({ progress }) {
+  const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(false);
   const steps = useMemo(() => {
     const byId = new Map();
@@ -1552,7 +1567,7 @@ function CollapsibleProgress({ progress }) {
       >
         {open ? <ChevronUp size={12} className="text-[#a3a3a3]" /> : <ChevronDown size={12} className="text-[#a3a3a3]" />}
         <span className="text-[11px] font-mono uppercase tracking-wider text-[#737373]">
-          Research process ({steps.length} step{steps.length !== 1 ? 's' : ''})
+          {t('webstudio.researchProcess', 'Research process ({{count}} step)', { count: steps.length })}
         </span>
       </button>
       {open && (

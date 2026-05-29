@@ -4,6 +4,7 @@ import {
   Hexagon, Key, Copy, Check, ArrowRight, AlertTriangle,
   Brain, Globe, ShieldCheck, Zap, CheckCircle2, XCircle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import { useCopyToClipboard } from '../shared/hooks';
@@ -33,6 +34,7 @@ const SCOPE_PRESETS = [
 ];
 
 function TestAccessButton({ rawKey }) {
+  const { t } = useTranslation('dashboard');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -59,11 +61,11 @@ function TestAccessButton({ rawKey }) {
       {testing ? (
         <div className="w-4 h-4 border-2 border-[#0a0a0a] border-t-transparent rounded-full animate-spin" />
       ) : result === 'success' ? (
-        <><CheckCircle2 size={16} className="text-[#16a34a]" /> Connected Successfully</>
+        <><CheckCircle2 size={16} className="text-[#16a34a]" /> {t('apikeysetup.connectedSuccessfully', 'Connected Successfully')}</>
       ) : result === 'error' ? (
-        <><XCircle size={16} className="text-[#dc2626]" /> Connection Failed</>
+        <><XCircle size={16} className="text-[#dc2626]" /> {t('apikeysetup.connectionFailed', 'Connection Failed')}</>
       ) : (
-        <><Zap size={16} /> Test Access</>
+        <><Zap size={16} /> {t('apikeysetup.testAccess', 'Test Access')}</>
       )}
     </button>
   );
@@ -74,6 +76,7 @@ function TestAccessButton({ rawKey }) {
  * Now with scope preset selection.
  */
 export default function ApiKeySetup() {
+  const { t } = useTranslation('dashboard');
   const { user, refresh, hasApiKey } = useAuth();
   const { copied, copy } = useCopyToClipboard();
   const [step, setStep] = useState('create'); // 'create' | 'show'
@@ -113,7 +116,7 @@ export default function ApiKeySetup() {
       refresh();
     } catch (err) {
       apiClient.clearApiKey();
-      setError(err.response?.data?.error || 'That API key was rejected by the core API.');
+      setError(err.response?.data?.error || t('apikeysetup.keyRejected', 'That API key was rejected by the core API.'));
     } finally {
       setActivating(false);
     }
@@ -144,12 +147,15 @@ export default function ApiKeySetup() {
           {step === 'create' && (
             <>
               <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
-                {hasApiKey ? 'Connect your core API key' : 'Create your API key'}
+                {hasApiKey
+                  ? t('apikeysetup.connectTitle', 'Connect your core API key')
+                  : t('apikeysetup.createTitle', 'Create your API key')}
               </h2>
               <p className="text-[#525252] text-sm mb-6 leading-relaxed">
-                Hi {user?.display_name || user?.email || 'there'} — {hasApiKey
-                  ? 'paste an existing HIVEMIND Core API key or create a replacement key for this browser.'
-                  : 'choose the capabilities for your API key.'}
+                {t('apikeysetup.greeting', 'Hi {{name}} —', { name: user?.display_name || user?.email || t('apikeysetup.there', 'there') })}{' '}
+                {hasApiKey
+                  ? t('apikeysetup.hasKeyHint', 'paste an existing HIVEMIND Core API key or create a replacement key for this browser.')
+                  : t('apikeysetup.noKeyHint', 'choose the capabilities for your API key.')}
               </p>
 
               {error && (
@@ -162,7 +168,7 @@ export default function ApiKeySetup() {
               {hasApiKey && (
                 <div className="mb-5">
                   <label className="block text-[#a3a3a3] text-xs font-mono mb-2 uppercase tracking-wider">
-                    Existing Core API Key
+                    {t('apikeysetup.existingKeyLabel', 'Existing Core API Key')}
                   </label>
                   <div className="flex flex-col gap-3">
                     <input
@@ -182,7 +188,7 @@ export default function ApiKeySetup() {
                       ) : (
                         <>
                           <Key size={16} />
-                          Use Existing Key
+                          {t('apikeysetup.useExistingKey', 'Use Existing Key')}
                         </>
                       )}
                     </button>
@@ -193,7 +199,7 @@ export default function ApiKeySetup() {
               {/* Scope presets */}
               <div className="mb-5">
                 <label className="block text-[#a3a3a3] text-xs font-mono mb-3 uppercase tracking-wider">
-                  Key Type
+                  {t('apikeysetup.keyType', 'Key Type')}
                 </label>
                 <div className="space-y-2">
                   {SCOPE_PRESETS.map(preset => {
@@ -240,7 +246,9 @@ export default function ApiKeySetup() {
                 ) : (
                   <>
                     <Key size={16} />
-                    {hasApiKey ? 'Create Replacement Key' : 'Generate API Key'}
+                    {hasApiKey
+                      ? t('apikeysetup.createReplacementKey', 'Create Replacement Key')
+                      : t('apikeysetup.generateApiKey', 'Generate API Key')}
                   </>
                 )}
               </button>
@@ -250,14 +258,14 @@ export default function ApiKeySetup() {
           {step === 'show' && rawKey && (
             <>
               <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
-                Your API key
+                {t('apikeysetup.yourApiKey', 'Your API key')}
               </h2>
 
               {/* Warning */}
               <div className="flex items-start gap-2 mb-4">
                 <AlertTriangle size={14} className="text-[#d97706] mt-0.5 shrink-0" />
                 <p className="text-[#d97706] text-xs font-['Space_Grotesk'] leading-relaxed">
-                  Copy this key now. It will not be shown again.
+                  {t('apikeysetup.copyNowWarning', 'Copy this key now. It will not be shown again.')}
                 </p>
               </div>
 
@@ -280,7 +288,7 @@ export default function ApiKeySetup() {
 
               {/* Scopes applied */}
               <div className="flex flex-wrap items-center gap-1.5 mb-4">
-                <span className="text-[10px] text-[#a3a3a3] font-mono uppercase">Scopes:</span>
+                <span className="text-[10px] text-[#a3a3a3] font-mono uppercase">{t('apikeysetup.scopesLabel', 'Scopes:')}</span>
                 {activePreset.scopes.map(s => (
                   <span
                     key={s}
@@ -301,7 +309,7 @@ export default function ApiKeySetup() {
                 onClick={handleContinue}
                 className="w-full flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] text-white font-semibold py-3 px-6 rounded-[4px] transition-all text-sm font-['Space_Grotesk'] group cursor-pointer border-none uppercase tracking-[0.075em]"
               >
-                Continue to Dashboard
+                {t('apikeysetup.continueToDashboard', 'Continue to Dashboard')}
                 <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
               </button>
             </>
@@ -317,9 +325,9 @@ export default function ApiKeySetup() {
           <div className="w-2 h-2 rounded-full bg-[#e3e0db]" />
         </div>
         <div className="flex items-center justify-center gap-8 mt-2">
-          <span className="text-[10px] text-[#117dff]/60 font-mono">Org</span>
-          <span className={`text-[10px] font-mono ${step === 'show' ? 'text-[#117dff]/60' : 'text-[#a3a3a3]'}`}>Key</span>
-          <span className="text-[10px] text-[#a3a3a3] font-mono">Dashboard</span>
+          <span className="text-[10px] text-[#117dff]/60 font-mono">{t('apikeysetup.stepOrg', 'Org')}</span>
+          <span className={`text-[10px] font-mono ${step === 'show' ? 'text-[#117dff]/60' : 'text-[#a3a3a3]'}`}>{t('apikeysetup.stepKey', 'Key')}</span>
+          <span className="text-[10px] text-[#a3a3a3] font-mono">{t('apikeysetup.stepDashboard', 'Dashboard')}</span>
         </div>
       </motion.div>
     </div>

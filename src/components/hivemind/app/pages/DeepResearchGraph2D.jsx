@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import ForceGraph2D from 'react-force-graph-2d';
 import {
   Network, X, Search, RefreshCw, Layers, GitBranch, Crosshair, CheckCircle2
@@ -276,6 +277,7 @@ function buildGraphFromLayers(layers) {
 
 /* ──── Node Detail Sidecar (MemoryGraph style) ──────────────────── */
 function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint, currentQuery }) {
+  const { t } = useTranslation('dashboard');
   const nodeMap = useMemo(() => {
     const map = {};
     nodes?.forEach(n => { map[n.id] = n; });
@@ -305,7 +307,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-[#e3e0db] px-4 py-3 flex items-center justify-between">
         <span className="text-xs font-mono text-[#a3a3a3] uppercase tracking-wider">
-          Node Detail
+          {t('deepresearchgraph2d.nodeDetail', 'Node Detail')}
         </span>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-[#f3f1ec] transition-colors">
           <X size={14} className="text-[#a3a3a3]" />
@@ -324,7 +326,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
           <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a] leading-snug">
             {node.title || 'Untitled'}
           </h3>
-          {node.agent && <p className="text-[10px] text-[#a3a3a3] mt-1">Agent: {node.agent}</p>}
+          {node.agent && <p className="text-[10px] text-[#a3a3a3] mt-1">{t('deepresearchgraph2d.agent', 'Agent')}: {node.agent}</p>}
         </div>
 
         {/* Content */}
@@ -347,9 +349,9 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
         {/* Scores */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Confidence', value: node.confidence != null ? `${(node.confidence * 100).toFixed(0)}%` : null },
-            { label: 'Type', value: node.type },
-            { label: node.layer === 'blueprints' ? 'Reused' : 'Layer', value: node.layer === 'blueprints' ? node.timesReused ?? 0 : node.layer },
+            { label: t('deepresearchgraph2d.confidence', 'Confidence'), value: node.confidence != null ? `${(node.confidence * 100).toFixed(0)}%` : null },
+            { label: t('deepresearchgraph2d.type', 'Type'), value: node.type },
+            { label: node.layer === 'blueprints' ? t('deepresearchgraph2d.reused', 'Reused') : t('deepresearchgraph2d.layer', 'Layer'), value: node.layer === 'blueprints' ? node.timesReused ?? 0 : node.layer },
           ].map(s => (
             <div key={s.label} className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
               <p className="text-[10px] text-[#a3a3a3] font-mono">{s.label}</p>
@@ -363,26 +365,26 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
-                <p className="text-[10px] text-[#a3a3a3] font-mono">Pattern</p>
-                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.patternCount || 0} steps</p>
+                <p className="text-[10px] text-[#a3a3a3] font-mono">{t('deepresearchgraph2d.pattern', 'Pattern')}</p>
+                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.patternCount || 0} {t('deepresearchgraph2d.steps', 'steps')}</p>
               </div>
               <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center">
-                <p className="text-[10px] text-[#a3a3a3] font-mono">State</p>
-                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.hasCapturedState ? 'Ready' : 'Partial'}</p>
+                <p className="text-[10px] text-[#a3a3a3] font-mono">{t('deepresearchgraph2d.state', 'State')}</p>
+                <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{node.hasCapturedState ? t('deepresearchgraph2d.ready', 'Ready') : t('deepresearchgraph2d.partial', 'Partial')}</p>
               </div>
             </div>
             {node.capturedStateSummary && (
               <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3 text-[10px] text-[#525252] font-['Space_Grotesk'] space-y-0.5">
-                <p>Sources: {node.capturedStateSummary.sourceCount ?? 0}</p>
-                <p>Findings: {node.capturedStateSummary.findingCount ?? 0}</p>
-                <p>Trails: {node.capturedStateSummary.trailCount ?? 0}</p>
+                <p>{t('deepresearchgraph2d.sources', 'Sources')}: {node.capturedStateSummary.sourceCount ?? 0}</p>
+                <p>{t('deepresearchgraph2d.findings', 'Findings')}: {node.capturedStateSummary.findingCount ?? 0}</p>
+                <p>{t('deepresearchgraph2d.trails', 'Trails')}: {node.capturedStateSummary.trailCount ?? 0}</p>
               </div>
             )}
             {onReuseBlueprint && (
               <button onClick={() => onReuseBlueprint(node, currentQuery)}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#d97706] text-white text-xs font-['Space_Grotesk'] font-medium hover:bg-[#b86505] transition-colors">
                 <RefreshCw size={12} />
-                Reuse Blueprint
+                {t('deepresearchgraph2d.reuseBlueprint', 'Reuse Blueprint')}
               </button>
             )}
           </div>
@@ -391,7 +393,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
         {/* Relationships */}
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
-            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-2">Relationships</p>
+            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-2">{t('deepresearchgraph2d.relationships', 'Relationships')}</p>
             <div className="space-y-1.5">
               {outbound.map((e, i) => {
                 const tid = typeof e.target === 'object' ? e.target.id : e.target;
@@ -432,7 +434,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
         {/* Meta */}
         <div className="text-[10px] text-[#a3a3a3] font-mono space-y-0.5">
           <p>ID: {node.id}</p>
-          {node.agent && <p>Agent: {node.agent}</p>}
+          {node.agent && <p>{t('deepresearchgraph2d.agent', 'Agent')}: {node.agent}</p>}
         </div>
       </div>
     </motion.div>
@@ -441,6 +443,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onReuseBlueprint,
 
 /* ──── Layered Isometric View ────────────────────────────────────── */
 function LayeredView({ graphData, selectedNode, onNodeClick }) {
+  const { t } = useTranslation('dashboard');
   const containerRef = useRef(null);
   const [dims, setDims] = useState({ w: 800, h: 600 });
   const [pov, setPov] = useState({ pitch: 55, yaw: -5, roll: 0, zoom: 1, panX: 0, panY: 0 });
@@ -611,10 +614,10 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
         />
 
         <div className="absolute left-4 top-4 z-30 max-w-[240px]">
-          <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#737373]">Layer POV</p>
-          <h3 className="mt-1 text-sm font-semibold text-[#0a0a0a]">Inspect one layer at a time</h3>
+          <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-[#737373]">{t('deepresearchgraph2d.layerPov', 'Layer POV')}</p>
+          <h3 className="mt-1 text-sm font-semibold text-[#0a0a0a]">{t('deepresearchgraph2d.inspectLayer', 'Inspect one layer at a time')}</h3>
           <p className="mt-1 text-[11px] text-[#737373] leading-snug">
-            Click a layer to flatten it into a top view with its live connections.
+            {t('deepresearchgraph2d.clickLayer', 'Click a layer to flatten it into a top view with its live connections.')}
           </p>
         </div>
 
@@ -745,14 +748,14 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
           <div className="absolute right-4 top-4 z-30 w-[194px] rounded-[18px] border border-[#e3e0db] bg-white/90 backdrop-blur shadow-lg p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-[#737373]">Top view</p>
+                <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-[#737373]">{t('deepresearchgraph2d.topView', 'Top view')}</p>
                 <p className="text-[11px] font-semibold text-[#0a0a0a]">{LAYER_META[focusedLayer]?.label}</p>
               </div>
               <button
                 onClick={() => setFocusedLayer(null)}
                 className="px-2 py-1 rounded-md text-[10px] border border-[#e3e0db] text-[#525252] hover:border-[#117dff]/30 hover:text-[#117dff]"
               >
-                Reset
+                {t('deepresearchgraph2d.reset', 'Reset')}
               </button>
             </div>
             <svg className="mt-3 w-full h-[116px] overflow-visible" viewBox={`0 0 ${miniW} ${miniH}`}>
@@ -796,8 +799,8 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
               <rect x="0" y="0" width={miniW} height={miniH} rx="14" fill="none" stroke="rgba(227,224,219,0.65)" />
             </svg>
             <div className="mt-2 flex items-center justify-between text-[10px] text-[#737373]">
-              <span>{focusedNodes.length} nodes</span>
-              <span>{focusedCrossEdges.length} links</span>
+              <span>{focusedNodes.length} {t('deepresearchgraph2d.nodes', 'nodes')}</span>
+              <span>{focusedCrossEdges.length} {t('deepresearchgraph2d.links', 'links')}</span>
             </div>
           </div>
         )}
@@ -822,7 +825,7 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
               startYPos: puckPos.y,
             };
           }}
-          title="Drag to change POV"
+          title={t('deepresearchgraph2d.dragPov', 'Drag to change POV')}
         >
           POV
         </div>
@@ -831,13 +834,13 @@ function LayeredView({ graphData, selectedNode, onNodeClick }) {
             className="flex-1 text-[10px] px-2 py-1 rounded-md border border-[#e3e0db] bg-white text-[#525252]"
             onClick={() => setPov({ pitch: 55, yaw: -5, roll: 0, zoom: 1, panX: 0, panY: 0 })}
           >
-            Reset
+            {t('deepresearchgraph2d.reset', 'Reset')}
           </button>
           <button
             className="flex-1 text-[10px] px-2 py-1 rounded-md border border-[#e3e0db] bg-white text-[#525252]"
             onClick={() => setPov({ pitch: 0, yaw: 0, roll: 0, zoom: 1.05, panX: 0, panY: 0 })}
           >
-            Top
+            {t('deepresearchgraph2d.top', 'Top')}
           </button>
         </div>
       </div>
@@ -851,6 +854,7 @@ const LAYER_X = { promotedClaims: 0, sources: -0.2, claims: 0, trails: 0.2, obse
 
 /* ──── Main Component ──────────────────────────────────────────── */
 export default function DeepResearchGraph2D({ sessionId, showChrome = true, onReuseBlueprint = null, currentQuery = '' }) {
+  const { t } = useTranslation('dashboard');
   const graphRef = useRef(null);
   const containerRef = useRef(null);
   const [dims, setDims] = useState({ w: 800, h: 600 });
@@ -1225,7 +1229,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
             <div className="w-8 h-8 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center">
               <Network size={16} className="text-[#8b5cf6]" />
             </div>
-            <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a]">Research Graph</h1>
+            <h1 className="text-sm font-bold font-['Space_Grotesk'] text-[#0a0a0a]">{t('deepresearchgraph2d.title', 'Research Graph')}</h1>
           </div>
 
           {/* View Toggle */}
@@ -1234,13 +1238,13 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
               className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] transition-all ${
                 viewMode === 'force' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#737373]'
               }`}>
-              <GitBranch size={10} className="inline mr-1" />Force
+              <GitBranch size={10} className="inline mr-1" />{t('deepresearchgraph2d.force', 'Force')}
             </button>
             <button onClick={() => setViewMode('layered')}
               className={`rounded-md px-2.5 py-1 text-[11px] font-mono uppercase tracking-[0.08em] transition-all ${
                 viewMode === 'layered' ? 'bg-[#117dff]/10 text-[#117dff]' : 'text-[#737373]'
               }`}>
-              <Layers size={10} className="inline mr-1" />Layers
+              <Layers size={10} className="inline mr-1" />{t('deepresearchgraph2d.layers', 'Layers')}
             </button>
           </div>
 
@@ -1249,7 +1253,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
             <input type="text" value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={highlightNodes.size > 0 ? `Search... (${highlightNodes.size} matches)` : 'Search nodes...'}
+              placeholder={highlightNodes.size > 0 ? t('deepresearchgraph2d.searchMatches', 'Search... ({{count}} matches)', { count: highlightNodes.size }) : t('deepresearchgraph2d.searchNodes', 'Search nodes...')}
               className="w-full pl-8 pr-3 py-1.5 border border-[#e3e0db] rounded-lg text-xs font-['Space_Grotesk'] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 bg-[#faf9f4]"
             />
           </div>
@@ -1259,7 +1263,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
             <button onClick={() => setLayerFilter('all')}
               className={`px-2 py-1 rounded text-[10px] font-['Space_Grotesk'] ${
                 layerFilter === 'all' ? 'bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20' : 'text-[#525252] border border-transparent'
-              }`}>All</button>
+              }`}>{t('deepresearchgraph2d.all', 'All')}</button>
             {LAYER_ORDER.map(l => (
               <button key={l} onClick={() => setLayerFilter(l)}
                 className={`px-2 py-1 rounded text-[10px] font-['Space_Grotesk'] whitespace-nowrap ${
@@ -1279,19 +1283,19 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
           {/* Actions */}
           <button onClick={handleRefresh} disabled={isLoading}
             className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors disabled:opacity-40"
-            title="Refresh">
+            title={t('deepresearchgraph2d.refresh', 'Refresh')}>
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
           </button>
           <button onClick={() => { graphRef.current?.zoomToFit?.(400, 70); setFitRequested(false); }}
             className="p-1.5 rounded-lg border border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252] hover:border-[#117dff]/20 transition-colors"
-            title="Fit to view">
+            title={t('deepresearchgraph2d.fitToView', 'Fit to view')}>
             <Crosshair size={13} />
           </button>
 
           {/* Stats */}
           <div className="flex items-center gap-3 ml-auto text-[10px] font-mono text-[#a3a3a3]">
-            <span>{stats.nodes} nodes</span>
-            <span>{stats.edges} edges</span>
+            <span>{stats.nodes} {t('deepresearchgraph2d.nodes', 'nodes')}</span>
+            <span>{stats.edges} {t('deepresearchgraph2d.edges', 'edges')}</span>
             {layerCounts.promotedClaims > 0 && <span className="flex items-center gap-1"><span style={{ color: LAYER_COLORS.promotedClaims }}>◈</span>{layerCounts.promotedClaims}</span>}
             {layerCounts.blueprints > 0 && <span className="flex items-center gap-1"><span style={{ color: LAYER_COLORS.blueprints }}>◆</span>{layerCounts.blueprints}</span>}
           </div>
@@ -1304,7 +1308,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">Loading research graph...</span>
+              <span className="text-xs text-[#a3a3a3] font-['Space_Grotesk']">{t('deepresearchgraph2d.loading', 'Loading research graph...')}</span>
             </div>
           </div>
         )}
@@ -1354,7 +1358,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
               <div className="text-center">
                 <Network size={32} className="text-[#e3e0db] mx-auto mb-3" />
                 <p className="text-sm text-[#a3a3a3] font-['Space_Grotesk']">
-                  No graph data yet. Start a research session to see nodes grow.
+                  {t('deepresearchgraph2d.empty', 'No graph data yet. Start a research session to see nodes grow.')}
                 </p>
               </div>
             </div>
@@ -1364,7 +1368,7 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
         {/* Legend — MemoryGraph style */}
         {graphData.nodes.length > 0 && viewMode === 'force' && (
           <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-[#e3e0db] rounded-xl px-3 py-2.5 z-10 max-w-[400px]">
-            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">Relationships</p>
+            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-1.5">{t('deepresearchgraph2d.relationships', 'Relationships')}</p>
             <div className="flex items-center gap-3 flex-wrap">
               {Object.entries(EDGE_COLORS).slice(0, 4).map(([type, color]) => (
                 <div key={type} className="flex items-center gap-1.5">
@@ -1373,14 +1377,14 @@ export default function DeepResearchGraph2D({ sessionId, showChrome = true, onRe
                 </div>
               ))}
             </div>
-            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">Node Shapes = Layer</p>
+            <p className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-wider mt-2 mb-1.5">{t('deepresearchgraph2d.nodeShapes', 'Node Shapes = Layer')}</p>
             <div className="flex flex-wrap gap-3">
               {[
-                { label: 'Sources / Claims', shape: 'circle', color: '#117dff' },
-                { label: 'Trails', shape: 'hex', color: '#9333ea' },
-                { label: 'Blueprints', shape: 'diamond', color: '#d97706' },
-                { label: 'Prior Knowledge', shape: 'star', color: '#f43f5e' },
-                { label: 'Observations', shape: 'square', color: '#3b82f6' },
+                { label: t('deepresearchgraph2d.sourcesClaims', 'Sources / Claims'), shape: 'circle', color: '#117dff' },
+                { label: t('deepresearchgraph2d.trailsLabel', 'Trails'), shape: 'hex', color: '#9333ea' },
+                { label: t('deepresearchgraph2d.blueprintsLabel', 'Blueprints'), shape: 'diamond', color: '#d97706' },
+                { label: t('deepresearchgraph2d.priorKnowledge', 'Prior Knowledge'), shape: 'star', color: '#f43f5e' },
+                { label: t('deepresearchgraph2d.observationsLabel', 'Observations'), shape: 'square', color: '#3b82f6' },
               ].map(({ label, shape, color }) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <svg width="12" height="12" viewBox="0 0 12 12">

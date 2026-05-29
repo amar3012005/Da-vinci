@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   Search,
   Filter,
@@ -260,6 +261,7 @@ const cardVariants = {
 };
 
 function MemoryCard({ memory, index, onSelect, isSelected }) {
+  const { t } = useTranslation('dashboard');
   return (
     <motion.button
       layout
@@ -278,7 +280,7 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       {/* Top row */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] leading-tight line-clamp-1 flex-1">
-          {memory.title || memory.content?.slice(0, 60) || 'Untitled Memory'}
+          {memory.title || memory.content?.slice(0, 60) || t('memories.untitledMemory', 'Untitled Memory')}
         </h3>
         <ChevronRight
           size={14}
@@ -401,13 +403,14 @@ const REL_TYPE_STYLE = {
 };
 
 function RelationsBlock({ loading, relations }) {
+  const { t } = useTranslation('dashboard');
   if (loading) {
     return (
       <div>
         <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-          Relations
+          {t('memories.relations', 'Relations')}
         </label>
-        <div className="text-[11px] text-[#a3a3a3] italic">Loading…</div>
+        <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.loadingRelations', 'Loading…')}</div>
       </div>
     );
   }
@@ -417,9 +420,9 @@ function RelationsBlock({ loading, relations }) {
     return (
       <div>
         <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-          Relations
+          {t('memories.relations', 'Relations')}
         </label>
-        <div className="text-[11px] text-[#a3a3a3] italic">No relations yet.</div>
+        <div className="text-[11px] text-[#a3a3a3] italic">{t('memories.noRelations', 'No relations yet.')}</div>
       </div>
     );
   }
@@ -433,7 +436,7 @@ function RelationsBlock({ loading, relations }) {
   return (
     <div>
       <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-2">
-        Relations · {total}
+        {t('memories.relationsCount', 'Relations · {{count}}', { count: total })}
       </label>
       <div className="space-y-3">
         {orderedTypes.map((type) => {
@@ -489,6 +492,7 @@ function RelationsBlock({ loading, relations }) {
 }
 
 function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
+  const { t } = useTranslation('dashboard');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState(null);
@@ -576,7 +580,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e3e0db]">
           <div className="flex items-center gap-2">
             <Brain size={16} className="text-[#117dff]" />
-            <span className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">Memory Detail</span>
+            <span className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">{t('memories.memoryDetail', 'Memory Detail')}</span>
           </div>
           <button
             onClick={onClose}
@@ -590,7 +594,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {/* Title */}
           <h2 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] leading-snug">
-            {memory.title || 'Untitled Memory'}
+            {memory.title || t('memories.untitledMemory', 'Untitled Memory')}
           </h2>
 
           {/* Meta row */}
@@ -635,7 +639,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {memory.importance != null && (
             <div>
               <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1">
-                Importance
+                {t('memories.importance', 'Importance')}
               </label>
               <ImportanceBar score={memory.importance} />
             </div>
@@ -644,10 +648,10 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {/* Full content */}
           <div>
             <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-              Content
+              {t('memories.content', 'Content')}
             </label>
             <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
-              {memory.content || 'No content'}
+              {memory.content || t('memories.noContent', 'No content')}
             </div>
           </div>
 
@@ -655,7 +659,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {memory.tags?.length > 0 && (
             <div>
               <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                Tags
+                {t('memories.tags', 'Tags')}
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {memory.tags.map((tag) => (
@@ -679,7 +683,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {evidenceCount !== null && evidenceCount > 0 && (
             <div>
               <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                Evidence
+                {t('memories.evidence', 'Evidence')}
               </label>
               <button
                 onClick={onViewEvidence}
@@ -687,10 +691,10 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
               >
                 <div className="flex items-center gap-2">
                   <Database size={16} />
-                  <span>View Supporting Evidence</span>
+                  <span>{t('memories.viewSupportingEvidence', 'View Supporting Evidence')}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono">{evidenceCount} segment{evidenceCount !== 1 ? 's' : ''}</span>
+                  <span className="text-xs font-mono">{evidenceCount} {t('memories.segment', 'segment', { count: evidenceCount })}{evidenceCount !== 1 ? 's' : ''}</span>
                   <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </button>
@@ -701,7 +705,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {entities && entities.length > 0 && (
             <div>
               <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                Entities
+                {t('memories.entities', 'Entities')}
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {entities.slice(0, 12).map((t) => (
@@ -721,36 +725,36 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
           {/* Metadata */}
           <div>
             <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-              Metadata
+              {t('memories.metadata', 'Metadata')}
             </label>
             <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3 space-y-1.5 text-[11px] font-mono">
               {memory.id && (
                 <div className="flex justify-between">
-                  <span className="text-[#d4d0ca]">ID</span>
+                  <span className="text-[#d4d0ca]">{t('memories.metaId', 'ID')}</span>
                   <span className="text-[#525252] truncate ml-4 max-w-[240px]">{memory.id}</span>
                 </div>
               )}
               {memory.project && (
                 <div className="flex justify-between">
-                  <span className="text-[#d4d0ca]">Project</span>
+                  <span className="text-[#d4d0ca]">{t('memories.metaProject', 'Project')}</span>
                   <span className="text-[#525252]">{memory.project}</span>
                 </div>
               )}
               {memory.version != null && (
                 <div className="flex justify-between">
-                  <span className="text-[#d4d0ca]">Version</span>
+                  <span className="text-[#d4d0ca]">{t('memories.metaVersion', 'Version')}</span>
                   <span className="text-[#525252]">{memory.version}</span>
                 </div>
               )}
               {memory.created_at && (
                 <div className="flex justify-between">
-                  <span className="text-[#d4d0ca]">Created</span>
+                  <span className="text-[#d4d0ca]">{t('memories.metaCreated', 'Created')}</span>
                   <span className="text-[#525252]">{new Date(memory.created_at).toLocaleString()}</span>
                 </div>
               )}
               {memory.updated_at && (
                 <div className="flex justify-between">
-                  <span className="text-[#d4d0ca]">Updated</span>
+                  <span className="text-[#d4d0ca]">{t('memories.metaUpdated', 'Updated')}</span>
                   <span className="text-[#525252]">{new Date(memory.updated_at).toLocaleString()}</span>
                 </div>
               )}
@@ -774,12 +778,12 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
             ) : confirmDelete ? (
               <>
                 <AlertTriangle size={14} />
-                Confirm Delete
+                {t('memories.confirmDelete', 'Confirm Delete')}
               </>
             ) : (
               <>
                 <Trash2 size={14} />
-                Delete Memory
+                {t('memories.deleteMemory', 'Delete Memory')}
               </>
             )}
           </button>
@@ -788,7 +792,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
               onClick={() => setConfirmDelete(false)}
               className="w-full mt-2 text-center text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-['Space_Grotesk']"
             >
-              Cancel
+              {t('memories.cancel', 'Cancel')}
             </button>
           )}
         </div>
@@ -800,6 +804,7 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
 function EmptyState({ hasFilters }) {
+  const { t } = useTranslation('dashboard');
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -810,12 +815,12 @@ function EmptyState({ hasFilters }) {
         <Brain size={36} className="text-[#117dff]/40" />
       </div>
       <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-2">
-        {hasFilters ? 'No memories match' : 'No memories yet'}
+        {hasFilters ? t('memories.emptyFilterTitle', 'No memories match') : t('memories.emptyTitle', 'No memories yet')}
       </h3>
       <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] text-center max-w-sm leading-relaxed">
         {hasFilters
-          ? 'Try adjusting your search or filters to find what you are looking for.'
-          : 'Memories will appear here as your AI agents interact and learn. Connect a data source or create your first memory to get started.'}
+          ? t('memories.emptyFilterHint', 'Try adjusting your search or filters to find what you are looking for.')
+          : t('memories.emptyHint', 'Memories will appear here as your AI agents interact and learn. Connect a data source or create your first memory to get started.')}
       </p>
     </motion.div>
   );
@@ -824,6 +829,7 @@ function EmptyState({ hasFilters }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Memories() {
+  const { t } = useTranslation('dashboard');
   // Project scope from TeamSwitcher — pages without project filter previously
   // showed org-wide rows even when a project was selected. activeProjectId is
   // included in listParams so backend recall returns only project-scoped rows.
@@ -1064,8 +1070,8 @@ export default function Memories() {
               <Brain size={22} className="text-[#117dff]" />
             </div>
             <div>
-              <h1 className="text-[#0a0a0a] text-xl font-bold">Memory Intelligence</h1>
-              <p className="text-[#a3a3a3] text-xs">Browse memories, documents, and evidence</p>
+              <h1 className="text-[#0a0a0a] text-xl font-bold">{t('memories.title', 'Memory Intelligence')}</h1>
+              <p className="text-[#a3a3a3] text-xs">{t('memories.subtitle', 'Browse memories, documents, and evidence')}</p>
             </div>
           </div>
           {hasFilters && (
@@ -1074,7 +1080,7 @@ export default function Memories() {
               className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-mono"
             >
               <X size={12} />
-              Clear filters
+              {t('memories.clearFilters', 'Clear filters')}
             </button>
           )}
         </div>
@@ -1100,7 +1106,7 @@ export default function Memories() {
                 }`}
               >
                 <Icon size={16} />
-                <span className="text-sm font-semibold">{tab.label}</span>
+                <span className="text-sm font-semibold">{t(`memories.tab_${tab.id}`, tab.label)}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeTab"
@@ -1119,7 +1125,7 @@ export default function Memories() {
             <div className="flex items-center gap-2 text-[#dc2626]">
               <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
               <span className="text-sm font-['Space_Grotesk']">
-                <strong>{contradictionsCount}</strong> conflicting memor{contradictionsCount === 1 ? 'y' : 'ies'} detected
+                <strong>{contradictionsCount}</strong> {t('memories.conflictingMemories', 'conflicting memor{{suffix}} detected', { suffix: contradictionsCount === 1 ? 'y' : 'ies' })}
               </span>
             </div>
             <a
@@ -1134,7 +1140,7 @@ export default function Memories() {
         {/* Top-entity chip cloud + group-by toggle */}
         {topEntities.length > 0 && (
           <div className="mb-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">Filter by entity:</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('memories.filterByEntity', 'Filter by entity:')}</span>
             {topEntities.map(e => {
               const active = activeEntity === e.key;
               const tint = e.type === 'person' ? '#117dff'
@@ -1164,7 +1170,7 @@ export default function Memories() {
                 onChange={(e) => setGroupByDoc(e.target.checked)}
                 className="accent-[#117dff]"
               />
-              <label htmlFor="group-by-doc" className="cursor-pointer">Group by document</label>
+              <label htmlFor="group-by-doc" className="cursor-pointer">{t('memories.groupByDocument', 'Group by document')}</label>
             </span>
           </div>
         )}
@@ -1257,6 +1263,7 @@ function MemoriesTab({
 }) {
   // ─── Data fetching ──────────────────────────────────────────────
 
+  const { t } = useTranslation('dashboard');
   const { activeProjectId } = useTeamContext() || {};
   const isSearching = debouncedQuery.trim().length > 0;
 
@@ -1422,7 +1429,7 @@ function MemoriesTab({
             setAllMemories([]);
             setHasMore(true);
           }}
-          placeholder="Search memories semantically..."
+          placeholder={t('memories.searchPlaceholder', 'Search memories semantically...')}
           className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
         />
       </div>
@@ -1432,8 +1439,8 @@ function MemoriesTab({
         <div className="flex items-center gap-1.5 mb-3 text-[10px] font-mono text-[#d4d0ca]">
           <span className={`w-1 h-1 rounded-full ${searchData?.metadata?.fallbackApplied ? 'bg-amber-400' : 'bg-[#16a34a]'}`} />
           {searchData?.metadata?.fallbackApplied
-            ? 'Keyword search (vector unavailable)'
-            : 'Semantic search (vector + keyword)'}
+            ? t('memories.keywordSearch', 'Keyword search (vector unavailable)')
+            : t('memories.semanticSearch', 'Semantic search (vector + keyword)')}
           {searchData?.metadata?.durationMs != null && (
             <span className="ml-1">· {searchData.metadata.durationMs}ms</span>
           )}
@@ -1452,7 +1459,7 @@ function MemoriesTab({
           }`}
         >
           <Filter size={12} />
-          Filters
+          {t('memories.filters', 'Filters')}
           {(activeType || activeTag) && (
             <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
           )}
@@ -1470,7 +1477,7 @@ function MemoriesTab({
               {/* Type filters */}
               <div className="mb-3">
                 <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                  Type
+                  {t('memories.filterType', 'Type')}
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {MEMORY_TYPES.map((t) => (
@@ -1498,7 +1505,7 @@ function MemoriesTab({
               {/* Cognitive layer filter — canonical / bridge / compression / reflection */}
               <div className="mb-3">
                 <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                  Cognitive Layer
+                  {t('memories.filterCognitiveLayer', 'Cognitive Layer')}
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[
@@ -1540,9 +1547,9 @@ function MemoriesTab({
                     className="w-3.5 h-3.5 accent-[#117dff]"
                   />
                   <span className="text-[11px] font-mono text-[#525252]">
-                    Show superseded
+                    {t('memories.showSuperseded', 'Show superseded')}
                     <span className="ml-1 text-[#a3a3a3]">
-                      (older versions hidden by cognition drift-compaction + Updates edges)
+                      {t('memories.showSupersededHint', '(older versions hidden by cognition drift-compaction + Updates edges)')}
                     </span>
                   </span>
                 </label>
@@ -1552,7 +1559,7 @@ function MemoriesTab({
                 {availableTags.length > 0 && (
                   <div>
                     <label className="block text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider mb-1.5">
-                      Tags
+                      {t('memories.filterTags', 'Tags')}
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {availableTags.slice(0, 20).map((tag) => (
@@ -1594,7 +1601,7 @@ function MemoriesTab({
           {loading && resolvedList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24">
               <Loader2 size={28} className="text-[#117dff]/50 animate-spin mb-4" />
-              <span className="text-[#d4d0ca] text-sm">Loading memories...</span>
+              <span className="text-[#d4d0ca] text-sm">{t('memories.loadingMemories', 'Loading memories...')}</span>
             </div>
           ) : resolvedList.length === 0 ? (
             <EmptyState hasFilters={!!hasFilters} />
@@ -1603,8 +1610,8 @@ function MemoriesTab({
               {/* Count */}
               <p className="text-[#d4d0ca] text-[11px] font-mono mb-3">
                 {isSearching
-                  ? `${resolvedList.length} result${resolvedList.length !== 1 ? 's' : ''}`
-                  : `${totalCount != null ? totalCount : resolvedList.length} memories`}
+                  ? t('memories.searchResultCount', '{{count}} result{{suffix}}', { count: resolvedList.length, suffix: resolvedList.length !== 1 ? 's' : '' })
+                  : t('memories.memoryCount', '{{count}} memories', { count: totalCount != null ? totalCount : resolvedList.length })}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 
@@ -1635,7 +1642,7 @@ function MemoriesTab({
                             <span className="text-[11px] font-mono uppercase tracking-wider text-[#525252]">
                               {docTitle}
                             </span>
-                            <span className="text-[10px] font-mono text-[#a3a3a3]">·{grp.items.length} memor{grp.items.length === 1 ? 'y' : 'ies'}</span>
+                            <span className="text-[10px] font-mono text-[#a3a3a3]">·{grp.items.length} {t('memories.memoryOrMemories', 'memor{{suffix}}', { suffix: grp.items.length === 1 ? 'y' : 'ies' })}</span>
                           </div>
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             {grp.items.map((memory, i) => (
@@ -1676,7 +1683,7 @@ function MemoriesTab({
                     onClick={handleLoadMore}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-sm font-semibold hover:text-[#525252] hover:border-[#d4d0ca] transition-all"
                   >
-                    Load more
+                    {t('memories.loadMore', 'Load more')}
                   </button>
                 </div>
               )}
@@ -1703,6 +1710,7 @@ function MemoriesTab({
 // ─── Documents Tab ─────────────────────────────────────────────────────────────
 
 function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelectedDocument }) {
+  const { t } = useTranslation('dashboard');
   const PAGE_SIZE = 20;
   // eslint-disable-next-line no-unused-vars
   const [offset, setOffset] = useState(0);
@@ -1746,7 +1754,7 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search documents by title, tags, or platform..."
+          placeholder={t('memories.searchDocumentsPlaceholder', 'Search documents by title, tags, or platform...')}
           className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
         />
       </div>
@@ -1761,7 +1769,7 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           <AlertTriangle size={16} />
-          <span>Failed to load documents</span>
+          <span>{t('memories.failedToLoadDocuments', 'Failed to load documents')}</span>
         </div>
       )}
 
@@ -1785,12 +1793,12 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <FileText size={48} className="text-[#d4d0ca] mb-4" />
           <h3 className="text-[#525252] font-semibold mb-2">
-            {isSearching ? 'No documents found' : 'No documents yet'}
+            {isSearching ? t('memories.noDocumentsFound', 'No documents found') : t('memories.noDocumentsYet', 'No documents yet')}
           </h3>
           <p className="text-[#a3a3a3] text-sm max-w-md">
             {isSearching
-              ? 'Try a different search query'
-              : 'Upload documents through the knowledge base to start building your intelligence repository'}
+              ? t('memories.noDocumentsHint', 'Try a different search query')
+              : t('memories.noDocumentsUploadHint', 'Upload documents through the knowledge base to start building your intelligence repository')}
           </p>
         </div>
       )}
@@ -1811,6 +1819,7 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
 // ─── Evidence Tab ──────────────────────────────────────────────────────────────
 
 function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDocument }) {
+  const { t } = useTranslation('dashboard');
   const [searchMode, setSearchMode] = useState('evidence'); // 'evidence' or 'hybrid'
   const debouncedQuery = useDebounce(searchQuery, 350);
 
@@ -1848,14 +1857,14 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search evidence segments..."
+            placeholder={t('memories.searchEvidencePlaceholder', 'Search evidence segments...')}
             className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-3.5 pl-11 pr-10 text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 focus:ring-1 focus:ring-[#117dff]/20 transition-all"
           />
         </div>
 
         {/* Mode Toggle */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#a3a3a3] font-mono">Search mode:</span>
+          <span className="text-xs text-[#a3a3a3] font-mono">{t('memories.searchMode', 'Search mode:')}</span>
           <button
             onClick={() => setSearchMode('evidence')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
@@ -1864,7 +1873,7 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
                 : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
             }`}
           >
-            Evidence only
+            {t('memories.evidenceOnly', 'Evidence only')}
           </button>
           <button
             onClick={() => setSearchMode('hybrid')}
@@ -1874,7 +1883,7 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
                 : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca]'
             }`}
           >
-            Hybrid (evidence + memories)
+            {t('memories.hybridSearch', 'Hybrid (evidence + memories)')}
           </button>
         </div>
       </div>
@@ -1889,7 +1898,7 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           <AlertTriangle size={16} />
-          <span>Failed to search evidence</span>
+          <span>{t('memories.failedToSearchEvidence', 'Failed to search evidence')}</span>
         </div>
       )}
 
@@ -1916,9 +1925,9 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       {!loading && !error && !debouncedQuery.trim() && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
-          <h3 className="text-[#525252] font-semibold mb-2">Search evidence segments</h3>
+          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.searchEvidenceTitle', 'Search evidence segments')}</h3>
           <p className="text-[#a3a3a3] text-sm max-w-md">
-            Enter a query to search through uploaded document segments and find supporting evidence
+            {t('memories.searchEvidenceHint', 'Enter a query to search through uploaded document segments and find supporting evidence')}
           </p>
         </div>
       )}
@@ -1926,9 +1935,9 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
       {!loading && !error && debouncedQuery.trim() && results.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Database size={48} className="text-[#d4d0ca] mb-4" />
-          <h3 className="text-[#525252] font-semibold mb-2">No evidence found</h3>
+          <h3 className="text-[#525252] font-semibold mb-2">{t('memories.noEvidenceFound', 'No evidence found')}</h3>
           <p className="text-[#a3a3a3] text-sm max-w-md">
-            Try a different query or switch search modes
+            {t('memories.noEvidenceHint', 'Try a different query or switch search modes')}
           </p>
         </div>
       )}
@@ -1939,6 +1948,7 @@ function EvidenceTab({ searchQuery, setSearchQuery, setActiveTab, setSelectedDoc
 // ─── Document Card ─────────────────────────────────────────────────────────────
 
 function DocumentCard({ document, index, onSelect, isSelected }) {
+  const { t } = useTranslation('dashboard');
   const typeColor = document.documentType === 'pdf' ? '#ef4444' :
                    document.documentType === 'docx' ? '#3b82f6' :
                    document.documentType === 'xlsx' ? '#10b981' : '#6b7280';
@@ -1978,11 +1988,11 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
 
       {/* Metadata */}
       <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mb-3">
-        <span>{document.wordCount?.toLocaleString() || 0} words</span>
+        <span>{document.wordCount?.toLocaleString() || 0} {t('memories.words', 'words')}</span>
         <span>·</span>
-        <span>{document.segmentCount || 0} segments</span>
+        <span>{document.segmentCount || 0} {t('memories.segmentsLower', 'segments')}</span>
         <span>·</span>
-        <span>{document.promotedCount || 0} promoted</span>
+        <span>{document.promotedCount || 0} {t('memories.promotedLower', 'promoted')}</span>
       </div>
 
       {/* Tags */}
@@ -2014,6 +2024,7 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
 // ─── Evidence Card ─────────────────────────────────────────────────────────────
 
 function EvidenceCard({ evidence, onViewDocument }) {
+  const { t } = useTranslation('dashboard');
   const hasDocument = evidence.document_id || evidence.documentId;
   
   return (
@@ -2048,14 +2059,14 @@ function EvidenceCard({ evidence, onViewDocument }) {
           {evidence.segment_index != null && (
             <>
               <span>·</span>
-              <span>Segment {evidence.segment_index + 1}</span>
+              <span>{t('memories.segment', 'Segment')} {evidence.segment_index + 1}</span>
             </>
           )}
           {evidence.type === 'memory' && (
             <>
               <span>·</span>
               <Brain size={10} />
-              <span>Canonical memory</span>
+              <span>{t('memories.canonicalMemory', 'Canonical memory')}</span>
             </>
           )}
         </div>
@@ -2067,7 +2078,7 @@ function EvidenceCard({ evidence, onViewDocument }) {
             className="flex items-center gap-1 px-2 py-1 text-[10px] font-mono text-[#117dff] hover:bg-[#117dff]/10 rounded transition-colors"
           >
             <ExternalLink size={10} />
-            <span>View Doc</span>
+            <span>{t('memories.viewDoc', 'View Doc')}</span>
           </button>
         )}
       </div>
@@ -2078,6 +2089,7 @@ function EvidenceCard({ evidence, onViewDocument }) {
 // ─── Document Detail Panel ─────────────────────────────────────────────────────
 
 function DocumentDetailPanel({ document, onClose }) {
+  const { t } = useTranslation('dashboard');
   const [detailData, setDetailData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -2148,19 +2160,19 @@ function DocumentDetailPanel({ document, onClose }) {
               {/* Metadata */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Word Count</span>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">{t('memories.wordCount', 'Word Count')}</span>
                   <p className="text-[#0a0a0a] font-semibold">{document.wordCount?.toLocaleString() || 0}</p>
                 </div>
                 <div>
-                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Segments</span>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">{t('memories.segments', 'Segments')}</span>
                   <p className="text-[#0a0a0a] font-semibold">{detailData.segments?.length || 0}</p>
                 </div>
                 <div>
-                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Promoted</span>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">{t('memories.promoted', 'Promoted')}</span>
                   <p className="text-[#0a0a0a] font-semibold">{detailData.promotedMemories?.length || 0}</p>
                 </div>
                 <div>
-                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">Created</span>
+                  <span className="text-[#a3a3a3] text-xs font-mono uppercase">{t('memories.created', 'Created')}</span>
                   <p className="text-[#0a0a0a] font-semibold">{new Date(document.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
@@ -2170,7 +2182,7 @@ function DocumentDetailPanel({ document, onClose }) {
                 <div>
                   <h3 className="text-sm font-semibold text-[#0a0a0a] mb-3 flex items-center gap-2">
                     <Brain size={16} />
-                    Promoted Memories ({detailData.promotedMemories.length})
+                    {t('memories.promotedMemories', 'Promoted Memories')} ({detailData.promotedMemories.length})
                   </h3>
                   <div className="space-y-2">
                     {detailData.promotedMemories.map(mem => (
@@ -2188,13 +2200,13 @@ function DocumentDetailPanel({ document, onClose }) {
                 <div>
                   <h3 className="text-sm font-semibold text-[#0a0a0a] mb-3 flex items-center gap-2">
                     <Layers size={16} />
-                    Segments ({detailData.segments.length})
+                    {t('memories.segments', 'Segments')} ({detailData.segments.length})
                   </h3>
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {detailData.segments.map(seg => (
                       <div key={seg.id} className="p-3 bg-transparent border border-[#e3e0db] rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-mono text-[#a3a3a3]">Segment {seg.segmentIndex + 1}</span>
+                          <span className="text-xs font-mono text-[#a3a3a3]">{t('memories.segment', 'Segment')} {seg.segmentIndex + 1}</span>
                           <span className="text-xs font-mono text-[#d4d0ca]">{seg.wordCount} words</span>
                         </div>
                         <p className="text-xs text-[#525252] line-clamp-4">{seg.content}</p>

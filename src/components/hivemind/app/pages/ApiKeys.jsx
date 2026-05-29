@@ -4,6 +4,7 @@ import {
   Key, Plus, Copy, Check, Trash2, Shield, AlertTriangle,
   Globe, Brain, Wrench, ShieldCheck, Zap, CheckCircle2, XCircle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
 
@@ -37,6 +38,7 @@ function ScopeBadge({ scope, size = 'sm' }) {
 
 // ── Test Access button ──────────────────────────────────────────────
 function TestAccessButton({ rawKey }) {
+  const { t } = useTranslation('dashboard');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState(null); // 'success' | 'error'
 
@@ -66,11 +68,11 @@ function TestAccessButton({ rawKey }) {
       {testing ? (
         <div className="w-3 h-3 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
       ) : result === 'success' ? (
-        <><CheckCircle2 size={13} className="text-[#16a34a]" /> Connected</>
+        <><CheckCircle2 size={13} className="text-[#16a34a]" /> {t('apikeys.connected', 'Connected')}</>
       ) : result === 'error' ? (
-        <><XCircle size={13} className="text-[#dc2626]" /> Failed</>
+        <><XCircle size={13} className="text-[#dc2626]" /> {t('apikeys.failed', 'Failed')}</>
       ) : (
-        <><Zap size={13} /> Test Access</>
+        <><Zap size={13} /> {t('apikeys.testAccess', 'Test Access')}</>
       )}
     </button>
   );
@@ -78,6 +80,7 @@ function TestAccessButton({ rawKey }) {
 
 // ── Key Created Banner ──────────────────────────────────────────────
 function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
+  const { t } = useTranslation('dashboard');
   const { copied, copy } = useCopyToClipboard();
 
   return (
@@ -92,10 +95,10 @@ function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
           <AlertTriangle size={18} className="text-[#117dff] mt-0.5 shrink-0" />
           <div>
             <p className="text-[#117dff] text-sm font-semibold font-['Space_Grotesk']">
-              Save your API key now
+              {t('apikeys.saveKeyNow', 'Save your API key now')}
             </p>
             <p className="text-[#525252] text-xs mt-1 font-['Space_Grotesk']">
-              This is the only time you will see this key. Copy it and store it securely.
+              {t('apikeys.saveKeyHint', 'This is the only time you will see this key. Copy it and store it securely.')}
             </p>
           </div>
         </div>
@@ -107,7 +110,7 @@ function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
           <button
             onClick={() => copy(rawKey)}
             className="shrink-0 p-2 rounded-lg hover:bg-[#f3f1ec] transition-colors"
-            title="Copy to clipboard"
+            title={t('apikeys.copyToClipboard', 'Copy to clipboard')}
           >
             {copied ? (
               <Check size={16} className="text-[#117dff]" />
@@ -120,7 +123,7 @@ function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
         {/* Scopes applied */}
         {scopes?.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
-            <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">SCOPES:</span>
+            <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">{t('apikeys.scopesLabel', 'SCOPES:')}</span>
             {scopes.map(s => <ScopeBadge key={s} scope={s} />)}
           </div>
         )}
@@ -131,7 +134,7 @@ function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
             onClick={onDismiss}
             className="text-[#a3a3a3] hover:text-[#525252] text-xs font-mono transition-colors"
           >
-            I've saved the key — dismiss
+            {t('apikeys.dismissKey', "I've saved the key — dismiss")}
           </button>
         </div>
       </div>
@@ -141,6 +144,7 @@ function KeyCreatedBanner({ rawKey, scopes, onDismiss }) {
 
 // ── Revoke Confirmation ─────────────────────────────────────────────
 function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
+  const { t } = useTranslation('dashboard');
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -150,7 +154,7 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
     >
       <AlertTriangle size={16} className="text-[#dc2626] shrink-0" />
       <p className="text-[#dc2626] text-xs font-['Space_Grotesk'] flex-1">
-        Revoke <span className="font-semibold">"{keyLabel}"</span>? This cannot be undone.
+        {t('apikeys.revokeConfirm', 'Revoke')} <span className="font-semibold">&quot;{keyLabel}&quot;</span>? {t('apikeys.revokeUndone', 'This cannot be undone.')}
       </p>
       <div className="flex items-center gap-2 shrink-0">
         <button
@@ -158,7 +162,7 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
           disabled={revoking}
           className="px-3 py-1.5 text-xs text-[#525252] hover:text-[#0a0a0a] font-['Space_Grotesk'] transition-colors"
         >
-          Cancel
+          {t('apikeys.cancel', 'Cancel')}
         </button>
         <button
           onClick={onConfirm}
@@ -168,7 +172,7 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
           {revoking ? (
             <div className="w-3 h-3 border-2 border-[#dc2626] border-t-transparent rounded-full animate-spin" />
           ) : (
-            'Revoke'
+            t('apikeys.revoke', 'Revoke')
           )}
         </button>
       </div>
@@ -178,6 +182,7 @@ function RevokeConfirmation({ keyLabel, onConfirm, onCancel, revoking }) {
 
 // ── Key Row ─────────────────────────────────────────────────────────
 function KeyRow({ apiKey, onRevoke }) {
+  const { t } = useTranslation('dashboard');
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const isRevoked = apiKey.status === 'revoked';
@@ -236,11 +241,11 @@ function KeyRow({ apiKey, onRevoke }) {
 
           {isRevoked ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-red-500/10 text-[#dc2626]/60 border border-red-500/10">
-              Revoked
+              {t('apikeys.statusRevoked', 'Revoked')}
             </span>
           ) : (
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono uppercase tracking-wider bg-emerald-500/10 text-[#16a34a] border border-emerald-500/20">
-              Active
+              {t('apikeys.statusActive', 'Active')}
             </span>
           )}
 
@@ -248,7 +253,7 @@ function KeyRow({ apiKey, onRevoke }) {
             <button
               onClick={() => setConfirmingRevoke(true)}
               className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-[#dc2626] hover:bg-red-50 transition-colors"
-              title="Revoke key"
+              title={t('apikeys.revokeKeyTitle', 'Revoke key')}
             >
               <Trash2 size={14} />
             </button>
@@ -281,6 +286,7 @@ function KeyRow({ apiKey, onRevoke }) {
 
 // ── Main Page ───────────────────────────────────────────────────────
 export default function ApiKeysPage() {
+  const { t } = useTranslation('dashboard');
   const DEFAULT_SCOPES = ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'];
   const [label, setLabel] = useState('');
   const [creating, setCreating] = useState(false);
@@ -336,11 +342,11 @@ export default function ApiKeysPage() {
               <Key size={20} className="text-[#117dff]" />
             </div>
             <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">
-              API Keys
+              {t('apikeys.title', 'API Keys')}
             </h1>
           </div>
           <p className="text-[#525252] text-sm font-['Space_Grotesk'] ml-[52px]">
-            Create and manage authentication keys with granular permissions.
+            {t('apikeys.subtitle', 'Create and manage authentication keys with granular permissions.')}
           </p>
         </motion.div>
 
@@ -354,9 +360,7 @@ export default function ApiKeysPage() {
           <div className="flex items-start gap-3 bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <Shield size={16} className="text-[#a3a3a3] mt-0.5 shrink-0" />
             <p className="text-[#525252] text-xs font-['Space_Grotesk'] leading-relaxed">
-              API keys authenticate requests to the HIVEMIND Core API. Each key is scoped to your
-              organization with specific permissions. Keep keys secret — revoke any key you suspect
-              has been compromised.
+              {t('apikeys.securityNotice', 'API keys authenticate requests to the HIVEMIND Core API. Each key is scoped to your organization with specific permissions. Keep keys secret — revoke any key you suspect has been compromised.')}
             </p>
           </div>
         </motion.div>
@@ -370,19 +374,19 @@ export default function ApiKeysPage() {
         >
           <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h2 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
-              Create a new key
+              {t('apikeys.createNewKey', 'Create a new key')}
             </h2>
             <form onSubmit={handleCreate} className="space-y-4">
               {/* Label */}
               <div>
                 <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">
-                  Label
+                  {t('apikeys.labelField', 'Label')}
                 </label>
                 <input
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder='e.g. "Production Key", "Dev Key"'
+                  placeholder={t('apikeys.labelPlaceholder', 'e.g. "Production Key", "Dev Key"')}
                   maxLength={64}
                   className="w-full bg-transparent border border-[#e3e0db] rounded-xl py-2.5 px-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 transition-colors"
                 />
@@ -390,7 +394,7 @@ export default function ApiKeysPage() {
 
               {/* All keys get full access by default */}
               <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">SCOPES:</span>
+                <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">{t('apikeys.scopesLabel', 'SCOPES:')}</span>
                 {DEFAULT_SCOPES.map(s => <ScopeBadge key={s} scope={s} />)}
               </div>
 
@@ -405,7 +409,7 @@ export default function ApiKeysPage() {
                 ) : (
                   <>
                     <Plus size={16} />
-                    Create Key
+                    {t('apikeys.createKey', 'Create Key')}
                   </>
                 )}
               </button>
@@ -435,14 +439,14 @@ export default function ApiKeysPage() {
           transition={{ delay: 0.15 }}
         >
           <h2 className="text-[#525252] text-xs font-mono mb-3 uppercase tracking-wider">
-            Existing Keys ({loading ? '...' : keyList.length})
+            {t('apikeys.existingKeys', 'Existing Keys')} ({loading ? '...' : keyList.length})
           </h2>
 
           {fetchError && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
               <AlertTriangle size={16} className="text-[#dc2626] shrink-0" />
               <p className="text-[#dc2626] text-xs font-['Space_Grotesk']">
-                Failed to load keys: {fetchError}
+                {t('apikeys.failedToLoad', 'Failed to load keys:')} {fetchError}
               </p>
             </div>
           )}
@@ -466,7 +470,7 @@ export default function ApiKeysPage() {
             <div className="bg-white border border-[#e3e0db] rounded-xl p-10 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <Key size={24} className="text-[#e3e0db] mx-auto mb-3" />
               <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
-                No API keys yet. Create one above to get started.
+                {t('apikeys.noKeys', 'No API keys yet. Create one above to get started.')}
               </p>
             </div>
           ) : (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Users, UserPlus, Trash2, AlertCircle, RefreshCw, Crown, FolderKanban, Send } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -15,6 +16,7 @@ const ROLE_BADGES = {
  * Uses P0-1 endpoints under /v1/teams/:id/members.
  */
 export default function TeamMembers() {
+  const { t } = useTranslation('dashboard');
   const { activeTeam, activeTeamId } = useTeamContext();
   const { user, org } = useAuth();
   const activeOrgId = org?.id;
@@ -81,7 +83,7 @@ export default function TeamMembers() {
 
   async function handleRemove(memberUserId) {
     if (!activeTeamId) return;
-    if (!window.confirm('Remove this member from the team?')) return;
+    if (!window.confirm(t('teammembers.removeConfirm', 'Remove this member from the team?'))) return;
     setError(null);
     try {
       await apiClient.removeTeamMember(activeTeamId, memberUserId);
@@ -111,8 +113,8 @@ export default function TeamMembers() {
     return (
       <div className="max-w-3xl mx-auto p-6 bg-white border border-[#e3e0db] rounded-[8px] text-center">
         <Users size={32} className="text-[#a3a3a3] mx-auto mb-3" />
-        <h2 className="text-[#0a0a0a] font-semibold mb-1">No team selected</h2>
-        <p className="text-[12px] text-[#a3a3a3]">Pick a team from the top-bar switcher.</p>
+        <h2 className="text-[#0a0a0a] font-semibold mb-1">{t('teammembers.noTeamTitle', 'No team selected')}</h2>
+        <p className="text-[12px] text-[#a3a3a3]">{t('teammembers.noTeamHint', 'Pick a team from the top-bar switcher.')}</p>
       </div>
     );
   }
@@ -122,10 +124,10 @@ export default function TeamMembers() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-            Team Members
+            {t('teammembers.title', 'Team Members')}
           </h1>
           <p className="text-[12px] text-[#a3a3a3] mt-1">
-            {activeTeam?.name || 'Active team'} — {members.length} {members.length === 1 ? 'member' : 'members'}
+            {activeTeam?.name || t('teammembers.activeTeamFallback', 'Active team')} — {members.length} {members.length === 1 ? t('teammembers.memberSingular', 'member') : t('teammembers.memberPlural', 'members')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -135,21 +137,21 @@ export default function TeamMembers() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
+            {t('teammembers.btnRefresh', 'Refresh')}
           </button>
           <button
             onClick={() => setAddOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1] text-[#0a0a0a]"
           >
             <UserPlus size={13} />
-            Add Existing
+            {t('teammembers.btnAddExisting', 'Add Existing')}
           </button>
           <button
             onClick={() => setInviteOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
           >
             <Send size={13} />
-            Invite to Team
+            {t('teammembers.btnInvite', 'Invite to Team')}
           </button>
         </div>
       </header>
@@ -164,27 +166,27 @@ export default function TeamMembers() {
         <table className="w-full text-[13px]">
           <thead className="bg-[#faf9f4] border-b border-[#e3e0db]">
             <tr>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">User</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Role</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Project Access</th>
-              <th className="text-left px-3 py-2 font-medium text-[#525252]">Joined</th>
-              <th className="text-right px-3 py-2 font-medium text-[#525252]">Actions</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('teammembers.colUser', 'User')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('teammembers.colRole', 'Role')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('teammembers.colProjectAccess', 'Project Access')}</th>
+              <th className="text-left px-3 py-2 font-medium text-[#525252]">{t('teammembers.colJoined', 'Joined')}</th>
+              <th className="text-right px-3 py-2 font-medium text-[#525252]">{t('teammembers.colActions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
             {members.length === 0 && !loading && (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-[#a3a3a3]">No members yet</td>
+                <td colSpan={5} className="text-center py-8 text-[#a3a3a3]">{t('teammembers.noMembers', 'No members yet')}</td>
               </tr>
             )}
             {members.map(m => {
               const u = m.user || {};
               const cls = ROLE_BADGES[m.role] || ROLE_BADGES.member;
               const isSelf = (u.id || m.userId) === user?.id;
-              const memberProjectCount = projects.filter(p => 
+              const memberProjectCount = projects.filter(p =>
                 p._count?.members > 0 || p.policy === 'team_inherited'
               ).length;
-              
+
               return (
                 <tr key={m.userId || m.user_id} className="border-b border-[#eae7e1] hover:bg-[#faf9f4]">
                   <td className="px-3 py-2">
@@ -200,7 +202,7 @@ export default function TeamMembers() {
                   <td className="px-3 py-2">
                     <span className="inline-flex items-center gap-1 text-[11px] text-[#525252]">
                       <FolderKanban size={11} className="text-[#117dff]" />
-                      {memberProjectCount} {memberProjectCount === 1 ? 'project' : 'projects'}
+                      {memberProjectCount} {memberProjectCount === 1 ? t('teammembers.projectSingular', 'project') : t('teammembers.projectPlural', 'projects')}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-[#a3a3a3] text-[11px]">
@@ -213,14 +215,14 @@ export default function TeamMembers() {
                           onClick={() => handlePromote(m)}
                           className="text-[11px] text-[#525252] hover:text-[#117dff]"
                         >
-                          {m.role === 'lead' ? 'Demote' : 'Promote to lead'}
+                          {m.role === 'lead' ? t('teammembers.btnDemote', 'Demote') : t('teammembers.btnPromote', 'Promote to lead')}
                         </button>
                       )}
                       {!isSelf && (
                         <button
                           onClick={() => handleRemove(m.userId || m.user_id)}
                           className="text-[#dc2626]/60 hover:text-[#dc2626]"
-                          title="Remove from team"
+                          title={t('teammembers.removeTitle', 'Remove from team')}
                         >
                           <Trash2 size={13} />
                         </button>
@@ -239,49 +241,49 @@ export default function TeamMembers() {
         onClose={() => { setInviteOpen(false); fetchMembers(); }}
         orgId={activeOrgId}
         defaultTeamIds={activeTeamId ? [activeTeamId] : []}
-        contextLabel={activeTeam?.name ? `${activeTeam.name} (team)` : 'team'}
+        contextLabel={activeTeam?.name ? `${activeTeam.name} (team)` : t('teammembers.contextLabelFallback', 'team')}
       />
 
       {addOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setAddOpen(false)}>
           <div className="bg-white rounded-[8px] p-5 w-[420px] shadow-xl" onClick={e => e.stopPropagation()}>
-            <h2 className="text-[15px] font-semibold mb-3">Add Team Member</h2>
+            <h2 className="text-[15px] font-semibold mb-3">{t('teammembers.addModalTitle', 'Add Team Member')}</h2>
             {availableToAdd.length === 0 ? (
-              <p className="text-[12px] text-[#a3a3a3]">All org members are already in this team.</p>
+              <p className="text-[12px] text-[#a3a3a3]">{t('teammembers.allMembersAdded', 'All org members are already in this team.')}</p>
             ) : (
               <>
-                <label className="block text-[11px] text-[#525252] mb-1">User</label>
+                <label className="block text-[11px] text-[#525252] mb-1">{t('teammembers.addModalLabelUser', 'User')}</label>
                 <select
                   value={addingUserId}
                   onChange={e => setAddingUserId(e.target.value)}
                   className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3"
                 >
-                  <option value="">— select org member —</option>
+                  <option value="">{t('teammembers.addModalSelectPlaceholder', '— select org member —')}</option>
                   {availableToAdd.map(u => (
                     <option key={u.user_id || u.userId || u.id} value={u.user_id || u.userId || u.id}>
                       {u.email || u.displayName || u.user_id}
                     </option>
                   ))}
                 </select>
-                <label className="block text-[11px] text-[#525252] mb-1">Role</label>
+                <label className="block text-[11px] text-[#525252] mb-1">{t('teammembers.addModalLabelRole', 'Role')}</label>
                 <select
                   value={addingRole}
                   onChange={e => setAddingRole(e.target.value)}
                   className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-4"
                 >
-                  <option value="member">Member</option>
-                  <option value="lead">Lead</option>
+                  <option value="member">{t('teammembers.roleMember', 'Member')}</option>
+                  <option value="lead">{t('teammembers.roleLead', 'Lead')}</option>
                 </select>
               </>
             )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => setAddOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">Cancel</button>
+              <button onClick={() => setAddOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">{t('teammembers.btnCancel', 'Cancel')}</button>
               <button
                 onClick={handleAdd}
                 disabled={!addingUserId}
                 className="px-3 py-2 text-[12px] bg-[#117dff] text-white rounded-[4px] hover:bg-[#0066e0] disabled:opacity-50"
               >
-                Add
+                {t('teammembers.btnAdd', 'Add')}
               </button>
             </div>
           </div>

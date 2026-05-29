@@ -36,6 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { useTranslation } from 'react-i18next';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
@@ -216,6 +217,7 @@ function ConfirmDialog({
   onCancel,
   children,
 }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div
@@ -236,7 +238,7 @@ function ConfirmDialog({
             onClick={onCancel}
             className="px-4 py-2 rounded-xl text-sm font-['Space_Grotesk'] font-semibold border border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec] transition-colors"
           >
-            Cancel
+            {t('profile.cancel', 'Cancel')}
           </button>
           <button
             onClick={onConfirm}
@@ -245,7 +247,7 @@ function ConfirmDialog({
               confirmVariant === 'red' ? 'bg-[#dc2626] hover:bg-red-700 disabled:bg-red-300' : 'bg-[#117dff] hover:bg-[#0066e0] disabled:bg-[#7fb5ff]'
             }`}
           >
-            {confirmLoading ? 'Processing...' : confirmLabel}
+            {confirmLoading ? t('profile.processing', 'Processing...') : confirmLabel}
           </button>
         </div>
       </motion.div>
@@ -260,6 +262,7 @@ function ConfirmDialog({
 // inline stat ticker. Replaces the old dark-themed BrainMetricsHero — same
 // info, lighter footprint, cleaner hierarchy on the page.
 function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) {
+  const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const nameFromFacts = profileFacts?.find((f) => f.key === 'name')?.value;
   const displayName = nameFromFacts || user?.display_name || user?.email?.split('@')[0] || 'User';
@@ -275,17 +278,17 @@ function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) 
   const sourceCount = (stats?.top_source_platforms || []).length;
 
   const stats4 = [
-    { label: 'Memories',    value: memoryCount,        icon: Brain,   to: '/hivemind/app/memories' },
-    { label: 'Connections', value: relationship_count, icon: Link,    to: '/hivemind/app/graph' },
-    { label: 'Facts',       value: factCount,          icon: User,    to: null },
-    { label: 'Sources',     value: sourceCount,        icon: Globe,   to: '/hivemind/app/connectors' },
+    { label: t('profile.statMemories', 'Memories'),    value: memoryCount,        icon: Brain,   to: '/hivemind/app/memories' },
+    { label: t('profile.statConnections', 'Connections'), value: relationship_count, icon: Link,    to: '/hivemind/app/graph' },
+    { label: t('profile.statFacts', 'Facts'),       value: factCount,          icon: User,    to: null },
+    { label: t('profile.statSources', 'Sources'),     value: sourceCount,        icon: Globe,   to: '/hivemind/app/connectors' },
   ];
 
   const quickActions = [
-    { label: 'Talk to HIVE', icon: MessageSquare, to: '/hivemind/app/overview', primary: true },
-    { label: 'Memory Graph', icon: Network,       to: '/hivemind/app/graph' },
-    { label: 'Connectors',   icon: ExternalLink,  to: '/hivemind/app/connectors' },
-    { label: 'Settings',     icon: Settings2,     to: '/hivemind/app/settings' },
+    { label: t('profile.actionTalkToHive', 'Talk to HIVE'), icon: MessageSquare, to: '/hivemind/app/overview', primary: true },
+    { label: t('profile.actionMemoryGraph', 'Memory Graph'), icon: Network,       to: '/hivemind/app/graph' },
+    { label: t('profile.actionConnectors', 'Connectors'),   icon: ExternalLink,  to: '/hivemind/app/connectors' },
+    { label: t('profile.actionSettings', 'Settings'),     icon: Settings2,     to: '/hivemind/app/settings' },
   ];
 
   return (
@@ -300,7 +303,7 @@ function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) 
             {org && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#f3f1ec] text-[#525252] border border-[#e3e0db]">
                 <Building2 size={11} />
-                {org.name || org.slug || 'Org'}
+                {org.name || org.slug || t('profile.org', 'Org')}
               </span>
             )}
             <PlanBadge plan={plan} />
@@ -317,7 +320,7 @@ function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) 
           onClick={onSignOut}
           className="self-start md:self-center inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#dc2626]/5 transition-colors"
         >
-          Sign Out
+          {t('profile.signOut', 'Sign Out')}
         </button>
       </div>
 
@@ -406,20 +409,22 @@ function getIconForKey(key) {
 }
 
 function KnowledgeIdentityCard({ facts, onToggleEditor }) {
+  const { t } = useTranslation('dashboard');
+
   if (!facts || facts.length === 0) {
     return (
       <Card>
         <div className="flex items-center gap-2 mb-4">
           <Eye size={16} className="text-[#117dff]" />
-          <SectionHeading>What Your Brain Knows About You</SectionHeading>
+          <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
         </div>
         <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
           <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
           <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
-            No identity facts yet.
+            {t('profile.noIdentityFacts', 'No identity facts yet.')}
           </p>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-            Profile facts build automatically as you use HIVEMIND, or add them manually below.
+            {t('profile.identityFactsHint', 'Profile facts build automatically as you use HIVEMIND, or add them manually below.')}
           </p>
         </div>
         <button
@@ -427,7 +432,7 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
           className="mt-4 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
         >
           <Plus size={14} />
-          Add Profile Facts
+          {t('profile.addProfileFacts', 'Add Profile Facts')}
         </button>
       </Card>
     );
@@ -442,9 +447,9 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Eye size={16} className="text-[#117dff]" />
-          <SectionHeading>What Your Brain Knows About You</SectionHeading>
+          <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
         </div>
-        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
+        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
       </div>
 
       {/* Identity grid */}
@@ -473,7 +478,7 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
       {/* Preferences */}
       {preferences.length > 0 && (
         <div className="mb-4">
-          <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider mb-2">Preferences</p>
+          <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider mb-2">{t('profile.preferences', 'Preferences')}</p>
           <div className="flex flex-wrap gap-2">
             {preferences.map((pref) => (
               <PillBadge key={pref.id} variant="amber">
@@ -489,7 +494,7 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
         className="flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
       >
         <Pencil size={13} />
-        Edit Profile Facts
+        {t('profile.editProfileFacts', 'Edit Profile Facts')}
         <ChevronDown size={14} />
       </button>
     </Card>
@@ -499,6 +504,7 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
 // ─── Section 3: Knowledge Breakdown ─────────────────────────────────────────
 
 function KnowledgeBreakdown({ stats }) {
+  const { t } = useTranslation('dashboard');
   const {
     top_source_platforms = [],
     memory_count: rawMemCount,
@@ -523,9 +529,9 @@ function KnowledgeBreakdown({ stats }) {
   }));
 
   const relationshipTypes = [
-    { label: 'Updates', count: graph_summary.update || 0, color: '#3b82f6' },
-    { label: 'Extends', count: graph_summary.extend || 0, color: '#117dff' },
-    { label: 'Derives', count: graph_summary.derive || 0, color: '#a855f7' },
+    { label: t('profile.relUpdates', 'Updates'), count: graph_summary.update || 0, color: '#3b82f6' },
+    { label: t('profile.relExtends', 'Extends'), count: graph_summary.extend || 0, color: '#117dff' },
+    { label: t('profile.relDerives', 'Derives'), count: graph_summary.derive || 0, color: '#a855f7' },
   ];
   const maxRelCount = Math.max(...relationshipTypes.map((r) => r.count), 1);
 
@@ -533,20 +539,20 @@ function KnowledgeBreakdown({ stats }) {
     <Card>
       <div className="flex items-center gap-2 mb-5">
         <BarChart2 size={16} className="text-[#117dff]" />
-        <SectionHeading>Knowledge Breakdown</SectionHeading>
+        <SectionHeading>{t('profile.knowledgeBreakdown', 'Knowledge Breakdown')}</SectionHeading>
       </div>
 
       {/* Knowledge Sources */}
       {sourcesWithPct.length > 0 && (
         <div className="mb-6">
-          <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Knowledge Sources</p>
+          <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">{t('profile.knowledgeSources', 'Knowledge Sources')}</p>
           <div className="space-y-3">
             {sourcesWithPct.map(({ name, pct, count }) => (
               <div key={name}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{name}</span>
                   <span className="text-[#a3a3a3] text-xs font-mono">
-                    ~{count.toLocaleString()} memories &middot; {pct}%
+                    ~{count.toLocaleString()} {t('profile.memories', 'memories')} &middot; {pct}%
                   </span>
                 </div>
                 <div className="w-full h-2.5 rounded-full bg-[#f3f1ec] overflow-hidden">
@@ -565,7 +571,7 @@ function KnowledgeBreakdown({ stats }) {
 
       {/* Connection Strength */}
       <div>
-        <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">Connection Strength</p>
+        <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">{t('profile.connectionStrength', 'Connection Strength')}</p>
         <div className="space-y-3">
           {relationshipTypes.map(({ label, count, color }) => (
             <div key={label}>
@@ -592,7 +598,7 @@ function KnowledgeBreakdown({ stats }) {
         <div className="mt-6 pt-5 border-t border-[#f3f1ec]">
           <div className="flex items-center gap-1.5 mb-2">
             <Tag size={13} className="text-[#117dff]" />
-            <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">Top Tags</span>
+            <span className="text-[#525252] text-xs font-mono uppercase tracking-wider">{t('profile.topTags', 'Top Tags')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {stats.top_tags.map((tag) => (
@@ -608,6 +614,7 @@ function KnowledgeBreakdown({ stats }) {
 // ─── Section 4: Recent Brain Activity ───────────────────────────────────────
 
 function RecentBrainActivity() {
+  const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const recentQuery = useApiQuery(
     useCallback(async () => {
@@ -629,20 +636,20 @@ function RecentBrainActivity() {
     const then = new Date(dateStr).getTime();
     const diffMs = now - then;
     const mins = Math.floor(diffMs / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return t('profile.justNow', 'just now');
+    if (mins < 60) return `${mins}${t('profile.minAgo', 'm ago')}`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return `${hours}${t('profile.hourAgo', 'h ago')}`;
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    return `${Math.floor(days / 7)}w ago`;
+    if (days < 7) return `${days}${t('profile.dayAgo', 'd ago')}`;
+    return `${Math.floor(days / 7)}${t('profile.weekAgo', 'w ago')}`;
   };
 
   return (
     <Card>
       <div className="flex items-center gap-2 mb-5">
         <Activity size={16} className="text-[#117dff]" />
-        <SectionHeading>Recent Brain Activity</SectionHeading>
+        <SectionHeading>{t('profile.recentBrainActivity', 'Recent Brain Activity')}</SectionHeading>
       </div>
 
       {recentLoading ? (
@@ -653,13 +660,13 @@ function RecentBrainActivity() {
         <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
           <Brain size={24} className="text-[#d4d0ca] mx-auto mb-2" />
           <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">
-            No recent memories found. Start adding knowledge to your second brain.
+            {t('profile.noRecentMemories', 'No recent memories found. Start adding knowledge to your second brain.')}
           </p>
         </div>
       ) : (
         <div className="space-y-0">
           {memories.slice(0, 5).map((mem, idx) => {
-            const title = mem.title || mem.content?.slice(0, 60) || mem.text?.slice(0, 60) || 'Untitled memory';
+            const title = mem.title || mem.content?.slice(0, 60) || mem.text?.slice(0, 60) || t('profile.untitledMemory', 'Untitled memory');
             const source = mem.source_platform || mem.source || mem.metadata?.source || '';
             const time = mem.updated_at || mem.created_at || mem.timestamp;
             return (
@@ -691,7 +698,7 @@ function RecentBrainActivity() {
         onClick={() => navigate('/hivemind/app/memories')}
         className="mt-4 inline-flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
       >
-        View All Memories
+        {t('profile.viewAllMemories', 'View All Memories')}
         <ArrowRight size={14} />
       </button>
     </Card>
@@ -701,6 +708,7 @@ function RecentBrainActivity() {
 // ─── Section 5: Profile Facts (Collapsible) ─────────────────────────────────
 
 function ProfileFactsSection({ facts, onRefresh }) {
+  const { t } = useTranslation('dashboard');
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -759,7 +767,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
   const handleAdd = async () => {
     setAddError(null);
     if (!newFact.key.trim() || !newFact.value.trim()) {
-      setAddError('Both key and value are required.');
+      setAddError(t('profile.addErrorRequired', 'Both key and value are required.'));
       return;
     }
     setSaving(true);
@@ -803,7 +811,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return '\u2014';
+    if (!dateStr) return '—';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
@@ -815,10 +823,10 @@ function ProfileFactsSection({ facts, onRefresh }) {
           <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
             <User size={24} className="text-[#d4d0ca] mx-auto mb-2" />
             <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk'] mb-1">
-              No profile facts yet.
+              {t('profile.noProfileFacts', 'No profile facts yet.')}
             </p>
             <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-              Profile facts build automatically as you use HIVEMIND, or you can add them manually.
+              {t('profile.profileFactsHint', 'Profile facts build automatically as you use HIVEMIND, or you can add them manually.')}
             </p>
           </div>
         ) : (
@@ -826,12 +834,12 @@ function ProfileFactsSection({ facts, onRefresh }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#f3f1ec]">
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Category</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Key</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">Value</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">Confidence</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden md:table-cell">Confirmed</th>
-                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">Last Seen</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thCategory', 'Category')}</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thKey', 'Key')}</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3">{t('profile.thValue', 'Value')}</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">{t('profile.thConfidence', 'Confidence')}</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden md:table-cell">{t('profile.thConfirmed', 'Confirmed')}</th>
+                  <th className="text-left text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2 pr-3 hidden lg:table-cell">{t('profile.thLastSeen', 'Last Seen')}</th>
                   <th className="text-right text-[#a3a3a3] text-xs font-mono uppercase tracking-wider py-2" />
                 </tr>
               </thead>
@@ -892,14 +900,14 @@ function ProfileFactsSection({ facts, onRefresh }) {
                           <button
                             onClick={() => startEdit(fact)}
                             className="p-1.5 rounded-lg text-[#525252] hover:bg-[#f3f1ec] hover:text-[#117dff] transition-colors"
-                            title="Edit value"
+                            title={t('profile.editValue', 'Edit value')}
                           >
                             <Pencil size={13} />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(fact)}
                             className="p-1.5 rounded-lg text-[#525252] hover:bg-red-50 hover:text-[#dc2626] transition-colors"
-                            title="Delete fact"
+                            title={t('profile.deleteFact', 'Delete fact')}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -945,7 +953,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     value={newFact.key}
                     onChange={(e) => setNewFact((prev) => ({ ...prev, key: e.target.value }))}
                     onKeyDown={handleAddKeyDown}
-                    placeholder="Key (e.g. favorite_color)"
+                    placeholder={t('profile.keyPlaceholder', 'Key (e.g. favorite_color)')}
                     className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
                   />
                   {/* Value */}
@@ -954,7 +962,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     value={newFact.value}
                     onChange={(e) => setNewFact((prev) => ({ ...prev, value: e.target.value }))}
                     onKeyDown={handleAddKeyDown}
-                    placeholder="Value (e.g. blue)"
+                    placeholder={t('profile.valuePlaceholder', 'Value (e.g. blue)')}
                     className="flex-1 min-w-[140px] bg-white border border-[#e3e0db] rounded-lg py-2 px-3 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] outline-none focus:border-[#117dff]/40 transition-colors"
                   />
                 </div>
@@ -970,7 +978,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     }}
                     className="px-3 py-1.5 rounded-lg text-sm font-['Space_Grotesk'] font-semibold text-[#525252] hover:bg-[#e3e0db] transition-colors"
                   >
-                    Cancel
+                    {t('profile.cancel', 'Cancel')}
                   </button>
                   <button
                     onClick={handleAdd}
@@ -982,7 +990,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
                     ) : (
                       <Check size={13} />
                     )}
-                    Save Fact
+                    {t('profile.saveFact', 'Save Fact')}
                   </button>
                 </div>
               </div>
@@ -997,7 +1005,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
             className="mt-4 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
           >
             <Plus size={14} />
-            Add Fact
+            {t('profile.addFact', 'Add Fact')}
           </button>
         )}
       </div>
@@ -1005,9 +1013,9 @@ function ProfileFactsSection({ facts, onRefresh }) {
       {/* Delete Confirmation */}
       {deleteTarget && (
         <ConfirmDialog
-          title="Delete Profile Fact"
-          message={`Remove "${deleteTarget.key}: ${deleteTarget.value}" from your profile? This fact may be re-learned from future conversations.`}
-          confirmLabel="Delete Fact"
+          title={t('profile.deleteFactTitle', 'Delete Profile Fact')}
+          message={t('profile.deleteFactMsg', 'Remove "{{key}}: {{value}}" from your profile? This fact may be re-learned from future conversations.', { key: deleteTarget.key, value: deleteTarget.value })}
+          confirmLabel={t('profile.deleteFactBtn', 'Delete Fact')}
           confirmVariant="red"
           confirmLoading={deleteLoading}
           onConfirm={handleDelete}
@@ -1023,6 +1031,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
 // ─── Section 6: Data & Privacy ──────────────────────────────────────────────
 
 function DataPrivacySection() {
+  const { t } = useTranslation('dashboard');
   const { logout } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
@@ -1038,10 +1047,10 @@ function DataPrivacySection() {
     setExportMsg(null);
     try {
       await apiClient.controlPlane.post('/v1/account/export');
-      setExportMsg({ type: 'success', text: 'Export request received. You will receive an email when ready.' });
+      setExportMsg({ type: 'success', text: t('profile.exportSuccess', 'Export request received. You will receive an email when ready.') });
     } catch (err) {
       if (err.response?.status === 404 || err.response?.status === 405) {
-        setExportMsg({ type: 'info', text: 'Data export is coming soon.' });
+        setExportMsg({ type: 'info', text: t('profile.exportComingSoon', 'Data export is coming soon.') });
       } else {
         setExportMsg({ type: 'error', text: err.response?.data?.error || err.message });
       }
@@ -1054,14 +1063,14 @@ function DataPrivacySection() {
     setDeleteLoading(true);
     setDeleteMsg(null);
     setDeleteProgress(0);
-    setDeleteStep('Initiating deletion...');
+    setDeleteStep(t('profile.deletingInitiating', 'Initiating deletion...'));
     try {
       setDeleteProgress(20);
-      setDeleteStep('Deleting account data...');
+      setDeleteStep(t('profile.deletingAccountData', 'Deleting account data...'));
       await apiClient.deleteAccount('DELETE');
       apiClient.clearApiKey();
       setDeleteProgress(100);
-      setDeleteStep('Account deleted. Redirecting...');
+      setDeleteStep(t('profile.deletingRedirecting', 'Account deleted. Redirecting...'));
       setTimeout(async () => {
         setShowDeleteDialog(false);
         await logout();
@@ -1071,7 +1080,7 @@ function DataPrivacySection() {
       const blockingOrg = err.response?.data?.org;
       const friendly = blockingOrg && serverErr
         ? `${serverErr} (Org: ${blockingOrg.name})`
-        : serverErr || err.message || 'Deletion failed';
+        : serverErr || err.message || t('profile.deletionFailed', 'Deletion failed');
       setDeleteMsg(friendly);
       setDeleteProgress(0);
       setDeleteStep('');
@@ -1085,7 +1094,7 @@ function DataPrivacySection() {
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <Shield size={16} className="text-[#525252]" />
-          <SectionHeading>Data &amp; Privacy</SectionHeading>
+          <SectionHeading>{t('profile.dataPrivacy', 'Data & Privacy')}</SectionHeading>
         </div>
 
         {/* Trust badge */}
@@ -1093,10 +1102,10 @@ function DataPrivacySection() {
           <MapPin size={16} className="text-emerald-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-emerald-800 text-sm font-['Space_Grotesk'] font-semibold">
-              Your data is stored in Frankfurt, Germany
+              {t('profile.dataLocation', 'Your data is stored in Frankfurt, Germany')}
             </p>
             <p className="text-emerald-700 text-xs font-['Space_Grotesk'] mt-0.5">
-              GDPR compliant &nbsp;&middot;&nbsp; No US data transfer &nbsp;&middot;&nbsp; EU data residency guaranteed
+              {t('profile.gdprNote', 'GDPR compliant  ·  No US data transfer  ·  EU data residency guaranteed')}
             </p>
           </div>
         </div>
@@ -1106,9 +1115,9 @@ function DataPrivacySection() {
           {/* Export */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4]">
             <div>
-              <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">Export My Data</p>
+              <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{t('profile.exportMyData', 'Export My Data')}</p>
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
-                Download all your memories, observations and settings as JSON.
+                {t('profile.exportDesc', 'Download all your memories, observations and settings as JSON.')}
               </p>
               {exportMsg && (
                 <p
@@ -1134,16 +1143,16 @@ function DataPrivacySection() {
               ) : (
                 <Download size={14} />
               )}
-              Export
+              {t('profile.exportBtn', 'Export')}
             </button>
           </div>
 
           {/* Delete */}
           <div className="flex items-center justify-between p-4 rounded-xl border border-red-100 bg-red-50">
             <div>
-              <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">Delete My Account</p>
+              <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{t('profile.deleteMyAccount', 'Delete My Account')}</p>
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
-                Permanently delete all your data. This action cannot be undone.
+                {t('profile.deleteAccountDesc', 'Permanently delete all your data. This action cannot be undone.')}
               </p>
               {deleteMsg && (
                 <p className="text-[#dc2626] text-xs font-mono mt-1.5">{deleteMsg}</p>
@@ -1158,7 +1167,7 @@ function DataPrivacySection() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-[#dc2626] text-sm font-['Space_Grotesk'] font-semibold hover:bg-red-50 transition-colors ml-4 flex-shrink-0"
             >
               <Trash2 size={14} />
-              Delete
+              {t('profile.deleteBtn', 'Delete')}
             </button>
           </div>
         </div>
@@ -1171,7 +1180,7 @@ function DataPrivacySection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a3a3a3] hover:text-[#117dff] transition-colors"
           >
-            Privacy Policy
+            {t('profile.privacyPolicy', 'Privacy Policy')}
             <ExternalLink size={11} />
           </a>
         </div>
@@ -1179,9 +1188,9 @@ function DataPrivacySection() {
 
       {showDeleteDialog && (
         <ConfirmDialog
-          title="Delete Account"
-          message={deleteLoading ? '' : 'This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue.'}
-          confirmLabel="Delete Account"
+          title={t('profile.deleteAccountTitle', 'Delete Account')}
+          message={deleteLoading ? '' : t('profile.deleteAccountConfirmMsg', 'This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue.')}
+          confirmLabel={t('profile.deleteAccountBtn', 'Delete Account')}
           confirmVariant="red"
           confirmDisabled={deleteConfirm.trim().toUpperCase() !== 'DELETE' || deleteLoading}
           confirmLoading={deleteLoading}
@@ -1222,7 +1231,7 @@ function DataPrivacySection() {
               <input
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="Type DELETE"
+                placeholder={t('profile.typeDeletePlaceholder', 'Type DELETE')}
                 className="w-full rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3 py-2.5 text-sm font-mono text-[#0a0a0a] outline-none focus:border-[#dc2626]"
                 autoFocus
               />
@@ -1240,6 +1249,7 @@ function DataPrivacySection() {
 // ─── Main Profile Page ───────────────────────────────────────────────────────
 
 export default function Profile() {
+  const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
   // Profile Facts auto-expand by default — they're the most-useful
   // editable surface on this page, no reason to hide them on first load.
@@ -1277,9 +1287,9 @@ export default function Profile() {
     <div className="min-h-full">
       {/* Page header */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Your Profile</h1>
+        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('profile.title', 'Your Profile')}</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          Account info, knowledge identity, and privacy controls
+          {t('profile.subtitle', 'Account info, knowledge identity, and privacy controls')}
         </p>
       </motion.div>
 
@@ -1319,8 +1329,8 @@ export default function Profile() {
           >
             <div className="flex items-center gap-2">
               <User size={16} className="text-[#117dff]" />
-              <SectionHeading>Profile Facts Editor</SectionHeading>
-              <span className="text-[#a3a3a3] text-xs font-mono ml-2">{facts.length} fact{facts.length !== 1 ? 's' : ''}</span>
+              <SectionHeading>{t('profile.profileFactsEditor', 'Profile Facts Editor')}</SectionHeading>
+              <span className="text-[#a3a3a3] text-xs font-mono ml-2">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
             </div>
             <motion.div
               animate={{ rotate: factsExpanded ? 90 : 0 }}

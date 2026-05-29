@@ -6,6 +6,7 @@ import {
   ZoomIn, ZoomOut, Crosshair,
   ChevronDown, Clock, GitBranch, Brain as BrainIcon,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
@@ -111,6 +112,7 @@ function drawSourceIcon(ctx, x, y, platform, color) {
 
 /* ─── Node Detail Panel (Dark Themed) ───────────────────────────── */
 function NodeDetail({ node, edges, onClose, onNavigate }) {
+  const { t } = useTranslation('dashboard');
   if (!node) return null;
 
   const inbound = edges.filter(e => e.target === node.id || e.target?.id === node.id);
@@ -125,7 +127,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
       className="absolute top-0 right-0 w-[340px] h-full bg-[#0d1117] border-l border-white/10 shadow-[-8px_0_30px_rgba(0,0,0,0.4)] z-20 overflow-y-auto"
     >
       <div className="sticky top-0 bg-[#0d1117]/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
-        <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Memory Detail</span>
+        <span className="text-xs font-mono text-white/40 uppercase tracking-wider">{t('brain.memoryDetail', 'Memory Detail')}</span>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/5 transition-colors">
           <X size={14} className="text-white/40" />
         </button>
@@ -154,14 +156,14 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
             )}
           </div>
           <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-white/90 leading-snug">
-            {node.title || 'Untitled Memory'}
+            {node.title || t('brain.untitledMemory', 'Untitled Memory')}
           </h3>
         </div>
 
         {/* Content */}
         <div className="bg-white/5 border border-white/10 rounded-lg p-3">
           <p className="text-xs text-white/60 font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
-            {node.content || 'No content'}
+            {node.content || t('brain.noContent', 'No content')}
           </p>
         </div>
 
@@ -182,9 +184,9 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
         {/* Scores */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Importance', value: node.importanceScore?.toFixed(2) },
-            { label: 'Strength', value: node.strength?.toFixed(2) },
-            { label: 'Recalls', value: node.recallCount },
+            { label: t('brain.importance', 'Importance'), value: node.importanceScore?.toFixed(2) },
+            { label: t('brain.strength', 'Strength'), value: node.strength?.toFixed(2) },
+            { label: t('brain.recalls', 'Recalls'), value: node.recallCount },
           ].map(s => (
             <div key={s.label} className="bg-white/5 border border-white/10 rounded-lg p-2 text-center">
               <p className="text-[10px] text-white/40 font-mono">{s.label}</p>
@@ -196,14 +198,14 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
         {/* Temporal */}
         <div className="flex items-center gap-2 text-[11px] text-white/40 font-['Space_Grotesk']">
           <Clock size={12} />
-          <span>{node.daysSinceUpdate != null ? `${node.daysSinceUpdate.toFixed(1)} days ago` : '--'}</span>
-          <span className="ml-auto">Glow: {((node.temporalWeight || 0) * 100).toFixed(0)}%</span>
+          <span>{node.daysSinceUpdate != null ? t('brain.daysAgo', '{{n}} days ago', { n: node.daysSinceUpdate.toFixed(1) }) : '--'}</span>
+          <span className="ml-auto">{t('brain.glow', 'Glow: {{pct}}%', { pct: ((node.temporalWeight || 0) * 100).toFixed(0) })}</span>
         </div>
 
         {/* Relationships */}
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
-            <p className="text-[10px] font-mono text-white/40 uppercase tracking-wider mb-2">Relationships</p>
+            <p className="text-[10px] font-mono text-white/40 uppercase tracking-wider mb-2">{t('brain.relationships', 'Relationships')}</p>
             <div className="space-y-1.5">
               {outbound.map((e, i) => {
                 const targetId = typeof e.target === 'object' ? e.target.id : e.target;
@@ -259,6 +261,7 @@ function NodeDetail({ node, edges, onClose, onNavigate }) {
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
 export default function Brain() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -579,7 +582,7 @@ export default function Brain() {
   }, [meta, graphData]);
 
   /* ─── Scope label ──────────────────────────────────────────────── */
-  const scopeLabel = scope === 'personal' ? 'Personal' : scope === 'team' ? 'Team' : 'All';
+  const scopeLabel = scope === 'personal' ? t('brain.scopePersonal', 'Personal') : scope === 'team' ? t('brain.scopeTeam', 'Team') : t('brain.scopeAll', 'All');
 
   return (
     <div className="h-screen w-full relative overflow-hidden" style={{ backgroundColor: '#08080c' }}>
@@ -608,7 +611,7 @@ export default function Brain() {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search memories..."
+            placeholder={t('brain.searchPlaceholder', 'Search memories...')}
             className="w-full pl-8 pr-3 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-xs font-['Space_Grotesk'] text-white/90 placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
@@ -631,9 +634,9 @@ export default function Brain() {
                 className="absolute top-full mt-1 left-0 bg-[#0d1117]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-lg z-30 py-1 min-w-[120px]"
               >
                 {[
-                  { key: 'personal', label: 'Personal' },
-                  { key: 'team', label: 'Team', disabled: org?.plan !== 'enterprise' },
-                  { key: 'all', label: 'All', disabled: org?.plan !== 'enterprise' },
+                  { key: 'personal', label: t('brain.scopePersonal', 'Personal') },
+                  { key: 'team', label: t('brain.scopeTeam', 'Team'), disabled: org?.plan !== 'enterprise' },
+                  { key: 'all', label: t('brain.scopeAll', 'All'), disabled: org?.plan !== 'enterprise' },
                 ].map(option => (
                   <button
                     key={option.key}
@@ -657,7 +660,7 @@ export default function Brain() {
             onClick={() => { setShowProjectMenu(!showProjectMenu); setShowScopeMenu(false); }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-['Space_Grotesk'] bg-white/5 backdrop-blur-md border border-white/10 text-white/70 hover:border-white/20 transition-colors"
           >
-            {projectFilter || 'All Projects'}
+            {projectFilter || t('brain.allProjects', 'All Projects')}
             <ChevronDown size={10} className="text-white/40" />
           </button>
           <AnimatePresence>
@@ -672,7 +675,7 @@ export default function Brain() {
                   onClick={() => { setProjectFilter(''); setShowProjectMenu(false); }}
                   className="w-full text-left px-3 py-1.5 text-xs font-['Space_Grotesk'] text-white/60 hover:bg-white/5"
                 >
-                  All Projects
+                  {t('brain.allProjects', 'All Projects')}
                 </button>
                 {meta.projects.map(p => (
                   <button
@@ -695,7 +698,7 @@ export default function Brain() {
           onClick={fetchGraph}
           disabled={loading}
           className="p-2 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors disabled:opacity-30"
-          title="Refresh"
+          title={t('brain.refresh', 'Refresh')}
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -704,21 +707,21 @@ export default function Brain() {
         <button
           onClick={() => graphRef.current?.zoom(graphRef.current.zoom() * 1.5, 200)}
           className="p-2 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
-          title="Zoom in"
+          title={t('brain.zoomIn', 'Zoom in')}
         >
           <ZoomIn size={13} />
         </button>
         <button
           onClick={() => graphRef.current?.zoom(graphRef.current.zoom() / 1.5, 200)}
           className="p-2 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
-          title="Zoom out"
+          title={t('brain.zoomOut', 'Zoom out')}
         >
           <ZoomOut size={13} />
         </button>
         <button
           onClick={() => graphRef.current?.zoomToFit(400, 40)}
           className="p-2 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-colors"
-          title="Fit to view"
+          title={t('brain.fitToView', 'Fit to view')}
         >
           <Crosshair size={13} />
         </button>
@@ -729,7 +732,7 @@ export default function Brain() {
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-[#60a5fa] border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-white/40 font-['Space_Grotesk']">Loading second brain...</span>
+            <span className="text-xs text-white/40 font-['Space_Grotesk']">{t('brain.loading', 'Loading second brain...')}</span>
           </div>
         </div>
       )}
@@ -775,7 +778,7 @@ export default function Brain() {
           <div className="text-center">
             <BrainIcon size={32} className="text-white/10 mx-auto mb-3" />
             <p className="text-sm text-white/30 font-['Space_Grotesk']">
-              No memories found. Save some memories to see your second brain.
+              {t('brain.noMemories', 'No memories found. Save some memories to see your second brain.')}
             </p>
           </div>
         </div>
@@ -784,10 +787,10 @@ export default function Brain() {
       {/* ─── Stats bar (bottom) ────────────────────────────────────── */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4 px-5 py-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
         {[
-          { label: 'Memories', value: formatNumber(stats.nodes) },
-          { label: 'Connections', value: formatNumber(stats.edges) },
-          { label: 'Sources', value: String(stats.sources) },
-          { label: 'Clusters', value: String(stats.clusters) },
+          { label: t('brain.statMemories', 'Memories'), value: formatNumber(stats.nodes) },
+          { label: t('brain.statConnections', 'Connections'), value: formatNumber(stats.edges) },
+          { label: t('brain.statSources', 'Sources'), value: String(stats.sources) },
+          { label: t('brain.statClusters', 'Clusters'), value: String(stats.clusters) },
         ].map((item, i) => (
           <React.Fragment key={item.label}>
             {i > 0 && <span className="text-white/10">|</span>}

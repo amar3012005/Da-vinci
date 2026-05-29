@@ -14,6 +14,7 @@ import {
   HardDrive,
   Headphones,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
@@ -201,6 +202,7 @@ const PLANS = [
 // ─── Usage Meter ─────────────────────────────────────────────────────────────
 
 function UsageMeter({ label, used, limit, icon: Icon }) {
+  const { t } = useTranslation('dashboard');
   const isUnlimited = !limit;
   const pct = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
   const isNearLimit = pct > 80;
@@ -217,7 +219,7 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
         <span className="text-[#0a0a0a] text-sm font-mono font-semibold">
           {used?.toLocaleString() || 0}
           <span className="text-[#d4d0ca]">
-            {isUnlimited ? ' / Unlimited' : ` / ${limit?.toLocaleString()}`}
+            {isUnlimited ? ` / ${t('billing.unlimited', 'Unlimited')}` : ` / ${limit?.toLocaleString()}`}
           </span>
         </span>
       </div>
@@ -233,7 +235,7 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
       </div>
       {isNearLimit && (
         <p className="text-amber-400/70 text-[10px] font-['Space_Grotesk'] mt-1.5">
-          {pct >= 100 ? 'Limit reached \u2014 upgrade to continue' : 'Approaching limit'}
+          {pct >= 100 ? t('billing.limitReached', 'Limit reached \u2014 upgrade to continue') : t('billing.approachingLimit', 'Approaching limit')}
         </p>
       )}
     </div>
@@ -243,6 +245,7 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
 // ─── Plan Card ───────────────────────────────────────────────────────────────
 
 function PlanCard({ plan, currentPlan, onSelect }) {
+  const { t } = useTranslation('dashboard');
   const isCurrent = currentPlan === plan.id;
   const isEnterprise = plan.id === 'enterprise';
 
@@ -261,7 +264,7 @@ function PlanCard({ plan, currentPlan, onSelect }) {
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
           <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white uppercase tracking-wider">
             <Sparkles size={10} />
-            Most Popular
+            {t('billing.mostPopular', 'Most Popular')}
           </span>
         </div>
       )}
@@ -303,11 +306,11 @@ function PlanCard({ plan, currentPlan, onSelect }) {
       {/* CTA */}
       {isCurrent ? (
         <div className="text-center py-2.5 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold font-['Space_Grotesk']">
-          Current Plan
+          {t('billing.currentPlan', 'Current Plan')}
         </div>
       ) : isEnterprise ? (
         <button className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
-          Contact Sales
+          {t('billing.contactSales', 'Contact Sales')}
           <ArrowRight size={13} />
         </button>
       ) : (
@@ -319,7 +322,7 @@ function PlanCard({ plan, currentPlan, onSelect }) {
               : 'bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] hover:bg-[#eae7e1]'
           }`}
         >
-          {`Upgrade to ${plan.name}`}
+          {t('billing.upgradeTo', 'Upgrade to {{name}}', { name: plan.name })}
           <ArrowRight size={13} />
         </button>
       )}
@@ -330,6 +333,7 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function Billing() {
+  const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [upgradeModal, setUpgradeModal] = useState(null);
@@ -444,10 +448,10 @@ export default function Billing() {
             </div>
             <div>
               <h2 className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk']">
-                Current Plan
+                {t('billing.currentPlanHeading', 'Current Plan')}
               </h2>
               <p className="text-[#a3a3a3] text-[12px] font-['Space_Grotesk']">
-                {org?.name || 'Your workspace'}
+                {org?.name || t('billing.yourWorkspace', 'Your workspace')}
               </p>
             </div>
           </div>
@@ -474,7 +478,7 @@ export default function Billing() {
                   </span>
                   {subscription.current_period_end && (
                     <span className="text-[#a3a3a3]">
-                      renews {new Date(subscription.current_period_end).toLocaleDateString()}
+                      {t('billing.renews', 'renews {{date}}', { date: new Date(subscription.current_period_end).toLocaleDateString() })}
                     </span>
                   )}
                 </div>
@@ -484,9 +488,9 @@ export default function Billing() {
               <button
                 onClick={handleManageSubscription}
                 className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
-                title="Open Stripe Customer Portal"
+                title={t('billing.manageSubscriptionTitle', 'Open Stripe Customer Portal')}
               >
-                Manage
+                {t('billing.manage', 'Manage')}
               </button>
             )}
           </div>
@@ -495,49 +499,49 @@ export default function Billing() {
         {/* Usage Meters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <UsageMeter
-            label="Tokens This Month"
+            label={t('billing.tokensThisMonth', 'Tokens This Month')}
             used={tokensUsed}
             limit={currentPlanDef?.limits.tokens}
             icon={Brain}
           />
           <UsageMeter
-            label="Memories"
+            label={t('billing.memories', 'Memories')}
             used={memoriesUsed}
             limit={currentPlanDef?.limits.memories}
             icon={HardDrive}
           />
           <UsageMeter
-            label="Deep Research"
+            label={t('billing.deepResearch', 'Deep Research')}
             used={deepResearchUsed}
             limit={currentPlanDef?.limits.deepResearch}
             icon={Zap}
           />
           <UsageMeter
-            label="Web Intel (Daily)"
+            label={t('billing.webIntelDaily', 'Web Intel (Daily)')}
             used={webIntelUsed}
             limit={currentPlanDef?.limits.webIntel}
             icon={Sparkles}
           />
           <UsageMeter
-            label="Searches This Month"
+            label={t('billing.searchesThisMonth', 'Searches This Month')}
             used={searchesUsed}
             limit={currentPlanDef?.limits.searches}
             icon={Zap}
           />
           <UsageMeter
-            label="KB Uploads"
+            label={t('billing.kbUploads', 'KB Uploads')}
             used={kbUploadsUsed}
             limit={currentPlanDef?.limits.kbUploads}
             icon={HardDrive}
           />
           <UsageMeter
-            label="Graph Queries"
+            label={t('billing.graphQueries', 'Graph Queries')}
             used={graphQueriesUsed}
             limit={currentPlanDef?.limits.searches}
             icon={Brain}
           />
           <UsageMeter
-            label="Connections"
+            label={t('billing.connections', 'Connections')}
             used={activeConnections}
             limit={currentPlanDef?.limits.connections}
             icon={Cable}
@@ -554,23 +558,23 @@ export default function Billing() {
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#0a0a0a] text-[14px] font-semibold font-['Space_Grotesk']">
-              Invoices
+              {t('billing.invoices', 'Invoices')}
             </h3>
             <a
               href={apiClient.invoiceCsvUrl()}
               className="text-[#117dff] text-[11px] font-medium font-['Space_Grotesk'] hover:underline"
             >
-              Download CSV
+              {t('billing.downloadCsv', 'Download CSV')}
             </a>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[12px] font-['Space_Grotesk']">
               <thead>
                 <tr className="text-left text-[#a3a3a3] border-b border-[#eae7e1]">
-                  <th className="py-2 pr-3 font-medium">Invoice</th>
-                  <th className="py-2 pr-3 font-medium">Period</th>
-                  <th className="py-2 pr-3 font-medium">Amount</th>
-                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-medium">{t('billing.colInvoice', 'Invoice')}</th>
+                  <th className="py-2 pr-3 font-medium">{t('billing.colPeriod', 'Period')}</th>
+                  <th className="py-2 pr-3 font-medium">{t('billing.colAmount', 'Amount')}</th>
+                  <th className="py-2 pr-3 font-medium">{t('billing.colStatus', 'Status')}</th>
                   <th className="py-2 pr-3 font-medium"></th>
                 </tr>
               </thead>
@@ -618,7 +622,7 @@ export default function Billing() {
               : 'text-[#525252] hover:text-[#525252]'
           }`}
         >
-          Monthly
+          {t('billing.monthly', 'Monthly')}
         </button>
         <button
           onClick={() => setBillingCycle('annual')}
@@ -628,7 +632,7 @@ export default function Billing() {
               : 'text-[#525252] hover:text-[#525252]'
           }`}
         >
-          Annual
+          {t('billing.annual', 'Annual')}
           <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
             -20%
           </span>
@@ -655,25 +659,25 @@ export default function Billing() {
       {/* FAQ Section */}
       <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-4">
-          Frequently Asked Questions
+          {t('billing.faqTitle', 'Frequently Asked Questions')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              q: 'What are tokens?',
-              a: 'Tokens are units of text processed by HIVEMIND. Every piece of information ingested, stored, or retrieved consumes tokens from your monthly quota.',
+              q: t('billing.faq1q', 'What are tokens?'),
+              a: t('billing.faq1a', 'Tokens are units of text processed by HIVEMIND. Every piece of information ingested, stored, or retrieved consumes tokens from your monthly quota.'),
             },
             {
-              q: 'Can I switch plans anytime?',
-              a: 'Yes. Upgrades take effect immediately. Downgrades apply at the end of your billing cycle.',
+              q: t('billing.faq2q', 'Can I switch plans anytime?'),
+              a: t('billing.faq2a', 'Yes. Upgrades take effect immediately. Downgrades apply at the end of your billing cycle.'),
             },
             {
-              q: 'What happens when I hit my limit?',
-              a: 'New ingestion will be paused until the next billing cycle. Existing data remains accessible. Upgrade or wait for your quota to reset.',
+              q: t('billing.faq3q', 'What happens when I hit my limit?'),
+              a: t('billing.faq3a', 'New ingestion will be paused until the next billing cycle. Existing data remains accessible. Upgrade or wait for your quota to reset.'),
             },
             {
-              q: 'Do you offer refunds?',
-              a: 'We offer a 14-day money-back guarantee on all paid plans. No questions asked.',
+              q: t('billing.faq4q', 'Do you offer refunds?'),
+              a: t('billing.faq4a', 'We offer a 14-day money-back guarantee on all paid plans. No questions asked.'),
             },
           ].map((faq, i) => (
             <div key={i}>
@@ -700,7 +704,7 @@ export default function Billing() {
                 <Zap size={20} className="text-[#117dff]" />
               </div>
               <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-1">
-                Upgrade to {PLANS.find(p => p.id === upgradeModal)?.name}
+                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: PLANS.find(p => p.id === upgradeModal)?.name })}
               </h3>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
                 {PLANS.find(p => p.id === upgradeModal)?.price}{PLANS.find(p => p.id === upgradeModal)?.period}
@@ -712,7 +716,7 @@ export default function Billing() {
                 disabled={upgrading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-['Space_Grotesk'] font-semibold border border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec] transition-colors disabled:opacity-50"
               >
-                Cancel
+                {t('billing.cancel', 'Cancel')}
               </button>
               <button
                 onClick={() => handleUpgrade(upgradeModal)}
@@ -722,10 +726,10 @@ export default function Billing() {
                 {upgrading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Processing…
+                    {t('billing.processing', 'Processing…')}
                   </>
                 ) : (
-                  'Confirm Upgrade'
+                  t('billing.confirmUpgrade', 'Confirm Upgrade')
                 )}
               </button>
             </div>
@@ -741,7 +745,7 @@ export default function Billing() {
             className="bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 font-['Space_Grotesk'] text-sm font-semibold"
           >
             <Check size={16} />
-            Plan upgraded successfully!
+            {t('billing.upgradeSuccess', 'Plan upgraded successfully!')}
           </motion.div>
         </div>
       )}

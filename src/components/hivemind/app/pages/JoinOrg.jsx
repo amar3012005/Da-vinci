@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, FolderKanban, Hexagon, Users, XCircle, Loader2 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 
 export default function JoinOrg() {
+  const { t } = useTranslation('dashboard');
   const { slug, token } = useParams();
   const navigate = useNavigate();
   const { refresh: refreshAuth } = useAuth() || {};
@@ -29,7 +31,7 @@ export default function JoinOrg() {
           return;
         }
         if (data.status === 'expired' || data.status === 'revoked') {
-          setError(`Invite ${data.status}`);
+          setError(t('joinOrg.inviteStatus', 'Invite {{status}}', { status: data.status }));
           setPhase('error');
           return;
         }
@@ -78,19 +80,19 @@ export default function JoinOrg() {
 
         {phase === 'loading' && (
           <>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Loading invite</h1>
-            <p className="text-sm text-[#525252]">Fetching details for <span className="font-mono">{slug}</span>…</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">{t('joinOrg.loadingInvite', 'Loading invite')}</h1>
+            <p className="text-sm text-[#525252]">{t('joinOrg.fetchingDetails', 'Fetching details for')} <span className="font-mono">{slug}</span>…</p>
           </>
         )}
 
         {phase === 'consent' && preview && (
           <>
             <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">
-              You're invited to {orgName}
+              {t('joinOrg.invitedTo', "You're invited to {{orgName}}", { orgName })}
             </h1>
             {preview.inviter && (
               <p className="text-sm text-[#525252] mb-5">
-                Invited by <span className="font-medium text-[#0a0a0a]">
+                {t('joinOrg.invitedBy', 'Invited by')} <span className="font-medium text-[#0a0a0a]">
                   {preview.inviter.displayName || preview.inviter.email}
                 </span>
               </p>
@@ -99,7 +101,7 @@ export default function JoinOrg() {
             {projects.length > 0 && (
               <section className="mb-4">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2">
-                  Projects you'll join
+                  {t('joinOrg.projectsYoullJoin', "Projects you'll join")}
                 </div>
                 <div className="space-y-2">
                   {projects.map(p => (
@@ -120,7 +122,7 @@ export default function JoinOrg() {
             {teams.length > 0 && (
               <section className="mb-4">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-[#737373] mb-2">
-                  Teams
+                  {t('joinOrg.teams', 'Teams')}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {teams.map(t => (
@@ -133,8 +135,7 @@ export default function JoinOrg() {
             )}
 
             <section className="mb-6 p-3 rounded-[8px] bg-[#fafaf9] border border-[#eae7e1] text-[12px] text-[#525252]">
-              By accepting, you'll get read + write access to the memories scoped to
-              the projects above. Your user id will be added as a project member.
+              {t('joinOrg.acceptDisclaimer', "By accepting, you'll get read + write access to the memories scoped to the projects above. Your user id will be added as a project member.")}
             </section>
 
             <div className="flex items-center gap-2">
@@ -143,7 +144,7 @@ export default function JoinOrg() {
                 onClick={handleAccept}
                 className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0066e0]"
               >
-                Accept and join
+                {t('joinOrg.acceptAndJoin', 'Accept and join')}
                 <ArrowRight size={16} />
               </button>
               <button
@@ -151,7 +152,7 @@ export default function JoinOrg() {
                 onClick={handleDecline}
                 className="rounded-[8px] border border-[#e3e0db] bg-white px-4 py-2.5 text-sm font-semibold text-[#525252] hover:bg-[#faf9f4]"
               >
-                Decline
+                {t('joinOrg.decline', 'Decline')}
               </button>
             </div>
           </>
@@ -160,8 +161,8 @@ export default function JoinOrg() {
         {phase === 'accepting' && (
           <>
             <Loader2 size={22} className="animate-spin text-[#117dff] mb-3" />
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Joining…</h1>
-            <p className="text-sm text-[#525252]">Provisioning access to projects.</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">{t('joinOrg.joining', 'Joining…')}</h1>
+            <p className="text-sm text-[#525252]">{t('joinOrg.provisioningAccess', 'Provisioning access to projects.')}</p>
           </>
         )}
 
@@ -170,16 +171,16 @@ export default function JoinOrg() {
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#16a34a]/10 text-[#16a34a] mb-4">
               <CheckCircle2 size={22} />
             </div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">You're in</h1>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">{t('joinOrg.youreIn', "You're in")}</h1>
             <p className="text-sm text-[#525252] mb-6">
-              Welcome to <span className="font-semibold text-[#0a0a0a]">{acceptedOrg?.name || orgName}</span>.
+              {t('joinOrg.welcomeTo', 'Welcome to')} <span className="font-semibold text-[#0a0a0a]">{acceptedOrg?.name || orgName}</span>.
             </p>
             <button
               type="button"
               onClick={() => navigate('/hivemind/app/overview')}
               className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white"
             >
-              Open workspace
+              {t('joinOrg.openWorkspace', 'Open workspace')}
               <ArrowRight size={16} />
             </button>
           </>
@@ -190,21 +191,21 @@ export default function JoinOrg() {
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#737373]/10 text-[#737373] mb-4">
               <XCircle size={22} />
             </div>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Invite declined</h1>
-            <p className="text-sm text-[#525252]">You can close this tab.</p>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">{t('joinOrg.inviteDeclined', 'Invite declined')}</h1>
+            <p className="text-sm text-[#525252]">{t('joinOrg.canCloseTab', 'You can close this tab.')}</p>
           </>
         )}
 
         {phase === 'error' && (
           <>
-            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">Invite could not be opened</h1>
+            <h1 className="text-2xl font-bold font-['Space_Grotesk'] text-[#0a0a0a] mb-2">{t('joinOrg.inviteCouldNotBeOpened', 'Invite could not be opened')}</h1>
             <p className="text-sm text-[#525252] mb-6">{error}</p>
             <button
               type="button"
               onClick={() => navigate('/hivemind/app/overview')}
               className="inline-flex items-center gap-2 rounded-[8px] bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white"
             >
-              Return to overview
+              {t('joinOrg.returnToOverview', 'Return to overview')}
               <ArrowRight size={16} />
             </button>
           </>

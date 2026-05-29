@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONNECTOR_BY_ID, CONNECTOR_MODES } from '../shared/connectors-catalog';
@@ -416,54 +417,55 @@ function pickPreferredMcpEndpoint(endpointList, preferredName) {
 // ─── Status Components ──────────────────────────────────────────────────────
 
 function ConnectorStatusBadge({ status }) {
+  const { t } = useTranslation('dashboard');
   const styles = {
     connected: {
       bg: 'bg-emerald-500/10',
       text: 'text-[#16a34a]',
       border: 'border-emerald-500/20',
-      label: 'Connected',
+      label: t('connectors.statusConnected', 'Connected'),
       dot: 'bg-[#16a34a]',
     },
     syncing: {
       bg: 'bg-blue-500/10',
       text: 'text-blue-400',
       border: 'border-blue-500/20',
-      label: 'Syncing',
+      label: t('connectors.statusSyncing', 'Syncing'),
       dot: 'bg-blue-400 animate-pulse',
     },
     error: {
       bg: 'bg-red-500/10',
       text: 'text-[#dc2626]',
       border: 'border-red-500/20',
-      label: 'Error',
+      label: t('connectors.statusError', 'Error'),
       dot: 'bg-[#dc2626]',
     },
     available: {
       bg: 'bg-[#f3f1ec]',
       text: 'text-[#525252]',
       border: 'border-[#e3e0db]',
-      label: 'Available',
+      label: t('connectors.statusAvailable', 'Available'),
       dot: 'bg-[#a3a3a3]',
     },
     coming_soon: {
       bg: 'bg-white',
       text: 'text-[#a3a3a3]',
       border: 'border-[#e3e0db]',
-      label: 'Coming Soon',
+      label: t('connectors.statusComingSoon', 'Coming Soon'),
       dot: 'bg-[#e3e0db]',
     },
     needs_reauth: {
       bg: 'bg-amber-500/10',
       text: 'text-amber-400',
       border: 'border-amber-500/20',
-      label: 'Needs Reauth',
+      label: t('connectors.statusNeedsReauth', 'Needs Reauth'),
       dot: 'bg-amber-400',
     },
     needs_oauth_setup: {
       bg: 'bg-amber-50',
       text: 'text-amber-600',
       border: 'border-amber-200',
-      label: 'Needs OAuth Setup',
+      label: t('connectors.statusNeedsOauthSetup', 'Needs OAuth Setup'),
       dot: 'bg-amber-500',
     },
   };
@@ -545,6 +547,7 @@ function colorize(line) {
 
 // eslint-disable-next-line no-unused-vars
 function CopyButton({ text, label = 'Copy' }) {
+  const { t } = useTranslation('dashboard');
   const { copied, copy } = useCopyToClipboard();
 
   return (
@@ -557,7 +560,7 @@ function CopyButton({ text, label = 'Copy' }) {
       }`}
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? 'Copied!' : label}
+      {copied ? t('connectors.copied', 'Copied!') : label}
     </button>
   );
 }
@@ -566,6 +569,7 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // eslint-disable-next-line no-unused-vars
 function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, onChangeScope, connecting, targetScope, selectedTeamId, onTargetScopeChange, onTeamChange, allowTeamScope, teams }) {
+  const { t } = useTranslation('dashboard');
   const [expanded, setExpanded] = useState(false);
   const [changeScopeOpen, setChangeScopeOpen] = useState(false);
   const [pendingScope, setPendingScope] = useState(targetScope);
@@ -595,9 +599,9 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
   const cat = CONNECTOR_BY_ID[catalogId];
   const modes = Array.isArray(cat?.mode) ? cat.mode : null;
   const scopeLabel = (
-    targetScope === 'organization' ? 'Org' :
-    targetScope === 'team' ? 'Team' :
-    'My Space'
+    targetScope === 'organization' ? t('connectors.scopeOrg', 'Org') :
+    targetScope === 'team' ? t('connectors.scopeTeam', 'Team') :
+    t('connectors.scopeMySpace', 'My Space')
   );
 
   const handleScopeChange = async () => {
@@ -704,12 +708,12 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
         {changeScopeOpen && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setChangeScopeOpen(false)}>
             <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
-              <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] mb-4">Change sync scope</h3>
+              <h3 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] mb-4">{t('connectors.changeSyncScope', 'Change sync scope')}</h3>
               <div className="space-y-2 mb-4">
                 {[
-                  { key: 'personal', label: 'My Space', desc: 'Only you can access these memories' },
-                  { key: 'team', label: 'Team', desc: 'All members of the selected team', disabled: !allowTeamScope || !teams?.length },
-                  { key: 'organization', label: 'Org-wide', desc: 'Every org member can recall these memories', disabled: !allowTeamScope },
+                  { key: 'personal', label: t('connectors.scopeMySpace', 'My Space'), desc: t('connectors.scopeMySpaceDesc', 'Only you can access these memories') },
+                  { key: 'team', label: t('connectors.scopeTeam', 'Team'), desc: t('connectors.scopeTeamDesc', 'All members of the selected team'), disabled: !allowTeamScope || !teams?.length },
+                  { key: 'organization', label: t('connectors.scopeOrgWide', 'Org-wide'), desc: t('connectors.scopeOrgWideDesc', 'Every org member can recall these memories'), disabled: !allowTeamScope },
                 ].map(opt => (
                   <button
                     key={opt.key}
@@ -734,7 +738,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                     onChange={e => setPendingTeamId(e.target.value || null)}
                     className="w-full text-[11px] font-mono border border-[#e3e0db] rounded-lg px-2.5 py-1.5 bg-[#faf9f4] text-[#525252] focus:outline-none focus:border-[#117dff]"
                   >
-                    <option value="">Select team...</option>
+                    <option value="">{t('connectors.selectTeam', 'Select team...')}</option>
                     {teams.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
@@ -746,14 +750,14 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                   onClick={() => setChangeScopeOpen(false)}
                   className="flex-1 py-2 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
                 >
-                  Cancel
+                  {t('connectors.cancel', 'Cancel')}
                 </button>
                 <button
                   onClick={handleScopeChange}
                   disabled={scopeSaving || (pendingScope === 'team' && !pendingTeamId)}
                   className="flex-1 py-2 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
                 >
-                  {scopeSaving ? 'Saving...' : 'Save'}
+                  {scopeSaving ? t('connectors.saving', 'Saving...') : t('connectors.save', 'Save')}
                 </button>
               </div>
             </div>
@@ -771,7 +775,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50 transition-all"
             >
               {connecting ? <RefreshCw size={12} className="animate-spin" /> : <Plus size={12} />}
-              {connecting ? 'Connecting...' : 'Connect'}
+              {connecting ? t('connectors.connecting', 'Connecting...') : t('connectors.connect', 'Connect')}
             </button>
           )}
           {connector.status === 'available' && isSetupOnly && (
@@ -780,7 +784,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff] text-white hover:bg-[#0066e0] transition-all"
             >
               {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              {expanded ? 'Hide Setup' : 'Setup'}
+              {expanded ? t('connectors.hideSetup', 'Hide Setup') : t('connectors.setup', 'Setup')}
             </button>
           )}
           {isActive && (
@@ -789,12 +793,12 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                 onClick={onDisconnect}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] text-[#dc2626]/70 hover:text-[#dc2626] hover:bg-red-50 transition-all"
               >
-                Disconnect
+                {t('connectors.disconnect', 'Disconnect')}
               </button>
               {(connector.oauthProvider || connector.nangoProvider) && (
                 <button
                   onClick={onResync}
-                  title="Sync now"
+                  title={t('connectors.syncNow', 'Sync now')}
                   className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
                 >
                   <RefreshCw size={13} />
@@ -803,7 +807,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               {(connector.oauthProvider || connector.nangoProvider) && (
                 <button
                   onClick={() => { setPendingScope(targetScope); setPendingTeamId(selectedTeamId || null); setChangeScopeOpen(true); }}
-                  title="Settings"
+                  title={t('connectors.settings', 'Settings')}
                   className="p-1.5 rounded-lg text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
                 >
                   <SettingsIcon size={13} />
@@ -812,11 +816,11 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               {canShowConfig && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  title="View config"
+                  title={t('connectors.viewConfig', 'View config')}
                   className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono text-[#737373] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-all"
                 >
                   {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                  Config
+                  {t('connectors.config', 'Config')}
                 </button>
               )}
             </>
@@ -828,13 +832,13 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20 transition-all"
               >
                 <RefreshCw size={12} />
-                Reconnect
+                {t('connectors.reconnect', 'Reconnect')}
               </button>
               <button
                 onClick={onDisconnect}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
               >
-                Disconnect
+                {t('connectors.disconnect', 'Disconnect')}
               </button>
             </>
           )}
@@ -849,20 +853,20 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
                 }`}
               >
                 <RefreshCw size={12} />
-                {isAuthErr ? 'Reconnect' : 'Retry'}
+                {isAuthErr ? t('connectors.reconnect', 'Reconnect') : t('connectors.retry', 'Retry')}
               </button>
               <button
                 onClick={onDisconnect}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium font-['Space_Grotesk'] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50 transition-all"
               >
-                Disconnect
+                {t('connectors.disconnect', 'Disconnect')}
               </button>
             </>
           )}
           {isComingSoon && (
             <span className="text-[#d4d0ca] text-[11px] font-['Space_Grotesk'] flex items-center gap-1.5">
               <Clock size={12} />
-              Coming soon
+              {t('connectors.comingSoon', 'Coming soon')}
             </span>
           )}
         </div>
@@ -882,7 +886,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               {isSetupOnly && (
                 <div className="mb-4 rounded-xl border border-[#117dff]/15 bg-[#117dff]/[0.05] p-4">
                   <h4 className="text-[#0a0a0a] text-xs font-semibold font-['Space_Grotesk'] mb-2">
-                    NotebookLM Setup
+                    {t('connectors.notebooklmSetup', 'NotebookLM Setup')}
                   </h4>
                   <ol className="space-y-1.5 text-[12px] leading-relaxed text-[#525252] font-['Space_Grotesk'] list-decimal pl-4">
                     <li>Install <code className="text-[#117dff] font-mono">pip install \"notebooklm-py[browser]\"</code></li>
@@ -905,15 +909,16 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
 
 // eslint-disable-next-line no-unused-vars
 function StatsRow({ connectors, endpoints }) {
+  const { t } = useTranslation('dashboard');
   const connected = connectors.filter(c => c.status === 'connected').length;
   const available = connectors.filter(c => c.status === 'available').length;
   const coming = connectors.filter(c => c.status === 'coming_soon').length;
 
   const stats = [
-    { label: 'Connected', value: connected, icon: CheckCircle2, color: 'text-[#16a34a]' },
-    { label: 'Available', value: available, icon: Zap, color: 'text-blue-400' },
-    { label: 'Coming Soon', value: coming, icon: Clock, color: 'text-[#525252]' },
-    { label: 'MCP Endpoints', value: endpoints?.length || 0, icon: Globe, color: 'text-[#117dff]' },
+    { label: t('connectors.statsConnected', 'Connected'), value: connected, icon: CheckCircle2, color: 'text-[#16a34a]' },
+    { label: t('connectors.statusAvailable', 'Available'), value: available, icon: Zap, color: 'text-blue-400' },
+    { label: t('connectors.statusComingSoon', 'Coming Soon'), value: coming, icon: Clock, color: 'text-[#525252]' },
+    { label: t('connectors.mcpEndpoints', 'MCP Endpoints'), value: endpoints?.length || 0, icon: Globe, color: 'text-[#117dff]' },
   ];
 
   return (
@@ -939,6 +944,7 @@ function StatsRow({ connectors, endpoints }) {
 // ─── Endpoint Status Table ───────────────────────────────────────────────────
 
 function EndpointTable({ endpoints, loading, onRefresh }) {
+  const { t } = useTranslation('dashboard');
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -952,7 +958,7 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
       <div className="py-10 text-center">
         <WifiOff size={20} className="text-[#e3e0db] mx-auto mb-2" />
         <p className="text-[#d4d0ca] text-sm font-['Space_Grotesk']">
-          No MCP endpoints registered
+          {t('connectors.noMcpEndpoints', 'No MCP endpoints registered')}
         </p>
       </div>
     );
@@ -963,7 +969,7 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[#e3e0db]">
-            {['Endpoint', 'Health', 'Tools', 'Resources', 'Last Checked'].map((h) => (
+            {[t('connectors.colEndpoint', 'Endpoint'), t('connectors.colHealth', 'Health'), t('connectors.colTools', 'Tools'), t('connectors.colResources', 'Resources'), t('connectors.colLastChecked', 'Last Checked')].map((h) => (
               <th key={h} className="text-left text-[#d4d0ca] text-[10px] font-mono uppercase tracking-wider px-4 py-2.5">
                 {h}
               </th>
@@ -1005,6 +1011,7 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
 // ─── Gmail Sync Settings Modal ──────────────────────────────────────────────
 
 function GmailSyncSettings({ email, onSync, onClose }) {
+  const { t } = useTranslation('dashboard');
   const [dateRange, setDateRange] = useState('30d');
   const [folders, setFolders] = useState(['INBOX', 'SENT']);
   const [excludeCategories, setExcludeCategories] = useState(['promotions', 'social', 'updates', 'forums']);
@@ -1087,11 +1094,11 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   };
 
   const dateOptions = [
-    { value: '7d', label: 'Last 7 days' },
-    { value: '30d', label: 'Last 30 days' },
-    { value: '90d', label: 'Last 90 days' },
-    { value: '365d', label: 'Last year' },
-    { value: 'all', label: 'All time' },
+    { value: '7d', label: t('connectors.last7days', 'Last 7 days') },
+    { value: '30d', label: t('connectors.last30days', 'Last 30 days') },
+    { value: '90d', label: t('connectors.last90days', 'Last 90 days') },
+    { value: '365d', label: t('connectors.lastYear', 'Last year') },
+    { value: 'all', label: t('connectors.allTime', 'All time') },
   ];
 
   const folderOptions = ['INBOX', 'SENT', 'STARRED', 'IMPORTANT', 'DRAFT'];
@@ -1112,7 +1119,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
             <Mail size={22} className="text-[#ef4444]" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-[#0a0a0a] text-[17px] font-bold font-['Space_Grotesk'] leading-tight">Configure Gmail Sync</h2>
+            <h2 className="text-[#0a0a0a] text-[17px] font-bold font-['Space_Grotesk'] leading-tight">{t('connectors.configureGmailSync', 'Configure Gmail Sync')}</h2>
             <p className="text-[#a3a3a3] text-[11px] font-mono leading-snug mt-0.5">
               {email ? <>Account · <span className="text-[#525252]">{email}</span></> : 'Pick threads → preview → approve'}
             </p>
@@ -1120,7 +1127,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
-            aria-label="Close"
+            aria-label={t('connectors.close', 'Close')}
           >
             <X size={16} />
           </button>
@@ -1130,7 +1137,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         {/* Top grid: Date Range + Max Emails side-by-side on md+ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
           <div>
-            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Date Range</label>
+            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.dateRange', 'Date Range')}</label>
             <div className="flex flex-wrap gap-2">
               {dateOptions.map(opt => (
                 <button
@@ -1149,7 +1156,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
           </div>
           <div>
             <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] flex items-center justify-between mb-2.5">
-              <span>Max Emails</span>
+              <span>{t('connectors.maxEmails', 'Max Emails')}</span>
               <span className="text-[#117dff] text-[14px] font-mono normal-case tracking-normal">{maxEmails}</span>
             </label>
             <input
@@ -1169,7 +1176,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 
         {/* Folders */}
         <div className="mb-5">
-          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Folders to Sync</label>
+          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.foldersToSync', 'Folders to Sync')}</label>
           <div className="flex flex-wrap gap-2">
             {folderOptions.map(f => (
               <button
@@ -1189,7 +1196,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 
         {/* Exclude Categories */}
         <div className="mb-6">
-          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">Exclude Categories</label>
+          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.excludeCategories', 'Exclude Categories')}</label>
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map(c => (
               <button
@@ -1213,10 +1220,10 @@ function GmailSyncSettings({ email, onSync, onClose }) {
             <div className="px-4 py-3 flex items-center justify-between border-b border-[#e3e0db] bg-white">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#525252] font-['Space_Grotesk']">
-                  Approve threads
+                  {t('connectors.approveThreads', 'Approve threads')}
                 </p>
                 <p className="text-[12.5px] font-mono text-[#0a0a0a] mt-0.5">
-                  <span className="text-[#117dff]">{selectedIds.size}</span> / {previews.length} selected
+                  <span className="text-[#117dff]">{selectedIds.size}</span> / {previews.length} {t('connectors.selected', 'selected')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1224,13 +1231,13 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                   onClick={() => setSelectedIds(new Set(previews.map(p => p.thread_id)))}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#117dff]/10 text-[#117dff] hover:bg-[#117dff]/15 transition-colors"
                 >
-                  Select all
+                  {t('connectors.selectAll', 'Select all')}
                 </button>
                 <button
                   onClick={() => setSelectedIds(new Set())}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#737373] hover:bg-[#eae7e1] transition-colors"
                 >
-                  None
+                  {t('connectors.none', 'None')}
                 </button>
               </div>
             </div>
@@ -1275,7 +1282,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
               })}
               {previews.length === 0 && (
                 <div className="px-4 py-10 text-center text-[12px] text-[#a3a3a3] font-mono">
-                  No threads matched the filter.
+                  {t('connectors.noThreadsMatched', 'No threads matched the filter.')}
                 </div>
               )}
             </div>
@@ -1301,7 +1308,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 onClick={onClose}
                 className="px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
               >
-                Cancel
+                {t('connectors.cancel', 'Cancel')}
               </button>
               <button
                 onClick={handlePreview}
@@ -1313,7 +1320,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 ) : (
                   <>
                     <Filter size={15} />
-                    Preview &amp; Approve
+                    {t('connectors.previewApprove', 'Preview & Approve')}
                   </>
                 )}
               </button>
@@ -1327,7 +1334,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 ) : (
                   <>
                     <Zap size={15} />
-                    Sync All
+                    {t('connectors.syncAll', 'Sync All')}
                   </>
                 )}
               </button>
@@ -1339,7 +1346,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 onClick={() => setStep('config')}
                 className="px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1] transition-all"
               >
-                Back
+                {t('connectors.back', 'Back')}
               </button>
               <button
                 onClick={handleIngestSelected}
@@ -1351,7 +1358,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
                 ) : (
                   <>
                     <Check size={15} />
-                    Ingest {selectedIds.size} {selectedIds.size === 1 ? 'thread' : 'threads'}
+                    {t('connectors.ingestThreads', 'Ingest {{count}} {{unit}}', { count: selectedIds.size, unit: selectedIds.size === 1 ? t('connectors.thread', 'thread') : t('connectors.threads', 'threads') })}
                   </>
                 )}
               </button>
@@ -1362,7 +1369,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
               onClick={onClose}
               className="flex-1 px-4 py-3 rounded-xl text-[13px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-all"
             >
-              Done
+              {t('connectors.done', 'Done')}
             </button>
           )}
         </div>
@@ -1371,13 +1378,13 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         {step === 'config' && (
           <div className="mt-5 pt-4 border-t border-[#f3f1ec] flex items-center justify-between">
             <p className="text-[11px] text-[#a3a3a3] font-mono">
-              Memory graph polluted? Start fresh.
+              {t('connectors.memoryPolluted', 'Memory graph polluted? Start fresh.')}
             </p>
             <button
               onClick={handleFlush}
               className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
             >
-              Flush all Gmail memories
+              {t('connectors.flushGmailMemories', 'Flush all Gmail memories')}
             </button>
           </div>
         )}
@@ -1390,6 +1397,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
 // ─── Google Workspace Intro Modal (one-time, before master OAuth) ──────────
 
 function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
+  const { t } = useTranslation('dashboard');
   const services = [
     { key: 'gmail',    name: 'Gmail',    desc: 'Email threads → event memories', color: '#ef4444' },
     { key: 'drive',    name: 'Drive',    desc: 'Docs/Sheets/Slides as searchable KB', color: '#f59e0b' },
@@ -1411,8 +1419,8 @@ function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
             <Mail size={20} className="text-[#4285F4]" />
           </div>
           <div>
-            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Connect Google Workspace</h3>
-            <p className="text-[#525252] text-xs">One consent → all services. Disconnect any one anytime.</p>
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('connectors.connectGoogleWorkspace', 'Connect Google Workspace')}</h3>
+            <p className="text-[#525252] text-xs">{t('connectors.googleWorkspaceDesc', 'One consent → all services. Disconnect any one anytime.')}</p>
           </div>
         </div>
 
@@ -1434,7 +1442,7 @@ function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
         </div>
 
         <div className="text-[11px] text-[#a3a3a3] font-mono mb-5">
-          After approval, we&apos;ll walk you through sync settings for each connected service.
+          {t('connectors.googleWorkspaceAfter', 'After approval, we\'ll walk you through sync settings for each connected service.')}
         </div>
 
         <div className="flex gap-3">
@@ -1442,14 +1450,14 @@ function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
             onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]"
           >
-            Cancel
+            {t('connectors.cancel', 'Cancel')}
           </button>
           <button
             onClick={onProceed}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#4285F4] text-white hover:bg-[#3367d6] flex items-center justify-center gap-2"
           >
             <Zap size={14} />
-            Continue to Google
+            {t('connectors.continueToGoogle', 'Continue to Google')}
           </button>
         </div>
       </motion.div>
@@ -1609,6 +1617,7 @@ const SERVICE_CONFIG_SCHEMAS = {
 // ─── Generic Service Sync Config Modal ────────────────────────────────────────
 
 function GoogleServiceSyncConfig({ provider, email, onSave, onSkip, onClose, stepLabel }) {
+  const { t } = useTranslation('dashboard');
   const schema = SERVICE_CONFIG_SCHEMAS[provider];
   const initial = {};
   if (schema) {
@@ -1725,7 +1734,7 @@ function GoogleServiceSyncConfig({ provider, email, onSave, onSkip, onClose, ste
             onClick={onSkip}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] bg-[#f3f1ec] text-[#525252] hover:bg-[#eae7e1]"
           >
-            Skip
+            {t('connectors.skip', 'Skip')}
           </button>
           <button
             onClick={handleSave}
@@ -1737,7 +1746,7 @@ function GoogleServiceSyncConfig({ provider, email, onSave, onSkip, onClose, ste
             ) : (
               <>
                 <Zap size={14} />
-                Save &amp; Continue
+                {t('connectors.saveContinue', 'Save & Continue')}
               </>
             )}
           </button>
@@ -1750,6 +1759,7 @@ function GoogleServiceSyncConfig({ provider, email, onSave, onSkip, onClose, ste
 // ─── MCP Setup Modal ─────────────────────────────────────────────────────────
 
 function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existingEndpointStatus }) {
+  const { t } = useTranslation('dashboard');
   const [copied, setCopied] = useState(false);
   const [generatedKey, setGeneratedKey] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -1873,16 +1883,16 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
   const statusPill = verificationState?.healthy ? (
     <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
       <Check size={10} />
-      Connected
+      {t('connectors.statusConnected', 'Connected')}
     </span>
   ) : verificationState?.error ? (
     <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-600">
       <AlertCircle size={10} />
-      Needs attention
+      {t('connectors.needsAttention', 'Needs attention')}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#737373]">
-      Not verified
+      {t('connectors.notVerified', 'Not verified')}
     </span>
   );
 
@@ -1910,15 +1920,15 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
             </h2>
             <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug truncate">
               {isClaudeTerminalSetup
-                ? 'Run installer script · restart Claude · verify'
-                : 'Paste config into your client · save · verify'}
+                ? t('connectors.mcpInstallHint', 'Run installer script · restart Claude · verify')
+                : t('connectors.mcpPasteHint', 'Paste config into your client · save · verify')}
             </p>
           </div>
           {statusPill}
           <button
             onClick={onClose}
             className="ml-1 w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
-            aria-label="Close"
+            aria-label={t('connectors.close', 'Close')}
           >
             <X size={14} />
           </button>
@@ -1955,7 +1965,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                   modalMode === 'uninstall' ? 'bg-red-500' : 'bg-[#0a0a0a]'
                 }`}>1</span>
                 <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-                  {modalMode === 'uninstall' ? 'Run uninstall command' : 'Run install command in terminal'}
+                  {modalMode === 'uninstall' ? t('connectors.runUninstallCmd', 'Run uninstall command') : t('connectors.runInstallCmd', 'Run install command in terminal')}
                 </p>
               </div>
               {connector.configPath && (
@@ -2027,7 +2037,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#117dff]/25 bg-[#117dff]/10 px-3 py-2 text-[12px] font-semibold font-['Space_Grotesk'] text-[#117dff] hover:bg-[#117dff]/15 disabled:opacity-50 transition-colors"
             >
               {verifying ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-              {verificationState?.healthy ? 'Re-check Connection' : 'Verify Connection'}
+              {verificationState?.healthy ? t('connectors.recheckConnection', 'Re-check Connection') : t('connectors.verifyConnection', 'Verify Connection')}
             </button>
           </div>
 
@@ -2037,7 +2047,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
               <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">2</span>
-                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Restart {connector.name}</p>
+                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('connectors.restart', 'Restart')} {connector.name}</p>
                 </div>
                 <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-relaxed">
                   After the one-liner finishes, quit + reopen {connector.name} so the MCP entry clears from memory. Reinstall any time using the Install tab.
@@ -2047,7 +2057,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
               <div className="rounded-lg border border-[#dbe8ff] bg-[#f7fbff] p-3">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="w-5 h-5 rounded-full bg-[#117dff] text-white text-[10px] font-bold flex items-center justify-center">2</span>
-                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Activate MCP prompt</p>
+                  <p className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('connectors.activateMcpPrompt', 'Activate MCP prompt')}</p>
                 </div>
                 <p className="text-[11.5px] text-[#525252] font-['Space_Grotesk'] leading-relaxed mb-2.5">
                   After Step 1 verifies, load the HIVEMIND prompt variants ({promptVariant === 'coding' ? 'coding' : 'agent'}) into your client.
@@ -2057,7 +2067,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
                   className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#117dff] px-3 py-2 text-[12px] font-semibold font-['Space_Grotesk'] text-white hover:bg-[#0066e0] transition-colors"
                 >
                   <ExternalLink size={12} />
-                  Continue to Prompt
+                  {t('connectors.continueToPrompt', 'Continue to Prompt')}
                 </button>
               </div>
             )}
@@ -2102,7 +2112,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg text-[12px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-colors"
           >
-            Done
+            {t('connectors.done', 'Done')}
           </button>
         </div>
       </motion.div>
@@ -2120,6 +2130,7 @@ const CHROME_WEBSTORE_URL =
   'https://chromewebstore.google.com/detail/hivemind-%E2%80%94-persistent-mem/fblojngccegocehklbpambblncakmlle';
 
 function BrowserIntelligenceCard() {
+  const { t } = useTranslation('dashboard');
   const [opened, setOpened] = useState(false);
 
   const handleInstall = () => {
@@ -2143,21 +2154,20 @@ function BrowserIntelligenceCard() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">
-                Browser Intelligence
+                {t('connectors.browserIntelligence', 'Browser Intelligence')}
               </h3>
               <span className="text-[9.5px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Official
               </span>
             </div>
             <p className="text-[#525252] text-[13px] leading-relaxed">
-              Talk to HIVE from any tab. Save selections, page sections, AI chat sessions
-              (ChatGPT · Claude · Gemini · Perplexity) directly into your memory engine.
+              {t('connectors.browserIntelligenceDesc', 'Talk to HIVE from any tab. Save selections, page sections, AI chat sessions (ChatGPT · Claude · Gemini · Perplexity) directly into your memory engine.')}
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-3 text-[11px] text-[#737373]">
-              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> Side-panel chat</span>
-              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> Section picker</span>
-              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> AI-chat ingest</span>
-              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> OAuth sign-in</span>
+              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> {t('connectors.sidePanelChat', 'Side-panel chat')}</span>
+              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> {t('connectors.sectionPicker', 'Section picker')}</span>
+              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> {t('connectors.aiChatIngest', 'AI-chat ingest')}</span>
+              <span className="flex items-center gap-1"><Check size={11} className="text-[#16a34a]" /> {t('connectors.oauthSignIn', 'OAuth sign-in')}</span>
             </div>
           </div>
         </div>
@@ -2171,17 +2181,17 @@ function BrowserIntelligenceCard() {
             {opened ? (
               <>
                 <Check size={14} />
-                Opened Chrome Web Store
+                {t('connectors.openedChromeStore', 'Opened Chrome Web Store')}
               </>
             ) : (
               <>
                 <Chrome size={14} />
-                Add to Chrome
+                {t('connectors.addToChrome', 'Add to Chrome')}
               </>
             )}
           </button>
           <p className="text-[10.5px] text-[#737373] sm:text-right max-w-[220px]">
-            One-click install from the official Chrome Web Store. Click
+            {t('connectors.chromeStoreHint', 'One-click install from the official Chrome Web Store. Click')}
             "Add to Chrome" on the page that opens.
           </p>
         </div>
@@ -2637,6 +2647,7 @@ function ChatGPTConnectorCard() {
 // GeminiAdapter → tree → engine.ingestMemoryTree. Returns turn_count.
 
 function GeminiPasteModal({ onClose, onSuccess }) {
+  const { t } = useTranslation('dashboard');
   const [transcript, setTranscript] = useState('');
   const [title, setTitle] = useState('');
   const [model, setModel] = useState('gemini-2.0-pro');
@@ -2682,8 +2693,8 @@ function GeminiPasteModal({ onClose, onSuccess }) {
               <MessageSquare size={18} className="text-white" />
             </div>
             <div>
-              <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Paste a Gemini chat</div>
-              <div className="text-[12px] text-[#737373]">Session + turns → operator graph</div>
+              <div className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('connectors.pasteGeminiChat', 'Paste a Gemini chat')}</div>
+              <div className="text-[12px] text-[#737373]">{t('connectors.geminiSessionDesc', 'Session + turns → operator graph')}</div>
             </div>
           </div>
           <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a] p-1.5">
@@ -2696,7 +2707,7 @@ function GeminiPasteModal({ onClose, onSuccess }) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title (optional)"
+              placeholder={t('connectors.titleOptional', 'Title (optional)')}
               className="px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[13px] focus:outline-none focus:ring-2 focus:ring-[#4285f4]/30"
             />
             <input
@@ -2729,14 +2740,14 @@ function GeminiPasteModal({ onClose, onSuccess }) {
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#525252] hover:bg-[#fafaf6]"
           >
-            Cancel
+            {t('connectors.cancel', 'Cancel')}
           </button>
           <button
             onClick={submit}
             disabled={submitting || !transcript.trim()}
             className="px-4 py-2 rounded-lg text-[13px] font-medium text-white bg-[#4285f4] hover:bg-[#3b78dc] disabled:opacity-50"
           >
-            {submitting ? 'Importing…' : 'Import to HIVEMIND'}
+            {submitting ? t('connectors.importing', 'Importing…') : t('connectors.importToHivemind', 'Import to HIVEMIND')}
           </button>
         </div>
       </motion.div>
@@ -2751,6 +2762,7 @@ function GeminiPasteModal({ onClose, onSuccess }) {
 // language as McpSetupModal (Step pill, two-column body, footer button).
 
 function ChatGptSetupModal({ onClose }) {
+  const { t } = useTranslation('dashboard');
   const PUBLIC_ORIGIN = 'https://hivemind.davinciai.eu';
   const SPEC_URL = PUBLIC_ORIGIN + '/v1/chatgpt/openapi.yaml';
   const CLIENT_ID = 'hmc_b8a3740e48be648d82633115';
@@ -2800,7 +2812,7 @@ function ChatGptSetupModal({ onClose }) {
           <button
             onClick={onClose}
             className="ml-1 w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
-            aria-label="Close"
+            aria-label={t('connectors.close', 'Close')}
           >
             <X size={14} />
           </button>
@@ -2882,7 +2894,7 @@ function ChatGptSetupModal({ onClose }) {
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg text-[12px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#262626] transition-colors"
           >
-            Done
+            {t('connectors.done', 'Done')}
           </button>
         </div>
       </motion.div>
@@ -2894,6 +2906,7 @@ function ChatGptSetupModal({ onClose }) {
 // Step 1: name + remote MCP URL → user pastes into claude.ai connectors form
 // Step 2: navigate to /mcp-server page to copy the HIVEMIND AI agent prompt
 function ClaudeWebSetupModal({ onClose }) {
+  const { t } = useTranslation('dashboard');
   const NAME = 'HIVEMIND';
   const MCP_URL = 'https://hivemind.davinciai.eu/api/mcp';
   const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector';
@@ -2934,7 +2947,7 @@ function ClaudeWebSetupModal({ onClose }) {
           <button
             onClick={onClose}
             className="ml-1 w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
-            aria-label="Close"
+            aria-label={t('connectors.close', 'Close')}
           >
             <X size={14} />
           </button>
@@ -3051,7 +3064,7 @@ function ClaudeWebSetupModal({ onClose }) {
                   onClick={onClose}
                   className="flex-1 px-3 py-2.5 rounded-lg bg-[#cc785c] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#b86a4d] transition-colors"
                 >
-                  Done
+                  {t('connectors.done', 'Done')}
                 </button>
               </div>
 
@@ -3069,6 +3082,7 @@ function ClaudeWebSetupModal({ onClose }) {
 
 // ─── Claude.ai disconnect modal — dual-step (revoke local + remove on claude.ai) ──
 function ClaudeWebDisconnectModal({ onClose, onRevoked }) {
+  const { t } = useTranslation('dashboard');
   const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors';
   const [revoking, setRevoking] = useState(false);
   const [revoked, setRevoked] = useState(null);
@@ -3104,7 +3118,7 @@ function ClaudeWebDisconnectModal({ onClose, onRevoked }) {
             <h2 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">Disconnect Claude</h2>
             <p className="text-[11px] text-[#a3a3a3] font-['Space_Grotesk'] leading-snug truncate">Two places to remove — local tokens + claude.ai connector</p>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec]" aria-label="Close"><X size={14} /></button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec]" aria-label={t('connectors.close', 'Close')}><X size={14} /></button>
         </div>
 
         <div className="p-5 flex flex-col gap-4">
@@ -3175,7 +3189,7 @@ function ClaudeWebDisconnectModal({ onClose, onRevoked }) {
               onClick={() => { if (revoked !== null && onRevoked) onRevoked(); else onClose(); }}
               className="flex-1 px-3 py-2.5 rounded-lg bg-[#0a0a0a] text-white text-[12.5px] font-semibold font-['Space_Grotesk'] hover:bg-[#1a1a1a]"
             >
-              {revoked !== null ? 'Done' : 'Close'}
+              {revoked !== null ? t('connectors.done', 'Done') : t('connectors.close', 'Close')}
             </button>
           </div>
         </div>
@@ -3193,6 +3207,7 @@ function ClaudeWebDisconnectModal({ onClose, onRevoked }) {
 // card layout with a single clean stack.
 
 export default function Connectors() {
+  const { t } = useTranslation('dashboard');
   const { org, user } = useAuth();
   const { teams } = useTeamContext();
   // eslint-disable-next-line no-unused-vars
@@ -3907,7 +3922,7 @@ export default function Connectors() {
       {featuredConnectors.length > 0 && (
         <div>
           <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-3">
-            AI Assistants
+            {t('connectors.aiAssistants', 'AI Assistants')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {featuredConnectors.map(renderConnectorCard)}
@@ -3925,7 +3940,7 @@ export default function Connectors() {
               : 'text-[#525252] hover:text-[#525252] border border-transparent'
           }`}
         >
-          All Connectors
+          {t('connectors.allConnectors', 'All Connectors')}
         </button>
         {CONNECTOR_CATEGORIES.map((cat) => (
           <button
@@ -3952,14 +3967,14 @@ export default function Connectors() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[#525252] text-[11px] font-mono uppercase tracking-wider">
-            Live MCP Endpoints
+            {t('connectors.liveMcpEndpoints', 'Live MCP Endpoints')}
           </h2>
           <button
             onClick={refetchStatus}
             className="flex items-center gap-1.5 text-[#a3a3a3] hover:text-[#117dff] text-[11px] font-['Space_Grotesk'] transition-colors"
           >
             <RefreshCw size={11} />
-            Refresh
+            {t('connectors.refresh', 'Refresh')}
           </button>
         </div>
         <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04)]">

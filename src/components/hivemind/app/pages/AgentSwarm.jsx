@@ -6,6 +6,7 @@ import {
   XCircle, GitBranch, Zap,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { useTranslation } from 'react-i18next';
 
 /* ─── Constants ────────────────────────────────────────────── */
 
@@ -84,6 +85,7 @@ function verdictBadge(verdict) {
 /* ─── Main Component ───────────────────────────────────────── */
 
 export default function AgentSwarm() {
+  const { t } = useTranslation('dashboard');
   const [selected, setSelected] = useState(null); // 'faraday' | 'feynman' | 'turing' | 'all'
   const [scope, setScope] = useState('workspace');
   const [goal, setGoal] = useState('');
@@ -154,7 +156,7 @@ export default function AgentSwarm() {
 
   const discardResearchSession = useCallback(async (sessionId) => {
     // eslint-disable-next-line no-alert
-    if (!window.confirm('Discard all buffered research traces for this session? Nothing will be persisted to the graph.')) return;
+    if (!window.confirm(t('agentswarm.discardConfirm', 'Discard all buffered research traces for this session? Nothing will be persisted to the graph.'))) return;
     setResearchActingOn(sessionId);
     try {
       await apiClient.discardResearchProposals(sessionId);
@@ -165,7 +167,7 @@ export default function AgentSwarm() {
     } finally {
       setResearchActingOn(null);
     }
-  }, [refreshResearchSessions]);
+  }, [refreshResearchSessions, t]);
 
   /* ── Run agent ──────────────────────────────────── */
 
@@ -355,14 +357,14 @@ export default function AgentSwarm() {
       {/* ── Header (compact) ── */}
       <div className="shrink-0 px-5 pt-4 pb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[#0a0a0a]">Agent Swarm Intelligence</h1>
-          <p className="text-xs text-[#a3a3a3]">Resident agents that make your knowledge graph smarter over time</p>
+          <h1 className="text-lg font-bold text-[#0a0a0a]">{t('agentswarm.title', 'Agent Swarm Intelligence')}</h1>
+          <p className="text-xs text-[#a3a3a3]">{t('agentswarm.subtitle', 'Resident agents that make your knowledge graph smarter over time')}</p>
         </div>
         <div className="flex items-center gap-3">
           {running && (
             <div className="flex items-center gap-2 text-xs text-[#117dff]">
               <Loader2 size={14} className="animate-spin" />
-              Running {runPhase}...
+              {t('agentswarm.running', 'Running {{phase}}...', { phase: runPhase })}
             </div>
           )}
           {/* Pending research approvals badge */}
@@ -370,11 +372,11 @@ export default function AgentSwarm() {
             <button
               onClick={() => setResearchPanelOpen(v => !v)}
               className="text-xs font-mono px-3 py-1 rounded-lg border border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 transition-colors"
-              title="Buffered research traces awaiting approval"
+              title={t('agentswarm.pendingResearchTitle', 'Buffered research traces awaiting approval')}
             >
-              📋 {researchSessions.length} pending research {researchSessions.length === 1 ? 'session' : 'sessions'}
+              📋 {researchSessions.length} {t('agentswarm.pendingResearch', 'pending research')} {researchSessions.length === 1 ? t('agentswarm.session', 'session') : t('agentswarm.sessions', 'sessions')}
               {' · '}
-              {researchSessions.reduce((sum, s) => sum + (s.total || 0), 0)} buffered
+              {researchSessions.reduce((sum, s) => sum + (s.total || 0), 0)} {t('agentswarm.buffered', 'buffered')}
             </button>
           )}
         </div>
@@ -386,16 +388,16 @@ export default function AgentSwarm() {
           <div className="flex items-center justify-between px-4 py-2 border-b border-amber-200 bg-amber-100/50">
             <div className="flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-700" />
-              <h3 className="text-sm font-bold text-amber-900">Pending Research Approvals</h3>
+              <h3 className="text-sm font-bold text-amber-900">{t('agentswarm.pendingApprovalsHeading', 'Pending Research Approvals')}</h3>
               <span className="text-[10px] font-mono text-amber-700">
-                {researchSessions.length} session{researchSessions.length === 1 ? '' : 's'} — buffered in RAM, not yet written to graph
+                {researchSessions.length} {researchSessions.length === 1 ? t('agentswarm.session', 'session') : t('agentswarm.sessions', 'sessions')} — {t('agentswarm.bufferedNotWritten', 'buffered in RAM, not yet written to graph')}
               </span>
             </div>
             <button
               onClick={() => setResearchPanelOpen(false)}
               className="text-[10px] px-2 py-0.5 rounded text-amber-800 hover:bg-amber-200/60"
             >
-              Collapse
+              {t('agentswarm.collapse', 'Collapse')}
             </button>
           </div>
           <div className="divide-y divide-amber-200">
@@ -422,25 +424,25 @@ export default function AgentSwarm() {
                       onClick={() => approveResearchSession(s.sessionId, ['findings', 'sources'])}
                       disabled={acting || (s.counts.findings + s.counts.sources === 0)}
                       className="text-[10px] px-2 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 font-semibold"
-                      title="Persist only findings + sources (skip raw observations and execution events)"
+                      title={t('agentswarm.approveFindingsTitle', 'Persist only findings + sources (skip raw observations and execution events)')}
                     >
-                      ✓ Findings + Sources
+                      {t('agentswarm.approveFindingsSources', '✓ Findings + Sources')}
                     </button>
                     <button
                       onClick={() => approveResearchSession(s.sessionId, null)}
                       disabled={acting || s.total === 0}
                       className="text-[10px] px-2 py-1 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-40 font-semibold"
-                      title="Persist everything in the buffer"
+                      title={t('agentswarm.approveAllTitle', 'Persist everything in the buffer')}
                     >
-                      ✓ Approve All
+                      {t('agentswarm.approveAll', '✓ Approve All')}
                     </button>
                     <button
                       onClick={() => discardResearchSession(s.sessionId)}
                       disabled={acting}
                       className="text-[10px] px-2 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 font-semibold"
-                      title="Drop buffer — nothing persisted"
+                      title={t('agentswarm.discardTitle', 'Drop buffer — nothing persisted')}
                     >
-                      🗑 Discard
+                      {t('agentswarm.discard', '🗑 Discard')}
                     </button>
                     {acting && <Loader2 size={12} className="animate-spin text-amber-700 ml-1" />}
                   </div>
@@ -501,9 +503,9 @@ export default function AgentSwarm() {
             <div className="w-7 h-7 rounded-lg bg-[#117dff]/10 flex items-center justify-center">
               <Zap size={14} className="text-[#117dff]" />
             </div>
-            <div className="text-sm font-bold text-[#0a0a0a]">Run All</div>
+            <div className="text-sm font-bold text-[#0a0a0a]">{t('agentswarm.runAll', 'Run All')}</div>
           </div>
-          <p className="text-[10px] text-[#525252]">Chain: F → Fe → T</p>
+          <p className="text-[10px] text-[#525252]">{t('agentswarm.runAllChain', 'Chain: F → Fe → T')}</p>
         </button>
       </div>
 
@@ -528,10 +530,10 @@ export default function AgentSwarm() {
                       onChange={e => setScope(e.target.value)}
                       className="text-xs border border-[#e3e0db] rounded-lg px-2 py-1.5 bg-[#faf9f4] text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
                     >
-                      <option value="workspace">Workspace</option>
-                      <option value="project">Project</option>
-                      <option value="graph">Graph</option>
-                      <option value="region">Region</option>
+                      <option value="workspace">{t('agentswarm.scopeWorkspace', 'Workspace')}</option>
+                      <option value="project">{t('agentswarm.scopeProject', 'Project')}</option>
+                      <option value="graph">{t('agentswarm.scopeGraph', 'Graph')}</option>
+                      <option value="region">{t('agentswarm.scopeRegion', 'Region')}</option>
                     </select>
                   </div>
 
@@ -543,7 +545,7 @@ export default function AgentSwarm() {
                         type="text"
                         value={project}
                         onChange={e => setProject(e.target.value)}
-                        placeholder="Project name"
+                        placeholder={t('agentswarm.projectPlaceholder', 'Project name')}
                         className="text-xs border border-[#e3e0db] rounded-lg px-2 py-1.5 bg-[#faf9f4] w-40 focus:outline-none focus:border-[#117dff]/40"
                       />
                     </div>
@@ -556,7 +558,7 @@ export default function AgentSwarm() {
                       className="text-xs border border-[#e3e0db] rounded-lg px-2 py-1.5 bg-[#faf9f4] text-[#a3a3a3] focus:outline-none w-[130px] shrink-0"
                       defaultValue=""
                     >
-                      <option value="" disabled>Presets...</option>
+                      <option value="" disabled>{t('agentswarm.presetsPlaceholder', 'Presets...')}</option>
                       {GOAL_PRESETS.map((p, i) => (
                         <option key={i} value={p.goal}>{p.label}</option>
                       ))}
@@ -565,7 +567,7 @@ export default function AgentSwarm() {
                       type="text"
                       value={goal}
                       onChange={e => setGoal(e.target.value)}
-                      placeholder={selected === 'all' ? 'Auto-optimized per agent' : 'Custom goal (or pick a preset)'}
+                      placeholder={selected === 'all' ? t('agentswarm.goalPlaceholderAll', 'Auto-optimized per agent') : t('agentswarm.goalPlaceholder', 'Custom goal (or pick a preset)')}
                       className="flex-1 text-xs border border-[#e3e0db] rounded-lg px-3 py-1.5 bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/40"
                     />
                   </div>
@@ -573,7 +575,7 @@ export default function AgentSwarm() {
                   {/* Dry run */}
                   <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
                     <input type="checkbox" checked={dryRun} onChange={e => setDryRun(e.target.checked)} className="rounded" />
-                    Dry run
+                    {t('agentswarm.dryRun', 'Dry run')}
                   </label>
 
                   {/* Run button */}
@@ -583,7 +585,7 @@ export default function AgentSwarm() {
                     className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#0a0a0a] text-white text-xs font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
                   >
                     <Play size={12} />
-                    {selected === 'all' ? 'Run Full Chain' : `Run ${AGENTS.find(a => a.id === selected)?.name || ''}`}
+                    {selected === 'all' ? t('agentswarm.runFullChain', 'Run Full Chain') : t('agentswarm.runAgent', 'Run {{name}}', { name: AGENTS.find(a => a.id === selected)?.name || '' })}
                   </button>
                 </div>
               </div>
@@ -610,8 +612,8 @@ export default function AgentSwarm() {
               <div className="w-16 h-16 rounded-2xl bg-[#faf9f4] border border-[#e3e0db] flex items-center justify-center mx-auto mb-3">
                 <Sparkles size={24} className="text-[#a3a3a3]" />
               </div>
-              <p className="text-sm text-[#525252] font-medium">Select an agent and run to see findings</p>
-              <p className="text-xs text-[#a3a3a3] mt-1">Faraday scans → Feynman analyzes → Turing verifies and repairs</p>
+              <p className="text-sm text-[#525252] font-medium">{t('agentswarm.emptyPrompt', 'Select an agent and run to see findings')}</p>
+              <p className="text-xs text-[#a3a3a3] mt-1">{t('agentswarm.emptyHint', 'Faraday scans → Feynman analyzes → Turing verifies and repairs')}</p>
             </div>
           </div>
         )}
@@ -622,10 +624,10 @@ export default function AgentSwarm() {
             <div className="text-center">
               <Loader2 size={32} className="animate-spin text-[#117dff] mx-auto mb-3" />
               <p className="text-sm text-[#525252] font-medium">
-                {runPhase === 'faraday' && 'Faraday is scanning your knowledge graph...'}
-                {runPhase === 'feynman' && 'Feynman is forming hypotheses...'}
-                {runPhase === 'turing' && 'Turing is verifying and executing graph actions...'}
-                {runPhase === 'hygiene' && 'Scanning graph for cleanup opportunities...'}
+                {runPhase === 'faraday' && t('agentswarm.runningFaraday', 'Faraday is scanning your knowledge graph...')}
+                {runPhase === 'feynman' && t('agentswarm.runningFeynman', 'Feynman is forming hypotheses...')}
+                {runPhase === 'turing' && t('agentswarm.runningTuring', 'Turing is verifying and executing graph actions...')}
+                {runPhase === 'hygiene' && t('agentswarm.runningHygiene', 'Scanning graph for cleanup opportunities...')}
               </p>
               <div className="flex items-center justify-center gap-4 mt-3">
                 {AGENTS.map(a => (
@@ -647,8 +649,8 @@ export default function AgentSwarm() {
             {/* Faraday findings */}
             {faradayObs.length > 0 && (
               <FindingsPanel
-                title="Faraday Scan"
-                subtitle={`${faradayObs.length} observations`}
+                title={t('agentswarm.faradayScanTitle', 'Faraday Scan')}
+                subtitle={t('agentswarm.observationsCount', '{{count}} observations', { count: faradayObs.length })}
                 color="#f59e0b"
                 icon={Search}
               >
@@ -669,8 +671,8 @@ export default function AgentSwarm() {
             {/* Feynman hypotheses */}
             {feynmanHyps.length > 0 && (
               <FindingsPanel
-                title="Feynman Hypotheses"
-                subtitle={`${feynmanHyps.length} hypotheses`}
+                title={t('agentswarm.feynmanHypothesesTitle', 'Feynman Hypotheses')}
+                subtitle={t('agentswarm.hypothesesCount', '{{count}} hypotheses', { count: feynmanHyps.length })}
                 color="#8b5cf6"
                 icon={Brain}
               >
@@ -692,8 +694,8 @@ export default function AgentSwarm() {
             {/* Turing verifications */}
             {turingVerdicts.length > 0 && (
               <FindingsPanel
-                title="Turing Verifications"
-                subtitle={`${turingVerdicts.length} verdicts`}
+                title={t('agentswarm.turingVerificationsTitle', 'Turing Verifications')}
+                subtitle={t('agentswarm.verdictsCount', '{{count}} verdicts', { count: turingVerdicts.length })}
                 color="#10b981"
                 icon={ShieldCheck}
               >
@@ -723,21 +725,21 @@ export default function AgentSwarm() {
               <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <GitBranch size={14} className="text-[#117dff]" />
-                  <h3 className="text-sm font-bold text-[#0a0a0a]">Graph Impact</h3>
+                  <h3 className="text-sm font-bold text-[#0a0a0a]">{t('agentswarm.graphImpactTitle', 'Graph Impact')}</h3>
                 </div>
                 <div className="flex gap-4 text-xs">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[#525252]">{graphActions.executed} executed</span>
+                    <span className="text-[#525252]">{graphActions.executed} {t('agentswarm.executed', 'executed')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span className="text-[#525252]">{graphActions.skipped} skipped</span>
+                    <span className="text-[#525252]">{graphActions.skipped} {t('agentswarm.skipped', 'skipped')}</span>
                   </div>
                   {graphActions.failed > 0 && (
                     <div className="flex items-center gap-1.5">
                       <div className="w-2 h-2 rounded-full bg-red-400" />
-                      <span className="text-[#525252]">{graphActions.failed} failed</span>
+                      <span className="text-[#525252]">{graphActions.failed} {t('agentswarm.failed', 'failed')}</span>
                     </div>
                   )}
                 </div>
@@ -747,9 +749,9 @@ export default function AgentSwarm() {
                       <div key={i} className="text-[10px] text-[#525252] flex items-center gap-1.5">
                         <CheckCircle2 size={10} className="text-emerald-500 shrink-0" />
                         <span className="font-medium">{r.action?.replace(/_/g, ' ')}</span>
-                        {r.merged && <span>— {r.merged} merged</span>}
-                        {r.relationships_created && <span>— {r.relationships_created} relationships</span>}
-                        {r.promoted_memory_id && <span>— promoted to canonical</span>}
+                        {r.merged && <span>— {r.merged} {t('agentswarm.merged', 'merged')}</span>}
+                        {r.relationships_created && <span>— {r.relationships_created} {t('agentswarm.relationships', 'relationships')}</span>}
+                        {r.promoted_memory_id && <span>— {t('agentswarm.promotedToCanonical', 'promoted to canonical')}</span>}
                       </div>
                     ))}
                   </div>
@@ -767,10 +769,10 @@ export default function AgentSwarm() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#f5f3ee]">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={14} className="text-amber-500" />
-                  <h3 className="text-sm font-bold text-[#0a0a0a]">Cleanup Approvals</h3>
+                  <h3 className="text-sm font-bold text-[#0a0a0a]">{t('agentswarm.cleanupApprovalsTitle', 'Cleanup Approvals')}</h3>
                   {hygieneStats && (
                     <span className="text-[10px] font-mono text-[#a3a3a3]">
-                      {hygieneStats.scanned ?? 0} scanned · {hygieneStats.issues ?? 0} issues
+                      {hygieneStats.scanned ?? 0} {t('agentswarm.scanned', 'scanned')} · {hygieneStats.issues ?? 0} {t('agentswarm.issues', 'issues')}
                     </span>
                   )}
                 </div>
@@ -780,14 +782,14 @@ export default function AgentSwarm() {
                       className="text-[10px] font-mono text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/20 rounded px-2 py-0.5 max-w-[420px] truncate"
                       title={`Parsed by ${hygieneStats.intent.source}: ${JSON.stringify(hygieneStats.intent.filter)}`}
                     >
-                      Understood: {hygieneStats.intent.summary}
+                      {t('agentswarm.understood', 'Understood:')} {hygieneStats.intent.summary}
                     </span>
                   )}
                   {hygieneProposals.length > 0 && hygieneStats?.queued_for_approval !== undefined && (
                     <span className="text-[10px] font-mono text-[#a3a3a3]">
-                      {hygieneStats.queued_for_approval ?? hygieneProposals.length} for approval
-                      {hygieneStats.llm_verified ? ` · LLM-verified: ${hygieneStats.llm_verified}` : ''}
-                      {hygieneStats.llm_dropped ? ` · dropped: ${hygieneStats.llm_dropped}` : ''}
+                      {hygieneStats.queued_for_approval ?? hygieneProposals.length} {t('agentswarm.forApproval', 'for approval')}
+                      {hygieneStats.llm_verified ? ` · ${t('agentswarm.llmVerified', 'LLM-verified')}: ${hygieneStats.llm_verified}` : ''}
+                      {hygieneStats.llm_dropped ? ` · ${t('agentswarm.dropped', 'dropped')}: ${hygieneStats.llm_dropped}` : ''}
                     </span>
                   )}
                   {/* Approve All — runs each proposal w/ its suggestedAction */}
@@ -803,9 +805,9 @@ export default function AgentSwarm() {
                         }
                       }}
                       className="text-[10px] px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-semibold"
-                      title="Approve every pending proposal at once"
+                      title={t('agentswarm.approveAllProposalsTitle', 'Approve every pending proposal at once')}
                     >
-                      ▶ Approve All ({hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id)).length})
+                      ▶ {t('agentswarm.approveAllProposals', 'Approve All')} ({hygieneProposals.filter(p => !executedIds.has(p.id) && !executingIds.has(p.id)).length})
                     </button>
                   )}
 
@@ -855,7 +857,7 @@ export default function AgentSwarm() {
                       className="text-[10px] px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold"
                       title={`Permanently delete every memory matching tags=[${hygieneStats.intent.filter.tags.join(', ')}]`}
                     >
-                      🗑 Bulk Delete Matching
+                      {t('agentswarm.bulkDeleteMatching', '🗑 Bulk Delete Matching')}
                     </button>
                   )}
                   {/* Re-scan */}
@@ -864,7 +866,7 @@ export default function AgentSwarm() {
                     disabled={hygieneLoading}
                     className="text-[10px] px-2 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors disabled:opacity-40"
                   >
-                    {hygieneLoading ? '…' : '↻ Re-scan'}
+                    {hygieneLoading ? '…' : t('agentswarm.rescan', '↻ Re-scan')}
                   </button>
                 </div>
               </div>
@@ -872,22 +874,22 @@ export default function AgentSwarm() {
               {hygieneLoading && hygieneProposals.length === 0 && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 size={20} className="animate-spin text-[#117dff]" />
-                  <span className="text-xs text-[#a3a3a3] ml-2">Scanning graph health...</span>
+                  <span className="text-xs text-[#a3a3a3] ml-2">{t('agentswarm.scanningGraph', 'Scanning graph health...')}</span>
                 </div>
               )}
 
               {!hygieneLoading && hygieneProposals.length === 0 && hygieneStats && (
                 <div className="px-4 py-10 text-center">
                   <CheckCircle2 size={28} className="text-emerald-500 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-[#0a0a0a]">Nothing to clean.</p>
+                  <p className="text-sm font-semibold text-[#0a0a0a]">{t('agentswarm.nothingToClean', 'Nothing to clean.')}</p>
                   <p className="text-xs text-[#a3a3a3] mt-1">
-                    {hygieneStats.scanned ?? 0} memories scanned. No proposals after LLM verification.
+                    {t('agentswarm.nothingToCleanHint', '{{count}} memories scanned. No proposals after LLM verification.', { count: hygieneStats.scanned ?? 0 })}
                   </p>
                   <button
                     onClick={runHygieneScan}
                     className="mt-3 text-[10px] px-3 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors"
                   >
-                    ↻ Run again
+                    {t('agentswarm.runAgain', '↻ Run again')}
                   </button>
                 </div>
               )}
@@ -895,13 +897,13 @@ export default function AgentSwarm() {
               {!hygieneLoading && hygieneProposals.length === 0 && !hygieneStats && results.turing && (
                 <div className="px-4 py-10 text-center">
                   <AlertTriangle size={20} className="text-amber-500 mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-[#0a0a0a]">Run the cleanup scan</p>
-                  <p className="text-xs text-[#a3a3a3] mt-1">Turing finished but no hygiene scan triggered. Click below.</p>
+                  <p className="text-sm font-semibold text-[#0a0a0a]">{t('agentswarm.runCleanupScanTitle', 'Run the cleanup scan')}</p>
+                  <p className="text-xs text-[#a3a3a3] mt-1">{t('agentswarm.runCleanupScanHint', 'Turing finished but no hygiene scan triggered. Click below.')}</p>
                   <button
                     onClick={runHygieneScan}
                     className="mt-3 text-[11px] px-3 py-1.5 rounded-lg bg-[#117dff] text-white hover:bg-[#0066e0] transition-colors font-semibold"
                   >
-                    ▶ Scan graph for cleanup
+                    {t('agentswarm.scanGraphForCleanup', '▶ Scan graph for cleanup')}
                   </button>
                 </div>
               )}
@@ -951,10 +953,10 @@ export default function AgentSwarm() {
                                     ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                     : 'bg-gray-100 text-gray-600'
                               }`}>
-                                {proposal.verdict === 'confirm' ? 'LLM-verified' : proposal.verdict === 'low_confidence' ? 'Needs your review' : proposal.verdict}
+                                {proposal.verdict === 'confirm' ? t('agentswarm.verdictLlmVerified', 'LLM-verified') : proposal.verdict === 'low_confidence' ? t('agentswarm.verdictNeedsReview', 'Needs your review') : proposal.verdict}
                               </span>
                               {proposal.llmReason && proposal.reason && (
-                                <span className="text-[9px] text-[#a3a3a3] font-mono">heuristic: {proposal.reason.slice(0, 80)}{proposal.reason.length > 80 ? '…' : ''}</span>
+                                <span className="text-[9px] text-[#a3a3a3] font-mono">{t('agentswarm.heuristic', 'heuristic:')} {proposal.reason.slice(0, 80)}{proposal.reason.length > 80 ? '…' : ''}</span>
                               )}
                             </div>
                           )}
@@ -969,16 +971,16 @@ export default function AgentSwarm() {
                               let chip = null;
                               if (proposal.category === 'targeted' || (m.role && m.role !== 'newer')) {
                                 if (proposal.suggestedAction === 'delete') {
-                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700">delete</span>;
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-700">{t('agentswarm.chipDelete', 'delete')}</span>;
                                 } else if (proposal.suggestedAction === 'archive' || proposal.suggestedAction === 'archive_duplicates') {
-                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700">archive</span>;
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700">{t('agentswarm.chipArchive', 'archive')}</span>;
                                 } else if (proposal.suggestedAction === 'link_update_chain') {
-                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700">link</span>;
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700">{t('agentswarm.chipLink', 'link')}</span>;
                                 } else if (proposal.suggestedAction === 'suppress') {
-                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-gray-200 text-gray-700">suppress</span>;
+                                  chip = <span className="text-[9px] px-1 py-0.5 rounded bg-gray-200 text-gray-700">{t('agentswarm.chipSuppress', 'suppress')}</span>;
                                 }
                               } else if (m.is_canonical) {
-                                chip = <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">keep</span>;
+                                chip = <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">{t('agentswarm.chipKeep', 'keep')}</span>;
                               }
                               return (
                                 <div key={m.id} className="flex items-center gap-1.5 text-[10px]">
@@ -989,7 +991,7 @@ export default function AgentSwarm() {
                               );
                             })}
                             {memories.length > 3 && (
-                              <span className="text-[10px] text-[#a3a3a3]">+{memories.length - 3} more</span>
+                              <span className="text-[10px] text-[#a3a3a3]">+{memories.length - 3} {t('agentswarm.more', 'more')}</span>
                             )}
                           </div>
                         </div>
@@ -998,7 +1000,7 @@ export default function AgentSwarm() {
                         <div className="shrink-0 flex flex-col gap-1">
                           {isExecuted ? (
                             <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-                              <CheckCircle2 size={12} /> Done
+                              <CheckCircle2 size={12} /> {t('agentswarm.done', 'Done')}
                             </span>
                           ) : isExecuting ? (
                             <Loader2 size={14} className="animate-spin text-[#117dff]" />
@@ -1011,21 +1013,21 @@ export default function AgentSwarm() {
                                 className="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-medium"
                                 title={`Run ${proposal.suggestedAction || 'archive'} on this memory`}
                               >
-                                Approve
+                                {t('agentswarm.approve', 'Approve')}
                               </button>
                               <button
                                 onClick={() => setExecutedIds(prev => new Set([...prev, proposal.id]))}
                                 className="text-[10px] px-2.5 py-1 rounded-lg bg-[#faf9f4] text-[#525252] border border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors font-medium"
-                                title="Skip this proposal — no action taken"
+                                title={t('agentswarm.skipTitle', 'Skip this proposal — no action taken')}
                               >
-                                Skip
+                                {t('agentswarm.skip', 'Skip')}
                               </button>
                               <button
                                 onClick={() => executeProposal(proposal, 'delete')}
                                 className="text-[10px] px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors font-medium"
-                                title="Permanently delete (cannot undo)"
+                                title={t('agentswarm.deleteTitle', 'Permanently delete (cannot undo)')}
                               >
-                                Delete
+                                {t('agentswarm.delete', 'Delete')}
                               </button>
                             </>
                           )}

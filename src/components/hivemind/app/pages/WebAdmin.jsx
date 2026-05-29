@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   Shield,
   RefreshCw,
@@ -108,6 +109,7 @@ function TelemetryRow({ label, value, warn }) {
 }
 
 export default function WebAdmin() {
+  const { t } = useTranslation('dashboard');
   const { data: metrics, loading, error, refetch } = useApiQuery(
     () => apiClient.getWebAdminMetrics(),
   );
@@ -172,11 +174,11 @@ export default function WebAdmin() {
           <div className="flex items-center gap-2 mb-1">
             <Shield size={20} className="text-[#117dff]" />
             <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk']">
-              Web Intelligence Admin
+              {t('webadmin.title', 'Web Intelligence Admin')}
             </h1>
           </div>
           <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-            Operational metrics and system health
+            {t('webadmin.subtitle', 'Operational metrics and system health')}
           </p>
         </div>
         <button
@@ -188,7 +190,7 @@ export default function WebAdmin() {
             size={14}
             className={`transition-transform ${refreshing ? 'animate-spin' : 'group-hover:rotate-45'}`}
           />
-          Refresh
+          {t('webadmin.refresh', 'Refresh')}
         </button>
       </motion.div>
 
@@ -212,42 +214,42 @@ export default function WebAdmin() {
         className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6"
       >
         <MetricCard
-          label="Total Jobs"
+          label={t('webadmin.totalJobs', 'Total Jobs')}
           icon={Layers}
           value={totalJobs.toLocaleString()}
           subtitle={`${succeeded} ok / ${failed} fail / ${queued} queued / ${running} running`}
         />
         <MetricCard
-          label="Success Rate"
+          label={t('webadmin.successRate', 'Success Rate')}
           icon={CheckCircle}
           value={`${successRate.toFixed(1)}%`}
           valueColor={successRateColor(successRate)}
           subtitle={`${succeeded.toLocaleString()} of ${totalJobs.toLocaleString()}`}
         />
         <MetricCard
-          label="Avg Duration"
+          label={t('webadmin.avgDuration', 'Avg Duration')}
           icon={Clock}
           value={formatMs(avgDuration)}
-          subtitle="Mean job runtime"
+          subtitle={t('webadmin.meanJobRuntime', 'Mean job runtime')}
         />
         <MetricCard
-          label="P95 Duration"
+          label={t('webadmin.p95Duration', 'P95 Duration')}
           icon={TrendingUp}
           value={formatMs(p95Duration)}
-          subtitle="95th percentile"
+          subtitle={t('webadmin.p95Percentile', '95th percentile')}
         />
         <MetricCard
-          label="Queue Depth"
+          label={t('webadmin.queueDepth', 'Queue Depth')}
           icon={Activity}
           value={queueDepth.toLocaleString()}
           subtitle={`${queued} queued + ${running} running`}
           valueColor={queueDepth > 50 ? '#f59e0b' : '#0a0a0a'}
         />
         <MetricCard
-          label="Jobs (24h)"
+          label={t('webadmin.jobs24h', 'Jobs (24h)')}
           icon={Zap}
           value={jobs24h.toLocaleString()}
-          subtitle="Last 24 hours"
+          subtitle={t('webadmin.last24h', 'Last 24 hours')}
         />
       </motion.div>
 
@@ -261,7 +263,7 @@ export default function WebAdmin() {
         <div className="flex items-center gap-2 mb-5">
           <Activity size={16} className="text-[#525252]" />
           <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
-            Runtime Distribution
+            {t('webadmin.runtimeDistribution', 'Runtime Distribution')}
           </h3>
         </div>
         {runtimeTotal > 0 ? (
@@ -273,7 +275,7 @@ export default function WebAdmin() {
               color="#117dff"
             />
             <RuntimeBar
-              label="Fetch fallback"
+              label={t('webadmin.fetchFallback', 'Fetch fallback')}
               count={fetchCount}
               total={runtimeTotal}
               color="#f59e0b"
@@ -281,7 +283,7 @@ export default function WebAdmin() {
           </div>
         ) : (
           <p className="text-[#a3a3a3] text-sm font-mono text-center py-6">
-            No runtime distribution data
+            {t('webadmin.noRuntimeData', 'No runtime distribution data')}
           </p>
         )}
       </motion.div>
@@ -296,51 +298,51 @@ export default function WebAdmin() {
         <div className="flex items-center gap-2 mb-5">
           <Info size={16} className="text-[#525252]" />
           <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
-            Runtime Telemetry
+            {t('webadmin.runtimeTelemetry', 'Runtime Telemetry')}
           </h3>
         </div>
         {Object.keys(telemetry).length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
             <div>
               <TelemetryRow
-                label="Lightpanda successes"
+                label={t('webadmin.lightpandaSuccesses', 'Lightpanda successes')}
                 value={(telemetry.lightpanda_success ?? 0).toLocaleString()}
               />
               <TelemetryRow
-                label="Lightpanda failures"
+                label={t('webadmin.lightpandaFailures', 'Lightpanda failures')}
                 value={(telemetry.lightpanda_failure ?? 0).toLocaleString()}
                 warn={(telemetry.lightpanda_failure ?? 0) > 0}
               />
               <TelemetryRow
-                label="Fallback successes"
+                label={t('webadmin.fallbackSuccesses', 'Fallback successes')}
                 value={(telemetry.fallback_success ?? 0).toLocaleString()}
               />
               <TelemetryRow
-                label="Fallback failures"
+                label={t('webadmin.fallbackFailures', 'Fallback failures')}
                 value={(telemetry.fallback_failure ?? 0).toLocaleString()}
                 warn={(telemetry.fallback_failure ?? 0) > 0}
               />
             </div>
             <div>
               <TelemetryRow
-                label="Circuit breaker trips"
+                label={t('webadmin.circuitBreakerTrips', 'Circuit breaker trips')}
                 value={(telemetry.circuit_breaker_trips ?? 0).toLocaleString()}
                 warn={(telemetry.circuit_breaker_trips ?? 0) > 0}
               />
               <TelemetryRow
-                label="Domain concurrency rejections"
+                label={t('webadmin.domainConcurrencyRejections', 'Domain concurrency rejections')}
                 value={(telemetry.domain_concurrency_rejections ?? 0).toLocaleString()}
                 warn={(telemetry.domain_concurrency_rejections ?? 0) > 0}
               />
               <TelemetryRow
-                label="Uptime"
+                label={t('webadmin.uptime', 'Uptime')}
                 value={formatUptime(telemetry.uptime_seconds)}
               />
             </div>
           </div>
         ) : (
           <p className="text-[#a3a3a3] text-sm font-mono text-center py-6">
-            No telemetry data available
+            {t('webadmin.noTelemetryData', 'No telemetry data available')}
           </p>
         )}
       </motion.div>
@@ -355,7 +357,7 @@ export default function WebAdmin() {
         <div className="flex items-center gap-2 mb-5">
           <XCircle size={16} className="text-[#525252]" />
           <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">
-            Top Errors
+            {t('webadmin.topErrors', 'Top Errors')}
           </h3>
         </div>
         {topErrors.length > 0 ? (
@@ -364,13 +366,13 @@ export default function WebAdmin() {
               <thead>
                 <tr className="border-b border-[#e3e0db]">
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">
-                    Error
+                    {t('webadmin.colError', 'Error')}
                   </th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">
-                    Count
+                    {t('webadmin.colCount', 'Count')}
                   </th>
                   <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 text-right">
-                    % of Failures
+                    {t('webadmin.colPctFailures', '% of Failures')}
                   </th>
                 </tr>
               </thead>
@@ -386,7 +388,7 @@ export default function WebAdmin() {
                     >
                       <td className="py-3 pr-4">
                         <span className="text-[#525252] text-xs font-mono break-all">
-                          {err.message || err.error || 'Unknown error'}
+                          {err.message || err.error || t('webadmin.unknownError', 'Unknown error')}
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-right">
@@ -405,7 +407,7 @@ export default function WebAdmin() {
           </div>
         ) : (
           <p className="text-[#a3a3a3] text-sm font-mono text-center py-6">
-            No errors recorded
+            {t('webadmin.noErrors', 'No errors recorded')}
           </p>
         )}
       </motion.div>

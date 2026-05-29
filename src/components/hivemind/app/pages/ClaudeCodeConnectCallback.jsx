@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, Copy, Terminal, AlertTriangle, ArrowLeft, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Claude Code one-click connect callback.
@@ -14,6 +15,7 @@ import { Check, Copy, Terminal, AlertTriangle, ArrowLeft, Sparkles } from 'lucid
  * terminal command, no plugin install required.
  */
 export default function ClaudeCodeConnectCallback() {
+  const { t } = useTranslation('dashboard');
   const [search] = useSearchParams();
   const [copied, setCopied] = useState(false);
 
@@ -66,14 +68,14 @@ export default function ClaudeCodeConnectCallback() {
         >
           <div className="flex items-center gap-3 mb-3">
             <AlertTriangle className="text-red-500" size={20} />
-            <h1 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Connection failed</h1>
+            <h1 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t('claudecodeconnectcallback.connectionFailed', 'Connection failed')}</h1>
           </div>
           <p className="text-sm text-[#525252] font-['Space_Grotesk'] mb-4">{error}</p>
           <Link
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#117dff] hover:underline"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('claudecodeconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
         </motion.div>
       </div>
@@ -84,16 +86,15 @@ export default function ClaudeCodeConnectCallback() {
     return (
       <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center p-6">
         <div className="bg-white border border-amber-200 rounded-2xl p-8 max-w-lg w-full">
-          <h1 className="text-lg font-bold text-[#0a0a0a] mb-2 font-['Space_Grotesk']">Missing parameters</h1>
+          <h1 className="text-lg font-bold text-[#0a0a0a] mb-2 font-['Space_Grotesk']">{t('claudecodeconnectcallback.missingParams', 'Missing parameters')}</h1>
           <p className="text-sm text-[#525252] mb-4 font-['Space_Grotesk']">
-            This page is only meaningful when reached from the OAuth callback.
-            Start the flow from the Connectors page.
+            {t('claudecodeconnectcallback.missingParamsHint', 'This page is only meaningful when reached from the OAuth callback. Start the flow from the Connectors page.')}
           </p>
           <Link
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#117dff] hover:underline"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('claudecodeconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
         </div>
       </div>
@@ -113,11 +114,11 @@ export default function ClaudeCodeConnectCallback() {
               <Check className="text-emerald-600" size={20} />
             </div>
             <h1 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">
-              You're authenticated. One command left.
+              {t('claudecodeconnectcallback.authenticated', "You're authenticated. One command left.")}
             </h1>
           </div>
           <p className="text-sm text-[#525252] font-['Space_Grotesk'] ml-[52px]">
-            Paste this into any terminal where you run Claude Code. Then restart your Claude Code session — all 22 HIVEMIND tools become available.
+            {t('claudecodeconnectcallback.authenticatedHint', 'Paste this into any terminal where you run Claude Code. Then restart your Claude Code session — all 22 HIVEMIND tools become available.')}
           </p>
         </motion.div>
 
@@ -131,10 +132,10 @@ export default function ClaudeCodeConnectCallback() {
             <div className="flex items-center gap-2">
               <Terminal size={14} className="text-[#525252]" />
               <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
-                Run this in your terminal
+                {t('claudecodeconnectcallback.runInTerminal', 'Run this in your terminal')}
               </p>
               <span className="text-[10px] text-emerald-600 font-mono">
-                {copied ? 'copied just now' : 'auto-copied to clipboard'}
+                {copied ? t('claudecodeconnectcallback.copiedJustNow', 'copied just now') : t('claudecodeconnectcallback.autoCopied', 'auto-copied to clipboard')}
               </span>
             </div>
             <button
@@ -146,7 +147,7 @@ export default function ClaudeCodeConnectCallback() {
               }`}
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('claudecodeconnectcallback.copied', 'Copied') : t('claudecodeconnectcallback.copy', 'Copy')}
             </button>
           </div>
           <pre className="px-5 py-4 text-[12px] font-mono text-[#cdd6f4] bg-[#0a0a0a] overflow-x-auto leading-relaxed whitespace-pre-wrap break-all">
@@ -163,21 +164,21 @@ export default function ClaudeCodeConnectCallback() {
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={14} className="text-[#117dff]" />
             <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
-              What this command does
+              {t('claudecodeconnectcallback.whatThisDoes', 'What this command does')}
             </p>
           </div>
           <ul className="space-y-2 text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed">
             <li>
-              <span className="text-[#117dff] font-mono">claude mcp add</span> — registers HIVEMIND with the Claude Code CLI at user scope (available to every Claude Code session on this machine).
+              <span className="text-[#117dff] font-mono">claude mcp add</span>{t('claudecodeconnectcallback.explainMcpAdd', ' — registers HIVEMIND with the Claude Code CLI at user scope (available to every Claude Code session on this machine).')}
             </li>
             <li>
-              <span className="text-[#117dff] font-mono">-e HIVEMIND_*</span> — passes your tenant-scoped API key + user_id as environment variables to the MCP bridge.
+              <span className="text-[#117dff] font-mono">-e HIVEMIND_*</span>{t('claudecodeconnectcallback.explainEnvVars', ' — passes your tenant-scoped API key + user_id as environment variables to the MCP bridge.')}
             </li>
             <li>
-              <span className="text-[#117dff] font-mono">npx -y @amar_528/mcp-bridge</span> — runs the official bridge that translates Claude Code MCP calls into HIVEMIND REST + WebSocket calls scoped to your account.
+              <span className="text-[#117dff] font-mono">npx -y @amar_528/mcp-bridge</span>{t('claudecodeconnectcallback.explainBridge', ' — runs the official bridge that translates Claude Code MCP calls into HIVEMIND REST + WebSocket calls scoped to your account.')}
             </li>
             <li>
-              On the next Claude Code session you can call <span className="text-[#117dff] font-mono">hivemind_recall</span>, <span className="text-[#117dff] font-mono">hivemind_ingest_code</span>, <span className="text-[#117dff] font-mono">hivemind_code_at</span>, and 19 others directly.
+              {t('claudecodeconnectcallback.explainNext', 'On the next Claude Code session you can call')} <span className="text-[#117dff] font-mono">hivemind_recall</span>, <span className="text-[#117dff] font-mono">hivemind_ingest_code</span>, <span className="text-[#117dff] font-mono">hivemind_code_at</span>{t('claudecodeconnectcallback.explainNextSuffix', ', and 19 others directly.')}
             </li>
           </ul>
         </motion.div>
@@ -191,7 +192,7 @@ export default function ClaudeCodeConnectCallback() {
           <Check className="text-emerald-600 shrink-0 mt-0.5" size={16} />
           <div>
             <p className="text-xs font-semibold text-emerald-700 font-['Space_Grotesk'] mb-1">
-              Verify after pasting
+              {t('claudecodeconnectcallback.verifyAfterPasting', 'Verify after pasting')}
             </p>
             <pre className="text-[11px] font-mono text-emerald-800 bg-white/50 rounded px-2 py-1.5">
               claude mcp list | grep hivemind
@@ -204,13 +205,13 @@ export default function ClaudeCodeConnectCallback() {
             to="/hivemind/app/connectors"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#525252] hover:text-[#117dff] font-['Space_Grotesk']"
           >
-            <ArrowLeft size={14} /> Back to Connectors
+            <ArrowLeft size={14} /> {t('claudecodeconnectcallback.backToConnectors', 'Back to Connectors')}
           </Link>
           <Link
             to="/hivemind/app/mcp"
             className="text-sm font-semibold text-[#117dff] hover:underline font-['Space_Grotesk']"
           >
-            View all 22 tools →
+            {t('claudecodeconnectcallback.viewAllTools', 'View all 22 tools →')}
           </Link>
         </div>
       </div>

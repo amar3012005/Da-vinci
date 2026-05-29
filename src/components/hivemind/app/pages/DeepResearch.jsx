@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUp, Sparkles, History,
@@ -428,6 +429,7 @@ function EventCard({ event, index }) {
    DeepResearch — Main Component (REDESIGNED)
    ═══════════════════════════════════════════════════════════════════ */
 export default function DeepResearch() {
+  const { t } = useTranslation('dashboard');
   const [query, setQuery] = useState('');
   const [sessionId, setSessionId] = useState(null);
   const [status, setStatus] = useState('idle');
@@ -1449,8 +1451,8 @@ export default function DeepResearch() {
             <Search size={16} className="sm:w-[18px] sm:h-[18px] text-[#117dff]" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk'] truncate">Deep Research</h1>
-            <p className="text-[9px] sm:text-[10px] text-[#a3a3a3] hidden sm:block">AI-powered research engine</p>
+            <h1 className="text-base sm:text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{t('deepresearch.title', 'Deep Research')}</h1>
+            <p className="text-[9px] sm:text-[10px] text-[#a3a3a3] hidden sm:block">{t('deepresearch.subtitle', 'AI-powered research engine')}</p>
           </div>
         </div>
 
@@ -1462,7 +1464,7 @@ export default function DeepResearch() {
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
               >
                 <History size={14} />
-                <span className="hidden sm:inline">History</span>
+                <span className="hidden sm:inline">{t('deepresearch.history', 'History')}</span>
               </button>
               <AnimatePresence>
                 {showSessions && (
@@ -1502,14 +1504,14 @@ export default function DeepResearch() {
                 }`}
               >
                 <GitBranch size={12} />
-                <span className="hidden sm:inline">{showPanel ? 'Hide' : 'Show'} Process</span>
+                <span className="hidden sm:inline">{showPanel ? t('deepresearch.hideProcess', 'Hide') : t('deepresearch.showProcess', 'Show')} {t('deepresearch.process', 'Process')}</span>
               </button>
               <button
                 onClick={handleNewResearch}
                 className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] text-xs hover:bg-[#f3f1ec] transition-colors"
               >
                 <Sparkles size={12} />
-                <span className="hidden sm:inline">New</span>
+                <span className="hidden sm:inline">{t('deepresearch.new', 'New')}</span>
               </button>
             </>
           )}
@@ -1529,13 +1531,13 @@ export default function DeepResearch() {
             >
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Current brief</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.currentBrief', 'Current brief')}</p>
                   <p className="mt-2 text-sm text-[#0a0a0a] leading-relaxed line-clamp-3">
-                    {activeGoal || query || 'Start a research question to build a live evidence graph, trail, and report workspace.'}
+                    {activeGoal || query || t('deepresearch.emptyBrief', 'Start a research question to build a live evidence graph, trail, and report workspace.')}
                   </p>
                 </div>
                 <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Run status</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.runStatus', 'Run status')}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${
                       status === 'running' ? 'bg-[#117dff] animate-pulse' :
@@ -1546,23 +1548,23 @@ export default function DeepResearch() {
                     <p className="text-sm text-[#0a0a0a] capitalize">{status}</p>
                   </div>
                   <p className="mt-2 text-[11px] text-[#737373]">
-                    {confidence ? `${(confidence * 100).toFixed(0)}% confidence` : 'Waiting for a run'}
+                    {confidence ? `${(confidence * 100).toFixed(0)}% ${t('deepresearch.confidence', 'confidence')}` : t('deepresearch.waitingForRun', 'Waiting for a run')}
                     {durationMs ? ` · ${(durationMs / 1000).toFixed(1)}s` : ''}
                   </p>
                   {reportInfluencedByRetention && (
                     <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0f766e]/10 text-[#0f766e] text-[10px] font-medium">
                       <Award size={10} />
-                      Retained memory influenced this run
+                      {t('deepresearch.retainedMemory', 'Retained memory influenced this run')}
                     </div>
                   )}
                 </div>
                 <div className="bg-white/90 backdrop-blur border border-[#e3e0db] rounded-2xl px-4 py-3 shadow-sm">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Graph layers</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.graphLayers', 'Graph layers')}</p>
                   <p className="mt-2 text-sm text-[#0a0a0a]">
-                    {Object.entries(graphLayers).filter(([, enabled]) => enabled).length} visible
+                    {Object.entries(graphLayers).filter(([, enabled]) => enabled).length} {t('deepresearch.visible', 'visible')}
                     <span className="text-[#737373]"> / {Object.keys(graphLayers).length}</span>
                   </p>
-                  <p className="mt-2 text-[11px] text-[#737373]">Sources, claims, trails, observations, events, blueprints</p>
+                  <p className="mt-2 text-[11px] text-[#737373]">{t('deepresearch.layersList', 'Sources, claims, trails, observations, events, blueprints')}</p>
                 </div>
               </div>
 
@@ -1575,8 +1577,8 @@ export default function DeepResearch() {
                           <Search size={22} className="text-[#117dff]" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Deep Research workspace</h2>
-                          <p className="text-sm text-[#525252]">Ask a question, then track sources, claims, trails, and the generated report in one place.</p>
+                          <h2 className="text-xl font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('deepresearch.workspaceTitle', 'Deep Research workspace')}</h2>
+                          <p className="text-sm text-[#525252]">{t('deepresearch.workspaceDesc', 'Ask a question, then track sources, claims, trails, and the generated report in one place.')}</p>
                         </div>
                       </div>
                     </div>
@@ -1586,7 +1588,7 @@ export default function DeepResearch() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="What would you like to research?"
+                        placeholder={t('deepresearch.placeholder', 'What would you like to research?')}
                         rows={4}
                         className="w-full bg-transparent text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] resize-none focus:outline-none leading-relaxed font-mono min-h-[120px]"
                         disabled={status === 'running'}
@@ -1594,10 +1596,10 @@ export default function DeepResearch() {
                       <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#e3e0db]">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="px-3 py-1.5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff] text-xs font-medium">
-                            Live graph + provenance
+                            {t('deepresearch.liveGraph', 'Live graph + provenance')}
                           </span>
                           <span className="px-3 py-1.5 rounded-full bg-[#d97706]/10 border border-[#d97706]/20 text-[#d97706] text-xs font-medium">
-                            Blueprint-aware
+                            {t('deepresearch.blueprintAware', 'Blueprint-aware')}
                           </span>
                         </div>
                         <motion.button
@@ -1608,9 +1610,9 @@ export default function DeepResearch() {
                           className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
                         >
                           {status === 'running' ? (
-                            <><Loader2 size={14} className="animate-spin" /><span className="hidden sm:inline">Running...</span></>
+                            <><Loader2 size={14} className="animate-spin" /><span className="hidden sm:inline">{t('deepresearch.running', 'Running...')}</span></>
                           ) : (
-                            <><span className="hidden sm:inline">Start Research</span><ArrowUp size={14} /></>
+                            <><span className="hidden sm:inline">{t('deepresearch.startResearch', 'Start Research')}</span><ArrowUp size={14} /></>
                           )}
                         </motion.button>
                       </div>
@@ -1619,16 +1621,16 @@ export default function DeepResearch() {
 
                   <div className="space-y-4">
                     <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">What this page does</p>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.whatThisDoes', 'What this page does')}</p>
                       <ul className="mt-3 space-y-2 text-sm text-[#525252] leading-relaxed">
-                        <li>Builds a live evidence graph from sources, claims, trails, and blueprints.</li>
-                        <li>Surfaces agent states and event timeline while research is running.</li>
-                        <li>Turns completed runs into reusable blueprints and report provenance.</li>
+                        <li>{t('deepresearch.featureGraph', 'Builds a live evidence graph from sources, claims, trails, and blueprints.')}</li>
+                        <li>{t('deepresearch.featureAgents', 'Surfaces agent states and event timeline while research is running.')}</li>
+                        <li>{t('deepresearch.featureBlueprints', 'Turns completed runs into reusable blueprints and report provenance.')}</li>
                       </ul>
                     </div>
                     {sessions.length > 0 && (
                       <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Recent sessions</p>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.recentSessions', 'Recent sessions')}</p>
                         <div className="mt-3 space-y-2 max-h-52 overflow-y-auto">
                           {sessions.slice(0, 4).map((s) => (
                             <button
@@ -1678,7 +1680,7 @@ export default function DeepResearch() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="What would you like to research?"
+                    placeholder={t('deepresearch.placeholder', 'What would you like to research?')}
                     rows={status === 'idle' ? 4 : 3}
                     className="w-full bg-transparent text-[#0a0a0a] text-sm placeholder:text-[#a3a3a3] resize-none focus:outline-none leading-relaxed font-mono"
                     disabled={status === 'running'}
@@ -1689,7 +1691,7 @@ export default function DeepResearch() {
                       {status === 'running' && (
                         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff] text-xs font-medium">
                           <Loader2 size={12} className="animate-spin" />
-                          Researching...
+                          {t('deepresearch.researching', 'Researching...')}
                         </span>
                       )}
                       {/* Show Process Button - appears when panel is closed but research is active */}
@@ -1699,12 +1701,12 @@ export default function DeepResearch() {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-xs font-medium hover:bg-[#9333ea]/20 transition-colors"
                         >
                           <GitBranch size={12} />
-                          Show Process
+                          {t('deepresearch.showProcess', 'Show')} {t('deepresearch.process', 'Process')}
                         </button>
                       )}
                       {fromCache && status === 'completed' && (
                         <span className="px-3 py-1.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-xs font-medium">
-                          From Cache
+                          {t('deepresearch.fromCache', 'From Cache')}
                         </span>
                       )}
                     </div>
@@ -1716,9 +1718,9 @@ export default function DeepResearch() {
                       className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#117dff] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md"
                     >
                       {status === 'running' ? (
-                        <><Loader2 size={14} className="animate-spin" /><span className="hidden sm:inline">Running...</span></>
+                        <><Loader2 size={14} className="animate-spin" /><span className="hidden sm:inline">{t('deepresearch.running', 'Running...')}</span></>
                       ) : (
-                        <><span className="hidden sm:inline">Start Research</span><ArrowUp size={14} /></>
+                        <><span className="hidden sm:inline">{t('deepresearch.startResearch', 'Start Research')}</span><ArrowUp size={14} /></>
                       )}
                     </motion.button>
                   </div>
@@ -1742,14 +1744,14 @@ export default function DeepResearch() {
                 <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Live trail</p>
-                      <p className="text-sm text-[#0a0a0a] mt-1">Newest research events and agent transitions.</p>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.liveTrail', 'Live trail')}</p>
+                      <p className="text-sm text-[#0a0a0a] mt-1">{t('deepresearch.liveTrailDesc', 'Newest research events and agent transitions.')}</p>
                     </div>
                     <button
                       onClick={() => setShowPanel(true)}
                       className="px-3 py-1.5 rounded-lg bg-[#117dff]/10 text-[#117dff] text-xs font-medium hover:bg-[#117dff]/15 transition-colors"
                     >
-                      Open panel
+                      {t('deepresearch.openPanel', 'Open panel')}
                     </button>
                   </div>
                   <div className="mt-4 space-y-2 max-h-80 overflow-y-auto pr-1">
@@ -1757,7 +1759,7 @@ export default function DeepResearch() {
                       <EventCard key={`${event.type}-${i}`} event={event} index={i} />
                     )) : (
                       <div className="rounded-xl border border-dashed border-[#e3e0db] px-4 py-8 text-center text-sm text-[#737373]">
-                        Events will appear here as the run progresses.
+                        {t('deepresearch.eventsPlaceholder', 'Events will appear here as the run progresses.')}
                       </div>
                     )}
                   </div>
@@ -1765,14 +1767,14 @@ export default function DeepResearch() {
 
                 <div className="space-y-4">
                   <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Progress</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.progress', 'Progress')}</p>
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
-                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">Findings</p>
+                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">{t('deepresearch.findings', 'Findings')}</p>
                         <p className="mt-1 text-lg font-semibold text-[#0a0a0a]">{findings.length}</p>
                       </div>
                       <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
-                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">Budget</p>
+                        <p className="text-[10px] text-[#737373] uppercase tracking-wider">{t('deepresearch.budget', 'Budget')}</p>
                         <p className="mt-1 text-lg font-semibold text-[#0a0a0a]">
                           {webUsage?.llm_calls?.used != null && webUsage?.llm_calls?.limit != null
                             ? `${webUsage.llm_calls.used}/${webUsage.llm_calls.limit}`
@@ -1782,7 +1784,7 @@ export default function DeepResearch() {
                     </div>
                   </div>
                   <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Current agents</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.currentAgents', 'Current agents')}</p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       {['Faraday', 'Feynmann', 'Turing', 'Synthesis'].map((agent) => {
                         const color = AGENT_COLORS[agent];
@@ -1802,7 +1804,7 @@ export default function DeepResearch() {
                   </div>
                   {(trailDiagnostics || goldenLine) && (
                     <div className="bg-white rounded-[1.25rem] border border-[#e3e0db] p-4 shadow-sm">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Synthesis gate</p>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.synthesisGate', 'Synthesis gate')}</p>
                       {trailDiagnostics && (
                         <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                           <div className="rounded-xl bg-[#faf9f4] border border-[#e3e0db] p-3">
@@ -1878,7 +1880,7 @@ export default function DeepResearch() {
                     }`}
                   >
                     <ListTodo size={14} />
-                    <span className="font-medium">Status</span>
+                    <span className="font-medium">{t('deepresearch.panelStatus', 'Status')}</span>
                     {status === 'running' && (
                       <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse" />
                     )}
@@ -1891,7 +1893,7 @@ export default function DeepResearch() {
                     disabled={!report}
                   >
                     <FileText size={14} />
-                    <span className="font-medium">Report</span>
+                    <span className="font-medium">{t('deepresearch.panelReport', 'Report')}</span>
                     {report && <CheckCircle2 size={12} />}
                   </button>
                   <button
@@ -1901,7 +1903,7 @@ export default function DeepResearch() {
                     }`}
                   >
                     <GitBranch size={14} />
-                    <span className="font-medium">Graph</span>
+                    <span className="font-medium">{t('deepresearch.panelGraph', 'Graph')}</span>
                   </button>
                 </div>
                 </div>
@@ -1911,7 +1913,7 @@ export default function DeepResearch() {
                   <button
                     onClick={handleDetachPanel}
                     className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252] transition-colors"
-                    title="Open panel in detached window"
+                    title={t('deepresearch.detachPanel', 'Open panel in detached window')}
                   >
                     <ExternalLink size={14} />
                   </button>
@@ -1919,7 +1921,7 @@ export default function DeepResearch() {
                   <button
                     onClick={() => setShowPanel(false)}
                     className="p-1.5 rounded-lg hover:bg-[#e3e0db]/40 text-[#525252] transition-colors"
-                    title="Close panel"
+                    title={t('deepresearch.closePanel', 'Close panel')}
                   >
                     <X size={16} />
                   </button>
@@ -1943,7 +1945,7 @@ export default function DeepResearch() {
                         <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Target size={14} className="text-[#117dff]" />
-                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Active Goal</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">{t('deepresearch.activeGoal', 'Active Goal')}</span>
                           </div>
                           <p className="text-sm text-[#0a0a0a]">{activeGoal}</p>
                         </div>
@@ -1953,11 +1955,11 @@ export default function DeepResearch() {
                       <div className="bg-gradient-to-br from-[#faf9f4] to-white border border-[#e3e0db] rounded-xl p-3">
                         <div className="flex items-center gap-2 mb-3">
                           <Users size={14} className="text-[#9333ea]" />
-                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">CSI Agents</span>
+                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">{t('deepresearch.csiAgents', 'CSI Agents')}</span>
                           {status === 'running' && (
                             <span className="ml-auto flex items-center gap-1 text-[10px] text-[#117dff]">
                               <Loader2 size={10} className="animate-spin" />
-                              Active
+                              {t('deepresearch.active', 'Active')}
                             </span>
                           )}
                         </div>
@@ -1988,7 +1990,7 @@ export default function DeepResearch() {
                           })}
                         </div>
                         <p className="text-[10px] text-[#a3a3a3] mt-2 leading-relaxed">
-                          CSI workers coordinate through shared graph traces: Faraday explores sources, Feynmann extracts claims, Turing verifies them, and Synthesis composes the report.
+                          {t('deepresearch.csiDesc', 'CSI workers coordinate through shared graph traces: Faraday explores sources, Feynmann extracts claims, Turing verifies them, and Synthesis composes the report.')}
                         </p>
                       </div>
 
@@ -2004,14 +2006,14 @@ export default function DeepResearch() {
                               <CheckCircle2 size={16} className="text-[#16a34a]" />
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-[#0a0a0a]">Research complete</p>
+                              <p className="text-sm font-semibold text-[#0a0a0a]">{t('deepresearch.researchComplete', 'Research complete')}</p>
                               <p className="text-xs text-[#525252] mt-0.5">
-                                {readyToSynthesize.findingCount} findings · {readyToSynthesize.sourceCount} sources · {((readyToSynthesize.confidence || 0) * 100).toFixed(0)}% confidence
+                                {readyToSynthesize.findingCount} {t('deepresearch.findings', 'findings')} · {readyToSynthesize.sourceCount} {t('deepresearch.sources', 'sources')} · {((readyToSynthesize.confidence || 0) * 100).toFixed(0)}% {t('deepresearch.confidence', 'confidence')}
                               </p>
                             </div>
                           </div>
                           <p className="text-xs text-[#525252]">
-                            Review the graph and findings above, then generate your report when ready.
+                            {t('deepresearch.reviewGraph', 'Review the graph and findings above, then generate your report when ready.')}
                           </p>
                           <button
                             onClick={handleConfirmSynthesis}
@@ -2019,8 +2021,8 @@ export default function DeepResearch() {
                             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#16a34a] text-white text-sm font-semibold hover:bg-[#15803d] transition-colors disabled:opacity-60"
                           >
                             {isConfirmingSynthesis
-                              ? <><Loader2 size={14} className="animate-spin" /> Generating report...</>
-                              : <><Sparkles size={14} /> Generate Report</>
+                              ? <><Loader2 size={14} className="animate-spin" /> {t('deepresearch.generatingReport', 'Generating report...')}</>
+                              : <><Sparkles size={14} /> {t('deepresearch.generateReport', 'Generate Report')}</>
                             }
                           </button>
                         </motion.div>
@@ -2031,7 +2033,7 @@ export default function DeepResearch() {
                         <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                           <div className="flex items-center gap-2 mb-3">
                             <ListTodo size={14} className="text-[#16a34a]" />
-                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Tasks</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">{t('deepresearch.tasks', 'Tasks')}</span>
                             {/* Task counter — shows completed / total */}
                             <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white border border-[#e3e0db] text-[10px] font-mono">
                               <span className="text-[#16a34a] font-semibold">
@@ -2041,7 +2043,7 @@ export default function DeepResearch() {
                               <span className="text-[#0a0a0a] font-semibold">
                                 {totalTasks ?? subgoals.length}
                               </span>
-                              <span className="text-[#a3a3a3]">tasks</span>
+                              <span className="text-[#a3a3a3]">{t('deepresearch.tasks', 'tasks')}</span>
                             </span>
                           </div>
                           <div className="space-y-2">
@@ -2061,7 +2063,7 @@ export default function DeepResearch() {
                                     )}
                                   </div>
                                   {goal.confidence != null && (
-                                    <p className="text-[10px] text-[#525252]/50 mt-0.5">{(goal.confidence * 100).toFixed(0)}% confidence</p>
+                                    <p className="text-[10px] text-[#525252]/50 mt-0.5">{(goal.confidence * 100).toFixed(0)}% {t('deepresearch.confidence', 'confidence')}</p>
                                   )}
                                 </div>
                               </div>
@@ -2074,13 +2076,13 @@ export default function DeepResearch() {
                       <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-xl p-3">
                         <div className="flex items-center gap-2 mb-3">
                           <GitBranch size={14} className="text-[#d97706]" />
-                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">Timeline</span>
+                          <span className="text-[10px] uppercase tracking-wider text-[#525252] font-medium">{t('deepresearch.timeline', 'Timeline')}</span>
                         </div>
                         <div className="space-y-2">
                           {events.length === 0 ? (
                             <div className="text-center py-4 text-[#a3a3a3] text-xs">
                               <Loader2 size={16} className="animate-spin mx-auto mb-2" />
-                              Waiting for events...
+                              {t('deepresearch.waitingForEvents', 'Waiting for events...')}
                             </div>
                           ) : (
                             events.map((event, i) => (
@@ -2108,17 +2110,17 @@ export default function DeepResearch() {
                           <div className="flex items-center gap-4 px-4 py-3 border-b border-[#e3e0db] bg-[#faf9f4]">
                             <div className="flex items-center gap-1.5">
                               <Zap size={12} className="text-[#117dff]" />
-                              <span className="text-xs text-[#525252] font-mono">{findings.length} findings</span>
+                              <span className="text-xs text-[#525252] font-mono">{findings.length} {t('deepresearch.findings', 'findings')}</span>
                             </div>
                             <span className="text-[#e3e0db]">·</span>
                             <span className="text-xs text-[#525252] font-mono">{(durationMs / 1000).toFixed(1)}s</span>
                             <span className="text-[#e3e0db]">·</span>
-                            <span className="text-xs text-[#525252] font-mono">{(confidence * 100).toFixed(0)}% confidence</span>
+                            <span className="text-xs text-[#525252] font-mono">{(confidence * 100).toFixed(0)}% {t('deepresearch.confidence', 'confidence')}</span>
                             {fromCache && (
-                              <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-[10px] font-medium">Cached</span></>
+                              <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#16a34a]/10 border border-[#16a34a]/20 text-[#16a34a] text-[10px] font-medium">{t('deepresearch.cached', 'Cached')}</span></>
                             )}
                             {fromBlueprint && (
-                              <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-[10px] font-medium">From Blueprint</span></>
+                              <><span className="text-[#e3e0db]">·</span><span className="px-2 py-0.5 rounded-full bg-[#9333ea]/10 border border-[#9333ea]/20 text-[#9333ea] text-[10px] font-medium">{t('deepresearch.fromBlueprint', 'From Blueprint')}</span></>
                             )}
                             <div className="ml-auto flex items-center gap-2">
                               {/* Resume: re-synthesize report from stored blueprint recall */}
@@ -2130,7 +2132,7 @@ export default function DeepResearch() {
                                   title="Re-synthesize report from stored claims, sources and trails (no new web search)"
                                 >
                                   {isSynthesizing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
-                                  {isSynthesizing ? 'Synthesizing...' : 'Resume from Blueprint'}
+                                  {isSynthesizing ? t('deepresearch.synthesizing', 'Synthesizing...') : t('deepresearch.resumeFromBlueprint', 'Resume from Blueprint')}
                                 </button>
                               )}
                               <button
@@ -2139,7 +2141,7 @@ export default function DeepResearch() {
                                 title="Save this research state as reusable blueprint"
                               >
                                 <Award size={10} />
-                                Save as Blueprint
+                                {t('deepresearch.saveAsBlueprint', 'Save as Blueprint')}
                               </button>
                             </div>
                           </div>
@@ -2151,24 +2153,24 @@ export default function DeepResearch() {
                         </div>
                         {reportProvenance && (
                           <div className="border-t border-[#e3e0db] bg-[#faf9f4] p-4">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">Report provenance</p>
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-[#737373] font-medium">{t('deepresearch.reportProvenance', 'Report provenance')}</p>
                             <div className="mt-3 grid gap-2 text-xs text-[#525252] sm:grid-cols-2">
-                              <div>Claims: {reportProvenance.claimIds?.length || 0}</div>
-                              <div>Sources: {reportProvenance.sourceIds?.length || 0}</div>
-                              <div>Trail steps: {reportProvenance.trailStepIds?.length || 0}</div>
-                              <div>Recalled memories: {reportProvenance.recalledMemoryIds?.length || 0}</div>
+                              <div>{t('deepresearch.claims', 'Claims')}: {reportProvenance.claimIds?.length || 0}</div>
+                              <div>{t('deepresearch.sources', 'Sources')}: {reportProvenance.sourceIds?.length || 0}</div>
+                              <div>{t('deepresearch.trailSteps', 'Trail steps')}: {reportProvenance.trailStepIds?.length || 0}</div>
+                              <div>{t('deepresearch.recalledMemories', 'Recalled memories')}: {reportProvenance.recalledMemoryIds?.length || 0}</div>
                             </div>
                             {reportInfluencedByRetention && (
                               <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0f766e]/10 text-[#0f766e] text-[10px] font-medium">
                                 <Award size={10} />
-                                Report reuses retained memory
+                                {t('deepresearch.reportReusesMemory', 'Report reuses retained memory')}
                               </div>
                             )}
                             <button
                               onClick={handlePromoteResearchToMemory}
                               className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#16a34a]/10 text-[#16a34a] text-xs font-medium hover:bg-[#16a34a]/15 transition-colors"
                             >
-                              Promote report to memory
+                              {t('deepresearch.promoteToMemory', 'Promote report to memory')}
                             </button>
                           </div>
                         )}
@@ -2178,8 +2180,8 @@ export default function DeepResearch() {
                           {isSynthesizing ? (
                             <>
                               <Loader2 size={32} className="animate-spin text-[#9333ea]" />
-                              <p className="text-sm">Synthesizing from blueprint recall...</p>
-                              <p className="text-xs text-[#a3a3a3]">Recalling stored claims, sources and trails</p>
+                              <p className="text-sm">{t('deepresearch.synthesizingBlueprint', 'Synthesizing from blueprint recall...')}</p>
+                              <p className="text-xs text-[#a3a3a3]">{t('deepresearch.recallingClaims', 'Recalling stored claims, sources and trails')}</p>
                             </>
                           ) : status === 'completed' || status === 'interrupted' ? (
                             <>
@@ -2187,21 +2189,21 @@ export default function DeepResearch() {
                                 <RefreshCw size={20} className="text-[#9333ea]" />
                               </div>
                               <div className="text-center">
-                                <p className="text-sm font-medium">No report generated yet</p>
-                                <p className="text-xs text-[#a3a3a3] mt-1">Synthesize from stored claims and sources</p>
+                                <p className="text-sm font-medium">{t('deepresearch.noReport', 'No report generated yet')}</p>
+                                <p className="text-xs text-[#a3a3a3] mt-1">{t('deepresearch.synthesizeFromStored', 'Synthesize from stored claims and sources')}</p>
                               </div>
                               <button
                                 onClick={() => handleSynthesizeFromBlueprint()}
                                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#9333ea] text-white text-sm font-medium hover:bg-[#7c3aed] transition-colors"
                               >
                                 <RefreshCw size={14} />
-                                Resume from Blueprint
+                                {t('deepresearch.resumeFromBlueprint', 'Resume from Blueprint')}
                               </button>
                             </>
                           ) : (
                             <>
                               <Loader2 size={32} className="animate-spin text-[#117dff]" />
-                              <p className="text-sm">Generating report...</p>
+                              <p className="text-sm">{t('deepresearch.generatingReport', 'Generating report...')}</p>
                             </>
                           )}
                         </div>
@@ -2304,7 +2306,7 @@ export default function DeepResearch() {
                               <button
                                 onClick={handleRefreshGraph}
                                 className="p-1.5 rounded hover:bg-[#e3e0db]/40 text-[#525252]"
-                                title="Refresh graph"
+                                title={t('deepresearch.refreshGraph', 'Refresh graph')}
                               >
                                 <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
                               </button>
@@ -2315,7 +2317,7 @@ export default function DeepResearch() {
                                     ? 'border-[#117dff]/40 bg-[#117dff]/20 text-[#117dff]'
                                     : 'border-transparent text-[#525252] hover:bg-[#117dff]/10 hover:text-[#117dff]'
                                 }`}
-                                title={showGraphWindow ? 'Hide graph window' : 'Show graph window'}
+                                title={showGraphWindow ? t('deepresearch.hideGraphWindow', 'Hide graph window') : t('deepresearch.showGraphWindow', 'Show graph window')}
                               >
                                 <Layers size={12} />
                               </button>
@@ -2326,11 +2328,11 @@ export default function DeepResearch() {
                                     ? 'border-[#117dff]/50 bg-[#117dff]/20 text-[#117dff]'
                                     : 'border-[#d4d1ca] bg-white text-[#525252] hover:bg-[#117dff]/10 hover:border-[#117dff]/30 hover:text-[#117dff]'
                                 }`}
-                                title={isGraphDetached ? 'Graph is detached' : 'Detach graph to floating window'}
+                                title={isGraphDetached ? t('deepresearch.graphDetached', 'Graph is detached') : t('deepresearch.detachGraph', 'Detach graph to floating window')}
                                 aria-pressed={isGraphDetached}
                               >
                                 <ExternalLink size={12} />
-                                <span>{isGraphDetached ? 'Detached' : 'Detach'}</span>
+                                <span>{isGraphDetached ? t('deepresearch.detachedLabel', 'Detached') : t('deepresearch.detachLabel', 'Detach')}</span>
                               </button>
                             </div>
                           </div>
@@ -2341,8 +2343,8 @@ export default function DeepResearch() {
                           {showGraphWindow ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#faf9f4] to-white border border-dashed border-[#e3e0db] rounded-2xl m-3">
                               <div className="text-center px-4">
-                                <p className="text-sm font-medium text-[#0a0a0a]">Graph opened in floating window</p>
-                                <p className="text-xs text-[#737373] mt-1">Use the detach panel to inspect the growing network.</p>
+                                <p className="text-sm font-medium text-[#0a0a0a]">{t('deepresearch.graphFloating', 'Graph opened in floating window')}</p>
+                                <p className="text-xs text-[#737373] mt-1">{t('deepresearch.graphFloatingDesc', 'Use the detach panel to inspect the growing network.')}</p>
                               </div>
                             </div>
                           ) : (
@@ -2386,21 +2388,21 @@ export default function DeepResearch() {
               onMouseDown={handleGraphDragStart}
             >
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#0a0a0a]">Research Graph</p>
-                <p className="text-[10px] text-[#737373] truncate">Floating preview - drag the header to move</p>
+                <p className="text-xs font-semibold text-[#0a0a0a]">{t('deepresearch.researchGraph', 'Research Graph')}</p>
+                <p className="text-[10px] text-[#737373] truncate">{t('deepresearch.floatingPreview', 'Floating preview - drag the header to move')}</p>
               </div>
               <div className="flex items-center gap-1" data-no-drag>
                 <button
                   onClick={handleRefreshGraph}
                   className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252]"
-                  title="Refresh graph"
+                  title={t('deepresearch.refreshGraph', 'Refresh graph')}
                 >
                   <RotateCcw size={12} className={graphLoading ? 'animate-spin' : ''} />
                 </button>
                 <button
                   onClick={handleCloseGraphWindow}
                   className="p-1.5 rounded hover:bg-[#e3e0db]/60 text-[#525252]"
-                  title="Close graph window"
+                  title={t('deepresearch.closeGraphWindow', 'Close graph window')}
                 >
                   <X size={12} />
                 </button>
@@ -2417,19 +2419,19 @@ export default function DeepResearch() {
             <button
               onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
               className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize bg-gradient-to-tl from-[#117dff]/25 to-transparent"
-              aria-label="Resize graph window"
+              aria-label={t('deepresearch.resizeGraphWindow', 'Resize graph window')}
               data-no-drag
             />
             <button
               onMouseDown={(e) => handleResizeStart(e, 'right')}
               className="absolute top-10 right-0 w-2 h-[calc(100%-2.5rem)] cursor-e-resize"
-              aria-label="Resize graph window horizontally"
+              aria-label={t('deepresearch.resizeGraphWindowH', 'Resize graph window horizontally')}
               data-no-drag
             />
             <button
               onMouseDown={(e) => handleResizeStart(e, 'bottom')}
               className="absolute bottom-0 left-0 h-2 w-[calc(100%-0.5rem)] cursor-s-resize"
-              aria-label="Resize graph window vertically"
+              aria-label={t('deepresearch.resizeGraphWindowV', 'Resize graph window vertically')}
               data-no-drag
             />
           </motion.div>

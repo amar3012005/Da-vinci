@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   FlaskConical,
@@ -252,6 +253,7 @@ function SearchResultRow({ result, index }) {
 /* ─── Connector Status Card ─────────────────────────────────────── */
 
 function ConnectorCard({ name, icon: Icon, connected, lastSync, memoryCount }) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex items-center gap-4">
       <div className="w-10 h-10 rounded-lg bg-[#f3f1ec] flex items-center justify-center shrink-0">
@@ -262,11 +264,11 @@ function ConnectorCard({ name, icon: Icon, connected, lastSync, memoryCount }) {
           <span className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">{name}</span>
           {connected ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#22c55e]/10 text-[#16a34a] border border-[#bbf7d0]">
-              <Wifi size={9} /> Connected
+              <Wifi size={9} /> {t('evaluation.connected', 'Connected')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]">
-              <WifiOff size={9} /> Disconnected
+              <WifiOff size={9} /> {t('evaluation.disconnected', 'Disconnected')}
             </span>
           )}
         </div>
@@ -278,7 +280,7 @@ function ConnectorCard({ name, icon: Icon, connected, lastSync, memoryCount }) {
           )}
           {memoryCount != null && (
             <span className="text-[#a3a3a3] text-[10px] font-mono">
-              {memoryCount} memories
+              {t('evaluation.memoriesCount', '{{count}} memories', { count: memoryCount })}
             </span>
           )}
         </div>
@@ -290,6 +292,7 @@ function ConnectorCard({ name, icon: Icon, connected, lastSync, memoryCount }) {
 /* ─── Per-Query Breakdown (preserved from original) ─────────────── */
 
 function PerQueryBreakdown({ results }) {
+  const { t } = useTranslation('dashboard');
   const [expanded, setExpanded] = useState(false);
   if (!results || results.length === 0) return null;
 
@@ -307,10 +310,10 @@ function PerQueryBreakdown({ results }) {
         <div className="flex items-center gap-2">
           <Search size={15} className="text-[#525252]" />
           <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
-            Per-Query Results
+            {t('evaluation.perQueryResults', 'Per-Query Results')}
           </h4>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">
-            {hits}/{results.length} hit
+            {hits}/{results.length} {t('evaluation.hit', 'hit')}
           </span>
         </div>
         {expanded ? <ChevronDown size={14} className="text-[#a3a3a3]" /> : <ChevronRight size={14} className="text-[#a3a3a3]" />}
@@ -355,6 +358,7 @@ function PerQueryBreakdown({ results }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 export default function Evaluation() {
+  const { t } = useTranslation('dashboard');
   /* ── Data fetching ───────────────────────────────────────────── */
 
   // Profile for accurate total memory count
@@ -445,11 +449,11 @@ export default function Evaluation() {
   // Sources breakdown string (based on sample of up to 100 memories)
   const sourcesSub = useMemo(() => {
     const entries = Object.entries(sourceCounts);
-    if (entries.length === 0) return 'No sources detected';
+    if (entries.length === 0) return t('evaluation.noSourcesDetected', 'No sources detected');
     const sampled = memories.length < totalCount;
     const label = entries.map(([k, v]) => `${k}: ${v}`).join(', ');
-    return sampled ? `${label} (sample of ${memories.length})` : label;
-  }, [sourceCounts, memories.length, totalCount]);
+    return sampled ? `${label} (${t('evaluation.sampleOf', 'sample of {{n}}', { n: memories.length })})` : label;
+  }, [sourceCounts, memories.length, totalCount, t]);
 
   /* ── Gmail connector info ────────────────────────────────────── */
 
@@ -531,9 +535,9 @@ export default function Evaluation() {
     <div className="min-h-full">
       {/* ═══ 1. Page Header ═══ */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">Memory Health</h1>
+        <h1 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-1">{t('evaluation.title', 'Memory Health')}</h1>
         <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-          Monitor your memory graph quality and search performance
+          {t('evaluation.subtitle', 'Monitor your memory graph quality and search performance')}
         </p>
       </motion.div>
 
@@ -541,32 +545,32 @@ export default function Evaluation() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <HealthCard
           icon={Database}
-          label="Total Memories"
+          label={t('evaluation.totalMemories', 'Total Memories')}
           value={totalCount.toLocaleString()}
-          sub={totalCount === 0 ? 'Add memories to get started' : `${Object.keys(sourceCounts).length} source${Object.keys(sourceCounts).length === 1 ? '' : 's'}`}
+          sub={totalCount === 0 ? t('evaluation.addMemoriesToStart', 'Add memories to get started') : `${Object.keys(sourceCounts).length} ${Object.keys(sourceCounts).length === 1 ? t('evaluation.source', 'source') : t('evaluation.sources', 'sources')}`}
         />
         <HealthCard
           icon={Layers}
-          label="Sources"
+          label={t('evaluation.sources', 'Sources')}
           value={Object.keys(sourceCounts).length}
           sub={sourcesSub}
         />
         <HealthCard
           icon={CalendarClock}
-          label="Freshness"
+          label={t('evaluation.freshness', 'Freshness')}
           value={memories.length > 0 ? `${freshness.week}%` : '--'}
           sub={memories.length > 0
-            ? `${freshness.week}% <7d, ${freshness.month}% <30d, ${freshness.older}% older${memories.length < totalCount ? ` (sampled ${memories.length})` : ''}`
-            : 'No data available'}
+            ? `${freshness.week}% <7d, ${freshness.month}% <30d, ${freshness.older}% ${t('evaluation.older', 'older')}${memories.length < totalCount ? ` (${t('evaluation.sampled', 'sampled {{n}}', { n: memories.length })})` : ''}`
+            : t('evaluation.noDataAvailable', 'No data available')}
           color={memories.length > 0 ? (freshness.week >= 30 ? '#22c55e' : freshness.week >= 10 ? '#f59e0b' : '#ef4444') : '#a3a3a3'}
         />
         <HealthCard
           icon={Star}
-          label="Avg Importance"
+          label={t('evaluation.avgImportance', 'Avg Importance')}
           value={avgImportance != null ? avgImportance.toFixed(2) : '--'}
           sub={avgImportance != null
-            ? (avgImportance >= 0.7 ? 'High quality signals' : avgImportance >= 0.4 ? 'Moderate quality' : 'Consider curating low-value entries')
-            : 'No importance data'}
+            ? (avgImportance >= 0.7 ? t('evaluation.highQualitySignals', 'High quality signals') : avgImportance >= 0.4 ? t('evaluation.moderateQuality', 'Moderate quality') : t('evaluation.considerCurating', 'Consider curating low-value entries'))
+            : t('evaluation.noImportanceData', 'No importance data')}
           color={avgImportance != null ? scoreColor(avgImportance) : '#a3a3a3'}
         />
       </div>
@@ -575,7 +579,7 @@ export default function Evaluation() {
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="bg-white border border-[#e3e0db] rounded-xl p-6 mb-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex items-center gap-2 mb-4">
           <Search size={16} className="text-[#525252]" />
-          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Search Tester</h3>
+          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('evaluation.searchTester', 'Search Tester')}</h3>
         </div>
 
         <div className="flex gap-3 mb-4">
@@ -584,7 +588,7 @@ export default function Evaluation() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Test a search query..."
+            placeholder={t('evaluation.searchPlaceholder', 'Test a search query...')}
             className="flex-1 bg-[#f3f1ec] border border-[#e3e0db] rounded-xl px-4 py-3 text-sm font-['Space_Grotesk'] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:ring-2 focus:ring-[#117dff]/30 focus:border-[#117dff] transition-all"
           />
           <button
@@ -597,7 +601,7 @@ export default function Evaluation() {
             ) : (
               <>
                 <Search size={14} />
-                Search
+                {t('evaluation.search', 'Search')}
               </>
             )}
           </button>
@@ -613,7 +617,7 @@ export default function Evaluation() {
         {searchResults && searchResults.length === 0 && (
           <div className="text-center py-8">
             <Search size={24} className="text-[#d4d0ca] mx-auto mb-2" />
-            <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">No results found for this query</p>
+            <p className="text-[#a3a3a3] text-sm font-['Space_Grotesk']">{t('evaluation.noResultsFound', 'No results found for this query')}</p>
           </div>
         )}
 
@@ -627,7 +631,7 @@ export default function Evaluation() {
 
         {!searchResults && !searchError && (
           <p className="text-[#a3a3a3] text-xs font-mono text-center py-4">
-            Enter a query above to test memory retrieval quality
+            {t('evaluation.searchHint', 'Enter a query above to test memory retrieval quality')}
           </p>
         )}
       </motion.div>
@@ -636,7 +640,7 @@ export default function Evaluation() {
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <RefreshCw size={16} className="text-[#525252]" />
-          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Connector Status</h3>
+          <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('evaluation.connectorStatus', 'Connector Status')}</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <ConnectorCard
@@ -678,9 +682,9 @@ export default function Evaluation() {
         >
           <div className="flex items-center gap-2">
             <FlaskConical size={16} className="text-[#525252]" />
-            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Admin: Retrieval Benchmarks</h3>
+            <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('evaluation.adminBenchmarks', 'Admin: Retrieval Benchmarks')}</h3>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#a3a3a3] border border-[#e3e0db]">
-              Advanced
+              {t('evaluation.advanced', 'Advanced')}
             </span>
           </div>
           {benchmarkOpen
@@ -702,7 +706,7 @@ export default function Evaluation() {
                 ) : (
                   <>
                     <Play size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                    Run Evaluation
+                    {t('evaluation.runEvaluation', 'Run Evaluation')}
                   </>
                 )}
               </button>
@@ -718,10 +722,10 @@ export default function Evaluation() {
               <div className="flex items-center gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-4 py-3 mb-4">
                 <Info size={14} className="text-[#d97706] shrink-0" />
                 <div>
-                  <span className="text-[#92400e] text-xs font-['Space_Grotesk'] block">No evaluation data available</span>
+                  <span className="text-[#92400e] text-xs font-['Space_Grotesk'] block">{t('evaluation.noEvalData', 'No evaluation data available')}</span>
                   <span className="text-[#a3a3a3] text-[10px] font-mono block mt-0.5">
                     {latestError.includes('404') || latestError.includes('not found')
-                      ? 'Run your first evaluation to generate baseline metrics.'
+                      ? t('evaluation.runFirstEval', 'Run your first evaluation to generate baseline metrics.')
                       : latestError}
                   </span>
                 </div>
@@ -731,7 +735,7 @@ export default function Evaluation() {
             {/* Benchmark Cards */}
             {latestReport && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <BenchmarkCard title="Latency" icon={Zap} passed={benchmarks.latency?.pass ?? null}>
+                <BenchmarkCard title={t('evaluation.latency', 'Latency')} icon={Zap} passed={benchmarks.latency?.pass ?? null}>
                   {benchmarks.latency ? (
                     <div className="grid grid-cols-3 gap-4">
                       <ScoreDisplay label="P50" value={benchmarks.latency.p50_ms} suffix="ms" />
@@ -745,7 +749,7 @@ export default function Evaluation() {
                       <ScoreDisplay label="P99" value={latestScores.latencyP99} suffix="ms" />
                     </div>
                   ) : (
-                    <p className="text-[#a3a3a3] text-xs font-mono text-center py-4">No latency data</p>
+                    <p className="text-[#a3a3a3] text-xs font-mono text-center py-4">{t('evaluation.noLatencyData', 'No latency data')}</p>
                   )}
                   {benchmarks.latency?.target_p99_ms && (
                     <p className="text-[#a3a3a3] text-[10px] font-mono mt-3 text-center">
@@ -754,7 +758,7 @@ export default function Evaluation() {
                   )}
                 </BenchmarkCard>
 
-                <BenchmarkCard title="Relevance" icon={Target} passed={benchmarks.relevance?.pass ?? null}>
+                <BenchmarkCard title={t('evaluation.relevance', 'Relevance')} icon={Target} passed={benchmarks.relevance?.pass ?? null}>
                   {benchmarks.relevance ? (
                     <div className="grid grid-cols-2 gap-4">
                       <ScoreDisplay label="P@5" value={benchmarks.relevance.precision_at_5} />
@@ -796,7 +800,7 @@ export default function Evaluation() {
                   <div className="flex items-center gap-3">
                     <FlaskConical size={16} className="text-[#117dff]" />
                     <div>
-                      <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">Overall Quality</h4>
+                      <h4 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">{t('evaluation.overallQuality', 'Overall Quality')}</h4>
                       {getRunTimestamp(latestReport) && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{formatDate(getRunTimestamp(latestReport))}</span>
                       )}
@@ -823,9 +827,9 @@ export default function Evaluation() {
             {!latestReport && !latestLoading && !latestError && (
               <div className="bg-[#f3f1ec] border border-[#e3e0db] rounded-xl p-10 text-center mb-6">
                 <FlaskConical size={28} className="text-[#d4d0ca] mx-auto mb-3" />
-                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">No evaluation results yet</p>
+                <p className="text-[#525252] text-sm font-['Space_Grotesk'] mb-1">{t('evaluation.noEvalResultsYet', 'No evaluation results yet')}</p>
                 <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">
-                  Click "Run Evaluation" to measure retrieval quality against your tenant dataset.
+                  {t('evaluation.clickRunEval', 'Click "Run Evaluation" to measure retrieval quality against your tenant dataset.')}
                 </p>
               </div>
             )}
@@ -834,7 +838,7 @@ export default function Evaluation() {
             <div className="bg-white border border-[#e3e0db] rounded-xl p-6 mb-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp size={16} className="text-[#525252]" />
-                <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">History</h3>
+                <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('evaluation.history', 'History')}</h3>
               </div>
 
               {historyList.length > 0 ? (
@@ -842,15 +846,15 @@ export default function Evaluation() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-[#e3e0db]">
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">Run ID</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">Date</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Precision</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">Recall</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">F1</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">NDCG</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">MRR</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-center">Status</th>
-                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 text-center">Compare</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">{t('evaluation.runId', 'Run ID')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4">{t('evaluation.date', 'Date')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">{t('evaluation.precision', 'Precision')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">{t('evaluation.recall', 'Recall')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">{t('evaluation.f1', 'F1')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">{t('evaluation.ndcg', 'NDCG')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-right">{t('evaluation.mrr', 'MRR')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 pr-4 text-center">{t('evaluation.status', 'Status')}</th>
+                        <th className="text-[#525252] text-xs font-mono uppercase tracking-wider pb-3 text-center">{t('evaluation.compare', 'Compare')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -931,7 +935,7 @@ export default function Evaluation() {
                 </div>
               ) : (
                 <p className="text-[#a3a3a3] text-sm font-mono text-center py-6">
-                  No evaluation history available
+                  {t('evaluation.noHistory', 'No evaluation history available')}
                 </p>
               )}
             </div>
@@ -941,7 +945,7 @@ export default function Evaluation() {
               <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
                 <div className="flex items-center gap-2 mb-6">
                   <BarChart3 size={16} className="text-[#525252]" />
-                  <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">Comparison</h3>
+                  <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">{t('evaluation.comparison', 'Comparison')}</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -974,9 +978,9 @@ export default function Evaluation() {
                         </div>
 
                         <div className="grid grid-cols-3 gap-4 mb-3">
-                          <ScoreDisplay label="Precision" value={scores.precision} />
-                          <ScoreDisplay label="Recall" value={scores.recall} />
-                          <ScoreDisplay label="F1" value={scores.f1} />
+                          <ScoreDisplay label={t('evaluation.precision', 'Precision')} value={scores.precision} />
+                          <ScoreDisplay label={t('evaluation.recall', 'Recall')} value={scores.recall} />
+                          <ScoreDisplay label={t('evaluation.f1', 'F1')} value={scores.f1} />
                         </div>
 
                         <div className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-mono">
@@ -1004,7 +1008,7 @@ export default function Evaluation() {
                   return (
                     <div className="mt-4 pt-4 border-t border-[#e3e0db]">
                       <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-3">
-                        Delta (B - A)
+                        {t('evaluation.delta', 'Delta (B - A)')}
                       </p>
                       <div className="grid grid-cols-3 gap-8 text-center">
                         {['precision', 'recall', 'f1'].map((key) => {
