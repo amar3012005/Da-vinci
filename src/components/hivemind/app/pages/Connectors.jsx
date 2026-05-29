@@ -273,13 +273,17 @@ const CONNECTORS = [
   {
     id: 'slack',
     name: 'Slack',
-    description: 'Channel messages, threads, files. Both batch sync + live query.',
+    description: 'Channel messages, threads, files, @mentions. Both batch sync + live query.',
     icon: MessageSquare,
     category: 'workspace',
     status: 'available',
     color: '#e11d48',
     priority: 2,
-    nangoProvider: 'slack',
+    // Native v2 bot OAuth (control-plane /v1/connectors/slack/start). Grants the
+    // BOT token with app_mentions:read (needed for @mention events) + the
+    // search:read user token. Nango slack-mcp was user-token-only and could not
+    // hold app_mentions:read.
+    oauthProvider: 'slack',
   },
   {
     id: 'whatsapp',
