@@ -266,8 +266,11 @@ export default function CartesiaVoiceWidget({ agentId: propAgentId, accessToken:
 
   const startCall = useCallback(async () => {
     setError(null);
-    let token = resolved.accessToken;
-    let agentId = resolved.agentId;
+    // Re-read window.CartesiaConfig live so a value set after mount (e.g. via
+    // console for a quick test) is honored without a reload.
+    const wc = (typeof window !== 'undefined' && window.CartesiaConfig) || {};
+    let token = resolved.accessToken || wc.accessToken || '';
+    let agentId = resolved.agentId || wc.agentId || '';
     try {
       if (typeof getAccessToken === 'function') {
         const r = await getAccessToken();
