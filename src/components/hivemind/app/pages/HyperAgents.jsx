@@ -1416,6 +1416,7 @@ function CreateRoomModal({ onClose, onCreated }) {
   const [template, setTemplate] = useState('debate');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
+  const [skepticId, setSkepticId] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -1438,11 +1439,15 @@ function CreateRoomModal({ onClose, onCreated }) {
     if (!name.trim() || busy) return;
     setBusy(true); setErr(null);
     try {
-      const resp = await apiClient.createHyperRoom({
+      const payload = {
         name: name.trim(),
         participant_ids: Array.from(picked),
         template,
-      });
+      };
+      if (template === 'swarm' && skepticId) {
+        payload.permanent_skeptic_id = skepticId;
+      }
+      const resp = await apiClient.createHyperRoom(payload);
       onCreated?.(resp.room);
     } catch (e2) {
       setErr(e2.response?.data?.error || e2.message);
@@ -1508,6 +1513,35 @@ function CreateRoomModal({ onClose, onCreated }) {
               ))}
             </div>
           </div>
+
+          {/* Swarm-template-only Skeptic picker. Defaults to first Skeptic-lane participant. */}
+          {template === 'swarm' && (
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
+                Permanent Skeptic (silent R1-R3, mandatory R4)
+              </label>
+              <select
+                value={skepticId}
+                onChange={(e) => setSkepticId(e.target.value)}
+                className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
+              >
+                <option value="">— auto-pick (first Skeptic-lane participant) —</option>
+                {employees
+                  .filter((emp) => picked.has(emp.id))
+                  .map((emp) => {
+                    const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
+                    return (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({lane}{lane.toLowerCase() === 'skeptic' ? ' ★' : ''})
+                      </option>
+                    );
+                  })}
+              </select>
+              <div className="text-[10px] text-[#a3a3a3] mt-1 font-mono">
+                Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
