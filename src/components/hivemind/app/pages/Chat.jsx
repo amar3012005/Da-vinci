@@ -14,6 +14,8 @@ import {
   Paperclip,
   X,
   CheckCircle2,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -91,19 +93,19 @@ const MAX_CHARS = 2000;
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
   exit: { opacity: 0, y: -6, transition: { duration: 0.15 } },
 };
 
 const messageVariants = {
-  hidden: { opacity: 0, y: 8, scale: 0.98 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.22, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 10, scale: 0.97 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.24, ease: 'easeOut' } },
 };
 
 const panelVariants = {
   hidden: { x: '100%', opacity: 0 },
-  visible: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  visible: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 280, damping: 28 } },
   exit: { x: '100%', opacity: 0, transition: { duration: 0.22, ease: 'easeIn' } },
 };
 
@@ -111,13 +113,13 @@ const panelVariants = {
 
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
+    <div className="flex items-center gap-1.5 px-5 py-4">
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-[#a3a3a3]"
-          animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
-          transition={{ duration: 1, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
+          className="w-2 h-2 rounded-full bg-[#117dff]/40"
+          animate={{ opacity: [0.25, 1, 0.25], y: [0, -4, 0], scale: [0.85, 1.1, 0.85] }}
+          transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
         />
       ))}
     </div>
@@ -131,12 +133,12 @@ function Sources({ sources }) {
   if (!sources || sources.length === 0) return null;
 
   return (
-    <div className="mt-3 border-t border-[#e3e0db] pt-3">
+    <div className="mt-3 border-t border-[#e3e0db]/70 pt-3">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-[11px] text-[#a3a3a3] hover:text-[#525252] transition-colors"
+        className="flex items-center gap-1.5 text-[11px] text-[#a3a3a3] hover:text-[#525252] transition-colors group"
       >
-        <FileText size={12} />
+        <FileText size={12} className="group-hover:text-[#117dff] transition-colors" />
         <span className="font-mono uppercase tracking-[0.06em]">
           {sources.length} {sources.length === 1 ? 'source' : 'sources'} used
         </span>
@@ -375,8 +377,14 @@ function MessageBubble({ msg }) {
         animate="visible"
         className="flex justify-end"
       >
-        <div className="max-w-[72%]">
-          <div className="bg-[#117dff] text-white rounded-2xl rounded-br-md px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words">
+        <div className="max-w-[76%]">
+          <div
+            className="rounded-2xl rounded-br-sm px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words text-white shadow-sm"
+            style={{
+              background: 'linear-gradient(135deg, #1e8bff 0%, #117dff 60%, #0066e0 100%)',
+              boxShadow: '0 2px 8px rgba(17,125,255,0.25)',
+            }}
+          >
             {msg.content}
           </div>
         </div>
@@ -391,17 +399,25 @@ function MessageBubble({ msg }) {
       animate="visible"
       className="flex justify-start"
     >
-      <div className="max-w-[80%]">
-        <div className="flex items-center gap-1.5 mb-1.5 px-1">
-          <div className="w-5 h-5 rounded-full bg-[#117dff]/10 flex items-center justify-center">
-            <Brain size={11} className="text-[#117dff]" />
+      <div className="max-w-[84%]">
+        {/* HIVE label row */}
+        <div className="flex items-center gap-2 mb-1.5 px-1">
+          <div
+            className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
+              boxShadow: '0 1px 4px rgba(17,125,255,0.35)',
+            }}
+          >
+            <Brain size={12} className="text-white" />
           </div>
-          <span className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-[0.06em]">HIVE</span>
+          <span className="text-[10px] font-semibold text-[#117dff] uppercase tracking-[0.08em] font-['Space_Grotesk']">HIVE</span>
           {msg.model && (
-            <span className="text-[10px] font-mono text-[#c4c1bb] truncate">· {msg.model}</span>
+            <span className="text-[10px] text-[#c4c1bb] font-mono truncate">· {msg.model}</span>
           )}
         </div>
-        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed text-[#0a0a0a] break-words shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        {/* Bubble */}
+        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-sm px-4 py-3.5 text-[13px] leading-relaxed text-[#0a0a0a] break-words shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
           {/* Tool timeline rendered ABOVE the answer — matches chrome
               extension treatment where the agent's tool calls are visible
               before the synthesized reply. */}
@@ -622,49 +638,81 @@ function AgentSteps({ steps }) {
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState() {
+// Suggestion chips wire directly to the existing setInput setter and optionally
+// focus the composer textarea via textareaRef. No new send/fetch logic.
+const SUGGESTION_CHIPS = [
+  { icon: Zap, label: 'What have I been working on lately?' },
+  { icon: Brain, label: 'Summarize my recent decisions' },
+  { icon: Sparkles, label: 'What are my key preferences?' },
+  { icon: MessageSquare, label: 'Show my latest saved memories' },
+];
+
+function EmptyState({ setInput, textareaRef }) {
+  const handleChip = (label) => {
+    setInput(label);
+    // Focus the textarea so the user can edit or immediately send
+    setTimeout(() => textareaRef?.current?.focus(), 0);
+  };
+
   return (
     <motion.div
       variants={fadeUp}
       initial="hidden"
       animate="visible"
-      className="flex flex-col items-center justify-center h-full gap-5 px-6 text-center"
+      className="flex flex-col items-center justify-center h-full gap-6 px-6 text-center"
     >
-      <div className="w-14 h-14 rounded-2xl bg-[#117dff]/[0.07] border border-[#117dff]/10 flex items-center justify-center">
-        <MessageSquare size={24} className="text-[#117dff]" />
+      {/* Hero glyph with radial glow */}
+      <div className="relative flex items-center justify-center">
+        <div
+          className="absolute w-24 h-24 rounded-full opacity-30"
+          style={{
+            background: 'radial-gradient(circle, rgba(17,125,255,0.45) 0%, transparent 70%)',
+            filter: 'blur(12px)',
+          }}
+        />
+        <div
+          className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
+            boxShadow: '0 4px 20px rgba(17,125,255,0.35)',
+          }}
+        >
+          <Brain size={28} className="text-white" />
+        </div>
       </div>
-      <div>
-        <p className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk'] mb-1.5">
+
+      {/* Copy */}
+      <div className="space-y-2">
+        <p className="text-[#0a0a0a] text-[17px] font-bold font-['Space_Grotesk'] leading-tight tracking-tight">
           Talk to HIVE
         </p>
-        <p className="text-[#a3a3a3] text-[13px] leading-relaxed max-w-xs">
-          Ask anything about your memories. HIVE answers like your second brain, not a search dump.
+        <p className="text-[#a3a3a3] text-[13px] leading-relaxed max-w-[260px]">
+          Your second brain — ask anything, get answers from your own memories.
         </p>
       </div>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {[
-          'What have I been working on lately?',
-          'Summarize my recent decisions',
-          'What are my key preferences?',
-        ].map((prompt) => (
-          <span
-            key={prompt}
-            className="px-3 py-1.5 rounded-full text-[11px] text-[#525252] bg-white border border-[#e3e0db] font-mono cursor-default hover:border-[#117dff]/30 hover:text-[#117dff] transition-colors"
+
+      {/* Suggestion chips — each onClick wires to setInput (existing setter) */}
+      <div className="w-full space-y-2">
+        {SUGGESTION_CHIPS.map(({ icon: Icon, label }) => (
+          <button
+            key={label}
+            onClick={() => handleChip(label)}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12.5px] text-[#525252] bg-white border border-[#e3e0db] font-['Space_Grotesk'] hover:border-[#117dff]/50 hover:text-[#117dff] hover:bg-[#117dff]/[0.03] transition-all text-left group"
           >
-            {prompt}
-          </span>
+            <Icon size={14} className="text-[#117dff]/60 group-hover:text-[#117dff] flex-shrink-0 transition-colors" />
+            <span className="truncate">{label}</span>
+            <ChevronRight size={12} className="ml-auto text-[#e3e0db] group-hover:text-[#117dff]/50 flex-shrink-0 transition-colors" />
+          </button>
         ))}
       </div>
 
       {/* QR pairing — scan to use HIVEMIND on mobile (same memory) */}
-      <div
-        className="mt-4 flex items-center gap-3 p-3.5 rounded-xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-transparent max-w-[360px]"
-      >
+      <div className="w-full flex items-center gap-3 p-3.5 rounded-xl border border-[#117dff]/20 bg-gradient-to-br from-[#117dff]/[0.04] to-transparent">
         <div className="flex-1 text-left min-w-0">
-          <div className="text-[13px] font-semibold text-[#0a0a0a] leading-tight">
+          <div className="text-[12.5px] font-semibold text-[#0a0a0a] leading-tight">
             Use on your phone
           </div>
-          <div className="text-[11.5px] text-[#a3a3a3] leading-snug mt-1">
+          <div className="text-[11px] text-[#a3a3a3] leading-snug mt-1">
             Scan to open Talk to HIVE on mobile — same memory, save from anywhere.
           </div>
           <div className="text-[9.5px] text-[#117dff]/70 font-mono mt-1.5 break-all">
@@ -708,15 +756,15 @@ function ModelSelector({ selectedId, onSelect }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#faf9f4] transition-colors text-[12px] text-[#525252] font-['Space_Grotesk']"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#e3e0db] bg-[#faf9f4] hover:bg-white hover:border-[#117dff]/30 transition-all text-[11.5px] text-[#525252] font-['Space_Grotesk']"
       >
-        <span className="truncate max-w-[120px]">{selected.label}</span>
+        <span className="truncate max-w-[100px]">{selected.label}</span>
         {selected.tag && (
-          <span className="text-[9px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
+          <span className="text-[9px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded-full">
             {selected.tag}
           </span>
         )}
-        <ChevronDown size={13} className={`text-[#a3a3a3] transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`text-[#a3a3a3] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -725,7 +773,7 @@ function ModelSelector({ selectedId, onSelect }) {
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.15 } }}
             exit={{ opacity: 0, y: -4, scale: 0.97, transition: { duration: 0.1 } }}
-            className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] z-[60] overflow-hidden py-1"
+            className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-[60] overflow-hidden py-1"
           >
             <div className="px-3 py-1.5">
               <span className="text-[9px] font-mono text-[#a3a3a3] uppercase tracking-[0.08em]">Groq (Free)</span>
@@ -740,7 +788,7 @@ function ModelSelector({ selectedId, onSelect }) {
               >
                 <span>{m.label}</span>
                 {m.tag && (
-                  <span className="text-[9px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
+                  <span className="text-[9px] font-mono uppercase tracking-wider bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded-full">
                     {m.tag}
                   </span>
                 )}
@@ -773,6 +821,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
+  const [composerFocused, setComposerFocused] = useState(false);
 
   // Persist on every messages change (debounced via rAF to coalesce rapid bursts).
   useEffect(() => {
@@ -957,18 +1006,25 @@ export function ChatPanel({ isOpen, onClose }) {
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
 
+  // Composer ring color driven by focus + over-limit state
+  const composerRing = overLimit
+    ? 'border-[#ef4444] shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
+    : composerFocused
+      ? 'border-[#117dff] shadow-[0_0_0_3px_rgba(17,125,255,0.12)]'
+      : 'border-[#e3e0db] shadow-none';
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Dark overlay */}
+          {/* Soft blurred scrim */}
           <motion.div
             key="chat-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/30 z-40"
+            transition={{ duration: 0.22 }}
+            className="fixed inset-0 z-40 bg-[#1a1814]/40 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -979,49 +1035,80 @@ export function ChatPanel({ isOpen, onClose }) {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed top-0 right-0 h-screen w-[420px] z-50 flex flex-col bg-[#faf9f4] shadow-[−8px_0_32px_rgba(0,0,0,0.12)] font-['Space_Grotesk']"
+            className="fixed top-0 right-0 h-screen w-[440px] max-w-full z-50 flex flex-col bg-[#faf9f4] font-['Space_Grotesk']"
+            style={{
+              boxShadow: '-4px 0 40px rgba(0,0,0,0.14), -1px 0 0 rgba(17,125,255,0.06)',
+              borderLeft: '1px solid rgba(227,224,219,0.8)',
+            }}
           >
+            {/* ── Left-edge blue accent line ── */}
+            <div
+              className="absolute top-0 left-0 w-[3px] h-full rounded-l-none pointer-events-none z-10"
+              style={{
+                background: 'linear-gradient(180deg, #117dff 0%, rgba(17,125,255,0.3) 60%, transparent 100%)',
+                opacity: 0.6,
+              }}
+            />
+
             {/* ── Header ── */}
             <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 bg-white border-b border-[#e3e0db] shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#117dff]/[0.07] border border-[#117dff]/10 flex items-center justify-center">
-                  <Brain size={16} className="text-[#117dff]" />
+              {/* Left: HIVE badge + title + scope */}
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Gradient HIVE badge */}
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
+                    boxShadow: '0 2px 10px rgba(17,125,255,0.30)',
+                  }}
+                >
+                  <Brain size={17} className="text-white" />
                 </div>
-                <div>
-                  <h2 className="text-[#0a0a0a] text-[15px] font-semibold leading-tight">Talk to HIVE</h2>
-                  <p className="text-[#a3a3a3] text-[10px] font-mono leading-tight">
-                    {activeProject
-                      ? <>scope · <span className="text-[#117dff]">{activeProject.name}</span></>
-                      : 'scope · org default'}
-                  </p>
+                <div className="min-w-0">
+                  <h2 className="text-[#0a0a0a] text-[14px] font-bold leading-tight tracking-tight">Talk to HIVE</h2>
+                  {/* Scope pill */}
+                  <div className="mt-0.5">
+                    {activeProject ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#117dff]/10 border border-[#117dff]/15 text-[10px] font-semibold text-[#117dff] leading-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#117dff] opacity-70" />
+                        {activeProject.name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f3f1ec] border border-[#e3e0db] text-[10px] text-[#a3a3a3] font-medium leading-none">
+                        org default
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Right: model selector + actions */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <ModelSelector selectedId={selectedModel} onSelect={setSelectedModel} />
                 {messages.length > 0 && (
                   <button
                     onClick={handleClear}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a3a3a3] hover:text-[#ef4444] hover:bg-[#f3f1ec] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c4c1bb] hover:text-[#ef4444] hover:bg-[#fef2f2] transition-colors"
                     aria-label="Clear chat history"
                     title="Clear chat history"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={14} />
                   </button>
                 )}
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c4c1bb] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"
                   aria-label="Close chat"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
             </div>
 
             {/* ── Messages ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
               {messages.length === 0 ? (
-                <EmptyState />
+                <EmptyState setInput={setInput} textareaRef={textareaRef} />
               ) : (
                 <>
                   {messages.map((msg) => (
@@ -1034,14 +1121,21 @@ export function ChatPanel({ isOpen, onClose }) {
                       animate="visible"
                       className="flex justify-start"
                     >
-                      <div className="max-w-[80%]">
-                        <div className="flex items-center gap-1.5 mb-1.5 px-1">
-                          <div className="w-5 h-5 rounded-full bg-[#117dff]/10 flex items-center justify-center">
-                            <Brain size={11} className="text-[#117dff]" />
+                      <div className="max-w-[84%]">
+                        {/* Typing label row */}
+                        <div className="flex items-center gap-2 mb-1.5 px-1">
+                          <div
+                            className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
+                              boxShadow: '0 1px 4px rgba(17,125,255,0.35)',
+                            }}
+                          >
+                            <Brain size={12} className="text-white" />
                           </div>
-                          <span className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-[0.06em]">HIVE</span>
+                          <span className="text-[10px] font-semibold text-[#117dff] uppercase tracking-[0.08em]">HIVE</span>
                         </div>
-                        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-sm shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
                           <TypingDots />
                         </div>
                       </div>
@@ -1052,11 +1146,11 @@ export function ChatPanel({ isOpen, onClose }) {
               <div ref={bottomRef} />
             </div>
 
-            {/* ── Input Bar ── */}
+            {/* ── Composer ── */}
             <div className="flex-shrink-0 px-4 py-4 bg-white border-t border-[#e3e0db]">
               {/* Active upload rows — image → Groq vision pipeline; doc → docling */}
               {uploads.length > 0 && (
-                <div className="mb-2 space-y-1.5">
+                <div className="mb-2.5 space-y-1.5">
                   {uploads.map((u) => (
                     <div
                       key={u.id}
@@ -1086,20 +1180,18 @@ export function ChatPanel({ isOpen, onClose }) {
                   ))}
                 </div>
               )}
+
+              {/* Floating composer card with focus glow */}
               <div
-                className={`flex items-end gap-3 rounded-2xl border bg-[#faf9f4] px-4 py-3 transition-colors ${
-                  overLimit
-                    ? 'border-[#ef4444]/40 focus-within:border-[#ef4444]'
-                    : 'border-[#e3e0db] focus-within:border-[#117dff]/40'
-                }`}
+                className={`flex items-end gap-2.5 rounded-2xl border bg-[#faf9f4] px-3.5 py-3 transition-all duration-150 ${composerRing}`}
               >
                 <button
                   onClick={onPickFiles}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#117dff] hover:bg-white border border-[#e3e0db] transition-colors flex-shrink-0"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#117dff] hover:bg-white border border-transparent hover:border-[#e3e0db] transition-all flex-shrink-0 mb-0.5"
                   title="Upload image or document"
                   aria-label="Upload"
                 >
-                  <Paperclip size={14} />
+                  <Paperclip size={13} />
                 </button>
                 <input
                   ref={fileInputRef}
@@ -1114,6 +1206,8 @@ export function ChatPanel({ isOpen, onClose }) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => setComposerFocused(true)}
+                  onBlur={() => setComposerFocused(false)}
                   placeholder="Ask HIVE anything..."
                   rows={1}
                   className="flex-1 bg-transparent resize-none outline-none text-[13px] text-[#0a0a0a] placeholder-[#c4c1bb] leading-relaxed min-h-[22px] max-h-[160px] font-['Space_Grotesk']"
@@ -1121,7 +1215,7 @@ export function ChatPanel({ isOpen, onClose }) {
                 <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
                   {charCount > 0 && (
                     <span
-                      className={`text-[10px] font-mono tabular-nums ${
+                      className={`text-[10px] font-mono tabular-nums transition-colors ${
                         overLimit ? 'text-[#ef4444]' : 'text-[#c4c1bb]'
                       }`}
                     >
@@ -1131,18 +1225,25 @@ export function ChatPanel({ isOpen, onClose }) {
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || loading || overLimit}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all bg-[#117dff] text-white hover:bg-[#0066e0] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#117dff]"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{
+                      background: (!input.trim() || loading || overLimit)
+                        ? undefined
+                        : 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
+                      backgroundColor: (!input.trim() || loading || overLimit) ? '#117dff' : undefined,
+                      boxShadow: (!input.trim() || loading || overLimit) ? 'none' : '0 2px 8px rgba(17,125,255,0.35)',
+                    }}
                   >
                     {loading ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={14} className="animate-spin text-white" />
                     ) : (
-                      <Send size={14} />
+                      <Send size={13} className="text-white" />
                     )}
                   </button>
                 </div>
               </div>
-              <p className="text-[10px] text-[#c4c1bb] mt-2 text-center font-mono">
-                Enter to send · Shift+Enter for newline · Esc to close
+              <p className="text-[10px] text-[#c4c1bb]/80 mt-2 text-center font-mono tracking-wide">
+                Enter · send &nbsp;·&nbsp; Shift+Enter · newline &nbsp;·&nbsp; Esc · close
               </p>
             </div>
           </motion.div>
