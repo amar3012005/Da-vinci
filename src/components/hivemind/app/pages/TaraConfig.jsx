@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
+import CartesiaVoiceWidget from '../../CartesiaVoiceWidget';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -540,6 +541,11 @@ export default function TaraConfig() {
             <AlertTriangle size={14} /> Save failed
           </span>
         )}
+      </motion.div>
+
+      {/* Talk to TARA — real-time voice via Cartesia agent */}
+      <motion.div variants={fadeUp}>
+        <CartesiaVoiceWidget />
       </motion.div>
 
       {/* Config Editor */}
