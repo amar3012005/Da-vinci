@@ -700,6 +700,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const highlightedNodesRef = useRef(new Set());
   const highlightedLinksRef = useRef(new Set());
   const animationFrameRef = useRef(null);
+  const warmFrameRef = useRef(null);
   const graphDataRef = useRef(graphData);
   const nodeMapRef = useRef(new Map());
   const neighborMapRef = useRef(new Map());
@@ -1419,10 +1420,42 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     resizeObserverRef.current = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      fg.width(entry.contentRect.width);
-      fg.height(entry.contentRect.height);
+      const { width: cw, height: ch } = entry.contentRect;
+      // Ignore 0-sized callbacks (container not laid out yet on SPA mount).
+      // Setting a 0x0 WebGL viewport blanks the canvas until a manual refresh.
+      if (cw <= 0 || ch <= 0) return;
+      fg.width(cw);
+      fg.height(ch);
     });
     resizeObserverRef.current.observe(containerRef.current);
+
+    // Warm the canvas across the next few frames. On SPA navigation the
+    // container can report 0x0 for a frame or two before layout settles —
+    // re-measure until it has real dimensions so the graph paints on first
+    // entry without needing a manual page refresh.
+    let warmFrames = 0;
+    const warm = () => {
+      const el = containerRef.current;
+      const inst = fgRef.current;
+      if (!el || !inst) return;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        inst.width(w);
+        inst.height(h);
+      }
+      warmFrames += 1;
+      if (warmFrames < 8) {
+        warmFrameRef.current = window.requestAnimationFrame(warm);
+      } else {
+        try {
+          inst.d3ReheatSimulation?.();
+        } catch (_e) {
+          // noop
+        }
+      }
+    };
+    warmFrameRef.current = window.requestAnimationFrame(warm);
 
     return () => {
       const activeControls = fg.controls?.();
@@ -1437,6 +1470,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (resumeFrameRef.current != null) {
         window.cancelAnimationFrame(resumeFrameRef.current);
         resumeFrameRef.current = null;
+      }
+      if (warmFrameRef.current != null) {
+        window.cancelAnimationFrame(warmFrameRef.current);
+        warmFrameRef.current = null;
       }
       resizeObserverRef.current?.disconnect?.();
       resizeObserverRef.current = null;

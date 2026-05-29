@@ -412,6 +412,69 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
 }
 
 /* ─── Main Page ──────────────────────────────────────────────────── */
+/**
+ * GraphTqdmBar — tqdm-style determinate progress bar for the graph loader.
+ * Animates an eased fill toward ~94% while the fetch is in flight (the real
+ * completion unmounts the loader). Renders a monospace block-char bar like
+ * `memory-graph ████████░░░░ 62%` to match the tqdm aesthetic.
+ */
+function GraphTqdmBar({ dark, done }) {
+  const [pct, setPct] = useState(6);
+
+  useEffect(() => {
+    if (done) {
+      setPct(100);
+      return undefined;
+    }
+    let raf;
+    let start = null;
+    const dur = 4200;
+    const tick = (t) => {
+      if (start === null) start = t;
+      const e = Math.min((t - start) / dur, 1);
+      // ease-out, asymptote ~94% so it never "finishes" before data lands
+      setPct(6 + (94 - 6) * (1 - Math.pow(1 - e, 2.4)));
+      if (e < 1) raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [done]);
+
+  const WIDTH = 24;
+  const filled = Math.max(0, Math.min(WIDTH, Math.round((pct / 100) * WIDTH)));
+  const barFull = "█".repeat(filled);
+  const barRest = "░".repeat(WIDTH - filled);
+  const rounded = Math.floor(pct);
+
+  return (
+    <div className="w-[320px] max-w-[78vw] font-mono select-none">
+      <div
+        className={`flex items-center justify-between text-[11px] mb-1.5 ${
+          dark ? "text-[#b8aea4]" : "text-[#8b857d]"
+        }`}
+      >
+        <span>memory-graph</span>
+        <span className="tabular-nums">{rounded}%</span>
+      </div>
+      <div
+        className="text-[13px] leading-none tracking-tight whitespace-nowrap overflow-hidden"
+        style={{ animation: "hm-tqdm-shimmer 1.6s ease-in-out infinite" }}
+      >
+        <span className={dark ? "text-[#ff8f86]" : "text-[#0a0a0a]"}>{barFull}</span>
+        <span className={dark ? "text-[#3a322e]" : "text-[#d8d3cb]"}>{barRest}</span>
+      </div>
+      <div
+        className={`flex items-center justify-between text-[10px] mt-1.5 ${
+          dark ? "text-[#7c736a]" : "text-[#a39d94]"
+        }`}
+      >
+        <span>resolving nodes · relations</span>
+        <span className="tabular-nums">{rounded}/100</span>
+      </div>
+    </div>
+  );
+}
+
 export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
@@ -670,6 +733,17 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   useEffect(() => {
     fetchGraph();
   }, [fetchGraph]);
+
+  // Warm on entry. The 3D canvas can mount before the layout settles, which
+  // historically left the graph blank until the user hit refresh manually.
+  // Fire one deferred re-fetch shortly after mount so the graph reliably
+  // paints (and the WebGL viewport re-measures) on first visit.
+  useEffect(() => {
+    const t = window.setTimeout(() => fetchGraph(), 650);
+    return () => window.clearTimeout(t);
+    // mount-only warm — fetchGraph identity is stable enough for this nudge
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const refreshIfVisible = () => {
@@ -1117,95 +1191,22 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   : "0 24px 60px rgba(37,32,27,0.12)",
               }}
             >
-              <div className="relative w-[88px] h-[88px]">
-                <div
-                  className={`absolute inset-0 rounded-full ${
-                    graphTheme === "night"
-                      ? "bg-[radial-gradient(circle_at_35%_35%,rgba(255,238,222,0.82),rgba(255,91,88,0.68)_42%,rgba(118,33,28,0.18)_74%,transparent_100%)]"
-                      : "bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.94),rgba(72,66,59,0.34)_48%,rgba(72,66,59,0.08)_76%,transparent_100%)]"
-                  }`}
-                  style={{ animation: "hm-pulse 2.1s ease-in-out infinite" }}
-                />
-                <div
-                  className="absolute left-[14px] top-[24px] w-[60px] h-px origin-left"
-                  style={{
-                    background: graphTheme === "night"
-                      ? "linear-gradient(90deg, rgba(255,120,111,0.88), rgba(255,231,214,0.32))"
-                      : "linear-gradient(90deg, rgba(10,10,10,0.78), rgba(10,10,10,0.22))",
-                    transform: "rotate(24deg)",
-                  }}
-                />
-                <div
-                  className="absolute left-[18px] top-[26px] w-[44px] h-px origin-left"
-                  style={{
-                    background: graphTheme === "night"
-                      ? "linear-gradient(90deg, rgba(255,231,214,0.74), rgba(255,120,111,0.16))"
-                      : "linear-gradient(90deg, rgba(10,10,10,0.58), rgba(10,10,10,0.14))",
-                    transform: "rotate(-38deg)",
-                  }}
-                />
-                <div
-                  className={`absolute left-[13px] top-[48px] w-3 h-3 rounded-full ${
-                    graphTheme === "night" ? "bg-[#ff6d67]" : "bg-[#1f1d1a]"
-                  }`}
-                  style={{ animation: "hm-float-a 1.8s ease-in-out infinite" }}
-                />
-                <div
-                  className={`absolute left-[42px] top-[18px] w-4 h-4 rounded-full ${
-                    graphTheme === "night" ? "bg-[#fff0e5]" : "bg-[#8b857d]"
-                  }`}
-                  style={{ animation: "hm-float-b 2s ease-in-out infinite" }}
-                />
-                <div
-                  className={`absolute left-[56px] top-[54px] w-2.5 h-2.5 rounded-full ${
-                    graphTheme === "night" ? "bg-[#d4c3b5]" : "bg-[#53504a]"
-                  }`}
-                  style={{ animation: "hm-float-c 1.65s ease-in-out infinite" }}
-                />
-                <div
-                  className={`absolute inset-[8px] rounded-full border ${
-                    graphTheme === "night"
-                      ? "border-[#ff8f86]/28"
-                      : "border-[#0a0a0a]/14"
-                  }`}
-                  style={{ animation: "hm-spin 4.4s linear infinite" }}
-                />
+              <div
+                className={`text-[13px] font-bold font-['Space_Grotesk'] tracking-tight ${
+                  graphTheme === "night" ? "text-[#fff1e6]" : "text-[#0a0a0a]"
+                }`}
+              >
+                {graphData.nodes.length === 0 ? "Loading memory graph" : "Refreshing graph"}
               </div>
-              <div className="text-center">
-                <div
-                  className={`text-[13px] font-bold font-['Space_Grotesk'] tracking-tight ${
-                    graphTheme === "night" ? "text-[#fff1e6]" : "text-[#0a0a0a]"
-                  }`}
-                >
-                  {graphData.nodes.length === 0 ? "Loading memory graph" : "Refreshing graph"}
-                </div>
-                <div
-                  className={`text-[10.5px] font-mono mt-0.5 uppercase tracking-[0.16em] ${
-                    graphTheme === "night" ? "text-[#b8aea4]" : "text-[#8b857d]"
-                  }`}
-                >
-                  resolving nodes and relations
-                </div>
-              </div>
+              <GraphTqdmBar
+                dark={graphTheme === "night"}
+                done={graphData.nodes.length > 0}
+              />
               <style>{`
-                @keyframes hm-pulse {
-                  0%, 100% { transform: scale(1); opacity: 0.92; }
-                  50% { transform: scale(1.06); opacity: 1; }
-                }
-                @keyframes hm-spin {
-                  to { transform: rotate(360deg); }
-                }
-                @keyframes hm-float-a {
-                  0%, 100% { transform: translate3d(0, 0, 0); }
-                  50% { transform: translate3d(-2px, -4px, 0); }
-                }
-                @keyframes hm-float-b {
-                  0%, 100% { transform: translate3d(0, 0, 0); }
-                  50% { transform: translate3d(2px, 3px, 0); }
-                }
-                @keyframes hm-float-c {
-                  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.92; }
-                  50% { transform: translate3d(-1px, -3px, 0); opacity: 1; }
+                @keyframes hm-tqdm-shimmer {
+                  0% { opacity: 0.55; }
+                  50% { opacity: 1; }
+                  100% { opacity: 0.55; }
                 }
               `}</style>
             </div>
