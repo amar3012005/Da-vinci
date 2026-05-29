@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus, X, UserMinus } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus, X, UserMinus, Activity, Clock } from 'lucide-react';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
@@ -24,6 +24,7 @@ export default function TeamProjects() {
   const [inviteTarget, setInviteTarget] = useState(null);
   // Project-members modal target — { projectId, projectName } or null.
   const [membersTarget, setMembersTarget] = useState(null);
+  const [activityTarget, setActivityTarget] = useState(null);
 
   const fetchProjects = useCallback(async () => {
     if (!activeTeamId) return;
@@ -135,7 +136,12 @@ export default function TeamProjects() {
             p.policy === 'org_visible' ? 'text-blue-600' : 'text-amber-600';
           
           return (
-          <div key={p.id} className="bg-white border border-[#e3e0db] rounded-[8px] p-4 hover:border-[#d4d0ca] transition-colors">
+          <div
+            key={p.id}
+            onClick={() => setActivityTarget({ projectId: p.id, projectName: p.name })}
+            className="bg-white border border-[#e3e0db] rounded-[8px] p-4 hover:border-[#d4d0ca] transition-colors cursor-pointer"
+            title="View project activity"
+          >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Folder size={16} className="text-[#117dff]" />
@@ -143,21 +149,21 @@ export default function TeamProjects() {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setMembersTarget({ projectId: p.id, projectName: p.name })}
+                  onClick={(e) => { e.stopPropagation(); setMembersTarget({ projectId: p.id, projectName: p.name }); }}
                   className="text-[#a3a3a3] hover:text-[#16a34a] transition-colors p-1"
                   title="Manage members + roles"
                 >
                   <Users size={13} />
                 </button>
                 <button
-                  onClick={() => setInviteTarget({ projectId: p.id, projectName: p.name })}
+                  onClick={(e) => { e.stopPropagation(); setInviteTarget({ projectId: p.id, projectName: p.name }); }}
                   className="text-[#a3a3a3] hover:text-[#117dff] transition-colors p-1"
                   title="Invite to this project"
                 >
                   <UserPlus size={13} />
                 </button>
                 <button
-                  onClick={() => handleArchive(p.id)}
+                  onClick={(e) => { e.stopPropagation(); handleArchive(p.id); }}
                   className="text-[#a3a3a3] hover:text-[#dc2626] transition-colors p-1"
                   title="Archive"
                 >
@@ -199,6 +205,14 @@ export default function TeamProjects() {
           projectId={membersTarget.projectId}
           projectName={membersTarget.projectName}
           onClose={() => setMembersTarget(null)}
+        />
+      )}
+
+      {activityTarget && (
+        <ProjectActivityModal
+          projectId={activityTarget.projectId}
+          projectName={activityTarget.projectName}
+          onClose={() => setActivityTarget(null)}
         />
       )}
 
@@ -385,6 +399,98 @@ function ProjectMembersModal({ projectId, projectName, onClose }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ProjectActivityModal — last activity, contributors, recent memories ────
+function ProjectActivityModal({ projectId, projectName, onClose }) {
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [err, setErr] = React.useState(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    apiClient.getProjectActivity(projectId)
+      .then(d => { if (alive) { setData(d); setLoading(false); } })
+      .catch(e => { if (alive) { setErr(e.response?.data?.error || e.message); setLoading(false); } });
+    return () => { alive = false; };
+  }, [projectId]);
+
+  const when = (t) => t ? new Date(t).toLocaleString() : '—';
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-[8px] w-[560px] max-h-[80vh] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e3e0db]">
+          <div className="flex items-center gap-2">
+            <Activity size={16} className="text-[#117dff]" />
+            <h2 className="text-[15px] font-semibold text-[#0a0a0a]">{projectName} · Activity</h2>
+          </div>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={16} /></button>
+        </div>
+        <div className="px-5 py-4 overflow-y-auto space-y-4">
+          {loading && <div className="text-[12px] text-[#a3a3a3]">Loading…</div>}
+          {err && <div className="text-[12px] text-red-600">{err}</div>}
+          {data && !loading && (
+            <>
+              <div className="text-[12px] text-[#525252]">
+                <span className="font-semibold text-[#0a0a0a]">{data.total_memories ?? 0}</span> memories in this project
+              </div>
+
+              {(data.contributors || []).length > 0 && (
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Contributors</div>
+                  <div className="border border-[#f3f1ec] rounded-[6px] divide-y divide-[#f3f1ec]">
+                    {data.contributors.map((c) => (
+                      <div key={c.user_id} className="flex items-center justify-between px-3 py-1.5 text-[12px]">
+                        <span className="text-[#0a0a0a]">{c.name}</span>
+                        <span className="font-mono text-[#a3a3a3] flex items-center gap-2">
+                          {c.memory_count} mem
+                          <span className="flex items-center gap-1"><Clock size={10} /> {when(c.last_activity)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.recent_memories || []).length > 0 && (
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Recent memories</div>
+                  <div className="border border-[#f3f1ec] rounded-[6px] divide-y divide-[#f3f1ec] max-h-[200px] overflow-y-auto">
+                    {data.recent_memories.map((m) => (
+                      <div key={m.id} className="px-3 py-1.5 text-[12px]">
+                        <div className="text-[#0a0a0a] truncate">{m.title || '(untitled)'}</div>
+                        <div className="text-[10px] text-[#a3a3a3] font-mono">{m.by} · {m.type} · {when(m.at)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.audit || []).length > 0 && (
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Admin events</div>
+                  <div className="border border-[#f3f1ec] rounded-[6px] divide-y divide-[#f3f1ec]">
+                    {data.audit.map((a, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-1.5 text-[11px]">
+                        <span className="text-[#525252]">{a.event} · {a.by}</span>
+                        <span className="font-mono text-[#a3a3a3]">{when(a.at)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(data.total_memories ?? 0) === 0 && (data.audit || []).length === 0 && (
+                <div className="text-[12px] text-[#a3a3a3]">No activity yet in this project.</div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

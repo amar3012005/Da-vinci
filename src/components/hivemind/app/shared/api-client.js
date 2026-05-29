@@ -343,6 +343,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getProjectActivity(projectId) {
+    const { data } = await this.controlPlane.get(`/v1/projects/${projectId}/activity`);
+    return data;
+  }
+
   async updateProjectV2(projectId, payload) {
     const { data } = await this.controlPlane.patch(`/v1/projects/${projectId}`, payload);
     return data;
