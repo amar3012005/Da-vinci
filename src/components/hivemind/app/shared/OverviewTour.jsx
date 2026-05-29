@@ -20,6 +20,7 @@ import {
   Hexagon,
   Key,
   LayoutDashboard,
+  MessageSquare,
   Mic,
   Network,
   Server,
@@ -62,6 +63,7 @@ const STEPS = [
   { to: '/hivemind/app/evaluation', icon: FlaskConical, title: 'Evaluation', desc: 'Run golden-case evals to gate quality before you ship changes.' },
   { to: '/hivemind/app/profile', icon: User, title: 'Profile', desc: 'Your account, identity and preferences.' },
   { to: '/hivemind/app/billing', icon: CreditCard, title: 'Billing', desc: 'Plans, usage and upgrades — unlock Pro limits and advanced connectors.' },
+  { to: 'talk-to-hive', icon: MessageSquare, title: 'Talk to HIVE', desc: 'Chat with your cortex from anywhere — ask questions, recall context, and let agents act on what they know.' },
 ];
 
 /** Gate: show once per (key, version). */
@@ -91,13 +93,68 @@ export function useOverviewTour() {
   return { open, close, reopen };
 }
 
-/** Build a smooth cubic-bezier path string from card anchor to a target point. */
-function buildPath(from, to) {
-  const dx = to.x - from.x;
-  // Pull control points horizontally for a clean S-hook toward the sidebar.
-  const c1 = { x: from.x + dx * 0.45, y: from.y };
-  const c2 = { x: to.x - dx * 0.35, y: to.y };
-  return `M ${from.x} ${from.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${to.x} ${to.y}`;
+/**
+ * Build an orthogonal (90°) connector with rounded corners through a list of
+ * right-angle points. Segments are axis-aligned; each bend is rounded with a
+ * quadratic arc clamped to the shorter adjacent segment.
+ */
+function roundedElbow(pts, radius = 14) {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const len1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    const len2 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const rr = Math.min(radius, len1 / 2, len2 / 2);
+    const v1x = Math.sign(p1.x - p0.x);
+    const v1y = Math.sign(p1.y - p0.y);
+    const v2x = Math.sign(p2.x - p1.x);
+    const v2y = Math.sign(p2.y - p1.y);
+    const a = { x: p1.x - v1x * rr, y: p1.y - v1y * rr };
+    const b = { x: p1.x + v2x * rr, y: p1.y + v2y * rr };
+    d += ` L ${a.x} ${a.y} Q ${p1.x} ${p1.y} ${b.x} ${b.y}`;
+  }
+  const last = pts[pts.length - 1];
+  d += ` L ${last.x} ${last.y}`;
+  return d;
+}
+
+/**
+ * Route a horizontal-vertical-horizontal (90°) elbow from the card anchor to a
+ * target tip. A short vertical channel sits just card-side of the target so the
+ * arrow always approaches the target horizontally. Works for targets on either
+ * side of the card.
+ */
+function elbowPath(from, to) {
+  const dir = Math.sign(from.x - to.x) || 1; // +1 target on left, -1 on right
+  const channelX = to.x + 26 * dir;
+  return roundedElbow([
+    { x: from.x, y: from.y },
+    { x: channelX, y: from.y },
+    { x: channelX, y: to.y },
+    { x: to.x, y: to.y },
+  ]);
+}
+
+/**
+ * Compute the connector endpoints between the card and a target rect. Picks the
+ * card edge (left/right) facing the target and the target edge facing the card.
+ */
+function geomFor(cardRect, rect) {
+  const cardCenterX = cardRect.left + cardRect.width / 2;
+  const cardCenterY = cardRect.top + cardRect.height / 2;
+  const itemCenterX = rect.left + rect.width / 2;
+  const itemCenterY = rect.top + rect.height / 2;
+  const onLeft = itemCenterX < cardCenterX;
+  const from = onLeft
+    ? { x: cardRect.left + 8, y: cardCenterY }
+    : { x: cardRect.left + cardRect.width - 8, y: cardCenterY };
+  const to = onLeft
+    ? { x: rect.right + 6, y: itemCenterY }
+    : { x: rect.left - 6, y: itemCenterY };
+  return { from, to };
 }
 
 export default function OverviewTour({ onClose }) {
@@ -180,31 +237,65 @@ export default function OverviewTour({ onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev, onClose]);
 
-  // Card anchor point = left-center of the card (arrows fan out to the left).
-  const cardAnchor = cardRect
-    ? { x: cardRect.left + 8, y: cardRect.top + cardRect.height / 2 }
+  const activeTarget = targets.find((t) => t.to === step.to) || null;
+
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+
+  // Spotlight hole around the active target so it stays crisp (un-blurred)
+  // while everything else is glass. Four panels carry the blur + tint around
+  // the clear rectangle.
+  const PAD = 6;
+  const hole = activeTarget
+    ? {
+        x: Math.max(0, activeTarget.rect.left - PAD),
+        y: Math.max(0, activeTarget.rect.top - PAD),
+        w: activeTarget.rect.width + PAD * 2,
+        h: activeTarget.rect.height + PAD * 2,
+      }
     : null;
 
-  const activeTarget = targets.find((t) => t.to === step.to) || null;
+  const GLASS = {
+    background: 'rgba(26,24,20,0.30)',
+    backdropFilter: 'blur(7px) saturate(120%)',
+    WebkitBackdropFilter: 'blur(7px) saturate(120%)',
+  };
+
+  const panels = hole
+    ? [
+        { key: 't', left: 0, top: 0, width: vw, height: hole.y },
+        { key: 'b', left: 0, top: hole.y + hole.h, width: vw, height: Math.max(0, vh - (hole.y + hole.h)) },
+        { key: 'l', left: 0, top: hole.y, width: hole.x, height: hole.h },
+        { key: 'r', left: hole.x + hole.w, top: hole.y, width: Math.max(0, vw - (hole.x + hole.w)), height: hole.h },
+      ]
+    : [];
 
   return (
     <div className="fixed inset-0 z-[130]">
-      {/* Glass-morphism backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(1200px 800px at 18% 40%, rgba(17,125,255,0.10), rgba(26,24,20,0.32) 60%, rgba(26,24,20,0.5))',
-          backdropFilter: 'blur(7px) saturate(120%)',
-          WebkitBackdropFilter: 'blur(7px) saturate(120%)',
-        }}
-      />
+      {/* Glass-morphism backdrop with a crisp spotlight cutout */}
+      {hole ? (
+        panels.map((p) => (
+          <motion.div
+            key={p.key}
+            className="absolute"
+            initial={false}
+            animate={{ left: p.left, top: p.top, width: p.width, height: p.height }}
+            transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+            style={GLASS}
+          />
+        ))
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0"
+          style={GLASS}
+        />
+      )}
 
       {/* SVG connector overlay */}
-      {cardAnchor && (
+      {cardRect && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
           <defs>
             <marker
@@ -216,10 +307,10 @@ export default function OverviewTour({ onClose }) {
               markerHeight="7"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#117dff" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" />
             </marker>
             <filter id="ovt-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3.4" result="b" />
+              <feGaussianBlur stdDeviation="3" result="b" />
               <feMerge>
                 <feMergeNode in="b" />
                 <feMergeNode in="SourceGraphic" />
@@ -227,52 +318,58 @@ export default function OverviewTour({ onClose }) {
             </filter>
           </defs>
 
-          {/* Faint connectors to every sidebar item */}
-          {targets.map((t) => (
-            <path
-              key={t.to}
-              d={buildPath(cardAnchor, t)}
-              fill="none"
-              stroke="rgba(255,255,255,0.16)"
-              strokeWidth="1"
-              strokeDasharray="3 5"
-            />
-          ))}
+          {/* Faint connectors to every target */}
+          {targets.map((t) => {
+            const { from, to } = geomFor(cardRect, t.rect);
+            return (
+              <path
+                key={t.to}
+                d={elbowPath(from, to)}
+                fill="none"
+                stroke="rgba(255,255,255,0.22)"
+                strokeWidth="1"
+                strokeDasharray="3 5"
+              />
+            );
+          })}
 
-          {/* Active connector — glows + animated draw + arrowhead */}
-          {activeTarget && (
-            <motion.path
-              key={`active-${step.to}`}
-              d={buildPath(cardAnchor, activeTarget)}
-              fill="none"
-              stroke="#117dff"
-              strokeWidth="2.25"
-              strokeLinecap="round"
-              markerEnd="url(#ovt-arrow)"
-              filter="url(#ovt-glow)"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            />
-          )}
+          {/* Active connector — white, glowing, animated draw + arrowhead */}
+          {activeTarget && (() => {
+            const { from, to } = geomFor(cardRect, activeTarget.rect);
+            return (
+              <motion.path
+                key={`active-${step.to}`}
+                d={elbowPath(from, to)}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                markerEnd="url(#ovt-arrow)"
+                filter="url(#ovt-glow)"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              />
+            );
+          })()}
 
-          {/* Spotlight ring on the active sidebar item */}
+          {/* Spotlight ring around the active target (white glow) */}
           {activeTarget && (
             <motion.rect
               key={`ring-${step.to}`}
-              x={activeTarget.rect.left - 4}
-              y={activeTarget.rect.top - 4}
-              width={activeTarget.rect.width + 8}
-              height={activeTarget.rect.height + 8}
+              x={activeTarget.rect.left - PAD}
+              y={activeTarget.rect.top - PAD}
+              width={activeTarget.rect.width + PAD * 2}
+              height={activeTarget.rect.height + PAD * 2}
               rx="10"
-              fill="rgba(17,125,255,0.10)"
-              stroke="#117dff"
-              strokeWidth="1.6"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="1.8"
               filter="url(#ovt-glow)"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
             />
           )}
         </svg>
