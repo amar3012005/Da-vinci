@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2,
+  AlertTriangle, Loader2, Trash2, Eraser,
   Network, Shield, Crown, Lightbulb, MessageCircle,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -69,6 +69,17 @@ export default function HyperAgents() {
   }, [activeRoomId]);
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
+
+  const handleDeleteRoom = useCallback(async (room) => {
+    if (!window.confirm(`Permanently delete #${room.name}? This removes the room and all its discussion. Cannot be undone.`)) return;
+    try {
+      await apiClient.deleteHyperRoom(room.id);
+      setRooms(prev => prev.filter(r => r.id !== room.id));
+      setActiveRoomId(prev => (prev === room.id ? null : prev));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }, []);
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
@@ -143,6 +154,7 @@ export default function HyperAgents() {
               room={r}
               active={r.id === activeRoomId}
               onClick={() => setActiveRoomId(r.id)}
+              onDelete={handleDeleteRoom}
             />
           ))}
           {archivedRooms.length > 0 && (
@@ -157,6 +169,7 @@ export default function HyperAgents() {
                     room={r}
                     active={r.id === activeRoomId}
                     onClick={() => setActiveRoomId(r.id)}
+                    onDelete={handleDeleteRoom}
                     archived
                   />
                 ))}
@@ -234,12 +247,15 @@ export default function HyperAgents() {
 
 /* ─── Room row in the left rail ──────────────────────────────────────── */
 
-function RoomRow({ room, active, onClick, archived }) {
+function RoomRow({ room, active, onClick, archived, onDelete }) {
   const participants = room.participants || [];
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
+      onKeyDown={(e) => { if (e.key === 'Enter') onClick?.(); }}
+      className={`group w-full text-left px-3 py-2 flex items-center gap-2 transition-colors cursor-pointer ${
         active ? 'bg-white border-l-2 border-violet-500' : 'hover:bg-white/60 border-l-2 border-transparent'
       } ${archived ? 'opacity-60' : ''}`}
     >
@@ -265,7 +281,17 @@ function RoomRow({ room, active, onClick, archived }) {
           )}
         </div>
       </div>
-    </button>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete(room); }}
+          className="opacity-0 group-hover:opacity-100 text-[#a3a3a3] hover:text-red-500 shrink-0 transition-opacity p-1"
+          title="Delete room permanently"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -391,6 +417,18 @@ function RoomThread({ roomId, onArchived, onBack }) {
     }
   }
 
+  async function handleClearDiscussion() {
+    if (!window.confirm(`Clear the entire discussion in #${room?.name}? Every turn and all agent activity will be deleted. The room itself stays. Cannot be undone.`)) return;
+    try {
+      await apiClient.clearHyperRoomTurns(roomId);
+      setActiveTurnId(null);
+      setLiveLines([]);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }
+
   async function handleParticipantsChange(participantIds) {
     try {
       const resp = await apiClient.updateHyperRoom(roomId, { participant_ids: participantIds });
@@ -447,6 +485,15 @@ function RoomThread({ roomId, onArchived, onBack }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {turns.length > 0 && (
+              <button
+                onClick={handleClearDiscussion}
+                className="p-1.5 text-[#a3a3a3] hover:text-red-600 rounded hover:bg-[#faf9f4]"
+                title="Clear discussion — delete all turns + agent activity (keeps the room)"
+              >
+                <Eraser size={13} />
+              </button>
+            )}
             {!archived && (
               <button
                 onClick={handleArchive}

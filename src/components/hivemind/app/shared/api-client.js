@@ -405,6 +405,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Permanent delete — removes the room and cascades its turns + activity.
+  async deleteHyperRoom(roomId) {
+    const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}?hard=true`);
+    return data;
+  }
+
+  // Clear the whole discussion (all turns / agent activity); keeps the room.
+  async clearHyperRoomTurns(roomId) {
+    const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}/turns`);
+    return data;
+  }
+
   async postHyperTurn(roomId, { user_message, idempotency_key }) {
     const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns`, {
       user_message, idempotency_key,
