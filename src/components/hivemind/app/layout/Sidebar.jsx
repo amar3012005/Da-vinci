@@ -189,6 +189,7 @@ export default function Sidebar() {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    data-tour-id={item.to}
                     className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
                     title={collapsed ? item.label : undefined}
                   >

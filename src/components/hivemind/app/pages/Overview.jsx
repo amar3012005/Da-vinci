@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -205,6 +206,8 @@ export default function Overview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const healthy = useHealthStatus(30000);
+  // First-visit guided tour — glass overlay + arrows to each sidebar page.
+  const tour = useOverviewTour();
 
   // Auto-redirect to the dedicated mobile chat page on phones. The full
   // Overview surface (graph stats, quick-actions grid, sidebar chrome) is
@@ -227,6 +230,22 @@ export default function Overview() {
     const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
     if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
   }, [navigate]);
+
+  // Post-login welcome email. Fires once the user reaches Overview after a
+  // successful login. Guarded to once per browser session so revisiting the
+  // page (or re-renders) won't re-send; the server also dedupes per session.
+  // Fire-and-forget — must never block or surface errors in the UI.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const FLAG = 'hm.welcomeEmailSent';
+    try {
+      if (window.sessionStorage.getItem(FLAG)) return;
+      window.sessionStorage.setItem(FLAG, '1');
+    } catch {
+      // sessionStorage blocked — fall through; server dedup still protects us.
+    }
+    apiClient.sendWelcomeEmail().catch(() => { /* silent: non-critical */ });
+  }, []);
 
   // Project scope from TeamSwitcher.
   const { activeProjectId } = useTeamContext() || {};
@@ -291,6 +310,11 @@ export default function Overview() {
 
   return (
     <div className="max-w-6xl mx-auto font-['Space_Grotesk']">
+      {/* First-visit guided tour */}
+      <AnimatePresence>
+        {tour.open && <OverviewTour onClose={tour.close} />}
+      </AnimatePresence>
+
       {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
