@@ -543,9 +543,15 @@ export default function TaraConfig() {
         )}
       </motion.div>
 
-      {/* Talk to TARA — real-time voice via Cartesia agent */}
+      {/* Talk to TARA — real-time voice via Cartesia agent. Token minted
+          server-side (key stays on the server); browser gets a 60s token. */}
       <motion.div variants={fadeUp}>
-        <CartesiaVoiceWidget />
+        <CartesiaVoiceWidget
+          getAccessToken={async () => {
+            const d = await apiClient.mintCartesiaToken();
+            return { token: d.token, agentId: d.agent_id };
+          }}
+        />
       </motion.div>
 
       {/* Config Editor */}

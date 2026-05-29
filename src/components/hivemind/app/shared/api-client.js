@@ -400,6 +400,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Mint a short-lived Cartesia agent access token (server holds the key).
+  async mintCartesiaToken() {
+    const { data } = await this.controlPlane.post('/v1/tara/cartesia-token', {});
+    return data;
+  }
+
   async archiveHyperRoom(roomId) {
     const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}`);
     return data;

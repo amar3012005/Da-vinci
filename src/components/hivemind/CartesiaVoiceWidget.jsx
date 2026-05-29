@@ -266,13 +266,19 @@ export default function CartesiaVoiceWidget({ agentId: propAgentId, accessToken:
 
   const startCall = useCallback(async () => {
     setError(null);
-    if (!resolved.agentId) { setError('No Cartesia agent id configured.'); return; }
     let token = resolved.accessToken;
+    let agentId = resolved.agentId;
     try {
-      if (typeof getAccessToken === 'function') token = await getAccessToken();
+      if (typeof getAccessToken === 'function') {
+        const r = await getAccessToken();
+        if (typeof r === 'string') token = r;
+        else if (r) { token = r.token || token; if (r.agentId) agentId = r.agentId; }
+      }
     } catch (e) {
-      setError('Could not fetch access token.'); return;
+      // Mint endpoint not configured yet — fall back to any env / window token.
+      console.warn('[cartesia] token mint failed, falling back to static config', e?.message);
     }
+    if (!agentId) { setError('No Cartesia agent id configured.'); return; }
     if (!token) { setError('No Cartesia access token yet — add it to start talking.'); return; }
 
     let stream;
@@ -293,7 +299,7 @@ export default function CartesiaVoiceWidget({ agentId: propAgentId, accessToken:
     playCtxRef.current = playCtx;
     lastPlayRef.current = playCtx.currentTime;
 
-    const url = new URL(`${CARTESIA_WS_BASE}/${encodeURIComponent(resolved.agentId)}`);
+    const url = new URL(`${CARTESIA_WS_BASE}/${encodeURIComponent(agentId)}`);
     url.searchParams.set('access_token', token);
     url.searchParams.set('cartesia_version', CARTESIA_VERSION);
     const ws = new WebSocket(url.toString());
@@ -399,7 +405,7 @@ export default function CartesiaVoiceWidget({ agentId: propAgentId, accessToken:
               {error}
             </div>
           )}
-          {!resolved.agentId && (
+          {!resolved.agentId && typeof getAccessToken !== 'function' && (
             <div className="mt-2 text-[10px] font-mono text-[#a3a3a3]">
               Set REACT_APP_CARTESIA_AGENT_ID (and an access token) to enable.
             </div>
