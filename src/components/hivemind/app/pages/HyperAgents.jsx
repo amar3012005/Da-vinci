@@ -650,6 +650,9 @@ function TurnView({ turn, participants, liveLines }) {
           votes={votes}
           swarmVerdict={swarmVerdict}
           roundStarts={roundStarts}
+          costCapHit={costCapHit}
+          deadlineHit={deadlineHit}
+          roomWarnings={roomWarnings}
           onOpenEvidence={setEvidenceMemoryId}
         />
       )}
@@ -944,7 +947,7 @@ function EvidenceModal({ memoryId, onClose }) {
   );
 }
 
-function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts, onOpenEvidence }) {
+function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts, costCapHit, deadlineHit, roomWarnings = [], onOpenEvidence }) {
   const reviewsByTarget = useMemo(() => {
     const out = {};
     for (const r of peerReviews || []) {
