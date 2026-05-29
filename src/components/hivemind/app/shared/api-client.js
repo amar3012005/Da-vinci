@@ -704,8 +704,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async deleteMemory(id) {
-    const { data } = await this.controlPlane.delete(`/v1/proxy/memories/${id}`);
+  async deleteMemory(id, { hard = true } = {}) {
+    const { data } = await this.controlPlane.delete(`/v1/proxy/memories/${id}${hard ? '?hard=true' : ''}`);
     return data;
   }
 

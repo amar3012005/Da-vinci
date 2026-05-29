@@ -34,6 +34,7 @@ import {
   Sun,
   Play,
   Pause,
+  Trash2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -201,7 +202,8 @@ function LegendShape({ shape, color }) {
 }
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
-function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
+function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
+  const deletable = node && node.id && node.kind !== 'document' && node.kind !== 'entity';
   // Create node lookup for resolving IDs to titles
   const nodeMap = useMemo(() => {
     const map = {};
@@ -231,12 +233,23 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate }) {
         <span className="text-xs font-mono text-[#a3a3a3] uppercase tracking-wider">
           Memory Detail
         </span>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-lg hover:bg-[#f3f1ec] transition-colors"
-        >
-          <X size={14} className="text-[#a3a3a3]" />
-        </button>
+        <div className="flex items-center gap-1">
+          {deletable && onDelete && (
+            <button
+              onClick={() => onDelete(node)}
+              className="p-1 rounded-lg hover:bg-red-50 text-[#a3a3a3] hover:text-red-600 transition-colors"
+              title="Permanently delete this memory"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-[#f3f1ec] transition-colors"
+          >
+            <X size={14} className="text-[#a3a3a3]" />
+          </button>
+        </div>
       </div>
       <div className="p-4 space-y-4">
         {/* Title & type */}
@@ -710,6 +723,27 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Node click
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
+  }, []);
+
+  // Hard-delete a memory node from the graph (confirm → delete → drop from
+  // graphData). Guarded against document/entity nodes (not memory ids).
+  const handleDeleteMemory = useCallback(async (node) => {
+    if (!node?.id || node.kind === 'document' || node.kind === 'entity') return;
+    if (!window.confirm(`Permanently delete memory "${node.title || node.label || node.id}"? This cannot be undone.`)) return;
+    try {
+      await apiClient.deleteMemory(node.id, { hard: true });
+      setGraphData((g) => ({
+        nodes: (g.nodes || []).filter((n) => n.id !== node.id),
+        links: (g.links || []).filter((l) => {
+          const s = typeof l.source === 'object' ? l.source.id : l.source;
+          const t = typeof l.target === 'object' ? l.target.id : l.target;
+          return s !== node.id && t !== node.id;
+        }),
+      }));
+      setSelectedNode(null);
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    }
   }, []);
 
   // Navigate to node from sidecar
@@ -1522,6 +1556,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               nodes={graphData.nodes}
               onClose={() => setSelectedNode(null)}
               onNavigate={handleNavigate}
+              onDelete={handleDeleteMemory}
             />
           )}
         </AnimatePresence>
