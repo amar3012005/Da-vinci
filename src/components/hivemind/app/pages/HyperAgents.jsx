@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2, Trash2, Eraser,
+  AlertTriangle, Loader2, Trash2, Eraser, ChevronDown, ChevronRight,
   Network, Shield, Crown, Lightbulb, MessageCircle,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -1494,10 +1494,13 @@ function AgentDmModal({ agent, onClose }) {
 
 function CreateRoomModal({ onClose, onCreated }) {
   const [name, setName] = useState('');
-  const [template, setTemplate] = useState('debate');
+  // Default to Smart (auto) — the orchestrator picks the best format from the
+  // first question. No-code users never have to understand the 10 templates.
+  const [template, setTemplate] = useState('auto');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [skepticId, setSkepticId] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -1563,11 +1566,31 @@ function CreateRoomModal({ onClose, onCreated }) {
               className="w-full h-9 px-3 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
             />
           </div>
+          {/* Format: Smart by default. Power users expand "Customize" to pick
+              one of the 10 templates + a permanent Skeptic. */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(v => !v)}
+              className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a]"
+            >
+              {showAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              Customize format
+              {!showAdvanced && (
+                <span className="text-[10px] text-[#a3a3a3] normal-case font-sans tracking-normal ml-1">
+                  · Smart — picks the best format for your question
+                </span>
+              )}
+            </button>
+          </div>
+
+          {showAdvanced && (
+          <>
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">Template</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
               {[
-                { key: 'auto', label: 'Auto', desc: 'Pick template from query keywords' },
+                { key: 'auto', label: 'Smart (Auto)', desc: 'Picks the best format from your question. Recommended.' },
                 { key: 'debate', label: 'Debate', desc: 'Full CSI: lead → reactors → synth → revise loop' },
                 { key: 'decision', label: 'Decision', desc: 'DACI: lead commits, save as memory, skip debate' },
                 { key: 'swarm', label: 'Swarm', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
@@ -1622,6 +1645,8 @@ function CreateRoomModal({ onClose, onCreated }) {
                 Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.
               </div>
             </div>
+          )}
+          </>
           )}
 
           <div>
