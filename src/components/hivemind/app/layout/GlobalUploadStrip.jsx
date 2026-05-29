@@ -19,10 +19,17 @@ import { useUploads, removeUpload } from '../shared/upload-store';
 
 const KB_ROUTE = '/hivemind/app/knowledge';
 
+function fmtUpBytes(n) {
+  if (!n && n !== 0) return '';
+  if (n < 1024) return `${n}B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)}KB`;
+  return `${(n / 1024 / 1024).toFixed(1)}MB`;
+}
+
 function statusBadge(u) {
   if (u.status === 'success') return { icon: CheckCircle2, color: '#16a34a', label: 'Uploaded' };
   if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertTriangle, color: '#dc2626', label: u.status === 'cancelled' ? 'Cancelled' : 'Failed' };
-  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: `${u.progress || 0}%` };
+  if (u.status === 'uploading') return { icon: Upload, color: '#117dff', label: u.stage === 'processing' ? 'processing' : `${u.progress || 0}%` };
   return { icon: Upload, color: '#a3a3a3', label: 'Queued' };
 }
 
@@ -102,20 +109,31 @@ export default function GlobalUploadStrip() {
                       key={u.id}
                       className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#f5f3ee] group"
                     >
-                      <Icon size={12} className="flex-shrink-0" style={{ color }} />
+                      <Icon size={12} className="flex-shrink-0 mt-0.5 self-start" style={{ color }} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-[11.5px] text-[#0a0a0a] font-medium truncate">{u.filename}</div>
-                        <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">{label}</div>
-                      </div>
-                      {/* Progress bar (live only) */}
-                      {u.status === 'uploading' && (
-                        <div className="w-12 h-1 rounded-full bg-[#e3e0db] overflow-hidden flex-shrink-0">
-                          <div
-                            className="h-full bg-[#117dff] transition-all duration-300"
-                            style={{ width: `${u.progress || 0}%` }}
-                          />
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11.5px] text-[#0a0a0a] font-medium truncate">{u.filename}</span>
+                          <span className="text-[10px] font-mono flex-shrink-0" style={{ color }}>{label}</span>
                         </div>
-                      )}
+                        {/* tqdm-style filling bar — determinate while uploading,
+                            pulsing once bytes hit 100% and the server is parsing. */}
+                        {u.status === 'uploading' && (
+                          <>
+                            <div className="mt-1 h-1.5 rounded-full bg-[#e3e0db] overflow-hidden">
+                              {u.stage === 'processing' ? (
+                                <div className="h-full bg-[#117dff] animate-pulse" style={{ width: '100%' }} />
+                              ) : (
+                                <div className="h-full bg-[#117dff] transition-all duration-300" style={{ width: `${u.progress || 0}%` }} />
+                              )}
+                            </div>
+                            <div className="text-[9px] text-[#a3a3a3] font-mono mt-0.5 truncate">
+                              {u.stage === 'processing'
+                                ? 'parsing on server (Docling)…'
+                                : `${u.progress || 0}%${u.bytesTotal ? ` · ${fmtUpBytes(u.bytesLoaded)}/${fmtUpBytes(u.bytesTotal)}` : ''}${u.etaSec != null ? ` · ${Math.ceil(u.etaSec)}s left` : ''}`}
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <button
                         onClick={() => removeUpload(u.id)}
                         className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded-md text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#e3e0db]/40 flex-shrink-0 transition-opacity"
