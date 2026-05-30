@@ -217,14 +217,6 @@ function TypingDots({ tone = 'default' }) {
   );
 }
 
-const STATUS_STYLES = {
-  draft:     { bg: 'bg-[#f3f1ec]',         text: 'text-[#525252]', dot: 'bg-[#a3a3a3]', label: 'Draft' },
-  deploying: { bg: 'bg-blue-500/10',       text: 'text-blue-700',  dot: 'bg-blue-500 animate-pulse', label: 'Deploying' },
-  running:   { bg: 'bg-emerald-500/10',    text: 'text-[#16a34a]', dot: 'bg-[#16a34a]', label: 'Running' },
-  paused:    { bg: 'bg-amber-500/10',      text: 'text-amber-700', dot: 'bg-amber-500', label: 'Paused' },
-  error:     { bg: 'bg-red-500/10',        text: 'text-[#dc2626]', dot: 'bg-[#dc2626]', label: 'Error' },
-};
-
 function StatusBadge({ status }) {
   const { t } = useTranslation('dashboard');
   const STATUS_STYLES_I18N = {

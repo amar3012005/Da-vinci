@@ -82,7 +82,7 @@ export default function HyperAgents() {
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     }
-  }, []);
+  }, [t]);
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);

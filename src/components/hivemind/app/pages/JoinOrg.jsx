@@ -44,7 +44,7 @@ export default function JoinOrg() {
       }
     })();
     return () => { cancelled = true; };
-  }, [token, navigate, refreshAuth]);
+  }, [token, navigate, refreshAuth, t]);
 
   async function handleAccept() {
     setPhase('accepting');
