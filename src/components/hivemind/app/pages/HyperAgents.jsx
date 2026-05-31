@@ -372,6 +372,8 @@ function RoomThread({ roomId, onArchived, onBack }) {
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
       'skeptic_challenge', 'vote', 'swarm_verdict',
+      // Recursive CSI convergence (multi-cycle):
+      'cycle_start', 'cycle_end', 'convergence',
       // Prod hardening events (cost cap / wall-clock deadline / role warnings):
       'cost_cap_hit', 'deadline_hit', 'warning',
     ].forEach(name => es.addEventListener(name, onAny));
@@ -653,15 +655,32 @@ function TurnView({ turn, participants, liveLines }) {
   const toolCallCounts = seal?.tool_call_counts || {};
   const toolCallTotal = seal?.tool_call_total || 0;
 
-  // Phase 4 swarm events (R1-R5):
-  const hypotheses = lines.filter(l => l.t === 'hypothesis');
-  const peerReviews = lines.filter(l => l.t === 'peer_review');
-  const chains = lines.filter(l => l.t === 'chain_of_thought');
-  const skepticChallenge = lines.find(l => l.t === 'skeptic_challenge');
-  const votes = lines.filter(l => l.t === 'vote');
+  // Recursive CSI convergence — a turn now runs N cycles until consensus.
+  // `cycle` is on every swarm event (legacy single-pass turns have none → 1).
+  const cycleOf = (l) => l.cycle || 1;
+  const cycleEnds = lines.filter(l => l.t === 'cycle_end');
+  const convergence = lines.find(l => l.t === 'convergence');
+  const allHypotheses = lines.filter(l => l.t === 'hypothesis');
+  const maxCycle = Math.max(
+    1,
+    ...lines.filter(l => ['hypothesis', 'vote', 'cycle_end', 'chain_of_thought'].includes(l.t)).map(cycleOf),
+  );
+  // Convergence trail: one entry per completed cycle (verdict + score).
+  const convergenceTrail = (convergence?.trail && convergence.trail.length)
+    ? convergence.trail
+    : cycleEnds.map(c => ({ cycle: c.cycle, verdict: c.verdict, weighted_score: c.weighted_score, converged: c.converged }));
+
+  // Phase 4 swarm events (R1-R5) — detail view shows the LATEST cycle so the
+  // converged result is front-and-centre; earlier cycles live in the trail.
+  const hypotheses = allHypotheses.filter(l => cycleOf(l) === maxCycle);
+  const peerReviews = lines.filter(l => l.t === 'peer_review' && cycleOf(l) === maxCycle);
+  const chains = lines.filter(l => l.t === 'chain_of_thought' && cycleOf(l) === maxCycle);
+  const skepticChallenge = [...lines].reverse().find(l => l.t === 'skeptic_challenge' && cycleOf(l) === maxCycle)
+    || lines.find(l => l.t === 'skeptic_challenge');
+  const votes = lines.filter(l => l.t === 'vote' && cycleOf(l) === maxCycle);
   const swarmVerdict = lines.find(l => l.t === 'swarm_verdict');
-  const isSwarm = template === 'swarm' || hypotheses.length > 0;
-  const roundStarts = lines.filter(l => l.t === 'round_start');
+  const isSwarm = template === 'swarm' || allHypotheses.length > 0;
+  const roundStarts = lines.filter(l => l.t === 'round_start' && cycleOf(l) === maxCycle);
   // Prod hardening signals — surfaced so a truncated/degraded turn isn't silent.
   const costCapHit = lines.find(l => l.t === 'cost_cap_hit') || lines.find(l => l.t === 'seal' && l.cost_cap_hit);
   const deadlineHit = lines.find(l => l.t === 'deadline_hit');
@@ -690,6 +709,30 @@ function TurnView({ turn, participants, liveLines }) {
               {template}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Recursive CSI convergence trail — one chip per cycle, verdict + score. */}
+      {isSwarm && convergenceTrail.length > 0 && (
+        <div className="flex items-center flex-wrap gap-1.5 pl-2 py-1">
+          <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] mr-0.5">
+            {t('hyperAgents.convergence', 'Convergence')} · {convergenceTrail.length} {convergenceTrail.length === 1 ? 'cycle' : 'cycles'}
+          </span>
+          {convergenceTrail.map((c, i) => {
+            const v = c.verdict;
+            const tone = v === 'AGREED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : v === 'CONDITIONAL' ? 'bg-amber-50 text-amber-700 border-amber-200'
+              : 'bg-rose-50 text-rose-700 border-rose-200';
+            return (
+              <React.Fragment key={c.cycle ?? i}>
+                {i > 0 && <span className="text-[#cbcbcb] text-[10px]">→</span>}
+                <span className={`px-1.5 py-0.5 rounded border text-[9px] font-mono ${tone}`} title={`weighted ${c.weighted_score ?? '–'}`}>
+                  C{c.cycle ?? i + 1} {v}{typeof c.weighted_score === 'number' ? ` ${c.weighted_score}` : ''}
+                  {c.converged ? ' ✓' : ''}
+                </span>
+              </React.Fragment>
+            );
+          })}
         </div>
       )}
 
