@@ -24,9 +24,12 @@ import {
   Shield,
   Cpu,
   Quote,
+  Rocket,
+  KeyRound,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
+import { useAuth } from '../auth/AuthProvider';
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
@@ -258,10 +261,13 @@ function HyperStateBadge({ hyper }) {
   );
 }
 
-function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectable, selected, onToggleSelect }) {
+function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy, selectable, selected, onToggleSelect }) {
   const { t } = useTranslation('dashboard');
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
+  const isDraft = employee.status === 'draft';
+  const isError = employee.status === 'error';
+  const isDeploying = employee.status === 'deploying';
   const msgs = employee.metricsLast24h?.messages || 0;
   const tokens = employee.metricsLast24h?.tokens || 0;
   const hyper = employee.hyper;
@@ -335,6 +341,17 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
 
       {!selectable && (
         <div className="flex items-center gap-1 mt-3">
+          {(isDraft || isError) && (
+            <button onClick={(e) => { e.stopPropagation(); onDeploy && onDeploy(employee); }}
+              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-white bg-[#117dff] hover:bg-[#0066e0]">
+              <Rocket size={11} /> {isError ? t('digitalemployees.retryDeploy', 'Retry') : t('digitalemployees.deploy', 'Deploy')}
+            </button>
+          )}
+          {isDeploying && (
+            <span className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-blue-700">
+              <RefreshCw size={11} className="animate-spin" /> {t('digitalemployees.deploying', 'Deploying')}
+            </span>
+          )}
           {isRunning && (
             <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
               className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-amber-700 hover:bg-amber-500/10">
@@ -1234,7 +1251,7 @@ function qualColor(pct) {
 }
 
 // ─── Qualifications popup (MiroFish CSI AgentDetailOverlay, HIVEMIND light) ─
-function AgentDetailOverlay({ employee, onClose, onChat }) {
+function AgentDetailOverlay({ employee, onClose, onChat, onRemint, isAdmin }) {
   const { t } = useTranslation('dashboard');
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -1334,13 +1351,22 @@ function AgentDetailOverlay({ employee, onClose, onChat }) {
         </div>
 
         {/* Talk CTA */}
-        <div className="sticky bottom-0 border-t border-[#eae7e1] bg-white/95 backdrop-blur px-8 py-4">
+        <div className="sticky bottom-0 border-t border-[#eae7e1] bg-white/95 backdrop-blur px-8 py-4 flex gap-2">
           <button
             onClick={() => onChat(employee)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#117dff] py-2.5 text-[13px] font-medium text-white hover:bg-[#0066e0]"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#117dff] py-2.5 text-[13px] font-medium text-white hover:bg-[#0066e0]"
           >
             <MessageCircle size={15} /> {t('digitalemployees.talkTo', 'Talk to {{name}}', { name: firstName })}
           </button>
+          {isAdmin && onRemint && (
+            <button
+              onClick={() => onRemint(employee)}
+              title={t('digitalemployees.remintKey', 'Re-mint HIVEMIND key')}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-[#e3e0db] px-3 py-2.5 text-[12px] font-medium text-[#525252] hover:bg-[#f3f1ec]"
+            >
+              <KeyRound size={14} /> {t('digitalemployees.remintKeyShort', 'Re-mint key')}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1365,44 +1391,100 @@ function Chip({ children, tone }) {
   return <span className={`rounded-md border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{children}</span>;
 }
 
+// Compact markdown → React (no new dep, no dangerouslySetInnerHTML).
+// Handles fenced code, headings, bullets, and inline bold/italic/code/links.
+function renderInline(s, k0) {
+  const parts = []; let rem = String(s); let k = k0;
+  const re = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*]+\*)/;
+  let m;
+  while ((m = rem.match(re))) {
+    if (m.index > 0) parts.push(rem.slice(0, m.index));
+    const tok = m[0];
+    if (tok.startsWith('**')) parts.push(<strong key={k++}>{tok.slice(2, -2)}</strong>);
+    else if (tok.startsWith('`')) parts.push(<code key={k++} className="rounded bg-black/5 px-1 py-0.5 font-mono text-[12px]">{tok.slice(1, -1)}</code>);
+    else if (tok.startsWith('[')) { const lm = tok.match(/\[([^\]]+)\]\(([^)]+)\)/); parts.push(<a key={k++} href={lm[2]} target="_blank" rel="noreferrer" className="text-[#117dff] underline">{lm[1]}</a>); }
+    else parts.push(<em key={k++}>{tok.slice(1, -1)}</em>);
+    rem = rem.slice(m.index + tok.length);
+  }
+  if (rem) parts.push(rem);
+  return parts;
+}
+function renderMarkdownLite(text) {
+  const lines = String(text || '').split('\n');
+  const out = []; let list = null; let code = null; let k = 0;
+  const flushList = () => { if (list) { out.push(<ul key={`u${k++}`} className="list-disc pl-5 my-1 space-y-0.5">{list}</ul>); list = null; } };
+  for (const ln of lines) {
+    if (ln.trim().startsWith('```')) {
+      if (code === null) { flushList(); code = []; }
+      else { out.push(<pre key={`c${k++}`} className="my-1.5 overflow-x-auto rounded-lg bg-[#0a0a0a]/90 p-2.5 text-[11.5px] text-[#e6edf3] font-mono whitespace-pre">{code.join('\n')}</pre>); code = null; }
+      continue;
+    }
+    if (code !== null) { code.push(ln); continue; }
+    const h = ln.match(/^(#{1,3})\s+(.*)/);
+    const b = ln.match(/^\s*[-*]\s+(.*)/);
+    if (b) { (list = list || []).push(<li key={`l${k++}`}>{renderInline(b[1], k += 100)}</li>); continue; }
+    flushList();
+    if (h) { out.push(<div key={`h${k++}`} className="font-semibold mt-1.5 mb-0.5">{renderInline(h[2], k += 100)}</div>); continue; }
+    if (ln.trim() === '') { out.push(<div key={`s${k++}`} className="h-1.5" />); continue; }
+    out.push(<p key={`p${k++}`} className="my-0.5">{renderInline(ln, k += 100)}</p>);
+  }
+  flushList();
+  if (code !== null && code.length) out.push(<pre key={`c${k++}`} className="my-1.5 overflow-x-auto rounded-lg bg-[#0a0a0a]/90 p-2.5 text-[11.5px] text-[#e6edf3] font-mono whitespace-pre">{code.join('\n')}</pre>);
+  return out;
+}
+
 // ─── Talk-to-Expert chat drawer (MiroFish ExpertChatPanel, HIVEMIND light) ─
 function ExpertChatDrawer({ employee, onClose }) {
   const { t } = useTranslation('dashboard');
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const conversationId = useRef(`emp-${employee.id}-${Date.now()}`);
-  const logRef = useRef(null);
   const p = deriveProfile(employee);
   const firstName = (employee.name || '').split(' ')[0];
+  // Stable per-employee conversation id (NOT Date.now) so the sidecar keeps
+  // memory across turns + sessions; persisted in localStorage.
+  const convId = useMemo(() => `emp-dm:${employee.slug || employee.id}`, [employee.slug, employee.id]);
+  const storageKey = `hm-empchat:${employee.id}`;
+  const conversationId = useRef(convId);
+  const intro = useMemo(() => ({
+    id: 'intro', role: 'assistant',
+    content: t('digitalemployees.chatIntro',
+      "Hi, I'm {{name}} — your {{title}}. I work the {{lane}} lane. Ask me anything from my point of view.",
+      { name: employee.name, title: p.title, lane: p.lane }),
+  }), [employee.name, p.title, p.lane, t]);
+  const [messages, setMessages] = useState(() => {
+    try { const raw = localStorage.getItem(storageKey); const arr = raw ? JSON.parse(raw) : null; return Array.isArray(arr) && arr.length ? arr : [intro]; }
+    catch { return [intro]; }
+  });
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const logRef = useRef(null);
 
-  // Seed an intro briefing (local — no extra endpoint).
+  // Persist transcript so reopening the drawer resumes the conversation.
   useEffect(() => {
-    setMessages([{
-      id: 'intro', role: 'assistant',
-      content: t('digitalemployees.chatIntro',
-        "Hi, I'm {{name}} — your {{title}}. I work the {{lane}} lane. Ask me anything from my point of view.",
-        { name: employee.name, title: p.title, lane: p.lane }),
-    }]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employee.id]);
+    try { localStorage.setItem(storageKey, JSON.stringify(messages.slice(-50))); } catch { /* quota — ignore */ }
+  }, [messages, storageKey]);
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [messages, loading]);
 
+  const clearHistory = () => {
+    if (!window.confirm(t('digitalemployees.clearChat', 'Clear this conversation?'))) return;
+    try { localStorage.removeItem(storageKey); } catch { /* ignore */ }
+    conversationId.current = convId;
+    setMessages([intro]);
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
-    setMessages(prev => [...prev, { id: `${Date.now()}-u`, role: 'user', content: text }]);
+    setMessages(prev => [...prev, { id: `${prev.length}-u`, role: 'user', content: text }]);
     setInput('');
     setLoading(true);
     try {
       const data = await apiClient.chatWithEmployee(employee.slug, { text, conversation_id: conversationId.current });
       if (data.conversation_id) conversationId.current = data.conversation_id;
-      setMessages(prev => [...prev, { id: `${Date.now()}-a`, role: 'assistant', content: data.reply || 'No response.' }]);
+      setMessages(prev => [...prev, { id: `${prev.length}-a`, role: 'assistant', content: data.reply || 'No response.' }]);
     } catch (e) {
-      setMessages(prev => [...prev, { id: `${Date.now()}-e`, role: 'assistant', error: true, content: e.response?.data?.detail || e.response?.data?.error || e.message }]);
+      setMessages(prev => [...prev, { id: `${prev.length}-e`, role: 'assistant', error: true, content: e.response?.data?.detail || e.response?.data?.error || e.message }]);
     } finally {
       setLoading(false);
     }
@@ -1421,6 +1503,10 @@ function ExpertChatDrawer({ employee, onClose }) {
             <div className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</div>
             <div className="text-[11px] text-[#737373] truncate">{p.title} · {p.lane} · {p.versionLabel}</div>
           </div>
+          <button onClick={clearHistory} title={t('digitalemployees.clearChat', 'Clear this conversation?')}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#737373] hover:bg-[#e3e0db]/60">
+            <Trash2 size={14} />
+          </button>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#737373] hover:bg-[#e3e0db]/60">
             <X size={16} />
           </button>
@@ -1435,10 +1521,10 @@ function ExpertChatDrawer({ employee, onClose }) {
                   {initialsOf(employee.name)}
                 </div>
               )}
-              <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${
-                msg.role === 'user' ? 'bg-[#117dff] text-white' : msg.error ? 'border border-red-200 bg-red-50 text-[#dc2626]' : 'bg-[#f3f1ec] text-[#0a0a0a]'
+              <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${
+                msg.role === 'user' ? 'bg-[#117dff] text-white whitespace-pre-wrap' : msg.error ? 'border border-red-200 bg-red-50 text-[#dc2626] whitespace-pre-wrap' : 'bg-[#f3f1ec] text-[#0a0a0a]'
               }`}>
-                {msg.content}
+                {msg.role === 'assistant' && !msg.error ? renderMarkdownLite(msg.content) : msg.content}
               </div>
             </div>
           ))}
@@ -1472,6 +1558,8 @@ function ExpertChatDrawer({ employee, onClose }) {
 export default function DigitalEmployees() {
   const { t } = useTranslation('dashboard');
   const { teams } = useTeamContext();
+  const { org, user } = useAuth();
+  const isOrgAdmin = ['admin', 'owner'].includes(user?.role);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1480,6 +1568,9 @@ export default function DigitalEmployees() {
   const [chatEmployee, setChatEmployee] = useState(null);
   const [detailEmployee, setDetailEmployee] = useState(null);
   const [slidePanelOpen, setSlidePanelOpen] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [reminting, setReminting] = useState(false);
+  const flash = useCallback((msg) => { setNotice(msg); setTimeout(() => setNotice(null), 4000); }, []);
 
   // Collapse the sidebar to a rail while on the Hyper Agents area (roster).
   // Sidebar's own ChevronRight is the re-open arrow. Restore on unmount.
@@ -1571,6 +1662,43 @@ export default function DigitalEmployees() {
     setSurface('employee');
     setDetailEmployee(emp);
   }
+  async function handleDeploy(emp) {
+    try {
+      await apiClient.deployEmployee(emp.id);
+      flash(t('digitalemployees.deployStarted', 'Deploying {{name}}…', { name: emp.name }));
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      await fetch();
+      // reconcile flips deploying→running within ~30s; refetch shortly after.
+      setTimeout(() => { fetch().catch(() => {}); }, 6000);
+    }
+  }
+  async function handleRemintKey(emp) {
+    if (!window.confirm(t('digitalemployees.remintConfirm', 'Re-mint HIVEMIND key for "{{name}}"? The current key is revoked and a new one issued.', { name: emp.name }))) return;
+    try {
+      await apiClient.remintEmployeeKey(emp.id);
+      flash(t('digitalemployees.remintOk', 'Key re-minted for {{name}}.', { name: emp.name }));
+      await fetch();
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+  async function handleRemintAll() {
+    const orgId = org?.id;
+    if (!orgId) { setError('No active org'); return; }
+    if (!window.confirm(t('digitalemployees.remintAllConfirm', 'Backfill HIVEMIND keys for all employees in this org missing one?'))) return;
+    setReminting(true);
+    try {
+      const r = await apiClient.remintAllEmployeeKeys(orgId);
+      flash(t('digitalemployees.remintAllOk', 'Re-mint complete{{n}}.', { n: r?.results ? ` (${r.results.filter(x => x.ok).length} keys)` : '' }));
+      await fetch();
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setReminting(false);
+    }
+  }
 
   function handleResumeTask(task) {
     setSurface('workspace');
@@ -1623,6 +1751,14 @@ export default function DigitalEmployees() {
             <Users size={13} />
             {seeding ? t('digitalemployees.seeding', 'Seeding...') : t('digitalemployees.seedHumanTeam', 'Seed Human Team')}
           </button>
+          {isOrgAdmin && (
+            <button onClick={handleRemintAll} disabled={reminting}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white text-[12px] hover:bg-[#faf9f4] disabled:opacity-50"
+              title={t('digitalemployees.remintAllKeys', 'Re-mint missing HIVEMIND keys')}>
+              <KeyRound size={13} className={reminting ? 'animate-pulse' : ''} />
+              {reminting ? t('digitalemployees.reminting', 'Re-minting...') : t('digitalemployees.remintAllKeys', 'Re-mint keys')}
+            </button>
+          )}
           {isWorkspaceMode ? (
             <button
               onClick={() => {
@@ -1647,6 +1783,11 @@ export default function DigitalEmployees() {
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-[8px] text-[12px] text-[#dc2626]">
           <AlertCircle size={13} /> {error}
+        </div>
+      )}
+      {notice && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-[8px] text-[12px] text-[#16a34a]">
+          <CheckCircle2 size={13} /> {notice}
         </div>
       )}
 
@@ -1702,6 +1843,7 @@ export default function DigitalEmployees() {
                   onResume={handleResume}
                   onArchive={handleArchive}
                   onOpen={handleOpen}
+                  onDeploy={handleDeploy}
                   selectable={false}
                   selected={false}
                   onToggleSelect={undefined}
@@ -1724,6 +1866,8 @@ export default function DigitalEmployees() {
           employee={detailEmployee}
           onClose={() => setDetailEmployee(null)}
           onChat={(emp) => { setDetailEmployee(null); setChatEmployee(emp); }}
+          isAdmin={isOrgAdmin}
+          onRemint={(emp) => { setDetailEmployee(null); handleRemintKey(emp); }}
         />
       )}
 

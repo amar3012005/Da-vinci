@@ -526,6 +526,13 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Take a draft/errored employee live: ensures a scoped key + sets status
+  // 'deploying'; the sidecar reconcile builds the agent and flips to running.
+  async deployEmployee(id) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${id}/deploy`);
+    return data;
+  }
+
   async archiveEmployee(id) {
     const { data } = await this.controlPlane.delete(`/v1/employees/${id}`);
     return data;
