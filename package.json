@@ -39,6 +39,7 @@
     "react-dom": "^18.2.0",
     "react-force-graph-2d": "^1.29.1",
     "react-gtag": "^0.0.0",
+    "react-helmet-async": "2.0.5",
     "react-i18next": "^17.0.8",
     "react-intersection-observer": "^9.5.3",
     "react-router-dom": "^7.1.5",
@@ -50,7 +51,6 @@
     "tailwindcss": "^3.4.17",
     "three": "^0.183.2",
     "twilio": "^5.4.2",
-    "react-helmet-async": "2.0.5",
     "unicornstudio-react": "^1.4.31"
   },
   "overrides": {
@@ -94,13 +94,24 @@
     "@types/react": "^19.1.14",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.183.0",
+    "i18next-parser": "^9.3.0",
     "react-snap": "1.23.0",
     "typescript": "^5.9.2"
   },
   "reactSnap": {
-    "include": ["/", "/about", "/terms", "/privacy", "/demo", "/research"],
+    "include": [
+      "/",
+      "/about",
+      "/terms",
+      "/privacy",
+      "/demo",
+      "/research"
+    ],
     "inlineCss": false,
-    "puppeteerArgs": ["--no-sandbox", "--disable-setuid-sandbox"],
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
     "skipThirdPartyRequests": true
   }
 }
