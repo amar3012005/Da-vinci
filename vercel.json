@@ -33,8 +33,16 @@
       "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-authorization-server"
     },
     {
+      "source": "/.well-known/oauth-authorization-server/:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-authorization-server/:path*"
+    },
+    {
       "source": "/.well-known/oauth-protected-resource",
       "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-protected-resource"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/:path*",
+      "destination": "https://core.hivemind.davinciai.eu:8050/.well-known/oauth-protected-resource/:path*"
     },
     {
       "source": "/.well-known/mcp-protected-resource",
