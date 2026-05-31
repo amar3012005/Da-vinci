@@ -450,6 +450,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getHyperRoomArtifacts(roomId, { type = 'all', limit = 200 } = {}) {
+    const qs = new URLSearchParams({ type, limit: String(limit) }).toString();
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/artifacts?${qs}`);
+    return data;
+  }
+
   // SSE — caller manages EventSource lifecycle, we just expose URL.
   hyperTurnStreamUrl(roomId, turnId) {
     const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
