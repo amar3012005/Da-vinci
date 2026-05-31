@@ -47,6 +47,14 @@ const AGREEMENT_META = {
 
 export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
+
+  // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
+  // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
+  useEffect(() => {
+    window.dispatchEvent(new Event('hivemind:close-sidebar'));
+    return () => window.dispatchEvent(new Event('hivemind:open-sidebar'));
+  }, []);
+
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -14,11 +14,16 @@ import {
   X,
   Send,
   Users,
-  GripHorizontal,
   CheckCircle2,
   MessageCircle,
   ArrowRight,
   Zap,
+  GraduationCap,
+  Brain,
+  Target,
+  Shield,
+  Cpu,
+  Quote,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -361,136 +366,9 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, selectab
 // internally (employee | workspace) — toggled by the topbar Workspace
 // button. Re-introduce if multi-surface segmenting comes back.
 
-function PreviewWindow({ title, subtitle, onClose, children }) {
-  const windowRef = useRef(null);
-  const [position, setPosition] = useState({ x: window.innerWidth - 500, y: 140 });
-  const dragStateRef = useRef(null);
-
-  useEffect(() => {
-    const handleMove = (event) => {
-      if (!dragStateRef.current) return;
-      const nextX = dragStateRef.current.startX + (event.clientX - dragStateRef.current.originX);
-      const nextY = dragStateRef.current.startY + (event.clientY - dragStateRef.current.originY);
-      setPosition({
-        x: Math.max(24, Math.min(nextX, window.innerWidth - 460)),
-        y: Math.max(96, Math.min(nextY, window.innerHeight - 180)),
-      });
-    };
-    const handleUp = () => {
-      dragStateRef.current = null;
-    };
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleUp);
-    };
-  }, []);
-
-  const startDrag = (event) => {
-    dragStateRef.current = {
-      originX: event.clientX,
-      originY: event.clientY,
-      startX: position.x,
-      startY: position.y,
-    };
-  };
-
-  return (
-    <div
-      ref={windowRef}
-      className="fixed z-[120] w-[440px] overflow-hidden rounded-2xl border border-[#e3e0db] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
-      style={{ left: position.x, top: position.y }}
-    >
-      <div
-        className="flex items-center justify-between gap-3 border-b border-[#e3e0db] bg-[#faf9f4] px-3 py-2 cursor-move"
-        onMouseDown={startDrag}
-      >
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-[#0a0a0a]">{title}</p>
-          <p className="truncate text-[10px] text-[#737373]">{subtitle}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          <GripHorizontal size={12} className="text-[#a3a3a3]" />
-          <button onClick={onClose} className="rounded p-1.5 text-[#525252] hover:bg-[#e3e0db]/60">
-            <X size={12} />
-          </button>
-        </div>
-      </div>
-      <div className="max-h-[70vh] overflow-y-auto bg-white">{children}</div>
-    </div>
-  );
-}
-
-function EmployeeChatPreview({ employee, onClose }) {
-  const { t } = useTranslation('dashboard');
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState(() => `emp-${employee.id}`);
-
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-    setMessages(prev => [...prev, { id: `${Date.now()}-u`, role: 'user', content: text }]);
-    setInput('');
-    setLoading(true);
-    try {
-      const data = await apiClient.chatWithEmployee(employee.slug, {
-        text,
-        conversation_id: conversationId,
-      });
-      setConversationId(data.conversation_id || conversationId);
-      setMessages(prev => [...prev, { id: `${Date.now()}-a`, role: 'assistant', content: data.reply || 'No response.' }]);
-    } catch (e) {
-      setMessages(prev => [...prev, { id: `${Date.now()}-e`, role: 'assistant', content: e.response?.data?.detail || e.response?.data?.error || e.message, error: true }]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <PreviewWindow title={`${employee.name} DM`} subtitle={`1-on-1 employee chat · ${employee.slug}`} onClose={onClose}>
-      <div className="space-y-3 p-4">
-        <div className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3 text-[11px] text-[#525252]">
-          {t('digitalemployees.chatDirectly', 'Chat directly with this employee using its current prompt version {{version}}, tools, and in-sidecar conversation memory.', { version: employee.active_prompt_version?.version_label || employee.hyper?.active_prompt_version?.version_label || 'v0' })}
-        </div>
-        <div className="space-y-2 min-h-[280px]">
-          {messages.length === 0 ? (
-            <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-dashed border-[#e3e0db] bg-[#faf9f4] px-8 text-center text-[12px] text-[#a3a3a3]">
-              {t('digitalemployees.sendMessageToStart', 'Send a message to start a persistent employee conversation.')}
-            </div>
-          ) : messages.map(msg => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[82%] rounded-2xl px-3 py-2 text-[12px] leading-relaxed ${msg.role === 'user' ? 'bg-[#117dff] text-white' : msg.error ? 'border border-red-200 bg-red-50 text-[#dc2626]' : 'border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a]'}`}>
-                {msg.content}
-              </div>
-            </div>
-          ))}
-          {loading && <div className="text-[11px] text-[#a3a3a3]">{t('digitalemployees.employeeThinking', 'Employee is thinking...')}</div>}
-        </div>
-        <div className="flex items-end gap-2 rounded-2xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            rows={2}
-            placeholder={t('digitalemployees.messagePlaceholder', 'Message {{name}}...', { name: employee.name })}
-            className="min-h-[44px] flex-1 resize-none bg-transparent text-[12px] text-[#0a0a0a] outline-none placeholder:text-[#a3a3a3]"
-          />
-          <button onClick={sendMessage} disabled={loading || !input.trim()} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50">
-            <Send size={14} />
-          </button>
-        </div>
-      </div>
-    </PreviewWindow>
-  );
-}
+// PreviewWindow + EmployeeChatPreview removed — superseded by the
+// MiroFish-style AgentDetailOverlay (qualifications popup) + ExpertChatDrawer
+// (right slide-in chat) defined below.
 
 function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity }) {
   const { t } = useTranslation('dashboard');
@@ -1284,6 +1162,313 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
   );
 }
 
+// ─── Human-style qualification profiles, derived from role_archetype ──────
+// HIVEMIND employees carry persona + role + model + hyper eval state, not a CV.
+// Map the role to a recognisable "job profile" (title, lane, skills, evidence
+// bias, comm style) so the detail popup reads like a real teammate's resume —
+// without fabricating credentials.
+const ROLE_PROFILES = {
+  coordinator: {
+    title: 'Operations Lead', lane: 'Operations', icon: Target,
+    specialties: ['Planning', 'Status tracking', 'Coordination'],
+    skills: ['Project planning', 'Stakeholder comms', 'Prioritisation', 'Risk surfacing', 'Owner/blocker tracking'],
+    evidence: 'process, owners & next steps',
+    comm: 'Direct, warm, practical, time-aware.',
+  },
+  skeptic: {
+    title: 'Product Skeptic', lane: 'Critique', icon: Shield,
+    specialties: ['Risk analysis', 'Assumption testing'],
+    skills: ['Critical analysis', 'User-impact reasoning', 'Evidence demands', "Devil's advocacy", 'Failure-mode hunting'],
+    evidence: 'what could break & what signal changes the call',
+    comm: 'Polite, opinionated, evidence-driven.',
+  },
+  investigator: {
+    title: 'Research Strategist', lane: 'Research', icon: Brain,
+    specialties: ['Source synthesis', 'Pattern finding'],
+    skills: ['Memory recall', 'Context linking', 'Evidence synthesis', 'Plain-language framing', 'Prior-decision lookup'],
+    evidence: 'prior notes, history & data',
+    comm: 'Analytical, reads the room, plain-language.',
+  },
+  generalist: {
+    title: 'Senior Builder', lane: 'Execution', icon: Cpu,
+    specialties: ['Systems thinking', 'Shipping'],
+    skills: ['Decomposition', 'Tradeoff analysis', 'Systems design', 'Pragmatic execution', 'Bias to ship'],
+    evidence: "what's buildable & testable today",
+    comm: 'Practical, human, impatient with fluff.',
+  },
+};
+
+function deriveProfile(employee) {
+  const role = String(employee.role_archetype || 'generalist').toLowerCase();
+  const base = ROLE_PROFILES[role] || ROLE_PROFILES.generalist;
+  const hyper = employee.hyper || {};
+  const evalCount = hyper.evaluation_count || 0;
+  const threshold = hyper.tuning_threshold || 20;
+  let qualPct;
+  if (hyper.state === 'optimized') qualPct = 0.95;
+  else if (hyper.state === 'ready_for_tuning') qualPct = 0.8;
+  else qualPct = Math.min(0.5 + (evalCount / Math.max(threshold, 1)) * 0.3, 0.72);
+  return {
+    ...base,
+    role,
+    qualPct,
+    qualState: hyper.state === 'optimized' ? 'Optimised' : hyper.state === 'ready_for_tuning' ? 'Ready for tuning' : 'Baseline',
+    evalCount,
+    threshold,
+    versionLabel: employee.active_prompt_version?.version_label || hyper.active_prompt_version?.version_label || 'v0',
+    model: (employee.model || '').split('-').slice(0, 3).join('-'),
+    tools: employee.tools || [],
+    msgs: employee.metricsLast24h?.messages || 0,
+    tokens: employee.metricsLast24h?.tokens || 0,
+  };
+}
+
+function initialsOf(name) {
+  return String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function qualColor(pct) {
+  if (pct > 0.85) return '#16a34a';
+  if (pct > 0.65) return '#f59e0b';
+  return '#117dff';
+}
+
+// ─── Qualifications popup (MiroFish CSI AgentDetailOverlay, HIVEMIND light) ─
+function AgentDetailOverlay({ employee, onClose, onChat }) {
+  const { t } = useTranslation('dashboard');
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  if (!employee) return null;
+  const p = deriveProfile(employee);
+  const RoleIcon = p.icon || Bot;
+  const firstName = (employee.name || '').split(' ')[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-[#0a0a0a]/30 backdrop-blur-md p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative w-full max-w-[480px] max-h-[86vh] overflow-y-auto rounded-3xl border border-[#e3e0db] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
+        <button onClick={onClose} className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-[#f3f1ec] text-[#737373] hover:bg-[#e3e0db] hover:text-[#0a0a0a]">
+          <X size={16} />
+        </button>
+
+        {/* Header */}
+        <div className="flex flex-col items-center px-8 pt-9 pb-5 border-b border-[#eae7e1]">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#117dff]/10 border border-[#117dff]/20 mb-3">
+            <span className="text-[24px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</span>
+          </div>
+          <h2 className="text-[20px] font-semibold text-[#0a0a0a]">{employee.name}</h2>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#117dff]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#117dff]">
+              <RoleIcon size={11} /> {p.title}
+            </span>
+            <span className="text-[11px] text-[#a3a3a3] font-mono">{p.lane} lane</span>
+          </div>
+          {/* Qualification bar */}
+          <div className="mt-4 w-[180px]">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#ece8e1]">
+              <div className="h-full rounded-full transition-all" style={{ width: `${(p.qualPct * 100).toFixed(0)}%`, background: qualColor(p.qualPct) }} />
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] font-mono text-[#a3a3a3]">
+              <span>{(p.qualPct * 100).toFixed(0)}% qualified</span>
+              <span>{p.qualState}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-8 py-5 space-y-5">
+          {/* Specialties */}
+          <Section label={t('digitalemployees.specialties', 'Specialties')}>
+            <div className="flex flex-wrap gap-1.5">
+              {p.specialties.map(s => <Chip key={s} tone="solid">{s}</Chip>)}
+            </div>
+          </Section>
+
+          {/* Skills */}
+          <Section label={t('digitalemployees.skills', 'Skills')}>
+            <div className="flex flex-wrap gap-1.5">
+              {p.skills.map(s => <Chip key={s}>{s}</Chip>)}
+            </div>
+          </Section>
+
+          {/* Communication style */}
+          <Section label={t('digitalemployees.commStyle', 'Communication style')}>
+            <p className="text-[13px] text-[#525252] leading-relaxed">{p.comm}</p>
+          </Section>
+
+          {/* Evidence priority */}
+          <Section label={t('digitalemployees.evidencePriority', 'Evidence priority')}>
+            <p className="text-[13px] text-[#525252] leading-relaxed flex items-start gap-1.5">
+              <Quote size={13} className="mt-0.5 flex-shrink-0 text-[#a3a3a3]" /> {p.evidence}
+            </p>
+          </Section>
+
+          {/* Persona / bio */}
+          {employee.persona && (
+            <Section label={t('digitalemployees.persona', 'Persona')}>
+              <p className="text-[13px] text-[#525252] leading-relaxed">{employee.persona}</p>
+            </Section>
+          )}
+
+          {/* Tools */}
+          {p.tools.length > 0 && (
+            <Section label={t('digitalemployees.tools', 'Tools')}>
+              <div className="flex flex-wrap gap-1.5">
+                {p.tools.map(tool => <Chip key={tool} tone="action">{tool}</Chip>)}
+              </div>
+            </Section>
+          )}
+
+          {/* Footer stats */}
+          <div className="flex items-center gap-3 pt-1 text-[10px] text-[#a3a3a3] font-mono">
+            <span className="flex items-center gap-1"><GraduationCap size={11} /> {p.versionLabel} prompt</span>
+            <span>·</span>
+            <span>{p.evalCount}/{p.threshold} evals</span>
+            <span>·</span>
+            <span className="flex items-center gap-1"><Cpu size={11} /> {p.model}</span>
+          </div>
+        </div>
+
+        {/* Talk CTA */}
+        <div className="sticky bottom-0 border-t border-[#eae7e1] bg-white/95 backdrop-blur px-8 py-4">
+          <button
+            onClick={() => onChat(employee)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#117dff] py-2.5 text-[13px] font-medium text-white hover:bg-[#0066e0]"
+          >
+            <MessageCircle size={15} /> {t('digitalemployees.talkTo', 'Talk to {{name}}', { name: firstName })}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ label, children }) {
+  return (
+    <div>
+      <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[#a3a3a3] mb-2">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ children, tone }) {
+  const cls = tone === 'solid'
+    ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20'
+    : tone === 'action'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]';
+  return <span className={`rounded-md border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{children}</span>;
+}
+
+// ─── Talk-to-Expert chat drawer (MiroFish ExpertChatPanel, HIVEMIND light) ─
+function ExpertChatDrawer({ employee, onClose }) {
+  const { t } = useTranslation('dashboard');
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const conversationId = useRef(`emp-${employee.id}-${Date.now()}`);
+  const logRef = useRef(null);
+  const p = deriveProfile(employee);
+  const firstName = (employee.name || '').split(' ')[0];
+
+  // Seed an intro briefing (local — no extra endpoint).
+  useEffect(() => {
+    setMessages([{
+      id: 'intro', role: 'assistant',
+      content: t('digitalemployees.chatIntro',
+        "Hi, I'm {{name}} — your {{title}}. I work the {{lane}} lane. Ask me anything from my point of view.",
+        { name: employee.name, title: p.title, lane: p.lane }),
+    }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id]);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [messages, loading]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setMessages(prev => [...prev, { id: `${Date.now()}-u`, role: 'user', content: text }]);
+    setInput('');
+    setLoading(true);
+    try {
+      const data = await apiClient.chatWithEmployee(employee.slug, { text, conversation_id: conversationId.current });
+      if (data.conversation_id) conversationId.current = data.conversation_id;
+      setMessages(prev => [...prev, { id: `${Date.now()}-a`, role: 'assistant', content: data.reply || 'No response.' }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { id: `${Date.now()}-e`, role: 'assistant', error: true, content: e.response?.data?.detail || e.response?.data?.error || e.message }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[130]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="absolute inset-0 bg-[#0a0a0a]/20 backdrop-blur-[2px]" />
+      <div className="absolute right-0 top-0 bottom-0 flex w-full max-w-[480px] flex-col bg-white shadow-[-12px_0_40px_rgba(0,0,0,0.12)] animate-[slideIn_0.28s_ease]">
+        {/* Header */}
+        <header className="flex items-center gap-3 border-b border-[#eae7e1] bg-[#faf9f4] px-4 py-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#117dff]/10 border border-[#117dff]/20 flex-shrink-0">
+            <span className="text-[13px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</div>
+            <div className="text-[11px] text-[#737373] truncate">{p.title} · {p.lane} · {p.versionLabel}</div>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#737373] hover:bg-[#e3e0db]/60">
+            <X size={16} />
+          </button>
+        </header>
+
+        {/* Log */}
+        <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-white">
+          {messages.map(msg => (
+            <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {msg.role === 'assistant' && (
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#117dff]/10 text-[10px] font-bold text-[#117dff] font-mono">
+                  {initialsOf(employee.name)}
+                </div>
+              )}
+              <div className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${
+                msg.role === 'user' ? 'bg-[#117dff] text-white' : msg.error ? 'border border-red-200 bg-red-50 text-[#dc2626]' : 'bg-[#f3f1ec] text-[#0a0a0a]'
+              }`}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex gap-2">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#117dff]/10 text-[10px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</div>
+              <div className="rounded-2xl bg-[#f3f1ec] px-4 py-3"><TypingDots /></div>
+            </div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="flex items-center gap-2 border-t border-[#eae7e1] bg-[#faf9f4] px-4 py-3">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder={t('digitalemployees.askPlaceholder', 'Ask {{name}} a question…', { name: firstName })}
+            disabled={loading}
+            className="flex-1 rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[13px] outline-none focus:border-[#117dff]"
+          />
+          <button onClick={send} disabled={loading || !input.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50">
+            <Send size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DigitalEmployees() {
   const { t } = useTranslation('dashboard');
   const { teams } = useTeamContext();
@@ -1293,7 +1478,15 @@ export default function DigitalEmployees() {
   const [createOpen, setCreateOpen] = useState(false);
   const [surface, setSurface] = useState('employee');
   const [chatEmployee, setChatEmployee] = useState(null);
+  const [detailEmployee, setDetailEmployee] = useState(null);
   const [slidePanelOpen, setSlidePanelOpen] = useState(false);
+
+  // Collapse the sidebar to a rail while on the Hyper Agents area (roster).
+  // Sidebar's own ChevronRight is the re-open arrow. Restore on unmount.
+  useEffect(() => {
+    window.dispatchEvent(new Event('hivemind:close-sidebar'));
+    return () => window.dispatchEvent(new Event('hivemind:open-sidebar'));
+  }, []);
   const [seeding, setSeeding] = useState(false);
   const [recentTasks, setRecentTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -1376,7 +1569,7 @@ export default function DigitalEmployees() {
   }
   function handleOpen(emp) {
     setSurface('employee');
-    setChatEmployee(emp);
+    setDetailEmployee(emp);
   }
 
   function handleResumeTask(task) {
@@ -1526,8 +1719,16 @@ export default function DigitalEmployees() {
         teams={teams || []}
       />
 
-      {chatEmployee && surface === 'employee' && (
-        <EmployeeChatPreview employee={chatEmployee} onClose={() => setChatEmployee(null)} />
+      {detailEmployee && (
+        <AgentDetailOverlay
+          employee={detailEmployee}
+          onClose={() => setDetailEmployee(null)}
+          onChat={(emp) => { setDetailEmployee(null); setChatEmployee(emp); }}
+        />
+      )}
+
+      {chatEmployee && (
+        <ExpertChatDrawer employee={chatEmployee} onClose={() => setChatEmployee(null)} />
       )}
 
       {slidePanelOpen && (

@@ -130,7 +130,7 @@ export default function AppShell() {
         {!graphFullscreen && <Sidebar />}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen ? 'sidebar-content-expanded' : ''}`}
-          style={{ marginLeft: sidebarCollapsed || graphFullscreen ? '0px' : '260px' }}
+          style={{ marginLeft: graphFullscreen ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
           {!graphFullscreen && <TopBar />}
           <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-6 overflow-y-auto"}>
