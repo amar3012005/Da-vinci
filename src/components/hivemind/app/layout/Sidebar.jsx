@@ -131,6 +131,7 @@ export default function Sidebar() {
 
   return (
     <aside
+      data-tour-sidebar
       className={`fixed left-0 top-0 bottom-0 ${sidebarWidth} bg-[#faf9f4] border-r border-[#e3e0db] flex flex-col z-40 transition-all duration-200`}
     >
       {/* Logo */}

@@ -151,9 +151,12 @@ function geomFor(cardRect, rect) {
   const from = onLeft
     ? { x: cardRect.left + 8, y: cardCenterY }
     : { x: cardRect.left + cardRect.width - 8, y: cardCenterY };
+  // For sidebar (left) targets, land the arrowhead just OUTSIDE the sidebar's
+  // right edge — the sidebar is lifted above the arrow layer, so a tip inside
+  // it would be hidden. +16 clears the nav padding + the item's glow ring.
   const to = onLeft
-    ? { x: rect.right + 6, y: itemCenterY }
-    : { x: rect.left - 6, y: itemCenterY };
+    ? { x: rect.right + 16, y: itemCenterY }
+    : { x: rect.left - 8, y: itemCenterY };
   return { from, to };
 }
 
@@ -237,29 +240,38 @@ export default function OverviewTour({ onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev, onClose]);
 
-  // Spotlight: lift the active target ABOVE the dim backdrop (z > tour) and
-  // give it a glowing ring, so it stays crisp and unmistakable. The sidebar
-  // NavLinks are position:relative (and the FAB is fixed), so z-index applies.
-  // Styles are saved and restored on step change / unmount.
+  // Lift the WHOLE sidebar above the dim backdrop so the entire nav stays
+  // crisp and fully readable during the tour (z > tour). Mount/unmount only.
+  useEffect(() => {
+    const sb = document.querySelector('[data-tour-sidebar]');
+    if (!sb) return undefined;
+    const savedZ = sb.style.zIndex;
+    sb.style.zIndex = '132';
+    return () => { sb.style.zIndex = savedZ; };
+  }, []);
+
+  // Spotlight: give the active nav item a glowing ring so it's unmistakable.
+  // It already sits above the dim (the whole sidebar is lifted). Styles are
+  // saved and restored on step change.
   useEffect(() => {
     const el = document.querySelector(`[data-tour-id="${step.to}"]`);
     if (!el) return undefined;
     const saved = {
-      zIndex: el.style.zIndex,
       boxShadow: el.style.boxShadow,
       borderRadius: el.style.borderRadius,
       transition: el.style.transition,
+      background: el.style.background,
     };
-    el.style.zIndex = '131';
     el.style.borderRadius = '8px';
-    el.style.transition = 'box-shadow 0.25s ease';
+    el.style.transition = 'box-shadow 0.25s ease, background 0.25s ease';
+    el.style.background = 'rgba(17,125,255,0.10)';
     el.style.boxShadow =
-      '0 0 0 2px #117dff, 0 0 0 5px rgba(17,125,255,0.28), 0 0 22px rgba(17,125,255,0.6)';
+      '0 0 0 2px #117dff, 0 0 0 5px rgba(17,125,255,0.25), 0 0 24px rgba(17,125,255,0.55)';
     return () => {
-      el.style.zIndex = saved.zIndex;
       el.style.boxShadow = saved.boxShadow;
       el.style.borderRadius = saved.borderRadius;
       el.style.transition = saved.transition;
+      el.style.background = saved.background;
     };
   }, [step.to]);
 
@@ -290,15 +302,15 @@ export default function OverviewTour({ onClose }) {
               viewBox="0 0 10 10"
               refX="8"
               refY="5"
-              markerWidth="8"
-              markerHeight="8"
+              markerWidth="7"
+              markerHeight="7"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#117dff" />
             </marker>
           </defs>
 
-          {/* Faint connectors to every target */}
+          {/* Faint connectors to every target (subtle blue guide lines) */}
           {targets.map((t) => {
             const { from, to } = geomFor(cardRect, t.rect);
             return (
@@ -306,16 +318,15 @@ export default function OverviewTour({ onClose }) {
                 key={t.to}
                 d={elbowPath(from, to)}
                 fill="none"
-                stroke="rgba(255,255,255,0.28)"
+                stroke="rgba(17,125,255,0.18)"
                 strokeWidth="1.25"
                 strokeDasharray="3 5"
               />
             );
           })}
 
-          {/* Active connector — dark halo underlay (visible on any bg) + crisp
-              white line + arrowhead. Fades in (no pathLength — that was the
-              cause of the invisible arrow). */}
+          {/* Active connector — white halo underlay (pops on the dimmed light
+              content) + crisp blue line + blue arrowhead. Fades in. */}
           {activeTarget && (() => {
             const { from, to } = geomFor(cardRect, activeTarget.rect);
             const d = elbowPath(from, to);
@@ -326,8 +337,8 @@ export default function OverviewTour({ onClose }) {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                <path d={d} fill="none" stroke="rgba(8,12,20,0.45)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={d} fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" markerEnd="url(#ovt-arrow)" />
+                <path d={d} fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={d} fill="none" stroke="#117dff" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" markerEnd="url(#ovt-arrow)" />
               </motion.g>
             );
           })()}
