@@ -21,8 +21,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
   AlertTriangle, Loader2, Trash2, Eraser, ChevronDown, ChevronRight,
-  Network, Shield, Crown, Lightbulb, MessageCircle,
+  Network, Shield, Crown, Lightbulb, MessageCircle, Check,
+  Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
 } from 'lucide-react';
+
+// Compact relative-time for room last-used. Pure, no deps.
+function relTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts).getTime();
+  if (Number.isNaN(d)) return '';
+  const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
+  if (s < 45) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d`;
+  return `${Math.floor(s / 604800)}w`;
+}
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
@@ -165,7 +179,7 @@ export default function HyperAgents() {
               key={r.id}
               room={r}
               active={r.id === activeRoomId}
-              onClick={() => setActiveRoomId(r.id)}
+              onClick={() => { setActiveRoomId(r.id); setViewMode('thread'); }}
               onDelete={handleDeleteRoom}
             />
           ))}
@@ -180,13 +194,36 @@ export default function HyperAgents() {
                     key={r.id}
                     room={r}
                     active={r.id === activeRoomId}
-                    onClick={() => setActiveRoomId(r.id)}
+                    onClick={() => { setActiveRoomId(r.id); setViewMode('thread'); }}
                     onDelete={handleDeleteRoom}
                     archived
                   />
                 ))}
               </div>
             </details>
+          )}
+        </div>
+
+        {/* Footer: one-tap toggle between active room and the agent roster.
+            Always visible at the bottom of the rooms stack. */}
+        <div className="border-t border-[#e3e0db] p-2 shrink-0">
+          {viewMode === 'roster' ? (
+            <button
+              onClick={() => setViewMode('thread')}
+              disabled={!activeRoomId}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-40 transition-colors"
+              title={t('hyperAgents.backToActiveRoom', 'Back to active room')}
+            >
+              <ArrowLeft size={13} /> {t('hyperAgents.backToRoom', 'Back to Room')}
+            </button>
+          ) : (
+            <button
+              onClick={() => setViewMode('roster')}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors"
+              title={t('hyperAgents.browseEditHires', 'Browse + edit your hires')}
+            >
+              <LayoutGrid size={13} /> {t('hyperAgents.agentRoster', 'Agent roster')}
+            </button>
           )}
         </div>
       </aside>
@@ -196,13 +233,7 @@ export default function HyperAgents() {
         {viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
-              <button
-                onClick={() => setViewMode('thread')}
-                className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db]"
-                title={t('hyperAgents.backToActiveRoom', 'Back to active room')}
-              >
-                {t('hyperAgents.backToRoom', 'Back to Room')}
-              </button>
+              <LayoutGrid size={14} className="text-violet-500" />
               <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('hyperAgents.agentRoster', 'Agent roster')}</span>
               <span className="text-[10px] text-[#a3a3a3] ml-auto">{t('hyperAgents.browseEditHires', 'Browse + edit your hires')}</span>
             </div>
@@ -294,16 +325,29 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
           )}
         </div>
       </div>
-      {onDelete && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete(room); }}
-          className="opacity-0 group-hover:opacity-100 text-[#a3a3a3] hover:text-red-500 shrink-0 transition-opacity p-1"
-          title={t('hyperAgents.deleteRoomPermanently', 'Delete room permanently')}
-        >
-          <Trash2 size={12} />
-        </button>
-      )}
+      <div className="relative shrink-0 w-9 flex items-center justify-end">
+        {(() => {
+          const rt = relTime(room.updated_at || room.updatedAt);
+          return rt ? (
+            <span
+              className="absolute right-0 text-[9px] font-mono text-[#b3aea4] group-hover:opacity-0 transition-opacity flex items-center gap-0.5"
+              title={t('hyperAgents.lastUsed', 'Last used {{t}} ago', { t: rt })}
+            >
+              <Clock size={8} /> {rt}
+            </span>
+          ) : null;
+        })()}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(room); }}
+            className="opacity-0 group-hover:opacity-100 text-[#a3a3a3] hover:text-red-500 transition-opacity p-1"
+            title={t('hyperAgents.deleteRoomPermanently', 'Delete room permanently')}
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -470,6 +514,16 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
 
+  // Total LLM usage across the room = sum of every sealed turn's cost_tokens
+  // (+ the live turn's seal if present). Surfaced top-right of the navbar.
+  const sealedTokens = turns.reduce((sum, trn) => {
+    const seal = (trn.lines || []).find(l => l && l.t === 'seal');
+    return sum + (Number(seal?.cost_tokens) || 0);
+  }, 0);
+  const liveSeal = liveLines.find(l => l && l.t === 'seal');
+  const totalTokens = sealedTokens + (Number(liveSeal?.cost_tokens) || 0);
+  const fmtTokens = totalTokens >= 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : `${totalTokens}`;
+
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
       <section className="flex-1 min-w-0 min-h-0 flex flex-col">
@@ -501,6 +555,12 @@ function RoomThread({ roomId, onArchived, onBack }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <span
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-[10px] font-mono font-semibold"
+              title={t('hyperAgents.totalLlmTokens', 'Total LLM tokens used in this room')}
+            >
+              <Zap size={11} /> {fmtTokens} {t('hyperAgents.tok', 'tok')}
+            </span>
             {turns.length > 0 && (
               <button
                 onClick={handleClearDiscussion}
@@ -1584,7 +1644,7 @@ function CreateRoomModal({ onClose, onCreated }) {
 
   async function submit(e) {
     e?.preventDefault?.();
-    if (!name.trim() || busy) return;
+    if (!name.trim() || picked.size === 0 || busy) return;
     setBusy(true); setErr(null);
     try {
       const payload = {
@@ -1606,28 +1666,39 @@ function CreateRoomModal({ onClose, onCreated }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-[#1a1814]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.form
         onSubmit={submit}
-        initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
-        className="bg-white rounded-xl w-full max-w-[520px] shadow-2xl overflow-hidden"
+        initial={{ scale: 0.96, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+        className="bg-white rounded-2xl w-full max-w-[560px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(124,58,237,0.3),0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <header className="px-5 py-4 border-b border-[#e3e0db] flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#0a0a0a]">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
-          <button type="button" onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
+        <header className="px-5 py-4 border-b border-[#eceae6] flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
+              style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
+              <Plus size={16} />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-bold text-[#0a0a0a] leading-tight font-['Space_Grotesk']">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
+              <p className="text-[10px] text-[#a3a3a3] leading-tight">{t('hyperAgents.newRoomSub', 'Spin up a multi-agent collaboration room')}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"><X size={15} /></button>
         </header>
-        <div className="px-5 py-4 space-y-3">
+        <div className="px-5 py-4 space-y-4 overflow-y-auto">
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">{t('hyperAgents.nameLbl', 'Name')}</label>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
             <input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={t('hyperAgents.namePlaceholder', 'Q2 planning')}
-              className="w-full h-9 px-3 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
+              className="w-full h-10 px-3.5 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
             />
           </div>
           {/* Format: Smart by default. Power users expand "Customize" to pick
@@ -1636,13 +1707,15 @@ function CreateRoomModal({ onClose, onCreated }) {
             <button
               type="button"
               onClick={() => setShowAdvanced(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a]"
+              className={`w-full flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-mono uppercase tracking-wider transition-colors ${
+                showAdvanced ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'
+              }`}
             >
-              {showAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {showAdvanced ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               {t('hyperAgents.customizeFormat', 'Customize format')}
               {!showAdvanced && (
-                <span className="text-[10px] text-[#a3a3a3] normal-case font-sans tracking-normal ml-1">
-                  · {t('hyperAgents.smartHint', 'Smart — picks the best format for your question')}
+                <span className="text-[10px] text-[#a3a3a3] normal-case font-sans tracking-normal ml-auto">
+                  {t('hyperAgents.smartHint', 'Smart — picks the best format for your question')}
                 </span>
               )}
             </button>
@@ -1651,8 +1724,8 @@ function CreateRoomModal({ onClose, onCreated }) {
           {showAdvanced && (
           <>
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">{t('hyperAgents.templateLbl', 'Template')}</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.templateLbl', 'Template')}</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-1 -mr-1">
               {[
                 { key: 'auto', labelKey: 'hyperAgents.tmplAutoLabel', label: 'Smart (Auto)', descKey: 'hyperAgents.tmplAutoDesc', desc: 'Picks the best format from your question. Recommended.' },
                 { key: 'debate', labelKey: 'hyperAgents.tmplDebateLabel', label: 'Debate', descKey: 'hyperAgents.tmplDebateDesc', desc: 'Full CSI: lead → reactors → synth → revise loop' },
@@ -1669,14 +1742,19 @@ function CreateRoomModal({ onClose, onCreated }) {
                   type="button"
                   key={tmpl.key}
                   onClick={() => setTemplate(tmpl.key)}
-                  className={`text-left px-2 py-2 rounded-lg border text-[11px] transition-colors ${
+                  className={`relative text-left px-2.5 py-2.5 rounded-xl border text-[11px] transition-all ${
                     template === tmpl.key
-                      ? 'border-violet-500 bg-violet-50'
-                      : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+                      ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
+                      : 'border-[#e3e0db] hover:border-violet-300 hover:bg-[#faf9f4]'
                   }`}
                 >
-                  <div className="font-semibold text-[#0a0a0a]">{t(tmpl.labelKey, tmpl.label)}</div>
-                  <div className="text-[10px] text-[#737373] mt-0.5">{t(tmpl.descKey, tmpl.desc)}</div>
+                  <span className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors ${
+                    template === tmpl.key ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'
+                  }`}>
+                    {template === tmpl.key && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                  <div className="font-semibold text-[#0a0a0a] pr-4 font-['Space_Grotesk']">{t(tmpl.labelKey, tmpl.label)}</div>
+                  <div className="text-[10px] text-[#737373] mt-0.5 leading-snug">{t(tmpl.descKey, tmpl.desc)}</div>
                 </button>
               ))}
             </div>
@@ -1691,7 +1769,7 @@ function CreateRoomModal({ onClose, onCreated }) {
               <select
                 value={skepticId}
                 onChange={(e) => setSkepticId(e.target.value)}
-                className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-violet-500"
+                className="w-full h-10 px-3 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
               >
                 <option value="">{t('hyperAgents.skepticAutoPick', '— auto-pick (first Skeptic-lane participant) —')}</option>
                 {employees
@@ -1714,22 +1792,37 @@ function CreateRoomModal({ onClose, onCreated }) {
           )}
 
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
-              {t('hyperAgents.addAgentsLbl', 'Add agents ({{n}} selected)', { n: picked.size })}
-            </label>
-            <div className="max-h-[260px] overflow-y-auto border border-[#e3e0db] rounded-lg divide-y divide-[#f3f1ec]">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={`text-[11px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#737373]'}`}>
+                {t('hyperAgents.addAgentsLbl', 'Add agents ({{n}} selected)', { n: picked.size })}
+                {picked.size === 0 && <span className="ml-1 normal-case font-sans tracking-normal text-[10px]">· {t('hyperAgents.pickAtLeastOne', 'pick at least 1')}</span>}
+              </label>
+              {employees.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPicked(picked.size === employees.length ? new Set() : new Set(employees.map(e => e.id)))}
+                  className="flex items-center gap-1 text-[10px] font-medium text-violet-600 hover:text-violet-700"
+                >
+                  <CheckCheck size={11} /> {picked.size === employees.length ? t('hyperAgents.clearAll', 'Clear') : t('hyperAgents.selectAll', 'Select all')}
+                </button>
+              )}
+            </div>
+            <div className="max-h-[260px] overflow-y-auto border border-[#e3e0db] rounded-xl divide-y divide-[#f3f1ec]">
               {employees.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">{t('hyperAgents.noEmployeesYet', 'No employees yet.')}</div>
+                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">
+                  {t('hyperAgents.noEmployeesYet', 'No employees yet.')}
+                  <div className="mt-1 text-[10px]">{t('hyperAgents.seedFirst', 'Seed or create employees from the roster first.')}</div>
+                </div>
               )}
               {employees.map(emp => {
                 const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
                 const meta = LANE_META[lane] || LANE_META.Communicator;
                 const checked = picked.has(emp.id);
                 return (
-                  <label key={emp.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#faf9f4]">
-                    <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="accent-violet-500" />
+                  <label key={emp.id} className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-violet-50' : 'hover:bg-[#faf9f4]'}`}>
+                    <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="w-4 h-4 accent-violet-500" />
                     <div
-                      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
+                      className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-semibold ring-2 ring-white"
                       style={{ background: meta.bg, color: meta.color }}
                     >
                       {emp.avatar_url
@@ -1737,9 +1830,11 @@ function CreateRoomModal({ onClose, onCreated }) {
                         : (emp.name?.[0] || '?').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[12px] font-semibold text-[#0a0a0a] truncate">{emp.name}</div>
-                      <div className="text-[10px] font-mono" style={{ color: meta.color }}>{meta.label}</div>
+                      <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate font-['Space_Grotesk']">{emp.name}</div>
+                      <div className="text-[10px] font-mono mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full"
+                        style={{ background: meta.bg, color: meta.color }}>{meta.label}</div>
                     </div>
+                    {checked && <Check size={15} className="text-violet-500 shrink-0" />}
                   </label>
                 );
               })}
@@ -1751,14 +1846,16 @@ function CreateRoomModal({ onClose, onCreated }) {
             </div>
           )}
         </div>
-        <footer className="px-5 py-3 border-t border-[#e3e0db] bg-[#faf9f4] flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="text-[12px] text-[#525252] hover:text-[#0a0a0a] px-3 py-1.5">
+        <footer className="px-5 py-3.5 border-t border-[#eceae6] bg-[#faf9f4] flex items-center justify-end gap-2 flex-shrink-0">
+          <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-lg hover:bg-[#eceae6] transition-colors">
             {t('hyperAgents.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
-            disabled={!name.trim() || busy}
-            className="bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+            disabled={!name.trim() || picked.size === 0 || busy}
+            title={picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : undefined}
+            className="text-white text-[12px] font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_18px_rgba(124,58,237,0.45)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
+            style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}
           >
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
             {t('hyperAgents.createRoom', 'Create room')}
