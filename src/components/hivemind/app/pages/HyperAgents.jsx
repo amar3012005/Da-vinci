@@ -20,9 +20,10 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2, Trash2, Eraser, ChevronDown, ChevronRight,
+  AlertTriangle, Loader2, Trash2, Eraser,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
+  Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -56,6 +57,45 @@ const AGREEMENT_META = {
   extend:    { emoji: '➕', label: 'extend',    color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
   challenge: { emoji: '⚠️', label: 'challenge', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' },
 };
+
+/* ─── Room formats (collaboration templates) ─────────────────────────────
+ * Single source of truth for the create-room format picker. `auto` is the
+ * hero/default — the orchestrator picks the best format from the first
+ * question, so no-code users never need to learn the others. Each entry
+ * carries an icon, a tier tag, and a one-line plain-English description.
+ */
+const ROOM_FORMATS = [
+  { key: 'auto',          icon: Sparkles,      tier: 'Recommended', color: '#7c3aed',
+    labelKey: 'hyperAgents.tmplAutoLabel',      label: 'Smart',
+    descKey: 'hyperAgents.tmplAutoDesc',        desc: 'Picks the best format from your question automatically.' },
+  { key: 'debate',        icon: Swords,        tier: 'Deep',        color: '#f59e0b',
+    labelKey: 'hyperAgents.tmplDebateLabel',    label: 'Debate',
+    descKey: 'hyperAgents.tmplDebateDesc',      desc: 'Lead → reactors → synthesis → revise loop.' },
+  { key: 'decision',      icon: Gavel,         color: '#117dff',
+    labelKey: 'hyperAgents.tmplDecisionLabel',  label: 'Decision',
+    descKey: 'hyperAgents.tmplDecisionDesc',    desc: 'Lead commits, saves the call as memory. No debate.' },
+  { key: 'swarm',         icon: Network,       tier: 'Deep',        color: '#a855f7',
+    labelKey: 'hyperAgents.tmplSwarmLabel',     label: 'Swarm',
+    descKey: 'hyperAgents.tmplSwarmDesc',       desc: 'R1–R5: hypotheses → cross-exam → Skeptic → vote.' },
+  { key: 'brainstorm',    icon: Lightbulb,     color: '#10b981',
+    labelKey: 'hyperAgents.tmplBrainstormLabel',label: 'Brainstorm',
+    descKey: 'hyperAgents.tmplBrainstormDesc',  desc: 'Generative-only. Top 5–8 ideas, no early pick.' },
+  { key: 'council',       icon: Scale,         color: '#a855f7',
+    labelKey: 'hyperAgents.tmplCouncilLabel',   label: 'Council',
+    descKey: 'hyperAgents.tmplCouncilDesc',     desc: 'Majority vote: APPROVED / CONDITIONAL / REJECTED.' },
+  { key: 'lean_coffee',   icon: Coffee,        tier: 'Fast',        color: '#ec4899',
+    labelKey: 'hyperAgents.tmplLeanCoffeeLabel',label: 'Lean Coffee',
+    descKey: 'hyperAgents.tmplLeanCoffeeDesc',  desc: 'Rotate 2–3 sub-topics, time-boxed exploration.' },
+  { key: 'retrospective', icon: History,       color: '#117dff',
+    labelKey: 'hyperAgents.tmplRetroLabel',     label: 'Retrospective',
+    descKey: 'hyperAgents.tmplRetroDesc',       desc: "What worked / didn't / what to change." },
+  { key: 'review',        icon: ClipboardCheck,color: '#10b981',
+    labelKey: 'hyperAgents.tmplReviewLabel',    label: 'Review',
+    descKey: 'hyperAgents.tmplReviewDesc',      desc: 'Score per dimension: PASS / NEEDS_WORK / FAIL.' },
+  { key: 'standup',       icon: ListChecks,    tier: 'Fast',        color: '#ec4899',
+    labelKey: 'hyperAgents.tmplStandupLabel',   label: 'Standup',
+    descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
+];
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
@@ -1624,9 +1664,14 @@ function CreateRoomModal({ onClose, onCreated }) {
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [skepticId, setSkepticId] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [agentQuery, setAgentQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+
+  const activeFormat = ROOM_FORMATS.find(f => f.key === template) || ROOM_FORMATS[0];
+  const filteredEmployees = agentQuery.trim()
+    ? employees.filter(e => (e.name || '').toLowerCase().includes(agentQuery.trim().toLowerCase()))
+    : employees;
 
   useEffect(() => {
     apiClient.listEmployees()
@@ -1701,75 +1746,105 @@ function CreateRoomModal({ onClose, onCreated }) {
               className="w-full h-10 px-3.5 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
             />
           </div>
-          {/* Format: Smart by default. Power users expand "Customize" to pick
-              one of the 10 templates + a permanent Skeptic. */}
+          {/* ── Format picker — always visible, user-friendly. Smart is the
+                hero/default; the 9 specific formats sit in an icon grid. ── */}
           <div>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(v => !v)}
-              className={`w-full flex items-center gap-1.5 px-3 py-2 rounded-xl border text-[11px] font-mono uppercase tracking-wider transition-colors ${
-                showAdvanced ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca] hover:bg-[#faf9f4]'
-              }`}
-            >
-              {showAdvanced ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              {t('hyperAgents.customizeFormat', 'Customize format')}
-              {!showAdvanced && (
-                <span className="text-[10px] text-[#a3a3a3] normal-case font-sans tracking-normal ml-auto">
-                  {t('hyperAgents.smartHint', 'Smart — picks the best format for your question')}
-                </span>
-              )}
-            </button>
-          </div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">
+              {t('hyperAgents.formatLbl', 'How should they collaborate?')}
+            </label>
 
-          {showAdvanced && (
-          <>
-          <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.templateLbl', 'Template')}</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-1 -mr-1">
-              {[
-                { key: 'auto', labelKey: 'hyperAgents.tmplAutoLabel', label: 'Smart (Auto)', descKey: 'hyperAgents.tmplAutoDesc', desc: 'Picks the best format from your question. Recommended.' },
-                { key: 'debate', labelKey: 'hyperAgents.tmplDebateLabel', label: 'Debate', descKey: 'hyperAgents.tmplDebateDesc', desc: 'Full CSI: lead → reactors → synth → revise loop' },
-                { key: 'decision', labelKey: 'hyperAgents.tmplDecisionLabel', label: 'Decision', descKey: 'hyperAgents.tmplDecisionDesc', desc: 'DACI: lead commits, save as memory, skip debate' },
-                { key: 'swarm', labelKey: 'hyperAgents.tmplSwarmLabel', label: 'Swarm', descKey: 'hyperAgents.tmplSwarmDesc', desc: 'R1-R5: hypotheses → cross-exam → chain-of-thought → Skeptic → vote (30-70 actions)' },
-                { key: 'brainstorm', labelKey: 'hyperAgents.tmplBrainstormLabel', label: 'Brainstorm', descKey: 'hyperAgents.tmplBrainstormDesc', desc: 'Generative-only. Top 5-8 ideas. No premature pick.' },
-                { key: 'council', labelKey: 'hyperAgents.tmplCouncilLabel', label: 'Council', descKey: 'hyperAgents.tmplCouncilDesc', desc: 'Majority vote (3/5+). APPROVED / CONDITIONAL / REJECTED.' },
-                { key: 'lean_coffee', labelKey: 'hyperAgents.tmplLeanCoffeeLabel', label: 'Lean Coffee', descKey: 'hyperAgents.tmplLeanCoffeeDesc', desc: 'Rotate 2-3 sub-topics, time-boxed. Light exploration.' },
-                { key: 'retrospective', labelKey: 'hyperAgents.tmplRetroLabel', label: 'Retrospective', descKey: 'hyperAgents.tmplRetroDesc', desc: "What worked / What didn't / What to change." },
-                { key: 'review', labelKey: 'hyperAgents.tmplReviewLabel', label: 'Review', descKey: 'hyperAgents.tmplReviewDesc', desc: 'Score per dimension. PASS / NEEDS_WORK / FAIL.' },
-                { key: 'standup', labelKey: 'hyperAgents.tmplStandupLabel', label: 'Standup', descKey: 'hyperAgents.tmplStandupDesc', desc: 'Yesterday / Today / Blockers status report.' },
-              ].map((tmpl) => (
+            {/* Hero: Smart (auto) */}
+            {(() => {
+              const fmt = ROOM_FORMATS[0];
+              const Icon = fmt.icon;
+              const on = template === fmt.key;
+              return (
                 <button
                   type="button"
-                  key={tmpl.key}
-                  onClick={() => setTemplate(tmpl.key)}
-                  className={`relative text-left px-2.5 py-2.5 rounded-xl border text-[11px] transition-all ${
-                    template === tmpl.key
+                  onClick={() => setTemplate(fmt.key)}
+                  className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all ${
+                    on
                       ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
                       : 'border-[#e3e0db] hover:border-violet-300 hover:bg-[#faf9f4]'
                   }`}
                 >
-                  <span className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors ${
-                    template === tmpl.key ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'
-                  }`}>
-                    {template === tmpl.key && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
+                    style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
+                    <Icon size={17} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</span>
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-violet-700 bg-violet-100 rounded-full px-1.5 py-0.5">{t('hyperAgents.recommended', 'Recommended')}</span>
+                    </div>
+                    <div className="text-[10.5px] text-[#737373] mt-0.5 leading-snug">{t(fmt.descKey, fmt.desc)}</div>
+                  </div>
+                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${on ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'}`}>
+                    {on && <Check size={11} className="text-white" />}
                   </span>
-                  <div className="font-semibold text-[#0a0a0a] pr-4 font-['Space_Grotesk']">{t(tmpl.labelKey, tmpl.label)}</div>
-                  <div className="text-[10px] text-[#737373] mt-0.5 leading-snug">{t(tmpl.descKey, tmpl.desc)}</div>
                 </button>
-              ))}
+              );
+            })()}
+
+            {/* Divider */}
+            <div className="flex items-center gap-2 my-2.5">
+              <div className="h-px flex-1 bg-[#eceae6]" />
+              <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.orPickFormat', 'Or pick a specific format')}</span>
+              <div className="h-px flex-1 bg-[#eceae6]" />
+            </div>
+
+            {/* Grid of the 9 specific formats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {ROOM_FORMATS.slice(1).map((fmt) => {
+                const Icon = fmt.icon;
+                const on = template === fmt.key;
+                return (
+                  <button
+                    type="button"
+                    key={fmt.key}
+                    onClick={() => setTemplate(fmt.key)}
+                    title={t(fmt.descKey, fmt.desc)}
+                    className={`relative text-left p-2.5 rounded-xl border transition-all group ${
+                      on
+                        ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
+                        : 'border-[#e3e0db] hover:border-violet-300 hover:bg-[#faf9f4]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: on ? fmt.color : `${fmt.color}1a`, color: on ? '#fff' : fmt.color }}>
+                        <Icon size={13} />
+                      </span>
+                      {fmt.tier && (
+                        <span className="text-[8px] font-mono uppercase tracking-wider rounded-full px-1.5 py-0.5"
+                          style={{ background: `${fmt.color}14`, color: fmt.color }}>{t(`hyperAgents.tier${fmt.tier}`, fmt.tier)}</span>
+                      )}
+                    </div>
+                    <div className="text-[11.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</div>
+                    <div className="text-[9.5px] text-[#737373] mt-0.5 leading-snug line-clamp-2">{t(fmt.descKey, fmt.desc)}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected-format recap line */}
+            <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-[#737373]">
+              <activeFormat.icon size={12} style={{ color: activeFormat.color }} />
+              <span className="font-medium text-[#525252]">{t(activeFormat.labelKey, activeFormat.label)}</span>
+              <span className="text-[#a3a3a3]">— {t(activeFormat.descKey, activeFormat.desc)}</span>
             </div>
           </div>
 
-          {/* Swarm-template-only Skeptic picker. Defaults to first Skeptic-lane participant. */}
+          {/* Swarm-only Skeptic picker. Defaults to first Skeptic-lane participant. */}
           {template === 'swarm' && (
-            <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-1 block">
-                {t('hyperAgents.permanentSkepticLbl', 'Permanent Skeptic (silent R1-R3, mandatory R4)')}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-amber-700 mb-1 flex items-center gap-1">
+                <Shield size={12} /> {t('hyperAgents.permanentSkepticLbl', 'Permanent Skeptic (silent R1-R3, mandatory R4)')}
               </label>
               <select
                 value={skepticId}
                 onChange={(e) => setSkepticId(e.target.value)}
-                className="w-full h-10 px-3 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                className="w-full h-9 px-3 text-[13px] bg-white border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 transition-all"
               >
                 <option value="">{t('hyperAgents.skepticAutoPick', '— auto-pick (first Skeptic-lane participant) —')}</option>
                 {employees
@@ -1783,14 +1858,13 @@ function CreateRoomModal({ onClose, onCreated }) {
                     );
                   })}
               </select>
-              <div className="text-[10px] text-[#a3a3a3] mt-1 font-mono">
+              <div className="text-[10px] text-amber-700/70 mt-1">
                 {t('hyperAgents.skepticHint', 'Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.')}
               </div>
             </div>
           )}
-          </>
-          )}
 
+          {/* ── Agents ── */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className={`text-[11px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#737373]'}`}>
@@ -1807,14 +1881,30 @@ function CreateRoomModal({ onClose, onCreated }) {
                 </button>
               )}
             </div>
-            <div className="max-h-[260px] overflow-y-auto border border-[#e3e0db] rounded-xl divide-y divide-[#f3f1ec]">
+            {employees.length > 6 && (
+              <div className="relative mb-1.5">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+                <input
+                  value={agentQuery}
+                  onChange={e => setAgentQuery(e.target.value)}
+                  placeholder={t('hyperAgents.searchAgents', 'Search agents…')}
+                  className="w-full h-8 pl-8 pr-3 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                />
+              </div>
+            )}
+            <div className="max-h-[240px] overflow-y-auto border border-[#e3e0db] rounded-xl divide-y divide-[#f3f1ec]">
               {employees.length === 0 && (
                 <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">
                   {t('hyperAgents.noEmployeesYet', 'No employees yet.')}
                   <div className="mt-1 text-[10px]">{t('hyperAgents.seedFirst', 'Seed or create employees from the roster first.')}</div>
                 </div>
               )}
-              {employees.map(emp => {
+              {employees.length > 0 && filteredEmployees.length === 0 && (
+                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">
+                  {t('hyperAgents.noAgentMatch', 'No agents match your search.')}
+                </div>
+              )}
+              {filteredEmployees.map(emp => {
                 const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
                 const meta = LANE_META[lane] || LANE_META.Communicator;
                 const checked = picked.has(emp.id);
