@@ -261,8 +261,9 @@ function HyperStateBadge({ hyper }) {
   );
 }
 
-function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy, selectable, selected, onToggleSelect }) {
+function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy, onTune, selectable, selected, onToggleSelect }) {
   const { t } = useTranslation('dashboard');
+  const [tuning, setTuning] = useState(false);
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const isDraft = employee.status === 'draft';
@@ -274,6 +275,19 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
   const versionLabel = employee.active_prompt_version?.version_label || hyper?.active_prompt_version?.version_label || 'v0';
   const evalCount = hyper?.evaluation_count || 0;
   const threshold = hyper?.tuning_threshold || 20;
+  const isReadyForTuning = hyper?.state === 'ready_for_tuning';
+  const isOptimized = hyper?.state === 'optimized';
+
+  const handleTune = async (e) => {
+    e.stopPropagation();
+    if (tuning || !onTune) return;
+    setTuning(true);
+    try {
+      await onTune(employee);
+    } finally {
+      setTuning(false);
+    }
+  };
 
   const handleClick = () => {
     if (selectable && onToggleSelect) {
@@ -329,6 +343,26 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
             style={{ width: `${hyper?.state === 'optimized' ? 100 : (hyper?.progress_pct || 0)}%` }}
           />
         </div>
+        {isReadyForTuning && (
+          <button
+            onClick={handleTune}
+            disabled={tuning}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 rounded-[6px] bg-violet-600 px-2 py-1.5 text-[11px] font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+          >
+            {tuning ? (
+              <><RefreshCw size={11} className="animate-spin" /> {t('digitalemployees.tuning', 'Tuning…')}</>
+            ) : (
+              <><Sparkles size={11} /> {t('digitalemployees.tuneNow', 'Tune now')}</>
+            )}
+          </button>
+        )}
+        {isOptimized && (
+          <div className="mt-3 flex justify-center">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+              <Sparkles size={10} /> {t('digitalemployees.optimizedBadge', 'Optimized {{version}}', { version: versionLabel })}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mt-auto pt-2 border-t border-[#eae7e1]">
@@ -1262,6 +1296,10 @@ function AgentDetailOverlay({ employee, onClose, onChat, onRemint, isAdmin }) {
   const p = deriveProfile(employee);
   const RoleIcon = p.icon || Bot;
   const firstName = (employee.name || '').split(' ')[0];
+  const hyper = employee.hyper || {};
+  const apv = employee.active_prompt_version || hyper.active_prompt_version || {};
+  const tuneMetrics = apv.metrics || {};
+  const showTuning = hyper.state === 'optimized';
 
   return (
     <div
@@ -1328,6 +1366,42 @@ function AgentDetailOverlay({ employee, onClose, onChat, onRemint, isAdmin }) {
           {employee.persona && (
             <Section label={t('digitalemployees.persona', 'Persona')}>
               <p className="text-[13px] text-[#525252] leading-relaxed">{employee.persona}</p>
+            </Section>
+          )}
+
+          {/* Tuning — only once the agent has been optimized */}
+          {showTuning && (
+            <Section label={t('digitalemployees.tuning', 'Tuning')}>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[
+                  { key: 'baseline', label: t('digitalemployees.tuneBaseline', 'Baseline'), value: tuneMetrics.baseline },
+                  { key: 'variant', label: t('digitalemployees.tuneVariant', 'Variant'), value: tuneMetrics.variant },
+                  { key: 'delta', label: t('digitalemployees.tuneDelta', 'Delta'), value: tuneMetrics.delta },
+                ].map(({ key, label, value }) => (
+                  <div key={key} className="rounded-[8px] border border-[#eae7e1] bg-[#fbfaf7] px-2.5 py-2 text-center">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.1em] text-[#a3a3a3]">{label}</p>
+                    <p className={`mt-1 text-[14px] font-semibold ${key === 'delta' && Number(value) > 0 ? 'text-emerald-600' : 'text-[#0a0a0a]'}`}>
+                      {typeof value === 'number' ? (key === 'delta' && value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2)) : '—'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {apv.initial_prompt && (
+                <details className="mb-2 rounded-[8px] border border-[#eae7e1] bg-white">
+                  <summary className="cursor-pointer px-3 py-2 text-[11px] font-medium text-[#525252] hover:bg-[#faf9f4]">
+                    {t('digitalemployees.tuneInitialPrompt', 'Initial prompt')}
+                  </summary>
+                  <p className="border-t border-[#eae7e1] px-3 py-2 text-[12px] leading-relaxed text-[#525252] whitespace-pre-wrap">{apv.initial_prompt}</p>
+                </details>
+              )}
+              {apv.optimized_prompt && (
+                <details className="rounded-[8px] border border-emerald-200 bg-emerald-50/40">
+                  <summary className="cursor-pointer px-3 py-2 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50">
+                    {t('digitalemployees.tuneOptimizedPrompt', 'Optimized prompt')}
+                  </summary>
+                  <p className="border-t border-emerald-200 px-3 py-2 text-[12px] leading-relaxed text-[#525252] whitespace-pre-wrap">{apv.optimized_prompt}</p>
+                </details>
+              )}
             </Section>
           )}
 
@@ -1700,6 +1774,21 @@ export default function DigitalEmployees() {
     }
   }
 
+  async function handleTune(emp) {
+    try {
+      await apiClient.tuneEmployee(emp.id);
+      flash(t('digitalemployees.tuneStarted', 'Tuning {{name}}…', { name: emp.name }));
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      // The tune runs server-side (Groq teacher loop) and flips state to
+      // 'optimized'. Poll a few times so the new prompt version + badge land.
+      await fetch();
+      setTimeout(() => { fetch().catch(() => {}); }, 5000);
+      setTimeout(() => { fetch().catch(() => {}); }, 12000);
+    }
+  }
+
   function handleResumeTask(task) {
     setSurface('workspace');
     setChatEmployee(null);
@@ -1844,6 +1933,7 @@ export default function DigitalEmployees() {
                   onArchive={handleArchive}
                   onOpen={handleOpen}
                   onDeploy={handleDeploy}
+                  onTune={handleTune}
                   selectable={false}
                   selected={false}
                   onToggleSelect={undefined}

@@ -538,6 +538,14 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Kick off a prompt-tuning run for an employee that has hit its eval
+  // threshold (hyper.state === 'ready_for_tuning'). Server runs the Groq
+  // teacher loop and flips state to 'optimized' with a new prompt version.
+  async tuneEmployee(id) {
+    const { data } = await this.controlPlane.post(`/v1/employees/${id}/tune`);
+    return data;
+  }
+
   async pauseAllEmployees(orgId) {
     const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/employees/pause-all`);
     return data;
