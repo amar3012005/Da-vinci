@@ -24,6 +24,9 @@ import {
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
 } from 'lucide-react';
+import apiClient from '../shared/api-client';
+import DigitalEmployees from './DigitalEmployees';
+import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 
 // Compact relative-time for room last-used. Pure, no deps.
 function relTime(ts) {
@@ -37,9 +40,6 @@ function relTime(ts) {
   if (s < 604800) return `${Math.floor(s / 86400)}d`;
   return `${Math.floor(s / 604800)}w`;
 }
-import apiClient from '../shared/api-client';
-import DigitalEmployees from './DigitalEmployees';
-import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
 
