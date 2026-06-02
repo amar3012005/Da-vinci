@@ -33,6 +33,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const [langFilter, setLangFilter] = useState('en');
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
+  const [mode, setMode] = useState('external'); // external = full agent (clinical) | internal = direct recall
   const [previewing, setPreviewing] = useState(false);
   const previewAudioRef = useRef(null);
 
@@ -132,6 +133,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     if (orgId) url.searchParams.set('org_id', orgId);
     url.searchParams.set('session_id', `tara_${Date.now()}`);
     url.searchParams.set('language', langFilter || language);
+    url.searchParams.set('mode', mode);
     if (voiceId) url.searchParams.set('voice_id', voiceId);
 
     const ws = new WebSocket(url.toString());
@@ -178,7 +180,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     };
     ws.onerror = () => setError('Connection error.');
     ws.onclose = () => { if (active) stopAll('closed'); };
-  }, [userId, orgId, language, langFilter, voiceId, wsBase, playPcm, active, stopAll]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, wsBase, playPcm, active, stopAll]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -214,6 +216,19 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
               <p className="text-[#a3a3a3] text-[12px]">Real-time voice · self-hosted AaaS</p>
             </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
+              {!active && (
+                <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
+                  {['external', 'internal'].map((m) => (
+                    <button key={m} type="button" onClick={() => setMode(m)}
+                      title={m === 'internal' ? 'Direct HIVEMIND recall, no clinical reasoning' : 'Full agent (clinical reasoning if configured)'}
+                      className={`px-2.5 py-1.5 transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              )}
             <button
               onClick={active ? () => stopAll('user') : start}
               disabled={busy}
@@ -224,6 +239,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
               {busy ? <Loader2 size={14} className="animate-spin" /> : active ? <Square size={14} /> : <Mic size={14} />}
               {busy ? 'Connecting…' : active ? 'Stop' : 'Start'}
             </button>
+            </div>
           </div>
 
           {/* Voice config (always visible when idle) */}

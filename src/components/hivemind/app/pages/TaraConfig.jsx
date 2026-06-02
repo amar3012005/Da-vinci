@@ -509,7 +509,7 @@ export default function TaraConfig() {
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
-  const [showPrompt, setShowPrompt] = useState(true);
+  const [activeTab, setActiveTab] = useState('system');
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
@@ -567,33 +567,60 @@ export default function TaraConfig() {
         <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language="en" />
       </motion.div>
 
-      {/* System Prompt — collapsible */}
+      {/* Stat cards */}
+      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { icon: Play, label: 'Total Calls', value: '0', color: '#117dff' },
+          { icon: Clock, label: 'This Week', value: '0', color: '#117dff' },
+          { icon: MessageSquare, label: 'Turns', value: '0', color: '#16a34a' },
+          { icon: Brain, label: 'Mode', value: 'External', color: '#7c3aed' },
+          { icon: Zap, label: 'Last Call', value: '—', color: '#a3a3a3' },
+        ].map((s) => (
+          <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <s.icon size={15} style={{ color: s.color }} />
+            <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums mt-2">{s.value}</p>
+            <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Tabs */}
       <motion.div variants={fadeUp}>
-        <button
-          onClick={() => setShowPrompt((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white border border-[#e3e0db] rounded-xl hover:border-[#d4d0ca] transition-colors"
-        >
-          <span className="flex items-center gap-2 text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">
-            <Sliders size={15} className="text-[#117dff]" /> {t('taraconfig.systemPrompt', 'System Prompt')}
-          </span>
-          {showPrompt ? <ChevronDown size={16} className="text-[#a3a3a3]" /> : <ChevronRight size={16} className="text-[#a3a3a3]" />}
-        </button>
-        <AnimatePresence>
-          {showPrompt && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mt-3"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 size={20} className="text-[#117dff] animate-spin" />
-                </div>
-              ) : (
-                <ConfigEditor config={config} onSave={handleSave} saving={saving} />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="flex items-center gap-1 border-b border-[#e3e0db] mb-4">
+          {[
+            { id: 'system', label: 'System Prompt', icon: Sliders },
+            { id: 'history', label: 'Call History', icon: Clock },
+            { id: 'insights', label: 'Insights', icon: Brain },
+            { id: 'usage', label: 'Usage', icon: Zap },
+          ].map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab.id ? 'border-[#117dff] text-[#0a0a0a]' : 'border-transparent text-[#a3a3a3] hover:text-[#525252]'}`}>
+              <tab.icon size={14} /> {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'system' && (
+          loading
+            ? <div className="flex items-center justify-center py-8"><Loader2 size={20} className="text-[#117dff] animate-spin" /></div>
+            : <ConfigEditor config={config} onSave={handleSave} saving={saving} />
+        )}
+        {activeTab === 'history' && (
+          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+            <Clock size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No calls yet. Your conversation history will appear here.
+          </div>
+        )}
+        {activeTab === 'insights' && (
+          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+            <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Insights from your conversations will be summarized here.
+          </div>
+        )}
+        {activeTab === 'usage' && (
+          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+            <Zap size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> STT / LLM / TTS token usage will be tracked here.
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
