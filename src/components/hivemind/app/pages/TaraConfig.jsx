@@ -534,18 +534,16 @@ export default function TaraConfig() {
       initial="hidden"
       animate="visible"
       variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
-      className="max-w-4xl mx-auto space-y-6"
+      className="max-w-[1200px] mx-auto space-y-6"
     >
-      {/* Header */}
-      <motion.div variants={fadeUp} className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#117dff] to-[#6366f1] flex items-center justify-center shadow-lg">
-            <Mic size={18} className="text-white" />
+      {/* Header — eyebrow + big title + subtitle (Workspace-Admin style) */}
+      <motion.div variants={fadeUp} className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-[#a3a3a3] mb-1">
+            <Mic size={12} className="text-[#117dff]" /> HIVEMIND
           </div>
-          <div>
-            <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk']">TARA × HIVEMIND</h1>
-            <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk']">{t('taraconfig.subtitle', 'Voice agent conversational runtime')}</p>
-          </div>
+          <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
+          <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
         </div>
         {saveStatus === 'saved' && (
           <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-['Space_Grotesk'] font-semibold">
