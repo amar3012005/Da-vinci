@@ -183,113 +183,105 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
   const busy = state === 'connecting';
+  const orbState = busy ? 'thinking' : state;
   return (
-    <div className="rounded-2xl border border-[#e3e0db] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full ${
-            state === 'talking' ? 'bg-[#117dff] animate-pulse'
-            : state === 'listening' ? 'bg-[#16a34a]'
-            : state === 'thinking' || busy ? 'bg-amber-500 animate-pulse'
-            : 'bg-[#d4d0ca]'}`} />
-          <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">
-            Talk to TARA <span className="text-[#a3a3a3] font-normal">· self-hosted AaaS</span>
+    <div className="rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex items-start gap-5">
+        {/* ElevenLabs-style glossy orb */}
+        <div className="relative w-28 h-28 shrink-0">
+          <div className="absolute -inset-3 rounded-full blur-2xl"
+            style={{ background: 'radial-gradient(circle, rgba(17,125,255,0.45), transparent 70%)', opacity: orbState === 'idle' ? 0.35 : 0.7 }} />
+          <div
+            className={`absolute inset-0 rounded-full ${orbState === 'idle' ? '' : orbState === 'talking' ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_9s_linear_infinite]'}`}
+            style={{ background: 'conic-gradient(from 210deg, #0a1733, #117dff, #9ec5ff, #0a0a0a 70%, #0a1733)' }}
+          />
+          <div className="absolute inset-0 rounded-full"
+            style={{ background: 'radial-gradient(circle at 32% 26%, rgba(255,255,255,0.6), transparent 42%)' }} />
+          <div className="absolute inset-[34%] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.85), transparent 75%)' }} />
+          {(orbState === 'talking' || orbState === 'listening') && (
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ boxShadow: '0 0 0 2px rgba(17,125,255,0.4)' }} />
+          )}
+          <span className="absolute -bottom-5 left-0 right-0 text-center text-[9px] font-mono text-[#a3a3a3] uppercase tracking-[0.14em]">
+            {orbState === 'idle' ? 'TALK TO TARA' : orbState}
           </span>
         </div>
-        <span className="text-[10px] font-mono text-[#a3a3a3] uppercase">{state}</span>
-      </div>
 
-      {/* Orb — spins when active, pulses while talking/listening */}
-      <div className="flex justify-center my-5">
-        <div className="relative w-28 h-28">
-          <div
-            className={`absolute inset-0 rounded-full ${
-              state === 'talking' ? 'animate-[spin_2.5s_linear_infinite]'
-              : state === 'listening' || state === 'thinking' || state === 'connecting' ? 'animate-[spin_7s_linear_infinite]'
-              : ''}`}
-            style={{ background: 'conic-gradient(from 0deg, #117dff, #7db4ff, #0a0a0a 55%, #117dff)' }}
-          />
-          <div className="absolute inset-[7px] rounded-full bg-[#0a0a0a]" />
-          {(state === 'talking' || state === 'listening') && (
-            <div className="absolute inset-0 rounded-full animate-pulse" style={{ boxShadow: '0 0 32px rgba(17,125,255,0.55)' }} />
-          )}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[8px] font-mono text-white/60 uppercase tracking-[0.12em]">{state === 'idle' ? 'tara' : state}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Current turn only — user STT + TARA reply */}
-      {(transcript || agentTurn) && (
-        <div className="mb-3 space-y-2">
-          {transcript && (
-            <div className="flex gap-2">
-              <span className="text-[10px] font-mono text-[#a3a3a3] uppercase pt-0.5 w-10 shrink-0">You</span>
-              <p className="text-[12.5px] text-[#0a0a0a] flex-1">{transcript}</p>
+        {/* Right column */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
+              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · self-hosted AaaS</p>
             </div>
-          )}
-          {agentTurn && (
-            <div className="flex gap-2">
-              <span className="text-[10px] font-mono text-[#117dff] uppercase pt-0.5 w-10 shrink-0">TARA</span>
-              <p className="text-[12.5px] text-[#525252] flex-1">{agentTurn}</p>
-            </div>
-          )}
-        </div>
-      )}
-      {error && (
-        <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-3">
-          <AlertTriangle size={11} className="inline mr-1" /> {error}
-        </div>
-      )}
-
-      {/* Voice picker — choose before starting */}
-      {!active && voices.length > 0 && (
-        <div className="mb-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}
-              className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
-              <option value="">All languages</option>
-              {langs.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-            </select>
-            <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}
-              className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
-              <option value="">Any gender</option>
-              <option value="feminine">Feminine</option>
-              <option value="masculine">Masculine</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}
-              className="flex-1 h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
-              {filteredVoices.length === 0 && <option value="">No voices</option>}
-              {filteredVoices.slice(0, 10).map((v) => (
-                <option key={v.id} value={v.id}>{v.name} ({v.gender?.[0]?.toUpperCase()}{v.country ? `·${v.country}` : ''})</option>
-              ))}
-            </select>
-            <button type="button" onClick={preview} disabled={!voiceId || previewing}
-              className="px-3 h-9 rounded-lg border border-[#e3e0db] text-[12px] text-[#117dff] hover:bg-[#faf9f4] disabled:opacity-50 flex items-center gap-1">
-              {previewing ? <Loader2 size={13} className="animate-spin" /> : <Volume2 size={13} />} Hear
+            <button
+              onClick={active ? () => stopAll('user') : start}
+              disabled={busy}
+              className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-[13px] font-semibold transition-all shrink-0 ${
+                active ? 'bg-[#ef4444] text-white hover:bg-[#dc2626]'
+                : 'bg-[#0a0a0a] text-white hover:bg-[#262626] disabled:opacity-50'}`}
+            >
+              {busy ? <Loader2 size={14} className="animate-spin" /> : active ? <Square size={14} /> : <Mic size={14} />}
+              {busy ? 'Connecting…' : active ? 'Stop' : 'Start'}
             </button>
           </div>
-          {voiceId && (() => { const v = voices.find((x) => x.id === voiceId); return v?.description ? (
-            <p className="text-[10px] text-[#a3a3a3] leading-snug">{v.description}</p>
-          ) : null; })()}
-        </div>
-      )}
 
-      <button
-        onClick={active ? () => stopAll('user') : start}
-        disabled={busy}
-        className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
-          active
-            ? 'bg-[#ef4444] text-white hover:bg-[#dc2626]'
-            : 'bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50'
-        }`}
-      >
-        {busy ? <Loader2 size={15} className="animate-spin" />
-          : active ? <Square size={15} /> : <Mic size={15} />}
-        {busy ? 'Connecting…' : active ? 'Stop' : 'Start'}
-      </button>
+          {/* Voice config (always visible when idle) */}
+          {!active && (
+            <div className="mt-4 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}
+                  className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+                  <option value="">All languages</option>
+                  {langs.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+                </select>
+                <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}
+                  className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+                  <option value="">Any gender</option>
+                  <option value="feminine">Feminine</option>
+                  <option value="masculine">Masculine</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}
+                  className="flex-1 h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+                  {filteredVoices.length === 0 && <option value="">{voices.length ? 'No match' : 'Loading voices…'}</option>}
+                  {filteredVoices.slice(0, 10).map((v) => (
+                    <option key={v.id} value={v.id}>{v.name} ({v.gender?.[0]?.toUpperCase()}{v.country ? `·${v.country}` : ''})</option>
+                  ))}
+                </select>
+                <button type="button" onClick={preview} disabled={!voiceId || previewing}
+                  className="px-3 h-9 rounded-lg border border-[#e3e0db] text-[12px] text-[#117dff] hover:bg-[#faf9f4] disabled:opacity-50 flex items-center gap-1">
+                  {previewing ? <Loader2 size={13} className="animate-spin" /> : <Volume2 size={13} />} Hear
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Current turn — user STT + TARA reply */}
+          {(transcript || agentTurn) && (
+            <div className="mt-4 space-y-2 border-t border-[#f3f1ec] pt-3">
+              {transcript && (
+                <div className="flex gap-2">
+                  <span className="text-[10px] font-mono text-[#a3a3a3] uppercase pt-0.5 w-10 shrink-0">You</span>
+                  <p className="text-[12.5px] text-[#0a0a0a] flex-1">{transcript}</p>
+                </div>
+              )}
+              {agentTurn && (
+                <div className="flex gap-2">
+                  <span className="text-[10px] font-mono text-[#117dff] uppercase pt-0.5 w-10 shrink-0">TARA</span>
+                  <p className="text-[12.5px] text-[#525252] flex-1">{agentTurn}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {error && (
+            <div className="mt-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+              <AlertTriangle size={11} className="inline mr-1" /> {error}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
