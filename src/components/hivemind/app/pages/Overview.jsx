@@ -22,6 +22,11 @@ import {
   Globe,
   Bookmark,
   Hexagon,
+  Sparkles,
+  Building2,
+  Users,
+  Network,
+  Boxes,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce, useHealthStatus } from '../shared/hooks';
@@ -231,6 +236,21 @@ export default function Overview() {
     if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
   }, [navigate]);
 
+  // Auto-greet: slide the Talk-to-HIVE panel out ~1.5s after the dashboard
+  // settles, so the assistant proactively welcomes the user. Once per browser
+  // session (so revisiting Overview doesn't re-pop), desktop only (mobile
+  // redirects to /m/chat above).
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    try { if (window.sessionStorage.getItem('hm.autoChatShown')) return undefined; } catch { /* storage blocked */ }
+    if (window.matchMedia('(max-width: 768px)').matches) return undefined;
+    const timer = window.setTimeout(() => {
+      try { window.sessionStorage.setItem('hm.autoChatShown', '1'); } catch { /* noop */ }
+      window.dispatchEvent(new CustomEvent('hivemind:open-chat'));
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   // Post-login welcome email. Fires once the user reaches Overview after a
   // successful login. Guarded to once per browser session so revisiting the
   // page (or re-renders) won't re-send; the server also dedupes per session.
@@ -308,6 +328,20 @@ export default function Overview() {
     return searchResults.metadata || null;
   }, [searchResults]);
 
+  // Feature launcher — Overview is the entrance to every surface. Primary
+  // action (Talk to HIVE) slides the assistant panel out; the rest navigate.
+  const openChat = () => window.dispatchEvent(new CustomEvent('hivemind:open-chat'));
+  const FEATURES = [
+    { key: 'chat',      icon: Sparkles,  label: t('overview.feat.chat', 'Talk to HIVE'),        hint: t('overview.feat.chatHint', 'Ask your second brain anything'), onClick: openChat, primary: true },
+    { key: 'rooms',     icon: Users,     label: t('overview.feat.rooms', 'HyperAgents Rooms'),  hint: t('overview.feat.roomsHint', 'Multi-agent collaboration rooms'), onClick: () => navigate('../employees') },
+    { key: 'workspace', icon: Building2, label: t('overview.feat.workspace', 'Workspace'),       hint: t('overview.feat.workspaceHint', 'Team, members & projects'),     onClick: () => navigate('../workspace') },
+    { key: 'knowledge', icon: BookOpen,  label: t('overview.feat.knowledge', 'Knowledge Base'),  hint: t('overview.feat.knowledgeHint', 'Upload & manage documents'),    onClick: () => navigate('../knowledge') },
+    { key: 'graph',     icon: Network,   label: t('overview.feat.graph', 'Memory Graph'),        hint: t('overview.feat.graphHint', '3D map of your memories'),         onClick: () => navigate('../graph') },
+    { key: 'swarm',     icon: Boxes,     label: t('overview.feat.swarm', 'Swarm'),               hint: t('overview.feat.swarmHint', 'Digital employees & agents'),      onClick: () => navigate('../swarm') },
+    { key: 'connectors',icon: Cable,     label: t('overview.feat.connectors', 'Connectors'),     hint: t('overview.feat.connectorsHint', 'Link Slack, Gmail, Notion…'), onClick: () => navigate('../connectors') },
+    { key: 'web',       icon: Globe,     label: t('overview.feat.web', 'Web Intelligence'),      hint: t('overview.feat.webHint', 'Research & live web recall'),        onClick: () => navigate('../web') },
+  ];
+
   return (
     <div className="max-w-6xl mx-auto font-['Space_Grotesk']">
       {/* First-visit guided tour */}
@@ -327,6 +361,46 @@ export default function Overview() {
           <h1 className="text-[#0a0a0a] text-2xl font-bold tracking-tight">{t('overview.title', 'Overview')}</h1>
         </div>
         <p className="text-[#525252] text-sm ml-8">{t('overview.subtitle', 'Your HIVEMIND memory engine at a glance.')}</p>
+      </motion.div>
+
+      {/* Feature launcher — the entrance to every surface */}
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8"
+      >
+        {FEATURES.map((f) => {
+          const Icon = f.icon;
+          return (
+            <motion.button
+              key={f.key}
+              variants={fadeUp}
+              onClick={f.onClick}
+              className={`group relative flex flex-col gap-2 p-4 rounded-2xl border text-left transition-all overflow-hidden ${
+                f.primary
+                  ? 'bg-gradient-to-br from-[#117dff] to-[#0a5fd0] border-[#117dff] text-white shadow-[0_4px_16px_rgba(17,125,255,0.25)] hover:shadow-[0_6px_22px_rgba(17,125,255,0.35)]'
+                  : 'bg-white border-[#e3e0db] hover:border-[#117dff]/40 hover:bg-[#f7f6f2] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
+              }`}
+            >
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                f.primary ? 'bg-white/20' : 'bg-[#117dff]/10 border border-[#117dff]/20'
+              }`}>
+                <Icon size={18} className={f.primary ? 'text-white' : 'text-[#117dff]'} />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-sm font-semibold leading-tight ${f.primary ? 'text-white' : 'text-[#0a0a0a]'}`}>{f.label}</p>
+                <p className={`text-[11px] mt-0.5 leading-snug ${f.primary ? 'text-white/80' : 'text-[#a3a3a3]'}`}>{f.hint}</p>
+              </div>
+              <ArrowRight
+                size={14}
+                className={`absolute top-4 right-4 transition-transform group-hover:translate-x-0.5 ${
+                  f.primary ? 'text-white/70' : 'text-[#e3e0db] group-hover:text-[#117dff]/60'
+                }`}
+              />
+            </motion.button>
+          );
+        })}
       </motion.div>
 
       {/* Grid */}

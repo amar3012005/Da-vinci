@@ -111,12 +111,18 @@ export default function AppShell() {
     const handleCollapse = () => setSidebarCollapsed(true);
     const handleExpand = () => setSidebarCollapsed(false);
 
+    // Lets any page (e.g. Overview's auto-greet) slide the Talk-to-HIVE
+    // panel out via window.dispatchEvent(new CustomEvent('hivemind:open-chat')).
+    const handleOpenChat = () => setChatOpen(true);
+
     window.addEventListener('hivemind:close-sidebar', handleCollapse);
     window.addEventListener('hivemind:open-sidebar', handleExpand);
+    window.addEventListener('hivemind:open-chat', handleOpenChat);
 
     return () => {
       window.removeEventListener('hivemind:close-sidebar', handleCollapse);
       window.removeEventListener('hivemind:open-sidebar', handleExpand);
+      window.removeEventListener('hivemind:open-chat', handleOpenChat);
     };
   }, []);
 
