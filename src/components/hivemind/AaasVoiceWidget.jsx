@@ -10,18 +10,58 @@
  *   ?user_id=&org_id=&session_id=&language=   (tenant = user_id; auth hardening = Phase 2)
  */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Mic, Square, Loader2, AlertTriangle } from 'lucide-react';
+import { Mic, Square, Loader2, AlertTriangle, Volume2 } from 'lucide-react';
 
 const SAMPLE_RATE = 16000;
 const DEFAULT_WS =
   process.env.REACT_APP_AAAS_WS ||
   'wss://core.hivemind.davinciai.eu:8050/aaas/voice';
 
+const AAAS_HTTP =
+  (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || 'https://core.hivemind.davinciai.eu:8050/aaas';
+
 export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = DEFAULT_WS }) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState('idle'); // idle|connecting|listening|thinking|talking
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState(null);
+
+  // Voice picker
+  const [voices, setVoices] = useState([]);
+  const [langs, setLangs] = useState([]);
+  const [langFilter, setLangFilter] = useState('en');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [voiceId, setVoiceId] = useState('');
+  const [previewing, setPreviewing] = useState(false);
+  const previewAudioRef = useRef(null);
+
+  useEffect(() => {
+    fetch(`${AAAS_HTTP}/voices`)
+      .then((r) => r.json())
+      .then((d) => {
+        setVoices(d.voices || []);
+        setLangs(d.languages || []);
+        const en = (d.voices || []).find((v) => v.language === 'en');
+        if (en) setVoiceId(en.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  const filteredVoices = voices.filter(
+    (v) => (!langFilter || v.language === langFilter) && (!genderFilter || v.gender === genderFilter)
+  );
+
+  const preview = useCallback(() => {
+    if (!voiceId) return;
+    setPreviewing(true);
+    const url = `${AAAS_HTTP}/voice-preview?voice_id=${encodeURIComponent(voiceId)}&language=${langFilter || 'en'}`;
+    if (previewAudioRef.current) { try { previewAudioRef.current.pause(); } catch { /* noop */ } }
+    const a = new Audio(url);
+    previewAudioRef.current = a;
+    a.onended = () => setPreviewing(false);
+    a.onerror = () => setPreviewing(false);
+    a.play().catch(() => setPreviewing(false));
+  }, [voiceId, langFilter]);
 
   const wsRef = useRef(null);
   const micCtxRef = useRef(null);
@@ -90,7 +130,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     url.searchParams.set('user_id', userId);
     if (orgId) url.searchParams.set('org_id', orgId);
     url.searchParams.set('session_id', `tara_${Date.now()}`);
-    url.searchParams.set('language', language);
+    url.searchParams.set('language', langFilter || language);
+    if (voiceId) url.searchParams.set('voice_id', voiceId);
 
     const ws = new WebSocket(url.toString());
     ws.binaryType = 'arraybuffer';
@@ -135,7 +176,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     };
     ws.onerror = () => setError('Connection error.');
     ws.onclose = () => { if (active) stopAll('closed'); };
-  }, [userId, orgId, language, wsBase, playPcm, active, stopAll]);
+  }, [userId, orgId, language, langFilter, voiceId, wsBase, playPcm, active, stopAll]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -165,9 +206,44 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         </div>
       )}
 
+      {/* Voice picker — choose before starting */}
+      {!active && voices.length > 0 && (
+        <div className="mb-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <select value={langFilter} onChange={(e) => setLangFilter(e.target.value)}
+              className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+              <option value="">All languages</option>
+              {langs.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+            </select>
+            <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}
+              className="h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+              <option value="">Any gender</option>
+              <option value="feminine">Feminine</option>
+              <option value="masculine">Masculine</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}
+              className="flex-1 h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
+              {filteredVoices.length === 0 && <option value="">No voices</option>}
+              {filteredVoices.map((v) => (
+                <option key={v.id} value={v.id}>{v.name} ({v.gender?.[0]?.toUpperCase()}{v.country ? `·${v.country}` : ''})</option>
+              ))}
+            </select>
+            <button type="button" onClick={preview} disabled={!voiceId || previewing}
+              className="px-3 h-9 rounded-lg border border-[#e3e0db] text-[12px] text-[#117dff] hover:bg-[#faf9f4] disabled:opacity-50 flex items-center gap-1">
+              {previewing ? <Loader2 size={13} className="animate-spin" /> : <Volume2 size={13} />} Hear
+            </button>
+          </div>
+          {voiceId && (() => { const v = voices.find((x) => x.id === voiceId); return v?.description ? (
+            <p className="text-[10px] text-[#a3a3a3] leading-snug">{v.description}</p>
+          ) : null; })()}
+        </div>
+      )}
+
       <button
         onClick={active ? () => stopAll('user') : start}
-        disabled={busy}
+        disabled={busy || (!active && !voiceId)}
         className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
           active
             ? 'bg-[#ef4444] text-white hover:bg-[#dc2626]'
