@@ -1,85 +1,99 @@
 /**
- * AI Meeting Notes — control-room redesign.
+ * AI Meeting Notes — "Control Deck" redesign.
  *
- * Right: a slowly self-rotating "meeting wheel". Hub = live clock (day / date /
- * time, realtime). Saved meetings ride the left-facing arc as nodes; hover →
- * summary popover, click → full details in the left panel. Rotation pauses on
- * hover so nodes are easy to target.
+ * Dark, premium studio: animated recording waveform, a glossy radial dial of
+ * past meetings (hover → expands a labeled segment + summary, click → details),
+ * a live clock hub, a 7-day strip, and Metric.IQ-style insight cards.
  *
- * Left: record → Groq Whisper transcribe → (optional pyannote multi-speaker) →
- * gpt-oss insights → Save to HIVEMIND. Selecting a past meeting shows its
- * Summary / Notes / Transcript (Notion-style tabs).
+ * Pipeline (unchanged): record → Groq Whisper → optional pyannote multi-speaker
+ * → gpt-oss insights → Save to HIVEMIND. Past meetings load from memories
+ * tagged `ai-meeting-notes`.
  */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
-  HelpCircle, Tag, Save, AlertTriangle, Sparkles, Clock, Users, Plus,
-  AlignLeft, ScrollText,
+  HelpCircle, Save, AlertTriangle, Sparkles, Users, Plus, AlignLeft,
+  ScrollText, ArrowUpRight,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTranslation } from 'react-i18next';
 
-function fmtTime(s) {
-  const m = Math.floor(s / 60), ss = s % 60;
-  return `${m}:${String(ss).padStart(2, '0')}`;
-}
+/* ── theme tokens ── */
+const C = {
+  bg: '#0a0c11', panel: 'rgba(255,255,255,0.035)', panelSolid: '#12151d',
+  border: 'rgba(255,255,255,0.09)', text: '#e8eaf0', muted: '#8a90a2',
+  faint: '#5b6172', blue: '#3b9dff', blueDeep: '#117dff', rec: '#ff5a63',
+};
+const SPEAKER_COLORS = { SPEAKER_00: '#3b9dff', SPEAKER_01: '#34d399', SPEAKER_02: '#fbbf24', SPEAKER_03: '#a78bfa', SPEAKER_04: '#22d3ee', SPEAKER_05: '#fb7185' };
+const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
+const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#16a34a', SPEAKER_02: '#f59e0b', SPEAKER_03: '#7c3aed', SPEAKER_04: '#0891b2', SPEAKER_05: '#dc2626' };
-function speakerLabel(s) { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); }
+function extractSummary(c = '') { const m = /##\s*Summary\s*\n([\s\S]*?)(\n##\s|$)/i.exec(c); return (m ? m[1] : c).replace(/[#*`>]/g, '').trim().slice(0, 240); }
+function extractSection(c = '', n) { const m = new RegExp(`##\\s*${n}\\s*\\n([\\s\\S]*?)(\\n##\\s|$)`, 'i').exec(c); return m ? m[1].trim() : ''; }
+function fmtMeetingDate(iso) { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
 
-// Pull a one-line summary out of a saved meeting's markdown content.
-function extractSummary(content = '') {
-  const m = /##\s*Summary\s*\n([\s\S]*?)(\n##\s|$)/i.exec(content);
-  const s = (m ? m[1] : content).replace(/[#*`>]/g, '').trim();
-  return s.slice(0, 220);
-}
-function extractSection(content = '', name) {
-  const re = new RegExp(`##\\s*${name}\\s*\\n([\\s\\S]*?)(\\n##\\s|$)`, 'i');
-  const m = re.exec(content);
-  return m ? m[1].trim() : '';
-}
-function fmtMeetingDate(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
+const STYLE = `
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+@keyframes mn-pulse { 0%{transform:scale(1);opacity:.55} 70%{transform:scale(2.4);opacity:0} 100%{opacity:0} }
+@keyframes mn-eq { 0%,100%{transform:scaleY(.28)} 50%{transform:scaleY(1)} }
+@keyframes mn-spin { to { transform: rotate(360deg) } }
+@keyframes mn-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+.mn-grain:before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.mn-font{font-family:'Sora',ui-sans-serif,system-ui,sans-serif}
+.mn-scroll::-webkit-scrollbar{width:6px}.mn-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+`;
 
-// ── Live clock hub ───────────────────────────────────────────────────────
-function HubClock() {
+/* ── live clock for the dial hub ── */
+function HubClock({ recording }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
-  const day = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const day = now.toLocaleDateString(undefined, { weekday: 'long' }).toUpperCase();
   const date = now.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const time = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
-  const sec = String(now.getSeconds()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
   return (
     <div className="flex flex-col items-center justify-center text-center select-none">
-      <span className="text-[10px] uppercase tracking-[0.25em] text-[#117dff] font-['Space_Grotesk'] font-semibold">{day}</span>
-      <div className="flex items-baseline gap-1 mt-1">
-        <span className="text-white text-3xl font-bold tabular-nums font-mono leading-none">{time}</span>
-        <span className="text-white/40 text-sm font-mono tabular-nums">{sec}</span>
+      <span className="text-[9px] tracking-[0.35em] font-semibold" style={{ color: recording ? C.rec : C.blue }}>{day}</span>
+      <div className="flex items-baseline mt-1.5" style={{ color: C.text }}>
+        <span className="text-[40px] font-bold tabular-nums leading-none" style={{ fontFamily: 'ui-monospace,SFMono-Regular,monospace', letterSpacing: '-0.02em' }}>{hh}:{mm}</span>
+        <span className="text-base tabular-nums ml-1" style={{ color: C.faint, fontFamily: 'ui-monospace,monospace' }}>{ss}</span>
       </div>
-      <span className="text-white/55 text-[11px] mt-1 font-['Space_Grotesk']">{date}</span>
+      <span className="text-[11px] mt-1.5" style={{ color: C.muted }}>{date}</span>
     </div>
   );
 }
 
-function InsightBlock({ icon: Icon, title, accent, children }) {
+/* ── animated recording waveform (equalizer bars + pulse) ── */
+function Waveform({ active }) {
+  const bars = 28;
   return (
-    <div className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center gap-2 mb-2.5">
-        <Icon size={15} style={{ color: accent }} />
-        <span className="text-[12px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a] uppercase tracking-wide">{title}</span>
-      </div>
-      {children}
+    <div className="flex items-center justify-center gap-[3px] h-12">
+      {Array.from({ length: bars }).map((_, i) => (
+        <span key={i} className="w-[3px] rounded-full" style={{
+          height: '100%', background: `linear-gradient(${C.blue},${C.blueDeep})`,
+          transformOrigin: 'center',
+          animation: active ? `mn-eq ${0.7 + (i % 5) * 0.12}s ease-in-out ${i * 0.04}s infinite` : 'none',
+          transform: active ? undefined : 'scaleY(0.12)', opacity: active ? 1 : 0.25,
+        }} />
+      ))}
     </div>
+  );
+}
+
+function Card({ children, className = '', glow }) {
+  return (
+    <div className={`relative rounded-2xl border ${className}`} style={{
+      background: C.panel, borderColor: C.border, backdropFilter: 'blur(10px)',
+      boxShadow: glow ? `0 0 0 1px ${C.blueDeep}22, 0 12px 40px rgba(0,0,0,.4)` : '0 8px 30px rgba(0,0,0,.28)',
+    }}>{children}</div>
   );
 }
 
 export default function MeetingNotes() {
   const { t } = useTranslation('dashboard');
-  const [status, setStatus] = useState('idle'); // idle|recording|transcribing|analyzing|done|error
+  const [status, setStatus] = useState('idle');
   const [elapsed, setElapsed] = useState(0);
   const [notes, setNotes] = useState('');
   const [transcript, setTranscript] = useState('');
@@ -89,38 +103,28 @@ export default function MeetingNotes() {
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   const [speakerSegments, setSpeakerSegments] = useState(null);
 
-  // Wheel + history
   const [meetings, setMeetings] = useState([]);
-  const [selected, setSelected] = useState(null); // saved meeting memory (history view) or null (live view)
+  const [selected, setSelected] = useState(null);
   const [hoverId, setHoverId] = useState(null);
-  const [tab, setTab] = useState('summary'); // summary|notes|transcript
+  const [tab, setTab] = useState('summary');
   const [rotation, setRotation] = useState(0);
   const pausedRef = useRef(false);
   const rafRef = useRef(null);
 
-  const recRef = useRef(null);
-  const chunksRef = useRef([]);
-  const streamRef = useRef(null);
-  const timerRef = useRef(null);
+  const recRef = useRef(null); const chunksRef = useRef([]); const streamRef = useRef(null); const timerRef = useRef(null);
 
-  // ── Load saved meetings for the wheel ──
   const loadMeetings = useCallback(async () => {
     try {
       const data = await apiClient.listMemories({ limit: 40, tags: 'ai-meeting-notes' });
       const list = Array.isArray(data) ? data : (data?.memories || data?.data || []);
       setMeetings(list.filter(Boolean));
-    } catch { /* non-fatal — wheel just shows fewer nodes */ }
+    } catch { /* non-fatal */ }
   }, []);
   useEffect(() => { loadMeetings(); }, [loadMeetings]);
 
-  // ── Continuous slow rotation (pauses on wheel hover) ──
   useEffect(() => {
     let last = performance.now();
-    const tick = (now) => {
-      const dt = now - last; last = now;
-      if (!pausedRef.current) setRotation((r) => (r + dt * 0.012) % 360); // ~30s/turn
-      rafRef.current = requestAnimationFrame(tick);
-    };
+    const tick = (n) => { const dt = n - last; last = n; if (!pausedRef.current) setRotation((r) => (r + dt * 0.01) % 360); rafRef.current = requestAnimationFrame(tick); };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
@@ -135,363 +139,282 @@ export default function MeetingNotes() {
     setError(null);
     try {
       setStatus('transcribing');
-      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, {
-        headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000,
-      });
-      const text = tr.data?.transcript || '';
-      const segs = tr.data?.speakerSegments || null;
+      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
+      const text = tr.data?.transcript || ''; const segs = tr.data?.speakerSegments || null;
       setTranscript(text); setSpeakerSegments(segs);
       if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
-      const insightInput = segs && segs.length ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n') : text;
-      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: insightInput, notes }, { timeout: 120000 });
-      setInsights(ins.data?.insights || null);
-      setStatus('done');
-    } catch (e) {
-      setStatus('error');
-      setError(e.response?.data?.error || e.message || 'Processing failed.');
-    }
+      const input = segs && segs.length ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n') : text;
+      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 120000 });
+      setInsights(ins.data?.insights || null); setStatus('done');
+    } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
   }, [notes, multiSpeaker]);
 
   const start = useCallback(async () => {
     setSelected(null); setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null);
     let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    } catch { setError('Microphone permission denied.'); return; }
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch { setError('Microphone permission denied.'); return; }
     streamRef.current = stream; chunksRef.current = [];
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-    const rec = new MediaRecorder(stream, { mimeType: mime });
-    recRef.current = rec;
+    const rec = new MediaRecorder(stream, { mimeType: mime }); recRef.current = rec;
     rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
     rec.onstop = () => { cleanup(); process(new Blob(chunksRef.current, { type: 'audio/webm' })); };
-    rec.start(1000);
-    setStatus('recording');
+    rec.start(1000); setStatus('recording');
     timerRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
   }, [cleanup, process]);
 
-  const stop = useCallback(() => {
-    if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop();
-  }, []);
+  const stop = useCallback(() => { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); }, []);
 
   const save = useCallback(async () => {
     if (!transcript) return;
     try {
       const title = insights?.title || `Meeting ${new Date().toLocaleString()}`;
       const summary = insights?.summary || transcript.slice(0, 500);
-      const transcriptMd = speakerSegments && speakerSegments.length
-        ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n')
-        : transcript;
-      const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${transcriptMd}`;
-      await apiClient.core.post('/api/memories', {
-        title, content,
-        tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)],
-        memory_type: 'event',
-      });
-      setSaved(true);
-      loadMeetings();
+      const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n') : transcript;
+      const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${tMd}`;
+      await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
+      setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
   }, [transcript, insights, speakerSegments, loadMeetings]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
-  const liveView = !selected; // showing the current recording session
+  const recording = status === 'recording';
+  const liveView = !selected;
 
-  // ── Wheel geometry ──
-  const CX = 430, CY = 310, R = 290, HUB = 118;
-  const wheelNodes = useMemo(() => {
+  /* 7-day strip with meeting counts */
+  const dayStrip = useMemo(() => {
+    const days = []; const today = new Date();
+    for (let i = 6; i >= 0; i--) { const d = new Date(today); d.setDate(today.getDate() - i); days.push(d); }
+    const counts = {};
+    meetings.forEach((m) => { const d = new Date(m.created_at || m.createdAt); if (!Number.isNaN(d.getTime())) { const k = d.toDateString(); counts[k] = (counts[k] || 0) + 1; } });
+    return days.map((d) => ({ d, n: counts[d.toDateString()] || 0, today: d.toDateString() === today.toDateString() }));
+  }, [meetings]);
+
+  /* dial geometry — centered, NOT clipped */
+  const CX = 240, CY = 240, R = 188, HUB = 96;
+  const nodes = useMemo(() => {
     const n = Math.max(meetings.length, 1);
     return meetings.map((m, i) => {
-      // base angle spread around the full circle; 180° = left-facing (front)
-      const base = 180 + (i / n) * 360;
-      const ang = (base + rotation) % 360;
+      const ang = (270 + (i / n) * 360 + rotation) % 360; // 270 = top start
       const rad = (ang * Math.PI) / 180;
-      const x = CX + R * Math.cos(rad);
-      const y = CY + R * Math.sin(rad);
-      // visibility/opacity: fade out away from the left front (180°)
-      const delta = Math.min(Math.abs(ang - 180), 360 - Math.abs(ang - 180));
-      const opacity = delta > 95 ? 0 : Math.max(0.12, 1 - delta / 95);
-      const scale = 0.72 + 0.28 * Math.max(0, 1 - delta / 95);
-      return { m, x, y, opacity, scale, z: Math.round(1000 - delta), front: delta < 30 };
+      const x = CX + R * Math.cos(rad), y = CY + R * Math.sin(rad);
+      return { m, x, y, ang, z: 100 + i };
     });
   }, [meetings, rotation]);
 
   return (
-    <div className="relative min-h-[calc(100vh-120px)] overflow-hidden">
-      {/* ambient backdrop */}
-      <div className="pointer-events-none absolute inset-0 -z-10"
-        style={{ background: 'radial-gradient(1200px 600px at 85% 30%, rgba(17,125,255,0.07), transparent 60%)' }} />
+    <div className="mn-font mn-grain relative -m-6 p-6 min-h-[calc(100vh-64px)] overflow-hidden" style={{ background: C.bg, color: C.text }}>
+      <style>{STYLE}</style>
+      {/* ambient glows */}
+      <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(900px 500px at 78% 8%, ${recording ? 'rgba(255,90,99,.10)' : 'rgba(17,125,255,.12)'}, transparent 60%), radial-gradient(700px 500px at 10% 90%, rgba(59,157,255,.07), transparent 60%)` }} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_460px] gap-6">
-        {/* ───────────── LEFT: detail / recorder ───────────── */}
-        <div className="min-w-0 space-y-4 max-w-2xl">
+      <div className="relative max-w-[1180px] mx-auto">
+        {/* ── header + day strip ── */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#117dff] to-[#6366f1] flex items-center justify-center shadow-lg">
-              <Sparkles size={18} className="text-white" />
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: `linear-gradient(135deg,${C.blue},${C.blueDeep})`, boxShadow: `0 8px 24px rgba(17,125,255,.4)` }}>
+              <Sparkles size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk']">{t('meetingnotes.title', 'AI Meeting Notes')}</h1>
-              <p className="text-[#a3a3a3] text-xs">{t('meetingnotes.subtitle', 'Record · transcribe · extract insights')}</p>
+              <h1 className="text-2xl font-bold tracking-tight">{t('meetingnotes.title', 'AI Meeting Notes')}</h1>
+              <p className="text-xs" style={{ color: C.muted }}>{t('meetingnotes.subtitle', 'Record · transcribe · extract insights')}</p>
             </div>
           </div>
-
-          {liveView ? (
-            <>
-              {/* Recorder card */}
-              <div className="bg-white border border-[#e3e0db] rounded-2xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText size={16} className="text-[#117dff] flex-shrink-0" />
-                    <span className="font-['Space_Grotesk'] font-semibold text-[#0a0a0a] truncate">
-                      {insights?.title || t('meetingnotes.newMeeting', 'New meeting')}
-                    </span>
-                  </div>
-                  {status === 'recording' ? (
-                    <button onClick={stop} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ef4444] text-white text-[13px] font-semibold hover:bg-[#dc2626]">
-                      <Square size={14} /> {t('meetingnotes.stop', 'Stop')} · {fmtTime(elapsed)}
-                    </button>
-                  ) : (
-                    <button onClick={start} disabled={busy}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] disabled:opacity-50">
-                      {busy ? <Loader2 size={14} className="animate-spin" /> : <Mic size={14} />}
-                      {busy ? (status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
-                    </button>
-                  )}
-                </div>
-
-                <button type="button" onClick={() => setMultiSpeaker((v) => !v)} disabled={status === 'recording' || busy}
-                  className="flex items-center gap-2 mb-3 text-[13px] font-['Space_Grotesk'] text-[#525252] disabled:opacity-50"
-                  title={t('meetingnotes.multiSpeakerHint', 'Label who said what (slower — runs speaker diarization)')}>
-                  <Users size={15} style={{ color: multiSpeaker ? '#117dff' : '#a3a3a3' }} />
-                  <span>{t('meetingnotes.multiSpeaker', 'Multi-speaker recognition')}</span>
-                  <span className={`ml-1 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${multiSpeaker ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </span>
-                </button>
-
-                {status === 'idle' && !insights && (
-                  <div className="text-[13px] text-[#737373] leading-relaxed">
-                    <p className="font-medium text-[#525252] mb-1">{t('meetingnotes.howItWorks', 'How it works:')}</p>
-                    <p>1. {t('meetingnotes.step1', 'Click “Start transcribing” to record the meeting.')}</p>
-                    <p>2. {t('meetingnotes.step2', 'Add notes below — the AI uses them to make insights smarter.')}</p>
-                    <p>3. {t('meetingnotes.step3', 'Click “Stop” → full transcript + insights are generated.')}</p>
-                    <p className="mt-2 text-[11px] text-[#a3a3a3]">{t('meetingnotes.consent', 'By recording, you confirm everyone present has given consent.')}</p>
-                  </div>
-                )}
-                {status === 'recording' && (
-                  <div className="flex items-center gap-2 text-[13px] text-[#ef4444]">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse" />
-                    {t('meetingnotes.recording', 'Recording…')} <Clock size={13} className="ml-1" /> {fmtTime(elapsed)}
-                  </div>
-                )}
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                  placeholder={t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}
-                  className="mt-4 w-full min-h-[72px] p-3 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:border-[#117dff]/40 resize-y" />
+          <div className="flex items-center gap-1.5">
+            {dayStrip.map(({ d, n, today }, i) => (
+              <div key={i} className="flex flex-col items-center justify-center w-11 h-14 rounded-xl border"
+                style={{ background: today ? `linear-gradient(${C.blueDeep},${C.blue})` : C.panel, borderColor: today ? 'transparent' : C.border }}>
+                <span className="text-[9px] uppercase tracking-wide" style={{ color: today ? 'rgba(255,255,255,.8)' : C.faint }}>{d.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2)}</span>
+                <span className="text-base font-bold tabular-nums" style={{ color: today ? '#fff' : C.text }}>{d.getDate()}</span>
+                <span className="flex gap-0.5 mt-0.5 h-1">{Array.from({ length: Math.min(n, 3) }).map((_, k) => (<span key={k} className="w-1 h-1 rounded-full" style={{ background: today ? '#fff' : C.blue }} />))}</span>
               </div>
-
-              {error && (
-                <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-                  <AlertTriangle size={12} className="inline mr-1" /> {error}
-                </div>
-              )}
-
-              {insights && (
-                <div className="space-y-3">
-                  {insights.summary && (
-                    <InsightBlock icon={FileText} title={t('meetingnotes.summary', 'Summary')} accent="#117dff">
-                      <p className="text-[13px] text-[#525252] leading-relaxed">{insights.summary}</p>
-                    </InsightBlock>
-                  )}
-                  {insights.action_items?.length > 0 && (
-                    <InsightBlock icon={ListChecks} title={t('meetingnotes.actionItems', 'Action Items')} accent="#16a34a">
-                      <ul className="space-y-1.5">
-                        {insights.action_items.map((a, i) => (
-                          <li key={i} className="flex items-start gap-2 text-[13px] text-[#0a0a0a]">
-                            <CheckCircle2 size={14} className="text-[#16a34a] mt-0.5 flex-shrink-0" />
-                            <span>{a.task}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </InsightBlock>
-                  )}
-                  {insights.decisions?.length > 0 && (
-                    <InsightBlock icon={Lightbulb} title={t('meetingnotes.decisions', 'Decisions')} accent="#f59e0b">
-                      <ul className="list-disc pl-5 space-y-1 text-[13px] text-[#525252]">{insights.decisions.map((d, i) => <li key={i}>{d}</li>)}</ul>
-                    </InsightBlock>
-                  )}
-                  {insights.key_points?.length > 0 && (
-                    <InsightBlock icon={Sparkles} title={t('meetingnotes.keyPoints', 'Key Points')} accent="#7c3aed">
-                      <ul className="list-disc pl-5 space-y-1 text-[13px] text-[#525252]">{insights.key_points.map((k, i) => <li key={i}>{k}</li>)}</ul>
-                    </InsightBlock>
-                  )}
-                  {insights.questions?.length > 0 && (
-                    <InsightBlock icon={HelpCircle} title={t('meetingnotes.openQuestions', 'Open Questions')} accent="#0891b2">
-                      <ul className="list-disc pl-5 space-y-1 text-[13px] text-[#525252]">{insights.questions.map((q, i) => <li key={i}>{q}</li>)}</ul>
-                    </InsightBlock>
-                  )}
-                  {insights.topics?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {insights.topics.map((tp, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-[#f3f1ec] text-[#525252]"><Tag size={10} /> {tp}</span>
-                      ))}
-                    </div>
-                  )}
-                  <button onClick={save} disabled={saved}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0a0a0a] text-white text-[13px] font-semibold hover:bg-[#262626] disabled:opacity-50">
-                    {saved ? <CheckCircle2 size={14} /> : <Save size={14} />} {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : t('meetingnotes.save', 'Save to HIVEMIND')}
-                  </button>
-                </div>
-              )}
-
-              {transcript && (
-                <InsightBlock icon={speakerSegments?.length ? Users : FileText} title={t('meetingnotes.transcript', 'Full Transcript')} accent="#a3a3a3">
-                  {speakerSegments && speakerSegments.length ? (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {speakerSegments.map((s, i) => (
-                        <div key={i} className="text-[12px] leading-relaxed">
-                          <span className="font-['Space_Grotesk'] font-semibold" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{speakerLabel(s.speaker)}:</span>{' '}
-                          <span className="text-[#525252] whitespace-pre-wrap">{s.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[300px] overflow-y-auto">{transcript}</p>
-                  )}
-                </InsightBlock>
-              )}
-            </>
-          ) : (
-            /* ───────────── HISTORY: selected meeting (Notion-style) ───────────── */
-            <div className="bg-white border border-[#e3e0db] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] leading-tight">
-                  {selected.title || 'Meeting'}
-                  <span className="text-[#a3a3a3] font-medium text-base ml-2">@ {fmtMeetingDate(selected.created_at || selected.createdAt)}</span>
-                </h2>
-                <button onClick={() => { setSelected(null); }} className="text-[12px] text-[#a3a3a3] hover:text-[#117dff] flex-shrink-0">{t('meetingnotes.close', 'Close')}</button>
-              </div>
-
-              <div className="flex items-center gap-1 mt-4 mb-5 border-b border-[#eee] -mx-1">
-                {[['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
-                  <button key={key} onClick={() => setTab(key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-['Space_Grotesk'] rounded-t-lg -mb-px border-b-2 transition-colors ${tab === key ? 'border-[#117dff] text-[#0a0a0a] font-semibold' : 'border-transparent text-[#a3a3a3] hover:text-[#525252]'}`}>
-                    <Icon size={14} /> {label}
-                  </button>
-                ))}
-              </div>
-
-              {tab === 'summary' && (
-                <div className="space-y-5 text-[14px] text-[#333] leading-relaxed">
-                  {(() => {
-                    const ai = extractSection(selected.content, 'Action Items');
-                    const items = ai.split('\n').map((l) => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean);
-                    return items.length ? (
-                      <div>
-                        <h3 className="text-[#0a0a0a] font-bold font-['Space_Grotesk'] mb-2">Action Items</h3>
-                        <ul className="space-y-2">{items.map((it, i) => (
-                          <li key={i} className="flex items-start gap-2.5"><span className="mt-0.5 w-4 h-4 rounded border border-[#cbd5e1] flex-shrink-0" /><span>{it}</span></li>
-                        ))}</ul>
-                      </div>
-                    ) : null;
-                  })()}
-                  <div>
-                    <h3 className="text-[#0a0a0a] font-bold font-['Space_Grotesk'] mb-2">Meeting Overview</h3>
-                    <p className="whitespace-pre-wrap">{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p>
-                  </div>
-                  {extractSection(selected.content, 'Decisions') && (
-                    <div>
-                      <h3 className="text-[#0a0a0a] font-bold font-['Space_Grotesk'] mb-2">Decisions</h3>
-                      <p className="whitespace-pre-wrap">{extractSection(selected.content, 'Decisions')}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              {tab === 'notes' && (
-                <p className="text-[14px] text-[#333] leading-relaxed whitespace-pre-wrap">{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p>
-              )}
-              {tab === 'transcript' && (
-                <p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{extractSection(selected.content, 'Transcript') || 'No transcript saved.'}</p>
-              )}
-            </div>
-          )}
+            ))}
+          </div>
         </div>
 
-        {/* ───────────── RIGHT: rotating meeting wheel ───────────── */}
-        <div className="relative hidden lg:block">
-          <div
-            className="absolute right-[-150px] top-1/2 -translate-y-1/2"
-            style={{ width: 600, height: 620 }}
-            onMouseEnter={() => { pausedRef.current = true; }}
-            onMouseLeave={() => { pausedRef.current = false; setHoverId(null); }}
-          >
-            {/* rotating guide ring */}
-            <div className="absolute rounded-full border border-[#117dff]/15"
-              style={{ left: CX - R, top: CY - R, width: R * 2, height: R * 2,
-                background: 'radial-gradient(circle at 50% 40%, rgba(17,125,255,0.05), transparent 62%)' }} />
-            <div className="absolute rounded-full border border-dashed border-[#cbd5e1]/40"
-              style={{ left: CX - R - 14, top: CY - R - 14, width: (R + 14) * 2, height: (R + 14) * 2 }} />
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px] gap-6 items-start">
+          {/* ════════ LEFT: studio / detail ════════ */}
+          <div className="min-w-0 space-y-4">
+            {liveView ? (
+              <>
+                {/* recorder studio */}
+                <Card glow={recording} className="p-6 overflow-hidden">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText size={16} style={{ color: C.blue }} />
+                      <span className="font-semibold truncate">{insights?.title || t('meetingnotes.newMeeting', 'New meeting')}</span>
+                    </div>
+                    <button onClick={() => setMultiSpeaker((v) => !v)} disabled={recording || busy}
+                      className="flex items-center gap-2 text-[12px] disabled:opacity-40" style={{ color: C.muted }}
+                      title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+                      <Users size={14} style={{ color: multiSpeaker ? C.blue : C.faint }} />
+                      <span className="hidden sm:inline">{t('meetingnotes.multiSpeaker', 'Multi-speaker')}</span>
+                      <span className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors" style={{ background: multiSpeaker ? C.blueDeep : 'rgba(255,255,255,.12)' }}>
+                        <span className="inline-block h-4 w-4 rounded-full bg-white transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
+                      </span>
+                    </button>
+                  </div>
 
-            {/* hub — glossy dark disc with the live clock */}
-            <div className="absolute rounded-full flex items-center justify-center shadow-[0_18px_50px_rgba(10,12,20,0.45)]"
-              style={{ left: CX - HUB, top: CY - HUB, width: HUB * 2, height: HUB * 2,
-                background: 'radial-gradient(circle at 38% 28%, #2b3140, #0c0e15 70%)',
-                border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="absolute rounded-full" style={{ inset: 10, border: '1px solid rgba(17,125,255,0.25)' }} />
-              <HubClock />
-            </div>
+                  {/* record control + waveform */}
+                  <div className="flex flex-col items-center py-3">
+                    <div className="relative mb-4">
+                      {recording && (<>
+                        <span className="absolute inset-0 rounded-full" style={{ background: C.rec, animation: 'mn-pulse 2s ease-out infinite' }} />
+                        <span className="absolute inset-0 rounded-full" style={{ background: C.rec, animation: 'mn-pulse 2s ease-out .8s infinite' }} />
+                      </>)}
+                      <button onClick={recording ? stop : start} disabled={busy}
+                        className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center transition-transform active:scale-95 disabled:opacity-50"
+                        style={{ background: recording ? `linear-gradient(${C.rec},#e1444d)` : `linear-gradient(135deg,${C.blue},${C.blueDeep})`, boxShadow: `0 10px 30px ${recording ? 'rgba(255,90,99,.5)' : 'rgba(17,125,255,.5)'}` }}>
+                        {busy ? <Loader2 size={26} className="text-white animate-spin" /> : recording ? <Square size={24} className="text-white" /> : <Mic size={26} className="text-white" />}
+                      </button>
+                    </div>
+                    <Waveform active={recording} />
+                    <div className="mt-3 text-center">
+                      {recording ? (
+                        <p className="text-sm font-semibold tabular-nums" style={{ color: C.rec, fontFamily: 'ui-monospace,monospace' }}>● REC {fmtTimer(elapsed)}</p>
+                      ) : busy ? (
+                        <p className="text-sm" style={{ color: C.blue }}>{status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}</p>
+                      ) : (
+                        <p className="text-sm font-semibold">{t('meetingnotes.start', 'Start transcribing')}</p>
+                      )}
+                      {!recording && !busy && !insights && <p className="text-[11px] mt-1" style={{ color: C.faint }}>{t('meetingnotes.consent', 'By recording, you confirm everyone present has given consent.')}</p>}
+                    </div>
+                  </div>
 
-            {/* meeting nodes on the arc */}
-            {wheelNodes.map(({ m, x, y, opacity, scale, z, front }) => {
-              if (opacity <= 0.01) return null;
-              const active = selected?.id === m.id;
-              return (
-                <div key={m.id} className="absolute" style={{ left: x, top: y, transform: `translate(-100%, -50%) scale(${scale})`, opacity, zIndex: z }}>
-                  <button
-                    onMouseEnter={() => setHoverId(m.id)}
-                    onMouseLeave={() => setHoverId((h) => (h === m.id ? null : h))}
-                    onClick={() => { setSelected(m); setTab('summary'); }}
-                    className={`group flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border whitespace-nowrap transition-shadow ${active ? 'bg-[#117dff] border-[#117dff] text-white shadow-[0_4px_16px_rgba(17,125,255,0.35)]' : 'bg-white border-[#e3e0db] text-[#0a0a0a] hover:shadow-[0_4px_14px_rgba(0,0,0,0.1)]'}`}
-                    style={{ fontFamily: 'Space Grotesk' }}
-                  >
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${active ? 'bg-white/20' : 'bg-[#117dff]/10'}`}>
-                      <FileText size={12} className={active ? 'text-white' : 'text-[#117dff]'} />
-                    </span>
-                    <span className="text-[11px] leading-tight text-left max-w-[150px] truncate">
-                      <span className="block font-semibold truncate">{(m.title || 'Meeting').replace(/^Meeting\s+/, '')}</span>
-                      <span className={`block text-[10px] ${active ? 'text-white/70' : 'text-[#a3a3a3]'}`}>{fmtMeetingDate(m.created_at || m.createdAt)}</span>
-                    </span>
-                  </button>
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                    placeholder={t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}
+                    className="mt-3 w-full min-h-[64px] p-3 text-[13px] rounded-xl resize-y outline-none mn-scroll"
+                    style={{ background: 'rgba(0,0,0,.25)', border: `1px solid ${C.border}`, color: C.text }} />
+                </Card>
 
-                  {/* hover summary popover (only for the front-most / hovered node) */}
-                  <AnimatePresence>
-                    {hoverId === m.id && (
-                      <motion.div initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                        className="absolute right-[calc(100%+10px)] top-1/2 -translate-y-1/2 w-64 p-3 rounded-xl bg-[#0c0e15] text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] z-[2000]"
-                        style={{ pointerEvents: 'none' }}>
-                        <p className="text-[12px] font-semibold mb-1 font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</p>
-                        <p className="text-[11px] text-white/70 leading-snug line-clamp-4">{extractSummary(m.content)}</p>
-                        <p className="text-[10px] text-[#117dff] mt-2">Click to open details →</p>
-                      </motion.div>
+                {error && (<div className="text-[12px] rounded-xl px-3 py-2" style={{ color: '#ffb4b8', background: 'rgba(255,90,99,.1)', border: '1px solid rgba(255,90,99,.25)' }}><AlertTriangle size={12} className="inline mr-1" /> {error}</div>)}
+
+                {insights && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {insights.summary && (
+                      <Card className="p-4 sm:col-span-2">
+                        <div className="flex items-center gap-2 mb-2"><FileText size={14} style={{ color: C.blue }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.summary', 'Summary')}</span></div>
+                        <p className="text-[13px] leading-relaxed" style={{ color: '#cfd3de' }}>{insights.summary}</p>
+                      </Card>
                     )}
-                  </AnimatePresence>
-                  {front && null}
+                    {insights.action_items?.length > 0 && (
+                      <Card className="p-4 sm:col-span-2">
+                        <div className="flex items-center gap-2 mb-3"><ListChecks size={14} style={{ color: '#34d399' }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.actionItems', 'Action Items')}</span></div>
+                        <ul className="space-y-2">{insights.action_items.map((a, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-[13px]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border flex-shrink-0" style={{ borderColor: '#34d39966' }} /><span>{a.task}{a.owner && <span style={{ color: C.faint }}> · @{a.owner}</span>}{a.due && <span style={{ color: C.faint }}> · {a.due}</span>}</span></li>
+                        ))}</ul>
+                      </Card>
+                    )}
+                    {insights.decisions?.length > 0 && (
+                      <Card className="p-4"><div className="flex items-center gap-2 mb-2"><Lightbulb size={14} style={{ color: '#fbbf24' }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.decisions', 'Decisions')}</span></div><ul className="space-y-1.5 text-[12px]" style={{ color: '#cfd3de' }}>{insights.decisions.map((d, i) => <li key={i} className="flex gap-2"><span style={{ color: '#fbbf24' }}>·</span>{d}</li>)}</ul></Card>
+                    )}
+                    {insights.key_points?.length > 0 && (
+                      <Card className="p-4"><div className="flex items-center gap-2 mb-2"><Sparkles size={14} style={{ color: '#a78bfa' }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.keyPoints', 'Key Points')}</span></div><ul className="space-y-1.5 text-[12px]" style={{ color: '#cfd3de' }}>{insights.key_points.map((k, i) => <li key={i} className="flex gap-2"><span style={{ color: '#a78bfa' }}>·</span>{k}</li>)}</ul></Card>
+                    )}
+                    {insights.questions?.length > 0 && (
+                      <Card className="p-4 sm:col-span-2"><div className="flex items-center gap-2 mb-2"><HelpCircle size={14} style={{ color: '#22d3ee' }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.openQuestions', 'Open Questions')}</span></div><ul className="space-y-1.5 text-[12px]" style={{ color: '#cfd3de' }}>{insights.questions.map((q, i) => <li key={i} className="flex gap-2"><span style={{ color: '#22d3ee' }}>?</span>{q}</li>)}</ul></Card>
+                    )}
+                    {insights.topics?.length > 0 && (
+                      <div className="sm:col-span-2 flex flex-wrap gap-1.5">{insights.topics.map((tp, i) => (<span key={i} className="text-[11px] px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,157,255,.12)', color: C.blue, border: '1px solid rgba(59,157,255,.2)' }}>#{tp}</span>))}</div>
+                    )}
+                    <button onClick={save} disabled={saved}
+                      className="sm:col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold disabled:opacity-60"
+                      style={{ background: saved ? 'rgba(52,211,153,.15)' : '#fff', color: saved ? '#34d399' : '#0a0c11' }}>
+                      {saved ? <CheckCircle2 size={15} /> : <Save size={15} />} {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : t('meetingnotes.save', 'Save to HIVEMIND')}
+                    </button>
+                  </div>
+                )}
+
+                {transcript && (
+                  <Card className="p-4">
+                    <div className="flex items-center gap-2 mb-3"><ScrollText size={14} style={{ color: C.faint }} /><span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: C.muted }}>{t('meetingnotes.transcript', 'Transcript')}</span></div>
+                    {speakerSegments?.length ? (
+                      <div className="space-y-2 max-h-[280px] overflow-y-auto mn-scroll">{speakerSegments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold" style={{ color: SPEAKER_COLORS[s.speaker] || C.blue }}>{speakerLabel(s.speaker)}:</span> <span style={{ color: '#b9bdc9' }}>{s.text}</span></div>))}</div>
+                    ) : (<p className="text-[12px] leading-relaxed whitespace-pre-wrap max-h-[280px] overflow-y-auto mn-scroll" style={{ color: '#b9bdc9' }}>{transcript}</p>)}
+                  </Card>
+                )}
+              </>
+            ) : (
+              /* ════════ history detail (Notion-style) ════════ */
+              <Card className="p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-2xl font-bold leading-tight">{selected.title || 'Meeting'}<span className="text-base font-medium ml-2" style={{ color: C.faint }}>@ {fmtMeetingDate(selected.created_at || selected.createdAt)}</span></h2>
+                  <button onClick={() => setSelected(null)} className="text-[12px] flex-shrink-0" style={{ color: C.muted }}>{t('meetingnotes.close', 'Close')}</button>
                 </div>
-              );
-            })}
-
-            {/* New-meeting node pinned at the front of the wheel */}
-            <button
-              onClick={() => { setSelected(null); setInsights(null); setTranscript(''); setStatus('idle'); }}
-              className="absolute flex items-center gap-2 px-3 py-2 rounded-full bg-[#0a0a0a] text-white text-[12px] font-semibold shadow-lg hover:bg-[#262626]"
-              style={{ left: CX - R - 6, top: CY, transform: 'translate(-100%, -50%)', fontFamily: 'Space Grotesk' }}
-            >
-              <Plus size={14} /> {t('meetingnotes.new', 'New')}
-            </button>
-
-            {meetings.length === 0 && (
-              <div className="absolute text-[12px] text-[#a3a3a3] text-center" style={{ left: CX - R, top: CY + R + 6, width: R }}>
-                {t('meetingnotes.noMeetings', 'Saved meetings appear here on the wheel.')}
-              </div>
+                <div className="flex items-center gap-1 mt-4 mb-5 border-b" style={{ borderColor: C.border }}>
+                  {[['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
+                    <button key={key} onClick={() => setTab(key)} className="flex items-center gap-1.5 px-3 py-2 text-[13px] -mb-px border-b-2 transition-colors"
+                      style={{ borderColor: tab === key ? C.blue : 'transparent', color: tab === key ? C.text : C.faint, fontWeight: tab === key ? 600 : 400 }}>
+                      <Icon size={14} /> {label}
+                    </button>
+                  ))}
+                </div>
+                {tab === 'summary' && (
+                  <div className="space-y-5 text-[14px] leading-relaxed" style={{ color: '#cfd3de' }}>
+                    {(() => { const items = extractSection(selected.content, 'Action Items').split('\n').map((l) => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean); return items.length ? (<div><h3 className="font-bold mb-2" style={{ color: C.text }}>Action Items</h3><ul className="space-y-2">{items.map((it, i) => (<li key={i} className="flex items-start gap-2.5"><span className="mt-0.5 w-4 h-4 rounded-[5px] border flex-shrink-0" style={{ borderColor: C.border }} /><span>{it}</span></li>))}</ul></div>) : null; })()}
+                    <div><h3 className="font-bold mb-2" style={{ color: C.text }}>Meeting Overview</h3><p className="whitespace-pre-wrap">{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p></div>
+                    {extractSection(selected.content, 'Decisions') && (<div><h3 className="font-bold mb-2" style={{ color: C.text }}>Decisions</h3><p className="whitespace-pre-wrap">{extractSection(selected.content, 'Decisions')}</p></div>)}
+                  </div>
+                )}
+                {tab === 'notes' && (<p className="text-[14px] leading-relaxed whitespace-pre-wrap" style={{ color: '#cfd3de' }}>{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p>)}
+                {tab === 'transcript' && (<p className="text-[13px] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto mn-scroll" style={{ color: '#b9bdc9' }}>{extractSection(selected.content, 'Transcript') || 'No transcript saved.'}</p>)}
+              </Card>
             )}
+          </div>
+
+          {/* ════════ RIGHT: radial dial ════════ */}
+          <div className="relative hidden lg:flex flex-col items-center">
+            <div className="text-[10px] uppercase tracking-[0.3em] mb-3 self-start" style={{ color: C.faint }}>{t('meetingnotes.pastMeetings', 'Past meetings')}</div>
+            <div className="relative" style={{ width: CX * 2, height: CY * 2 }}
+              onMouseEnter={() => { pausedRef.current = true; }} onMouseLeave={() => { pausedRef.current = false; setHoverId(null); }}>
+              {/* guide rings */}
+              <div className="absolute rounded-full" style={{ left: CX - R - 22, top: CY - R - 22, width: (R + 22) * 2, height: (R + 22) * 2, border: `1px dashed ${C.border}` }} />
+              <div className="absolute rounded-full" style={{ left: CX - R, top: CY - R, width: R * 2, height: R * 2, border: `1px solid rgba(59,157,255,.14)`, background: `radial-gradient(circle at 50% 38%, rgba(59,157,255,.05), transparent 60%)` }} />
+              {/* hub */}
+              <div className="absolute rounded-full flex items-center justify-center" style={{ left: CX - HUB, top: CY - HUB, width: HUB * 2, height: HUB * 2, background: 'radial-gradient(circle at 40% 30%, #232a36, #0c0e15 72%)', border: '1px solid rgba(255,255,255,.08)', boxShadow: `0 22px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06)` }}>
+                <div className="absolute rounded-full" style={{ inset: 9, border: `1px solid ${recording ? 'rgba(255,90,99,.4)' : 'rgba(59,157,255,.3)'}` }} />
+                {recording && <span className="absolute rounded-full" style={{ inset: 9, border: '1px solid rgba(255,90,99,.6)', animation: 'mn-pulse 2s ease-out infinite' }} />}
+                <HubClock recording={recording} />
+              </div>
+
+              {/* meeting nodes */}
+              {nodes.map(({ m, x, y, z }) => {
+                const active = selected?.id === m.id; const hov = hoverId === m.id;
+                return (
+                  <div key={m.id} className="absolute" style={{ left: x, top: y, transform: 'translate(-50%,-50%)', zIndex: hov ? 5000 : z }}>
+                    <button onMouseEnter={() => setHoverId(m.id)} onClick={() => { setSelected(m); setTab('summary'); }}
+                      className="relative flex items-center justify-center rounded-full transition-all"
+                      style={{ width: hov ? 44 : 36, height: hov ? 44 : 36, background: active ? `linear-gradient(${C.blue},${C.blueDeep})` : hov ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.05)', border: `1px solid ${active ? 'transparent' : C.border}`, boxShadow: active || hov ? `0 6px 20px rgba(17,125,255,.4)` : 'none', animation: hov ? 'none' : 'mn-float 5s ease-in-out infinite' }}>
+                      <FileText size={hov ? 16 : 14} style={{ color: active ? '#fff' : C.blue }} />
+                    </button>
+                    {/* expanded label + summary (Huly style) */}
+                    <AnimatePresence>
+                      {hov && (
+                        <motion.div initial={{ opacity: 0, x: -8, scale: .96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -8 }}
+                          className="absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 w-60 p-3 rounded-2xl"
+                          style={{ background: 'rgba(18,21,29,.96)', border: `1px solid ${C.border}`, backdropFilter: 'blur(8px)', boxShadow: '0 16px 50px rgba(0,0,0,.5)', pointerEvents: 'none' }}>
+                          <p className="text-[12px] font-semibold truncate">{m.title || 'Meeting'}</p>
+                          <p className="text-[10px] mb-1.5" style={{ color: C.blue }}>{fmtMeetingDate(m.created_at || m.createdAt)}</p>
+                          <p className="text-[11px] leading-snug line-clamp-3" style={{ color: C.muted }}>{extractSummary(m.content)}</p>
+                          <p className="text-[10px] mt-2 flex items-center gap-1" style={{ color: C.faint }}>Open details <ArrowUpRight size={11} /></p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+
+              {/* New meeting — pinned at top of dial */}
+              <button onClick={() => { setSelected(null); setInsights(null); setTranscript(''); setStatus('idle'); }}
+                className="absolute flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold"
+                style={{ left: CX, top: CY - R - 4, transform: 'translate(-50%,-50%)', background: '#fff', color: '#0a0c11', boxShadow: '0 8px 20px rgba(0,0,0,.4)' }}>
+                <Plus size={13} /> {t('meetingnotes.new', 'New')}
+              </button>
+            </div>
+            <p className="text-[11px] mt-4 text-center" style={{ color: C.faint }}>
+              {meetings.length ? t('meetingnotes.dialHint', 'Hover a node for the summary · click to open') : t('meetingnotes.noMeetings', 'Saved meetings appear here on the dial.')}
+            </p>
           </div>
         </div>
       </div>
