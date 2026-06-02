@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   Mic,
@@ -14,10 +14,12 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  Sliders,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
-import CartesiaVoiceWidget from '../../CartesiaVoiceWidget';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 const fadeUp = {
@@ -505,6 +507,7 @@ export default function TaraConfig() {
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
+  const [showPrompt, setShowPrompt] = useState(false);
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
@@ -557,35 +560,39 @@ export default function TaraConfig() {
       </motion.div>
 
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
-          wss://core.hivemind.davinciai.eu:8050/aaas/voice. Tenant = user_id. */}
+          The ONE Start. Voice/lang config + current-turn chat live inside. */}
       <motion.div variants={fadeUp}>
         <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language="en" />
       </motion.div>
 
-      {/* Legacy: Cartesia-hosted agent. Token minted server-side. */}
+      {/* System Prompt — collapsible */}
       <motion.div variants={fadeUp}>
-        <CartesiaVoiceWidget
-          getAccessToken={async () => {
-            const d = await apiClient.mintCartesiaToken();
-            return { token: d.token, agentId: d.agent_id };
-          }}
-        />
+        <button
+          onClick={() => setShowPrompt((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white border border-[#e3e0db] rounded-xl hover:border-[#d4d0ca] transition-colors"
+        >
+          <span className="flex items-center gap-2 text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">
+            <Sliders size={15} className="text-[#117dff]" /> {t('taraconfig.systemPrompt', 'System Prompt')}
+          </span>
+          {showPrompt ? <ChevronDown size={16} className="text-[#a3a3a3]" /> : <ChevronRight size={16} className="text-[#a3a3a3]" />}
+        </button>
+        <AnimatePresence>
+          {showPrompt && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-3"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={20} className="text-[#117dff] animate-spin" />
+                </div>
+              ) : (
+                <ConfigEditor config={config} onSave={handleSave} saving={saving} />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
-
-      {/* Config Editor */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="text-[#117dff] animate-spin" />
-        </div>
-      ) : (
-        <ConfigEditor config={config} onSave={handleSave} saving={saving} />
-      )}
-
-      {/* Live Test */}
-      <LiveTest />
-
-      {/* Active Sessions */}
-      <ActiveSessions />
     </motion.div>
   );
 }

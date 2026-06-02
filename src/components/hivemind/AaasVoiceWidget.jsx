@@ -23,7 +23,8 @@ const AAAS_HTTP =
 export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = DEFAULT_WS }) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState('idle'); // idle|connecting|listening|thinking|talking
-  const [transcript, setTranscript] = useState('');
+  const [transcript, setTranscript] = useState('');   // current-turn user STT
+  const [agentTurn, setAgentTurn] = useState('');     // current-turn TARA reply
   const [error, setError] = useState(null);
 
   // Voice picker
@@ -168,7 +169,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
           if (playCtxRef.current) lastPlayRef.current = playCtxRef.current.currentTime;
           setState('thinking');
           break;
-        case 'transcript': setTranscript(evt.text || ''); setState('thinking'); break;
+        case 'transcript': setTranscript(evt.text || ''); setAgentTurn(''); setState('thinking'); break;
+        case 'agent_text': setAgentTurn((p) => p + (evt.text || '')); break;
         case 'turn_done': setState('listening'); break;
         case 'error': setError(evt.error || 'stream error'); break;
         default: break;
@@ -197,8 +199,22 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         <span className="text-[10px] font-mono text-[#a3a3a3] uppercase">{state}</span>
       </div>
 
-      {transcript && (
-        <p className="text-[12px] text-[#525252] mb-3 italic">“{transcript}”</p>
+      {/* Current turn only — user STT + TARA reply */}
+      {(transcript || agentTurn) && (
+        <div className="mb-3 space-y-2">
+          {transcript && (
+            <div className="flex gap-2">
+              <span className="text-[10px] font-mono text-[#a3a3a3] uppercase pt-0.5 w-10 shrink-0">You</span>
+              <p className="text-[12.5px] text-[#0a0a0a] flex-1">{transcript}</p>
+            </div>
+          )}
+          {agentTurn && (
+            <div className="flex gap-2">
+              <span className="text-[10px] font-mono text-[#117dff] uppercase pt-0.5 w-10 shrink-0">TARA</span>
+              <p className="text-[12.5px] text-[#525252] flex-1">{agentTurn}</p>
+            </div>
+          )}
+        </div>
       )}
       {error && (
         <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5 mb-3">
