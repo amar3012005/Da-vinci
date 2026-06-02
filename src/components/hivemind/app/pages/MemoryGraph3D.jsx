@@ -562,6 +562,23 @@ function hexToRgb(hex) {
   };
 }
 
+// Perf: share node GEOMETRIES across all nodes. Geometry is the heavy GPU
+// buffer and is never mutated per-node (only material colors are, during
+// recolor — so materials stay per-node, geometries are pooled). Keyed by
+// shape + a quantized radius bucket so continuous radii still reuse a handful
+// of buffers. Visual: radius snaps to the nearest 0.25 — imperceptible.
+// Above this link count, skip per-link on-edge label sprites (hidden clutter
+// on dense graphs; hover tooltip still shows the relation). Small graphs keep
+// the exact same persistent labels.
+const LINK_LABEL_SPRITE_CAP = 400;
+const _geoCache = new Map();
+const _rb = (r) => Math.round(r * 4) / 4;
+function cachedGeo(key, make) {
+  let g = _geoCache.get(key);
+  if (!g) { g = make(); _geoCache.set(key, g); }
+  return g;
+}
+
 function makeMaterial(color, opacity = 0.96) {
   return new THREE.MeshStandardMaterial({
     color,
@@ -595,34 +612,35 @@ function makeNodeShape(node, color, clusterTint) {
   });
   let mesh;
 
+  const rb = _rb(radius);
   switch (type) {
     case "document":
       // Diamond/octahedron — matches reference image style
-      mesh = new THREE.Mesh(new THREE.OctahedronGeometry(radius * 1.25, 0), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`oct:${rb}`, () => new THREE.OctahedronGeometry(rb * 1.25, 0)), primaryMaterial);
       break;
     case "entity":
       // Hexagonal disc — entity nodes
-      mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.1, radius * 1.1, radius * 0.4, 6), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`cyl-disc:${rb}`, () => new THREE.CylinderGeometry(rb * 1.1, rb * 1.1, rb * 0.4, 6)), primaryMaterial);
       break;
     case "decision":
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.98, 16, 16), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`sph16:${rb}`, () => new THREE.SphereGeometry(rb * 0.98, 16, 16)), primaryMaterial);
       break;
     case "preference":
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.7, radius * 1.28, radius * 1.05), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`box-pref:${rb}`, () => new THREE.BoxGeometry(rb * 1.7, rb * 1.28, rb * 1.05)), primaryMaterial);
       break;
     case "goal":
-      mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.98, radius * 0.98, radius * 1.45, 6), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`cyl-goal:${rb}`, () => new THREE.CylinderGeometry(rb * 0.98, rb * 0.98, rb * 1.45, 6)), primaryMaterial);
       mesh.rotation.z = Math.PI / 2;
       break;
     case "lesson":
-      mesh = new THREE.Mesh(new THREE.TetrahedronGeometry(radius * 1.18, 0), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`tetra:${rb}`, () => new THREE.TetrahedronGeometry(rb * 1.18, 0)), primaryMaterial);
       break;
     case "event":
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(radius * 1.55, radius * 1.1, radius * 1.1), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`box-evt:${rb}`, () => new THREE.BoxGeometry(rb * 1.55, rb * 1.1, rb * 1.1)), primaryMaterial);
       break;
     case "relationship": {
       const torus = new THREE.Mesh(
-        new THREE.TorusGeometry(radius * 0.88, Math.max(radius * 0.16, 0.24), 12, 28),
+        cachedGeo(`torus:${rb}`, () => new THREE.TorusGeometry(rb * 0.88, Math.max(rb * 0.16, 0.24), 12, 28)),
         primaryMaterial,
       );
       torus.rotation.x = Math.PI / 2;
@@ -633,16 +651,17 @@ function makeNodeShape(node, color, clusterTint) {
     case "fact_raw":
     case "fact_extracted":
     default:
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 14), primaryMaterial);
+      mesh = new THREE.Mesh(cachedGeo(`sph14:${rb}`, () => new THREE.SphereGeometry(rb, 14, 14)), primaryMaterial);
       break;
   }
 
+  const ct = clusterTint ? 1 : 0;
   const field = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * (clusterTint ? 2.35 : 2.08), 14, 14),
+    cachedGeo(`field:${ct}:${rb}`, () => new THREE.SphereGeometry(rb * (ct ? 2.35 : 2.08), 14, 14)),
     fieldMaterial,
   );
   const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * (clusterTint ? 1.72 : 1.48), 12, 12),
+    cachedGeo(`halo:${ct}:${rb}`, () => new THREE.SphereGeometry(rb * (ct ? 1.72 : 1.48), 12, 12)),
     haloMaterial,
   );
   halo.renderOrder = 2;
@@ -1110,6 +1129,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .graphData(graphDataRef.current)
       .backgroundColor(getThemeBackground(themeRef.current, backgroundColorRef.current))
       .showNavInfo(false)
+      // Perf: bound the physics sim so it settles fast then STOPS (idle = 0
+      // CPU/GPU). Without this the layout engine ran indefinitely + re-rendered
+      // every frame. Reheat on interaction is still bounded by these ticks.
+      .cooldownTicks(80)
+      .cooldownTime(8000)
       .nodeResolution(themeRef.current.name === "atlas" ? 10 : 12)
       .nodeRelSize(1.65)
       .nodeOpacity(themeRef.current.name === "atlas" ? 0.96 : 0.9)
@@ -1150,7 +1174,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // only appear when zoomed in (mode='all') or on focused nodes
       // (mode='focus'). Far zoom = mode='hidden' = opacity 0 = no noise.
       .linkThreeObjectExtend(true)
-      .linkThreeObject((link) => makeLinkLabelSprite(link, themeRef.current.name))
+      .linkThreeObject((link) => {
+        // Perf: a persistent on-edge label sprite per link costs a draw call +
+        // a per-frame linkPositionUpdate. On dense graphs those labels are
+        // hidden clutter at any zoom-out anyway, so skip creating them above a
+        // threshold — the hover tooltip (.linkLabel) still shows the relation.
+        const linkCount = graphDataRef.current?.links?.length || 0;
+        if (linkCount > LINK_LABEL_SPRITE_CAP) return null;
+        return makeLinkLabelSprite(link, themeRef.current.name);
+      })
       .linkPositionUpdate((sprite, coords, link) => {
         // Defensive: ForceGraph occasionally calls this with partially
         // initialized endpoints during the first frame after a graph swap
@@ -1239,6 +1271,22 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeThreeObjectExtend(false);
 
     fgRef.current = fg;
+
+    // Perf: cap the renderer pixel ratio. On retina/4K displays the default
+    // (2–3×) shades 4–9× the pixels — and the additive-blend glow spheres are
+    // fill-rate heavy, so this is the single biggest smoothness win. 1.5 keeps
+    // edges crisp while roughly halving fragment work on hi-DPI screens.
+    try {
+      const renderer = fg.renderer?.();
+      if (renderer?.setPixelRatio) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      }
+    } catch { /* renderer not ready — non-fatal */ }
+    // Faster settle so the bounded sim reaches rest sooner (less churn).
+    try {
+      fg.d3VelocityDecay?.(0.32);
+      fg.d3AlphaDecay?.(0.035);
+    } catch { /* noop */ }
 
     const scene = fg.scene?.();
     if (scene) {

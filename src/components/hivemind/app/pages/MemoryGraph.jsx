@@ -745,12 +745,19 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Perf: render once, then DON'T poll. The old 30s setInterval refetched the
+  // whole graph every 30s in live mode → full rebuild + relayout → periodic
+  // lag spike. Instead refetch only when the tab returns to the foreground
+  // after being hidden (data may have gone stale while away). No periodic poll.
   useEffect(() => {
-    const refreshIfVisible = () => {
-      if (isLiveMode && document.visibilityState === "visible") fetchGraph();
+    if (!isLiveMode) return undefined;
+    let wasHidden = false;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") { wasHidden = true; return; }
+      if (wasHidden) { wasHidden = false; fetchGraph(); }
     };
-    const interval = window.setInterval(refreshIfVisible, 30000);
-    return () => window.clearInterval(interval);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [fetchGraph, isLiveMode]);
 
   useEffect(() => {
