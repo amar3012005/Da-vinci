@@ -509,7 +509,7 @@ export default function TaraConfig() {
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(true);
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))

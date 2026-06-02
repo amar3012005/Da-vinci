@@ -262,7 +262,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
             <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)}
               className="flex-1 h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40">
               {filteredVoices.length === 0 && <option value="">No voices</option>}
-              {filteredVoices.map((v) => (
+              {filteredVoices.slice(0, 10).map((v) => (
                 <option key={v.id} value={v.id}>{v.name} ({v.gender?.[0]?.toUpperCase()}{v.country ? `·${v.country}` : ''})</option>
               ))}
             </select>
