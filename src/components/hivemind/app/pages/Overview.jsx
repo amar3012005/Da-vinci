@@ -205,6 +205,28 @@ function SearchResult({ result }) {
   );
 }
 
+// ─── Control-console live clock ──────────────────────────────────
+// Self-contained so its per-tick re-render is isolated from the page.
+function ConsoleClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 15000);
+    return () => window.clearInterval(id);
+  }, []);
+  const day = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const date = now.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+  const time = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return (
+    <div className="flex items-center gap-3">
+      <div className="leading-tight">
+        <p className="text-[#0a0a0a] text-[11px] font-semibold">{day}</p>
+        <p className="text-[#a3a3a3] text-[10px] -mt-0.5">{date}</p>
+      </div>
+      <span className="text-[#0a0a0a] text-2xl font-bold tracking-tight tabular-nums font-mono">{time}</span>
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
@@ -349,59 +371,79 @@ export default function Overview() {
         {tour.open && <OverviewTour onClose={tour.close} />}
       </AnimatePresence>
 
-      {/* Page header */}
+      {/* Control console — device-style status bar (bezel → screen) */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="mb-8"
+        transition={{ duration: 0.35 }}
+        className="mb-6 rounded-[26px] bg-gradient-to-b from-[#f3f1ec] to-[#e9e6df] border border-[#dcd8d0] p-2 shadow-[0_2px_10px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]"
       >
-        <div className="flex items-center gap-3 mb-1">
-          <Hexagon size={20} className="text-[#117dff]" />
-          <h1 className="text-[#0a0a0a] text-2xl font-bold tracking-tight">{t('overview.title', 'Overview')}</h1>
+        <div className="relative flex items-center gap-3 rounded-[18px] bg-white border border-[#e8e5df] px-3 py-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden">
+          {/* Left edge status LED strip */}
+          <span className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full ${healthy ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'} shadow-[0_0_8px_currentColor]`} />
+
+          {/* Device badge */}
+          <div className="ml-1.5 w-9 h-9 rounded-xl bg-[#0a0a0a] flex items-center justify-center flex-shrink-0">
+            <Hexagon size={18} className="text-white" />
+          </div>
+
+          {/* Live clock */}
+          <ConsoleClock />
+
+          <span className="h-7 w-px bg-[#e8e5df] mx-1" />
+
+          {/* Operator / scope pill */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-[#f7f6f2] border border-[#e8e5df]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_#22c55e]" />
+            <span className="text-[#0a0a0a] text-xs font-medium truncate max-w-[160px]">
+              {profile?.name || profile?.org_name || t('overview.title', 'Memory Engine')}
+            </span>
+          </div>
+
+          {/* System status pill (right) */}
+          <div className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+            healthy ? 'bg-[#117dff] text-white shadow-[0_2px_8px_rgba(17,125,255,0.3)]' : 'bg-[#f59e0b] text-white'
+          }`}>
+            <Activity size={12} />
+            <span>{healthy ? t('overview.online', 'Online') : t('overview.degraded', 'Degraded')}</span>
+          </div>
         </div>
-        <p className="text-[#525252] text-sm ml-8">{t('overview.subtitle', 'Your HIVEMIND memory engine at a glance.')}</p>
       </motion.div>
 
-      {/* Feature launcher — the entrance to every surface */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8"
-      >
-        {FEATURES.map((f) => {
-          const Icon = f.icon;
-          return (
-            <motion.button
-              key={f.key}
-              variants={fadeUp}
-              onClick={f.onClick}
-              className={`group relative flex flex-col gap-2 p-4 rounded-2xl border text-left transition-all overflow-hidden ${
-                f.primary
-                  ? 'bg-gradient-to-br from-[#117dff] to-[#0a5fd0] border-[#117dff] text-white shadow-[0_4px_16px_rgba(17,125,255,0.25)] hover:shadow-[0_6px_22px_rgba(17,125,255,0.35)]'
-                  : 'bg-white border-[#e3e0db] hover:border-[#117dff]/40 hover:bg-[#f7f6f2] shadow-[0_1px_3px_rgba(0,0,0,0.04)]'
-              }`}
-            >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                f.primary ? 'bg-white/20' : 'bg-[#117dff]/10 border border-[#117dff]/20'
-              }`}>
-                <Icon size={18} className={f.primary ? 'text-white' : 'text-[#117dff]'} />
-              </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-semibold leading-tight ${f.primary ? 'text-white' : 'text-[#0a0a0a]'}`}>{f.label}</p>
-                <p className={`text-[11px] mt-0.5 leading-snug ${f.primary ? 'text-white/80' : 'text-[#a3a3a3]'}`}>{f.hint}</p>
-              </div>
-              <ArrowRight
-                size={14}
-                className={`absolute top-4 right-4 transition-transform group-hover:translate-x-0.5 ${
-                  f.primary ? 'text-white/70' : 'text-[#e3e0db] group-hover:text-[#117dff]/60'
+      {/* Feature launcher — compact console tabs */}
+      <div className="mb-6">
+        <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em] mb-2 ml-1">{t('overview.launch', 'Launch')}</p>
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="flex flex-wrap gap-2"
+        >
+          {FEATURES.map((f) => {
+            const Icon = f.icon;
+            return (
+              <motion.button
+                key={f.key}
+                variants={fadeUp}
+                onClick={f.onClick}
+                title={f.hint}
+                className={`group flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                  f.primary
+                    ? 'bg-[#117dff] border-[#117dff] text-white shadow-[0_2px_8px_rgba(17,125,255,0.28)] hover:shadow-[0_3px_12px_rgba(17,125,255,0.4)]'
+                    : 'bg-white border-[#e3e0db] text-[#0a0a0a] hover:border-[#117dff]/40 hover:bg-[#f7f6f2]'
                 }`}
-              />
-            </motion.button>
-          );
-        })}
-      </motion.div>
+              >
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  f.primary ? 'bg-white/20' : 'bg-[#117dff]/10'
+                }`}>
+                  <Icon size={13} className={f.primary ? 'text-white' : 'text-[#117dff]'} />
+                </span>
+                {f.label}
+              </motion.button>
+            );
+          })}
+        </motion.div>
+      </div>
 
       {/* Grid */}
       <motion.div

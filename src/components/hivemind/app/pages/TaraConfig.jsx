@@ -18,6 +18,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import CartesiaVoiceWidget from '../../CartesiaVoiceWidget';
+import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -502,6 +503,14 @@ export default function TaraConfig() {
     []
   );
 
+  // Identity for the self-hosted AaaS voice widget (tenant = user_id).
+  const [identity, setIdentity] = useState({ userId: null, orgId: null });
+  useEffect(() => {
+    apiClient.bootstrap()
+      .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
+      .catch(() => {});
+  }, []);
+
   const handleSave = async (newConfig) => {
     setSaving(true);
     setSaveStatus(null);
@@ -547,8 +556,13 @@ export default function TaraConfig() {
         )}
       </motion.div>
 
-      {/* Talk to TARA — real-time voice via Cartesia agent. Token minted
-          server-side (key stays on the server); browser gets a 60s token. */}
+      {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
+          wss://core.hivemind.davinciai.eu:8050/aaas/voice. Tenant = user_id. */}
+      <motion.div variants={fadeUp}>
+        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language="en" />
+      </motion.div>
+
+      {/* Legacy: Cartesia-hosted agent. Token minted server-side. */}
       <motion.div variants={fadeUp}>
         <CartesiaVoiceWidget
           getAccessToken={async () => {
