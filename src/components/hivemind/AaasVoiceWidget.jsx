@@ -199,6 +199,26 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         <span className="text-[10px] font-mono text-[#a3a3a3] uppercase">{state}</span>
       </div>
 
+      {/* Orb — spins when active, pulses while talking/listening */}
+      <div className="flex justify-center my-5">
+        <div className="relative w-28 h-28">
+          <div
+            className={`absolute inset-0 rounded-full ${
+              state === 'talking' ? 'animate-[spin_2.5s_linear_infinite]'
+              : state === 'listening' || state === 'thinking' || state === 'connecting' ? 'animate-[spin_7s_linear_infinite]'
+              : ''}`}
+            style={{ background: 'conic-gradient(from 0deg, #117dff, #7db4ff, #0a0a0a 55%, #117dff)' }}
+          />
+          <div className="absolute inset-[7px] rounded-full bg-[#0a0a0a]" />
+          {(state === 'talking' || state === 'listening') && (
+            <div className="absolute inset-0 rounded-full animate-pulse" style={{ boxShadow: '0 0 32px rgba(17,125,255,0.55)' }} />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[8px] font-mono text-white/60 uppercase tracking-[0.12em]">{state === 'idle' ? 'tara' : state}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Current turn only — user STT + TARA reply */}
       {(transcript || agentTurn) && (
         <div className="mb-3 space-y-2">
@@ -259,7 +279,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
 
       <button
         onClick={active ? () => stopAll('user') : start}
-        disabled={busy || (!active && !voiceId)}
+        disabled={busy}
         className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
           active
             ? 'bg-[#ef4444] text-white hover:bg-[#dc2626]'
