@@ -12,7 +12,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
-  HelpCircle, Tag, Save, AlertTriangle, Sparkles, Clock,
+  HelpCircle, Tag, Save, AlertTriangle, Sparkles, Clock, Users,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,10 @@ function fmtTime(s) {
   const m = Math.floor(s / 60), ss = s % 60;
   return `${m}:${String(ss).padStart(2, '0')}`;
 }
+
+// Speaker color palette + friendly label for diarized transcripts.
+const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#16a34a', SPEAKER_02: '#f59e0b', SPEAKER_03: '#7c3aed', SPEAKER_04: '#0891b2', SPEAKER_05: '#dc2626' };
+function speakerLabel(s) { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); }
 
 function InsightBlock({ icon: Icon, title, accent, children }) {
   return (
@@ -43,6 +47,8 @@ export default function MeetingNotes() {
   const [insights, setInsights] = useState(null);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [multiSpeaker, setMultiSpeaker] = useState(false);
+  const [speakerSegments, setSpeakerSegments] = useState(null);
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -59,26 +65,33 @@ export default function MeetingNotes() {
     setError(null);
     try {
       setStatus('transcribing');
-      const tr = await apiClient.core.post('/api/meetings/transcribe', blob, {
+      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, {
         headers: { 'Content-Type': blob.type || 'audio/webm' },
         timeout: 300000,
       });
       const text = tr.data?.transcript || '';
+      const segs = tr.data?.speakerSegments || null; // present only when diarized
       setTranscript(text);
+      setSpeakerSegments(segs);
       if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
 
       setStatus('analyzing');
-      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: text, notes }, { timeout: 120000 });
+      // Feed the speaker-labeled transcript to insights when available so the
+      // LLM can attribute action-item owners to speakers.
+      const insightInput = segs && segs.length
+        ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n')
+        : text;
+      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: insightInput, notes }, { timeout: 120000 });
       setInsights(ins.data?.insights || null);
       setStatus('done');
     } catch (e) {
       setStatus('error');
       setError(e.response?.data?.error || e.message || 'Processing failed.');
     }
-  }, [notes]);
+  }, [notes, multiSpeaker]);
 
   const start = useCallback(async () => {
-    setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0);
+    setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null);
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -112,17 +125,21 @@ export default function MeetingNotes() {
     try {
       const title = insights?.title || `Meeting ${new Date().toLocaleString()}`;
       const summary = insights?.summary || transcript.slice(0, 500);
-      const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${transcript}`;
+      // Persist the speaker-labeled transcript when diarized, else plain.
+      const transcriptMd = speakerSegments && speakerSegments.length
+        ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n')
+        : transcript;
+      const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${transcriptMd}`;
       await apiClient.core.post('/api/memories', {
         title, content,
-        tags: ['meeting', 'ai-meeting-notes', ...(insights?.topics || []).slice(0, 5)],
+        tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)],
         memory_type: 'event',
       });
       setSaved(true);
     } catch (e) {
       setError('Save failed: ' + (e.response?.data?.error || e.message));
     }
-  }, [transcript, insights]);
+  }, [transcript, insights, speakerSegments]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const now = new Date().toLocaleString('en-US', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -159,6 +176,21 @@ export default function MeetingNotes() {
             </button>
           )}
         </div>
+
+        {/* Multi-speaker recognition toggle (pyannote diarization, opt-in) */}
+        <button
+          type="button"
+          onClick={() => setMultiSpeaker((v) => !v)}
+          disabled={status === 'recording' || busy}
+          className="flex items-center gap-2 mb-3 text-[13px] font-['Space_Grotesk'] text-[#525252] disabled:opacity-50"
+          title={t('meetingnotes.multiSpeakerHint', 'Label who said what (slower — runs speaker diarization)')}
+        >
+          <Users size={15} style={{ color: multiSpeaker ? '#117dff' : '#a3a3a3' }} />
+          <span>{t('meetingnotes.multiSpeaker', 'Multi-speaker recognition')}</span>
+          <span className={`ml-1 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${multiSpeaker ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          </span>
+        </button>
 
         {status === 'idle' && (
           <div className="text-[13px] text-[#737373] leading-relaxed">
@@ -242,10 +274,23 @@ export default function MeetingNotes() {
         </div>
       )}
 
-      {/* Transcript */}
+      {/* Transcript — speaker-labeled when diarized, else plain */}
       {transcript && (
-        <InsightBlock icon={FileText} title={t('meetingnotes.transcript', 'Full Transcript')} accent="#a3a3a3">
-          <p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[300px] overflow-y-auto">{transcript}</p>
+        <InsightBlock icon={speakerSegments?.length ? Users : FileText} title={t('meetingnotes.transcript', 'Full Transcript')} accent="#a3a3a3">
+          {speakerSegments && speakerSegments.length ? (
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {speakerSegments.map((s, i) => (
+                <div key={i} className="text-[12px] leading-relaxed">
+                  <span className="font-['Space_Grotesk'] font-semibold" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>
+                    {speakerLabel(s.speaker)}:
+                  </span>{' '}
+                  <span className="text-[#525252] whitespace-pre-wrap">{s.text}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[300px] overflow-y-auto">{transcript}</p>
+          )}
         </InsightBlock>
       )}
     </motion.div>
