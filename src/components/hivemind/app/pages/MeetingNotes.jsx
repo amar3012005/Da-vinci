@@ -19,8 +19,6 @@ import { useTranslation } from 'react-i18next';
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-function extractSummary(c = '') { const m = /##\s*Summary\s*\n([\s\S]*?)(\n##\s|$)/i.exec(c); return (m ? m[1] : c).replace(/[#*`>]/g, '').trim().slice(0, 180); }
-function extractSection(c = '', n) { const m = new RegExp(`##\\s*${n}\\s*\\n([\\s\\S]*?)(\\n##\\s|$)`, 'i').exec(c); return m ? m[1].trim() : ''; }
 function fmtDate(iso) { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
 
 /* live clock chip — Space Grotesk numerals, ivory pill */
@@ -87,6 +85,7 @@ export default function MeetingNotes() {
   const [saved, setSaved] = useState(false);
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   const [speakerSegments, setSpeakerSegments] = useState(null);
+  const [language, setLanguage] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detailTab, setDetailTab] = useState('summary');
@@ -95,9 +94,9 @@ export default function MeetingNotes() {
 
   const loadMeetings = useCallback(async () => {
     try {
-      const data = await apiClient.listMemories({ limit: 40, tags: 'ai-meeting-notes' });
-      const list = Array.isArray(data) ? data : (data?.memories || data?.data || []);
-      setMeetings(list.filter(Boolean));
+      // Persistent org-level meetings table (structured rows).
+      const { data } = await apiClient.core.get('/api/meetings?limit=40');
+      setMeetings((data?.meetings || []).filter(Boolean));
     } catch { /* non-fatal */ }
   }, []);
   useEffect(() => { loadMeetings(); }, [loadMeetings]);
@@ -114,7 +113,7 @@ export default function MeetingNotes() {
       setStatus('transcribing');
       const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
       const text = tr.data?.transcript || ''; const segs = tr.data?.speakerSegments || null;
-      setTranscript(text); setSpeakerSegments(segs);
+      setTranscript(text); setSpeakerSegments(segs); setLanguage(tr.data?.language || null);
       if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
       const input = segs && segs.length ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n') : text;
@@ -146,10 +145,17 @@ export default function MeetingNotes() {
       const summary = insights?.summary || transcript.slice(0, 500);
       const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n') : transcript;
       const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${tMd}`;
-      await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
+      const mem = await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
+      // Persist the structured row in the org-level meetings table.
+      const speakers = speakerSegments?.length ? new Set(speakerSegments.map((s) => s.speaker)).size : null;
+      await apiClient.core.post('/api/meetings', {
+        title, transcript, language, multi_speaker: !!speakerSegments?.length, speaker_count: speakers,
+        segments: speakerSegments || null, source_memory_id: mem?.data?.id || mem?.data?.memory_id || null,
+        insights: insights || {},
+      }).catch(() => { /* memory already saved; table mirror best-effort */ });
       setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
-  }, [transcript, insights, speakerSegments, loadMeetings]);
+  }, [transcript, insights, speakerSegments, language, loadMeetings]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
@@ -157,10 +163,10 @@ export default function MeetingNotes() {
   /* stats */
   const stats = useMemo(() => {
     const now = new Date(); const weekAgo = new Date(now.getTime() - 7 * 864e5);
-    const thisWeek = meetings.filter((m) => new Date(m.created_at || m.createdAt) >= weekAgo).length;
-    const actions = meetings.reduce((s, m) => s + (extractSection(m.content, 'Action Items').split('\n').filter((l) => l.trim().match(/^[-*]/)).length), 0);
-    const multi = meetings.filter((m) => (m.tags || []).includes('multi-speaker')).length;
-    const last = meetings[0] ? new Date(meetings[0].created_at || meetings[0].createdAt) : null;
+    const thisWeek = meetings.filter((m) => new Date(m.created_at) >= weekAgo).length;
+    const actions = meetings.reduce((s, m) => s + (Array.isArray(m.action_items) ? m.action_items.length : 0), 0);
+    const multi = meetings.filter((m) => m.multi_speaker).length;
+    const last = meetings[0] ? new Date(meetings[0].created_at) : null;
     return { total: meetings.length, thisWeek, actions, multi, last: last ? last.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '—' };
   }, [meetings]);
 
@@ -293,9 +299,12 @@ export default function MeetingNotes() {
                   <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
                 </div>
                 <div className="text-[13px] font-semibold text-[#0a0a0a] mt-2.5 line-clamp-1 font-['Space_Grotesk']">{m.title || 'Meeting'}</div>
-                <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">{fmtDate(m.created_at || m.createdAt)}</div>
-                <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{extractSummary(m.content)}</p>
-                {(m.tags || []).includes('multi-speaker') && <span className="inline-flex items-center gap-1 mt-2 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] text-emerald-700"><Users size={9} /> multi-speaker</span>}
+                <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">{fmtDate(m.created_at)}</div>
+                <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
+                <div className="flex flex-wrap items-center gap-1 mt-2">
+                  {Array.isArray(m.action_items) && m.action_items.length > 0 && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[9px] text-blue-700"><ListChecks size={9} /> {m.action_items.length}</span>}
+                  {m.multi_speaker && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] text-emerald-700"><Users size={9} /> {m.speaker_count || 'multi'}</span>}
+                </div>
               </button>
             ))}
           </div>
@@ -313,7 +322,7 @@ export default function MeetingNotes() {
         <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
           <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] mb-3"><ArrowLeft size={12} /> {t('meetingnotes.back', 'All meetings')}</button>
           <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">{selected.title || 'Meeting'}
-            <span className="text-[13px] font-normal text-[#a3a3a3] ml-2">@ {fmtDate(selected.created_at || selected.createdAt)}</span></h2>
+            <span className="text-[13px] font-normal text-[#a3a3a3] ml-2">@ {fmtDate(selected.created_at)}{selected.language ? ` · ${selected.language}` : ''}</span></h2>
           <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4">
             {[['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
               <button key={key} onClick={() => setDetailTab(key)} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium border-b-2 -mb-px transition-colors ${detailTab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}><Icon size={14} /> {label}</button>
@@ -321,13 +330,18 @@ export default function MeetingNotes() {
           </nav>
           {detailTab === 'summary' && (
             <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
-              {(() => { const items = extractSection(selected.content, 'Action Items').split('\n').map((l) => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean); return items.length ? (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Action Items</h3><ul className="space-y-2">{items.map((it, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{it}</span></li>))}</ul></div>) : null; })()}
-              <div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Meeting Overview</h3><p className="whitespace-pre-wrap">{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p></div>
-              {extractSection(selected.content, 'Decisions') && (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Decisions</h3><p className="whitespace-pre-wrap">{extractSection(selected.content, 'Decisions')}</p></div>)}
+              {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Action Items</h3><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
+              <div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Meeting Overview</h3><p className="whitespace-pre-wrap">{selected.summary || '—'}</p></div>
+              {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Decisions</h3><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></div>)}
+              {Array.isArray(selected.topics) && selected.topics.length > 0 && (<div className="flex flex-wrap gap-1.5">{selected.topics.map((tp, i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>)}</div>)}
             </div>
           )}
-          {detailTab === 'notes' && (<p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">{extractSection(selected.content, 'Summary') || extractSummary(selected.content)}</p>)}
-          {detailTab === 'transcript' && (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{extractSection(selected.content, 'Transcript') || 'No transcript saved.'}</p>)}
+          {detailTab === 'notes' && (<p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">{selected.summary || '—'}</p>)}
+          {detailTab === 'transcript' && (
+            Array.isArray(selected.segments) && selected.segments.length ? (
+              <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{speakerLabel(s.speaker)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
+            ) : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{selected.transcript || 'No transcript saved.'}</p>)
+          )}
         </div>
       )}
     </motion.div>

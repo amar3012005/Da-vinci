@@ -181,6 +181,7 @@ function ConfigEditor({ config, onSave, saving }) {
 
 // ─── Live Test ──────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars -- WIP component, kept for upcoming wiring
 function LiveTest() {
   const { t } = useTranslation('dashboard');
   const [query, setQuery] = useState('');
@@ -452,6 +453,7 @@ function LiveTest() {
 
 // ─── Active Sessions ────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars -- WIP component, kept for upcoming wiring
 function ActiveSessions() {
   const { t } = useTranslation('dashboard');
   const { data: sessions, loading } = useApiQuery(
