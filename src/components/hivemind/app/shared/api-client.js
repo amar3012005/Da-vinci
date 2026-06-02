@@ -1139,22 +1139,73 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Poll async ingest job status. Returns { status, progress, metadata:{stage,segments,promoted,document_id,...} }.
+  async getKnowledgeStatus(jobId) {
+    const { data } = await this.controlPlane.get('/v1/proxy/knowledge/status', {
+      params: { job_id: jobId },
+      timeout: 15000,
+    });
+    return data;
+  }
+
+  // Async upload: the server returns a job id immediately (no 152s sync
+  // request → no proxy 502 on large PDFs) and ingests in the background; we
+  // poll status to completion. Transparent to callers — same return shape
+  // ({ documentId, segmentCount, promotedCount }). Pass options.onStatus to
+  // surface live stage/progress, options.signal to cancel.
   async uploadDocument(file, options = {}) {
     const formData = new FormData();
     formData.append('file', file);
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
-    const { data } = await this.controlPlane.post('/v1/proxy/knowledge/upload', formData, {
+    formData.append('async', 'true');
+
+    // 1. Kick off — fast 202 with job_id (only the byte-upload is awaited here).
+    const { data: started } = await this.controlPlane.post('/v1/proxy/knowledge/upload?async=true', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 300000, // 5 minutes for large file uploads
+      timeout: 120000, // byte upload only; ingestion runs server-side
       maxBodyLength: 110 * 1024 * 1024, // 110MB
       maxContentLength: 110 * 1024 * 1024,
-      // Parallel upload pool support — caller can pass progress + cancel signal
       onUploadProgress: options.onUploadProgress,
       signal: options.signal,
     });
-    return data;
+
+    // Back-compat: an older core (no async support) returns the sync result
+    // directly (has documentId, no job_id) — pass it straight through.
+    if (!started?.job_id) return started;
+
+    // 2. Poll status until terminal.
+    const jobId = started.job_id;
+    const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
+    const pollMs = options.pollMs || 2500;
+    while (Date.now() < deadline) {
+      if (options.signal?.aborted) throw new Error('Upload cancelled');
+      await new Promise((r) => setTimeout(r, pollMs));
+      let st;
+      try {
+        st = await this.getKnowledgeStatus(jobId);
+      } catch {
+        continue; // transient — keep polling
+      }
+      const meta = st?.metadata || {};
+      if (options.onStatus) {
+        options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: meta.segments, promoted: meta.promoted });
+      }
+      if (st.status === 'indexed') {
+        return {
+          documentId: meta.document_id,
+          segmentCount: meta.segmentCount,
+          candidateCount: meta.candidateCount,
+          promotedCount: meta.promotedCount,
+          job_id: jobId,
+        };
+      }
+      if (st.status === 'failed') {
+        throw new Error(st.error || 'Ingestion failed');
+      }
+    }
+    throw new Error('Ingestion timed out');
   }
 
   // ─── Core: Image Ingestion (Groq vision pipeline) ─────────────
