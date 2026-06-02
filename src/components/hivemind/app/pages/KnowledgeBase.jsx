@@ -33,9 +33,12 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
 
-const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'xlsx', 'xls',
+const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
+  // pptx/ppt are parsed by Docling server-side + listed in the picker accept=
+  // attr; they were missing here, so the client rejected them before upload.
+  'pptx', 'ppt', 'html', 'htm',
   // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
-  'png', 'jpg', 'jpeg', 'webp', 'gif'];
+  'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif'];
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
 
 // ─── Robust upload helpers ─────────────────────────────────────────────
