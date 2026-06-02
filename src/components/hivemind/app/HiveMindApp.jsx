@@ -10,6 +10,7 @@ import AppShell from './layout/AppShell';
 const Overview = React.lazy(() => import('./pages/Overview'));
 const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
 const Memories = React.lazy(() => import('./pages/Memories'));
+const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
 const Connectors = React.lazy(() => import('./pages/Connectors'));
 const Profile = React.lazy(() => import('./pages/Profile'));
@@ -93,6 +94,7 @@ export default function HiveMindApp() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<PageSuspense><Overview /></PageSuspense>} />
           <Route path="memories" element={<PageSuspense><Memories /></PageSuspense>} />
+          <Route path="meeting-notes" element={<PageSuspense><MeetingNotes /></PageSuspense>} />
           <Route path="keys" element={<PageSuspense><ApiKeys /></PageSuspense>} />
           <Route path="connectors" element={<PageSuspense><Connectors /></PageSuspense>} />
           <Route path="profile" element={<PageSuspense><Profile /></PageSuspense>} />
