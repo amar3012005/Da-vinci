@@ -198,7 +198,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         {/* Exact ElevenLabs orb (Three.js shader) */}
         <div className="w-28 h-28 shrink-0">
           <Orb
-            colors={["#9ec5ff", "#117dff"]}
+            colors={["#cadcfc", "#6b86b5"]}
             agentState={active ? (state === 'talking' ? 'talking' : (state === 'thinking' || state === 'connecting') ? 'thinking' : 'listening') : null}
             getOutputVolume={() => outVolRef.current}
             getInputVolume={() => inVolRef.current}
