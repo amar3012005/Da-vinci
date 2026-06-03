@@ -508,6 +508,20 @@ export default function TaraConfig() {
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
   const [activeTab, setActiveTab] = useState('system');
+  const [calls, setCalls] = useState([]);
+  const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
+
+  const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
+  useEffect(() => { refreshCalls(); }, []);
+
+  const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
+
+  // Aggregates for stat cards + usage tab
+  const now = Date.now();
+  const weekCount = calls.filter((c) => now - new Date(c.startedAt).getTime() < 7 * 864e5).length;
+  const totalTurns = calls.reduce((a, c) => a + (c.turnCount || 0), 0);
+  const totalTokens = calls.reduce((a, c) => a + (c.promptTokens || 0) + (c.completionTokens || 0), 0);
+  const lastCall = calls[0] ? new Date(calls[0].startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
@@ -566,11 +580,11 @@ export default function TaraConfig() {
       {/* Stat cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { icon: Play, label: 'Total Calls', value: '0', color: '#117dff' },
-          { icon: Clock, label: 'This Week', value: '0', color: '#117dff' },
-          { icon: MessageSquare, label: 'Turns', value: '0', color: '#16a34a' },
-          { icon: Brain, label: 'Mode', value: 'External', color: '#7c3aed' },
-          { icon: Zap, label: 'Last Call', value: '—', color: '#a3a3a3' },
+          { icon: Play, label: 'Total Calls', value: String(calls.length), color: '#117dff' },
+          { icon: Clock, label: 'This Week', value: String(weekCount), color: '#117dff' },
+          { icon: MessageSquare, label: 'Turns', value: String(totalTurns), color: '#16a34a' },
+          { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#7c3aed' },
+          { icon: Clock, label: 'Last Call', value: lastCall, color: '#a3a3a3' },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <s.icon size={15} style={{ color: s.color }} />
@@ -603,18 +617,68 @@ export default function TaraConfig() {
             : <ConfigEditor config={config} onSave={handleSave} saving={saving} />
         )}
         {activeTab === 'history' && (
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-            <Clock size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No calls yet. Your conversation history will appear here.
+          <div className="space-y-3">
+            <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>
+            {calls.length === 0 ? (
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+                <Clock size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No calls yet.
+              </div>
+            ) : calls.map((c) => (
+              <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl">
+                <button onClick={() => (callDetail?.call?.id === c.id ? setCallDetail(null) : openCall(c.id))}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#faf9f4] transition-colors text-left">
+                  <div>
+                    <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{new Date(c.startedAt).toLocaleString()}</span>
+                    <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.mode} · {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
+                  </div>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${c.status==='completed'?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'}`}>{c.status}</span>
+                </button>
+                {callDetail?.call?.id === c.id && (
+                  <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2 max-h-[320px] overflow-y-auto">
+                    {callDetail.insight?.summary && <p className="text-[12px] text-[#525252] italic mb-2">{callDetail.insight.summary}</p>}
+                    {(callDetail.turns||[]).map((tn) => (
+                      <div key={tn.id} className="text-[12px]">
+                        {tn.userText && <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">You </span>{tn.userText}</div>}
+                        {tn.agentText && <div><span className="text-[#117dff] font-mono text-[10px] uppercase">TARA </span>{tn.agentText}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
         {activeTab === 'insights' && (
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-            <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Insights from your conversations will be summarized here.
-          </div>
+          calls.find((c) => c.id) && callDetail?.insight ? (
+            <div className="bg-white border border-[#e3e0db] rounded-xl p-5 space-y-3">
+              <p className="text-[13px] text-[#0a0a0a]">{callDetail.insight.summary}</p>
+              {(callDetail.insight.data?.action_items||[]).length>0 && (
+                <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Action Items</p>
+                  <ul className="list-disc pl-5 text-[12px] text-[#525252]">{callDetail.insight.data.action_items.map((a,i)=><li key={i}>{a.task}{a.owner?` · @${a.owner}`:''}</li>)}</ul></div>
+              )}
+              {(callDetail.insight.data?.topics||[]).length>0 && (
+                <div className="flex flex-wrap gap-1.5">{callDetail.insight.data.topics.map((tp,i)=><span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{tp}</span>)}</div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+              <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Open a call in Call History to see its insights.
+            </div>
+          )
         )}
         {activeTab === 'usage' && (
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-            <Zap size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> STT / LLM / TTS token usage will be tracked here.
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Total Calls', value: String(calls.length) },
+              { label: 'Total Turns', value: String(totalTurns) },
+              { label: 'Total Tokens', value: totalTokens.toLocaleString() },
+              { label: 'Avg Turns/Call', value: calls.length ? (totalTurns/calls.length).toFixed(1) : '0' },
+            ].map((u) => (
+              <div key={u.label} className="bg-white border border-[#e3e0db] rounded-xl p-4">
+                <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums">{u.value}</p>
+                <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{u.label}</p>
+              </div>
+            ))}
           </div>
         )}
       </motion.div>

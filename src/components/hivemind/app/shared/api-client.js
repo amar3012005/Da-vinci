@@ -456,6 +456,17 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ── TARA call history / insights / usage (org-scoped) ──
+  async listTaraCalls(limit = 30) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/tara/calls?limit=${limit}`);
+    return data?.calls || [];
+  }
+
+  async getTaraCall(id) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/tara/calls/${id}`);
+    return data; // { call, turns, insight }
+  }
+
   // SSE — caller manages EventSource lifecycle, we just expose URL.
   hyperTurnStreamUrl(roomId, turnId) {
     const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
