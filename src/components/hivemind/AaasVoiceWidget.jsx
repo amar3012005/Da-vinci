@@ -11,6 +11,7 @@
  */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, Square, Loader2, AlertTriangle, Volume2 } from 'lucide-react';
+import { Orb } from './Orb';
 
 const SAMPLE_RATE = 16000;
 const DEFAULT_WS =
@@ -72,6 +73,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const procRef = useRef(null);
   const lastPlayRef = useRef(0);
   const sourcesRef = useRef([]);
+  const outVolRef = useRef(0);   // TARA speaking volume → orb
+  const inVolRef = useRef(0);    // mic volume → orb
 
   const stopAll = useCallback((reason) => {
     sourcesRef.current.forEach((s) => { try { s.stop(); } catch { /* noop */ } });
@@ -94,7 +97,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     if (!ctx || !arrayBuf.byteLength) return;
     const i16 = new Int16Array(arrayBuf);
     const f32 = new Float32Array(i16.length);
-    for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 0x8000;
+    let sum = 0;
+    for (let i = 0; i < i16.length; i++) { f32[i] = i16[i] / 0x8000; sum += f32[i] * f32[i]; }
+    outVolRef.current = Math.min(1, Math.sqrt(sum / (f32.length || 1)) * 3); // RMS → orb output volume
     const buf = ctx.createBuffer(1, f32.length, SAMPLE_RATE);
     buf.copyToChannel(f32, 0);
     const src = ctx.createBufferSource();
@@ -151,7 +156,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
         const input = e.inputBuffer.getChannelData(0);
         const pcm = new Int16Array(input.length);
-        for (let i = 0; i < input.length; i++) pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+        let sum = 0;
+        for (let i = 0; i < input.length; i++) { const s = Math.max(-1, Math.min(1, input[i])); pcm[i] = s * 0x7fff; sum += s * s; }
+        inVolRef.current = Math.min(1, Math.sqrt(sum / (input.length || 1)) * 3); // mic RMS → orb input volume
         ws.send(pcm.buffer);
       };
       srcNode.connect(proc);
@@ -185,28 +192,18 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
   const busy = state === 'connecting';
-  const orbState = busy ? 'thinking' : state;
   return (
     <div className="rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex items-start gap-5">
-        {/* ElevenLabs-style glossy orb */}
-        <div className="relative w-28 h-28 shrink-0">
-          <div className="absolute -inset-3 rounded-full blur-2xl"
-            style={{ background: 'radial-gradient(circle, rgba(17,125,255,0.45), transparent 70%)', opacity: orbState === 'idle' ? 0.35 : 0.7 }} />
-          <div
-            className={`absolute inset-0 rounded-full ${orbState === 'idle' ? '' : orbState === 'talking' ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_9s_linear_infinite]'}`}
-            style={{ background: 'conic-gradient(from 210deg, #0a1733, #117dff, #9ec5ff, #0a0a0a 70%, #0a1733)' }}
+        {/* Exact ElevenLabs orb (Three.js shader) */}
+        <div className="w-28 h-28 shrink-0">
+          <Orb
+            colors={["#9ec5ff", "#117dff"]}
+            agentState={active ? (state === 'talking' ? 'talking' : (state === 'thinking' || state === 'connecting') ? 'thinking' : 'listening') : null}
+            getOutputVolume={() => outVolRef.current}
+            getInputVolume={() => inVolRef.current}
+            className="w-full h-full"
           />
-          <div className="absolute inset-0 rounded-full"
-            style={{ background: 'radial-gradient(circle at 32% 26%, rgba(255,255,255,0.6), transparent 42%)' }} />
-          <div className="absolute inset-[34%] rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.85), transparent 75%)' }} />
-          {(orbState === 'talking' || orbState === 'listening') && (
-            <div className="absolute inset-0 rounded-full animate-ping" style={{ boxShadow: '0 0 0 2px rgba(17,125,255,0.4)' }} />
-          )}
-          <span className="absolute -bottom-5 left-0 right-0 text-center text-[9px] font-mono text-[#a3a3a3] uppercase tracking-[0.14em]">
-            {orbState === 'idle' ? 'TALK TO TARA' : orbState}
-          </span>
         </div>
 
         {/* Right column */}
