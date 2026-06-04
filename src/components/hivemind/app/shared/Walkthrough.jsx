@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowLeft,
-  ArrowUpRight,
   Brain,
   Filter,
   Hexagon,
@@ -286,9 +285,7 @@ export default function Walkthrough({
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState(1);
   const total = steps.length;
-  const step = steps[index];
   const isLast = index === total - 1;
-  const Icon = step.icon || Sparkles;
 
   const goNext = useCallback(() => {
     if (isLast) {
@@ -317,11 +314,13 @@ export default function Walkthrough({
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev, close]);
 
-  const slide = {
-    enter: (d) => ({ opacity: 0, x: d > 0 ? 36 : -36 }),
-    center: { opacity: 1, x: 0 },
-    exit: (d) => ({ opacity: 0, x: d > 0 ? -36 : 36 }),
-  };
+  // Cards visible in the deck: front (depth 0) + up to 2 peeking behind.
+  const VISIBLE = 3;
+  const deck = [];
+  for (let d = 0; d < VISIBLE; d++) {
+    const i = index + d;
+    if (i < total) deck.push({ i, d, s: steps[i] });
+  }
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
@@ -334,149 +333,97 @@ export default function Walkthrough({
         className="absolute inset-0 bg-[#1a1814]/40 backdrop-blur-md"
       />
 
-      {/* Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-        className="relative z-10 w-full max-w-[420px]"
-      >
-        <div className="rounded-[28px] bg-white border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(17,125,255,0.25),0_8px_30px_rgba(0,0,0,0.08)] p-4">
-          {/* Header row */}
-          <div className="flex items-center justify-between px-2 pt-1 pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-                <Hexagon size={17} className="text-[#117dff]" />
-              </div>
-              <span className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] tracking-tight">
-                {brand}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Skip walkthrough"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#525252] hover:bg-[#f3f1ec] transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* Visual panel — the signature card surface */}
-          <div className="relative h-[230px] rounded-[20px] overflow-hidden">
-            <AnimatePresence custom={dir} mode="wait">
+      {/* Stacked deck — horizontal cards; front slides down on Next, revealing behind */}
+      <div className="relative z-10 w-full max-w-[640px]" style={{ height: 360 }}>
+        <AnimatePresence initial={false} custom={dir}>
+          {deck.map(({ i, d, s }) => {
+            const StepIcon = s.icon || Sparkles;
+            const front = d === 0;
+            return (
               <motion.div
-                key={index}
+                key={i}
                 custom={dir}
-                variants={slide}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0"
-                style={{
-                  background: `radial-gradient(120% 120% at 30% 20%, ${step.accent[1]} 0%, ${step.accent[0]} 55%, #0b3b86 120%)`,
+                initial={{ y: 28 + d * 14, scale: 0.94, opacity: 0 }}
+                animate={{
+                  y: -d * 18,                       // peek upward behind the front
+                  scale: 1 - d * 0.05,
+                  opacity: d === 0 ? 1 : 0.55 - (d - 1) * 0.18,
+                  zIndex: 30 - d,
                 }}
+                exit={{ y: 200, opacity: 0, rotate: dir > 0 ? 3 : -3, transition: { duration: 0.38, ease: [0.4, 0, 0.2, 1] } }}
+                transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+                className="absolute inset-x-0 top-0"
+                style={{ transformOrigin: 'top center', pointerEvents: front ? 'auto' : 'none' }}
               >
-                {/* Honeycomb texture */}
-                <HoneycombPattern />
+                <div className="rounded-[26px] bg-white border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(17,125,255,0.22),0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+                        <Hexagon size={15} className="text-[#117dff]" />
+                      </div>
+                      <span className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] tracking-tight">{brand}</span>
+                    </div>
+                    {front && (
+                      <button type="button" onClick={close} aria-label="Skip walkthrough"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#525252] hover:bg-[#f3f1ec] transition-colors">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Floating feature glyph */}
-                <motion.div
-                  initial={{ y: 8, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.08, duration: 0.4 }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 -m-6 rounded-full bg-white/20 blur-2xl" />
-                    <div className="relative w-[88px] h-[88px] rounded-[26px] bg-white/15 border border-white/30 backdrop-blur-xl flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
-                      <Icon size={40} className="text-white" strokeWidth={1.6} />
+                  {/* Body — HORIZONTAL: gradient visual left, copy right */}
+                  <div className="flex gap-4 px-5 pb-3">
+                    <div className="relative w-[200px] h-[150px] shrink-0 rounded-[18px] overflow-hidden"
+                      style={{ background: `radial-gradient(120% 120% at 30% 20%, ${s.accent[1]} 0%, ${s.accent[0]} 55%, #0b3b86 120%)` }}>
+                      <HoneycombPattern />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="relative">
+                          <div className="absolute inset-0 -m-4 rounded-full bg-white/20 blur-2xl" />
+                          <div className="relative w-[64px] h-[64px] rounded-[20px] bg-white/15 border border-white/30 backdrop-blur-xl flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+                            <StepIcon size={30} className="text-white" strokeWidth={1.6} />
+                          </div>
+                        </div>
+                      </div>
+                      <span className="absolute left-3 bottom-2 text-white text-[18px] leading-none font-bold font-['Space_Grotesk'] drop-shadow-sm">{s.label}</span>
+                    </div>
+                    <div className="flex-1 min-w-0 py-1">
+                      <h2 className="text-[#0a0a0a] text-[20px] leading-tight font-bold font-['Space_Grotesk'] mb-2">{s.title}</h2>
+                      <p className="text-[#525252] text-[13.5px] leading-relaxed">{s.description}</p>
                     </div>
                   </div>
-                </motion.div>
 
-                {/* Big bottom-left label (reference: "$275") */}
-                <div className="absolute left-5 bottom-4 right-20">
-                  <span className="block text-white text-[26px] leading-none font-bold font-['Space_Grotesk'] drop-shadow-sm">
-                    {step.label}
-                  </span>
+                  {/* Footer: dots + nav (front only) */}
+                  {front && (
+                    <div className="flex items-center justify-between px-5 pt-2 pb-4">
+                      <div className="flex items-center gap-1.5">
+                        {steps.map((st, j) => (
+                          <button key={st.label + j} type="button"
+                            onClick={() => { setDir(j > index ? 1 : -1); setIndex(j); }}
+                            aria-label={`Go to step ${j + 1}`}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${j === index ? 'w-6 bg-[#117dff]' : 'w-1.5 bg-[#d4d0ca] hover:bg-[#a3a3a3]'}`} />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {index > 0 && (
+                          <button type="button" onClick={goPrev} aria-label="Back"
+                            className="w-9 h-9 rounded-full border border-[#e3e0db] text-[#525252] flex items-center justify-center hover:bg-[#f3f1ec] transition-colors">
+                            <ArrowLeft size={16} />
+                          </button>
+                        )}
+                        <button type="button" onClick={goNext}
+                          className="h-9 px-5 rounded-full bg-[#117dff] text-white text-sm font-medium font-['Space_Grotesk'] hover:bg-[#0066e0] active:scale-95 transition-all shadow-[0_4px_16px_rgba(17,125,255,0.3)]">
+                          {isLast ? 'Get started' : 'Next'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
-            </AnimatePresence>
-
-            {/* Signature circular arrow CTA */}
-            <button
-              type="button"
-              onClick={goNext}
-              aria-label={isLast ? 'Get started' : 'Next'}
-              className="absolute right-4 bottom-4 w-14 h-14 rounded-full bg-white text-[#0a0a0a] flex items-center justify-center shadow-[0_6px_20px_rgba(0,0,0,0.18)] hover:scale-105 active:scale-95 transition-transform"
-            >
-              <ArrowUpRight size={24} strokeWidth={2} />
-            </button>
-          </div>
-
-          {/* Copy */}
-          <div className="px-2 pt-5 pb-2 min-h-[120px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.28 }}
-              >
-                <h2 className="text-[#0a0a0a] text-[22px] leading-tight font-bold font-['Space_Grotesk'] mb-2">
-                  {step.title}
-                </h2>
-                <p className="text-[#525252] text-sm leading-relaxed">
-                  {step.description}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Footer: dots + nav */}
-          <div className="flex items-center justify-between px-2 pt-3 pb-1">
-            <div className="flex items-center gap-1.5">
-              {steps.map((s, i) => (
-                <button
-                  key={s.label + i}
-                  type="button"
-                  onClick={() => {
-                    setDir(i > index ? 1 : -1);
-                    setIndex(i);
-                  }}
-                  aria-label={`Go to step ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === index ? 'w-6 bg-[#117dff]' : 'w-1.5 bg-[#d4d0ca] hover:bg-[#a3a3a3]'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {index > 0 && (
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  className="w-9 h-9 rounded-full border border-[#e3e0db] text-[#525252] flex items-center justify-center hover:bg-[#f3f1ec] transition-colors"
-                  aria-label="Back"
-                >
-                  <ArrowLeft size={16} />
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={goNext}
-                className="h-9 px-4 rounded-full bg-[#117dff] text-white text-sm font-medium font-['Space_Grotesk'] hover:bg-[#0066e0] active:scale-95 transition-all shadow-[0_4px_16px_rgba(17,125,255,0.3)]"
-              >
-                {isLast ? 'Get started' : 'Next'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
