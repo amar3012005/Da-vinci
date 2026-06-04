@@ -20,6 +20,10 @@ import {
   Lock,
   Check,
   Shield,
+  Briefcase,
+  Headphones,
+  Calendar,
+  FolderOpen,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -507,15 +511,14 @@ function ActiveSessions() {
 // secondary; internal = single). "+" creates a skill. Checkbox selects one per
 // section; "Save selection" finalises (copies the skill's prompts into config).
 
-// Pick a folder emoji per skill (by kind + name heuristic).
-function skillEmoji(skill) {
-  if (skill.kind === 'internal') return '🧠';
+// Pick a lucide icon per skill (by kind + name heuristic).
+function skillIcon(skill) {
+  if (skill.kind === 'internal') return Brain;
   const n = (skill.name || '').toLowerCase();
-  if (n.includes('sales')) return '💼';
-  if (n.includes('support') || n.includes('customer')) return '🎧';
-  if (n.includes('close')) return '🤝';
-  if (n.includes('book') || n.includes('schedul')) return '📅';
-  return '🗂️';
+  if (n.includes('sales')) return Briefcase;
+  if (n.includes('support') || n.includes('customer')) return Headphones;
+  if (n.includes('book') || n.includes('schedul')) return Calendar;
+  return FolderOpen;
 }
 
 // Compact "file folder" card — wide + short, with a folder tab on top.
@@ -524,18 +527,25 @@ function SkillCard({ skill, selected, onOpen, onToggle }) {
   const chars = (skill.primary_prompt || '').length + (skill.secondary_prompt || '').length;
   const accent = isInternal ? '#7c3aed' : '#117dff';
   const tabBg = isInternal ? '#f3ecff' : '#eef5ff';
+  const Icon = skillIcon(skill);
   return (
     <div onClick={onOpen} className="relative shrink-0 w-[330px] cursor-pointer">
       {/* Folder tab */}
       <div
-        className={`absolute -top-[6px] left-5 h-[7px] w-16 rounded-t-[6px] border-x border-t ${selected ? 'border-[#117dff]' : 'border-[#e3e0db]'}`}
+        className="absolute -top-[6px] left-5 h-[7px] w-16 rounded-t-[6px] border-x border-t border-[#e3e0db]"
         style={{ background: tabBg }}
       />
       {/* Folder body — single compact row */}
-      <div className={`relative flex items-center gap-3 rounded-xl rounded-tl-[6px] border bg-white px-3.5 py-3 transition-all hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] ${
-        selected ? 'border-[#117dff] ring-1 ring-[#117dff]' : 'border-[#e3e0db]'}`}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[19px] leading-none shrink-0" style={{ background: tabBg }}>
-          {skillEmoji(skill)}
+      <div className={`relative flex items-center gap-3 rounded-xl rounded-tl-[6px] border border-[#e3e0db] px-3.5 py-3 transition-all hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] ${
+        selected ? 'bg-[#fbfcff]' : 'bg-white'}`}>
+        {/* Glassmorphism icon tile */}
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 backdrop-blur-md ring-1 ring-white/70 shadow-[0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_1px_rgba(255,255,255,0.6)]"
+          style={{ background: isInternal
+            ? 'linear-gradient(135deg, rgba(243,236,255,0.9), rgba(221,214,254,0.55))'
+            : 'linear-gradient(135deg, rgba(238,245,255,0.9), rgba(219,234,254,0.55))' }}
+        >
+          <Icon size={16} style={{ color: accent }} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
