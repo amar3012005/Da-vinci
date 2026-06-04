@@ -19,6 +19,7 @@ import {
   Trash2,
   Lock,
   Check,
+  Shield,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -507,29 +508,50 @@ function ActiveSessions() {
 // section; "Save selection" finalises (copies the skill's prompts into config).
 
 function SkillCard({ skill, selected, onOpen, onToggle }) {
+  const isInternal = skill.kind === 'internal';
+  const chars = (skill.primary_prompt || '').length + (skill.secondary_prompt || '').length;
   return (
     <div
       onClick={onOpen}
-      className={`relative shrink-0 w-[210px] cursor-pointer rounded-xl border p-4 transition-all bg-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] ${
+      className={`relative shrink-0 w-[270px] cursor-pointer rounded-2xl border bg-white p-5 transition-all hover:shadow-[0_6px_22px_rgba(0,0,0,0.07)] ${
         selected ? 'border-[#117dff] ring-1 ring-[#117dff]' : 'border-[#e3e0db]'}`}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className={`absolute top-3 right-3 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-          selected ? 'bg-[#117dff] border-[#117dff]' : 'border-[#d4d0ca] hover:border-[#117dff]'}`}
-        aria-label="select skill"
-      >
-        {selected && <Check size={13} className="text-white" />}
-      </button>
-      <div className="flex items-center gap-1.5 mb-2">
-        <Sliders size={14} className="text-[#117dff]" />
-        {skill.builtin && <Lock size={11} className="text-[#a3a3a3]" />}
+      {/* Header: icon tile + name + select checkbox */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isInternal ? 'bg-[#f3ecff]' : 'bg-[#eef5ff]'}`}>
+            <Sliders size={16} className={isInternal ? 'text-[#7c3aed]' : 'text-[#117dff]'} />
+          </div>
+          <p className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight truncate">{skill.name}</p>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+            selected ? 'bg-[#117dff] border-[#117dff]' : 'border-[#d4d0ca] hover:border-[#117dff]'}`}
+          aria-label="select skill"
+        >
+          {selected && <Check size={13} className="text-white" />}
+        </button>
       </div>
-      <p className="text-[#0a0a0a] text-[14px] font-bold font-['Space_Grotesk'] leading-snug pr-6">{skill.name}</p>
-      <p className="text-[#a3a3a3] text-[11px] mt-1 line-clamp-2">{(skill.primary_prompt || '').slice(0, 90)}…</p>
-      <span className="inline-block mt-3 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-        {skill.builtin ? 'Built-in' : 'Custom'}
-      </span>
+
+      {/* Description — first line of the primary prompt */}
+      <p className="text-[#737373] text-[12px] leading-relaxed mt-3 line-clamp-2 min-h-[34px]">
+        {(skill.primary_prompt || '').replace(/\s+/g, ' ').slice(0, 110)}…
+      </p>
+
+      {/* Badges: kind + built-in/custom */}
+      <div className="flex items-center gap-1.5 mt-3">
+        <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isInternal ? 'text-[#7c3aed]' : 'text-[#117dff]'}`}>
+          <Shield size={12} /> {isInternal ? 'Internal' : 'External'}
+        </span>
+        {skill.builtin && <span className="inline-flex items-center gap-1 text-[11px] text-[#a3a3a3]"><Lock size={11} /> Built-in</span>}
+      </div>
+
+      {/* Metric row — total prompt chars (+ secondary note for external) */}
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f3f1ec]">
+        <span className="text-[#a3a3a3] text-[12px] tabular-nums">{chars.toLocaleString()} chars</span>
+        <span className="text-[#a3a3a3] text-[11px]">{isInternal ? 'single prompt' : 'primary + secondary'}</span>
+      </div>
     </div>
   );
 }
@@ -547,8 +569,8 @@ function SkillSection({ title, hint, kind, skills, selectedId, onSelect, onOpen,
             onOpen={() => onOpen(s)} onToggle={() => onSelect(s.id)} />
         ))}
         <button onClick={() => onAdd(kind)}
-          className="shrink-0 w-[210px] rounded-xl border border-dashed border-[#d4d0ca] flex flex-col items-center justify-center gap-1.5 text-[#a3a3a3] hover:border-[#117dff] hover:text-[#117dff] transition-colors min-h-[120px]">
-          <Plus size={20} /><span className="text-[12px] font-medium">New skill</span>
+          className="shrink-0 w-[270px] rounded-2xl border border-dashed border-[#d4d0ca] flex flex-col items-center justify-center gap-1.5 text-[#a3a3a3] hover:border-[#117dff] hover:text-[#117dff] hover:bg-[#fafbff] transition-colors min-h-[168px]">
+          <Plus size={22} /><span className="text-[12px] font-medium">New skill</span>
         </button>
       </div>
     </div>
@@ -605,13 +627,13 @@ function SkillModal({ skill, kind, onClose, onCreated, onUpdated, onDeleted }) {
               className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[14px] focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
           </div>
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">{isInternal ? 'Prompt (voice of HIVEMIND)' : 'Primary prompt (persona)'}</label>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] flex justify-between"><span>{isInternal ? 'Prompt (voice of HIVEMIND)' : 'Primary prompt (persona)'}</span><span className="tabular-nums">{primary.length.toLocaleString()} chars</span></label>
             <textarea value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={readOnly} rows={8}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[13px] font-mono leading-relaxed focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
           </div>
           {!isInternal && (
             <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">Secondary prompt (clinical / reasoning)</label>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] flex justify-between"><span>Secondary prompt (clinical / reasoning)</span><span className="tabular-nums">{secondary.length.toLocaleString()} chars</span></label>
               <textarea value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={readOnly} rows={6}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[13px] font-mono leading-relaxed focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
             </div>
@@ -674,6 +696,22 @@ function SkillsManager() {
 
   return (
     <div className="space-y-6">
+      {/* Top bar — title + Save selection (top-right) */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">Skills</h3>
+          <p className="text-[#a3a3a3] text-[12px]">Pick the active persona per side, then save to finalise.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {savedFlash && <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle size={14} /> Saved</span>}
+          {dirty && !savedFlash && <span className="text-[11px] text-[#a3a3a3]">Unsaved selection</span>}
+          <button onClick={saveSelection} disabled={!dirty || saving}
+            className="flex items-center gap-1.5 bg-[#117dff] text-white text-[13px] font-semibold px-4 py-2 rounded-lg hover:bg-[#0e6ae0] disabled:opacity-40 disabled:cursor-not-allowed">
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save selection
+          </button>
+        </div>
+      </div>
+
       <SkillSection title="External" hint="Customer-facing personas (primary + secondary prompt)"
         kind="external" skills={external} selectedId={pending.external}
         onSelect={(id) => setPending((p) => ({ ...p, external: p.external === id ? null : id }))}
@@ -683,15 +721,6 @@ function SkillsManager() {
         kind="internal" skills={internal} selectedId={pending.internal}
         onSelect={(id) => setPending((p) => ({ ...p, internal: p.internal === id ? null : id }))}
         onOpen={(s) => setModal({ skill: s })} onAdd={(kind) => setModal({ create: kind })} />
-
-      {/* Finalise selection */}
-      <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#f3f1ec]">
-        {savedFlash && <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle size={14} /> Selection saved</span>}
-        <button onClick={saveSelection} disabled={!dirty || saving}
-          className="flex items-center gap-1.5 bg-[#117dff] text-white text-[13px] font-semibold px-4 py-2 rounded-lg hover:bg-[#0e6ae0] disabled:opacity-40">
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save selection
-        </button>
-      </div>
 
       {modal && (
         <SkillModal
