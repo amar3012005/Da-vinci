@@ -12,6 +12,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, Square, Loader2, AlertTriangle, Volume2 } from 'lucide-react';
 import { Orb } from './Orb';
+import apiClient from './app/shared/api-client';
 
 const SAMPLE_RATE = 16000;
 const DEFAULT_WS =
@@ -35,6 +36,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
   const [mode, setMode] = useState('external'); // external = full agent (clinical) | internal = direct recall
+  // Active skill name per mode (org-wide selection from the Skills tab) — the
+  // toggle reflects whichever skill is selected for each side.
+  const [skillNames, setSkillNames] = useState({ external: null, internal: null });
   const [previewing, setPreviewing] = useState(false);
   const previewAudioRef = useRef(null);
 
@@ -49,6 +53,20 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       })
       .catch(() => {});
   }, []);
+
+  // Reflect the org-wide selected skill on each toggle side.
+  useEffect(() => {
+    apiClient.listTaraSkills()
+      .then((d) => {
+        const byId = Object.fromEntries((d?.skills || []).map((s) => [s.id, s.name]));
+        const sel = d?.selected || {};
+        setSkillNames({
+          external: byId[sel.external_skill_id] || null,
+          internal: byId[sel.internal_skill_id] || null,
+        });
+      })
+      .catch(() => {});
+  }, [active]);
 
   const filteredVoices = voices.filter(
     (v) => (!langFilter || v.language === langFilter) && (!genderFilter || v.gender === genderFilter)
@@ -219,9 +237,14 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
                 <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
                   {['external', 'internal'].map((m) => (
                     <button key={m} type="button" onClick={() => setMode(m)}
-                      title={m === 'internal' ? 'Direct HIVEMIND recall, no clinical reasoning' : 'Full agent (clinical reasoning if configured)'}
-                      className={`px-2.5 py-1.5 transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
-                      {m}
+                      title={skillNames[m]
+                        ? `Active skill: ${skillNames[m]}`
+                        : (m === 'internal' ? 'Direct HIVEMIND recall, no clinical reasoning' : 'Full agent (clinical reasoning if configured)')}
+                      className={`px-2.5 py-1 leading-tight text-left transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
+                      <span className="block capitalize">{m}</span>
+                      <span className={`block text-[9px] normal-case ${mode === m ? 'text-white/75' : 'text-[#a3a3a3]'}`}>
+                        {skillNames[m] || 'no skill selected'}
+                      </span>
                     </button>
                   ))}
                 </div>
