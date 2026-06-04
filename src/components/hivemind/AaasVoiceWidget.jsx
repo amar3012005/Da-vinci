@@ -52,10 +52,15 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     fetch(`${AAAS_HTTP}/voices`)
       .then((r) => r.json())
       .then((d) => {
-        setVoices(d.voices || []);
+        const list = d.voices || [];
+        setVoices(list);
         setLangs(d.languages || []);
-        const en = (d.voices || []).find((v) => v.language === 'en');
-        if (en) setVoiceId(en.id);
+        // Robust default: exact 'en' → any 'en*' → first available (never leave empty,
+        // which would make Start send no voice_id and fall back to Cartesia's default).
+        const def = list.find((v) => v.language === 'en')
+          || list.find((v) => (v.language || '').startsWith('en'))
+          || list[0];
+        if (def) setVoiceId(def.id);
       })
       .catch(() => {});
   }, []);
@@ -77,6 +82,15 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const filteredVoices = voices.filter(
     (v) => (!langFilter || v.language === langFilter) && (!genderFilter || v.gender === genderFilter)
   );
+
+  // Keep voiceId valid for the current filter. Without this the dropdown shows
+  // one voice while voiceId still holds a stale/invalid id, so Start sends the
+  // wrong (or no) voice_id. Auto-select the first matching voice.
+  useEffect(() => {
+    if (filteredVoices.length && !filteredVoices.some((v) => v.id === voiceId)) {
+      setVoiceId(filteredVoices[0].id);
+    }
+  }, [filteredVoices, voiceId]);
 
   const preview = useCallback(() => {
     if (!voiceId) return;
