@@ -22,6 +22,12 @@ const DEFAULT_WS =
 const AAAS_HTTP =
   (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || 'https://core.hivemind.davinciai.eu:8050/aaas';
 
+// What each mode means — shown as an overlay caption so the user knows on toggle.
+const MODE_DESC = {
+  external: 'Agent acts as your employee — used for client or user interaction.',
+  internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
+};
+
 export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = DEFAULT_WS }) {
   const [active, setActive] = useState(false);
   const [state, setState] = useState('idle'); // idle|connecting|listening|thinking|talking
@@ -234,19 +240,24 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
             <div className="flex items-center gap-2 shrink-0">
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
               {!active && (
-                <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
-                  {['external', 'internal'].map((m) => (
-                    <button key={m} type="button" onClick={() => setMode(m)}
-                      title={skillNames[m]
-                        ? `Active skill: ${skillNames[m]}`
-                        : (m === 'internal' ? 'Direct HIVEMIND recall, no clinical reasoning' : 'Full agent (clinical reasoning if configured)')}
-                      className={`px-2.5 py-1 leading-tight text-left transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
-                      <span className="block capitalize">{m}</span>
-                      <span className={`block text-[9px] normal-case ${mode === m ? 'text-white/75' : 'text-[#a3a3a3]'}`}>
-                        {skillNames[m] || 'no skill selected'}
-                      </span>
-                    </button>
-                  ))}
+                <div className="relative">
+                  <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
+                    {['external', 'internal'].map((m) => (
+                      <button key={m} type="button" onClick={() => setMode(m)}
+                        title={skillNames[m] ? `Active skill: ${skillNames[m]}` : MODE_DESC[m]}
+                        className={`px-2.5 py-1 leading-tight text-left transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
+                        <span className="block capitalize">{m}</span>
+                        <span className={`block text-[9px] normal-case ${mode === m ? 'text-white/75' : 'text-[#a3a3a3]'}`}>
+                          {skillNames[m] || 'no skill selected'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {/* Overlay caption — explains the currently-selected mode */}
+                  <div className="absolute z-20 top-full right-0 mt-1.5 w-[240px] rounded-lg bg-[#0a0a0a] text-white text-[11px] leading-snug px-3 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
+                    <span className={`font-mono uppercase tracking-wider text-[9px] ${mode === 'internal' ? 'text-[#c4b5fd]' : 'text-[#93c5fd]'}`}>{mode}</span>
+                    <p className="mt-0.5">{MODE_DESC[mode]}</p>
+                  </div>
                 </div>
               )}
             <button
