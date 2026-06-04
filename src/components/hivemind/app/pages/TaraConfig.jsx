@@ -12,9 +12,13 @@ import {
   Zap,
   Brain,
   CheckCircle,
-  AlertTriangle,
   Loader2,
   Sliders,
+  Plus,
+  X,
+  Trash2,
+  Lock,
+  Check,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -27,6 +31,7 @@ const fadeUp = {
 
 // ─── Config Editor ──────────────────────────────────────────────────────────
 
+// eslint-disable-next-line no-unused-vars -- replaced by SkillsManager; kept for reference
 function ConfigEditor({ config, onSave, saving }) {
   const { t } = useTranslation('dashboard');
   const [systemPrompt, setSystemPrompt] = useState(config?.system_prompt || '');
@@ -495,19 +500,219 @@ function ActiveSessions() {
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
+// ─── Skills Manager ───────────────────────────────────────────────────────
+// Two sections (External / Internal). Each is a horizontal stack of selectable
+// skill cards. Click a card → popup with its prompt(s) (external = primary +
+// secondary; internal = single). "+" creates a skill. Checkbox selects one per
+// section; "Save selection" finalises (copies the skill's prompts into config).
+
+function SkillCard({ skill, selected, onOpen, onToggle }) {
+  return (
+    <div
+      onClick={onOpen}
+      className={`relative shrink-0 w-[210px] cursor-pointer rounded-xl border p-4 transition-all bg-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.06)] ${
+        selected ? 'border-[#117dff] ring-1 ring-[#117dff]' : 'border-[#e3e0db]'}`}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        className={`absolute top-3 right-3 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+          selected ? 'bg-[#117dff] border-[#117dff]' : 'border-[#d4d0ca] hover:border-[#117dff]'}`}
+        aria-label="select skill"
+      >
+        {selected && <Check size={13} className="text-white" />}
+      </button>
+      <div className="flex items-center gap-1.5 mb-2">
+        <Sliders size={14} className="text-[#117dff]" />
+        {skill.builtin && <Lock size={11} className="text-[#a3a3a3]" />}
+      </div>
+      <p className="text-[#0a0a0a] text-[14px] font-bold font-['Space_Grotesk'] leading-snug pr-6">{skill.name}</p>
+      <p className="text-[#a3a3a3] text-[11px] mt-1 line-clamp-2">{(skill.primary_prompt || '').slice(0, 90)}…</p>
+      <span className="inline-block mt-3 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+        {skill.builtin ? 'Built-in' : 'Custom'}
+      </span>
+    </div>
+  );
+}
+
+function SkillSection({ title, hint, kind, skills, selectedId, onSelect, onOpen, onAdd }) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-2 mb-2">
+        <h4 className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] uppercase tracking-wide">{title}</h4>
+        <span className="text-[11px] text-[#a3a3a3]">{hint}</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2">
+        {skills.map((s) => (
+          <SkillCard key={s.id} skill={s} selected={selectedId === s.id}
+            onOpen={() => onOpen(s)} onToggle={() => onSelect(s.id)} />
+        ))}
+        <button onClick={() => onAdd(kind)}
+          className="shrink-0 w-[210px] rounded-xl border border-dashed border-[#d4d0ca] flex flex-col items-center justify-center gap-1.5 text-[#a3a3a3] hover:border-[#117dff] hover:text-[#117dff] transition-colors min-h-[120px]">
+          <Plus size={20} /><span className="text-[12px] font-medium">New skill</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SkillModal({ skill, kind, onClose, onCreated, onUpdated, onDeleted }) {
+  const isCreate = !skill;
+  const isInternal = (skill?.kind || kind) === 'internal';
+  const readOnly = !!skill?.builtin;
+  const [name, setName] = useState(skill?.name || '');
+  const [primary, setPrimary] = useState(skill?.primary_prompt || '');
+  const [secondary, setSecondary] = useState(skill?.secondary_prompt || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      if (isCreate) {
+        await apiClient.createTaraSkill({ kind, name, primary_prompt: primary, secondary_prompt: isInternal ? null : secondary });
+        onCreated();
+      } else {
+        await apiClient.updateTaraSkill(skill.id, { name, primary_prompt: primary, secondary_prompt: isInternal ? null : secondary });
+        onUpdated();
+      }
+    } catch (e) { setErr(e?.response?.data?.message || e.message || 'Failed'); }
+    finally { setBusy(false); }
+  };
+
+  const del = async () => {
+    if (!window.confirm(`Delete skill "${skill.name}"?`)) return;
+    setBusy(true);
+    try { await apiClient.deleteTaraSkill(skill.id); onDeleted(); }
+    catch (e) { setErr(e?.response?.data?.message || e.message); setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl border border-[#e3e0db] shadow-xl w-full max-w-[640px] max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f1ec] sticky top-0 bg-white">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{isInternal ? 'Internal' : 'External'}</span>
+            <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk']">{isCreate ? 'New skill' : skill.name}{readOnly && <Lock size={12} className="inline ml-1.5 text-[#a3a3a3]" />}</h3>
+          </div>
+          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={18} /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} disabled={readOnly}
+              placeholder="e.g. Sales Agent"
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[14px] focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
+          </div>
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">{isInternal ? 'Prompt (voice of HIVEMIND)' : 'Primary prompt (persona)'}</label>
+            <textarea value={primary} onChange={(e) => setPrimary(e.target.value)} disabled={readOnly} rows={8}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[13px] font-mono leading-relaxed focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
+          </div>
+          {!isInternal && (
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3]">Secondary prompt (clinical / reasoning)</label>
+              <textarea value={secondary} onChange={(e) => setSecondary(e.target.value)} disabled={readOnly} rows={6}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-[#e3e0db] text-[13px] font-mono leading-relaxed focus:border-[#117dff] outline-none disabled:bg-[#faf9f4] disabled:text-[#737373]" />
+            </div>
+          )}
+          {err && <p className="text-red-500 text-[12px]">{err}</p>}
+        </div>
+        <div className="flex items-center justify-between px-5 py-4 border-t border-[#f3f1ec] sticky bottom-0 bg-white">
+          {!isCreate && !readOnly
+            ? <button onClick={del} disabled={busy} className="flex items-center gap-1.5 text-red-500 text-[13px] hover:text-red-600"><Trash2 size={14} /> Delete</button>
+            : <span />}
+          {!readOnly && (
+            <button onClick={submit} disabled={busy || !name || !primary}
+              className="flex items-center gap-1.5 bg-[#117dff] text-white text-[13px] font-semibold px-4 py-2 rounded-lg hover:bg-[#0e6ae0] disabled:opacity-50">
+              {busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {isCreate ? 'Create' : 'Save'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkillsManager() {
+  const [data, setData] = useState({ skills: [], selected: { external_skill_id: null, internal_skill_id: null } });
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null); // { skill } | { create: kind }
+  const [pending, setPending] = useState({ external: null, internal: null });
+  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    return apiClient.listTaraSkills()
+      .then((d) => {
+        const sel = d?.selected || {};
+        setData({ skills: d?.skills || [], selected: sel });
+        setPending({ external: sel.external_skill_id || null, internal: sel.internal_skill_id || null });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const external = data.skills.filter((s) => s.kind === 'external');
+  const internal = data.skills.filter((s) => s.kind === 'internal');
+  const dirty = pending.external !== data.selected.external_skill_id || pending.internal !== data.selected.internal_skill_id;
+
+  const saveSelection = async () => {
+    setSaving(true);
+    try {
+      if (pending.external && pending.external !== data.selected.external_skill_id) await apiClient.selectTaraSkill(pending.external);
+      if (pending.internal && pending.internal !== data.selected.internal_skill_id) await apiClient.selectTaraSkill(pending.internal);
+      await load();
+      setSavedFlash(true); setTimeout(() => setSavedFlash(false), 2500);
+    } catch { /* surfaced by reload */ }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-10"><Loader2 size={20} className="text-[#117dff] animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <SkillSection title="External" hint="Customer-facing personas (primary + secondary prompt)"
+        kind="external" skills={external} selectedId={pending.external}
+        onSelect={(id) => setPending((p) => ({ ...p, external: p.external === id ? null : id }))}
+        onOpen={(s) => setModal({ skill: s })} onAdd={(kind) => setModal({ create: kind })} />
+
+      <SkillSection title="Internal" hint="Voice of HIVEMIND — full-recall, internal use"
+        kind="internal" skills={internal} selectedId={pending.internal}
+        onSelect={(id) => setPending((p) => ({ ...p, internal: p.internal === id ? null : id }))}
+        onOpen={(s) => setModal({ skill: s })} onAdd={(kind) => setModal({ create: kind })} />
+
+      {/* Finalise selection */}
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#f3f1ec]">
+        {savedFlash && <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold"><CheckCircle size={14} /> Selection saved</span>}
+        <button onClick={saveSelection} disabled={!dirty || saving}
+          className="flex items-center gap-1.5 bg-[#117dff] text-white text-[13px] font-semibold px-4 py-2 rounded-lg hover:bg-[#0e6ae0] disabled:opacity-40">
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save selection
+        </button>
+      </div>
+
+      {modal && (
+        <SkillModal
+          skill={modal.skill || null}
+          kind={modal.create || modal.skill?.kind}
+          onClose={() => setModal(null)}
+          onCreated={() => { setModal(null); load(); }}
+          onUpdated={() => { setModal(null); load(); }}
+          onDeleted={() => { setModal(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function TaraConfig() {
   const { t } = useTranslation('dashboard');
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null);
-
-  const { data: config, loading, refetch } = useApiQuery(
-    () => apiClient.controlPlane.get('/v1/proxy/tara/config').then(r => r.data?.config || r.data).catch(() => null),
-    []
-  );
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
-  const [activeTab, setActiveTab] = useState('system');
+  const [activeTab, setActiveTab] = useState('skills');
   const [calls, setCalls] = useState([]);
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
 
@@ -528,21 +733,6 @@ export default function TaraConfig() {
       .catch(() => {});
   }, []);
 
-  const handleSave = async (newConfig) => {
-    setSaving(true);
-    setSaveStatus(null);
-    try {
-      await apiClient.controlPlane.post('/v1/proxy/tara/config', newConfig);
-      setSaveStatus('saved');
-      refetch();
-      setTimeout(() => setSaveStatus(null), 3000);
-    } catch (err) {
-      setSaveStatus('error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <motion.div
       initial="hidden"
@@ -559,16 +749,6 @@ export default function TaraConfig() {
           <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
           <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
         </div>
-        {saveStatus === 'saved' && (
-          <span className="flex items-center gap-1.5 text-emerald-600 text-xs font-['Space_Grotesk'] font-semibold">
-            <CheckCircle size={14} /> {t('taraconfig.saveStatusSaved', 'Saved')}
-          </span>
-        )}
-        {saveStatus === 'error' && (
-          <span className="flex items-center gap-1.5 text-red-500 text-xs font-['Space_Grotesk'] font-semibold">
-            <AlertTriangle size={14} /> {t('taraconfig.saveStatusError', 'Save failed')}
-          </span>
-        )}
       </motion.div>
 
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
@@ -598,7 +778,7 @@ export default function TaraConfig() {
       <motion.div variants={fadeUp}>
         <div className="flex items-center gap-1 border-b border-[#e3e0db] mb-4">
           {[
-            { id: 'system', label: 'System Prompt', icon: Sliders },
+            { id: 'skills', label: 'Skills', icon: Sliders },
             { id: 'history', label: 'Call History', icon: Clock },
             { id: 'insights', label: 'Insights', icon: Brain },
             { id: 'usage', label: 'Usage', icon: Zap },
@@ -611,11 +791,7 @@ export default function TaraConfig() {
           ))}
         </div>
 
-        {activeTab === 'system' && (
-          loading
-            ? <div className="flex items-center justify-center py-8"><Loader2 size={20} className="text-[#117dff] animate-spin" /></div>
-            : <ConfigEditor config={config} onSave={handleSave} saving={saving} />
-        )}
+        {activeTab === 'skills' && <SkillsManager />}
         {activeTab === 'history' && (
           <div className="space-y-3">
             <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>

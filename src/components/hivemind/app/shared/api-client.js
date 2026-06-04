@@ -467,6 +467,32 @@ class HiveMindApiClient {
     return data; // { call, turns, insight }
   }
 
+  // ── TARA Skills (named prompt presets, org-scoped) ──
+  async listTaraSkills() {
+    const { data } = await this.controlPlane.get('/v1/proxy/tara/skills');
+    return data; // { skills: [...], selected: { external_skill_id, internal_skill_id } }
+  }
+
+  async createTaraSkill({ kind, name, primary_prompt, secondary_prompt }) {
+    const { data } = await this.controlPlane.post('/v1/proxy/tara/skills', { kind, name, primary_prompt, secondary_prompt });
+    return data?.skill;
+  }
+
+  async updateTaraSkill(id, { name, primary_prompt, secondary_prompt }) {
+    const { data } = await this.controlPlane.put(`/v1/proxy/tara/skills/${id}`, { name, primary_prompt, secondary_prompt });
+    return data?.skill;
+  }
+
+  async deleteTaraSkill(id) {
+    const { data } = await this.controlPlane.delete(`/v1/proxy/tara/skills/${id}`);
+    return data;
+  }
+
+  async selectTaraSkill(skillId) {
+    const { data } = await this.controlPlane.post('/v1/proxy/tara/skills/select', { skill_id: skillId });
+    return data; // { selected, kind }
+  }
+
   // SSE — caller manages EventSource lifecycle, we just expose URL.
   hyperTurnStreamUrl(roomId, turnId) {
     const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
