@@ -507,22 +507,48 @@ function ActiveSessions() {
 // secondary; internal = single). "+" creates a skill. Checkbox selects one per
 // section; "Save selection" finalises (copies the skill's prompts into config).
 
+// Pick a folder emoji per skill (by kind + name heuristic).
+function skillEmoji(skill) {
+  if (skill.kind === 'internal') return '🧠';
+  const n = (skill.name || '').toLowerCase();
+  if (n.includes('sales')) return '💼';
+  if (n.includes('support') || n.includes('customer')) return '🎧';
+  if (n.includes('close')) return '🤝';
+  if (n.includes('book') || n.includes('schedul')) return '📅';
+  return '🗂️';
+}
+
+// Compact "file folder" card — wide + short, with a folder tab on top.
 function SkillCard({ skill, selected, onOpen, onToggle }) {
   const isInternal = skill.kind === 'internal';
   const chars = (skill.primary_prompt || '').length + (skill.secondary_prompt || '').length;
+  const accent = isInternal ? '#7c3aed' : '#117dff';
+  const tabBg = isInternal ? '#f3ecff' : '#eef5ff';
   return (
-    <div
-      onClick={onOpen}
-      className={`relative shrink-0 w-[270px] cursor-pointer rounded-2xl border bg-white p-5 transition-all hover:shadow-[0_6px_22px_rgba(0,0,0,0.07)] ${
-        selected ? 'border-[#117dff] ring-1 ring-[#117dff]' : 'border-[#e3e0db]'}`}
-    >
-      {/* Header: icon tile + name + select checkbox */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isInternal ? 'bg-[#f3ecff]' : 'bg-[#eef5ff]'}`}>
-            <Sliders size={16} className={isInternal ? 'text-[#7c3aed]' : 'text-[#117dff]'} />
+    <div onClick={onOpen} className="relative shrink-0 w-[330px] cursor-pointer">
+      {/* Folder tab */}
+      <div
+        className={`absolute -top-[6px] left-5 h-[7px] w-16 rounded-t-[6px] border-x border-t ${selected ? 'border-[#117dff]' : 'border-[#e3e0db]'}`}
+        style={{ background: tabBg }}
+      />
+      {/* Folder body — single compact row */}
+      <div className={`relative flex items-center gap-3 rounded-xl rounded-tl-[6px] border bg-white px-3.5 py-3 transition-all hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] ${
+        selected ? 'border-[#117dff] ring-1 ring-[#117dff]' : 'border-[#e3e0db]'}`}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[19px] leading-none shrink-0" style={{ background: tabBg }}>
+          {skillEmoji(skill)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[#0a0a0a] text-[14px] font-bold font-['Space_Grotesk'] leading-tight truncate">{skill.name}</p>
+            {skill.builtin && <Lock size={10} className="text-[#a3a3a3] shrink-0" />}
           </div>
-          <p className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight truncate">{skill.name}</p>
+          <div className="flex items-center gap-1.5 mt-0.5 text-[11px]">
+            <span className="inline-flex items-center gap-1 font-medium" style={{ color: accent }}>
+              <Shield size={10} /> {isInternal ? 'Internal' : 'External'}
+            </span>
+            <span className="text-[#d4d0ca]">·</span>
+            <span className="text-[#a3a3a3] tabular-nums">{chars.toLocaleString()} chars</span>
+          </div>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
@@ -532,25 +558,6 @@ function SkillCard({ skill, selected, onOpen, onToggle }) {
         >
           {selected && <Check size={13} className="text-white" />}
         </button>
-      </div>
-
-      {/* Description — first line of the primary prompt */}
-      <p className="text-[#737373] text-[12px] leading-relaxed mt-3 line-clamp-2 min-h-[34px]">
-        {(skill.primary_prompt || '').replace(/\s+/g, ' ').slice(0, 110)}…
-      </p>
-
-      {/* Badges: kind + built-in/custom */}
-      <div className="flex items-center gap-1.5 mt-3">
-        <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${isInternal ? 'text-[#7c3aed]' : 'text-[#117dff]'}`}>
-          <Shield size={12} /> {isInternal ? 'Internal' : 'External'}
-        </span>
-        {skill.builtin && <span className="inline-flex items-center gap-1 text-[11px] text-[#a3a3a3]"><Lock size={11} /> Built-in</span>}
-      </div>
-
-      {/* Metric row — total prompt chars (+ secondary note for external) */}
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#f3f1ec]">
-        <span className="text-[#a3a3a3] text-[12px] tabular-nums">{chars.toLocaleString()} chars</span>
-        <span className="text-[#a3a3a3] text-[11px]">{isInternal ? 'single prompt' : 'primary + secondary'}</span>
       </div>
     </div>
   );
@@ -563,14 +570,14 @@ function SkillSection({ title, hint, kind, skills, selectedId, onSelect, onOpen,
         <h4 className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] uppercase tracking-wide">{title}</h4>
         <span className="text-[11px] text-[#a3a3a3]">{hint}</span>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex flex-wrap gap-3 pt-2 pb-1">
         {skills.map((s) => (
           <SkillCard key={s.id} skill={s} selected={selectedId === s.id}
             onOpen={() => onOpen(s)} onToggle={() => onSelect(s.id)} />
         ))}
         <button onClick={() => onAdd(kind)}
-          className="shrink-0 w-[270px] rounded-2xl border border-dashed border-[#d4d0ca] flex flex-col items-center justify-center gap-1.5 text-[#a3a3a3] hover:border-[#117dff] hover:text-[#117dff] hover:bg-[#fafbff] transition-colors min-h-[168px]">
-          <Plus size={22} /><span className="text-[12px] font-medium">New skill</span>
+          className="shrink-0 w-[330px] rounded-xl border border-dashed border-[#d4d0ca] flex items-center justify-center gap-1.5 text-[#a3a3a3] hover:border-[#117dff] hover:text-[#117dff] hover:bg-[#fafbff] transition-colors self-stretch min-h-[66px]">
+          <Plus size={16} /><span className="text-[12px] font-medium">New skill</span>
         </button>
       </div>
     </div>

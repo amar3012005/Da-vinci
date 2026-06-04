@@ -218,6 +218,15 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const busy = state === 'connecting';
   return (
     <div className="rounded-2xl border border-[#e3e0db] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      {/* Mode caption — long strip on top so the user knows what the active mode does */}
+      {!active && (
+        <div className={`mb-5 flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-[12px] ${
+          mode === 'internal' ? 'bg-[#f3ecff] text-[#5b21b6]' : 'bg-[#eef5ff] text-[#1e40af]'}`}>
+          <span className={`shrink-0 font-mono uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded ${
+            mode === 'internal' ? 'bg-[#7c3aed] text-white' : 'bg-[#117dff] text-white'}`}>{mode}</span>
+          <span className="leading-snug">{MODE_DESC[mode]}</span>
+        </div>
+      )}
       <div className="flex items-start gap-5">
         {/* Exact ElevenLabs orb (Three.js shader) */}
         <div className="w-28 h-28 shrink-0">
@@ -240,24 +249,17 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
             <div className="flex items-center gap-2 shrink-0">
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
               {!active && (
-                <div className="relative">
-                  <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
-                    {['external', 'internal'].map((m) => (
-                      <button key={m} type="button" onClick={() => setMode(m)}
-                        title={skillNames[m] ? `Active skill: ${skillNames[m]}` : MODE_DESC[m]}
-                        className={`px-2.5 py-1 leading-tight text-left transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
-                        <span className="block capitalize">{m}</span>
-                        <span className={`block text-[9px] normal-case ${mode === m ? 'text-white/75' : 'text-[#a3a3a3]'}`}>
-                          {skillNames[m] || 'no skill selected'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  {/* Overlay caption — explains the currently-selected mode */}
-                  <div className="absolute z-20 top-full right-0 mt-1.5 w-[240px] rounded-lg bg-[#0a0a0a] text-white text-[11px] leading-snug px-3 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
-                    <span className={`font-mono uppercase tracking-wider text-[9px] ${mode === 'internal' ? 'text-[#c4b5fd]' : 'text-[#93c5fd]'}`}>{mode}</span>
-                    <p className="mt-0.5">{MODE_DESC[mode]}</p>
-                  </div>
+                <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
+                  {['external', 'internal'].map((m) => (
+                    <button key={m} type="button" onClick={() => setMode(m)}
+                      title={skillNames[m] ? `Active skill: ${skillNames[m]}` : MODE_DESC[m]}
+                      className={`px-2.5 py-1 leading-tight text-left transition-colors ${mode === m ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
+                      <span className="block capitalize">{m}</span>
+                      <span className={`block text-[9px] normal-case ${mode === m ? 'text-white/75' : 'text-[#a3a3a3]'}`}>
+                        {skillNames[m] || 'no skill selected'}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
             <button
