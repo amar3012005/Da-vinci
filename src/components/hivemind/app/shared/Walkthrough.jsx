@@ -355,70 +355,100 @@ export default function Walkthrough({
                 className="absolute inset-x-0 top-0"
                 style={{ transformOrigin: 'top center', pointerEvents: front ? 'auto' : 'none' }}
               >
-                <div className="rounded-[26px] bg-white border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(17,125,255,0.22),0_8px_30px_rgba(0,0,0,0.08)] overflow-hidden">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-5 pt-4 pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-                        <Hexagon size={15} className="text-[#117dff]" />
-                      </div>
-                      <span className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] tracking-tight">{brand}</span>
-                    </div>
-                    {front && (
-                      <button type="button" onClick={close} aria-label="Skip walkthrough"
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#525252] hover:bg-[#f3f1ec] transition-colors">
-                        <X size={16} />
-                      </button>
-                    )}
-                  </div>
+                {(() => {
+                  const ink = s.accent[0];
+                  const inkDeep = s.accent[1] || s.accent[0];
+                  const num = String(i + 1).padStart(2, '0');
+                  const serial = `HM ${String(i + 1).padStart(10, '0')}`;
+                  return (
+                <div className="relative rounded-[16px] overflow-hidden shadow-[0_24px_70px_-20px_rgba(11,59,134,0.30),0_8px_30px_rgba(0,0,0,0.10)]"
+                  style={{ background: 'linear-gradient(135deg,#fbfaf6 0%,#f3f1e9 100%)' }}>
+                  {/* Engraved ink work */}
+                  <GuillochePattern ink={ink} />
+                  <WorldDots ink={inkDeep} />
+                  {/* Giant ghost watermark glyph */}
+                  <StepIcon className="absolute -right-3 top-1/2 -translate-y-1/2 opacity-[0.06] pointer-events-none"
+                    size={260} strokeWidth={0.6} style={{ color: inkDeep }} aria-hidden="true" />
 
-                  {/* Body — HORIZONTAL: gradient visual left, copy right */}
-                  <div className="flex gap-4 px-5 pb-3">
-                    <div className="relative w-[200px] h-[150px] shrink-0 rounded-[18px] overflow-hidden"
-                      style={{ background: `radial-gradient(120% 120% at 30% 20%, ${s.accent[1]} 0%, ${s.accent[0]} 55%, #0b3b86 120%)` }}>
-                      <HoneycombPattern />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="relative">
-                          <div className="absolute inset-0 -m-4 rounded-full bg-white/20 blur-2xl" />
-                          <div className="relative w-[64px] h-[64px] rounded-[20px] bg-white/15 border border-white/30 backdrop-blur-xl flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
-                            <StepIcon size={30} className="text-white" strokeWidth={1.6} />
-                          </div>
-                        </div>
+                  {/* Double engraved frame */}
+                  <div className="absolute inset-[9px] rounded-[11px] pointer-events-none" style={{ border: `1.5px solid ${ink}55` }} />
+                  <div className="absolute inset-[13px] rounded-[8px] pointer-events-none" style={{ border: `0.75px solid ${ink}33` }} />
+
+                  {/* Corner denomination numerals */}
+                  <span className="absolute top-3.5 right-4 text-[13px] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{num}</span>
+                  <span className="absolute bottom-3.5 left-4 text-[13px] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{num}</span>
+
+                  {/* Vertical microtext (left edge) */}
+                  <span className="absolute left-[18px] top-1/2 -translate-y-1/2 -rotate-90 origin-center whitespace-nowrap text-[7px] tracking-[0.32em] font-semibold uppercase"
+                    style={{ color: `${ink}99` }}>Sovereign Memory · Not Legal Tender</span>
+
+                  {/* Close (front only) */}
+                  {front && (
+                    <button type="button" onClick={close} aria-label="Skip walkthrough"
+                      className="absolute top-3 right-9 w-7 h-7 rounded-full flex items-center justify-center transition-colors hover:bg-black/5"
+                      style={{ color: `${ink}aa` }}>
+                      <X size={15} />
+                    </button>
+                  )}
+
+                  {/* Content */}
+                  <div className="relative flex gap-5 px-8 pt-7 pb-5 pl-12">
+                    {/* Denomination block */}
+                    <div className="shrink-0 w-[150px]">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[44px] leading-[0.85] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{i + 1}</span>
+                        <span className="text-[15px] font-bold font-['Space_Grotesk'] uppercase tracking-tight" style={{ color: ink }}>{s.label}</span>
                       </div>
-                      <span className="absolute left-3 bottom-2 text-white text-[18px] leading-none font-bold font-['Space_Grotesk'] drop-shadow-sm">{s.label}</span>
+                      <div className="mt-1.5 text-[8px] tracking-[0.28em] font-semibold uppercase" style={{ color: `${ink}cc` }}>
+                        Step {i + 1} of {total}
+                      </div>
+                      <div className="mt-4 flex items-center gap-1.5">
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: `${ink}1a`, border: `1px solid ${ink}33` }}>
+                          <Hexagon size={14} style={{ color: ink }} />
+                        </div>
+                        <span className="text-[11px] font-bold font-['Space_Grotesk'] tracking-tight" style={{ color: inkDeep }}>{brand}</span>
+                      </div>
+                      <div className="mt-3 text-[8.5px] font-mono tracking-[0.18em]" style={{ color: `${ink}99` }}>{serial}</div>
                     </div>
-                    <div className="flex-1 min-w-0 py-1">
-                      <h2 className="text-[#0a0a0a] text-[20px] leading-tight font-bold font-['Space_Grotesk'] mb-2">{s.title}</h2>
-                      <p className="text-[#525252] text-[13.5px] leading-relaxed">{s.description}</p>
+
+                    {/* Engraved copy */}
+                    <div className="flex-1 min-w-0 border-l pl-5" style={{ borderColor: `${ink}22` }}>
+                      <h2 className="text-[19px] leading-tight font-bold font-['Space_Grotesk'] mb-1.5" style={{ color: inkDeep }}>{s.title}</h2>
+                      <p className="text-[13px] leading-relaxed" style={{ color: '#3a4a63' }}>{s.description}</p>
                     </div>
                   </div>
 
                   {/* Footer: dots + nav (front only) */}
                   {front && (
-                    <div className="flex items-center justify-between px-5 pt-2 pb-4">
+                    <div className="relative flex items-center justify-between px-12 pb-5 pt-1">
                       <div className="flex items-center gap-1.5">
                         {steps.map((st, j) => (
                           <button key={st.label + j} type="button"
                             onClick={() => { setDir(j > index ? 1 : -1); setIndex(j); }}
                             aria-label={`Go to step ${j + 1}`}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${j === index ? 'w-6 bg-[#117dff]' : 'w-1.5 bg-[#d4d0ca] hover:bg-[#a3a3a3]'}`} />
+                            className="h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: j === index ? 24 : 6, background: j === index ? ink : `${ink}40` }} />
                         ))}
                       </div>
                       <div className="flex items-center gap-2">
                         {index > 0 && (
                           <button type="button" onClick={goPrev} aria-label="Back"
-                            className="w-9 h-9 rounded-full border border-[#e3e0db] text-[#525252] flex items-center justify-center hover:bg-[#f3f1ec] transition-colors">
+                            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-black/5"
+                            style={{ border: `1px solid ${ink}33`, color: ink }}>
                             <ArrowLeft size={16} />
                           </button>
                         )}
                         <button type="button" onClick={goNext}
-                          className="h-9 px-5 rounded-full bg-[#117dff] text-white text-sm font-medium font-['Space_Grotesk'] hover:bg-[#0066e0] active:scale-95 transition-all shadow-[0_4px_16px_rgba(17,125,255,0.3)]">
+                          className="h-9 px-5 rounded-full text-white text-sm font-medium font-['Space_Grotesk'] active:scale-95 transition-all"
+                          style={{ background: ink, boxShadow: `0 4px 16px ${ink}55` }}>
                           {isLast ? 'Get started' : 'Next'}
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
+                  );
+                })()}
               </motion.div>
             );
           })}
@@ -499,29 +529,40 @@ export function PageWalkthrough({
 }
 
 /** Subtle honeycomb SVG overlay for the visual panel. */
-function HoneycombPattern() {
+// Engraved guilloché — the fine wavy line-work on banknotes. Pure SVG, cheap.
+function GuillochePattern({ ink }) {
   return (
-    <svg
-      className="absolute inset-0 w-full h-full opacity-[0.12] mix-blend-overlay"
-      aria-hidden="true"
-    >
+    <svg className="absolute inset-0 w-full h-full opacity-[0.10]" aria-hidden="true" preserveAspectRatio="none">
       <defs>
-        <pattern
-          id="hm-hex"
-          width="28"
-          height="24"
-          patternUnits="userSpaceOnUse"
-          patternTransform="scale(1.4)"
-        >
-          <path
-            d="M14 1 L26 8 L26 20 L14 27 L2 20 L2 8 Z"
-            fill="none"
-            stroke="white"
-            strokeWidth="1"
-          />
+        <pattern id="hm-guilloche" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(8)">
+          <path d="M0 20 Q10 4 20 20 T40 20" fill="none" stroke={ink} strokeWidth="0.8" />
+          <path d="M0 28 Q10 12 20 28 T40 28" fill="none" stroke={ink} strokeWidth="0.6" />
+          <path d="M0 12 Q10 -4 20 12 T40 12" fill="none" stroke={ink} strokeWidth="0.6" />
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill="url(#hm-hex)" />
+      <rect width="100%" height="100%" fill="url(#hm-guilloche)" />
     </svg>
   );
 }
+
+// Faint dotted-globe watermark, echoing the banknote's world-map ink.
+function WorldDots({ ink }) {
+  return (
+    <svg className="absolute inset-0 w-full h-full opacity-[0.07]" aria-hidden="true" preserveAspectRatio="none">
+      <defs>
+        <radialGradient id="hm-globe" cx="62%" cy="50%" r="42%">
+          <stop offset="0%" stopColor={ink} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={ink} stopOpacity="0" />
+        </radialGradient>
+        <pattern id="hm-dots" width="9" height="9" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1.1" fill={ink} />
+        </pattern>
+        <mask id="hm-globe-mask">
+          <circle cx="62%" cy="50%" r="34%" fill="url(#hm-globe)" />
+        </mask>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#hm-dots)" mask="url(#hm-globe-mask)" />
+    </svg>
+  );
+}
+
