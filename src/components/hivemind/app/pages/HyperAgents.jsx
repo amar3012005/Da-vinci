@@ -1381,7 +1381,26 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
 
 /* ─── Bubble ─────────────────────────────────────────────────────────── */
 
-function AgentBubble({ agent, content, kind, agreement, confidence }) {
+// Defensive: the engine sometimes emits a raw reactor-decision JSON as the line
+// content (e.g. {"react":true,"agreement":"extend","line":"..."} or
+// {"react":false}). Render the prose `.line`; hide silent {"react":false}.
+function coerceLine(raw) {
+  if (typeof raw !== 'string') return raw;
+  const s = raw.trim();
+  if (!(s.startsWith('{') && s.includes('"react"'))) return raw;
+  try {
+    const o = JSON.parse(s);
+    if (o && typeof o === 'object' && ('react' in o || 'line' in o)) {
+      if (o.line && String(o.line).trim()) return String(o.line);
+      if (o.react === false) return null; // silent reactor — don't render
+    }
+  } catch { /* not JSON — render as-is */ }
+  return raw;
+}
+
+function AgentBubble({ agent, content: rawContent, kind, agreement, confidence }) {
+  const content = coerceLine(rawContent);
+  if (content == null) return null; // silent {"react":false}
   const lane = agent?.lane || 'Communicator';
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
