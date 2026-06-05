@@ -472,7 +472,33 @@ function RoomThread({ roomId, onArchived, onBack }) {
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
     });
+
+    // Fallback poll — guarantees the turn renders + completes even when the
+    // browser blocks EventSource (wallet/ad-block extensions, partitioned
+    // storage, or a buffering proxy). Reads the turn's lines from the DB every
+    // 1.5s; whichever of SSE/poll has more lines wins via the TurnView merge.
+    let stopped = false;
+    const poll = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const { turn } = await apiClient.getHyperTurn(roomId, activeTurnId);
+        if (Array.isArray(turn?.lines) && turn.lines.length) {
+          setLiveLines(prev => (turn.lines.length > prev.length ? turn.lines : prev));
+        }
+        if (turn?.status && turn.status !== 'live') {
+          stopped = true;
+          clearInterval(poll);
+          try { es.close(); } catch { /* ignore */ }
+          setActiveTurnId(null);
+          setSubmitting(false);
+          load();
+        }
+      } catch { /* ignore — SSE may still deliver */ }
+    }, 1500);
+
     return () => {
+      stopped = true;
+      clearInterval(poll);
       try { es.close(); } catch { /* ignore */ }
     };
   }, [activeTurnId, roomId, load]);
