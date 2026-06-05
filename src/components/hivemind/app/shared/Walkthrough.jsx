@@ -392,9 +392,9 @@ export default function Walkthrough({
                   )}
 
                   {/* Content */}
-                  <div className="relative flex gap-5 px-8 pt-7 pb-5 pl-12">
+                  <div className="relative flex items-stretch gap-5 px-8 pt-6 pb-4 pl-12 min-h-[150px]">
                     {/* Denomination block */}
-                    <div className="shrink-0 w-[150px]">
+                    <div className="shrink-0 w-[150px] flex flex-col justify-center">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-[44px] leading-[0.85] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{i + 1}</span>
                         <span className="text-[15px] font-bold font-['Space_Grotesk'] uppercase tracking-tight" style={{ color: ink }}>{s.label}</span>
@@ -412,7 +412,7 @@ export default function Walkthrough({
                     </div>
 
                     {/* Engraved copy */}
-                    <div className="flex-1 min-w-0 border-l pl-5" style={{ borderColor: `${ink}22` }}>
+                    <div className="flex-1 min-w-0 border-l pl-5 flex flex-col justify-center" style={{ borderColor: `${ink}22` }}>
                       <h2 className="text-[19px] leading-tight font-bold font-['Space_Grotesk'] mb-1.5" style={{ color: inkDeep }}>{s.title}</h2>
                       <p className="text-[13px] leading-relaxed" style={{ color: '#3a4a63' }}>{s.description}</p>
                     </div>
@@ -420,7 +420,7 @@ export default function Walkthrough({
 
                   {/* Footer: dots + nav (front only) */}
                   {front && (
-                    <div className="relative flex items-center justify-between px-12 pb-5 pt-1">
+                    <div className="relative flex items-center justify-between px-12 pb-4 pt-0">
                       <div className="flex items-center gap-1.5">
                         {steps.map((st, j) => (
                           <button key={st.label + j} type="button"
