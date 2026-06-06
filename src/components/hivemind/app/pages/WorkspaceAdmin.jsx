@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Users, FolderKanban, UserCog, Send, ScrollText, KeyRound,
   LayoutDashboard, Activity, ArrowUpRight, Building2, RefreshCw, Loader2,
-  Clock, CheckCircle2, XCircle,
+  Clock, CheckCircle2, XCircle, Brain,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
 import ShareInviteModal from '../components/ShareInviteModal';
+import CognitionSettings from '../components/CognitionSettings';
 import { PageWalkthrough, WORKSPACE_ADMIN_STEPS } from '../shared/Walkthrough';
 
 // Sub-pages — lazy so the tab strip is fast even when admin pages bloat.
@@ -22,13 +23,14 @@ const AdminSso         = React.lazy(() => import('./AdminSso'));
 // Digital Employees now lives at /hivemind/app/employees as its own
 // 'Hyper Agents' sidebar entry — no longer a tab here.
 const TABS = [
-  { id: 'overview',  label: 'Overview',     icon: LayoutDashboard },
-  { id: 'members',   label: 'Org Members',  icon: UserCog,  Component: AdminUsers },
-  { id: 'teams',     label: 'Team Members', icon: Users,    Component: TeamMembers },
-  { id: 'projects',  label: 'Projects',     icon: FolderKanban, Component: TeamProjects },
-  { id: 'invites',   label: 'Invites',      icon: Send },
-  { id: 'audit',     label: 'Audit Log',    icon: ScrollText, Component: AuditLog },
-  { id: 'sso',       label: 'SSO Config',   icon: KeyRound, Component: AdminSso },
+  { id: 'overview',   label: 'Overview',          icon: LayoutDashboard },
+  { id: 'members',    label: 'Org Members',        icon: UserCog,      Component: AdminUsers },
+  { id: 'teams',      label: 'Team Members',       icon: Users,        Component: TeamMembers },
+  { id: 'projects',   label: 'Projects',           icon: FolderKanban, Component: TeamProjects },
+  { id: 'invites',    label: 'Invites',            icon: Send },
+  { id: 'cognition',  label: 'Cognitive Layer',    icon: Brain },
+  { id: 'audit',      label: 'Audit Log',          icon: ScrollText,   Component: AuditLog },
+  { id: 'sso',        label: 'SSO Config',         icon: KeyRound,     Component: AdminSso },
 ];
 
 export default function WorkspaceAdmin() {
@@ -91,8 +93,9 @@ export default function WorkspaceAdmin() {
 
       {/* Tab body */}
       <section className="pb-12">
-        {Tab.id === 'overview' && <OverviewTab orgId={org?.id} setTab={setTab} />}
-        {Tab.id === 'invites'  && <InvitesTab orgId={org?.id} orgName={org?.name} />}
+        {Tab.id === 'overview'   && <OverviewTab orgId={org?.id} setTab={setTab} />}
+        {Tab.id === 'invites'    && <InvitesTab orgId={org?.id} orgName={org?.name} />}
+        {Tab.id === 'cognition'  && <CognitionTab />}
         {Tab.Component && (
           <React.Suspense
             fallback={
@@ -399,6 +402,25 @@ function InvitesTab({ orgId, orgName }) {
         orgId={orgId}
         contextLabel={orgName || 'workspace'}
       />
+    </div>
+  );
+}
+
+/* ─── Cognition tab ─────────────────────────────────────────────────────── */
+
+function CognitionTab() {
+  const { t } = useTranslation('dashboard');
+  return (
+    <div className="max-w-2xl space-y-4">
+      <header>
+        <h2 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+          {t('cognition.tabTitle', 'Cognitive Layer')}
+        </h2>
+        <p className="text-[12px] text-[#737373] mt-0.5">
+          {t('cognition.tabSubtitle', 'Control how HIVEMIND synthesizes and evolves organization memories.')}
+        </p>
+      </header>
+      <CognitionSettings />
     </div>
   );
 }
