@@ -49,6 +49,55 @@ function Waveform({ active }) {
   );
 }
 
+/* Record dial — hover-reactive radial control; concentric pulse rings when live.
+   Pure presentation: delegates to the same start/stop handlers (no logic change). */
+function RecordDial({ recording, busy, elapsed, onStart, onStop }) {
+  const active = recording;
+  return (
+    <div className="flex flex-col items-center justify-center py-2 select-none">
+      <button
+        type="button"
+        onClick={active ? onStop : onStart}
+        disabled={busy}
+        title={active ? 'Stop recording' : 'Start recording'}
+        className="relative grid place-items-center disabled:opacity-50 disabled:cursor-not-allowed group"
+        style={{ width: 132, height: 132 }}
+      >
+        {/* pulse rings */}
+        {active && [0, 1, 2].map((i) => (
+          <span key={i} className="absolute rounded-full border" style={{
+            width: 132, height: 132, borderColor: '#ef4444',
+            animation: `mn-ring 1.8s cubic-bezier(.2,.6,.3,1) ${i * 0.6}s infinite`,
+          }} />
+        ))}
+        {/* track */}
+        <span className="absolute rounded-full" style={{
+          width: 116, height: 116,
+          background: active ? 'rgba(239,68,68,0.06)' : 'rgba(17,125,255,0.05)',
+          border: `1px solid ${active ? 'rgba(239,68,68,0.25)' : '#e3e0db'}`,
+          transition: 'all .25s',
+        }} />
+        {/* inner disc — scales on hover */}
+        <span className="absolute grid place-items-center rounded-full transition-transform duration-200 group-hover:scale-105 group-active:scale-95" style={{
+          width: 84, height: 84,
+          background: active ? '#ef4444' : busy ? '#a3a3a3' : '#117dff',
+          boxShadow: active ? '0 6px 22px rgba(239,68,68,.35)' : '0 6px 22px rgba(17,125,255,.28)',
+        }}>
+          {busy ? <Loader2 size={26} className="text-white animate-spin" />
+            : active ? <Square size={24} className="text-white" />
+            : <Mic size={28} className="text-white" />}
+        </span>
+      </button>
+      <div className="mt-3 text-center">
+        {active
+          ? <div className="text-[18px] font-semibold text-[#ef4444] font-['Space_Grotesk'] tabular-nums">{fmtTimer(elapsed)}</div>
+          : <div className="text-[13px] font-medium text-[#0a0a0a]">{busy ? 'Working…' : 'Tap to record'}</div>}
+        <div className="text-[10px] text-[#a3a3a3] uppercase tracking-wider mt-0.5">{active ? 'Recording — tap to stop' : busy ? 'Transcribing & analyzing' : 'Microphone'}</div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ icon: Icon, value, label, color = '#0a0a0a' }) {
   return (
     <div className="bg-white border border-[#e3e0db] rounded-[10px] p-3 hover:border-[#d4d0ca] transition-colors">
@@ -172,7 +221,7 @@ export default function MeetingNotes() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-5">
-      <style>{`@keyframes mn-eq{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}`}</style>
+      <style>{`@keyframes mn-eq{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}@keyframes mn-ring{0%{transform:scale(.78);opacity:.55}100%{transform:scale(1.12);opacity:0}}`}</style>
 
       {/* header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -207,20 +256,13 @@ export default function MeetingNotes() {
       {tab === 'record' && (
         <div className="space-y-4">
           <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileText size={16} className="text-[#117dff] flex-shrink-0" />
-                <span className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{insights?.title || t('meetingnotes.newMeeting', 'New meeting')}</span>
-              </div>
-              {recording ? (
-                <button onClick={stop} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#ef4444] text-white text-[12px] font-medium hover:bg-[#dc2626]"><Square size={13} /> {t('meetingnotes.stop', 'Stop')} · {fmtTimer(elapsed)}</button>
-              ) : (
-                <button onClick={start} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] font-medium hover:bg-[#0066e0] disabled:opacity-50">
-                  {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
-                  {busy ? (status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
-                </button>
-              )}
+            <div className="flex items-center gap-2 min-w-0 mb-2">
+              <FileText size={16} className="text-[#117dff] flex-shrink-0" />
+              <span className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{insights?.title || t('meetingnotes.newMeeting', 'New meeting')}</span>
             </div>
+
+            {/* hero record dial (hover-reactive; pulse rings when live) */}
+            <RecordDial recording={recording} busy={busy} elapsed={elapsed} onStart={start} onStop={stop} />
 
             <button onClick={() => setMultiSpeaker((v) => !v)} disabled={recording || busy}
               className="flex items-center gap-2 mb-4 text-[12px] text-[#525252] disabled:opacity-50" title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
