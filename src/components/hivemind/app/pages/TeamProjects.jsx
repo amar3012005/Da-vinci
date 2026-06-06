@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus, X, UserMinus, Activity, Clock } from 'lucide-react';
+import { FolderKanban, Plus, RefreshCw, Trash2, AlertCircle, Folder, Shield, Users, UserPlus, X, UserMinus, Activity, Clock, Zap, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -27,14 +27,36 @@ export default function TeamProjects() {
   // Project-members modal target — { projectId, projectName } or null.
   const [membersTarget, setMembersTarget] = useState(null);
   const [activityTarget, setActivityTarget] = useState(null);
+  // Map of projectId → self_evolve_enabled (optimistic state).
+  const [selfEvolveMap, setSelfEvolveMap] = useState(/** @type {Record<string, boolean>} */ ({}));
+  // Set of projectIds currently being toggled (prevents double-click).
+  const [selfEvolveBusy, setSelfEvolveBusy] = useState(/** @type {Set<string>} */ (new Set()));
+  const [selfEvolveToast, setSelfEvolveToast] = useState(/** @type {string|null} */ (null));
+
+  const showSelfEvolveToast = useCallback((msg) => {
+    setSelfEvolveToast(msg);
+    setTimeout(() => setSelfEvolveToast(null), 3500);
+  }, []);
 
   const fetchProjects = useCallback(async () => {
     if (!activeTeamId) return;
     setLoading(true);
     setError(null);
     try {
-      const resp = await apiClient.listTeamProjects(activeTeamId);
-      setProjects(resp.projects || []);
+      const [projectsResp, cognitionResp] = await Promise.all([
+        apiClient.listTeamProjects(activeTeamId),
+        apiClient.getCognitionSettings().catch(() => ({ projects: [] })),
+      ]);
+      const loaded = projectsResp.projects || [];
+      setProjects(loaded);
+
+      // Build self-evolve map from cognition settings (merges server state).
+      const evolveMap = {};
+      loaded.forEach((p) => { evolveMap[p.id] = false; });
+      (cognitionResp.projects || []).forEach((cp) => {
+        if (cp.id in evolveMap) evolveMap[cp.id] = Boolean(cp.self_evolve_enabled);
+      });
+      setSelfEvolveMap(evolveMap);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -43,6 +65,39 @@ export default function TeamProjects() {
   }, [activeTeamId]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
+
+  async function handleSelfEvolveToggle(projectId, e) {
+    e.stopPropagation();
+    if (selfEvolveBusy.has(projectId)) return;
+
+    const current = Boolean(selfEvolveMap[projectId]);
+    const next = !current;
+
+    // Optimistic update
+    setSelfEvolveMap((prev) => ({ ...prev, [projectId]: next }));
+    setSelfEvolveBusy((prev) => new Set(prev).add(projectId));
+
+    try {
+      await apiClient.updateCognitionSettings({ project_id: projectId, self_evolve_enabled: next });
+      showSelfEvolveToast(next
+        ? t('teamprojects.selfEvolveOn', 'Self-evolve enabled for this project.')
+        : t('teamprojects.selfEvolveOff', 'Self-evolve disabled.'));
+    } catch (err) {
+      // Revert on error
+      setSelfEvolveMap((prev) => ({ ...prev, [projectId]: current }));
+      const status = err?.response?.status;
+      const msg = status === 403
+        ? t('teamprojects.selfEvolve403', 'Admin or owner role required.')
+        : (err?.response?.data?.error || err?.message || t('teamprojects.selfEvolveErr', 'Failed to update.'));
+      setError(msg);
+    } finally {
+      setSelfEvolveBusy((prev) => {
+        const next = new Set(prev);
+        next.delete(projectId);
+        return next;
+      });
+    }
+  }
 
   async function handleCreate() {
     if (!newName.trim() || !activeTeamId) return;
@@ -180,6 +235,41 @@ export default function TeamProjects() {
               <Shield size={11} className={policyColor} />
               <span className={`text-[10px] font-medium ${policyColor}`}>{policyLabel}</span>
             </div>
+
+            {/* Self-evolve toggle */}
+            <div
+              className="flex items-center justify-between mb-3 p-2 bg-[#faf9f4] border border-[#e3e0db] rounded-[6px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Zap size={11} className={selfEvolveMap[p.id] ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+                <span className="text-[10px] font-medium text-[#525252] truncate">
+                  {t('teamprojects.selfEvolve', 'Self-evolve')}
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(selfEvolveMap[p.id])}
+                disabled={selfEvolveBusy.has(p.id)}
+                onClick={(e) => handleSelfEvolveToggle(p.id, e)}
+                className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#117dff] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  selfEvolveMap[p.id] ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none block h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
+                    selfEvolveMap[p.id] ? 'translate-x-[14px]' : 'translate-x-0.5'
+                  }`}
+                />
+                {selfEvolveBusy.has(p.id) && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 size={8} className="animate-spin text-white" />
+                  </span>
+                )}
+              </button>
+            </div>
+
             <div className="flex items-center justify-between text-[10px] text-[#a3a3a3] font-mono">
               <span className="flex items-center gap-1">
                 <Users size={10} /> {p._count?.members ?? 0} {t('teamprojects.membersLabel', 'members')}
@@ -216,6 +306,13 @@ export default function TeamProjects() {
           projectName={activityTarget.projectName}
           onClose={() => setActivityTarget(null)}
         />
+      )}
+
+      {/* Self-evolve toast */}
+      {selfEvolveToast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-[#0a0a0a] text-white text-[12px] px-4 py-2.5 rounded-[8px] shadow-lg">
+          {selfEvolveToast}
+        </div>
       )}
 
       {createOpen && (

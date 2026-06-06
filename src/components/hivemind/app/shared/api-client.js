@@ -1741,6 +1741,30 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Cognitive Layer (Cognition Settings) ──────────────────
+
+  /**
+   * GET /api/governance/cognition-settings
+   * Returns { org_enabled: bool, personal_enabled: bool, projects: [{ id, name, self_evolve_enabled }] }
+   */
+  async getCognitionSettings() {
+    const { data } = await this.controlPlane.get('/v1/proxy/governance/cognition-settings');
+    return data;
+  }
+
+  /**
+   * POST /api/governance/cognition-settings
+   * Body variants:
+   *   { org_enabled: bool }
+   *   { personal_enabled: bool }
+   *   { project_id: string, self_evolve_enabled: bool }
+   * Returns { ok: true } or { error }
+   */
+  async updateCognitionSettings(payload) {
+    const { data } = await this.controlPlane.post('/v1/proxy/governance/cognition-settings', payload);
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
