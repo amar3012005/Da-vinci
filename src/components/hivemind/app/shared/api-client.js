@@ -1824,6 +1824,41 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hermes: Agent (single-tenant, v2) ──────────────────────
+
+  /**
+   * GET /hermes/agent → { agent: { id, name, status, config, … } }
+   * Returns the tenant's single Hermes profile agent.
+   * 404 when Hermes is not enabled (treat as notEnabled, not an error).
+   */
+  async getHermesAgent() {
+    const { data } = await this.controlPlane.get('/hermes/agent');
+    return data;
+  }
+
+  /**
+   * GET /hermes/library → { items: [{ id, name, description, version, … }] }
+   * Returns the tenant's library of runnable Hermes task templates.
+   */
+  async getHermesLibrary() {
+    const { data } = await this.controlPlane.get('/hermes/library');
+    return data;
+  }
+
+  /**
+   * POST /hermes/library/:id/run { …payload } → { job_id, status, result? }
+   * Runs a specific library item against the tenant's Hermes agent.
+   * @param {string} id - Library item id
+   * @param {object} payload - Arbitrary run parameters (task, context, …)
+   */
+  async runHermesLibrary(id, payload) {
+    const { data } = await this.controlPlane.post(
+      `/hermes/library/${encodeURIComponent(id)}/run`,
+      payload,
+    );
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
