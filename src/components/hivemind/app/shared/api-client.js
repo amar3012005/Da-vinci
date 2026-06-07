@@ -1919,6 +1919,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hermes: Model (provider + model picker) ─────────────────
+
+  /** GET /hermes/agent/model → { model: { provider, model } } */
+  async getHermesModel() {
+    const { data } = await this.controlPlane.get('/hermes/agent/model');
+    return data;
+  }
+
+  /** GET /hermes/providers/:provider/models → { provider, models: [{id,name}] } */
+  async getHermesProviderModels(provider) {
+    const { data } = await this.controlPlane.get(`/hermes/providers/${encodeURIComponent(provider)}/models`);
+    return data;
+  }
+
+  /** PUT /hermes/agent/model { provider, model, apiKey? } → { model } */
+  async updateHermesModel(payload) {
+    const { data } = await this.controlPlane.put('/hermes/agent/model', payload);
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
