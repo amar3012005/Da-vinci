@@ -26,6 +26,7 @@ const pageTitles = {
   '/hivemind/app/admin/sso': 'SSO Configuration',
   '/hivemind/app/employees': 'Hyper Agents',
   '/hivemind/app/workspace': 'Workspace Admin',
+  '/hivemind/app/hermes': 'Hermes Agents',
 };
 
 const pageDescriptions = {
@@ -48,6 +49,7 @@ const pageDescriptions = {
   '/hivemind/app/admin/sso': 'SAML routing + SCIM provisioning for enterprise SSO',
   '/hivemind/app/employees': 'Hyper Agents — autonomous brains with HIVEMIND memory + Slack access',
   '/hivemind/app/workspace': 'Members, teams, projects, invitations, audit and SSO — all in one place',
+  '/hivemind/app/hermes': 'Hermes Agents — per-tenant task agents with run history and approval flows',
 };
 
 export default function TopBar() {
