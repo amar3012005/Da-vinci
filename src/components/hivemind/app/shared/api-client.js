@@ -1765,6 +1765,65 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hermes: Agents ──────────────────────────────────────────
+
+  /** GET /hermes/agents → { agents: [{id,org_id,tenant_id,name,config,status,created_at,updated_at}] } */
+  async listHermesAgents() {
+    const { data } = await this.controlPlane.get('/hermes/agents');
+    return data;
+  }
+
+  /** POST /hermes/agents { name, config } → 201 { id, name, config, status } */
+  async createHermesAgent(payload) {
+    const { data } = await this.controlPlane.post('/hermes/agents', payload);
+    return data;
+  }
+
+  /** PATCH /hermes/agents/:id { name?, config? } → 200 { id, name, config, status } */
+  async updateHermesAgent(id, payload) {
+    const { data } = await this.controlPlane.patch(`/hermes/agents/${encodeURIComponent(id)}`, payload);
+    return data;
+  }
+
+  /** POST /hermes/agents/:id/run { task, context? } → 200 { job_id, status, result } | 502 | 409 */
+  async runHermesAgent(id, payload) {
+    const { data } = await this.controlPlane.post(`/hermes/agents/${encodeURIComponent(id)}/run`, payload);
+    return data;
+  }
+
+  /** POST /hermes/agents/:id/pause → 200 { id, status:'paused' } */
+  async pauseHermesAgent(id) {
+    const { data } = await this.controlPlane.post(`/hermes/agents/${encodeURIComponent(id)}/pause`);
+    return data;
+  }
+
+  /** POST /hermes/agents/:id/resume → 200 { id, status:'active' } */
+  async resumeHermesAgent(id) {
+    const { data } = await this.controlPlane.post(`/hermes/agents/${encodeURIComponent(id)}/resume`);
+    return data;
+  }
+
+  /** GET /hermes/agents/:id/runs → { runs: [{id,action,status,payload,result,created_at,updated_at}] } */
+  async listHermesRuns(id) {
+    const { data } = await this.controlPlane.get(`/hermes/agents/${encodeURIComponent(id)}/runs`);
+    return data;
+  }
+
+  /** GET /hermes/agents/:id/approvals → { approvals: [{id,action,status,payload,created_at}] } */
+  async listHermesApprovals(id) {
+    const { data } = await this.controlPlane.get(`/hermes/agents/${encodeURIComponent(id)}/approvals`);
+    return data;
+  }
+
+  /** POST /hermes/agents/:id/approvals/:aid { decision:'approve'|'reject' } → { id, status } */
+  async decideHermesApproval(id, aid, decision) {
+    const { data } = await this.controlPlane.post(
+      `/hermes/agents/${encodeURIComponent(id)}/approvals/${encodeURIComponent(aid)}`,
+      { decision },
+    );
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
