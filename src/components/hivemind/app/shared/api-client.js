@@ -1901,6 +1901,24 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** GET /hermes/agent/channels → { channels: [...] } */
+  async getHermesChannels() {
+    const { data } = await this.controlPlane.get('/hermes/agent/channels');
+    return data;
+  }
+
+  /** POST /hermes/agent/channels { type, token } → { channel } */
+  async connectHermesChannel(type, token) {
+    const { data } = await this.controlPlane.post('/hermes/agent/channels', { type, token });
+    return data;
+  }
+
+  /** GET /hermes/agent/memory → { memory: [...] } */
+  async getHermesMemory() {
+    const { data } = await this.controlPlane.get('/hermes/agent/memory');
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {

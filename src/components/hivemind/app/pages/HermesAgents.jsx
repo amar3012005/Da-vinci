@@ -35,6 +35,9 @@ import LibraryTab from './hermes/Library';
 import PersonaTab from './hermes/Persona';
 import SchedulesTab from './hermes/Schedules';
 import SkillsTab from './hermes/Skills';
+import ChannelsTab from './hermes/Channels';
+import ApprovalsTab from './hermes/Approvals';
+import MemoryTab from './hermes/Memory';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,7 +69,7 @@ function StatusPill({ status }) {
 
 // ─── Nav item definitions ──────────────────────────────────────────────────────
 
-const P1_SECTIONS = ['home', 'tasks', 'library', 'persona', 'schedules', 'skills'];
+const P1_SECTIONS = ['home', 'tasks', 'library', 'persona', 'schedules', 'skills', 'channels', 'approvals', 'memory'];
 
 const NAV_ITEMS = [
   { id: 'home',      label: 'Home',      Icon: Home,        p1: true  },
@@ -75,9 +78,9 @@ const NAV_ITEMS = [
   { id: 'persona',   label: 'Persona',   Icon: User,        p1: true  },
   { id: 'schedules', label: 'Schedules', Icon: Clock,       p1: true  },
   { id: 'skills',    label: 'Skills',    Icon: Wrench,      p1: true  },
-  { id: 'channels',  label: 'Channels',  Icon: Hash,        p1: false },
-  { id: 'approvals', label: 'Approvals', Icon: CheckSquare, p1: false },
-  { id: 'memory',    label: 'Memory',    Icon: Brain,       p1: false },
+  { id: 'channels',  label: 'Channels',  Icon: Hash,        p1: true },
+  { id: 'approvals', label: 'Approvals', Icon: CheckSquare, p1: true },
+  { id: 'memory',    label: 'Memory',    Icon: Brain,       p1: true },
 ];
 
 // ─── Nav row ──────────────────────────────────────────────────────────────────
@@ -303,6 +306,15 @@ export default function HermesAgents() {
         )}
         {activeSection === 'skills' && (
           <SkillsTab agent={agent} apiClient={apiClient} refresh={load} />
+        )}
+        {activeSection === 'channels' && (
+          <ChannelsTab agent={agent} apiClient={apiClient} refresh={load} />
+        )}
+        {activeSection === 'approvals' && (
+          <ApprovalsTab agent={agent} apiClient={apiClient} refresh={load} />
+        )}
+        {activeSection === 'memory' && (
+          <MemoryTab agent={agent} apiClient={apiClient} refresh={load} />
         )}
         {!P1_SECTIONS.includes(activeSection) && (
           <ComingSoon section={activeSection} />
