@@ -1,27 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cpu, RefreshCw, Check, ChevronDown } from 'lucide-react';
 
-// Model picker (Home). Choose provider (Groq / OpenRouter) → fetch that provider's
-// models → pick one → save. OpenRouter requires the tenant's own API key (stored
-// server-side in the profile, never shown back). Groq uses the platform key.
-// Backend: GET /hermes/agent/model, GET /hermes/providers/:provider/models,
-// PUT /hermes/agent/model { provider, model, apiKey? }.
+// Model picker (Home). Choose provider (OpenRouter / Groq) → fetch that provider's
+// models → pick one → save. API keys live SERVER-SIDE (container env) — the user
+// never enters a key. Backend: GET /hermes/agent/model,
+// GET /hermes/providers/:provider/models, PUT /hermes/agent/model { provider, model }.
 
 function errMessage(e) {
   return e?.response?.data?.error || e?.message || 'Something went wrong';
 }
 
 const PROVIDERS = [
-  { id: 'groq', label: 'Groq', blurb: 'Fast, platform key included.' },
-  { id: 'openrouter', label: 'OpenRouter', blurb: 'Claude, GPT, Gemini & more — needs your key.' },
+  { id: 'openrouter', label: 'OpenRouter', blurb: 'Recommended — supports tools / web automation.' },
+  { id: 'groq', label: 'Groq', blurb: 'Fast, cheap — best for plain chat (limited tool use).' },
 ];
 
 export default function ModelCard({ agent, apiClient }) {
-  const [provider, setProvider] = useState('groq');
+  const [provider, setProvider] = useState('openrouter');
   const [model, setModel] = useState('');
   const [current, setCurrent] = useState(null);
   const [models, setModels] = useState([]);
-  const [apiKey, setApiKey] = useState('');
   const [loadingModels, setLoadingModels] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -46,7 +44,13 @@ export default function ModelCard({ agent, apiClient }) {
     setError(null);
     try {
       const data = await apiClient.getHermesProviderModels(prov);
-      setModels(Array.isArray(data?.models) ? data.models : []);
+      const list = Array.isArray(data?.models) ? data.models : [];
+      setModels(list);
+      // Pre-select a sensible default if nothing chosen yet.
+      setModel((cur) => cur
+        || (prov === 'openrouter' && list.some((m) => m.id === 'google/gemini-2.5-flash')
+          ? 'google/gemini-2.5-flash'
+          : (list[0]?.id || '')));
     } catch (e) {
       setError(errMessage(e));
       setModels([]);
@@ -59,18 +63,12 @@ export default function ModelCard({ agent, apiClient }) {
 
   async function save() {
     if (!model || saving) return;
-    if (provider === 'openrouter' && !apiKey.trim() && current?.provider !== 'openrouter') {
-      setError('Enter your OpenRouter API key'); return;
-    }
     setSaving(true);
     setError(null);
     setSaved(false);
     try {
-      const payload = { provider, model };
-      if (provider === 'openrouter' && apiKey.trim()) payload.apiKey = apiKey.trim();
-      const data = await apiClient.updateHermesModel(payload);
+      const data = await apiClient.updateHermesModel({ provider, model });
       setCurrent(data?.model || { provider, model });
-      setApiKey('');
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -113,22 +111,6 @@ export default function ModelCard({ agent, apiClient }) {
           </button>
         ))}
       </div>
-
-      {/* OpenRouter key */}
-      {provider === 'openrouter' && (
-        <div className="mb-3">
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#a3a3a3] mb-1">
-            OpenRouter API key {current?.provider === 'openrouter' && <span className="text-[#16a34a]">(saved — leave blank to keep)</span>}
-          </label>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-or-..."
-            className="w-full rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2 text-[12px] font-mono outline-none focus:border-[#117dff]"
-          />
-        </div>
-      )}
 
       {/* Model select */}
       <div className="mb-3">
