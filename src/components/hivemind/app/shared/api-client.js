@@ -452,7 +452,7 @@ class HiveMindApiClient {
   }
 
   async decideHyperRoomFlyby(roomId, turnId, { decision, flyby_spec }) {
-    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns/${turnId}/flyby-decision`, {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns/${turnId}?action=flyby-decision`, {
       decision, flyby_spec,
     });
     return data;
