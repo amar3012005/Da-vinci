@@ -1859,6 +1859,48 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hermes: Persona (P2) ────────────────────────────────────
+
+  /** PUT /hermes/agent/persona { name?, role?, behavior? } → { persona } */
+  async updateHermesPersona(payload) {
+    const { data } = await this.controlPlane.put('/hermes/agent/persona', payload);
+    return data;
+  }
+
+  // ─── Hermes: Skills (P2) ─────────────────────────────────────
+
+  /** GET /hermes/agent/skills → { skills: [{ id, label, description, enabled }] } */
+  async getHermesSkills() {
+    const { data } = await this.controlPlane.get('/hermes/agent/skills');
+    return data;
+  }
+
+  /** PUT /hermes/agent/skills [{ id, enabled }] → { skills } */
+  async updateHermesSkills(skills) {
+    const { data } = await this.controlPlane.put('/hermes/agent/skills', { skills });
+    return data;
+  }
+
+  // ─── Hermes: Schedules (P2) ──────────────────────────────────
+
+  /** GET /hermes/agent/schedules → { schedules: [...] } */
+  async getHermesSchedules() {
+    const { data } = await this.controlPlane.get('/hermes/agent/schedules');
+    return data;
+  }
+
+  /** POST /hermes/agent/schedules { cron, prompt, name? } → { schedule } */
+  async addHermesSchedule(payload) {
+    const { data } = await this.controlPlane.post('/hermes/agent/schedules', payload);
+    return data;
+  }
+
+  /** DELETE /hermes/agent/schedules/:jobId → { ok: true } */
+  async deleteHermesSchedule(jobId) {
+    const { data } = await this.controlPlane.delete(`/hermes/agent/schedules/${encodeURIComponent(jobId)}`);
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
