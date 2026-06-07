@@ -970,6 +970,15 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           room feels alive instead of blank while the first events arrive. */}
       {!seal && !errorLine && !router && lines.length === 0 && <SwarmSpinningUp />}
 
+      {/* Before the first router event lands, show a light-weight live status
+          row so the room does not look frozen while the server is picking the
+          lead/reactors and the SSE stream catches up. */}
+      {!seal && !errorLine && !router && liveLines && (
+        <div className="text-[10px] text-[#a3a3a3] font-mono pl-2">
+          → selecting lead and reactors…
+        </div>
+      )}
+
       {router && (
         <div className="text-[10px] text-[#a3a3a3] font-mono pl-2">
           → lead: <span className="text-[#525252]">{router.lead}</span>
