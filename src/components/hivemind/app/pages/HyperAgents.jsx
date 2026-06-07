@@ -24,6 +24,7 @@ import {
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
+  UserPlus,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -77,6 +78,9 @@ const ROOM_FORMATS = [
   { key: 'swarm',         icon: Network,       tier: 'Deep',        color: '#a855f7',
     labelKey: 'hyperAgents.tmplSwarmLabel',     label: 'Swarm',
     descKey: 'hyperAgents.tmplSwarmDesc',       desc: 'R1–R5: hypotheses → cross-exam → Skeptic → vote.' },
+  { key: 'deep_sim',      icon: UserPlus,      tier: 'Deep',        color: '#117dff',
+    labelKey: 'hyperAgents.tmplDeepSimLabel',   label: 'Simulation',
+    descKey: 'hyperAgents.tmplDeepSimDesc',     desc: 'Ontology check, flyby expert gate, live peer simulation.' },
   { key: 'brainstorm',    icon: Lightbulb,     color: '#10b981',
     labelKey: 'hyperAgents.tmplBrainstormLabel',label: 'Brainstorm',
     descKey: 'hyperAgents.tmplBrainstormDesc',  desc: 'Generative-only. Top 5–8 ideas, no early pick.' },
@@ -406,6 +410,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const [draft, setDraft] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [dmAgent, setDmAgent] = useState(null);
+  const [flybyBusy, setFlybyBusy] = useState(false);
   const threadEndRef = useRef(null);
 
   // Load room + history
@@ -464,6 +469,10 @@ function RoomThread({ roomId, onArchived, onBack }) {
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
       'skeptic_challenge', 'vote', 'swarm_verdict',
+      // Deep simulation + flyby specialist gate:
+      'ontology', 'workforce_assessment', 'flyby_proposal',
+      'flyby_decision', 'flyby_joined', 'flyby_skipped',
+      'simulation_phase', 'simulation_claim',
       // Recursive CSI convergence (multi-cycle):
       'cycle_start', 'cycle_end', 'convergence',
       // Prod hardening events (cost cap / wall-clock deadline / role warnings):
@@ -615,6 +624,20 @@ function RoomThread({ roomId, onArchived, onBack }) {
     }
   }
 
+  async function handleFlybyDecision(turn, decision, spec) {
+    if (!turn?.id || String(turn.id).startsWith('pending-') || flybyBusy) return;
+    setFlybyBusy(true);
+    setError(null);
+    try {
+      await apiClient.decideHyperRoomFlyby(roomId, turn.id, { decision, flyby_spec: spec });
+      setActiveTurnId(turn.id);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setFlybyBusy(false);
+    }
+  }
+
   async function handleParticipantsChange(participantIds) {
     try {
       const resp = await apiClient.updateHyperRoom(roomId, { participant_ids: participantIds });
@@ -725,6 +748,8 @@ function RoomThread({ roomId, onArchived, onBack }) {
               busy={submitting}
               onClear={() => handleClearTurn(turn)}
               onRerun={() => handleRerunTurn(turn)}
+              onFlybyDecision={(decision, spec) => handleFlybyDecision(turn, decision, spec)}
+              flybyBusy={flybyBusy}
             />
           ))}
           {error && (
@@ -859,7 +884,7 @@ function SwarmSpinningUp() {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -883,6 +908,14 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // Phase 4 events:
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
+  const ontology = lines.find(l => l.t === 'ontology');
+  const workforceAssessment = lines.find(l => l.t === 'workforce_assessment');
+  const flybyProposal = lines.find(l => l.t === 'flyby_proposal');
+  const flybyDecision = lines.find(l => l.t === 'flyby_decision');
+  const flybyJoined = lines.find(l => l.t === 'flyby_joined');
+  const flybySkipped = lines.find(l => l.t === 'flyby_skipped');
+  const simulationPhases = lines.filter(l => l.t === 'simulation_phase');
+  const simulationClaims = lines.filter(l => l.t === 'simulation_claim');
   const trustDeltas = seal?.trust || {};
   const template = router?.template || 'debate';
   const sealStatus = seal?.status || 'complete';
@@ -991,6 +1024,24 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             </span>
           )}
         </div>
+      )}
+
+      {(ontology || workforceAssessment || flybyProposal || simulationPhases.length > 0 || simulationClaims.length > 0) && (
+        <DeepSimulationPanel
+          ontology={ontology}
+          workforceAssessment={workforceAssessment}
+          flybyProposal={flybyProposal}
+          flybyDecision={flybyDecision}
+          flybyJoined={flybyJoined}
+          flybySkipped={flybySkipped}
+          simulationPhases={simulationPhases}
+          simulationClaims={simulationClaims}
+          peerReviews={lines.filter(l => l.t === 'peer_review')}
+          participants={participants}
+          onFlybyDecision={onFlybyDecision}
+          busy={flybyBusy}
+          archived={archived}
+        />
       )}
 
       {/* Recursive CSI convergence trail — one chip per cycle, verdict + score. */}
@@ -1333,6 +1384,139 @@ function EvidenceModal({ memoryId, onClose }) {
   );
 }
 
+function DeepSimulationPanel({
+  ontology,
+  workforceAssessment,
+  flybyProposal,
+  flybyDecision,
+  flybyJoined,
+  flybySkipped,
+  simulationPhases,
+  simulationClaims,
+  peerReviews = [],
+  participants,
+  onFlybyDecision,
+  busy,
+  archived,
+}) {
+  const { t } = useTranslation('dashboard');
+  const requiredRoles = ontology?.required_roles || [];
+  const missingRoles = workforceAssessment?.missing_roles || flybyProposal?.missing_roles || [];
+  const coverage = workforceAssessment?.coverage || {};
+  const spec = flybyProposal?.spec;
+  const resolved = !!flybyDecision || !!flybyJoined || !!flybySkipped;
+
+  return (
+    <div className="ml-2 mr-2 space-y-2 border-l-2 border-blue-200 pl-3">
+      {(ontology || workforceAssessment) && (
+        <div className="rounded-md border border-[#e3e0db] bg-white px-3 py-2">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-blue-700">
+            <Search size={11} /> {t('hyperAgents.deepSimAssess', 'Simulation assessment')}
+          </div>
+          {requiredRoles.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {requiredRoles.map(role => {
+                const covered = (coverage[role] || []).length > 0;
+                return (
+                  <span
+                    key={role}
+                    className={`px-1.5 py-0.5 rounded border text-[9px] font-mono ${
+                      covered ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}
+                    title={(coverage[role] || []).join(', ') || t('hyperAgents.noCoverage', 'No current employee covers this lens')}
+                  >
+                    {role}{covered ? ` · ${(coverage[role] || []).join(', ')}` : ' · gap'}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {missingRoles.length > 0 && (
+            <div className="mt-1 text-[10px] text-[#737373]">
+              {t('hyperAgents.missingRoles', 'Missing lens: {{roles}}', { roles: missingRoles.join(', ') })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {flybyProposal && spec && (
+        <div className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2">
+          <div className="flex items-start gap-2">
+            <div className="w-7 h-7 rounded-full bg-white text-blue-700 flex items-center justify-center shrink-0">
+              <UserPlus size={14} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-[#0a0a0a]">
+                {spec.name || spec.slug}
+                <span className="ml-1 text-[9px] font-mono uppercase tracking-wider text-blue-700">
+                  {spec.role || 'flyby'}
+                </span>
+              </div>
+              <div className="text-[11px] text-[#525252] mt-0.5">{flybyProposal.reason || spec.reason}</div>
+              {!archived && !resolved && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onFlybyDecision?.('agree', spec)}
+                    className="h-7 px-2.5 rounded bg-[#0a0a0a] text-white text-[10px] font-semibold disabled:opacity-50 inline-flex items-center gap-1"
+                  >
+                    {busy ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                    {t('hyperAgents.agreeFlyby', 'Agree')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onFlybyDecision?.('disagree', spec)}
+                    className="h-7 px-2.5 rounded border border-[#d4d0ca] bg-white text-[#525252] text-[10px] font-semibold disabled:opacity-50 inline-flex items-center gap-1"
+                  >
+                    <X size={11} /> {t('hyperAgents.disagreeFlyby', 'Disagree')}
+                  </button>
+                </div>
+              )}
+              {resolved && (
+                <div className="mt-1 text-[10px] font-mono text-blue-700">
+                  {flybyJoined ? t('hyperAgents.flybyJoined', 'flyby joined') : t('hyperAgents.flybySkipped', 'flyby skipped')}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(simulationPhases.length > 0 || simulationClaims.length > 0) && (
+        <div className="space-y-1">
+          {simulationPhases.slice(-3).map((p, i) => (
+            <div key={`${p.phase}-${i}`} className="text-[9px] font-mono uppercase tracking-wider text-[#737373] pl-1">
+              {p.label || p.phase}
+            </div>
+          ))}
+          {simulationClaims.map((claim, i) => {
+            const agent = participants[claim.agent] || { slug: claim.agent, lane: claim.lane || 'Communicator' };
+            const meta = LANE_META[agent.lane || claim.lane] || LANE_META.Communicator;
+            const Icon = meta.icon;
+            return (
+              <div key={`${claim.id}-${i}`} className="rounded-md border border-[#e3e0db] bg-white px-3 py-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[11px] font-semibold text-[#0a0a0a]">{agent.name || claim.agent}</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded inline-flex items-center gap-0.5" style={{ background: meta.bg, color: meta.color }}>
+                    <Icon size={9} /> {claim.stance || meta.label}
+                  </span>
+                  {Number.isFinite(claim.confidence) && (
+                    <span className="text-[9px] font-mono text-[#a3a3a3] ml-auto">{Math.round(claim.confidence * 100)}%</span>
+                  )}
+                </div>
+                <div className="text-[12px] text-[#0a0a0a] leading-relaxed">{claim.content || claim.claim}</div>
+                {claim.risk && <div className="mt-1 text-[10px] text-amber-700">Risk: {claim.risk}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticChallenge, votes, swarmVerdict, roundStarts, costCapHit, deadlineHit, roomWarnings = [], onOpenEvidence }) {
   const { t } = useTranslation('dashboard');
   const reviewsByTarget = useMemo(() => {
@@ -1523,6 +1707,15 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
                 : w.code === 'lead_skeptic_collision'
                 ? t('hyperAgents.leadSkepticCollision', 'ℹ Lead and Skeptic resolved to the same agent{{slug}} — Skeptic dropped for this turn.', { slug: w.slug ? ` (${w.slug})` : '' })
                 : `ℹ ${w.code || t('hyperAgents.notice', 'notice')}`}
+            </div>
+          ))}
+          {peerReviews.map((review, i) => (
+            <div key={`deep-review-${i}`} className="ml-3 rounded-md border border-[#e3e0db] bg-[#faf9f4] px-3 py-2">
+              <div className="text-[10px] font-mono text-[#737373] mb-0.5">
+                {review.reviewer} {review.agreement || 'review'} {review.target_author || review.target_hypothesis_id}
+              </div>
+              <div className="text-[12px] text-[#525252] leading-relaxed">{review.content}</div>
+              {review.condition && <div className="mt-1 text-[10px] text-blue-700">Condition: {review.condition}</div>}
             </div>
           ))}
         </div>
