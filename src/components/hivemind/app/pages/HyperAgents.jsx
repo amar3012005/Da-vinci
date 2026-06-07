@@ -478,7 +478,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
     // storage, or a buffering proxy). Reads the turn's lines from the DB every
     // 1.5s; whichever of SSE/poll has more lines wins via the TurnView merge.
     let stopped = false;
-    const poll = setInterval(async () => {
+    const doPoll = async () => {
       if (stopped) return;
       try {
         const { turn } = await apiClient.getHyperTurn(roomId, activeTurnId);
@@ -494,7 +494,13 @@ function RoomThread({ roomId, onArchived, onBack }) {
           load();
         }
       } catch { /* ignore — SSE may still deliver */ }
-    }, 1500);
+    };
+    // Poll is the reliable path when SSE is buffered/blocked (wallet extensions,
+    // partitioned storage, or an edge proxy holding text/event-stream). Fire it
+    // RIGHT AWAY and at 600ms so the first agent bubble surfaces in well under a
+    // second instead of waiting on the SSE connection.
+    doPoll();
+    const poll = setInterval(doPoll, 600);
 
     return () => {
       stopped = true;
@@ -514,21 +520,27 @@ function RoomThread({ roomId, onArchived, onBack }) {
     if (!msg || submitting) return;
     setSubmitting(true);
     setLiveLines([]);
+    setDraft('');
+    // Instant optimistic echo — render the user's message IMMEDIATELY, before
+    // the network round-trip, so the room never looks frozen while the POST is
+    // in flight. Reconciled with the real turn id on response.
+    const tempId = `pending-${Date.now()}`;
+    setTurns(prev => [
+      ...prev,
+      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
+    ]);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
       const resp = await apiClient.postHyperTurn(roomId, {
         user_message: msg,
         idempotency_key: idempo,
       });
-      setDraft('');
-      // Optimistically add user turn shell
-      setTurns(prev => [
-        ...prev,
-        { id: resp.turn_id, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
-      ]);
+      // Swap the temp turn for the real id, then start streaming/polling.
+      setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
+      setTurns(prev => prev.filter(trn => trn.id !== tempId));
       setSubmitting(false);
     }
   }
