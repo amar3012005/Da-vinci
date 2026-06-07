@@ -16,6 +16,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import ModelCard from './ModelCard';
+import BrowserCard from './BrowserCard';
 import {
   Cpu,
   RefreshCw,
@@ -173,6 +174,8 @@ export default function Home({ agent, apiClient, refresh }) {
     <div className="p-6 space-y-5 font-['Space_Grotesk'] max-w-2xl">
 
       <ModelCard agent={agent} apiClient={apiClient} />
+
+      <BrowserCard agent={agent} apiClient={apiClient} />
 
       {/* ── Agent status card ──────────────────────────────────────────────── */}
       <section

@@ -1939,6 +1939,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Hermes: Web automation (browser pairing) ────────────────
+
+  /** GET /hermes/agent/browser → { paired, online } */
+  async getHermesBrowser() {
+    const { data } = await this.controlPlane.get('/hermes/agent/browser');
+    return data;
+  }
+
+  /** POST /hermes/agent/browser/pair → { token, connect_command, relay } */
+  async pairHermesBrowser() {
+    const { data } = await this.controlPlane.post('/hermes/agent/browser/pair');
+    return data;
+  }
+
+  /** DELETE /hermes/agent/browser → { ok } */
+  async unpairHermesBrowser() {
+    const { data } = await this.controlPlane.delete('/hermes/agent/browser');
+    return data;
+  }
+
   // ─── WhatsApp QR Connector ──────────────────────────────────
 
   async whatsappQr(payload = {}) {
