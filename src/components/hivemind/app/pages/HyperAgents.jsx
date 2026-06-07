@@ -524,7 +524,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
       // Optimistically add user turn shell
       setTurns(prev => [
         ...prev,
-        { id: resp.turn_id, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [] },
+        { id: resp.turn_id, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
       ]);
       setActiveTurnId(resp.turn_id);
     } catch (err) {
@@ -758,6 +758,14 @@ function RoomThread({ roomId, onArchived, onBack }) {
 
 /* ─── Per-turn render ────────────────────────────────────────────────── */
 
+// Small HH:MM:SS stamp for verifying turn/agent timing in the UI.
+function fmtTs(ms) {
+  if (!ms) return '';
+  try {
+    return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch { return ''; }
+}
+
 function TurnView({ turn, participants, liveLines }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
@@ -826,10 +834,14 @@ function TurnView({ turn, participants, liveLines }) {
   return (
     <div className="space-y-2">
       {/* User bubble */}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end">
         <div className="max-w-[80%] bg-violet-500 text-white text-[13px] rounded-2xl rounded-tr-md px-3 py-2 shadow-sm">
           {turn.userMessage || turn.user_message}
         </div>
+        {(() => {
+          const uts = turn.createdAt ? new Date(turn.createdAt).getTime() : (lines[0]?.ts || 0);
+          return uts ? <div className="text-[9px] font-mono text-[#a3a3a3] mt-0.5 pr-1">{fmtTs(uts)}</div> : null;
+        })()}
       </div>
 
       {router && (
@@ -900,6 +912,7 @@ function TurnView({ turn, participants, liveLines }) {
           agent={participants[leadLine.agent] || { slug: leadLine.agent, lane: 'Communicator' }}
           content={leadLine.content}
           kind="lead"
+          ts={leadLine.ts}
         />
       )}
 
@@ -911,6 +924,7 @@ function TurnView({ turn, participants, liveLines }) {
           kind="react"
           agreement={r.agreement}
           confidence={r.confidence}
+          ts={r.ts}
         />
       ))}
 
@@ -919,6 +933,7 @@ function TurnView({ turn, participants, liveLines }) {
           agent={participants[synthLine.agent] || { slug: synthLine.agent, lane: 'Communicator' }}
           content={synthLine.content}
           kind="synthesis"
+          ts={synthLine.ts}
         />
       )}
 
@@ -931,6 +946,7 @@ function TurnView({ turn, participants, liveLines }) {
             agent={participants[rev.agent] || { slug: rev.agent, lane: 'Communicator' }}
             content={rev.content}
             kind="revise"
+            ts={rev.ts}
           />
           {validates[i] && (
             <div className="mt-1.5">
@@ -941,6 +957,7 @@ function TurnView({ turn, participants, liveLines }) {
                 agent={participants[validates[i].agent] || { slug: validates[i].agent, lane: 'Communicator' }}
                 content={validates[i].content}
                 kind="validate"
+                ts={validates[i].ts}
               />
             </div>
           )}
@@ -956,6 +973,7 @@ function TurnView({ turn, participants, liveLines }) {
             agent={participants[rescueLine.agent] || { slug: rescueLine.agent, lane: 'Communicator' }}
             content={rescueLine.content}
             kind="rescue"
+            ts={rescueLine.ts}
           />
         </div>
       )}
@@ -1218,7 +1236,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
             const refined = chainByAgent[h.id];
             return (
               <div key={h.id} className="ml-2 border-l-2 border-violet-200 pl-3">
-                <AgentBubble agent={agent} content={h.content} kind="hypothesis" confidence={h.confidence} />
+                <AgentBubble agent={agent} content={h.content} kind="hypothesis" confidence={h.confidence} ts={h.ts} />
                 {(h.evidence_memory_ids || []).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1 ml-1">
                     {h.evidence_memory_ids.map((mid) => (
@@ -1424,7 +1442,7 @@ function coerceLine(raw) {
   return raw;
 }
 
-function AgentBubble({ agent, content: rawContent, kind, agreement, confidence }) {
+function AgentBubble({ agent, content: rawContent, kind, agreement, confidence, ts }) {
   const content = coerceLine(rawContent);
   if (content == null) return null; // silent {"react":false}
   const lane = agent?.lane || 'Communicator';
@@ -1463,6 +1481,7 @@ function AgentBubble({ agent, content: rawContent, kind, agreement, confidence }
               {Number.isFinite(confidence) && ` ${Math.round(confidence * 100)}%`}
             </span>
           )}
+          {ts ? <span className="text-[9px] font-mono text-[#a3a3a3] ml-auto">{fmtTs(ts)}</span> : null}
         </div>
         <div
           className="border border-[#e3e0db] rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[13px] text-[#0a0a0a] leading-relaxed break-words overflow-hidden"
