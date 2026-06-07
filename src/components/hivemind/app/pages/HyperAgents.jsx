@@ -778,6 +778,35 @@ function fmtTs(ms) {
   } catch { return ''; }
 }
 
+// Immediate "it's working" feedback shown while a live turn has no events yet.
+// Cycles through the real startup phases so the room never looks frozen.
+function SwarmSpinningUp() {
+  const { t } = useTranslation('dashboard');
+  const stages = [
+    t('hyperAgents.spin1', 'Spinning up the room…'),
+    t('hyperAgents.spin2', 'Spawning the agents…'),
+    t('hyperAgents.spin3', 'Assigning lead + reactors…'),
+    t('hyperAgents.spin4', 'Pulling relevant memories…'),
+    t('hyperAgents.spin5', 'Agents thinking…'),
+  ];
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((p) => Math.min(p + 1, stages.length - 1)), 1200);
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="flex items-center gap-2 pl-2 py-2 text-[12px] text-[#737373]">
+      <Loader2 size={13} className="animate-spin text-violet-500 shrink-0" />
+      <span className="font-mono">{stages[i]}</span>
+      <span className="flex items-center gap-0.5 ml-1">
+        {stages.map((_, ix) => (
+          <span key={ix} className={`w-1 h-1 rounded-full transition-colors ${ix <= i ? 'bg-violet-400' : 'bg-[#d4d0ca]'}`} />
+        ))}
+      </span>
+    </div>
+  );
+}
+
 function TurnView({ turn, participants, liveLines }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
@@ -855,6 +884,10 @@ function TurnView({ turn, participants, liveLines }) {
           return uts ? <div className="text-[9px] font-mono text-[#a3a3a3] mt-0.5 pr-1">{fmtTs(uts)}</div> : null;
         })()}
       </div>
+
+      {/* Live turn with nothing rendered yet — show the swarm spinning up so the
+          room feels alive instead of blank while the first events arrive. */}
+      {!seal && !errorLine && !router && lines.length === 0 && <SwarmSpinningUp />}
 
       {router && (
         <div className="text-[10px] text-[#a3a3a3] font-mono pl-2">
