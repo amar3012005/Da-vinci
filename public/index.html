@@ -46,6 +46,11 @@
     (function () {
       var host = window.location.hostname;
       if (host === "localhost" || host === "127.0.0.1" || host === "::1") return;
+      // Skip analytics where storage is partitioned/blocked (e.g. the OAuth
+      // ?auth=callback tab). Umami touches localStorage on load and otherwise
+      // throws an uncaught "Access to storage is not allowed" rejection there.
+      try { window.localStorage.setItem("__um_probe__", "1"); window.localStorage.removeItem("__um_probe__"); }
+      catch (e) { return; }
       var script = document.createElement("script");
       script.defer = true;
       script.src = "https://cloud.umami.is/script.js";
