@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive,
-  AlertTriangle, Loader2, Trash2, Eraser,
+  AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
@@ -567,6 +567,54 @@ function RoomThread({ roomId, onArchived, onBack }) {
     }
   }
 
+  // Clear ONE turn — e.g. when its answer was wrong or time-stale. Removes the
+  // user bubble + the agents' answer from the room. Pending (not-yet-posted)
+  // turns are dropped client-side only.
+  async function handleClearTurn(turn) {
+    const oldId = turn.id;
+    if (!window.confirm(t('hyperAgents.confirmClearTurn', 'Remove this turn and its answer from the room? Cannot be undone.'))) return;
+    if (String(oldId).startsWith('pending-')) {
+      setTurns(prev => prev.filter(trn => trn.id !== oldId));
+      return;
+    }
+    try {
+      await apiClient.deleteHyperTurn(roomId, oldId);
+      setTurns(prev => prev.filter(trn => trn.id !== oldId));
+      if (activeTurnId === oldId) { setActiveTurnId(null); setLiveLines([]); }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  }
+
+  // Update & rerun — drop the stale turn, then re-ask the same question so the
+  // team answers again (now with the current time-context). One click redo.
+  async function handleRerunTurn(turn) {
+    const msg = (turn.userMessage || turn.user_message || '').trim();
+    if (!msg || submitting) return;
+    const oldId = turn.id;
+    setSubmitting(true);
+    setLiveLines([]);
+    setTurns(prev => prev.filter(trn => trn.id !== oldId));
+    if (!String(oldId).startsWith('pending-')) {
+      try { await apiClient.deleteHyperTurn(roomId, oldId); } catch { /* non-fatal — re-post anyway */ }
+    }
+    const tempId = `pending-${Date.now()}`;
+    setTurns(prev => [
+      ...prev,
+      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
+    ]);
+    try {
+      const idempo = `${roomId}:${Date.now()}:${msg.length}`;
+      const resp = await apiClient.postHyperTurn(roomId, { user_message: msg, idempotency_key: idempo });
+      setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      setActiveTurnId(resp.turn_id);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+      setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      setSubmitting(false);
+    }
+  }
+
   async function handleParticipantsChange(participantIds) {
     try {
       const resp = await apiClient.updateHyperRoom(roomId, { participant_ids: participantIds });
@@ -673,6 +721,10 @@ function RoomThread({ roomId, onArchived, onBack }) {
               turn={turn}
               participants={participantBySlug}
               liveLines={turn.id === activeTurnId ? liveLines : null}
+              archived={archived}
+              busy={submitting}
+              onClear={() => handleClearTurn(turn)}
+              onRerun={() => handleRerunTurn(turn)}
             />
           ))}
           {error && (
@@ -807,7 +859,7 @@ function SwarmSpinningUp() {
   );
 }
 
-function TurnView({ turn, participants, liveLines }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -883,6 +935,35 @@ function TurnView({ turn, participants, liveLines }) {
           const uts = turn.createdAt ? new Date(turn.createdAt).getTime() : (lines[0]?.ts || 0);
           return uts ? <div className="text-[9px] font-mono text-[#a3a3a3] mt-0.5 pr-1">{fmtTs(uts)}</div> : null;
         })()}
+        {/* Per-turn controls — clear a wrong/time-stale answer, or update & rerun.
+            Hidden while the turn is still streaming (no seal/error yet) and in
+            archived rooms. */}
+        {!archived && !String(turn.id).startsWith('pending-') && (seal || errorLine || liveLines == null) && (onClear || onRerun) && (
+          <div className="flex items-center gap-1 mt-1 pr-0.5">
+            {onRerun && (
+              <button
+                type="button"
+                onClick={onRerun}
+                disabled={busy}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] hover:text-violet-600 hover:bg-violet-50 disabled:opacity-40 transition-colors"
+                title={t('hyperAgents.rerunTurnTitle', 'Wrong answer? Drop it and ask the team again with current context.')}
+              >
+                <RotateCcw size={10} /> {t('hyperAgents.rerunTurn', 'Update & rerun')}
+              </button>
+            )}
+            {onClear && (
+              <button
+                type="button"
+                onClick={onClear}
+                disabled={busy}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] hover:text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
+                title={t('hyperAgents.clearTurnTitle', 'Remove this turn and its answer from the room.')}
+              >
+                <Trash2 size={10} /> {t('hyperAgents.clearTurn', 'Clear')}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Live turn with nothing rendered yet — show the swarm spinning up so the
