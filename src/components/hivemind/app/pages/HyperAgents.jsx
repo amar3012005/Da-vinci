@@ -564,16 +564,18 @@ function RoomThread({ roomId, onArchived, onBack }) {
     // Instant optimistic echo — render the user's message IMMEDIATELY, before
     // the network round-trip, so the room never looks frozen while the POST is
     // in flight. Reconciled with the real turn id on response.
-    const tempId = `pending-${Date.now()}`;
+    const tempId = (window.crypto?.randomUUID?.() || `pending-${Date.now()}`);
     setTurns(prev => [
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
       const resp = await apiClient.postHyperTurn(roomId, {
         user_message: msg,
         idempotency_key: idempo,
+        turn_id: tempId,
       });
       // Swap the temp turn for the real id, then start streaming/polling.
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
@@ -581,6 +583,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      setActiveTurnId(null);
       setSubmitting(false);
     }
   }
@@ -638,19 +641,21 @@ function RoomThread({ roomId, onArchived, onBack }) {
     if (!String(oldId).startsWith('pending-')) {
       try { await apiClient.deleteHyperTurn(roomId, oldId); } catch { /* non-fatal — re-post anyway */ }
     }
-    const tempId = `pending-${Date.now()}`;
+    const tempId = (window.crypto?.randomUUID?.() || `pending-${Date.now()}`);
     setTurns(prev => [
       ...prev,
       { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
+    setActiveTurnId(tempId);
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
-      const resp = await apiClient.postHyperTurn(roomId, { user_message: msg, idempotency_key: idempo });
+      const resp = await apiClient.postHyperTurn(roomId, { user_message: msg, idempotency_key: idempo, turn_id: tempId });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       setActiveTurnId(resp.turn_id);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
       setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      setActiveTurnId(null);
       setSubmitting(false);
     }
   }

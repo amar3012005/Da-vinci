@@ -444,9 +444,9 @@ class HiveMindApiClient {
     return data;
   }
 
-  async postHyperTurn(roomId, { user_message, idempotency_key }) {
+  async postHyperTurn(roomId, { user_message, idempotency_key, turn_id }) {
     const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns`, {
-      user_message, idempotency_key,
+      user_message, idempotency_key, turn_id,
     });
     return data;
   }
