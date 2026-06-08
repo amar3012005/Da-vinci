@@ -886,6 +886,10 @@ function fmtTs(ms) {
   } catch { return ''; }
 }
 
+function eventDisplayTs(event) {
+  return event?.received_ts || event?.ts || null;
+}
+
 // Immediate "it's working" feedback shown while a live turn has no events yet.
 // Cycles through the real startup phases so the room never looks frozen.
 function SwarmSpinningUp() {
@@ -1128,7 +1132,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           agent={participants[leadLine.agent] || { slug: leadLine.agent, lane: 'Communicator' }}
           content={leadLine.content}
           kind="lead"
-          ts={leadLine.ts}
+          ts={eventDisplayTs(leadLine)}
         />
       )}
 
@@ -1140,7 +1144,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           kind="react"
           agreement={r.agreement}
           confidence={r.confidence}
-          ts={r.ts}
+          ts={eventDisplayTs(r)}
         />
       ))}
 
@@ -1149,7 +1153,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           agent={participants[synthLine.agent] || { slug: synthLine.agent, lane: 'Communicator' }}
           content={synthLine.content}
           kind="synthesis"
-          ts={synthLine.ts}
+          ts={eventDisplayTs(synthLine)}
         />
       )}
 
@@ -1162,7 +1166,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             agent={participants[rev.agent] || { slug: rev.agent, lane: 'Communicator' }}
             content={rev.content}
             kind="revise"
-            ts={rev.ts}
+            ts={eventDisplayTs(rev)}
           />
           {validates[i] && (
             <div className="mt-1.5">
@@ -1173,7 +1177,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                 agent={participants[validates[i].agent] || { slug: validates[i].agent, lane: 'Communicator' }}
                 content={validates[i].content}
                 kind="validate"
-                ts={validates[i].ts}
+                ts={eventDisplayTs(validates[i])}
               />
             </div>
           )}
@@ -1189,7 +1193,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             agent={participants[rescueLine.agent] || { slug: rescueLine.agent, lane: 'Communicator' }}
             content={rescueLine.content}
             kind="rescue"
-            ts={rescueLine.ts}
+            ts={eventDisplayTs(rescueLine)}
           />
         </div>
       )}
@@ -1617,7 +1621,7 @@ function SwarmRounds({ participants, hypotheses, peerReviews, chains, skepticCha
             const refined = chainByAgent[h.id];
             return (
               <div key={h.id} className="ml-2 border-l-2 border-violet-200 pl-3">
-                <AgentBubble agent={agent} content={h.content} kind="hypothesis" confidence={h.confidence} ts={h.ts} />
+                <AgentBubble agent={agent} content={h.content} kind="hypothesis" confidence={h.confidence} ts={eventDisplayTs(h)} />
                 {(h.evidence_memory_ids || []).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1 ml-1">
                     {h.evidence_memory_ids.map((mid) => (
