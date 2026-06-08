@@ -398,6 +398,32 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
 
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
+function hyperEventKey(event, index) {
+  if (!event) return `empty:${index}`;
+  return [
+    event.t || 'line',
+    event.ts || '',
+    event.agent || event.reviewer || event.voter || '',
+    event.kind || event.phase || event.round || '',
+    event.id || event.target_hypothesis_id || '',
+  ].join('|') || `idx:${index}`;
+}
+
+function mergeHyperEvents(base, overlay) {
+  const merged = Array.isArray(base) ? [...base] : [];
+  const incoming = Array.isArray(overlay) ? overlay : [];
+  if (!incoming.length) return merged;
+  const seen = new Set(merged.map(hyperEventKey));
+  incoming.forEach((event, index) => {
+    const key = hyperEventKey(event, index);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(event);
+    }
+  });
+  return merged;
+}
+
 function RoomThread({ roomId, onArchived, onBack }) {
   const { t } = useTranslation('dashboard');
   const [room, setRoom] = useState(null);
@@ -414,28 +440,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const threadEndRef = useRef(null);
 
   const mergeLiveEvents = useCallback((current, incoming) => {
-    const source = Array.isArray(incoming) ? incoming : [];
-    if (!source.length) return current;
-    const keyOf = (event, index) => {
-      if (!event) return `empty:${index}`;
-      return [
-        event.t || 'line',
-        event.ts || '',
-        event.agent || event.reviewer || event.voter || '',
-        event.kind || event.phase || event.round || '',
-        event.id || event.target_hypothesis_id || '',
-      ].join('|') || `idx:${index}`;
-    };
-    const seen = new Set((current || []).map(keyOf));
-    const merged = [...(current || [])];
-    source.forEach((event, index) => {
-      const key = keyOf(event, index);
-      if (!seen.has(key)) {
-        seen.add(key);
-        merged.push(event);
-      }
-    });
-    return merged;
+    return mergeHyperEvents(current, incoming);
   }, []);
 
   // Load room + history
@@ -509,8 +514,9 @@ function RoomThread({ roomId, onArchived, onBack }) {
 
     // Fallback poll — guarantees the turn renders + completes even when the
     // browser blocks EventSource (wallet/ad-block extensions, partitioned
-    // storage, or a buffering proxy). Reads the turn's lines from the DB every
-    // 1.5s; whichever of SSE/poll has more lines wins via the TurnView merge.
+    // storage, or a buffering proxy). Reads the turn's lines from the DB and
+    // merges by event identity so same-length SSE/poll races cannot hide a
+    // fresh event.
     let stopped = false;
     const doPoll = async () => {
       if (stopped) return;
@@ -915,8 +921,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const lines = useMemo(() => {
     const base = Array.isArray(turn.lines) ? turn.lines : [];
     if (!liveLines) return base;
-    // Use whichever array has more entries (live SSE tends to keep up).
-    return liveLines.length > base.length ? liveLines : base;
+    return mergeHyperEvents(base, liveLines);
   }, [turn.lines, liveLines]);
 
   const router = lines.find(l => l.t === 'router');
