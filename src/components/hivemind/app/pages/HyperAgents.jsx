@@ -1543,6 +1543,38 @@ function DeepSimulationPanel({
           })}
         </div>
       )}
+
+      {peerReviews.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-[#737373] pl-1">
+            {t('hyperAgents.peerReview', 'Peer review')}
+          </div>
+          {peerReviews.map((review, i) => {
+            const reviewer = participants[review.reviewer] || { slug: review.reviewer, lane: 'Skeptic' };
+            const meta = LANE_META[reviewer.lane] || LANE_META.Skeptic;
+            const Icon = meta.icon;
+            const agreementTone =
+              review.agreement === 'challenge' ? 'text-amber-700 bg-amber-50' :
+              review.agreement === 'agree' ? 'text-emerald-700 bg-emerald-50' :
+              'text-blue-700 bg-blue-50';
+            return (
+              <div key={`${review.reviewer || 'review'}-${review.target_hypothesis_id || i}-${review.ts || i}`} className="rounded-md border border-[#e3e0db] bg-white px-3 py-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[11px] font-semibold text-[#0a0a0a]">{reviewer.name || review.reviewer}</span>
+                  <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 ${agreementTone}`}>
+                    <Icon size={9} /> {review.agreement || 'review'}
+                  </span>
+                  {Number.isFinite(review.confidence) && (
+                    <span className="text-[9px] font-mono text-[#a3a3a3] ml-auto">{Math.round(review.confidence * 100)}%</span>
+                  )}
+                </div>
+                <div className="text-[12px] text-[#525252] leading-relaxed">{review.content}</div>
+                {review.condition && <div className="mt-1 text-[10px] text-blue-700">{review.condition}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
