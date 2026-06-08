@@ -413,6 +413,31 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const [flybyBusy, setFlybyBusy] = useState(false);
   const threadEndRef = useRef(null);
 
+  const mergeLiveEvents = useCallback((current, incoming) => {
+    const source = Array.isArray(incoming) ? incoming : [];
+    if (!source.length) return current;
+    const keyOf = (event, index) => {
+      if (!event) return `empty:${index}`;
+      return [
+        event.t || 'line',
+        event.ts || '',
+        event.agent || event.reviewer || event.voter || '',
+        event.kind || event.phase || event.round || '',
+        event.id || event.target_hypothesis_id || '',
+      ].join('|') || `idx:${index}`;
+    };
+    const seen = new Set((current || []).map(keyOf));
+    const merged = [...(current || [])];
+    source.forEach((event, index) => {
+      const key = keyOf(event, index);
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(event);
+      }
+    });
+    return merged;
+  }, []);
+
   // Load room + history
   const load = useCallback(async () => {
     setError(null);
@@ -448,7 +473,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
     const onAny = (e) => {
       try {
         const data = JSON.parse(e.data);
-        setLiveLines(prev => [...prev, { ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]);
+        setLiveLines(prev => mergeLiveEvents(prev, [{ ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]));
         if (e.type === 'seal' || data.t === 'seal') {
           es.close();
           setActiveTurnId(null);
@@ -492,7 +517,7 @@ function RoomThread({ roomId, onArchived, onBack }) {
       try {
         const { turn } = await apiClient.getHyperTurn(roomId, activeTurnId);
         if (Array.isArray(turn?.lines) && turn.lines.length) {
-          setLiveLines(prev => (turn.lines.length > prev.length ? turn.lines : prev));
+          setLiveLines(prev => mergeLiveEvents(prev, turn.lines));
         }
         if (turn?.status && turn.status !== 'live') {
           stopped = true;
@@ -506,17 +531,17 @@ function RoomThread({ roomId, onArchived, onBack }) {
     };
     // Poll is the reliable path when SSE is buffered/blocked (wallet extensions,
     // partitioned storage, or an edge proxy holding text/event-stream). Fire it
-    // RIGHT AWAY and at 600ms so the first agent bubble surfaces in well under a
+    // RIGHT AWAY and at 250ms so the first agent bubble surfaces in well under a
     // second instead of waiting on the SSE connection.
     doPoll();
-    const poll = setInterval(doPoll, 600);
+    const poll = setInterval(doPoll, 250);
 
     return () => {
       stopped = true;
       clearInterval(poll);
       try { es.close(); } catch { /* ignore */ }
     };
-  }, [activeTurnId, roomId, load]);
+  }, [activeTurnId, roomId, load, mergeLiveEvents]);
 
   // Reset live overlay when turn changes
   useEffect(() => {
