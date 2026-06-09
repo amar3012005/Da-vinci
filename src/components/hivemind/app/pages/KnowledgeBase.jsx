@@ -1470,7 +1470,7 @@ export default function KnowledgeBase() {
             e.target.value = '';
           }}
         />
-        <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
+        <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk'] mb-1">
           {t('knowledgebase.fileBasedImports', 'File-based imports')}
         </h3>
         <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mb-4">
