@@ -100,12 +100,12 @@ export default function TeamProjects() {
   }
 
   async function handleCreate() {
-    if (!newName.trim() || !activeTeamId) return;
+    if (!newName.trim() || !newDescription.trim() || !activeTeamId) return;
     setError(null);
     try {
       await apiClient.createTeamProject(activeTeamId, {
         name: newName.trim(),
-        description: newDescription.trim() || null,
+        description: newDescription.trim(),
         policy: newPolicy,
         teamId: activeTeamId,
       });
@@ -329,11 +329,12 @@ export default function TeamProjects() {
               className="w-full h-9 px-2 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3"
             />
 
-            <label className="block text-[11px] text-[#525252] mb-1">{t('teamprojects.descriptionLabel', 'Description (optional)')}</label>
+            <label className="block text-[11px] text-[#525252] mb-1">{t('teamprojects.descriptionLabelReq', 'Description (required — what this project is about)')}</label>
             <textarea
               value={newDescription}
               onChange={e => setNewDescription(e.target.value)}
               rows={3}
+              placeholder={t('teamprojects.descriptionPlaceholder', 'e.g. Q1 OKR planning, targets and review notes for the growth team')}
               className="w-full px-2 py-1.5 text-[13px] border border-[#e3e0db] rounded-[4px] mb-3 resize-y"
             />
 
@@ -389,7 +390,8 @@ export default function TeamProjects() {
               <button onClick={() => setCreateOpen(false)} className="px-3 py-2 text-[12px] text-[#525252] hover:bg-[#f3f1ec] rounded-[4px]">{t('teamprojects.cancel', 'Cancel')}</button>
               <button
                 onClick={handleCreate}
-                disabled={!newName.trim()}
+                disabled={!newName.trim() || !newDescription.trim()}
+                title={!newDescription.trim() ? t('teamprojects.descRequired', 'Add a description') : undefined}
                 className="px-3 py-2 text-[12px] bg-[#117dff] text-white rounded-[4px] hover:bg-[#0066e0] disabled:opacity-50"
               >
                 {t('teamprojects.create', 'Create')}
