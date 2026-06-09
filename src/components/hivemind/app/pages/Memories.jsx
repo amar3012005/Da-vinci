@@ -18,6 +18,11 @@ import {
   FileText,
   Database,
   ExternalLink,
+  User,
+  Globe,
+  FolderOpen,
+  Users,
+  Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
@@ -103,6 +108,28 @@ function CognitiveBadge({ role }) {
       title={`Cognitive layer: ${role}`}
     >
       COG·{role}
+    </span>
+  );
+}
+
+// Scope badge — every memory belongs to org / project / team / personal scope.
+const SCOPE_META = {
+  organization: { label: 'Org',      Icon: Globe,      color: '#117dff' },
+  project:      { label: 'Project',  Icon: FolderOpen, color: '#7c3aed' },
+  team:         { label: 'Team',     Icon: Users,      color: '#10b981' },
+  personal:     { label: 'Personal', Icon: Lock,       color: '#a3a3a3' },
+};
+function ScopeBadge({ scope, project }) {
+  const meta = SCOPE_META[scope] || SCOPE_META.personal;
+  const { Icon } = meta;
+  const label = scope === 'project' && project ? project : meta.label;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-['Space_Grotesk'] uppercase tracking-wider max-w-[140px] truncate"
+      style={{ backgroundColor: `${meta.color}14`, color: meta.color, border: `1px solid ${meta.color}33` }}
+      title={`Scope: ${scope || 'personal'}${scope === 'project' && project ? ` (${project})` : ''}`}
+    >
+      <Icon size={9} /> {label}
     </span>
   );
 }
@@ -262,6 +289,12 @@ const cardVariants = {
 
 function MemoryCard({ memory, index, onSelect, isSelected }) {
   const { t } = useTranslation('dashboard');
+  // Cognitive-layer memories (governance synthesis / canonical / bridge / principle /
+  // reflection) get a distinct warm-beige card so the cognitive loop's output is
+  // visually obvious among ingested memories.
+  const isCognitive = !!memory.cognitive_layer_role
+    || (memory.tags || []).some(t => typeof t === 'string'
+        && (t === 'cognition-loop' || t.startsWith('synthesis:') || t === 'internal-audit'));
   return (
     <motion.button
       layout
@@ -273,8 +306,10 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       onClick={() => onSelect(memory)}
       className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         isSelected
-          ? 'bg-[#117dff]/[0.06] border-[#117dff]/20 shadow-[0_0_20px_rgba(17,125,255,0.08)]'
-          : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
+          ? 'bg-[#117dff]/[0.06] border-[#117dff]/30 shadow-[0_0_20px_rgba(17,125,255,0.08)]'
+          : isCognitive
+            ? 'bg-[#f7f1e3] border-[#e6dabd] hover:border-[#d8c79c] hover:bg-[#f3ebd7]'
+            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
       }`}
     >
       {/* Top row */}
@@ -294,6 +329,7 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {memory.memory_type && <TypeBadge type={memory.memory_type} />}
         {memory.cognitive_layer_role && <CognitiveBadge role={memory.cognitive_layer_role} />}
+        <ScopeBadge scope={memory.scope} project={memory.project} />
         {memory.source && <SourceBadge source={memory.source} />}
         <RelationshipIndicator memory={memory} />
         <EntityChips memory={memory} />
@@ -370,6 +406,11 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          {(memory.owner_name || memory.owner?.name) && (
+            <span className="text-[10px] font-mono text-[#a3a3a3] flex items-center gap-1 max-w-[120px] truncate" title={`Owner: ${memory.owner_name || memory.owner?.name}`}>
+              <User size={9} /> {memory.owner_name || memory.owner?.name}
+            </span>
+          )}
           <ImportanceBar score={memory.importance} />
           <span className="text-[10px] font-mono text-[#d4d0ca] flex items-center gap-1">
             <Clock size={9} />
@@ -734,6 +775,16 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
                   <span className="text-[#525252] truncate ml-4 max-w-[240px]">{memory.id}</span>
                 </div>
               )}
+              {(memory.owner_name || memory.owner?.name) && (
+                <div className="flex justify-between">
+                  <span className="text-[#d4d0ca]">{t('memories.metaOwner', 'Owner')}</span>
+                  <span className="text-[#525252] truncate ml-4 max-w-[200px]">{memory.owner_name || memory.owner?.name}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-[#d4d0ca]">{t('memories.metaScope', 'Scope')}</span>
+                <span className="text-[#525252] uppercase">{memory.scope || 'personal'}</span>
+              </div>
               {memory.project && (
                 <div className="flex justify-between">
                   <span className="text-[#d4d0ca]">{t('memories.metaProject', 'Project')}</span>
