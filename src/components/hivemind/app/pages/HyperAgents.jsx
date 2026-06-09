@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Sparkles, Send, Users, Hash, X, Archive,
+  Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen,
   AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
@@ -2130,6 +2130,10 @@ function CreateRoomModal({ onClose, onCreated }) {
   const [agentQuery, setAgentQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  // Scope — org-wide (default) or inside a specific project HIVEMIND.
+  const [scope, setScope] = useState('org'); // 'org' | 'project'
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState('');
 
   const activeFormat = ROOM_FORMATS.find(f => f.key === template) || ROOM_FORMATS[0];
   const filteredEmployees = agentQuery.trim()
@@ -2140,6 +2144,9 @@ function CreateRoomModal({ onClose, onCreated }) {
     apiClient.listEmployees()
       .then(d => setEmployees(d?.employees || d || []))
       .catch(() => setEmployees([]));
+    apiClient.listAccessibleProjects()
+      .then(d => setProjects((d?.projects || d || []).filter(Boolean)))
+      .catch(() => setProjects([]));
   }, []);
 
   function toggle(id) {
@@ -2150,9 +2157,11 @@ function CreateRoomModal({ onClose, onCreated }) {
     });
   }
 
+  const scopeReady = scope === 'org' || (scope === 'project' && projectId);
+
   async function submit(e) {
     e?.preventDefault?.();
-    if (!name.trim() || picked.size === 0 || busy) return;
+    if (!name.trim() || picked.size === 0 || !scopeReady || busy) return;
     setBusy(true); setErr(null);
     try {
       const payload = {
@@ -2162,6 +2171,10 @@ function CreateRoomModal({ onClose, onCreated }) {
       };
       if (template === 'swarm' && skepticId) {
         payload.permanent_skeptic_id = skepticId;
+      }
+      // Scope: omit project_id for org-wide; set it to nest the room inside a project HIVEMIND.
+      if (scope === 'project' && projectId) {
+        payload.project_id = projectId;
       }
       const resp = await apiClient.createHyperRoom(payload);
       onCreated?.(resp.room);
@@ -2174,163 +2187,212 @@ function CreateRoomModal({ onClose, onCreated }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-[#1a1814]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-[#17151f]/55 backdrop-blur-md z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.form
         onSubmit={submit}
-        initial={{ scale: 0.96, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.96, opacity: 0 }}
+        initial={{ scale: 0.97, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-        className="bg-white rounded-2xl w-full max-w-[560px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(124,58,237,0.3),0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden"
+        className="bg-white rounded-[20px] w-full max-w-[940px] max-h-[90vh] flex flex-col border border-[#e7e3f5] shadow-[0_30px_90px_-24px_rgba(124,58,237,0.45),0_10px_36px_rgba(20,16,40,0.16)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        <header className="px-5 py-4 border-b border-[#eceae6] flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)]"
-              style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
-              <Plus size={16} />
+        {/* Aesthetic gradient header band */}
+        <header className="relative px-6 py-4 flex items-center justify-between flex-shrink-0 overflow-hidden"
+          style={{ background: 'linear-gradient(120deg,#2a1f52 0%,#5b21b6 46%,#7c3aed 100%)' }}>
+          <div className="absolute inset-0 opacity-[0.18] pointer-events-none"
+            style={{ background: 'radial-gradient(420px 120px at 12% -10%,#e9d5ff 0%,transparent 70%),radial-gradient(360px 120px at 88% 120%,#c4b5fd 0%,transparent 70%)' }} />
+          <div className="relative flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-violet-700 bg-white/95 shadow-[0_6px_18px_rgba(0,0,0,0.18)]">
+              <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-[15px] font-bold text-[#0a0a0a] leading-tight font-['Space_Grotesk']">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
-              <p className="text-[10px] text-[#a3a3a3] leading-tight">{t('hyperAgents.newRoomSub', 'Spin up a multi-agent collaboration room')}</p>
+              <h2 className="text-[16px] font-bold text-white leading-tight font-['Space_Grotesk'] tracking-tight">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
+              <p className="text-[10.5px] text-violet-200/90 leading-tight">{t('hyperAgents.newRoomSub', 'Spin up a multi-agent collaboration room')}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] transition-colors"><X size={15} /></button>
+            className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors"><X size={16} /></button>
         </header>
-        <div className="px-5 py-4 space-y-4 overflow-y-auto">
-          <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
-            <input
-              autoFocus
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder={t('hyperAgents.namePlaceholder', 'Q2 planning')}
-              className="w-full h-10 px-3.5 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
-            />
-          </div>
-          {/* ── Format picker — always visible, user-friendly. Smart is the
-                hero/default; the 9 specific formats sit in an icon grid. ── */}
-          <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">
-              {t('hyperAgents.formatLbl', 'How should they collaborate?')}
-            </label>
 
-            {/* Hero: Smart (auto) */}
-            {(() => {
-              const fmt = ROOM_FORMATS[0];
-              const Icon = fmt.icon;
-              const on = template === fmt.key;
-              return (
-                <button
-                  type="button"
-                  onClick={() => setTemplate(fmt.key)}
-                  className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all ${
-                    on
-                      ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
-                      : 'border-[#e3e0db] hover:border-violet-300 hover:bg-[#faf9f4]'
-                  }`}
-                >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
-                    style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
-                    <Icon size={17} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</span>
-                      <span className="text-[9px] font-mono uppercase tracking-wider text-violet-700 bg-violet-100 rounded-full px-1.5 py-0.5">{t('hyperAgents.recommended', 'Recommended')}</span>
-                    </div>
-                    <div className="text-[10.5px] text-[#737373] mt-0.5 leading-snug">{t(fmt.descKey, fmt.desc)}</div>
-                  </div>
-                  <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${on ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'}`}>
-                    {on && <Check size={11} className="text-white" />}
-                  </span>
-                </button>
-              );
-            })()}
-
-            {/* Divider */}
-            <div className="flex items-center gap-2 my-2.5">
-              <div className="h-px flex-1 bg-[#eceae6]" />
-              <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.orPickFormat', 'Or pick a specific format')}</span>
-              <div className="h-px flex-1 bg-[#eceae6]" />
+        {/* Landscape two-column body */}
+        <div className="grid md:grid-cols-[1.15fr_0.85fr] min-h-0 flex-1">
+          {/* LEFT rail — settings */}
+          <div className="px-6 py-5 space-y-4 overflow-y-auto bg-gradient-to-b from-[#fbfaff] to-[#f6f3ff] border-r border-[#efeafc]">
+            {/* Name + Scope row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder={t('hyperAgents.namePlaceholder', 'Q2 planning')}
+                  className="w-full h-10 px-3.5 text-[13px] bg-white border border-[#e3def5] rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">{t('hyperAgents.scopeLbl', 'Scope')}</label>
+                <div className="flex rounded-xl border border-[#e3def5] bg-white p-0.5 h-10">
+                  {[['org', t('hyperAgents.scopeOrg', 'Whole Org'), Globe], ['project', t('hyperAgents.scopeProject', 'Project'), FolderOpen]].map(([key, label, Icon]) => {
+                    const on = scope === key;
+                    return (
+                      <button type="button" key={key} onClick={() => setScope(key)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg text-[11.5px] font-semibold transition-all ${on ? 'bg-violet-600 text-white shadow-[0_3px_10px_rgba(124,58,237,0.32)]' : 'text-[#6b6580] hover:text-[#2a1f52]'}`}>
+                        <Icon size={12} /> {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Grid of the 9 specific formats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {ROOM_FORMATS.slice(1).map((fmt) => {
+            {/* Project picker — only when scope=project */}
+            {scope === 'project' && (
+              <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2.5">
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-violet-700 mb-1 flex items-center gap-1">
+                  <FolderOpen size={12} /> {t('hyperAgents.pickProject', 'Project HIVEMIND')}
+                </label>
+                <select
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="w-full h-9 px-3 text-[13px] bg-white border border-violet-200 rounded-lg focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                >
+                  <option value="">{t('hyperAgents.selectProject', '— select a project —')}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name || p.slug || p.id}</option>
+                  ))}
+                </select>
+                <div className="text-[10px] text-violet-700/70 mt-1">
+                  {projects.length === 0
+                    ? t('hyperAgents.noProjects', 'No projects yet — the room will live org-wide.')
+                    : t('hyperAgents.projectScopeHint', 'Room + its memories stay inside this project HIVEMIND.')}
+                </div>
+              </div>
+            )}
+
+            {/* ── Format picker ── */}
+            <div>
+              <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">
+                {t('hyperAgents.formatLbl', 'How should they collaborate?')}
+              </label>
+
+              {/* Hero: Smart (auto) */}
+              {(() => {
+                const fmt = ROOM_FORMATS[0];
                 const Icon = fmt.icon;
                 const on = template === fmt.key;
                 return (
                   <button
                     type="button"
-                    key={fmt.key}
                     onClick={() => setTemplate(fmt.key)}
-                    title={t(fmt.descKey, fmt.desc)}
-                    className={`relative text-left p-2.5 rounded-xl border transition-all group ${
+                    className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all ${
                       on
-                        ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
-                        : 'border-[#e3e0db] hover:border-violet-300 hover:bg-[#faf9f4]'
+                        ? 'border-violet-500 bg-white ring-2 ring-violet-500/15 shadow-[0_4px_16px_rgba(124,58,237,0.14)]'
+                        : 'border-[#e3def5] bg-white/70 hover:border-violet-300 hover:bg-white'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: on ? fmt.color : `${fmt.color}1a`, color: on ? '#fff' : fmt.color }}>
-                        <Icon size={13} />
-                      </span>
-                      {fmt.tier && (
-                        <span className="text-[8px] font-mono uppercase tracking-wider rounded-full px-1.5 py-0.5"
-                          style={{ background: `${fmt.color}14`, color: fmt.color }}>{t(`hyperAgents.tier${fmt.tier}`, fmt.tier)}</span>
-                      )}
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
+                      style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
+                      <Icon size={17} />
                     </div>
-                    <div className="text-[11.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</div>
-                    <div className="text-[9.5px] text-[#737373] mt-0.5 leading-snug line-clamp-2">{t(fmt.descKey, fmt.desc)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</span>
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-violet-700 bg-violet-100 rounded-full px-1.5 py-0.5">{t('hyperAgents.recommended', 'Recommended')}</span>
+                      </div>
+                      <div className="text-[10.5px] text-[#737373] mt-0.5 leading-snug">{t(fmt.descKey, fmt.desc)}</div>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${on ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'}`}>
+                      {on && <Check size={11} className="text-white" />}
+                    </span>
                   </button>
                 );
-              })}
-            </div>
+              })()}
 
-            {/* Selected-format recap line */}
-            <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-[#737373]">
-              <activeFormat.icon size={12} style={{ color: activeFormat.color }} />
-              <span className="font-medium text-[#525252]">{t(activeFormat.labelKey, activeFormat.label)}</span>
-              <span className="text-[#a3a3a3]">— {t(activeFormat.descKey, activeFormat.desc)}</span>
-            </div>
-          </div>
+              {/* Divider */}
+              <div className="flex items-center gap-2 my-2.5">
+                <div className="h-px flex-1 bg-[#e7e1f7]" />
+                <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a39bc0]">{t('hyperAgents.orPickFormat', 'Or pick a specific format')}</span>
+                <div className="h-px flex-1 bg-[#e7e1f7]" />
+              </div>
 
-          {/* Swarm-only Skeptic picker. Defaults to first Skeptic-lane participant. */}
-          {template === 'swarm' && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-amber-700 mb-1 flex items-center gap-1">
-                <Shield size={12} /> {t('hyperAgents.permanentSkepticLbl', 'Permanent Skeptic (silent R1-R3, mandatory R4)')}
-              </label>
-              <select
-                value={skepticId}
-                onChange={(e) => setSkepticId(e.target.value)}
-                className="w-full h-9 px-3 text-[13px] bg-white border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 transition-all"
-              >
-                <option value="">{t('hyperAgents.skepticAutoPick', '— auto-pick (first Skeptic-lane participant) —')}</option>
-                {employees
-                  .filter((emp) => picked.has(emp.id))
-                  .map((emp) => {
-                    const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
-                    return (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({lane}{lane.toLowerCase() === 'skeptic' ? ' ★' : ''})
-                      </option>
-                    );
-                  })}
-              </select>
-              <div className="text-[10px] text-amber-700/70 mt-1">
-                {t('hyperAgents.skepticHint', 'Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.')}
+              {/* Grid of the 9 specific formats */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {ROOM_FORMATS.slice(1).map((fmt) => {
+                  const Icon = fmt.icon;
+                  const on = template === fmt.key;
+                  return (
+                    <button
+                      type="button"
+                      key={fmt.key}
+                      onClick={() => setTemplate(fmt.key)}
+                      title={t(fmt.descKey, fmt.desc)}
+                      className={`relative text-left p-2.5 rounded-xl border transition-all group ${
+                        on
+                          ? 'border-violet-500 bg-white ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
+                          : 'border-[#e3def5] bg-white/70 hover:border-violet-300 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ background: on ? fmt.color : `${fmt.color}1a`, color: on ? '#fff' : fmt.color }}>
+                          <Icon size={13} />
+                        </span>
+                        {fmt.tier && (
+                          <span className="text-[8px] font-mono uppercase tracking-wider rounded-full px-1.5 py-0.5"
+                            style={{ background: `${fmt.color}14`, color: fmt.color }}>{t(`hyperAgents.tier${fmt.tier}`, fmt.tier)}</span>
+                        )}
+                      </div>
+                      <div className="text-[11.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</div>
+                      <div className="text-[9.5px] text-[#737373] mt-0.5 leading-snug line-clamp-2">{t(fmt.descKey, fmt.desc)}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected-format recap line */}
+              <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-[#737373]">
+                <activeFormat.icon size={12} style={{ color: activeFormat.color }} />
+                <span className="font-medium text-[#525252]">{t(activeFormat.labelKey, activeFormat.label)}</span>
+                <span className="text-[#a3a3a3]">— {t(activeFormat.descKey, activeFormat.desc)}</span>
               </div>
             </div>
-          )}
 
-          {/* ── Agents ── */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className={`text-[11px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#737373]'}`}>
+            {/* Swarm-only Skeptic picker. Defaults to first Skeptic-lane participant. */}
+            {template === 'swarm' && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-amber-700 mb-1 flex items-center gap-1">
+                  <Shield size={12} /> {t('hyperAgents.permanentSkepticLbl', 'Permanent Skeptic (silent R1-R3, mandatory R4)')}
+                </label>
+                <select
+                  value={skepticId}
+                  onChange={(e) => setSkepticId(e.target.value)}
+                  className="w-full h-9 px-3 text-[13px] bg-white border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 transition-all"
+                >
+                  <option value="">{t('hyperAgents.skepticAutoPick', '— auto-pick (first Skeptic-lane participant) —')}</option>
+                  {employees
+                    .filter((emp) => picked.has(emp.id))
+                    .map((emp) => {
+                      const lane = emp.hyper?.lane || emp.roleArchetype || 'Communicator';
+                      return (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} ({lane}{lane.toLowerCase() === 'skeptic' ? ' ★' : ''})
+                        </option>
+                      );
+                    })}
+                </select>
+                <div className="text-[10px] text-amber-700/70 mt-1">
+                  {t('hyperAgents.skepticHint', 'Skeptic challenges consensus + proposes unorthodox angles. Pick a Skeptic-lane agent for best results.')}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT rail — agents */}
+          <div className="px-6 py-5 flex flex-col min-h-0 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-[10.5px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#6b6580]'}`}>
                 {t('hyperAgents.addAgentsLbl', 'Add agents ({{n}} selected)', { n: picked.size })}
                 {picked.size === 0 && <span className="ml-1 normal-case font-sans tracking-normal text-[10px]">· {t('hyperAgents.pickAtLeastOne', 'pick at least 1')}</span>}
               </label>
@@ -2345,25 +2407,25 @@ function CreateRoomModal({ onClose, onCreated }) {
               )}
             </div>
             {employees.length > 6 && (
-              <div className="relative mb-1.5">
+              <div className="relative mb-2">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
                 <input
                   value={agentQuery}
                   onChange={e => setAgentQuery(e.target.value)}
                   placeholder={t('hyperAgents.searchAgents', 'Search agents…')}
-                  className="w-full h-8 pl-8 pr-3 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                  className="w-full h-8 pl-8 pr-3 text-[12px] bg-[#faf9ff] border border-[#e3def5] rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
                 />
               </div>
             )}
-            <div className="max-h-[240px] overflow-y-auto border border-[#e3e0db] rounded-xl divide-y divide-[#f3f1ec]">
+            <div className="flex-1 min-h-[220px] overflow-y-auto border border-[#e3def5] rounded-xl divide-y divide-[#f3f1fc]">
               {employees.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">
+                <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
                   {t('hyperAgents.noEmployeesYet', 'No employees yet.')}
                   <div className="mt-1 text-[10px]">{t('hyperAgents.seedFirst', 'Seed or create employees from the roster first.')}</div>
                 </div>
               )}
               {employees.length > 0 && filteredEmployees.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-[#a3a3a3]">
+                <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
                   {t('hyperAgents.noAgentMatch', 'No agents match your search.')}
                 </div>
               )}
@@ -2372,7 +2434,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                 const meta = LANE_META[lane] || LANE_META.Communicator;
                 const checked = picked.has(emp.id);
                 return (
-                  <label key={emp.id} className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-violet-50' : 'hover:bg-[#faf9f4]'}`}>
+                  <label key={emp.id} className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-violet-50' : 'hover:bg-[#faf9ff]'}`}>
                     <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="w-4 h-4 accent-violet-500" />
                     <div
                       className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-semibold ring-2 ring-white"
@@ -2392,27 +2454,37 @@ function CreateRoomModal({ onClose, onCreated }) {
                 );
               })}
             </div>
+            {err && (
+              <div className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                <AlertTriangle size={11} className="inline mr-1" /> {err}
+              </div>
+            )}
           </div>
-          {err && (
-            <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
-              <AlertTriangle size={11} className="inline mr-1" /> {err}
-            </div>
-          )}
         </div>
-        <footer className="px-5 py-3.5 border-t border-[#eceae6] bg-[#faf9f4] flex items-center justify-end gap-2 flex-shrink-0">
-          <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-lg hover:bg-[#eceae6] transition-colors">
-            {t('hyperAgents.cancel', 'Cancel')}
-          </button>
-          <button
-            type="submit"
-            disabled={!name.trim() || picked.size === 0 || busy}
-            title={picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : undefined}
-            className="text-white text-[12px] font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_18px_rgba(124,58,237,0.45)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
-            style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}
-          >
-            {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-            {t('hyperAgents.createRoom', 'Create room')}
-          </button>
+
+        <footer className="px-6 py-3.5 border-t border-[#efeafc] bg-[#faf9ff] flex items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 text-[10.5px] text-[#8b84a3]">
+            {scope === 'project'
+              ? <><FolderOpen size={12} className="text-violet-500" /> {projects.find(p => p.id === projectId)?.name || t('hyperAgents.scopeProject', 'Project')}</>
+              : <><Globe size={12} className="text-violet-500" /> {t('hyperAgents.scopeOrg', 'Whole Org')}</>}
+            <span className="text-[#c4bdd6]">·</span>
+            <span>{picked.size} {t('hyperAgents.agentsWord', 'agents')}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-lg hover:bg-[#efeafc] transition-colors">
+              {t('hyperAgents.cancel', 'Cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim() || picked.size === 0 || !scopeReady || busy}
+              title={picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : (!scopeReady ? t('hyperAgents.selectProject', '— select a project —') : undefined)}
+              className="text-white text-[12px] font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_18px_rgba(124,58,237,0.45)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
+              style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}
+            >
+              {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+              {t('hyperAgents.createRoom', 'Create room')}
+            </button>
+          </div>
         </footer>
       </motion.form>
     </motion.div>
