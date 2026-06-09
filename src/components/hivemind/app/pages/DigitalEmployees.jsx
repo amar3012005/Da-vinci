@@ -26,6 +26,7 @@ import {
   Quote,
   Rocket,
   KeyRound,
+  Store,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
@@ -77,6 +78,58 @@ const PERSONA_PRESETS = [
     model: DEFAULT_GROQ_MODEL,
     tools: ['hivemind_recall', 'hivemind_save_memory', 'hivemind_slack_post'],
     persona: 'You are Eli Mercer, a senior builder who thinks in systems and execution. You sound human, practical, and slightly impatient with fluff. You break work into steps, explain tradeoffs, and keep pushing toward something the team can actually ship or test today.',
+  },
+];
+
+const MARKETPLACE_AGENT_PRESETS = [
+  ...PERSONA_PRESETS,
+  {
+    id: 'cfo',
+    name: 'Nora Klein',
+    summary: 'Finance operator for runway, margins, pricing, and unit economics decisions.',
+    role_archetype: 'strategist',
+    peer_review_targets: ['skeptic', 'generalist'],
+    llm_provider: 'groq',
+    model: DEFAULT_GROQ_MODEL,
+    tools: ['hivemind_recall', 'hivemind_save_memory'],
+    persona: 'You are Nora Klein, a finance operator with a sharp eye for margin, runway, pricing, and unit economics. You speak in concrete tradeoffs, call out hidden costs, and turn vague growth plans into numbers, risks, and decision thresholds. You are direct, calm, and skeptical of plans that cannot explain how they become profitable.',
+    category: 'Finance',
+  },
+  {
+    id: 'security',
+    name: 'Victor Shah',
+    summary: 'Security and compliance reviewer for enterprise readiness and risk reduction.',
+    role_archetype: 'skeptic',
+    peer_review_targets: ['generalist', 'coordinator'],
+    llm_provider: 'groq',
+    model: DEFAULT_GROQ_MODEL,
+    tools: ['hivemind_recall', 'hivemind_save_memory'],
+    persona: 'You are Victor Shah, an enterprise security and compliance reviewer. You challenge weak access controls, unclear data boundaries, vendor risk, audit gaps, and operational shortcuts. You speak like an internal reviewer who wants the company to win enterprise deals without creating avoidable security debt.',
+    category: 'Risk',
+  },
+  {
+    id: 'gtm',
+    name: 'Amelia Ross',
+    summary: 'GTM strategist for positioning, partnerships, pipeline, and customer expansion.',
+    role_archetype: 'coordinator',
+    peer_review_targets: ['skeptic', 'investigator'],
+    llm_provider: 'groq',
+    model: DEFAULT_GROQ_MODEL,
+    tools: ['hivemind_recall', 'hivemind_save_memory', 'hivemind_slack_post'],
+    persona: 'You are Amelia Ross, a GTM strategist focused on positioning, partner leverage, pipeline quality, and customer expansion. You translate product capability into buyer language, identify where deals will stall, and push the team toward clear offers, channels, and follow-up actions.',
+    category: 'GTM',
+  },
+  {
+    id: 'product',
+    name: 'Theo Brandt',
+    summary: 'Product systems thinker for roadmap, sequencing, dependencies, and execution quality.',
+    role_archetype: 'generalist',
+    peer_review_targets: ['investigator', 'skeptic'],
+    llm_provider: 'groq',
+    model: DEFAULT_GROQ_MODEL,
+    tools: ['hivemind_recall', 'hivemind_save_memory'],
+    persona: 'You are Theo Brandt, a senior product systems thinker. You care about sequencing, dependencies, customer value, and the smallest useful next release. You are practical, concise, and willing to reject attractive ideas when they would distract from the current product constraint.',
+    category: 'Product',
   },
 ];
 
@@ -1629,6 +1682,94 @@ function ExpertChatDrawer({ employee, onClose }) {
   );
 }
 
+function AgentMarketplaceModal({ open, onClose, employees, installingId, onInstall, isAdmin }) {
+  const { t } = useTranslation('dashboard');
+  if (!open) return null;
+  const existingSlugs = new Set((employees || []).map((emp) => emp.slug));
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/55 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-[1080px] max-h-[86vh] overflow-hidden rounded-[22px] border border-[#dfe7f3] bg-white shadow-[0_28px_90px_-24px_rgba(15,23,42,0.55)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between border-b border-[#e5edf7] bg-[linear-gradient(118deg,#0f172a_0%,#1d4ed8_64%,#059669_100%)] px-6 py-5 text-white">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/95 text-[#117dff] shadow-[0_10px_28px_rgba(15,23,42,0.24)]">
+              <Store size={19} />
+            </div>
+            <div>
+              <h2 className="font-['Space_Grotesk'] text-[18px] font-bold leading-tight">
+                {t('digitalemployees.marketplaceTitle', 'Agent Marketplace')}
+              </h2>
+              <p className="mt-0.5 text-[11px] text-blue-100/90">
+                {t('digitalemployees.marketplaceSubtitle', 'Install polished, role-specific agents into this organization.')}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/15 hover:text-white"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </header>
+
+        <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#f8fbff] p-4 md:grid-cols-2 xl:grid-cols-3">
+          {MARKETPLACE_AGENT_PRESETS.map((preset) => {
+            const slug = slugifyName(preset.name);
+            const installed = existingSlugs.has(slug);
+            const busy = installingId === preset.id;
+            return (
+              <div key={preset.id} className="p-2">
+                <article className="flex h-full flex-col rounded-[18px] border border-[#dfe7f3] bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#117dff]/10 font-mono text-[13px] font-bold text-[#117dff]">
+                      {initialsOf(preset.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="truncate font-['Space_Grotesk'] text-[14px] font-semibold text-[#0f172a]">{preset.name}</h3>
+                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-emerald-700">
+                          {preset.category || 'Core'}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#64748b]">{preset.summary}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {(preset.tools || []).slice(0, 4).map((tool) => (
+                      <span key={tool} className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[9px] font-mono text-[#475569]">
+                        {tool.replace('hivemind_', '')}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-3 line-clamp-4 flex-1 text-[11px] leading-relaxed text-[#475569]">{preset.persona}</p>
+                  <button
+                    type="button"
+                    disabled={!isAdmin || installed || busy}
+                    onClick={() => onInstall(preset)}
+                    className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1] disabled:text-white"
+                    title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
+                  >
+                    {busy ? <RefreshCw size={13} className="animate-spin" /> : installed ? <CheckCircle2 size={13} /> : <Plus size={13} />}
+                    {installed
+                      ? t('digitalemployees.installed', 'Installed')
+                      : busy
+                        ? t('digitalemployees.installing', 'Installing...')
+                        : t('digitalemployees.installAgent', 'Install agent')}
+                  </button>
+                </article>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DigitalEmployees() {
   const { t } = useTranslation('dashboard');
   const { teams } = useTeamContext();
@@ -1644,6 +1785,8 @@ export default function DigitalEmployees() {
   const [slidePanelOpen, setSlidePanelOpen] = useState(false);
   const [notice, setNotice] = useState(null);
   const [reminting, setReminting] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [installingMarketplaceId, setInstallingMarketplaceId] = useState(null);
   const flash = useCallback((msg) => { setNotice(msg); setTimeout(() => setNotice(null), 4000); }, []);
 
   // Collapse the sidebar to a rail while on the Hyper Agents area (roster).
@@ -1675,15 +1818,18 @@ export default function DigitalEmployees() {
     try {
       const { employees: list } = await apiClient.listEmployees();
       setEmployees(list || []);
-      await loadRecentTasks();
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
       setLoading(false);
     }
-  }, [loadRecentTasks]);
+  }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  useEffect(() => {
+    if (surface === 'workspace') loadRecentTasks();
+  }, [surface, loadRecentTasks]);
 
   async function handleCreate(payload) {
     await apiClient.createEmployee(payload);
@@ -1697,6 +1843,10 @@ export default function DigitalEmployees() {
     await fetch();
   }
   async function handleSeedPersonas() {
+    if (!isOrgAdmin) {
+      setError(t('digitalemployees.adminOnlySeed', 'Only org admins can seed employees into the organization.'));
+      return;
+    }
     const existingSlugs = new Set(employees.map((emp) => emp.slug));
     const pending = PERSONA_PRESETS.filter((preset) => !existingSlugs.has(slugifyName(preset.name)));
     if (!pending.length) {
@@ -1712,8 +1862,8 @@ export default function DigitalEmployees() {
           persona: preset.persona,
           model: preset.model,
           llm_provider: preset.llm_provider,
-          scope: 'team',
-          team_id: '',
+          scope: 'organization',
+          team_id: null,
           slack_team_id: null,
           slack_channels_allowed: [],
           tools: preset.tools,
@@ -1730,6 +1880,40 @@ export default function DigitalEmployees() {
       setError(e.response?.data?.error || e.message);
     } finally {
       setSeeding(false);
+    }
+  }
+  async function handleInstallMarketplaceAgent(preset) {
+    if (!isOrgAdmin) {
+      setError(t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.'));
+      return;
+    }
+    setInstallingMarketplaceId(preset.id);
+    setError(null);
+    try {
+      await apiClient.createEmployee({
+        name: preset.name,
+        persona: preset.persona,
+        model: preset.model,
+        llm_provider: preset.llm_provider,
+        scope: 'organization',
+        team_id: null,
+        slack_team_id: null,
+        slack_channels_allowed: [],
+        tools: preset.tools,
+        role_archetype: preset.role_archetype,
+        peer_review_targets: preset.peer_review_targets,
+        policy_rules: {
+          rate_limit_per_min: 30,
+          marketplace_template_id: preset.id,
+          marketplace_category: preset.category || 'Core',
+        },
+      });
+      await fetch();
+      flash(t('digitalemployees.agentInstalled', '{{name}} installed into your organization.', { name: preset.name }));
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setInstallingMarketplaceId(null);
     }
   }
   function handleOpen(emp) {
@@ -1835,7 +2019,17 @@ export default function DigitalEmployees() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {t('digitalemployees.refresh', 'Refresh')}
           </button>
-          <button onClick={handleSeedPersonas} disabled={seeding}
+          <button
+            onClick={() => setMarketplaceOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#dbeafe] bg-[#eff6ff] text-[12px] text-[#117dff] hover:bg-[#dbeafe]"
+          >
+            <Store size={13} />
+            {t('digitalemployees.marketplace', 'Marketplace')}
+          </button>
+          <button
+            onClick={handleSeedPersonas}
+            disabled={seeding || !isOrgAdmin}
+            title={!isOrgAdmin ? t('digitalemployees.adminOnlySeed', 'Only org admins can seed employees into the organization.') : undefined}
             className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white text-[12px] hover:bg-[#faf9f4] disabled:opacity-50">
             <Users size={13} />
             {seeding ? t('digitalemployees.seeding', 'Seeding...') : t('digitalemployees.seedHumanTeam', 'Seed Human Team')}
@@ -1949,6 +2143,15 @@ export default function DigitalEmployees() {
         onClose={() => setCreateOpen(false)}
         onCreate={handleCreate}
         teams={teams || []}
+      />
+
+      <AgentMarketplaceModal
+        open={marketplaceOpen}
+        onClose={() => setMarketplaceOpen(false)}
+        employees={employees}
+        installingId={installingMarketplaceId}
+        onInstall={handleInstallMarketplaceAgent}
+        isAdmin={isOrgAdmin}
       />
 
       {detailEmployee && (
