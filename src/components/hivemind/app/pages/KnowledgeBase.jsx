@@ -21,6 +21,8 @@ import {
   ChevronDown,
   Sheet,
   Trash2,
+  Code2,
+  FileType,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -40,6 +42,63 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
   // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
   'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif'];
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+
+// File-based imports — typed entry cards below the upload dropzone. Each card
+// opens a file picker scoped to one document family, then feeds the SAME
+// queueFilesForUpload pipeline as the dropzone (scope modal → smart-extract →
+// handleFiles). The `accept` strings are subsets of the dropzone's accept attr.
+const IMPORT_TYPES = [
+  {
+    key: 'csv',
+    icon: Sheet,
+    iconColor: 'text-[#16a34a]',
+    accept: '.csv,.tsv,.xlsx,.xls',
+    titleKey: 'knowledgebase.importCsvTitle',
+    titleDefault: 'CSV',
+    descKey: 'knowledgebase.importCsvDesc',
+    descDefault: 'Import structured data from spreadsheets',
+  },
+  {
+    key: 'pdf',
+    icon: FileText,
+    iconColor: 'text-[#ef4444]',
+    accept: '.pdf',
+    titleKey: 'knowledgebase.importPdfTitle',
+    titleDefault: 'PDF',
+    descKey: 'knowledgebase.importPdfDesc',
+    descDefault: 'Extract content from PDF documents',
+  },
+  {
+    key: 'text',
+    icon: FileType,
+    iconColor: 'text-[#525252]',
+    accept: '.txt,.md,.markdown',
+    titleKey: 'knowledgebase.importTextTitle',
+    titleDefault: 'Text & Markdown',
+    descKey: 'knowledgebase.importTextDesc',
+    descDefault: 'Import plain text and formatted notes',
+  },
+  {
+    key: 'html',
+    icon: Code2,
+    iconColor: 'text-[#117dff]',
+    accept: '.html,.htm',
+    titleKey: 'knowledgebase.importHtmlTitle',
+    titleDefault: 'HTML',
+    descKey: 'knowledgebase.importHtmlDesc',
+    descDefault: 'Import web pages and structured content',
+  },
+  {
+    key: 'word',
+    icon: FileText,
+    iconColor: 'text-[#2563eb]',
+    accept: '.docx,.doc',
+    titleKey: 'knowledgebase.importWordTitle',
+    titleDefault: 'Word',
+    descKey: 'knowledgebase.importWordDesc',
+    descDefault: 'Bring your Word documents into the Knowledge Base',
+  },
+];
 
 // ─── Robust upload helpers ─────────────────────────────────────────────
 // We do NOT use localStorage for upload buffers — it caps at ~5MB, is
@@ -611,6 +670,7 @@ export default function KnowledgeBase() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+  const typedImportRef = useRef(null);
   // Per-document relationship summaries: { <docId>: { total, byType, cluster_size } }
   const [relSummaries, setRelSummaries] = useState({});
 
@@ -1150,6 +1210,17 @@ export default function KnowledgeBase() {
     setScopeModalOpen(true);
   }, []);
 
+  // Typed file-based import: set the shared hidden input's accept to the chosen
+  // family, then open it. Setting the attr imperatively (not via React state)
+  // avoids the async-render race where .click() fires before accept updates.
+  const openTypedImport = useCallback((accept) => {
+    const el = typedImportRef.current;
+    if (!el) return;
+    el.setAttribute('accept', accept || '');
+    el.value = '';
+    el.click();
+  }, []);
+
   const handleConfirmUploadScope = useCallback(async () => {
     const project = selectedScope === 'organization' ? (selectedProject || null) : null;
     const files = pendingFiles;
@@ -1384,6 +1455,50 @@ export default function KnowledgeBase() {
             <span className="text-xs font-['Space_Grotesk'] text-[#117dff]">{t('knowledgebase.analyzing', 'Analyzing document type...')}</span>
           </div>
         )}
+      </motion.div>
+
+      {/* ─── File-based imports: typed entry cards (feed the same upload pipeline) ─── */}
+      <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
+        {/* Shared hidden input — accept set per-card by openTypedImport */}
+        <input
+          ref={typedImportRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
+            e.target.value = '';
+          }}
+        />
+        <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
+          {t('knowledgebase.fileBasedImports', 'File-based imports')}
+        </h3>
+        <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mb-4">
+          {t('knowledgebase.fileBasedImportsSubtitle', 'Import DOCX, CSV, PDF, text, markdown, or HTML files to convert them to memories')}
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {IMPORT_TYPES.map((type) => {
+            const Icon = type.icon;
+            return (
+              <button
+                key={type.key}
+                type="button"
+                onClick={() => openTypedImport(type.accept)}
+                className="group text-left rounded-2xl border border-[#e3e0db] bg-white p-5 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
+              >
+                <div className="flex items-center gap-2.5 mb-2">
+                  <Icon size={20} className={type.iconColor} />
+                  <span className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk']">
+                    {t(type.titleKey, type.titleDefault)}
+                  </span>
+                </div>
+                <p className="text-[#525252] text-sm font-['Space_Grotesk'] leading-snug">
+                  {t(type.descKey, type.descDefault)}
+                </p>
+              </button>
+            );
+          })}
+        </div>
       </motion.div>
 
       <UploadScopeModal
