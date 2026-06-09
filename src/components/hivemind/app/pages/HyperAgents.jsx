@@ -2258,7 +2258,6 @@ function CreateRoomModal({ onClose, onCreated }) {
   }
 
   const scopeReady = scope === 'org' || (scope === 'project' && projectId);
-  const ACCENT = '#117dff';
 
   async function submit(e) {
     e?.preventDefault?.();
