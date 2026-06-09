@@ -19,7 +19,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen,
+  Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
   AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
@@ -437,7 +437,31 @@ function RoomThread({ roomId, onArchived, onBack }) {
   const [showPicker, setShowPicker] = useState(false);
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const [savingScope, setSavingScope] = useState(false);
   const threadEndRef = useRef(null);
+
+  // Projects for the scope badge / changer (room can be moved Org ↔ Project).
+  useEffect(() => {
+    apiClient.listAccessibleProjects()
+      .then(d => setProjects((d?.projects || d || []).filter(Boolean)))
+      .catch(() => setProjects([]));
+  }, []);
+
+  // Change room scope after creation: null = org-wide, <id> = project HIVEMIND.
+  const handleSetScope = useCallback(async (newProjectId) => {
+    setSavingScope(true);
+    try {
+      const resp = await apiClient.updateHyperRoom(roomId, { project_id: newProjectId || null });
+      setRoom(prev => ({ ...prev, ...resp.room, participants: prev?.participants }));
+      setScopeOpen(false);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setSavingScope(false);
+    }
+  }, [roomId]);
 
   const mergeLiveEvents = useCallback((current, incoming) => {
     return mergeHyperEvents(current, incoming);
@@ -733,6 +757,47 @@ function RoomThread({ roomId, onArchived, onBack }) {
                   {t('hyperAgents.archived', 'archived')}
                 </span>
               )}
+              {/* Scope badge — Org vs Project; click to change (even after creation) */}
+              {(() => {
+                const inProject = !!room.projectId;
+                const projName = inProject ? (projects.find(p => p.id === room.projectId)?.name || t('hyperAgents.scopeProject', 'Project')) : null;
+                return (
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setScopeOpen(o => !o)}
+                      title={t('hyperAgents.changeScope', 'Change scope (Org ↔ Project)')}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors ${inProject ? 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20 hover:bg-[#117dff]/15' : 'bg-[#faf9f4] text-[#525252] border-[#e3e0db] hover:border-[#117dff]/30'}`}
+                    >
+                      {inProject ? <FolderOpen size={10} /> : <Globe size={10} />}
+                      <span className="truncate max-w-[120px]">{inProject ? projName : t('hyperAgents.scopeOrg', 'Whole Org')}</span>
+                      <ChevronDown size={10} className="opacity-60" />
+                    </button>
+                    {scopeOpen && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setScopeOpen(false)} />
+                        <div className="absolute left-0 top-full mt-1 z-30 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.25)] p-1.5">
+                          <div className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] px-2 py-1">{t('hyperAgents.moveRoomTo', 'Move room to')}</div>
+                          <button type="button" disabled={savingScope} onClick={() => handleSetScope(null)}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-left hover:bg-[#faf9f4] ${!inProject ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'}`}>
+                            <Globe size={12} /> {t('hyperAgents.scopeOrg', 'Whole Org')} {!inProject && <Check size={12} className="ml-auto" />}
+                          </button>
+                          <div className="max-h-44 overflow-y-auto">
+                            {projects.map(p => (
+                              <button type="button" key={p.id} disabled={savingScope} onClick={() => handleSetScope(p.id)}
+                                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-left hover:bg-[#faf9f4] ${room.projectId === p.id ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'}`}>
+                                <FolderOpen size={12} /> <span className="truncate">{p.name || p.slug || p.id}</span>
+                                {room.projectId === p.id && <Check size={12} className="ml-auto shrink-0" />}
+                              </button>
+                            ))}
+                            {projects.length === 0 && <div className="px-2 py-2 text-[11px] text-[#a3a3a3]">{t('hyperAgents.noProjects', 'No projects yet.')}</div>}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
@@ -2134,11 +2199,23 @@ function CreateRoomModal({ onClose, onCreated }) {
   const [scope, setScope] = useState('org'); // 'org' | 'project'
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState('');
+  const [projectTeamId, setProjectTeamId] = useState(null); // resolved team of selected project
+  const [projectResolved, setProjectResolved] = useState(false);
 
   const activeFormat = ROOM_FORMATS.find(f => f.key === template) || ROOM_FORMATS[0];
-  const filteredEmployees = agentQuery.trim()
-    ? employees.filter(e => (e.name || '').toLowerCase().includes(agentQuery.trim().toLowerCase()))
+  const empTeam = (e) => e?.teamId || e?.team_id || e?.team?.id || null;
+
+  // Agents allowed for the current scope. When a project (with a team) is chosen,
+  // restrict to agents on that project's team. If the project has no team, we
+  // cannot restrict by data → fall back to all org agents (with a hint).
+  const projectRestricted = scope === 'project' && !!projectId && projectResolved && !!projectTeamId;
+  const allowedEmployees = projectRestricted
+    ? employees.filter(e => empTeam(e) === projectTeamId)
     : employees;
+  const filteredEmployees = agentQuery.trim()
+    ? allowedEmployees.filter(e => (e.name || '').toLowerCase().includes(agentQuery.trim().toLowerCase()))
+    : allowedEmployees;
+  const selectedProject = projects.find(p => p.id === projectId);
 
   useEffect(() => {
     apiClient.listEmployees()
@@ -2149,6 +2226,29 @@ function CreateRoomModal({ onClose, onCreated }) {
       .catch(() => setProjects([]));
   }, []);
 
+  // Resolve the selected project's team so we can restrict the agent roster to it.
+  useEffect(() => {
+    let cancelled = false;
+    if (scope !== 'project' || !projectId) { setProjectTeamId(null); setProjectResolved(false); return; }
+    setProjectResolved(false);
+    const fromList = selectedProject && (selectedProject.teamId || selectedProject.team_id);
+    if (fromList) { setProjectTeamId(fromList); setProjectResolved(true); return; }
+    apiClient.getProjectV2(projectId)
+      .then(p => { if (cancelled) return; const proj = p?.project || p || {}; setProjectTeamId(proj.teamId || proj.team_id || null); setProjectResolved(true); })
+      .catch(() => { if (!cancelled) { setProjectTeamId(null); setProjectResolved(true); } });
+    return () => { cancelled = true; };
+  }, [scope, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Drop any picked agent that isn't allowed under the current (project) scope.
+  useEffect(() => {
+    if (!projectRestricted) return;
+    setPicked(prev => {
+      const allow = new Set(allowedEmployees.map(e => e.id));
+      const next = new Set([...prev].filter(id => allow.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [projectRestricted, projectTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function toggle(id) {
     setPicked(prev => {
       const next = new Set(prev);
@@ -2158,6 +2258,7 @@ function CreateRoomModal({ onClose, onCreated }) {
   }
 
   const scopeReady = scope === 'org' || (scope === 'project' && projectId);
+  const ACCENT = '#117dff';
 
   async function submit(e) {
     e?.preventDefault?.();
@@ -2187,58 +2288,55 @@ function CreateRoomModal({ onClose, onCreated }) {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-[#17151f]/55 backdrop-blur-md z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-[#1a1814]/45 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.form
         onSubmit={submit}
         initial={{ scale: 0.97, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-        className="bg-white rounded-[20px] w-full max-w-[940px] max-h-[90vh] flex flex-col border border-[#e7e3f5] shadow-[0_30px_90px_-24px_rgba(124,58,237,0.45),0_10px_36px_rgba(20,16,40,0.16)] overflow-hidden"
+        className="bg-[#faf9f4] rounded-[20px] w-full max-w-[940px] max-h-[90vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(0,0,0,0.28),0_8px_28px_rgba(0,0,0,0.10)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Aesthetic gradient header band */}
-        <header className="relative px-6 py-4 flex items-center justify-between flex-shrink-0 overflow-hidden"
-          style={{ background: 'linear-gradient(120deg,#2a1f52 0%,#5b21b6 46%,#7c3aed 100%)' }}>
-          <div className="absolute inset-0 opacity-[0.18] pointer-events-none"
-            style={{ background: 'radial-gradient(420px 120px at 12% -10%,#e9d5ff 0%,transparent 70%),radial-gradient(360px 120px at 88% 120%,#c4b5fd 0%,transparent 70%)' }} />
-          <div className="relative flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-violet-700 bg-white/95 shadow-[0_6px_18px_rgba(0,0,0,0.18)]">
+        {/* Header — clean white band, blue accent tile (MCP console palette) */}
+        <header className="px-6 py-4 flex items-center justify-between flex-shrink-0 bg-white border-b border-[#e3e0db]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#117dff]/10 text-[#117dff]">
               <Sparkles size={18} />
             </div>
             <div>
-              <h2 className="text-[16px] font-bold text-white leading-tight font-['Space_Grotesk'] tracking-tight">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
-              <p className="text-[10.5px] text-violet-200/90 leading-tight">{t('hyperAgents.newRoomSub', 'Spin up a multi-agent collaboration room')}</p>
+              <h2 className="text-[16px] font-bold text-[#0a0a0a] leading-tight font-['Space_Grotesk'] tracking-tight">{t('hyperAgents.newRoomTitle', 'New room')}</h2>
+              <p className="text-[10.5px] text-[#a3a3a3] leading-tight font-['Space_Grotesk']">{t('hyperAgents.newRoomSub', 'Spin up a multi-agent collaboration room')}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Close"
-            className="relative w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors"><X size={16} /></button>
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4] transition-colors"><X size={16} /></button>
         </header>
 
         {/* Landscape two-column body */}
         <div className="grid md:grid-cols-[1.15fr_0.85fr] min-h-0 flex-1">
           {/* LEFT rail — settings */}
-          <div className="px-6 py-5 space-y-4 overflow-y-auto bg-gradient-to-b from-[#fbfaff] to-[#f6f3ff] border-r border-[#efeafc]">
+          <div className="px-6 py-5 space-y-4 overflow-y-auto bg-white border-r border-[#e3e0db]">
             {/* Name + Scope row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
                 <input
                   autoFocus
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder={t('hyperAgents.namePlaceholder', 'Q2 planning')}
-                  className="w-full h-10 px-3.5 text-[13px] bg-white border border-[#e3def5] rounded-xl focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                  className="w-full h-10 px-3.5 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15 transition-all"
                 />
               </div>
               <div>
-                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">{t('hyperAgents.scopeLbl', 'Scope')}</label>
-                <div className="flex rounded-xl border border-[#e3def5] bg-white p-0.5 h-10">
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">{t('hyperAgents.scopeLbl', 'Scope')}</label>
+                <div className="flex rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-0.5 h-10">
                   {[['org', t('hyperAgents.scopeOrg', 'Whole Org'), Globe], ['project', t('hyperAgents.scopeProject', 'Project'), FolderOpen]].map(([key, label, Icon]) => {
                     const on = scope === key;
                     return (
                       <button type="button" key={key} onClick={() => setScope(key)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg text-[11.5px] font-semibold transition-all ${on ? 'bg-violet-600 text-white shadow-[0_3px_10px_rgba(124,58,237,0.32)]' : 'text-[#6b6580] hover:text-[#2a1f52]'}`}>
+                        className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg text-[11.5px] font-semibold font-['Space_Grotesk'] transition-all ${on ? 'bg-[#117dff] text-white shadow-[0_3px_10px_rgba(17,125,255,0.3)]' : 'text-[#737373] hover:text-[#0a0a0a]'}`}>
                         <Icon size={12} /> {label}
                       </button>
                     );
@@ -2249,31 +2347,33 @@ function CreateRoomModal({ onClose, onCreated }) {
 
             {/* Project picker — only when scope=project */}
             {scope === 'project' && (
-              <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2.5">
-                <label className="text-[10.5px] font-mono uppercase tracking-wider text-violet-700 mb-1 flex items-center gap-1">
+              <div className="rounded-xl border border-[#117dff]/20 bg-[#117dff]/5 px-3 py-2.5">
+                <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#117dff] mb-1 flex items-center gap-1">
                   <FolderOpen size={12} /> {t('hyperAgents.pickProject', 'Project HIVEMIND')}
                 </label>
                 <select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full h-9 px-3 text-[13px] bg-white border border-violet-200 rounded-lg focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                  className="w-full h-9 px-3 text-[13px] bg-white border border-[#cfe0fb] rounded-lg focus:outline-none focus:border-[#117dff]/50 focus:ring-2 focus:ring-[#117dff]/15 transition-all"
                 >
                   <option value="">{t('hyperAgents.selectProject', '— select a project —')}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name || p.slug || p.id}</option>
                   ))}
                 </select>
-                <div className="text-[10px] text-violet-700/70 mt-1">
+                <div className="text-[10px] text-[#117dff]/80 mt-1">
                   {projects.length === 0
                     ? t('hyperAgents.noProjects', 'No projects yet — the room will live org-wide.')
-                    : t('hyperAgents.projectScopeHint', 'Room + its memories stay inside this project HIVEMIND.')}
+                    : (projectId && projectResolved && !projectTeamId
+                        ? t('hyperAgents.projectNoTeam', 'This project has no dedicated agents — all org agents are available.')
+                        : t('hyperAgents.projectScopeHint', 'Room + memories stay inside this project; agents limited to it.'))}
                 </div>
               </div>
             )}
 
             {/* ── Format picker ── */}
             <div>
-              <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#6b6580] mb-1.5 block">
+              <label className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373] mb-1.5 block">
                 {t('hyperAgents.formatLbl', 'How should they collaborate?')}
               </label>
 
@@ -2288,22 +2388,21 @@ function CreateRoomModal({ onClose, onCreated }) {
                     onClick={() => setTemplate(fmt.key)}
                     className={`w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all ${
                       on
-                        ? 'border-violet-500 bg-white ring-2 ring-violet-500/15 shadow-[0_4px_16px_rgba(124,58,237,0.14)]'
-                        : 'border-[#e3def5] bg-white/70 hover:border-violet-300 hover:bg-white'
+                        ? 'border-[#117dff] bg-[#117dff]/5 ring-2 ring-[#117dff]/15 shadow-[0_4px_16px_rgba(17,125,255,0.12)]'
+                        : 'border-[#e3e0db] bg-[#faf9f4] hover:border-[#117dff]/40 hover:bg-white'
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
-                      style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#117dff]/10 text-[#117dff] shrink-0">
                       <Icon size={17} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t(fmt.labelKey, fmt.label)}</span>
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-violet-700 bg-violet-100 rounded-full px-1.5 py-0.5">{t('hyperAgents.recommended', 'Recommended')}</span>
+                        <span className="text-[9px] font-mono uppercase tracking-wider text-[#117dff] bg-[#117dff]/10 rounded-full px-1.5 py-0.5">{t('hyperAgents.recommended', 'Recommended')}</span>
                       </div>
                       <div className="text-[10.5px] text-[#737373] mt-0.5 leading-snug">{t(fmt.descKey, fmt.desc)}</div>
                     </div>
-                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${on ? 'border-violet-500 bg-violet-500' : 'border-[#d4d0ca]'}`}>
+                    <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${on ? 'border-[#117dff] bg-[#117dff]' : 'border-[#d4d0ca]'}`}>
                       {on && <Check size={11} className="text-white" />}
                     </span>
                   </button>
@@ -2312,9 +2411,9 @@ function CreateRoomModal({ onClose, onCreated }) {
 
               {/* Divider */}
               <div className="flex items-center gap-2 my-2.5">
-                <div className="h-px flex-1 bg-[#e7e1f7]" />
-                <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a39bc0]">{t('hyperAgents.orPickFormat', 'Or pick a specific format')}</span>
-                <div className="h-px flex-1 bg-[#e7e1f7]" />
+                <div className="h-px flex-1 bg-[#e3e0db]" />
+                <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.orPickFormat', 'Or pick a specific format')}</span>
+                <div className="h-px flex-1 bg-[#e3e0db]" />
               </div>
 
               {/* Grid of the 9 specific formats */}
@@ -2330,8 +2429,8 @@ function CreateRoomModal({ onClose, onCreated }) {
                       title={t(fmt.descKey, fmt.desc)}
                       className={`relative text-left p-2.5 rounded-xl border transition-all group ${
                         on
-                          ? 'border-violet-500 bg-white ring-2 ring-violet-500/15 shadow-[0_4px_14px_rgba(124,58,237,0.12)]'
-                          : 'border-[#e3def5] bg-white/70 hover:border-violet-300 hover:bg-white'
+                          ? 'border-[#117dff] bg-[#117dff]/5 ring-2 ring-[#117dff]/15 shadow-[0_4px_14px_rgba(17,125,255,0.1)]'
+                          : 'border-[#e3e0db] bg-[#faf9f4] hover:border-[#117dff]/40 hover:bg-white'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
@@ -2390,34 +2489,40 @@ function CreateRoomModal({ onClose, onCreated }) {
           </div>
 
           {/* RIGHT rail — agents */}
-          <div className="px-6 py-5 flex flex-col min-h-0 bg-white">
+          <div className="px-6 py-5 flex flex-col min-h-0 bg-[#faf9f4]">
             <div className="flex items-center justify-between mb-2">
-              <label className={`text-[10.5px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#6b6580]'}`}>
+              <label className={`text-[10.5px] font-mono uppercase tracking-wider ${picked.size === 0 ? 'text-red-500' : 'text-[#737373]'}`}>
                 {t('hyperAgents.addAgentsLbl', 'Add agents ({{n}} selected)', { n: picked.size })}
                 {picked.size === 0 && <span className="ml-1 normal-case font-sans tracking-normal text-[10px]">· {t('hyperAgents.pickAtLeastOne', 'pick at least 1')}</span>}
               </label>
-              {employees.length > 0 && (
+              {allowedEmployees.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setPicked(picked.size === employees.length ? new Set() : new Set(employees.map(e => e.id)))}
-                  className="flex items-center gap-1 text-[10px] font-medium text-violet-600 hover:text-violet-700"
+                  onClick={() => setPicked(picked.size === allowedEmployees.length ? new Set() : new Set(allowedEmployees.map(e => e.id)))}
+                  className="flex items-center gap-1 text-[10px] font-medium text-[#117dff] hover:text-[#0066e0]"
                 >
-                  <CheckCheck size={11} /> {picked.size === employees.length ? t('hyperAgents.clearAll', 'Clear') : t('hyperAgents.selectAll', 'Select all')}
+                  <CheckCheck size={11} /> {picked.size === allowedEmployees.length ? t('hyperAgents.clearAll', 'Clear') : t('hyperAgents.selectAll', 'Select all')}
                 </button>
               )}
             </div>
-            {employees.length > 6 && (
+            {/* project-restricted hint */}
+            {projectRestricted && (
+              <div className="mb-2 flex items-center gap-1.5 text-[10px] text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/15 rounded-lg px-2 py-1.5">
+                <FolderOpen size={11} /> {t('hyperAgents.agentsInProject', 'Showing agents in {{p}}', { p: selectedProject?.name || t('hyperAgents.scopeProject', 'Project') })}
+              </div>
+            )}
+            {allowedEmployees.length > 6 && (
               <div className="relative mb-2">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
                 <input
                   value={agentQuery}
                   onChange={e => setAgentQuery(e.target.value)}
                   placeholder={t('hyperAgents.searchAgents', 'Search agents…')}
-                  className="w-full h-8 pl-8 pr-3 text-[12px] bg-[#faf9ff] border border-[#e3def5] rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/15 transition-all"
+                  className="w-full h-8 pl-8 pr-3 text-[12px] bg-white border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15 transition-all"
                 />
               </div>
             )}
-            <div className="flex-1 min-h-[220px] overflow-y-auto border border-[#e3def5] rounded-xl divide-y divide-[#f3f1fc]">
+            <div className="flex-1 min-h-[220px] overflow-y-auto bg-white border border-[#e3e0db] rounded-xl divide-y divide-[#f3f1ec]">
               {employees.length === 0 && (
                 <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
                   {t('hyperAgents.noEmployeesYet', 'No employees yet.')}
@@ -2426,7 +2531,9 @@ function CreateRoomModal({ onClose, onCreated }) {
               )}
               {employees.length > 0 && filteredEmployees.length === 0 && (
                 <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
-                  {t('hyperAgents.noAgentMatch', 'No agents match your search.')}
+                  {projectRestricted
+                    ? t('hyperAgents.noAgentInProject', 'No agents assigned to this project.')
+                    : t('hyperAgents.noAgentMatch', 'No agents match your search.')}
                 </div>
               )}
               {filteredEmployees.map(emp => {
@@ -2434,8 +2541,8 @@ function CreateRoomModal({ onClose, onCreated }) {
                 const meta = LANE_META[lane] || LANE_META.Communicator;
                 const checked = picked.has(emp.id);
                 return (
-                  <label key={emp.id} className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-violet-50' : 'hover:bg-[#faf9ff]'}`}>
-                    <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="w-4 h-4 accent-violet-500" />
+                  <label key={emp.id} className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-[#117dff]/5' : 'hover:bg-[#faf9f4]'}`}>
+                    <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="w-4 h-4 accent-[#117dff]" />
                     <div
                       className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[11px] font-semibold ring-2 ring-white"
                       style={{ background: meta.bg, color: meta.color }}
@@ -2449,7 +2556,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                       <div className="text-[10px] font-mono mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full"
                         style={{ background: meta.bg, color: meta.color }}>{meta.label}</div>
                     </div>
-                    {checked && <Check size={15} className="text-violet-500 shrink-0" />}
+                    {checked && <Check size={15} className="text-[#117dff] shrink-0" />}
                   </label>
                 );
               })}
@@ -2462,24 +2569,23 @@ function CreateRoomModal({ onClose, onCreated }) {
           </div>
         </div>
 
-        <footer className="px-6 py-3.5 border-t border-[#efeafc] bg-[#faf9ff] flex items-center justify-between gap-2 flex-shrink-0">
-          <div className="flex items-center gap-1.5 text-[10.5px] text-[#8b84a3]">
+        <footer className="px-6 py-3.5 border-t border-[#e3e0db] bg-white flex items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 text-[10.5px] text-[#737373] font-['Space_Grotesk']">
             {scope === 'project'
-              ? <><FolderOpen size={12} className="text-violet-500" /> {projects.find(p => p.id === projectId)?.name || t('hyperAgents.scopeProject', 'Project')}</>
-              : <><Globe size={12} className="text-violet-500" /> {t('hyperAgents.scopeOrg', 'Whole Org')}</>}
-            <span className="text-[#c4bdd6]">·</span>
+              ? <><FolderOpen size={12} className="text-[#117dff]" /> {selectedProject?.name || t('hyperAgents.scopeProject', 'Project')}</>
+              : <><Globe size={12} className="text-[#117dff]" /> {t('hyperAgents.scopeOrg', 'Whole Org')}</>}
+            <span className="text-[#cbd5e1]">·</span>
             <span>{picked.size} {t('hyperAgents.agentsWord', 'agents')}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-lg hover:bg-[#efeafc] transition-colors">
+            <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-lg hover:bg-[#faf9f4] transition-colors">
               {t('hyperAgents.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={!name.trim() || picked.size === 0 || !scopeReady || busy}
               title={picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : (!scopeReady ? t('hyperAgents.selectProject', '— select a project —') : undefined)}
-              className="text-white text-[12px] font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_18px_rgba(124,58,237,0.45)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
-              style={{ background: 'linear-gradient(135deg,#a855f7 0%,#7c3aed 100%)' }}
+              className="text-white text-[12px] font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 bg-[#117dff] shadow-[0_4px_14px_rgba(17,125,255,0.32)] hover:bg-[#0066e0] hover:shadow-[0_6px_18px_rgba(17,125,255,0.42)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
             >
               {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
               {t('hyperAgents.createRoom', 'Create room')}
