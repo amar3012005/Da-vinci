@@ -2199,22 +2199,14 @@ function CreateRoomModal({ onClose, onCreated }) {
   const [scope, setScope] = useState('org'); // 'org' | 'project'
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState('');
-  const [projectTeamId, setProjectTeamId] = useState(null); // resolved team of selected project
-  const [projectResolved, setProjectResolved] = useState(false);
-
   const activeFormat = ROOM_FORMATS.find(f => f.key === template) || ROOM_FORMATS[0];
-  const empTeam = (e) => e?.teamId || e?.team_id || e?.team?.id || null;
 
-  // Agents allowed for the current scope. When a project (with a team) is chosen,
-  // restrict to agents on that project's team. If the project has no team, we
-  // cannot restrict by data → fall back to all org agents (with a hint).
-  const projectRestricted = scope === 'project' && !!projectId && projectResolved && !!projectTeamId;
-  const allowedEmployees = projectRestricted
-    ? employees.filter(e => empTeam(e) === projectTeamId)
-    : employees;
+  // ALL org agents are always selectable regardless of scope — project scope only
+  // affects what the room recalls (memories), never who can join it.
+  const allowedEmployees = employees;
   const filteredEmployees = agentQuery.trim()
-    ? allowedEmployees.filter(e => (e.name || '').toLowerCase().includes(agentQuery.trim().toLowerCase()))
-    : allowedEmployees;
+    ? employees.filter(e => (e.name || '').toLowerCase().includes(agentQuery.trim().toLowerCase()))
+    : employees;
   const selectedProject = projects.find(p => p.id === projectId);
 
   useEffect(() => {
@@ -2225,29 +2217,6 @@ function CreateRoomModal({ onClose, onCreated }) {
       .then(d => setProjects((d?.projects || d || []).filter(Boolean)))
       .catch(() => setProjects([]));
   }, []);
-
-  // Resolve the selected project's team so we can restrict the agent roster to it.
-  useEffect(() => {
-    let cancelled = false;
-    if (scope !== 'project' || !projectId) { setProjectTeamId(null); setProjectResolved(false); return; }
-    setProjectResolved(false);
-    const fromList = selectedProject && (selectedProject.teamId || selectedProject.team_id);
-    if (fromList) { setProjectTeamId(fromList); setProjectResolved(true); return; }
-    apiClient.getProjectV2(projectId)
-      .then(p => { if (cancelled) return; const proj = p?.project || p || {}; setProjectTeamId(proj.teamId || proj.team_id || null); setProjectResolved(true); })
-      .catch(() => { if (!cancelled) { setProjectTeamId(null); setProjectResolved(true); } });
-    return () => { cancelled = true; };
-  }, [scope, projectId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Drop any picked agent that isn't allowed under the current (project) scope.
-  useEffect(() => {
-    if (!projectRestricted) return;
-    setPicked(prev => {
-      const allow = new Set(allowedEmployees.map(e => e.id));
-      const next = new Set([...prev].filter(id => allow.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [projectRestricted, projectTeamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggle(id) {
     setPicked(prev => {
@@ -2363,9 +2332,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                 <div className="text-[10px] text-[#117dff]/80 mt-1">
                   {projects.length === 0
                     ? t('hyperAgents.noProjects', 'No projects yet — the room will live org-wide.')
-                    : (projectId && projectResolved && !projectTeamId
-                        ? t('hyperAgents.projectNoTeam', 'This project has no dedicated agents — all org agents are available.')
-                        : t('hyperAgents.projectScopeHint', 'Room + memories stay inside this project; agents limited to it.'))}
+                    : t('hyperAgents.projectScopeHint', 'Room recalls + saves memories inside this project. Any org agent can join.')}
                 </div>
               </div>
             )}
@@ -2504,12 +2471,6 @@ function CreateRoomModal({ onClose, onCreated }) {
                 </button>
               )}
             </div>
-            {/* project-restricted hint */}
-            {projectRestricted && (
-              <div className="mb-2 flex items-center gap-1.5 text-[10px] text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/15 rounded-lg px-2 py-1.5">
-                <FolderOpen size={11} /> {t('hyperAgents.agentsInProject', 'Showing agents in {{p}}', { p: selectedProject?.name || t('hyperAgents.scopeProject', 'Project') })}
-              </div>
-            )}
             {allowedEmployees.length > 6 && (
               <div className="relative mb-2">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
@@ -2530,9 +2491,7 @@ function CreateRoomModal({ onClose, onCreated }) {
               )}
               {employees.length > 0 && filteredEmployees.length === 0 && (
                 <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
-                  {projectRestricted
-                    ? t('hyperAgents.noAgentInProject', 'No agents assigned to this project.')
-                    : t('hyperAgents.noAgentMatch', 'No agents match your search.')}
+                  {t('hyperAgents.noAgentMatch', 'No agents match your search.')}
                 </div>
               )}
               {filteredEmployees.map(emp => {
