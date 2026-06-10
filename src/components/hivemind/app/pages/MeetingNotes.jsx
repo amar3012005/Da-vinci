@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
-  CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote,
+  CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -20,6 +20,8 @@ import { useTranslation } from 'react-i18next';
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+/* real participant name when insights mapped one (from the pre-meeting context) */
+const nameFor = (speaker, map) => (map && map[speaker]) || speakerLabel(speaker);
 
 /* Notion-style "@Today 11:01 PM" — relative day + time */
 function fmtAt(iso) {
@@ -139,7 +141,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-700 font-['Space_Grotesk']">
-              ✨ {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
+              <Sparkles size={11} /> {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
             </span>
           )}
           <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] font-['Space_Grotesk'] tabular-nums">
@@ -154,7 +156,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
           <span className="text-[32px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{atRest.join(' ')}</span>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <span className="text-[14px]">🎙️</span>
+          <span className="w-6 h-6 rounded-[7px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><Mic size={12} className="text-[#117dff]" /></span>
           <span className="text-[13px] font-medium text-[#737373] truncate">{title || t('meetingnotes.newMeeting', 'New meeting')}</span>
           {recording && <span className="text-[9px] text-[#a3a3a3] uppercase tracking-[0.18em] font-['Space_Grotesk']">{t('meetingnotes.live', 'Live')}</span>}
         </div>
@@ -169,7 +171,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
           <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
             className="flex items-center gap-2 mb-1 text-[12px] text-[#525252] disabled:opacity-50"
             title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
-            <span>👥 {t('meetingnotes.multiShort', 'Multi-speaker')}</span>
+            <span className="inline-flex items-center gap-1.5"><Users size={13} className="text-[#f59e0b]" /> {t('meetingnotes.multiShort', 'Multi-speaker')}</span>
             <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
               <span className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
             </span>
@@ -182,11 +184,11 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
 
         {/* notes — functional, same state as the page */}
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-          placeholder={`📝 ${t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}`}
+          placeholder={t('meetingnotes.contextPlaceholder2', 'Topic, speaker names, key terms — add anytime…')}
           className="mt-3 w-full h-[64px] resize-none p-3 text-[12px] rounded-[10px] bg-[#faf9f4] border border-[#e3e0db] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40" />
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-['Space_Grotesk']">🎧 {t('meetingnotes.channel', 'Meeting Notes')}</span>
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-[#a3a3a3] uppercase tracking-wider font-['Space_Grotesk']"><MeetingNotesIcon size={11} /> {t('meetingnotes.channel', 'Meeting Notes')}</span>
           <button onClick={onStop} disabled={!recording}
             className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#ef4444] text-white text-[13px] font-semibold hover:bg-[#dc2626] disabled:opacity-40 transition-colors">
             <Square size={12} fill="currentColor" /> {t('meetingnotes.stop', 'Stop')}
@@ -211,7 +213,7 @@ function MeetingCard({ m, onOpen }) {
       className="text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center text-[13px] flex-shrink-0">🎙️</span>
+          <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><MeetingNotesIcon size={14} className="text-[#117dff]" /></span>
           <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
         </div>
         <ArrowUpRight size={12} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] flex-shrink-0 transition-colors" />
@@ -229,10 +231,10 @@ function MeetingCard({ m, onOpen }) {
       </div>
       <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
       <div className="mt-2.5 pt-2 border-t border-[#eae7e1] flex items-center gap-3 text-[10.5px] text-[#737373]">
-        <span>✅ {actions}</span>
-        <span>✨ {keyPts}</span>
-        <span>❓ {quests}</span>
-        {m.multi_speaker ? <span>👥 {m.speaker_count || 2}</span> : null}
+        <span className="inline-flex items-center gap-1"><ListChecks size={11} className="text-[#10b981]" /> {actions}</span>
+        <span className="inline-flex items-center gap-1"><Sparkles size={11} className="text-[#8b5cf6]" /> {keyPts}</span>
+        <span className="inline-flex items-center gap-1"><HelpCircle size={11} className="text-[#0891b2]" /> {quests}</span>
+        {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={11} className="text-[#f59e0b]" /> {m.speaker_count || 2}</span> : null}
       </div>
     </motion.button>
   );
@@ -329,13 +331,13 @@ export default function MeetingNotes() {
     setError(null);
     try {
       setStatus('transcribing');
-      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
+      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent((notes || '').slice(0, 800))}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
       const text = tr.data?.transcript || ''; const segs = tr.data?.speakerSegments || null;
       const lang = tr.data?.language || null;
       setTranscript(text); setSpeakerSegments(segs); setLanguage(lang);
       if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
-      const input = segs && segs.length ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n') : text;
+      const input = segs && segs.length ? segs.map((s) => `${s.speaker}: ${s.text}`).join('\n') : text;
       const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 120000 });
       const insights = ins.data?.insights || null;
       setInsights(insights); setStatus('done');
@@ -371,7 +373,7 @@ export default function MeetingNotes() {
     try {
       const title = insights?.title || `Meeting ${new Date().toLocaleString()}`;
       const summary = insights?.summary || transcript.slice(0, 500);
-      const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n') : transcript;
+      const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${nameFor(s.speaker, insights?.speaker_names)}:** ${s.text}`).join('\n\n') : transcript;
       const sect = (heading, items, fmt = (x) => `- ${x}`) => (items?.length ? `\n\n## ${heading}\n${items.map(fmt).join('\n')}` : '');
       const content = `# ${title}\n\n## Summary\n${summary}`
         + sect('Action Items', insights?.action_items, (a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`)
@@ -490,8 +492,19 @@ export default function MeetingNotes() {
               </div>
             )}
 
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}
-              className="w-full min-h-[72px] p-3 text-[13px] bg-[#faf9f4] border border-[#e3e0db] rounded-[8px] focus:outline-none focus:border-[#117dff]/40 resize-y" />
+            {/* Pre-meeting context — feeds Whisper (correct spelling of names/terms),
+                speaker naming and insights. One box, crucial. */}
+            <div className={`rounded-[10px] border p-3 transition-colors ${notes.trim() ? 'bg-[#faf9f4] border-[#e3e0db]' : 'bg-blue-50/40 border-[#117dff]/30'}`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="w-6 h-6 rounded-[7px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><NotebookPen size={12} className="text-[#117dff]" /></span>
+                <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('meetingnotes.contextTitle', 'Meeting context')}</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[9px] font-semibold text-blue-700 uppercase tracking-wide">{t('meetingnotes.contextCrucial', 'Crucial')}</span>
+              </div>
+              <p className="text-[11px] text-[#737373] mb-2 leading-snug">{t('meetingnotes.contextHint', 'Topic, who is speaking (names), companies, key terms — used to spell names correctly in the transcript, label speakers and sharpen insights.')}</p>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('meetingnotes.contextPlaceholder', 'e.g. Weekly product sync — speakers: Amar, Matthias (investor). Topics: pricing, Hannover event, cap table…')}
+                className="w-full min-h-[64px] p-2.5 text-[13px] bg-white border border-[#e3e0db] rounded-[8px] focus:outline-none focus:border-[#117dff]/40 resize-y" />
+            </div>
           </div>
 
           {error && (<div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2"><AlertTriangle size={12} className="inline mr-1" /> {error}</div>)}
@@ -519,7 +532,7 @@ export default function MeetingNotes() {
               {insights.topics?.length > 0 && (<div className="flex flex-wrap gap-1.5">{insights.topics.map((tp, i) => (<span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>))}</div>)}
               {transcript && (
                 <Panel icon={speakerSegments?.length ? Users : ScrollText} title={t('meetingnotes.transcript', 'Transcript')} accent="#a3a3a3">
-                  {speakerSegments?.length ? (<div className="space-y-2 max-h-[280px] overflow-y-auto">{speakerSegments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{speakerLabel(s.speaker)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>)
+                  {speakerSegments?.length ? (<div className="space-y-2 max-h-[280px] overflow-y-auto">{speakerSegments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{nameFor(s.speaker, insights?.speaker_names)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>)
                     : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[280px] overflow-y-auto">{transcript}</p>)}
                 </Panel>
               )}
@@ -576,7 +589,7 @@ export default function MeetingNotes() {
             const risks = Array.isArray(insx.risks) ? insx.risks : [];
             const nextSteps = Array.isArray(insx.next_steps) ? insx.next_steps : [];
             const ents = (insx.entities && typeof insx.entities === 'object') ? insx.entities : {};
-            const entChips = [...(ents.people || []).map((e) => ['👤', e]), ...(ents.organizations || []).map((e) => ['🏢', e]), ...(ents.dates || []).map((e) => ['📅', e])];
+            const entChips = [...(ents.people || []).map((e) => [User, e]), ...(ents.organizations || []).map((e) => [Building2, e]), ...(ents.dates || []).map((e) => [CalendarDays, e])];
             const H = ({ children }) => <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">{children}</h3>;
             return (
               <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
@@ -588,7 +601,7 @@ export default function MeetingNotes() {
                 {quotes.length > 0 && (<div><H>Notable Quotes</H><ul className="space-y-2">{quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></div>)}
                 {risks.length > 0 && (<div><H>Risks & Red Flags</H><ul className="space-y-1.5">{risks.map((r, i) => <li key={i} className="flex gap-2"><AlertTriangle size={13} className="text-[#ef4444] mt-0.5 flex-shrink-0" />{r}</li>)}</ul></div>)}
                 {nextSteps.length > 0 && (<div><H>Next Steps</H><ul className="space-y-1.5">{nextSteps.map((n, i) => <li key={i} className="flex gap-2"><ArrowUpRight size={13} className="text-[#10b981] mt-0.5 flex-shrink-0" />{n}</li>)}</ul></div>)}
-                {entChips.length > 0 && (<div><H>Mentioned</H><div className="flex flex-wrap gap-1.5">{entChips.map(([ic, e], i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[10px] text-[#525252]">{ic} {e}</span>)}</div></div>)}
+                {entChips.length > 0 && (<div><H>Mentioned</H><div className="flex flex-wrap gap-1.5">{entChips.map(([Ic, e], i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[10px] text-[#525252]"><Ic size={10} className="text-[#737373]" /> {e}</span>)}</div></div>)}
                 {(selected.sentiment || (Array.isArray(selected.topics) && selected.topics.length > 0)) && (
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {selected.sentiment && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700"><Sparkles size={9} /> {selected.sentiment}</span>}
@@ -605,7 +618,7 @@ export default function MeetingNotes() {
           )}
           {detailTab === 'transcript' && (
             Array.isArray(selected.segments) && selected.segments.length ? (
-              <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{speakerLabel(s.speaker)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
+              <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{nameFor(s.speaker, (selected.insights && selected.insights.speaker_names) || null)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
             ) : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{selected.transcript || 'No transcript saved.'}</p>)
           )}
         </div>
