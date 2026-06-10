@@ -296,7 +296,8 @@ export default function TeamProjects() {
         <ProjectMembersModal
           projectId={membersTarget.projectId}
           projectName={membersTarget.projectName}
-          onClose={() => setMembersTarget(null)}
+          orgId={activeOrgId}
+          onClose={() => { setMembersTarget(null); fetchProjects(); }}
         />
       )}
 
@@ -405,13 +406,16 @@ export default function TeamProjects() {
 }
 
 
-// ─── ProjectMembersModal — manage role + remove ────────────────────────────
-function ProjectMembersModal({ projectId, projectName, onClose }) {
+// ─── ProjectMembersModal — one-tap add from org directory + role + remove ──
+function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
   const { t } = useTranslation('dashboard');
   const [members, setMembers] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState(null);
   const [busyId, setBusyId] = React.useState(null);
+  // Org directory for the one-tap "Add member" picker.
+  const [orgMembers, setOrgMembers] = React.useState([]);
+  const [search, setSearch] = React.useState('');
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -427,6 +431,43 @@ function ProjectMembersModal({ projectId, projectName, onClose }) {
   }, [projectId]);
 
   React.useEffect(() => { load(); }, [load]);
+
+  React.useEffect(() => {
+    if (!orgId) return;
+    let alive = true;
+    apiClient.listOrgMembers(orgId)
+      .then(d => { if (alive) setOrgMembers(d?.members || d || []); })
+      .catch(() => { if (alive) setOrgMembers([]); });
+    return () => { alive = false; };
+  }, [orgId]);
+
+  // Org members not yet in the project — these get the one-tap Add button.
+  const memberIds = React.useMemo(
+    () => new Set(members.map(m => m.user_id || m.userId)),
+    [members],
+  );
+  const candidates = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orgMembers
+      .filter(m => !memberIds.has(m.user_id || m.userId || m.id))
+      .filter(m => !q
+        || (m.display_name || m.displayName || '').toLowerCase().includes(q)
+        || (m.email || '').toLowerCase().includes(q));
+  }, [orgMembers, memberIds, search]);
+
+  async function addMember(member) {
+    const uid = member.user_id || member.userId || member.id;
+    setBusyId(uid);
+    setErr(null);
+    try {
+      await apiClient.addProjectMember(projectId, { user_id: uid, role: 'contributor' });
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function changeRole(userId, role) {
     setBusyId(userId);
@@ -467,10 +508,53 @@ function ProjectMembersModal({ projectId, projectName, onClose }) {
             <AlertCircle size={12} /> {err}
           </div>
         )}
+        {/* One-tap add from the org directory — invite links are only needed
+            for people who aren't in the org yet. */}
+        <div className="mb-4 p-3 bg-[#faf9f4] border border-[#e3e0db] rounded-[6px]">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">
+            {t('teamprojects.addFromOrg', 'Add from org members')}
+          </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('teamprojects.searchMembers', 'Search name or email…')}
+            className="w-full h-8 px-2 text-[12px] border border-[#e3e0db] rounded-[4px] mb-2 bg-white"
+          />
+          {candidates.length === 0 ? (
+            <div className="text-[11px] text-[#a3a3a3] py-1">
+              {orgMembers.length === 0
+                ? t('teamprojects.dirLoading', 'Loading directory…')
+                : t('teamprojects.allInProject', 'Everyone in the org is already in this project. Use the Invite icon to bring in someone new.')}
+            </div>
+          ) : (
+            <div className="max-h-[160px] overflow-y-auto space-y-1">
+              {candidates.slice(0, 20).map((m) => {
+                const uid = m.user_id || m.userId || m.id;
+                return (
+                  <div key={uid} className="flex items-center justify-between px-2 py-1.5 bg-white border border-[#ece8e1] rounded-[4px]">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] text-[#0a0a0a] truncate">{m.display_name || m.displayName || m.email || uid.slice(0, 8)}</div>
+                      {m.email && <div className="text-[10px] text-[#737373] truncate">{m.email}</div>}
+                    </div>
+                    <button
+                      onClick={() => addMember(m)}
+                      disabled={busyId === uid}
+                      className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] font-medium text-white bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-50 shrink-0"
+                    >
+                      {busyId === uid ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                      {t('teamprojects.add', 'Add')}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {loading ? (
           <div className="py-8 text-center text-[12px] text-[#a3a3a3]">{t('teamprojects.loading', 'Loading…')}</div>
         ) : members.length === 0 ? (
-          <div className="py-8 text-center text-[12px] text-[#a3a3a3]">{t('teamprojects.noMembers', 'No members yet. Use Invite icon to add.')}</div>
+          <div className="py-8 text-center text-[12px] text-[#a3a3a3]">{t('teamprojects.noMembers', 'No members yet — add one from the org directory above.')}</div>
         ) : (
           <div className="space-y-2">
             {members.map((m) => (
