@@ -353,10 +353,10 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
   return (
     <div
       onClick={handleClick}
-      className={`group bg-white border rounded-2xl p-4 transition-all cursor-pointer flex flex-col shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_18px_44px_-18px_rgba(15,23,42,0.22)] hover:-translate-y-0.5 ${
+      className={`bg-white border rounded-xl p-4 transition-all cursor-pointer flex flex-col shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         selected
           ? 'border-[#117dff] ring-2 ring-[#117dff]/20'
-          : 'border-[#dfe7f3] hover:border-[#cfe0fb]'
+          : 'border-[#e3e0db] hover:border-[#117dff]/30'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
@@ -1689,19 +1689,19 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/55 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="w-full max-w-[1080px] max-h-[86vh] overflow-hidden rounded-[22px] border border-[#dfe7f3] bg-white shadow-[0_28px_90px_-24px_rgba(15,23,42,0.55)]"
+        className="w-full max-w-[1080px] max-h-[86vh] overflow-hidden rounded-[22px] border border-[#e3e0db] bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-[#e5edf7] bg-[linear-gradient(118deg,#0f172a_0%,#1d4ed8_64%,#059669_100%)] px-6 py-5 text-white">
+        <header className="flex items-center justify-between border-b border-[#e3e0db] bg-white px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/95 text-[#117dff] shadow-[0_10px_28px_rgba(15,23,42,0.24)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff]">
               <Store size={19} />
             </div>
             <div>
-              <h2 className="font-['Space_Grotesk'] text-[18px] font-bold leading-tight">
+              <h2 className="font-['Space_Grotesk'] text-[18px] font-bold leading-tight text-[#0a0a0a]">
                 {t('digitalemployees.marketplaceTitle', 'Agent Marketplace')}
               </h2>
-              <p className="mt-0.5 text-[11px] text-blue-100/90">
+              <p className="mt-0.5 text-[11px] text-[#a3a3a3]">
                 {t('digitalemployees.marketplaceSubtitle', 'Install polished, role-specific agents into this organization.')}
               </p>
             </div>
@@ -1709,43 +1709,43 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/15 hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[#a3a3a3] transition-colors hover:bg-[#faf9f4] hover:text-[#0a0a0a]"
             aria-label="Close"
           >
             <X size={16} />
           </button>
         </header>
 
-        <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#f8fbff] p-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#faf9f4] p-4 md:grid-cols-2 xl:grid-cols-3">
           {MARKETPLACE_AGENT_PRESETS.map((preset) => {
             const slug = slugifyName(preset.name);
             const installed = existingSlugs.has(slug);
             const busy = installingId === preset.id;
             return (
               <div key={preset.id} className="p-2">
-                <article className="flex h-full flex-col rounded-[18px] border border-[#dfe7f3] bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <article className="flex h-full flex-col rounded-xl border border-[#e3e0db] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors hover:border-[#117dff]/30">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#117dff]/10 font-mono text-[13px] font-bold text-[#117dff]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 font-mono text-[13px] font-bold text-[#117dff]">
                       {initialsOf(preset.name)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="truncate font-['Space_Grotesk'] text-[14px] font-semibold text-[#0f172a]">{preset.name}</h3>
-                        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-emerald-700">
+                        <h3 className="truncate font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">{preset.name}</h3>
+                        <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-emerald-700">
                           {preset.category || 'Core'}
                         </span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#64748b]">{preset.summary}</p>
+                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#525252]">{preset.summary}</p>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {(preset.tools || []).slice(0, 4).map((tool) => (
-                      <span key={tool} className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[9px] font-mono text-[#475569]">
+                      <span key={tool} className="rounded-md bg-[#faf9f4] border border-[#e3e0db] px-2 py-0.5 text-[9px] font-mono text-[#525252]">
                         {tool.replace('hivemind_', '')}
                       </span>
                     ))}
                   </div>
-                  <p className="mt-3 line-clamp-4 flex-1 text-[11px] leading-relaxed text-[#475569]">{preset.persona}</p>
+                  <p className="mt-3 line-clamp-4 flex-1 text-[11px] leading-relaxed text-[#737373]">{preset.persona}</p>
                   <button
                     type="button"
                     disabled={!isAdmin || installed || busy}
@@ -1958,60 +1958,59 @@ export default function DigitalEmployees() {
   return (
     <div className="max-w-7xl mx-auto space-y-4 transition-[padding-right] duration-300" style={isWorkspaceMode && slidePanelOpen ? { paddingRight: dockedWorkspaceWidth } : undefined}>
       {/* Gradient hero band — mirrors the New Room popup header
-          (diagonal #111827→#1d4ed8→#059669 + radial glow + glass chips). */}
-      <header className="relative overflow-hidden rounded-[24px] border border-[#dfe7f3] bg-[linear-gradient(118deg,#111827_0%,#1d4ed8_58%,#059669_100%)] shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
-        <div className="absolute inset-0 opacity-[0.22] pointer-events-none bg-[radial-gradient(460px_160px_at_10%_-20%,#bfdbfe_0%,transparent_70%),radial-gradient(420px_180px_at_92%_120%,#bbf7d0_0%,transparent_70%)]" />
-        <div className="relative px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/95 text-[#117dff] shadow-[0_10px_26px_rgba(15,23,42,0.24)] shrink-0">
-              <Bot size={22} />
+          flat operator-console theme (matches MCP Server page — no gradient/glow). */}
+      <header className="rounded-2xl border border-[#e3e0db] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center text-[#117dff] shrink-0">
+              <Bot size={20} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-[20px] font-bold text-white leading-tight font-['Space_Grotesk'] tracking-tight">
+              <h1 className="text-[20px] font-bold text-[#0a0a0a] leading-tight font-['Space_Grotesk'] tracking-tight">
                 {t('digitalemployees.pageTitle', 'Digital Employees')}
               </h1>
-              <p className="text-[11.5px] text-blue-100/90 leading-tight font-['Space_Grotesk'] mt-0.5">
+              <p className="text-[12px] text-[#a3a3a3] leading-tight font-['Space_Grotesk'] mt-0.5">
                 {t('digitalemployees.pageSubtitleShort', 'Autonomous AI agents with HIVEMIND memory + Slack access')}
               </p>
             </div>
           </div>
 
-          {/* glass stat chips */}
+          {/* flat stat chips */}
           <div className="flex items-center gap-2">
             {[
-              [t('digitalemployees.statTotal', 'Total'), employees.length, '#ffffff'],
-              [t('digitalemployees.statRunning', 'Running'), running, '#bbf7d0'],
-              [t('digitalemployees.statOptimized', 'Optimized'), optimized, '#bfdbfe'],
+              [t('digitalemployees.statTotal', 'Total'), employees.length, '#0a0a0a'],
+              [t('digitalemployees.statRunning', 'Running'), running, '#16a34a'],
+              [t('digitalemployees.statOptimized', 'Optimized'), optimized, '#117dff'],
             ].map(([label, value, color]) => (
-              <div key={label} className="rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2 text-center min-w-[68px] backdrop-blur-sm">
+              <div key={label} className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] px-3.5 py-2 text-center min-w-[66px]">
                 <div className="text-[18px] font-bold font-['Space_Grotesk'] tabular-nums leading-none" style={{ color }}>{value}</div>
-                <div className="text-[9px] uppercase tracking-[0.14em] text-blue-100/70 mt-1">{label}</div>
+                <div className="text-[9px] uppercase tracking-[0.14em] text-[#a3a3a3] mt-1">{label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* action bar on the band */}
-        <div className="relative px-6 pb-5 flex flex-wrap items-center justify-end gap-2">
+        {/* action bar */}
+        <div className="mt-4 pt-4 border-t border-[#e3e0db] flex flex-wrap items-center justify-end gap-2">
           {isWorkspaceMode && (
-            <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-[12px] text-white hover:bg-white/20 transition-colors">
+            <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#525252] hover:border-[#117dff]/30 hover:text-[#117dff] transition-colors">
               <Users size={13} />
               {slidePanelOpen ? t('digitalemployees.workspaceOpen', 'Workspace open') : t('digitalemployees.workspacePanel', 'Workspace panel')}
             </button>
           )}
           <button onClick={fetch} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[12px] text-[#525252] hover:border-[#117dff]/30 hover:text-[#117dff] transition-colors disabled:opacity-50">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {t('digitalemployees.refresh', 'Refresh')}
           </button>
           <button onClick={() => setMarketplaceOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#dbeafe] bg-[#eff6ff] text-[12px] text-[#117dff] hover:bg-[#dbeafe] transition-colors">
             <Store size={13} />
             {t('digitalemployees.marketplace', 'Marketplace')}
           </button>
           {isOrgAdmin && (
             <button onClick={handleRemintAll} disabled={reminting}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#e3e0db] bg-white text-[12px] text-[#525252] hover:border-[#117dff]/30 hover:text-[#117dff] transition-colors disabled:opacity-50"
               title={t('digitalemployees.remintAllKeys', 'Re-mint missing HIVEMIND keys')}>
               <KeyRound size={13} className={reminting ? 'animate-pulse' : ''} />
               {reminting ? t('digitalemployees.reminting', 'Re-minting...') : t('digitalemployees.remintAllKeys', 'Re-mint keys')}
@@ -2020,15 +2019,15 @@ export default function DigitalEmployees() {
           {isWorkspaceMode ? (
             <button
               onClick={() => { setActiveWorkspaceTaskId(null); setSlidePanelOpen(true); }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-white text-[#0f172a] text-[12px] font-semibold hover:bg-blue-50 transition-colors shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"
             >
-              <Zap size={13} className="text-[#117dff]" />
+              <Zap size={13} />
               {t('digitalemployees.runTask', 'Run Task')}
             </button>
           ) : (
             <button onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-white text-[#0f172a] text-[12px] font-semibold hover:bg-blue-50 transition-colors shadow-[0_8px_20px_rgba(15,23,42,0.18)]">
-              <Plus size={13} className="text-[#117dff]" />
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors">
+              <Plus size={13} />
               {t('digitalemployees.newEmployee', 'New Employee')}
             </button>
           )}
