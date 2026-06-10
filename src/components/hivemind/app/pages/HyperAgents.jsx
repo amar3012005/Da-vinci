@@ -401,6 +401,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
 
 function hyperEventKey(event, index) {
   if (!event) return `empty:${index}`;
+  if (event.id) return `id:${event.id}`;
   return [
     event.t || 'line',
     event.ts || '',
@@ -516,7 +517,7 @@ function RoomThread({ roomId, onArchived }) {
       }
     };
     [
-      'router', 'typing', 'line', 'react', 'revise', 'validate',
+      'router', 'router_bootstrap', 'typing', 'line', 'react', 'revise', 'validate',
       'seal', 'error', 'heartbeat',
       // Phase 4 cognitive upgrades:
       'decision_required', 'decision_saved',
@@ -954,6 +955,18 @@ function eventDisplayTs(event) {
   return event?.received_ts || event?.ts || null;
 }
 
+function getPersonaContract(agent) {
+  return agent?.hyper?.persona_contract || agent?.persona_contract || null;
+}
+
+function contractSnippet(contract) {
+  if (!contract) return '';
+  const parts = [];
+  if (contract.stance) parts.push(contract.stance);
+  if (contract.context_home) parts.push(`home:${contract.context_home}`);
+  return parts.join(' · ');
+}
+
 // Immediate "it's working" feedback shown while a live turn has no events yet.
 // Cycles through the real startup phases so the room never looks frozen.
 function SwarmSpinningUp() {
@@ -992,7 +1005,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
     return mergeHyperEvents(base, liveLines);
   }, [turn.lines, liveLines]);
 
-  const router = lines.find(l => l.t === 'router');
+  const router = lines.find(l => l.t === 'router') || lines.find(l => l.t === 'router_bootstrap');
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
   const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
   const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
@@ -1115,6 +1128,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           → lead: <span className="text-[#525252]">{router.lead}</span>
           {(router.reactors || []).length > 0 && (
             <> · reactors: <span className="text-[#525252]">{router.reactors.join(', ')}</span></>
+          )}
+          {router.t === 'router_bootstrap' && (
+            <span className="ml-2 px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 text-[9px] uppercase tracking-wider">
+              bootstrap
+            </span>
           )}
           {template && template !== 'debate' && (
             <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9px] uppercase tracking-wider">
@@ -1906,6 +1924,7 @@ function AgentBubble({ agent, content: rawContent, kind, agreement, confidence, 
   const lane = agent?.lane || 'Communicator';
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
+  const contract = getPersonaContract(agent);
   const indent = kind === 'react' || kind === 'validate';
   const agMeta = agreement ? AGREEMENT_META[agreement] : null;
   const isShort = (content || '').length < 280 && !/\n.*\n/.test(content || '');
@@ -1930,6 +1949,11 @@ function AgentBubble({ agent, content: rawContent, kind, agreement, confidence, 
           >
             <Icon size={9} /> {meta.label}
           </span>
+          {contract?.stance && (
+            <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#faf9f4] text-[#525252] border border-[#e3e0db]">
+              {contract.stance}
+            </span>
+          )}
           {agMeta && (
             <span
               className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded"
@@ -1962,6 +1986,7 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
   const meta = LANE_META[lane] || LANE_META.Communicator;
   const Icon = meta.icon;
   const [hover, setHover] = useState(false);
+  const contract = getPersonaContract(agent);
 
   return (
     <div
@@ -1992,6 +2017,11 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
             </span>
           )}
         </div>
+        {contract?.stance && (
+          <div className="mt-0.5 text-[9px] text-[#737373] truncate" title={contractSnippet(contract)}>
+            {contract.stance}
+          </div>
+        )}
       </div>
       {canRemove && hover && (
         <button

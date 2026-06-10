@@ -31,6 +31,10 @@ import {
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
+import {
+  buildPersonaContractLike,
+  contractPills,
+} from '../shared/persona-contract';
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
@@ -179,6 +183,24 @@ function normalizeMetadata(metadata) {
   return {};
 }
 
+function PersonaContractRow({ contract }) {
+  const pills = contractPills(contract);
+  if (!pills || pills.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {pills.map((pill) => (
+        <span
+          key={pill}
+          className="inline-flex max-w-full items-center rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#525252] truncate"
+          title={pill}
+        >
+          {pill}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function formatReactionEmoji(value) {
   if (!value) return '✨';
   const normalized = String(value).replace(/^:+|:+$/g, '');
@@ -325,6 +347,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
   const msgs = employee.metricsLast24h?.messages || 0;
   const tokens = employee.metricsLast24h?.tokens || 0;
   const hyper = employee.hyper;
+  const contract = hyper?.persona_contract || buildPersonaContractLike(employee);
   const versionLabel = employee.active_prompt_version?.version_label || hyper?.active_prompt_version?.version_label || 'v0';
   const evalCount = hyper?.evaluation_count || 0;
   const threshold = hyper?.tuning_threshold || 20;
@@ -377,6 +400,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
       {employee.persona && (
         <p className="text-[11px] text-[#525252] line-clamp-2 mb-3">{employee.persona}</p>
       )}
+      <PersonaContractRow contract={contract} />
 
       <div className="mb-3 rounded-[10px] border border-[#ece8e1] bg-[#fbfaf7] p-3">
         <div className="flex items-center justify-between gap-2">
@@ -1130,6 +1154,11 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
           age: form.age || null,
           gender: form.gender || null,
           experience_years: Number(form.experience_years) || 0,
+          persona_contract: buildPersonaContractLike({
+            name: form.name.trim(),
+            role_archetype: form.role_archetype,
+            scope: form.team_id ? 'team' : 'personal',
+          }),
         },
       };
       await onCreate(payload);
@@ -1721,6 +1750,7 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
             const slug = slugifyName(preset.name);
             const installed = existingSlugs.has(slug);
             const busy = installingId === preset.id;
+            const contract = buildPersonaContractLike(preset);
             return (
               <div key={preset.id} className="p-2">
                 <article className="flex h-full flex-col rounded-xl border border-[#e3e0db] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors hover:border-[#117dff]/30">
@@ -1746,6 +1776,7 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
                     ))}
                   </div>
                   <p className="mt-3 line-clamp-4 flex-1 text-[11px] leading-relaxed text-[#737373]">{preset.persona}</p>
+                  <PersonaContractRow contract={contract} />
                   <button
                     type="button"
                     disabled={!isAdmin || installed || busy}
@@ -1875,6 +1906,7 @@ export default function DigitalEmployees() {
           rate_limit_per_min: 30,
           marketplace_template_id: preset.id,
           marketplace_category: preset.category || 'Core',
+          persona_contract: buildPersonaContractLike(preset),
         },
       });
       await fetch();
