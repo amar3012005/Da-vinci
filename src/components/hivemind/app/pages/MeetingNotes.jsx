@@ -14,6 +14,7 @@ import {
   CalendarDays, History, AudioLines, AlignLeft, ScrollText, ArrowLeft,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import MeetingNotesIcon from '../shared/MeetingNotesIcon';
 import { useTranslation } from 'react-i18next';
 
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
@@ -207,7 +208,7 @@ export default function MeetingNotes() {
       {/* header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <div className="flex items-center gap-2 text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1"><Sparkles size={12} /> HIVEMIND</div>
+          <div className="flex items-center gap-2 text-[11px] text-[#a3a3a3] font-mono uppercase tracking-wider mb-1"><MeetingNotesIcon size={13} /> HIVEMIND</div>
           <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('meetingnotes.title', 'AI Meeting Notes')}</h1>
           <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.subtitle', 'Record, transcribe and extract insights — saved straight into your memory.')}</p>
         </div>
@@ -216,7 +217,7 @@ export default function MeetingNotes() {
 
       {/* stat row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        <StatCard icon={History} value={stats.total} label={t('meetingnotes.stat.total', 'Meetings')} color="#117dff" />
+        <StatCard icon={MeetingNotesIcon} value={stats.total} label={t('meetingnotes.stat.total', 'Meetings')} color="#117dff" />
         <StatCard icon={CalendarDays} value={stats.thisWeek} label={t('meetingnotes.stat.week', 'This week')} color="#0A66C2" />
         <StatCard icon={ListChecks} value={stats.actions} label={t('meetingnotes.stat.actions', 'Action items')} color="#10b981" />
         <StatCard icon={Users} value={stats.multi} label={t('meetingnotes.stat.multi', 'Multi-speaker')} color="#f59e0b" />
@@ -239,7 +240,7 @@ export default function MeetingNotes() {
           <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2 min-w-0">
-                <FileText size={16} className="text-[#117dff] flex-shrink-0" />
+                <MeetingNotesIcon size={16} className="text-[#117dff] flex-shrink-0" />
                 <span className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{insights?.title || t('meetingnotes.newMeeting', 'New meeting')}</span>
               </div>
               {recording ? (
@@ -333,7 +334,7 @@ export default function MeetingNotes() {
               <button key={m.id} onClick={() => { setSelected(m); setDetailTab('summary'); }}
                 className="text-left bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
                 <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 flex items-center justify-center"><FileText size={15} className="text-[#117dff]" /></div>
+                  <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 flex items-center justify-center"><MeetingNotesIcon size={15} className="text-[#117dff]" /></div>
                   <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
                 </div>
                 <div className="text-[13px] font-semibold text-[#0a0a0a] mt-2.5 line-clamp-1 font-['Space_Grotesk']">{m.title || 'Meeting'}</div>
