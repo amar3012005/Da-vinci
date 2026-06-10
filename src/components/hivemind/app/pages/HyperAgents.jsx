@@ -24,7 +24,7 @@ import {
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, ArrowLeft, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
-  UserPlus,
+  UserPlus, LogOut,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -189,6 +189,7 @@ export default function HyperAgents() {
                 setShowCreate(false);
                 setRooms(prev => [room, ...prev]);
                 setActiveRoomId(room.id);
+                setViewMode('thread'); // drop straight into the new room
               }}
             />
           )}
@@ -248,8 +249,9 @@ export default function HyperAgents() {
           )}
         </div>
 
-        {/* Footer: one-tap toggle between active room and the agent roster.
-            Always visible at the bottom of the rooms stack. */}
+        {/* Footer: one-tap toggle. In a room → "Out of Room" (exits to the
+            agent roster). In the roster → "Back to Room". Lives at the bottom
+            of the rooms stack so the room view stays focused + uncluttered. */}
         <div className="border-t border-[#e3e0db] p-2 shrink-0">
           {viewMode === 'roster' ? (
             <button
@@ -263,10 +265,10 @@ export default function HyperAgents() {
           ) : (
             <button
               onClick={() => setViewMode('roster')}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors"
-              title={t('hyperAgents.browseEditHires', 'Browse + edit your hires')}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-mono uppercase tracking-wider text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors"
+              title={t('hyperAgents.exitRoom', 'Out of room — go to the agent roster')}
             >
-              <LayoutGrid size={13} /> {t('hyperAgents.agentRoster', 'Agent roster')}
+              <LogOut size={13} /> {t('hyperAgents.outOfRoom', 'Out of Room')}
             </button>
           )}
         </div>
@@ -289,7 +291,6 @@ export default function HyperAgents() {
           <RoomThread
             key={activeRoomId}
             roomId={activeRoomId}
-            onBack={() => setViewMode('roster')}
             onArchived={() => { fetchRooms(); setActiveRoomId(null); }}
           />
         ) : (
@@ -318,6 +319,7 @@ export default function HyperAgents() {
               setShowCreate(false);
               setRooms(prev => [room, ...prev]);
               setActiveRoomId(room.id);
+              setViewMode('thread'); // drop straight into the new room
             }}
           />
         )}
@@ -432,7 +434,7 @@ function mergeHyperEvents(base, overlay) {
   return merged;
 }
 
-function RoomThread({ roomId, onArchived, onBack }) {
+function RoomThread({ roomId, onArchived }) {
   const { t } = useTranslation('dashboard');
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
@@ -747,15 +749,8 @@ function RoomThread({ roomId, onArchived, onBack }) {
         {/* Header */}
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
           <div className="min-w-0 flex items-center gap-2">
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4] rounded border border-[#e3e0db] shrink-0"
-                title={t('hyperAgents.exitRoom', 'Exit room — go to agent roster')}
-              >
-                {t('hyperAgents.outOfRoom', 'Out of Room')}
-              </button>
-            )}
+            {/* "Out of Room" moved to the left-rail footer for a calmer, more
+                feasible room UX — exit lives with the room list, not the header. */}
             <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-[#0a0a0a]">
               <Hash size={13} className="text-[#a3a3a3]" />
