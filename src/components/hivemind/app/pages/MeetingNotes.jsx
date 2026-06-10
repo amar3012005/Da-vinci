@@ -83,6 +83,7 @@ export default function MeetingNotes() {
   const [insights, setInsights] = useState(null);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [meetingId, setMeetingId] = useState(null); // Past-meetings row id (persisted on finish, before any HIVEMIND save)
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   const [speakerSegments, setSpeakerSegments] = useState(null);
   const [language, setLanguage] = useState(null);
@@ -107,23 +108,49 @@ export default function MeetingNotes() {
   }, []);
   useEffect(() => cleanup, [cleanup]);
 
+  // Persist a structured meeting row to the Past-meetings table. Independent of
+  // HIVEMIND — called automatically the moment a meeting finishes, and again
+  // (as a PATCH) when the user later saves it to HIVEMIND. Returns { id }.
+  const persistRow = useCallback(async ({ insights, transcript, segments, language, sourceMemoryId = null, title }) => {
+    const speakers = segments?.length ? new Set(segments.map((s) => s.speaker)).size : null;
+    const { data } = await apiClient.core.post('/api/meetings', {
+      title: title || insights?.title || `Meeting ${new Date().toLocaleString()}`,
+      transcript, language,
+      multi_speaker: !!segments?.length, speaker_count: speakers,
+      segments: segments || null,
+      source_memory_id: sourceMemoryId,
+      insights: insights || {},
+    });
+    return data;
+  }, []);
+
   const process = useCallback(async (blob) => {
     setError(null);
     try {
       setStatus('transcribing');
       const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
       const text = tr.data?.transcript || ''; const segs = tr.data?.speakerSegments || null;
-      setTranscript(text); setSpeakerSegments(segs); setLanguage(tr.data?.language || null);
+      const lang = tr.data?.language || null;
+      setTranscript(text); setSpeakerSegments(segs); setLanguage(lang);
       if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
       const input = segs && segs.length ? segs.map((s) => `${speakerLabel(s.speaker)}: ${s.text}`).join('\n') : text;
       const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 120000 });
-      setInsights(ins.data?.insights || null); setStatus('done');
+      const insights = ins.data?.insights || null;
+      setInsights(insights); setStatus('done');
+      // Auto-save to Past meetings the moment the meeting finishes — regardless
+      // of whether the user later saves it to HIVEMIND. "Save to HIVEMIND" is a
+      // separate step that additionally ingests it as memories (and links here).
+      try {
+        const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs, language: lang });
+        if (row?.id) setMeetingId(row.id);
+        loadMeetings();
+      } catch { /* non-fatal — recording is still usable / re-savable */ }
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
-  }, [notes, multiSpeaker]);
+  }, [notes, multiSpeaker, persistRow, loadMeetings]);
 
   const start = useCallback(async () => {
-    setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null);
+    setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
     catch { setError('Microphone permission denied.'); return; }
@@ -146,16 +173,19 @@ export default function MeetingNotes() {
       const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n') : transcript;
       const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${tMd}`;
       const mem = await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
-      // Persist the structured row in the org-level meetings table.
-      const speakers = speakerSegments?.length ? new Set(speakerSegments.map((s) => s.speaker)).size : null;
-      await apiClient.core.post('/api/meetings', {
-        title, transcript, language, multi_speaker: !!speakerSegments?.length, speaker_count: speakers,
-        segments: speakerSegments || null, source_memory_id: mem?.data?.id || mem?.data?.memory_id || null,
-        insights: insights || {},
-      }).catch(() => { /* memory already saved; table mirror best-effort */ });
+      const memId = mem?.data?.id || mem?.data?.memory_id || null;
+      // The meeting is already in Past meetings (auto-saved on finish). Just link
+      // the new HIVEMIND memory to that row — no duplicate. Only POST a fresh row
+      // if the auto-save earlier failed (no meetingId yet).
+      if (meetingId) {
+        await apiClient.core.patch(`/api/meetings/${meetingId}`, { source_memory_id: memId }).catch(() => { /* link best-effort */ });
+      } else {
+        const row = await persistRow({ insights, transcript, segments: speakerSegments, language, sourceMemoryId: memId, title }).catch(() => null);
+        if (row?.id) setMeetingId(row.id);
+      }
       setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
-  }, [transcript, insights, speakerSegments, language, loadMeetings]);
+  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
@@ -279,9 +309,17 @@ export default function MeetingNotes() {
                     : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[280px] overflow-y-auto">{transcript}</p>)}
                 </Panel>
               )}
-              <button onClick={save} disabled={saved} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] font-medium hover:bg-[#262626] disabled:opacity-50">
-                {saved ? <CheckCircle2 size={14} /> : <Save size={14} />} {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : t('meetingnotes.save', 'Save to HIVEMIND')}
-              </button>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button onClick={save} disabled={saved} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] font-medium hover:bg-[#262626] disabled:opacity-50">
+                  {saved ? <CheckCircle2 size={14} /> : <Save size={14} />} {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : t('meetingnotes.save', 'Save to HIVEMIND')}
+                </button>
+                {meetingId && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-[#10b981]">
+                    <CheckCircle2 size={13} /> {t('meetingnotes.inPast', 'Saved to Past meetings')}
+                    {!saved && <span className="text-[#a3a3a3]">· {t('meetingnotes.hivemindOptional', 'Save to HIVEMIND to add it to memories')}</span>}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
