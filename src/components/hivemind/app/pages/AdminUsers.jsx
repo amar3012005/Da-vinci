@@ -35,6 +35,9 @@ const ROLE_COLORS = {
   member: 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]',
   viewer: 'bg-[#f3f1ec] text-[#737373] border-[#e3e0db]',
   service_account: 'bg-slate-100 text-slate-600 border-slate-200',
+  // Project-scoped invitee (often from a partner org) — distinctly amber so
+  // admins never mistake a guest for a full member.
+  guest: 'bg-amber-50 text-amber-700 border-amber-300',
 };
 
 function RoleChip({ role }) {
@@ -42,6 +45,21 @@ function RoleChip({ role }) {
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>
       {role}
+    </span>
+  );
+}
+
+/* "External · N org(s)" — the member also belongs to other organizations.
+   Boolean + count only; foreign org names are never exposed here. */
+function ExternalChip({ count }) {
+  const { t } = useTranslation('dashboard');
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-violet-50 text-violet-700 border-violet-200"
+      title={t('adminusers.externalTitle', 'This person also belongs to {{count}} other organization(s). Project-scoped invitees join as guests: they see only their projects — no org-wide memories, no other projects.', { count })}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.7 2.6 4 6 4 9.5s-1.3 6.9-4 9.5c-2.7-2.6-4-6-4-9.5s1.3-6.9 4-9.5Z"/></svg>
+      {t('adminusers.external', 'External')}{count > 1 ? ` · ${count}` : ''}
     </span>
   );
 }
@@ -310,6 +328,7 @@ export default function AdminUsers() {
                       ? (member.roles || []).map(role => <RoleChip key={role} role={role} />)
                       : <RoleChip role={member.role || 'member'} />
                     }
+                    {member.is_external && <ExternalChip count={member.other_org_count || 1} />}
                   </div>
                 </td>
                 <td className="px-4 py-3">

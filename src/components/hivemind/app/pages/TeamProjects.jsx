@@ -560,7 +560,25 @@ function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
             {members.map((m) => (
               <div key={m.user_id || m.userId} className="flex items-center justify-between p-2 border border-[#e3e0db] rounded-[4px] hover:bg-[#faf9f4]">
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] text-[#0a0a0a] truncate">{m.display_name || m.email || (m.user_id || m.userId).slice(0, 8)}</div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[13px] text-[#0a0a0a] truncate">{m.display_name || m.email || (m.user_id || m.userId).slice(0, 8)}</span>
+                    {m.org_role === 'guest' && (
+                      <span
+                        className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-amber-50 text-amber-700 border-amber-300"
+                        title={t('teamprojects.guestTitle', 'Guest — sees only this project, no org-wide memories.')}
+                      >
+                        {t('teamprojects.guest', 'guest')}
+                      </span>
+                    )}
+                    {m.is_external && (
+                      <span
+                        className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-violet-50 text-violet-700 border-violet-200"
+                        title={t('teamprojects.externalTitle', 'Also belongs to another organization.')}
+                      >
+                        {t('teamprojects.external', 'external')}
+                      </span>
+                    )}
+                  </div>
                   {m.email && <div className="text-[10px] text-[#737373] truncate">{m.email}</div>}
                 </div>
                 <select
