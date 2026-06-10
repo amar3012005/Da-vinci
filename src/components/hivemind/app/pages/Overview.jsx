@@ -1,209 +1,36 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
-  Brain,
-  GitFork,
-  Plug,
-  Search,
-  Tag,
-  Clock,
-  KeyRound,
-  Cable,
+  ArrowUp,
   BookOpen,
-  ArrowRight,
-  RefreshCw,
-  AlertCircle,
-  FileText,
-  MessageSquare,
-  Globe,
-  Bookmark,
-  Hexagon,
-  Sparkles,
-  Building2,
-  Users,
-  Network,
   Boxes,
+  Building2,
+  Cable,
+  Globe,
+  Hexagon,
+  Network,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { useApiQuery, useDebounce, useHealthStatus } from '../shared/hooks';
+import { useApiQuery, useHealthStatus } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 
 // ─── Animation variants ──────────────────────────────────────────
 
 const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
+  show: { transition: { staggerChildren: 0.05 } },
 };
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
-
-// ─── Type badge color map ────────────────────────────────────────
-
-const TYPE_STYLES = {
-  note:         { bg: 'bg-blue-500/10',   text: 'text-blue-500/70',   icon: FileText },
-  conversation: { bg: 'bg-purple-500/10', text: 'text-purple-500/70', icon: MessageSquare },
-  web:          { bg: 'bg-cyan-500/10',   text: 'text-cyan-500/70',   icon: Globe },
-  bookmark:     { bg: 'bg-amber-500/10',  text: 'text-amber-500/70',  icon: Bookmark },
-  document:     { bg: 'bg-emerald-500/10', text: 'text-emerald-500/70', icon: FileText },
-};
-
-function getTypeStyle(type) {
-  return TYPE_STYLES[type?.toLowerCase()] || { bg: 'bg-[#f3f1ec]', text: 'text-[#525252]', icon: FileText };
-}
-
-// ─── Sub-components ──────────────────────────────────────────────
-
-function HealthCard({ healthy, onRefresh }) {
-  const { t } = useTranslation('dashboard');
-  const isUnknown = healthy === null;
-  const label = isUnknown ? 'Checking...' : healthy ? 'All Systems Operational' : 'Service Degraded';
-  const dotColor = isUnknown
-    ? 'bg-[#d4d0ca]'
-    : healthy
-      ? 'bg-[#16a34a]'
-      : 'bg-[#dc2626]';
-  const glowColor = isUnknown
-    ? ''
-    : healthy
-      ? 'shadow-[0_0_8px_rgba(22,163,74,0.4)]'
-      : 'shadow-[0_0_8px_rgba(220,38,38,0.4)]';
-
-  return (
-    <motion.div variants={fadeUp} className="col-span-full">
-      <div className="bg-white border border-[#e3e0db] rounded-xl p-5 flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-            <Activity size={20} className="text-[#117dff]" />
-          </div>
-          <div>
-            <p className="text-[#525252] text-xs font-mono uppercase tracking-wider mb-0.5">{t('overview.coreApiHealth', 'Core API Health')}</p>
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${dotColor} ${glowColor}`} />
-              <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">{label}</span>
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={onRefresh}
-          className="p-2 rounded-lg hover:bg-[#f3f1ec] transition-colors text-[#a3a3a3] hover:text-[#525252]"
-          title="Refresh health"
-        >
-          <RefreshCw size={16} />
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, accent = false }) {
-  return (
-    <motion.div variants={fadeUp}>
-      <div className="bg-white border border-[#e3e0db] rounded-xl p-4 h-full hover:border-[#d4d0ca] transition-colors shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-2 mb-2.5">
-          <Icon size={14} className={accent ? 'text-[#117dff]' : 'text-[#a3a3a3]'} strokeWidth={1.75} />
-          <span className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] uppercase tracking-wider">{label}</span>
-        </div>
-        <p className="text-[#0a0a0a] text-xl font-mono font-semibold tabular-nums">
-          {value !== null && value !== undefined ? value.toLocaleString() : (
-            <span className="inline-block w-10 h-5 bg-[#f3f1ec] rounded animate-pulse" />
-          )}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
-
-function RecentMemoryRow({ memory, index }) {
-  const style = getTypeStyle(memory.type || memory.source_platform);
-  const TypeIcon = style.icon;
-  const title = memory.title || memory.content?.slice(0, 50) || 'Untitled';
-  const preview = memory.content
-    ? memory.content.length > 120 ? memory.content.slice(0, 120) + '...' : memory.content
-    : null;
-  const date = memory.created_at
-    ? new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : null;
-
-  return (
-    <motion.div
-      variants={fadeUp}
-      className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#f3f1ec] transition-colors group"
-    >
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${style.bg}`}>
-        <TypeIcon size={14} className={style.text} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium truncate">{title}</span>
-          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${style.bg} ${style.text} uppercase flex-shrink-0`}>
-            {memory.type || memory.source_platform || 'memory'}
-          </span>
-        </div>
-        {preview && (
-          <p className="text-[#a3a3a3] text-xs leading-relaxed line-clamp-2">{preview}</p>
-        )}
-        {date && (
-          <p className="text-[#d4d0ca] text-[10px] font-mono mt-1">{date}</p>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// ─── Source provenance badge ─────────────────────────────────
-
-const SOURCE_STYLES = {
-  vector:  { label: 'Vector',  color: 'text-purple-500/70', bg: 'bg-purple-500/10' },
-  keyword: { label: 'Keyword', color: 'text-blue-500/70',   bg: 'bg-blue-500/10' },
-  graph:   { label: 'Graph',   color: 'text-amber-500/70',  bg: 'bg-amber-500/10' },
-  hybrid:  { label: 'Hybrid',  color: 'text-emerald-500/70', bg: 'bg-emerald-500/10' },
-};
-
-function SourceBadge({ source }) {
-  const s = SOURCE_STYLES[source] || SOURCE_STYLES.hybrid;
-  return (
-    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${s.bg} ${s.color} uppercase tracking-wider flex-shrink-0`}>
-      {s.label}
-    </span>
-  );
-}
-
-function SearchResult({ result }) {
-  const title = result.title || result.payload?.title || result.content?.slice(0, 60) || 'Untitled';
-  const snippet = result.content || result.payload?.content;
-  const trimmedSnippet = snippet
-    ? snippet.length > 100 ? snippet.slice(0, 100) + '...' : snippet
-    : null;
-  const score = result.score != null ? (result.score * 100).toFixed(0) : null;
-  const source = result.source || (result.breakdown
-    ? Object.entries(result.breakdown).sort((a, b) => b[1] - a[1])[0]?.[0]
-    : null);
-
-  return (
-    <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-[#f3f1ec] transition-colors">
-      <Search size={14} className="text-[#d4d0ca] mt-1 flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] truncate">{title}</span>
-          {source && <SourceBadge source={source} />}
-          {score && (
-            <span className="text-[10px] font-mono text-[#117dff]/70 bg-[#117dff]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-              {score}%
-            </span>
-          )}
-        </div>
-        {trimmedSnippet && <p className="text-[#a3a3a3] text-xs mt-0.5 line-clamp-2">{trimmedSnippet}</p>}
-      </div>
-    </div>
-  );
-}
 
 // ─── Control-console live clock ──────────────────────────────────
 // Self-contained so its per-tick re-render is isolated from the page.
@@ -227,6 +54,219 @@ function ConsoleClock() {
   );
 }
 
+// ─── Inline HIVE chat ────────────────────────────────────────────
+// The Overview centerpiece. Same pipeline as the Talk-to-HIVE panel
+// (/v1/proxy/chat → react agent: recall + tools + draft-approval), rendered
+// as a fixed-height conversation so the page itself never grows — past
+// turns scroll INSIDE the thread box, the page stays put.
+
+const CHAT_STORE_KEY = 'hm.overviewChat';
+const CHAT_MODEL = 'gpt-oss-120b';
+const HISTORY_CAP = 40;
+
+function loadStoredChat() {
+  try {
+    const raw = window.sessionStorage.getItem(CHAT_STORE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex justify-start">
+      <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-[#a3a3a3]"
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18 }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatBubble({ msg }) {
+  if (msg.role === 'user') {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[80%] bg-[#0a0a0a] text-white rounded-2xl rounded-br-md px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words">
+          {msg.content}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex justify-start">
+      <div className={`max-w-[85%] bg-white border rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+        msg.error ? 'border-[#f59e0b]/50 text-[#92400e]' : 'border-[#e3e0db] text-[#262626]'
+      }`}>
+        {msg.content}
+      </div>
+    </div>
+  );
+}
+
+function OverviewChat({ inputRef }) {
+  const { t, i18n } = useTranslation('dashboard');
+  const { activeProjectId } = useTeamContext() || {};
+  const [messages, setMessages] = useState(() => (typeof window === 'undefined' ? [] : loadStoredChat()));
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const threadRef = useRef(null);
+
+  // Persist the conversation for the session so navigating away and back
+  // keeps the thread (capped so storage stays small).
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(CHAT_STORE_KEY, JSON.stringify(messages.slice(-HISTORY_CAP)));
+    } catch { /* storage blocked — chat still works in-memory */ }
+  }, [messages]);
+
+  // Keep the thread pinned to the latest turn (internal scroll only).
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, loading]);
+
+  const sendMessage = useCallback(async () => {
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg = { id: Date.now(), role: 'user', content: trimmed };
+    const fullHistory = [...messages, userMsg].slice(-10).map((m) => ({ role: m.role, content: m.content }));
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setLoading(true);
+
+    // Same strict-language directive the Talk-to-HIVE panel sends — UI keeps
+    // the clean text, only the wire payload carries it.
+    const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
+    const wireMessage = lang2 === 'en'
+      ? trimmed
+      : `[STRICT LANGUAGE: Respond ONLY in the UI language (${lang2}).]\n\n${trimmed}`;
+
+    try {
+      const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
+        message: wireMessage,
+        model: CHAT_MODEL,
+        history: fullHistory,
+        language: lang2,
+        ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
+      });
+      const chatData = chatRes.data || {};
+      let content = chatData.response
+        || t('overview.chat.empty', "I couldn't find relevant information in your memories.");
+      // Deferred save → list the projects so the user can reply with one.
+      const pcProjects = chatData.project_choice?.projects;
+      if (Array.isArray(pcProjects) && pcProjects.length) {
+        const names = pcProjects.map((p) => p.name || p.slug || p.id).filter(Boolean);
+        if (names.length) content += `\n\n${t('overview.chat.projects', 'Projects')}: ${names.join(' · ')}`;
+      }
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', content }]);
+    } catch (err) {
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1,
+        role: 'assistant',
+        error: true,
+        content: err?.response?.data?.error || err?.message
+          || t('overview.chat.error', "I couldn't process that right now. Please try again."),
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, messages, activeProjectId, i18n.language, t]);
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const hasThread = messages.length > 0 || loading;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.1 }}
+      className="max-w-3xl mx-auto w-full"
+    >
+      {/* Hero — only while the thread is empty */}
+      {!hasThread && (
+        <div className="flex flex-col items-center text-center mt-10 mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
+            <Hexagon size={26} className="text-white" />
+          </div>
+          <h1 className="text-[26px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-4">
+            {t('overview.chat.title', 'How can I help you today?')}
+          </h1>
+          <p className="text-[12px] text-[#737373] mt-1">
+            {t('overview.chat.subtitle', 'Ask your second brain — it recalls, saves and acts across your connected apps.')}
+          </p>
+        </div>
+      )}
+
+      {/* Thread — FIXED height, internal scroll. The page never grows. */}
+      {hasThread && (
+        <div
+          ref={threadRef}
+          className="h-[380px] overflow-y-auto bg-[#fdfcf9] border border-[#e3e0db] rounded-2xl p-4 space-y-3 mt-2 mb-3"
+        >
+          {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
+          {loading && <TypingBubble />}
+        </div>
+      )}
+
+      {/* Composer */}
+      <div className={`bg-white border border-[#e3e0db] rounded-2xl shadow-sm focus-within:border-[#117dff] transition-colors ${hasThread ? '' : 'mt-2'}`}>
+        <textarea
+          ref={inputRef}
+          rows={hasThread ? 1 : 2}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={t('overview.chat.placeholder', 'Do anything with HIVE…')}
+          className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none"
+        />
+        <div className="flex items-center justify-between px-3 pb-2.5">
+          <span className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider pl-1">
+            {t('overview.chat.engine', 'HIVE · full recall + tools')}
+          </span>
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(CHAT_STORE_KEY); } catch { /* noop */ } }}
+                className="text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"
+              >
+                {t('overview.chat.clear', 'Clear')}
+              </button>
+            )}
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim() || loading}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                input.trim() && !loading
+                  ? 'bg-[#117dff] text-white hover:bg-[#0066e0] shadow-[0_2px_8px_rgba(17,125,255,0.3)]'
+                  : 'bg-[#f3f1ec] text-[#a3a3a3]'
+              }`}
+              aria-label={t('overview.chat.send', 'Send')}
+            >
+              <ArrowUp size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────
 
 export default function Overview() {
@@ -235,48 +275,31 @@ export default function Overview() {
   const healthy = useHealthStatus(30000);
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
   const tour = useOverviewTour();
+  const chatInputRef = useRef(null);
 
   // Auto-redirect to the dedicated mobile chat page on phones. The full
-  // Overview surface (graph stats, quick-actions grid, sidebar chrome) is
-  // bandwidth-heavy and hard to navigate one-handed; mobile users land on
+  // Overview surface is hard to navigate one-handed; mobile users land on
   // /hivemind/m/chat which is a full-screen Talk-to-HIVE.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     // Detect phones either by narrow viewport OR by UA — catches the
     // "Request Desktop Site" case where the viewport widens beyond 768px
-    // but the device is still a phone (Safari/Chrome desktop-mode toggle,
-    // iPad in spoof-desktop, etc).
+    // but the device is still a phone.
     const narrowViewport = window.matchMedia('(max-width: 768px)').matches;
     const uaDataMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
     const uaSniff = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk/i.test(navigator.userAgent || '');
     const isMobile = narrowViewport || uaDataMobile || uaSniff;
-    // Forced entry from a QR/share link.
     const fromQR = new URLSearchParams(window.location.search).get('from');
-    // Explicit opt-out so power users can still get the full dashboard
-    // on phone if they really want it: ?desktop=1.
     const optOut = new URLSearchParams(window.location.search).get('desktop') === '1';
     if ((isMobile || fromQR) && !optOut) navigate('/hivemind/m/chat', { replace: true });
   }, [navigate]);
 
-  // Auto-greet: slide the Talk-to-HIVE panel out ~1.5s after the dashboard
-  // settles, so the assistant proactively welcomes the user. Once per browser
-  // session (so revisiting Overview doesn't re-pop), desktop only (mobile
-  // redirects to /m/chat above).
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    try { if (window.sessionStorage.getItem('hm.autoChatShown')) return undefined; } catch { /* storage blocked */ }
-    if (window.matchMedia('(max-width: 768px)').matches) return undefined;
-    const timer = window.setTimeout(() => {
-      try { window.sessionStorage.setItem('hm.autoChatShown', '1'); } catch { /* noop */ }
-      window.dispatchEvent(new CustomEvent('hivemind:open-chat'));
-    }, 1500);
-    return () => window.clearTimeout(timer);
-  }, []);
+  // NOTE: the old auto-greet (sliding the Talk-to-HIVE panel out after 1.5s)
+  // is intentionally gone — the chat IS the page now, and the floating
+  // Talk-to-HIVE button is hidden on Overview only (AppShell).
 
-  // Post-login welcome email. Fires once the user reaches Overview after a
-  // successful login. Guarded to once per browser session so revisiting the
-  // page (or re-renders) won't re-send; the server also dedupes per session.
-  // Fire-and-forget — must never block or surface errors in the UI.
+  // Post-login welcome email. Fires once per browser session; the server
+  // also dedupes. Fire-and-forget — never blocks the UI.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const FLAG = 'hm.welcomeEmailSent';
@@ -284,77 +307,19 @@ export default function Overview() {
       if (window.sessionStorage.getItem(FLAG)) return;
       window.sessionStorage.setItem(FLAG, '1');
     } catch {
-      // sessionStorage blocked — fall through; server dedup still protects us.
+      // sessionStorage blocked — server dedup still protects us.
     }
     apiClient.sendWelcomeEmail().catch(() => { /* silent: non-critical */ });
   }, []);
 
-  // Project scope from TeamSwitcher.
-  const { activeProjectId } = useTeamContext() || {};
+  // Profile — feeds the operator pill in the status bar.
+  const { data: profileData } = useApiQuery(() => apiClient.getProfile(), []);
+  const profile = useMemo(() => profileData?.profile || profileData || null, [profileData]);
 
-  // Profile / stats
-  const { data: profileData, refetch: refetchProfile } = useApiQuery(
-    () => apiClient.getProfile(),
-    []
-  );
-
-  // Recent memories — project-scoped when TeamSwitcher set.
-  const { data: recentMemories, loading: memoriesLoading } = useApiQuery(
-    () => apiClient.listMemories({ limit: 5, ...(activeProjectId ? { project_id: activeProjectId } : {}) }),
-    [activeProjectId]
-  );
-
-  // Connector status
-  const { data: connectors } = useApiQuery(
-    () => apiClient.getConnectorStatus().catch(() => null),
-    []
-  );
-
-  // Quick search
-  const [searchInput, setSearchInput] = useState('');
-  const debouncedQuery = useDebounce(searchInput, 350);
-
-  const { data: searchResults, loading: searchLoading } = useApiQuery(
-    () => debouncedQuery.trim().length >= 2
-      ? apiClient.quickSearch(debouncedQuery.trim())
-      : Promise.resolve(null),
-    [debouncedQuery]
-  );
-
-  // Derived stats - profile data is nested: { ok: true, profile: {...}, graph_summary: {...} }
-  const profile = profileData?.profile || profileData || null;
-  const memoryCount = profile?.memory_count ?? null;
-  const relationshipCount = profile?.relationship_count ?? null;
-  const activeConnectors = useMemo(() => {
-    if (!connectors) return null;
-    if (Array.isArray(connectors)) return connectors.filter(c => c && (c.status === 'connected' || c.healthy)).length;
-    if (typeof connectors === 'object' && connectors.count != null) return connectors.count;
-    if (typeof connectors === 'object' && connectors.active_count != null) return connectors.active_count;
-    return 0;
-  }, [connectors]);
-  const topTags = profile?.top_tags ?? [];
-
-  const memories = useMemo(() => {
-    if (!recentMemories) return [];
-    return Array.isArray(recentMemories) ? recentMemories : (recentMemories.memories || recentMemories.data || []);
-  }, [recentMemories]);
-
-  const results = useMemo(() => {
-    if (!searchResults) return [];
-    return Array.isArray(searchResults) ? searchResults : (searchResults.results || searchResults.data || []);
-  }, [searchResults]);
-
-  // Extract search metadata for fallback mode indicator
-  const searchMeta = useMemo(() => {
-    if (!searchResults || Array.isArray(searchResults)) return null;
-    return searchResults.metadata || null;
-  }, [searchResults]);
-
-  // Feature launcher — Overview is the entrance to every surface. Primary
-  // action (Talk to HIVE) slides the assistant panel out; the rest navigate.
-  const openChat = () => window.dispatchEvent(new CustomEvent('hivemind:open-chat'));
+  // Feature launcher — Overview is the entrance to every surface. The chat
+  // entry focuses the inline composer (the chat lives on this page now).
   const FEATURES = [
-    { key: 'chat',      icon: Sparkles,  label: t('overview.feat.chat', 'Talk to HIVE'),        hint: t('overview.feat.chatHint', 'Ask your second brain anything'), onClick: openChat, primary: true },
+    { key: 'chat',      icon: Sparkles,  label: t('overview.feat.chat', 'Talk to HIVE'),        hint: t('overview.feat.chatHint', 'Ask your second brain anything'), onClick: () => chatInputRef.current?.focus(), primary: true },
     { key: 'rooms',     icon: Users,     label: t('overview.feat.rooms', 'HyperAgents Rooms'),  hint: t('overview.feat.roomsHint', 'Multi-agent collaboration rooms'), onClick: () => navigate('../employees') },
     { key: 'workspace', icon: Building2, label: t('overview.feat.workspace', 'Workspace'),       hint: t('overview.feat.workspaceHint', 'Team, members & projects'),     onClick: () => navigate('../workspace') },
     { key: 'knowledge', icon: BookOpen,  label: t('overview.feat.knowledge', 'Knowledge Base'),  hint: t('overview.feat.knowledgeHint', 'Upload & manage documents'),    onClick: () => navigate('../knowledge') },
@@ -445,186 +410,8 @@ export default function Overview() {
         </motion.div>
       </div>
 
-      {/* Grid */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        {/* Health */}
-        <HealthCard
-          healthy={healthy}
-          onRefresh={refetchProfile}
-        />
-
-        {/* Stats row */}
-        <StatCard icon={Brain}   label="Total Memories"   value={memoryCount}      accent />
-        <StatCard icon={GitFork} label="Relationships"     value={relationshipCount} />
-        <StatCard icon={Plug}    label="Active Connectors" value={activeConnectors}  />
-        <StatCard
-          icon={Tag}
-          label="Top Tags"
-          value={topTags?.length > 0 ? topTags.length : 0}
-        />
-      </motion.div>
-
-      {/* Bottom section: Recent + Search + Actions */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4"
-      >
-        {/* Recent Memories */}
-        <motion.div variants={fadeUp} className="lg:col-span-2">
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-5 h-full shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-[#a3a3a3]" />
-                <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">{t('overview.recentMemories', 'Recent Memories')}</h2>
-              </div>
-              <button
-                onClick={() => navigate('../memories')}
-                className="text-xs text-[#a3a3a3] hover:text-[#117dff] transition-colors flex items-center gap-1 font-mono"
-              >
-                View all <ArrowRight size={12} />
-              </button>
-            </div>
-
-            {memoriesLoading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#f3f1ec] animate-pulse" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 bg-[#f3f1ec] rounded w-3/4 animate-pulse" />
-                      <div className="h-2 bg-[#f3f1ec] rounded w-1/2 animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : memories.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Brain size={28} className="text-[#e3e0db] mb-3" />
-                <p className="text-[#a3a3a3] text-sm">{t('overview.noMemories', 'No memories yet.')}</p>
-                <p className="text-[#d4d0ca] text-xs mt-1">{t('overview.noMemoriesHint', 'Connect an MCP client to start ingesting memories.')}</p>
-              </div>
-            ) : (
-              <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-1">
-                {memories.slice(0, 5).map((mem, i) => (
-                  <RecentMemoryRow key={mem.id || i} memory={mem} index={i} />
-                ))}
-              </motion.div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Right column: Search + Quick Actions */}
-        <motion.div variants={fadeUp} className="flex flex-col gap-4">
-          {/* Quick Search */}
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="flex items-center gap-2 mb-3">
-              <Search size={16} className="text-[#a3a3a3]" />
-              <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider">{t('overview.quickSearch', 'Quick Search')}</h2>
-            </div>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search memories..."
-                className="w-full bg-transparent border border-[#e3e0db] rounded-[6px] py-2.5 pl-9 pr-4 text-[#0a0a0a] text-sm font-['Space_Grotesk'] placeholder:text-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40 transition-colors"
-              />
-              {searchLoading && debouncedQuery.trim().length >= 2 && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="w-3.5 h-3.5 border-2 border-[#117dff]/40 border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-            </div>
-
-            {/* Search mode indicator */}
-            {searchMeta && debouncedQuery.trim().length >= 2 && !searchLoading && (
-              <div className="flex items-center gap-1.5 mt-2 text-[10px] font-mono text-[#a3a3a3]">
-                <span className={`w-1 h-1 rounded-full ${searchMeta.fallbackApplied ? 'bg-[#d97706]' : 'bg-[#16a34a]'}`} />
-                {searchMeta.fallbackApplied
-                  ? 'Keyword only (vector unavailable)'
-                  : `Vector + keyword`}
-                {searchMeta.durationMs != null && (
-                  <span className="ml-auto">{searchMeta.durationMs}ms</span>
-                )}
-              </div>
-            )}
-
-            {/* Search results */}
-            {debouncedQuery.trim().length >= 2 && (
-              <div className="mt-3 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-                {results.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {results.slice(0, 6).map((r, i) => (
-                      <SearchResult key={r.id || i} result={r} />
-                    ))}
-                  </div>
-                ) : !searchLoading ? (
-                  <div className="flex items-center gap-2 p-3 text-[#a3a3a3] text-xs">
-                    <AlertCircle size={12} />
-                    <span>No results for &quot;{debouncedQuery}&quot;</span>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white border border-[#e3e0db] rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <h2 className="text-[#0a0a0a] text-sm font-semibold uppercase tracking-wider mb-3">{t('overview.quickActions', 'Quick Actions')}</h2>
-            <div className="space-y-2">
-              <button
-                onClick={() => navigate('../keys')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white hover:bg-[#eae7e1] border border-[#eae7e1] hover:border-[#117dff]/30 transition-all group text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center flex-shrink-0">
-                  <KeyRound size={14} className="text-[#117dff]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.createApiKey', 'Create API Key')}</p>
-                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.createApiKeyHint', 'Generate keys for MCP clients')}</p>
-                </div>
-                <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('../connectors')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white hover:bg-[#eae7e1] border border-[#eae7e1] hover:border-[#117dff]/30 transition-all group text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center flex-shrink-0">
-                  <Cable size={14} className="text-[#525252]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.connectMcp', 'Connect MCP Client')}</p>
-                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.connectMcpHint', 'Link Claude, Cursor, or custom clients')}</p>
-                </div>
-                <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('../memories')}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-white hover:bg-[#eae7e1] border border-[#eae7e1] hover:border-[#117dff]/30 transition-all group text-left"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center flex-shrink-0">
-                  <BookOpen size={14} className="text-[#525252]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[#0a0a0a] text-sm font-medium">{t('overview.browseMemories', 'Browse Memories')}</p>
-                  <p className="text-[#a3a3a3] text-[11px]">{t('overview.browseMemoriesHint', 'Explore and manage stored memories')}</p>
-                </div>
-                <ArrowRight size={14} className="text-[#e3e0db] group-hover:text-[#117dff]/50 ml-auto transition-colors" />
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
+      {/* The HIVE chat — the Overview centerpiece */}
+      <OverviewChat inputRef={chatInputRef} />
     </div>
   );
 }

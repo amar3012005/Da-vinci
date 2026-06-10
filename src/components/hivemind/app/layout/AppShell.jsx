@@ -105,6 +105,10 @@ export default function AppShell() {
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
+  // Overview embeds the HIVE chat as the page centerpiece — the floating
+  // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
+  // every other page keeps the FAB.
+  const onOverview = /\/hivemind\/app(\/overview)?\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
   useEffect(() => {
@@ -145,7 +149,7 @@ export default function AppShell() {
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen} />
+        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview} />
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}
