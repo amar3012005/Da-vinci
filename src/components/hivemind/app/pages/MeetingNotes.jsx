@@ -7,11 +7,11 @@
  * `ai-meeting-notes`.
  */
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
-  CalendarDays, History, AudioLines, AlignLeft, ScrollText, ArrowLeft, Quote,
+  CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, MoreHorizontal,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -20,7 +20,32 @@ import { useTranslation } from 'react-i18next';
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-function fmtDate(iso) { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+
+/* Notion-style "@Today 11:01 PM" — relative day + time */
+function fmtAt(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (sameDay(d, now)) return `@Today ${time}`;
+  if (sameDay(d, yest)) return `@Yesterday ${time}`;
+  return `@${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).replace(/ /g, ' ')} ${time}`;
+}
+
+/* "@Today 11:01 PM" chip — Notion-grey; dark variant for device surfaces */
+function AtChip({ iso, dark = false, className = '' }) {
+  const label = fmtAt(iso);
+  if (!label) return null;
+  const [at, ...rest] = label.split(' ');
+  return (
+    <span className={`inline-flex items-baseline gap-1 font-['Space_Grotesk'] ${className}`}>
+      <span className={`text-[12px] font-semibold ${dark ? 'text-[#8e8e93]' : 'text-[#737373]'}`}>{at}</span>
+      <span className={`text-[12px] tabular-nums ${dark ? 'text-[#6e6e73]' : 'text-[#a3a3a3]'}`}>{rest.join(' ')}</span>
+    </span>
+  );
+}
 
 /* live clock chip — Space Grotesk numerals, ivory pill */
 function ClockChip() {
@@ -35,18 +60,177 @@ function ClockChip() {
   );
 }
 
-/* subtle equalizer — light, blue */
-function Waveform({ active }) {
+/* radio-tuner tick ring — rotates slowly while recording (SVG, no glow) */
+function TickRing({ active, size = 520 }) {
+  const ticks = useMemo(() => {
+    const out = [];
+    const r = size / 2;
+    for (let i = 0; i < 96; i++) {
+      const major = i % 8 === 0;
+      const a = (i / 96) * Math.PI * 2;
+      const r1 = r - (major ? 30 : 20);
+      out.push(<line key={i}
+        x1={r + r1 * Math.cos(a)} y1={r + r1 * Math.sin(a)}
+        x2={r + (r - 8) * Math.cos(a)} y2={r + (r - 8) * Math.sin(a)}
+        stroke={major ? '#73737a' : '#46464c'} strokeWidth={major ? 2.5 : 1.5} strokeLinecap="round" />);
+    }
+    return out;
+  }, [size]);
   return (
-    <div className="flex items-end justify-center gap-[3px] h-8">
-      {Array.from({ length: 32 }).map((_, i) => (
-        <span key={i} className="w-[3px] rounded-full bg-[#117dff]" style={{
-          height: '100%', transformOrigin: 'bottom',
-          animation: active ? `mn-eq ${0.6 + (i % 6) * 0.1}s ease-in-out ${i * 0.03}s infinite` : 'none',
-          transform: active ? undefined : 'scaleY(0.1)', opacity: active ? 0.85 : 0.18,
-        }} />
-      ))}
-    </div>
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true"
+      style={{ animation: active ? 'mn-dial 90s linear infinite' : 'none' }}>
+      {ticks}
+      <circle cx={size / 2} cy={size / 2} r={size / 2 - 56} fill="none" stroke="#222226" strokeWidth="1" />
+    </svg>
+  );
+}
+
+/* minute-scale arc on the modal's left edge — progress follows elapsed time.
+   Sweep is ±55° (always a minor arc → large-arc flag stays 0). */
+function MinuteArc({ elapsed }) {
+  const frac = Math.min(1, (elapsed % 3600) / 3600);
+  const R = 250; const CX = -130; const CY = 200; // circle centre off-canvas left
+  const A = (Math.PI * 55) / 180; // half-sweep
+  const ang = (f) => -A + f * 2 * A;
+  const arc = (from, to, color, w) => {
+    const a0 = ang(from); const a1 = ang(to);
+    const p0 = [CX + R * Math.cos(a0), CY + R * Math.sin(a0)];
+    const p1 = [CX + R * Math.cos(a1), CY + R * Math.sin(a1)];
+    return <path d={`M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 1 ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}`} fill="none" stroke={color} strokeWidth={w} strokeLinecap="butt" />;
+  };
+  return (
+    <svg viewBox="0 0 180 400" className="h-full w-auto" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
+      {arc(0, 1, '#cfe3ff', 44)}
+      {frac > 0.002 && arc(0, frac, '#117dff', 44)}
+      {[15, 30, 45].map((m) => {
+        const a = ang(m / 60);
+        return <text key={m} x={CX + (R + 42) * Math.cos(a)} y={CY + (R + 42) * Math.sin(a)} fill="#6e6e73" fontSize="13" fontFamily="Space Grotesk" textAnchor="middle" dominantBaseline="middle">{m}</text>;
+      })}
+    </svg>
+  );
+}
+
+/* Recording popup — dark "tuner device" panel; opens on Start transcribing.
+   Stays up through transcribe/analyze, closes itself on done/error. */
+function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMultiSpeaker, onStop, title, t }) {
+  const recording = status === 'recording';
+  const busy = status === 'transcribing' || status === 'analyzing';
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]">
+      <motion.div initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        className="bg-[#faf9f4] border border-[#e3e0db] rounded-[26px] p-1.5 shadow-xl w-full max-w-[660px]">
+        <div className="relative bg-[#0a0a0a] rounded-[22px] overflow-hidden" style={{ minHeight: 380 }}>
+          {/* dial face — rotates while recording */}
+          <div className="absolute -left-24 top-1/2 -translate-y-1/2 opacity-90 pointer-events-none">
+            <TickRing active={recording} />
+          </div>
+          {/* minute arc on the left edge */}
+          <div className="absolute left-0 top-0 bottom-0 pointer-events-none"><MinuteArc elapsed={elapsed} /></div>
+
+          {/* top bar */}
+          <div className="relative flex items-center justify-between px-5 pt-4">
+            <AtChip iso={now.toISOString()} dark />
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#1c1c1e] text-white text-[11px] font-semibold font-['Space_Grotesk'] tracking-wide">
+                REC <span className={`w-2 h-2 rounded-full bg-[#ef4444] ${recording ? 'animate-pulse' : ''}`} />
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-white text-[14px] font-semibold font-['Space_Grotesk'] tabular-nums">
+                <Clock size={13} className="text-[#8e8e93]" />
+                {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+              </span>
+            </div>
+          </div>
+
+          {/* main display */}
+          <div className="relative pl-[180px] pr-6 pt-6 pb-6">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[18px] text-[#8e8e93] font-['Space_Grotesk'] font-medium truncate max-w-[260px]">{title || t('meetingnotes.newMeeting', 'New meeting')}</span>
+              <span className="text-[9px] text-[#5a5a5e] uppercase tracking-[0.18em] font-['Space_Grotesk']">{t('meetingnotes.live', 'Live')}</span>
+            </div>
+            <div className="mt-3 inline-flex items-center bg-[#1c1c1e] rounded-[18px] px-7 py-2.5">
+              <span className="font-['Space_Grotesk'] font-semibold tabular-nums leading-none text-[64px]">
+                <span className={mm === '00' ? 'text-[#48484c]' : 'text-white'}>{mm}</span>
+                <span className="text-[#48484c]">:</span>
+                <span className="text-white">{ss}</span>
+              </span>
+            </div>
+            {/* MIC / MULTI — FM/AM-style selector */}
+            <div className="mt-3 flex items-center gap-4 font-['Space_Grotesk'] select-none">
+              <span className="text-[20px] font-semibold text-[#117dff]">{t('meetingnotes.mic', 'MIC')}</span>
+              <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
+                title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}
+                className={`text-[20px] font-semibold transition-colors ${multiSpeaker ? 'text-[#117dff]' : 'text-[#48484c] hover:text-[#8e8e93]'}`}>
+                {t('meetingnotes.multi', 'MULTI')}
+              </button>
+              {busy && (
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-[#8e8e93] ml-2">
+                  <Loader2 size={13} className="animate-spin text-[#117dff]" />
+                  {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
+                </span>
+              )}
+            </div>
+            {/* notes — functional, same state as the page */}
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder={t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}
+              className="mt-4 w-full h-[64px] resize-none p-3 text-[12px] rounded-[12px] bg-[#141416] border border-[#232326] text-[#d4d4d8] placeholder-[#5a5a5e] focus:outline-none focus:border-[#117dff]/50" />
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-[10px] text-[#5a5a5e] uppercase tracking-wider font-['Space_Grotesk']">{t('meetingnotes.channel', 'Meeting Notes')}</span>
+              <button onClick={onStop} disabled={!recording}
+                className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-[#ef4444] text-white text-[13px] font-semibold hover:bg-[#dc2626] disabled:opacity-40 transition-colors">
+                <Square size={13} fill="currentColor" /> {t('meetingnotes.stop', 'Stop')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* Past-meeting card — dark "bento widget": header, @time, accent ruler strip,
+   big stat, footer micro-stats. Theme-matched (app blue, Space Grotesk, no glow). */
+function MeetingCard({ m, onOpen }) {
+  const actions = Array.isArray(m.action_items) ? m.action_items.length : 0;
+  const keyPts = Array.isArray(m.key_points) ? m.key_points.length : 0;
+  const quests = Array.isArray(m.questions) ? m.questions.length : 0;
+  const time = new Date(m.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return (
+    <motion.button whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 420, damping: 30 }} onClick={() => onOpen(m)}
+      className="relative text-left bg-[#101012] border border-[#222226] rounded-[18px] p-4 hover:border-[#117dff]/60 transition-colors group overflow-hidden">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-[#1c1c1e] flex items-center justify-center flex-shrink-0"><MeetingNotesIcon size={13} className="text-[#117dff]" /></div>
+          <span className="text-[13px] font-semibold text-white font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
+        </div>
+        <MoreHorizontal size={14} className="text-[#48484c] flex-shrink-0" />
+      </div>
+      <div className="mt-1.5"><AtChip iso={m.created_at} dark /></div>
+      {/* accent ruler strip — start time · ticks · language */}
+      <div className="mt-3 rounded-[10px] bg-[#117dff] px-3 py-2 flex items-center font-['Space_Grotesk']">
+        <span className="text-[12px] font-semibold text-white tabular-nums">{time}</span>
+        <span className="flex-1 mx-3 h-[10px] opacity-60" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 1.5px, transparent 1.5px 7px)' }} />
+        <span className="text-[11px] font-semibold text-white uppercase">{m.language || '—'}</span>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <div className="flex-shrink-0">
+          <div className="text-[34px] leading-none font-semibold text-white font-['Space_Grotesk'] tabular-nums">{actions}</div>
+          <div className="text-[10px] text-[#6e6e73] uppercase tracking-wider mt-1">Action items</div>
+        </div>
+        <p className="text-[11px] text-[#8e8e93] leading-snug line-clamp-2 text-right">{m.summary || '—'}</p>
+      </div>
+      <div className="mt-3 pt-2.5 border-t border-[#1d1d20] flex items-center gap-4 text-[10px] text-[#8e8e93] font-['Space_Grotesk']">
+        <span className="inline-flex items-center gap-1"><Sparkles size={10} className="text-[#117dff]" /> {keyPts} key</span>
+        <span className="inline-flex items-center gap-1"><HelpCircle size={10} className="text-[#0891b2]" /> {quests} open</span>
+        {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={10} className="text-[#10b981]" /> {m.speaker_count || 'multi'}</span> : null}
+        <ArrowUpRight size={12} className="ml-auto text-[#48484c] group-hover:text-white transition-colors" />
+      </div>
+    </motion.button>
   );
 }
 
@@ -224,7 +408,7 @@ export default function MeetingNotes() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-5">
-      <style>{`@keyframes mn-eq{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}`}</style>
+      <style>{`@keyframes mn-dial{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
 
       {/* header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -255,6 +439,15 @@ export default function MeetingNotes() {
         ))}
       </nav>
 
+      {/* recording popup — tuner-device panel (opens on Start transcribing) */}
+      <AnimatePresence>
+        {(recording || busy) && (
+          <RecordingModal key="rec-modal" status={status} elapsed={elapsed} notes={notes} setNotes={setNotes}
+            multiSpeaker={multiSpeaker} setMultiSpeaker={setMultiSpeaker} onStop={stop}
+            title={insights?.title} t={t} />
+        )}
+      </AnimatePresence>
+
       {/* ───────── RECORD TAB ───────── */}
       {tab === 'record' && (
         <div className="space-y-4">
@@ -282,16 +475,6 @@ export default function MeetingNotes() {
                 <span className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
               </span>
             </button>
-
-            {/* live state row */}
-            {(recording || busy) && (
-              <div className="flex items-center gap-3 mb-4 px-3 py-2 rounded-[6px] bg-[#faf9f4] border border-[#e3e0db]">
-                {recording
-                  ? <span className="flex items-center gap-1.5 text-[12px] text-[#ef4444] font-medium"><span className="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse" /> REC {fmtTimer(elapsed)}</span>
-                  : <span className="flex items-center gap-1.5 text-[12px] text-[#117dff]"><AudioLines size={14} /> {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}</span>}
-                <div className="flex-1"><Waveform active={recording} /></div>
-              </div>
-            )}
 
             {status === 'idle' && !insights && (
               <div className="text-[12px] text-[#737373] leading-relaxed mb-4">
@@ -355,23 +538,8 @@ export default function MeetingNotes() {
       {/* ───────── PAST MEETINGS TAB ───────── */}
       {tab === 'past' && !selected && (
         meetings.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {meetings.map((m) => (
-              <button key={m.id} onClick={() => openMeeting(m)}
-                className="text-left bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 flex items-center justify-center"><MeetingNotesIcon size={15} className="text-[#117dff]" /></div>
-                  <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
-                </div>
-                <div className="text-[13px] font-semibold text-[#0a0a0a] mt-2.5 line-clamp-1 font-['Space_Grotesk']">{m.title || 'Meeting'}</div>
-                <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">{fmtDate(m.created_at)}</div>
-                <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
-                <div className="flex flex-wrap items-center gap-1 mt-2">
-                  {Array.isArray(m.action_items) && m.action_items.length > 0 && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[9px] text-blue-700"><ListChecks size={9} /> {m.action_items.length}</span>}
-                  {m.multi_speaker && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] text-emerald-700"><Users size={9} /> {m.speaker_count || 'multi'}</span>}
-                </div>
-              </button>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {meetings.map((m) => <MeetingCard key={m.id} m={m} onOpen={openMeeting} />)}
           </div>
         ) : (
           <div className="bg-white border border-[#e3e0db] rounded-[10px] p-10 text-center">
@@ -387,8 +555,9 @@ export default function MeetingNotes() {
         <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
           <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] mb-3"><ArrowLeft size={12} /> {t('meetingnotes.back', 'All meetings')}</button>
           {detailErr && (<div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2.5 py-1.5 mb-3"><AlertTriangle size={11} className="inline mr-1" /> {t('meetingnotes.detailErr', 'Could not load the full record — showing the overview only.')}</div>)}
-          <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">{selected.title || 'Meeting'}
-            <span className="text-[13px] font-normal text-[#a3a3a3] ml-2">@ {fmtDate(selected.created_at)}{selected.language ? ` · ${selected.language}` : ''}</span></h2>
+          <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight flex items-baseline gap-2 flex-wrap">{selected.title || 'Meeting'}
+            <AtChip iso={selected.created_at} />
+            {selected.language && <span className="text-[12px] font-normal text-[#a3a3a3]">· {selected.language}</span>}</h2>
           <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4">
             {[['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
               <button key={key} onClick={() => setDetailTab(key)} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium border-b-2 -mb-px transition-colors ${detailTab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}><Icon size={14} /> {label}</button>
