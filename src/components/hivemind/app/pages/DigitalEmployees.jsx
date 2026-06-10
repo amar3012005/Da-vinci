@@ -353,10 +353,10 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
   return (
     <div
       onClick={handleClick}
-      className={`bg-white border rounded-[10px] p-4 transition-all cursor-pointer flex flex-col ${
+      className={`group bg-white border rounded-2xl p-4 transition-all cursor-pointer flex flex-col shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:shadow-[0_18px_44px_-18px_rgba(15,23,42,0.22)] hover:-translate-y-0.5 ${
         selected
-          ? 'border-[#117dff] ring-2 ring-[#117dff]/20 shadow-[0_0_0_4px_rgba(17,125,255,0.08)]'
-          : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+          ? 'border-[#117dff] ring-2 ring-[#117dff]/20'
+          : 'border-[#dfe7f3] hover:border-[#cfe0fb]'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
@@ -1795,7 +1795,6 @@ export default function DigitalEmployees() {
     window.dispatchEvent(new Event('hivemind:close-sidebar'));
     return () => window.dispatchEvent(new Event('hivemind:open-sidebar'));
   }, []);
-  const [seeding, setSeeding] = useState(false);
   const [recentTasks, setRecentTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [activeWorkspaceTaskId, setActiveWorkspaceTaskId] = useState(null);
@@ -1838,50 +1837,20 @@ export default function DigitalEmployees() {
   async function handlePause(emp)   { await apiClient.pauseEmployee(emp.id); await fetch(); }
   async function handleResume(emp)  { await apiClient.resumeEmployee(emp.id); await fetch(); }
   async function handleArchive(emp) {
-    if (!window.confirm(t('digitalemployees.archiveConfirm', 'Archive "{{name}}"? Container will be stopped.', { name: emp.name }))) return;
-    await apiClient.archiveEmployee(emp.id);
-    await fetch();
-  }
-  async function handleSeedPersonas() {
-    if (!isOrgAdmin) {
-      setError(t('digitalemployees.adminOnlySeed', 'Only org admins can seed employees into the organization.'));
-      return;
-    }
-    const existingSlugs = new Set(employees.map((emp) => emp.slug));
-    const pending = PERSONA_PRESETS.filter((preset) => !existingSlugs.has(slugifyName(preset.name)));
-    if (!pending.length) {
-      setError(t('digitalemployees.allPersonasExist', 'All sample personas already exist.'));
-      return;
-    }
-    setSeeding(true);
-    setError(null);
+    if (!window.confirm(t('digitalemployees.archiveConfirm', 'Delete "{{name}}"? The agent is archived and its container stopped. This cannot be undone.', { name: emp.name }))) return;
     try {
-      for (const preset of pending) {
-        await apiClient.createEmployee({
-          name: preset.name,
-          persona: preset.persona,
-          model: preset.model,
-          llm_provider: preset.llm_provider,
-          scope: 'organization',
-          team_id: null,
-          slack_team_id: null,
-          slack_channels_allowed: [],
-          tools: preset.tools,
-          role_archetype: preset.role_archetype,
-          peer_review_targets: preset.peer_review_targets,
-          policy_rules: { rate_limit_per_min: 30 },
-        });
-      }
-      await fetch();
-      setSurface('workspace');
-      setSlidePanelOpen(true);
-      setActiveWorkspaceTaskId(null);
+      await apiClient.archiveEmployee(emp.id);
+      flash(t('digitalemployees.archived', '{{name}} deleted.', { name: emp.name }));
     } catch (e) {
-      setError(e.response?.data?.error || e.message);
+      // Was silently swallowed before — surface it so a failed delete is visible.
+      setError(e.response?.data?.error || e.message || 'Delete failed.');
     } finally {
-      setSeeding(false);
+      await fetch();
     }
   }
+  // Bulk "Seed Human Team" removed — agents are installed individually from the
+  // Marketplace now (handleInstallMarketplaceAgent). The persona presets live on
+  // as the Marketplace catalog (MARKETPLACE_AGENT_PRESETS).
   async function handleInstallMarketplaceAgent(preset) {
     if (!isOrgAdmin) {
       setError(t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.'));
@@ -1981,62 +1950,68 @@ export default function DigitalEmployees() {
   }
 
   const running = employees.filter(e => e.status === 'running').length;
-  const paused = employees.filter(e => e.status === 'paused').length;
-  const draft = employees.filter(e => e.status === 'draft').length;
   const optimized = employees.filter((e) => e.hyper?.state === 'optimized').length;
-  const readyForTuning = employees.filter((e) => e.hyper?.state === 'ready_for_tuning').length;
 
   const isWorkspaceMode = surface === 'workspace';
   const dockedWorkspaceWidth = slidePanelOpen ? 'min(50vw, 720px)' : '0px';
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 transition-[padding-right] duration-300" style={isWorkspaceMode && slidePanelOpen ? { paddingRight: dockedWorkspaceWidth } : undefined}>
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div>
-          <h1 className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
-            {t('digitalemployees.pageTitle', 'Digital Employees')}
-          </h1>
-          <p className="text-[12px] text-[#a3a3a3] mt-1">
-            {t('digitalemployees.pageSubtitle', 'Autonomous AI agents with HIVEMIND memory + Slack access. {{total}} total · {{running}} running · {{paused}} paused · {{draft}} draft.', { total: employees.length, running, paused, draft })}
-          </p>
-          <p className="text-[11px] text-[#737373] mt-1">
-            {t('digitalemployees.hyperStatus', 'Hyper status: {{optimized}} optimized · {{readyForTuning}} ready for tuning.', { optimized, readyForTuning })}
-          </p>
-        </div>
-        {/* Employee/Workspace toggle removed per UX cleanup —
-            workspace panel still reachable via the topbar button below. */}
-        <div />
+      {/* Gradient hero band — mirrors the New Room popup header
+          (diagonal #111827→#1d4ed8→#059669 + radial glow + glass chips). */}
+      <header className="relative overflow-hidden rounded-[24px] border border-[#dfe7f3] bg-[linear-gradient(118deg,#111827_0%,#1d4ed8_58%,#059669_100%)] shadow-[0_24px_70px_-30px_rgba(15,23,42,0.55)]">
+        <div className="absolute inset-0 opacity-[0.22] pointer-events-none bg-[radial-gradient(460px_160px_at_10%_-20%,#bfdbfe_0%,transparent_70%),radial-gradient(420px_180px_at_92%_120%,#bbf7d0_0%,transparent_70%)]" />
+        <div className="relative px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/95 text-[#117dff] shadow-[0_10px_26px_rgba(15,23,42,0.24)] shrink-0">
+              <Bot size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-[20px] font-bold text-white leading-tight font-['Space_Grotesk'] tracking-tight">
+                {t('digitalemployees.pageTitle', 'Digital Employees')}
+              </h1>
+              <p className="text-[11.5px] text-blue-100/90 leading-tight font-['Space_Grotesk'] mt-0.5">
+                {t('digitalemployees.pageSubtitleShort', 'Autonomous AI agents with HIVEMIND memory + Slack access')}
+              </p>
+            </div>
+          </div>
 
-        <div className="flex justify-end gap-2">
+          {/* glass stat chips */}
+          <div className="flex items-center gap-2">
+            {[
+              [t('digitalemployees.statTotal', 'Total'), employees.length, '#ffffff'],
+              [t('digitalemployees.statRunning', 'Running'), running, '#bbf7d0'],
+              [t('digitalemployees.statOptimized', 'Optimized'), optimized, '#bfdbfe'],
+            ].map(([label, value, color]) => (
+              <div key={label} className="rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2 text-center min-w-[68px] backdrop-blur-sm">
+                <div className="text-[18px] font-bold font-['Space_Grotesk'] tabular-nums leading-none" style={{ color }}>{value}</div>
+                <div className="text-[9px] uppercase tracking-[0.14em] text-blue-100/70 mt-1">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* action bar on the band */}
+        <div className="relative px-6 pb-5 flex flex-wrap items-center justify-end gap-2">
           {isWorkspaceMode && (
-            <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[6px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] hover:bg-[#faf9f4]">
+            <button onClick={() => setSlidePanelOpen(true)} className="flex items-center gap-1.5 rounded-[10px] border border-white/20 bg-white/10 px-3 py-2 text-[12px] text-white hover:bg-white/20 transition-colors">
               <Users size={13} />
               {slidePanelOpen ? t('digitalemployees.workspaceOpen', 'Workspace open') : t('digitalemployees.workspacePanel', 'Workspace panel')}
             </button>
           )}
           <button onClick={fetch} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] hover:bg-[#eae7e1]">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors disabled:opacity-50">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             {t('digitalemployees.refresh', 'Refresh')}
           </button>
-          <button
-            onClick={() => setMarketplaceOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#dbeafe] bg-[#eff6ff] text-[12px] text-[#117dff] hover:bg-[#dbeafe]"
-          >
+          <button onClick={() => setMarketplaceOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors">
             <Store size={13} />
             {t('digitalemployees.marketplace', 'Marketplace')}
           </button>
-          <button
-            onClick={handleSeedPersonas}
-            disabled={seeding || !isOrgAdmin}
-            title={!isOrgAdmin ? t('digitalemployees.adminOnlySeed', 'Only org admins can seed employees into the organization.') : undefined}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white text-[12px] hover:bg-[#faf9f4] disabled:opacity-50">
-            <Users size={13} />
-            {seeding ? t('digitalemployees.seeding', 'Seeding...') : t('digitalemployees.seedHumanTeam', 'Seed Human Team')}
-          </button>
           {isOrgAdmin && (
             <button onClick={handleRemintAll} disabled={reminting}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] border border-[#e3e0db] bg-white text-[12px] hover:bg-[#faf9f4] disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-white/20 bg-white/10 text-[12px] text-white hover:bg-white/20 transition-colors disabled:opacity-50"
               title={t('digitalemployees.remintAllKeys', 'Re-mint missing HIVEMIND keys')}>
               <KeyRound size={13} className={reminting ? 'animate-pulse' : ''} />
               {reminting ? t('digitalemployees.reminting', 'Re-minting...') : t('digitalemployees.remintAllKeys', 'Re-mint keys')}
@@ -2044,19 +2019,16 @@ export default function DigitalEmployees() {
           )}
           {isWorkspaceMode ? (
             <button
-              onClick={() => {
-                setActiveWorkspaceTaskId(null);
-                setSlidePanelOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+              onClick={() => { setActiveWorkspaceTaskId(null); setSlidePanelOpen(true); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-white text-[#0f172a] text-[12px] font-semibold hover:bg-blue-50 transition-colors shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
             >
-              <Zap size={13} />
+              <Zap size={13} className="text-[#117dff]" />
               {t('digitalemployees.runTask', 'Run Task')}
             </button>
           ) : (
             <button onClick={() => setCreateOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]">
-              <Plus size={13} />
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] bg-white text-[#0f172a] text-[12px] font-semibold hover:bg-blue-50 transition-colors shadow-[0_8px_20px_rgba(15,23,42,0.18)]">
+              <Plus size={13} className="text-[#117dff]" />
               {t('digitalemployees.newEmployee', 'New Employee')}
             </button>
           )}
