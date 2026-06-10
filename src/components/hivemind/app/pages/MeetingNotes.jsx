@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
-  CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, MoreHorizontal,
+  CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -60,175 +60,179 @@ function ClockChip() {
   );
 }
 
-/* radio-tuner tick ring — rotates slowly while recording (SVG, no glow) */
-function TickRing({ active, size = 520 }) {
-  const ticks = useMemo(() => {
-    const out = [];
-    const r = size / 2;
-    for (let i = 0; i < 96; i++) {
-      const major = i % 8 === 0;
-      const a = (i / 96) * Math.PI * 2;
-      const r1 = r - (major ? 30 : 20);
-      out.push(<line key={i}
-        x1={r + r1 * Math.cos(a)} y1={r + r1 * Math.sin(a)}
-        x2={r + (r - 8) * Math.cos(a)} y2={r + (r - 8) * Math.sin(a)}
-        stroke={major ? '#73737a' : '#46464c'} strokeWidth={major ? 2.5 : 1.5} strokeLinecap="round" />);
+/* Live wave — canvas bars. While recording: audio-reactive (Web Audio analyser
+   on the live mic stream). While analyzing: a calm synthetic sine wave keeps
+   moving. Light theme, app-blue bars, no glow. */
+function LiveWave({ stream, mode }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    const W = (canvas.width = Math.max(300, canvas.offsetWidth) * 2);
+    const H = (canvas.height = 88 * 2);
+    const N = 64; const bw = W / N;
+    let raf; let audio = null; let analyser = null; let data = null;
+    const t0 = performance.now();
+    if (stream && mode === 'record') {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audio = new AC();
+        const src = audio.createMediaStreamSource(stream);
+        analyser = audio.createAnalyser();
+        analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.78;
+        src.connect(analyser);
+        data = new Uint8Array(analyser.frequencyBinCount);
+      } catch { analyser = null; }
     }
-    return out;
-  }, [size]);
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true"
-      style={{ animation: active ? 'mn-dial 90s linear infinite' : 'none' }}>
-      {ticks}
-      <circle cx={size / 2} cy={size / 2} r={size / 2 - 56} fill="none" stroke="#222226" strokeWidth="1" />
-    </svg>
-  );
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      const t = (performance.now() - t0) / 1000;
+      ctx.clearRect(0, 0, W, H);
+      for (let i = 0; i < N; i++) {
+        let v;
+        if (analyser) {
+          analyser.getByteFrequencyData(data);
+          v = (data[Math.floor((i * data.length) / N / 1.7)] || 0) / 255;
+          v = 0.06 + v * 0.94;
+        } else {
+          v = 0.3 + 0.22 * Math.sin(t * 2.6 + i * 0.42) + 0.14 * Math.sin(t * 5.3 + i * 0.9);
+        }
+        const h = Math.max(6, v * H * 0.86);
+        const x = i * bw + bw * 0.28; const w = bw * 0.44;
+        const y = (H - h) / 2;
+        ctx.fillStyle = mode === 'record' ? 'rgba(17,125,255,0.92)' : 'rgba(17,125,255,0.45)';
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, w / 2);
+        ctx.fill();
+      }
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); if (audio) audio.close().catch(() => {}); };
+  }, [stream, mode]);
+  return <canvas ref={canvasRef} className="w-full h-[88px] block" aria-hidden="true" />;
 }
 
-/* minute-scale arc on the modal's left edge — progress follows elapsed time.
-   Sweep is ±55° (always a minor arc → large-arc flag stays 0). */
-function MinuteArc({ elapsed }) {
-  const frac = Math.min(1, (elapsed % 3600) / 3600);
-  const R = 250; const CX = -130; const CY = 200; // circle centre off-canvas left
-  const A = (Math.PI * 55) / 180; // half-sweep
-  const ang = (f) => -A + f * 2 * A;
-  const arc = (from, to, color, w) => {
-    const a0 = ang(from); const a1 = ang(to);
-    const p0 = [CX + R * Math.cos(a0), CY + R * Math.sin(a0)];
-    const p1 = [CX + R * Math.cos(a1), CY + R * Math.sin(a1)];
-    return <path d={`M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 1 ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}`} fill="none" stroke={color} strokeWidth={w} strokeLinecap="butt" />;
-  };
-  return (
-    <svg viewBox="0 0 180 400" className="h-full w-auto" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
-      {arc(0, 1, '#cfe3ff', 44)}
-      {frac > 0.002 && arc(0, frac, '#117dff', 44)}
-      {[15, 30, 45].map((m) => {
-        const a = ang(m / 60);
-        return <text key={m} x={CX + (R + 42) * Math.cos(a)} y={CY + (R + 42) * Math.sin(a)} fill="#6e6e73" fontSize="13" fontFamily="Space Grotesk" textAnchor="middle" dominantBaseline="middle">{m}</text>;
-      })}
-    </svg>
-  );
-}
-
-/* Recording popup — dark "tuner device" panel; opens on Start transcribing.
-   Stays up through transcribe/analyze, closes itself on done/error. */
-function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMultiSpeaker, onStop, title, t }) {
+/* Recording popup — LIGHT panel matching the operator-console theme.
+   Big Notion-style "@Today 11:01 PM" heading, audio-reactive wave while
+   recording, calm waving shimmer while transcribing/analyzing. */
+function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMultiSpeaker, onStop, title, stream, t }) {
   const recording = status === 'recording';
   const busy = status === 'transcribing' || status === 'analyzing';
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
+  const atLabel = fmtAt(now.toISOString());
+  const [atDay, ...atRest] = atLabel.split(' ');
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]">
-      <motion.div initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className="bg-[#faf9f4] border border-[#e3e0db] rounded-[26px] p-1.5 shadow-xl w-full max-w-[660px]">
-        <div className="relative bg-[#0a0a0a] rounded-[22px] overflow-hidden" style={{ minHeight: 380 }}>
-          {/* dial face — rotates while recording */}
-          <div className="absolute -left-24 top-1/2 -translate-y-1/2 opacity-90 pointer-events-none">
-            <TickRing active={recording} />
-          </div>
-          {/* minute arc on the left edge */}
-          <div className="absolute left-0 top-0 bottom-0 pointer-events-none"><MinuteArc elapsed={elapsed} /></div>
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0a0a0a]/25 backdrop-blur-[3px]">
+      <motion.div initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+        className="bg-white border border-[#e3e0db] rounded-[18px] shadow-xl w-full max-w-[560px] p-6">
+        {/* top row — REC / status pill + live clock */}
+        <div className="flex items-center justify-between">
+          {recording ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[11px] font-semibold text-red-600 font-['Space_Grotesk'] tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> REC
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-700 font-['Space_Grotesk']">
+              ✨ {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] font-['Space_Grotesk'] tabular-nums">
+            <Clock size={12} className="text-[#a3a3a3]" />
+            {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+          </span>
+        </div>
 
-          {/* top bar */}
-          <div className="relative flex items-center justify-between px-5 pt-4">
-            <AtChip iso={now.toISOString()} dark />
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#1c1c1e] text-white text-[11px] font-semibold font-['Space_Grotesk'] tracking-wide">
-                REC <span className={`w-2 h-2 rounded-full bg-[#ef4444] ${recording ? 'animate-pulse' : ''}`} />
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-white text-[14px] font-semibold font-['Space_Grotesk'] tabular-nums">
-                <Clock size={13} className="text-[#8e8e93]" />
-                {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
-              </span>
-            </div>
-          </div>
+        {/* BIG Notion-style @Today heading */}
+        <div className="mt-3 font-['Space_Grotesk'] leading-none">
+          <span className="text-[32px] font-semibold text-[#525252]">{atDay}</span>
+          <span className="text-[32px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{atRest.join(' ')}</span>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-[14px]">🎙️</span>
+          <span className="text-[13px] font-medium text-[#737373] truncate">{title || t('meetingnotes.newMeeting', 'New meeting')}</span>
+          {recording && <span className="text-[9px] text-[#a3a3a3] uppercase tracking-[0.18em] font-['Space_Grotesk']">{t('meetingnotes.live', 'Live')}</span>}
+        </div>
 
-          {/* main display */}
-          <div className="relative pl-[180px] pr-6 pt-6 pb-6">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[18px] text-[#8e8e93] font-['Space_Grotesk'] font-medium truncate max-w-[260px]">{title || t('meetingnotes.newMeeting', 'New meeting')}</span>
-              <span className="text-[9px] text-[#5a5a5e] uppercase tracking-[0.18em] font-['Space_Grotesk']">{t('meetingnotes.live', 'Live')}</span>
-            </div>
-            <div className="mt-3 inline-flex items-center bg-[#1c1c1e] rounded-[18px] px-7 py-2.5">
-              <span className="font-['Space_Grotesk'] font-semibold tabular-nums leading-none text-[64px]">
-                <span className={mm === '00' ? 'text-[#48484c]' : 'text-white'}>{mm}</span>
-                <span className="text-[#48484c]">:</span>
-                <span className="text-white">{ss}</span>
-              </span>
-            </div>
-            {/* MIC / MULTI — FM/AM-style selector */}
-            <div className="mt-3 flex items-center gap-4 font-['Space_Grotesk'] select-none">
-              <span className="text-[20px] font-semibold text-[#117dff]">{t('meetingnotes.mic', 'MIC')}</span>
-              <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
-                title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}
-                className={`text-[20px] font-semibold transition-colors ${multiSpeaker ? 'text-[#117dff]' : 'text-[#48484c] hover:text-[#8e8e93]'}`}>
-                {t('meetingnotes.multi', 'MULTI')}
-              </button>
-              {busy && (
-                <span className="inline-flex items-center gap-1.5 text-[12px] text-[#8e8e93] ml-2">
-                  <Loader2 size={13} className="animate-spin text-[#117dff]" />
-                  {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
-                </span>
-              )}
-            </div>
-            {/* notes — functional, same state as the page */}
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-              placeholder={t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}
-              className="mt-4 w-full h-[64px] resize-none p-3 text-[12px] rounded-[12px] bg-[#141416] border border-[#232326] text-[#d4d4d8] placeholder-[#5a5a5e] focus:outline-none focus:border-[#117dff]/50" />
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-[10px] text-[#5a5a5e] uppercase tracking-wider font-['Space_Grotesk']">{t('meetingnotes.channel', 'Meeting Notes')}</span>
-              <button onClick={onStop} disabled={!recording}
-                className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-[#ef4444] text-white text-[13px] font-semibold hover:bg-[#dc2626] disabled:opacity-40 transition-colors">
-                <Square size={13} fill="currentColor" /> {t('meetingnotes.stop', 'Stop')}
-              </button>
-            </div>
-          </div>
+        {/* timer + live wave */}
+        <div className="mt-4 flex items-end justify-between gap-4">
+          <span className="font-['Space_Grotesk'] font-semibold tabular-nums leading-none text-[54px]">
+            <span className={mm === '00' ? 'text-[#d4d0ca]' : 'text-[#0a0a0a]'}>{mm}</span>
+            <span className="text-[#d4d0ca]">:</span>
+            <span className="text-[#0a0a0a]">{ss}</span>
+          </span>
+          <button onClick={() => setMultiSpeaker((v) => !v)} disabled={busy}
+            className="flex items-center gap-2 mb-1 text-[12px] text-[#525252] disabled:opacity-50"
+            title={t('meetingnotes.multiSpeakerHint', 'Label who said what (runs speaker diarization)')}>
+            <span>👥 {t('meetingnotes.multiShort', 'Multi-speaker')}</span>
+            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${multiSpeaker ? 'bg-[#117dff]' : 'bg-[#e3e0db]'}`}>
+              <span className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform" style={{ transform: multiSpeaker ? 'translateX(18px)' : 'translateX(2px)' }} />
+            </span>
+          </button>
+        </div>
+        <div className="relative mt-3 rounded-[12px] bg-[#faf9f4] border border-[#e3e0db] overflow-hidden px-2">
+          <LiveWave stream={recording ? stream : null} mode={recording ? 'record' : 'analyze'} />
+          {busy && <div className="absolute inset-y-0 w-1/3 pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, rgba(17,125,255,0.14), transparent)', animation: 'mn-sweep 1.6s ease-in-out infinite' }} />}
+        </div>
+
+        {/* notes — functional, same state as the page */}
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+          placeholder={`📝 ${t('meetingnotes.notesPlaceholder', 'Add notes here anytime…')}`}
+          className="mt-3 w-full h-[64px] resize-none p-3 text-[12px] rounded-[10px] bg-[#faf9f4] border border-[#e3e0db] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff]/40" />
+
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[10px] text-[#a3a3a3] uppercase tracking-wider font-['Space_Grotesk']">🎧 {t('meetingnotes.channel', 'Meeting Notes')}</span>
+          <button onClick={onStop} disabled={!recording}
+            className="flex items-center gap-2 px-4 py-2 rounded-[8px] bg-[#ef4444] text-white text-[13px] font-semibold hover:bg-[#dc2626] disabled:opacity-40 transition-colors">
+            <Square size={12} fill="currentColor" /> {t('meetingnotes.stop', 'Stop')}
+          </button>
         </div>
       </motion.div>
     </motion.div>
   );
 }
 
-/* Past-meeting card — dark "bento widget": header, @time, accent ruler strip,
-   big stat, footer micro-stats. Theme-matched (app blue, Space Grotesk, no glow). */
+/* Past-meeting card — small light card matching the operator-console theme.
+   Emoji tile, prominent @date·time, soft blue ruler strip, emoji micro-stats. */
 function MeetingCard({ m, onOpen }) {
   const actions = Array.isArray(m.action_items) ? m.action_items.length : 0;
   const keyPts = Array.isArray(m.key_points) ? m.key_points.length : 0;
   const quests = Array.isArray(m.questions) ? m.questions.length : 0;
   const time = new Date(m.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const atLabel = fmtAt(m.created_at);
+  const [atDay, ...atRest] = atLabel.split(' ');
   return (
-    <motion.button whileHover={{ y: -3 }} transition={{ type: 'spring', stiffness: 420, damping: 30 }} onClick={() => onOpen(m)}
-      className="relative text-left bg-[#101012] border border-[#222226] rounded-[18px] p-4 hover:border-[#117dff]/60 transition-colors group overflow-hidden">
+    <motion.button whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 420, damping: 30 }} onClick={() => onOpen(m)}
+      className="text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-[#1c1c1e] flex items-center justify-center flex-shrink-0"><MeetingNotesIcon size={13} className="text-[#117dff]" /></div>
-          <span className="text-[13px] font-semibold text-white font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
+          <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center text-[13px] flex-shrink-0">🎙️</span>
+          <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
         </div>
-        <MoreHorizontal size={14} className="text-[#48484c] flex-shrink-0" />
+        <ArrowUpRight size={12} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] flex-shrink-0 transition-colors" />
       </div>
-      <div className="mt-1.5"><AtChip iso={m.created_at} dark /></div>
-      {/* accent ruler strip — start time · ticks · language */}
-      <div className="mt-3 rounded-[10px] bg-[#117dff] px-3 py-2 flex items-center font-['Space_Grotesk']">
-        <span className="text-[12px] font-semibold text-white tabular-nums">{time}</span>
-        <span className="flex-1 mx-3 h-[10px] opacity-60" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 1.5px, transparent 1.5px 7px)' }} />
-        <span className="text-[11px] font-semibold text-white uppercase">{m.language || '—'}</span>
+      {/* prominent @date · time */}
+      <div className="mt-2 font-['Space_Grotesk'] leading-none">
+        <span className="text-[16px] font-semibold text-[#525252]">{atDay}</span>
+        <span className="text-[16px] font-semibold text-[#b9b5ae] ml-1.5 tabular-nums">{atRest.join(' ')}</span>
       </div>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        <div className="flex-shrink-0">
-          <div className="text-[34px] leading-none font-semibold text-white font-['Space_Grotesk'] tabular-nums">{actions}</div>
-          <div className="text-[10px] text-[#6e6e73] uppercase tracking-wider mt-1">Action items</div>
-        </div>
-        <p className="text-[11px] text-[#8e8e93] leading-snug line-clamp-2 text-right">{m.summary || '—'}</p>
+      {/* soft ruler strip — start time · ticks · language */}
+      <div className="mt-2.5 rounded-[8px] bg-blue-50 border border-blue-100 px-2.5 py-1.5 flex items-center font-['Space_Grotesk']">
+        <span className="text-[11px] font-semibold text-blue-700 tabular-nums">{time}</span>
+        <span className="flex-1 mx-2.5 h-[8px]" style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(17,125,255,.35) 0 1.5px, transparent 1.5px 7px)' }} />
+        <span className="text-[10px] font-semibold text-blue-700 uppercase">{m.language || '—'}</span>
       </div>
-      <div className="mt-3 pt-2.5 border-t border-[#1d1d20] flex items-center gap-4 text-[10px] text-[#8e8e93] font-['Space_Grotesk']">
-        <span className="inline-flex items-center gap-1"><Sparkles size={10} className="text-[#117dff]" /> {keyPts} key</span>
-        <span className="inline-flex items-center gap-1"><HelpCircle size={10} className="text-[#0891b2]" /> {quests} open</span>
-        {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={10} className="text-[#10b981]" /> {m.speaker_count || 'multi'}</span> : null}
-        <ArrowUpRight size={12} className="ml-auto text-[#48484c] group-hover:text-white transition-colors" />
+      <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
+      <div className="mt-2.5 pt-2 border-t border-[#eae7e1] flex items-center gap-3 text-[10.5px] text-[#737373]">
+        <span>✅ {actions}</span>
+        <span>✨ {keyPts}</span>
+        <span>❓ {quests}</span>
+        {m.multi_speaker ? <span>👥 {m.speaker_count || 2}</span> : null}
       </div>
     </motion.button>
   );
@@ -408,7 +412,7 @@ export default function MeetingNotes() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-5">
-      <style>{`@keyframes mn-dial{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes mn-sweep{0%{left:-35%}100%{left:105%}}`}</style>
 
       {/* header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -444,7 +448,7 @@ export default function MeetingNotes() {
         {(recording || busy) && (
           <RecordingModal key="rec-modal" status={status} elapsed={elapsed} notes={notes} setNotes={setNotes}
             multiSpeaker={multiSpeaker} setMultiSpeaker={setMultiSpeaker} onStop={stop}
-            title={insights?.title} t={t} />
+            title={insights?.title} stream={streamRef.current} t={t} />
         )}
       </AnimatePresence>
 
@@ -538,7 +542,7 @@ export default function MeetingNotes() {
       {/* ───────── PAST MEETINGS TAB ───────── */}
       {tab === 'past' && !selected && (
         meetings.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
             {meetings.map((m) => <MeetingCard key={m.id} m={m} onOpen={openMeeting} />)}
           </div>
         ) : (
