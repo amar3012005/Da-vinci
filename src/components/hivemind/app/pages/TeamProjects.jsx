@@ -205,19 +205,16 @@ export default function TeamProjects() {
                 <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{p.name}</h3>
               </div>
               <div className="flex items-center gap-1">
+                {/* Single people entry — the modal hosts one-tap add, roles,
+                    pending invites, AND the share-link path. The old second
+                    icon (UserPlus) duplicated this and confused everyone. */}
                 <button
                   onClick={(e) => { e.stopPropagation(); setMembersTarget({ projectId: p.id, projectName: p.name }); }}
-                  className="text-[#a3a3a3] hover:text-[#16a34a] transition-colors p-1"
-                  title={t('teamprojects.manageMembers', 'Manage members + roles')}
+                  className="flex items-center gap-1 text-[#a3a3a3] hover:text-[#117dff] transition-colors px-1.5 py-1 rounded hover:bg-[#f0f6ff]"
+                  title={t('teamprojects.people', 'People — members, roles, invites')}
                 >
                   <Users size={13} />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setInviteTarget({ projectId: p.id, projectName: p.name }); }}
-                  className="text-[#a3a3a3] hover:text-[#117dff] transition-colors p-1"
-                  title={t('teamprojects.invite', 'Invite to this project')}
-                >
-                  <UserPlus size={13} />
+                  <span className="text-[10px] font-medium">{t('teamprojects.peopleBtn', 'People')}</span>
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleArchive(p.id); }}
@@ -297,6 +294,7 @@ export default function TeamProjects() {
           projectId={membersTarget.projectId}
           projectName={membersTarget.projectName}
           orgId={activeOrgId}
+          onInviteLink={() => { setInviteTarget(membersTarget); setMembersTarget(null); }}
           onClose={() => { setMembersTarget(null); fetchProjects(); }}
         />
       )}
@@ -407,7 +405,7 @@ export default function TeamProjects() {
 
 
 // ─── ProjectMembersModal — one-tap add from org directory + role + remove ──
-function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
+function ProjectMembersModal({ projectId, projectName, orgId, onClose, onInviteLink }) {
   const { t } = useTranslation('dashboard');
   const [members, setMembers] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -416,6 +414,18 @@ function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
   // Org directory for the one-tap "Add member" picker.
   const [orgMembers, setOrgMembers] = React.useState([]);
   const [search, setSearch] = React.useState('');
+  // Pending invites scoped to THIS project — invited people are part of the
+  // project's people, not just contributors/creators.
+  const [pendingInvites, setPendingInvites] = React.useState([]);
+
+  React.useEffect(() => {
+    if (!orgId) return;
+    let alive = true;
+    apiClient.listInvites(orgId, { status: 'pending', projectId })
+      .then(d => { if (alive) setPendingInvites(d?.invites || []); })
+      .catch(() => { if (alive) setPendingInvites([]); });
+    return () => { alive = false; };
+  }, [orgId, projectId]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -511,8 +521,19 @@ function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
         {/* One-tap add from the org directory — invite links are only needed
             for people who aren't in the org yet. */}
         <div className="mb-4 p-3 bg-[#faf9f4] border border-[#e3e0db] rounded-[6px]">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">
-            {t('teamprojects.addFromOrg', 'Add from org members')}
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+              {t('teamprojects.addFromOrg', 'Add from org members')}
+            </div>
+            {onInviteLink && (
+              <button
+                onClick={onInviteLink}
+                className="flex items-center gap-1 text-[10px] font-medium text-[#117dff] hover:text-[#0066e0]"
+                title={t('teamprojects.inviteLinkTitle', 'For people outside the org — email or share link; they join this project as a guest.')}
+              >
+                <UserPlus size={11} /> {t('teamprojects.inviteOutside', 'Invite someone outside the org')}
+              </button>
+            )}
           </div>
           <input
             value={search}
@@ -601,6 +622,31 @@ function ProjectMembersModal({ projectId, projectName, orgId, onClose }) {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Invited — pending. These people ARE part of the project's people;
+            they just haven't accepted yet. */}
+        {pendingInvites.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">
+              {t('teamprojects.pendingInvites', 'Invited · pending')}
+            </div>
+            <div className="space-y-1.5">
+              {pendingInvites.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between px-2 py-1.5 border border-dashed border-[#d4d0ca] rounded-[4px] bg-[#fdfcf9]">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] text-[#525252] truncate">{inv.email || t('teamprojects.linkInvite', 'Link invite')}</div>
+                    <div className="text-[9px] text-[#a3a3a3] font-mono">
+                      {t('teamprojects.invitedOn', 'invited')} {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : ''} · {t('teamprojects.joinsAsGuest', 'joins as guest')}
+                    </div>
+                  </div>
+                  <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border bg-amber-50 text-amber-700 border-amber-300">
+                    {t('teamprojects.pending', 'pending')}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
