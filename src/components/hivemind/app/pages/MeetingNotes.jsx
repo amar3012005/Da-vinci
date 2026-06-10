@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
-  CalendarDays, History, AudioLines, AlignLeft, ScrollText, ArrowLeft,
+  CalendarDays, History, AudioLines, AlignLeft, ScrollText, ArrowLeft, Quote,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -91,6 +91,7 @@ export default function MeetingNotes() {
   const [meetings, setMeetings] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detailTab, setDetailTab] = useState('summary');
+  const [detailErr, setDetailErr] = useState(false);
 
   const recRef = useRef(null); const chunksRef = useRef([]); const streamRef = useRef(null); const timerRef = useRef(null);
 
@@ -102,6 +103,16 @@ export default function MeetingNotes() {
     } catch { /* non-fatal */ }
   }, []);
   useEffect(() => { loadMeetings(); }, [loadMeetings]);
+
+  // The list endpoint is light (no transcript/notes/insights) — fetch the full
+  // row when a past meeting is opened so every section + transcript renders.
+  const openMeeting = useCallback(async (m) => {
+    setSelected(m); setDetailTab('summary'); setDetailErr(false);
+    try {
+      const { data } = await apiClient.core.get(`/api/meetings/${m.id}`);
+      if (data?.meeting) setSelected((cur) => (cur && cur.id === m.id ? { ...m, ...data.meeting } : cur));
+    } catch { setDetailErr(true); /* keep the list row — partial beats broken */ }
+  }, []);
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -121,9 +132,10 @@ export default function MeetingNotes() {
       segments: segments || null,
       source_memory_id: sourceMemoryId,
       insights: insights || {},
+      notes: notes || null,
     });
     return data;
-  }, []);
+  }, [notes]);
 
   const process = useCallback(async (blob) => {
     setError(null);
@@ -172,7 +184,16 @@ export default function MeetingNotes() {
       const title = insights?.title || `Meeting ${new Date().toLocaleString()}`;
       const summary = insights?.summary || transcript.slice(0, 500);
       const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${speakerLabel(s.speaker)}:** ${s.text}`).join('\n\n') : transcript;
-      const content = `# ${title}\n\n## Summary\n${summary}\n\n## Action Items\n${(insights?.action_items || []).map((a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`).join('\n')}\n\n## Decisions\n${(insights?.decisions || []).map((d) => `- ${d}`).join('\n')}\n\n## Transcript\n${tMd}`;
+      const sect = (heading, items, fmt = (x) => `- ${x}`) => (items?.length ? `\n\n## ${heading}\n${items.map(fmt).join('\n')}` : '');
+      const content = `# ${title}\n\n## Summary\n${summary}`
+        + sect('Action Items', insights?.action_items, (a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`)
+        + sect('Key Points', insights?.key_points)
+        + sect('Decisions', insights?.decisions)
+        + sect('Open Questions', insights?.questions)
+        + sect('Risks', insights?.risks)
+        + sect('Next Steps', insights?.next_steps)
+        + (notes?.trim() ? `\n\n## My Notes\n${notes.trim()}` : '')
+        + `\n\n## Transcript\n${tMd}`;
       const mem = await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
       const memId = mem?.data?.id || mem?.data?.memory_id || null;
       // The meeting is already in Past meetings (auto-saved on finish). Just link
@@ -186,7 +207,7 @@ export default function MeetingNotes() {
       }
       setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
-  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
+  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId, notes]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
@@ -303,6 +324,11 @@ export default function MeetingNotes() {
                 {insights.key_points?.length > 0 && (<Panel icon={Sparkles} title={t('meetingnotes.keyPoints', 'Key Points')} accent="#8b5cf6"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.key_points.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#8b5cf6]">·</span>{k}</li>)}</ul></Panel>)}
               </div>
               {insights.questions?.length > 0 && (<Panel icon={HelpCircle} title={t('meetingnotes.openQuestions', 'Open Questions')} accent="#0891b2"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></Panel>)}
+              {insights.quotes?.length > 0 && (<Panel icon={Quote} title={t('meetingnotes.quotes', 'Notable Quotes')} accent="#117dff"><ul className="space-y-2 text-[12px] text-[#525252]">{insights.quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></Panel>)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {insights.risks?.length > 0 && (<Panel icon={AlertTriangle} title={t('meetingnotes.risks', 'Risks & Red Flags')} accent="#ef4444"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.risks.map((r, i) => <li key={i} className="flex gap-2"><span className="text-[#ef4444]">!</span>{r}</li>)}</ul></Panel>)}
+                {insights.next_steps?.length > 0 && (<Panel icon={ArrowUpRight} title={t('meetingnotes.nextSteps', 'Next Steps')} accent="#10b981"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.next_steps.map((n, i) => <li key={i} className="flex gap-2"><span className="text-[#10b981]">→</span>{n}</li>)}</ul></Panel>)}
+              </div>
               {insights.topics?.length > 0 && (<div className="flex flex-wrap gap-1.5">{insights.topics.map((tp, i) => (<span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>))}</div>)}
               {transcript && (
                 <Panel icon={speakerSegments?.length ? Users : ScrollText} title={t('meetingnotes.transcript', 'Transcript')} accent="#a3a3a3">
@@ -331,7 +357,7 @@ export default function MeetingNotes() {
         meetings.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {meetings.map((m) => (
-              <button key={m.id} onClick={() => { setSelected(m); setDetailTab('summary'); }}
+              <button key={m.id} onClick={() => openMeeting(m)}
                 className="text-left bg-white border border-[#e3e0db] rounded-[10px] p-4 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
                 <div className="flex items-center justify-between">
                   <div className="w-8 h-8 rounded-[8px] bg-[#117dff]/10 flex items-center justify-center"><MeetingNotesIcon size={15} className="text-[#117dff]" /></div>
@@ -360,6 +386,7 @@ export default function MeetingNotes() {
       {tab === 'past' && selected && (
         <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
           <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] mb-3"><ArrowLeft size={12} /> {t('meetingnotes.back', 'All meetings')}</button>
+          {detailErr && (<div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2.5 py-1.5 mb-3"><AlertTriangle size={11} className="inline mr-1" /> {t('meetingnotes.detailErr', 'Could not load the full record — showing the overview only.')}</div>)}
           <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">{selected.title || 'Meeting'}
             <span className="text-[13px] font-normal text-[#a3a3a3] ml-2">@ {fmtDate(selected.created_at)}{selected.language ? ` · ${selected.language}` : ''}</span></h2>
           <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4">
@@ -367,15 +394,42 @@ export default function MeetingNotes() {
               <button key={key} onClick={() => setDetailTab(key)} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium border-b-2 -mb-px transition-colors ${detailTab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}><Icon size={14} /> {label}</button>
             ))}
           </nav>
-          {detailTab === 'summary' && (
-            <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
-              {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Action Items</h3><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
-              <div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Meeting Overview</h3><p className="whitespace-pre-wrap">{selected.summary || '—'}</p></div>
-              {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">Decisions</h3><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></div>)}
-              {Array.isArray(selected.topics) && selected.topics.length > 0 && (<div className="flex flex-wrap gap-1.5">{selected.topics.map((tp, i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>)}</div>)}
-            </div>
+          {detailTab === 'summary' && (() => {
+            // Old columns + the full insights object (new sections live there).
+            const insx = (selected.insights && typeof selected.insights === 'object') ? selected.insights : {};
+            const keyPoints = Array.isArray(selected.key_points) && selected.key_points.length ? selected.key_points : (insx.key_points || []);
+            const questions = Array.isArray(selected.questions) && selected.questions.length ? selected.questions : (insx.questions || []);
+            const quotes = Array.isArray(insx.quotes) ? insx.quotes : [];
+            const risks = Array.isArray(insx.risks) ? insx.risks : [];
+            const nextSteps = Array.isArray(insx.next_steps) ? insx.next_steps : [];
+            const ents = (insx.entities && typeof insx.entities === 'object') ? insx.entities : {};
+            const entChips = [...(ents.people || []).map((e) => ['👤', e]), ...(ents.organizations || []).map((e) => ['🏢', e]), ...(ents.dates || []).map((e) => ['📅', e])];
+            const H = ({ children }) => <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">{children}</h3>;
+            return (
+              <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
+                <div><H>Meeting Overview</H><p className="whitespace-pre-wrap">{selected.summary || '—'}</p></div>
+                {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><H>Action Items</H><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
+                {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#8b5cf6]">·</span>{k}</li>)}</ul></div>)}
+                {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><H>Decisions</H><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></div>)}
+                {questions.length > 0 && (<div><H>Open Questions</H><ul className="space-y-1.5">{questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></div>)}
+                {quotes.length > 0 && (<div><H>Notable Quotes</H><ul className="space-y-2">{quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></div>)}
+                {risks.length > 0 && (<div><H>Risks & Red Flags</H><ul className="space-y-1.5">{risks.map((r, i) => <li key={i} className="flex gap-2"><AlertTriangle size={13} className="text-[#ef4444] mt-0.5 flex-shrink-0" />{r}</li>)}</ul></div>)}
+                {nextSteps.length > 0 && (<div><H>Next Steps</H><ul className="space-y-1.5">{nextSteps.map((n, i) => <li key={i} className="flex gap-2"><ArrowUpRight size={13} className="text-[#10b981] mt-0.5 flex-shrink-0" />{n}</li>)}</ul></div>)}
+                {entChips.length > 0 && (<div><H>Mentioned</H><div className="flex flex-wrap gap-1.5">{entChips.map(([ic, e], i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[10px] text-[#525252]">{ic} {e}</span>)}</div></div>)}
+                {(selected.sentiment || (Array.isArray(selected.topics) && selected.topics.length > 0)) && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {selected.sentiment && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-700"><Sparkles size={9} /> {selected.sentiment}</span>}
+                    {(selected.topics || []).map((tp, i) => <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-700">#{tp}</span>)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          {detailTab === 'notes' && (
+            <p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">
+              {selected.notes || t('meetingnotes.noNotes', 'No notes were added during this meeting.')}
+            </p>
           )}
-          {detailTab === 'notes' && (<p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">{selected.summary || '—'}</p>)}
           {detailTab === 'transcript' && (
             Array.isArray(selected.segments) && selected.segments.length ? (
               <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{speakerLabel(s.speaker)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
