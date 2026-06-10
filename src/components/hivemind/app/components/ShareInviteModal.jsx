@@ -46,13 +46,23 @@ export default function ShareInviteModal({
   const [loadingList, setLoadingList] = useState(false);
   const [busyById, setBusyById] = useState({});
 
+  // Depend on the PRIMITIVE project id, never the array prop: `defaultProjectIds`
+  // defaults to `[]`, which is a fresh identity on every parent render. With the
+  // array in the useCallback deps, each fetch's own setState re-rendered the tree,
+  // minted a new fetchInvites, and re-fired the effect — an unbounded
+  // listInvites?status=pending request storm (ERR_INSUFFICIENT_RESOURCES) that
+  // starved every other call on the page.
+  const projectScopeId = Array.isArray(defaultProjectIds) && defaultProjectIds.length
+    ? defaultProjectIds[0]
+    : null;
+
   const fetchInvites = useCallback(async () => {
     if (!orgId) return;
     setLoadingList(true);
     try {
       const resp = await apiClient.listInvites(orgId, {
         status: statusFilter,
-        projectId: defaultProjectIds[0] || null,
+        projectId: projectScopeId,
       });
       setInvites(resp.invites || []);
     } catch {
@@ -60,7 +70,7 @@ export default function ShareInviteModal({
     } finally {
       setLoadingList(false);
     }
-  }, [orgId, statusFilter, defaultProjectIds]);
+  }, [orgId, statusFilter, projectScopeId]);
 
   useEffect(() => {
     if (open) fetchInvites();
