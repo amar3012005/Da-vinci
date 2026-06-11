@@ -889,6 +889,7 @@ export function ChatPanel({ isOpen, onClose }) {
       let steps = [];
       let draftIds = [];
       let projectChoice = null;
+      let onboardingIntro = null;
 
       // Belt-and-braces language enforcement: when UI language is anything
       // other than English, prepend a strict directive to the outgoing
@@ -930,6 +931,7 @@ export function ChatPanel({ isOpen, onClose }) {
         steps = Array.isArray(chatData.steps) ? chatData.steps : [];
         draftIds = Array.isArray(chatData.draft_ids) ? chatData.draft_ids : [];
         projectChoice = chatData.project_choice || null;
+        onboardingIntro = chatData.onboarding?.intro || null;
       } catch (chatErr) {
         console.warn('[Chat] chat failed:', chatErr?.message);
         responseContent = "I couldn't process your request right now. Please try again.";
@@ -947,7 +949,13 @@ export function ChatPanel({ isOpen, onClose }) {
         project_choice: projectChoice,
       };
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      // One-time greeting rides in on the first answer as `onboarding.intro`.
+      // Render it as the agent's own opening bubble BEFORE the answer — it never
+      // replaces the user's answer (the real reply is assistantMsg).
+      const greetingMsg = onboardingIntro
+        ? { id: Date.now() + 2, role: 'assistant', content: onboardingIntro, isGreeting: true }
+        : null;
+      setMessages((prev) => greetingMsg ? [...prev, greetingMsg, assistantMsg] : [...prev, assistantMsg]);
     } catch (err) {
       const errMsg = err?.response?.data?.detail || err?.message || 'Something went wrong.';
       setMessages((prev) => [
