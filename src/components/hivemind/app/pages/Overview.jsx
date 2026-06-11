@@ -476,11 +476,11 @@ function OverviewChat({ inputRef }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 }}
-      className="max-w-3xl mx-auto w-full"
+      className={`max-w-3xl mx-auto w-full ${hasThread ? 'mt-6' : 'mt-[16vh]'}`}
     >
       {/* Hero — only while the thread is empty */}
       {!hasThread && (
-        <div className="flex flex-col items-center text-center mt-10 mb-8">
+        <div className="flex flex-col items-center text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
             <Hexagon size={26} className="text-white" />
           </div>
