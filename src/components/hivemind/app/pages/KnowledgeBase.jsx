@@ -1522,7 +1522,7 @@ export default function KnowledgeBase() {
         <p className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] mb-3">
           {t('knowledgebase.fileBasedImportsSubtitle', 'PDF · Word · Excel · Slides · Text · HTML · Images · Audio — converted to memories')}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {IMPORT_TYPES.map((type) => {
             const Icon = type.icon;
             return (
@@ -1530,13 +1530,15 @@ export default function KnowledgeBase() {
                 key={type.key}
                 type="button"
                 onClick={() => openTypedImport(type.accept)}
-                className="group flex items-center gap-2.5 rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
+                className="group text-left rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2.5 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
               >
-                <Icon size={15} className={`${type.iconColor} shrink-0`} />
-                <span className="text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] shrink-0">
-                  {t(type.titleKey, type.titleDefault)}
-                </span>
-                <span className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] truncate">
+                <div className="flex items-center gap-2">
+                  <Icon size={15} className={`${type.iconColor} shrink-0`} />
+                  <span className="text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] truncate">
+                    {t(type.titleKey, type.titleDefault)}
+                  </span>
+                </div>
+                <span className="block text-[#a3a3a3] text-[10px] font-['Space_Grotesk'] leading-snug mt-0.5 truncate">
                   {t(type.descKey, type.descDefault)}
                 </span>
               </button>
