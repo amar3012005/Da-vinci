@@ -521,6 +521,7 @@ function RoomThread({ roomId, onArchived }) {
       'seal', 'error', 'heartbeat',
       // Phase 4 cognitive upgrades:
       'decision_required', 'decision_saved',
+      'final_report',
       // Phase 4 swarm (R1-R5):
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
@@ -1019,6 +1020,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // Phase 4 events:
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
+  const finalReport = [...lines].reverse().find(l => l.t === 'final_report');
   const ontology = lines.find(l => l.t === 'ontology');
   const workforceAssessment = lines.find(l => l.t === 'workforce_assessment');
   const flybyProposal = lines.find(l => l.t === 'flyby_proposal');
@@ -1298,6 +1300,10 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
+      {finalReport && (
+        <FinalReportCard report={finalReport} />
+      )}
+
       {!seal && typing.length > 0 && (
         <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
           {typing.map((typingLine, i) => (
@@ -1349,6 +1355,37 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function FinalReportCard({ report }) {
+  const { t } = useTranslation('dashboard');
+  if (!report?.content) return null;
+  const verdict = String(report.verdict || report.status || '').toUpperCase();
+  const tone = verdict.includes('AGREED') || verdict.includes('RESOLVED') || verdict.includes('COMPLETE')
+    ? 'border-emerald-200 bg-emerald-50/40 text-emerald-700'
+    : verdict.includes('CONDITIONAL') || verdict.includes('ESCALATED')
+      ? 'border-amber-200 bg-amber-50/50 text-amber-700'
+      : 'border-[#e3e0db] bg-white text-[#525252]';
+  return (
+    <div className="mx-2 my-3 rounded-lg border border-[#d7d2ca] bg-white shadow-sm overflow-hidden">
+      <div className={`px-3 py-2 border-b flex items-center justify-between gap-2 ${tone}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <ClipboardCheck size={14} className="shrink-0" />
+          <span className="text-[10px] font-mono uppercase tracking-wider truncate">
+            {t('hyperAgents.finalReport', 'Final report')}
+          </span>
+        </div>
+        {verdict && (
+          <span className="text-[9px] font-mono uppercase tracking-wider shrink-0">
+            {verdict}{report.weighted_score != null ? ` · ${report.weighted_score}` : ''}
+          </span>
+        )}
+      </div>
+      <div className="px-3 py-3 text-[12px] leading-relaxed text-[#0a0a0a]">
+        {renderMarkdownLite(report.content)}
+      </div>
     </div>
   );
 }
