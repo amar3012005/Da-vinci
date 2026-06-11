@@ -4,15 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity,
   AlertCircle,
   ArrowUp,
   BookOpen,
   Boxes,
+  Brain,
   Building2,
   Cable,
   CheckCircle2,
   FileText,
+  GitFork,
   Globe,
   Hexagon,
   Loader2,
@@ -24,8 +25,9 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { useApiQuery, useHealthStatus } from '../shared/hooks';
+import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
+import { useAuth } from '../auth/AuthProvider';
 import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
 
 // ─── Animation variants ──────────────────────────────────────────
@@ -476,7 +478,7 @@ function OverviewChat({ inputRef }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 }}
-      className={`max-w-3xl mx-auto w-full ${hasThread ? 'mt-6' : 'mt-[26vh]'}`}
+      className={`max-w-3xl mx-auto w-full ${hasThread ? 'mt-6' : 'mt-[32vh]'}`}
     >
       {/* Hero — only while the thread is empty */}
       {!hasThread && (
@@ -585,7 +587,6 @@ function OverviewChat({ inputRef }) {
 export default function Overview() {
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
-  const healthy = useHealthStatus(30000);
   // First-visit guided tour — glass overlay + arrows to each sidebar page.
   const tour = useOverviewTour();
   const chatInputRef = useRef(null);
@@ -625,9 +626,27 @@ export default function Overview() {
     apiClient.sendWelcomeEmail().catch(() => { /* silent: non-critical */ });
   }, []);
 
-  // Profile — feeds the operator pill in the status bar.
+  // Status-bar stats: memories + relationships from the profile, projects
+  // from the team context, members from the org roster.
   const { data: profileData } = useApiQuery(() => apiClient.getProfile(), []);
   const profile = useMemo(() => profileData?.profile || profileData || null, [profileData]);
+  const { projects } = useTeamContext() || {};
+  const { org } = useAuth() || {};
+  const { data: membersData } = useApiQuery(
+    () => (org?.id ? apiClient.listMembers(org.id).catch(() => null) : Promise.resolve(null)),
+    [org?.id]
+  );
+  const memberCount = useMemo(() => {
+    if (!membersData) return null;
+    const list = Array.isArray(membersData) ? membersData : (membersData.members || membersData.data || []);
+    return Array.isArray(list) ? list.length : null;
+  }, [membersData]);
+  const STATS = [
+    { key: 'memories',  icon: Brain,   value: profile?.memory_count,        label: t('overview.stats.memories', 'Memories') },
+    { key: 'relations', icon: GitFork, value: profile?.relationship_count,  label: t('overview.stats.relationships', 'Relationships') },
+    { key: 'projects',  icon: Boxes,   value: projects?.length,             label: t('overview.stats.projects', 'Projects') },
+    { key: 'members',   icon: Users,   value: memberCount,                  label: t('overview.stats.members', 'Members') },
+  ];
 
   // Feature launcher — Overview is the entrance to every surface. The chat
   // entry focuses the inline composer (the chat lives on this page now).
@@ -649,42 +668,39 @@ export default function Overview() {
         {tour.open && <OverviewTour onClose={tour.close} />}
       </AnimatePresence>
 
-      {/* Control console — device-style status bar (bezel → screen) */}
+      {/* Status bar — flat white card matching every other page's theme:
+          badge + live clock on the left, the numbers that matter on the right. */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mb-6 rounded-[26px] bg-gradient-to-b from-[#f3f1ec] to-[#e9e6df] border border-[#dcd8d0] p-2 shadow-[0_2px_10px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]"
+        className="mb-6 bg-white border border-[#e3e0db] rounded-[10px] px-4 py-3 flex items-center gap-4 flex-wrap"
       >
-        <div className="relative flex items-center gap-3 rounded-[18px] bg-white border border-[#e8e5df] px-3 py-2.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden">
-          {/* Left edge status LED strip */}
-          <span className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full ${healthy ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'} shadow-[0_0_8px_currentColor]`} />
+        {/* Badge */}
+        <div className="w-9 h-9 rounded-xl bg-[#0a0a0a] flex items-center justify-center flex-shrink-0">
+          <Hexagon size={18} className="text-white" />
+        </div>
 
-          {/* Device badge */}
-          <div className="ml-1.5 w-9 h-9 rounded-xl bg-[#0a0a0a] flex items-center justify-center flex-shrink-0">
-            <Hexagon size={18} className="text-white" />
-          </div>
+        {/* Live clock */}
+        <ConsoleClock />
 
-          {/* Live clock */}
-          <ConsoleClock />
-
-          <span className="h-7 w-px bg-[#e8e5df] mx-1" />
-
-          {/* Operator / scope pill */}
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-[#f7f6f2] border border-[#e8e5df]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_#22c55e]" />
-            <span className="text-[#0a0a0a] text-xs font-medium truncate max-w-[160px]">
-              {profile?.name || profile?.org_name || t('overview.title', 'Memory Engine')}
-            </span>
-          </div>
-
-          {/* System status pill (right) */}
-          <div className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-            healthy ? 'bg-[#117dff] text-white shadow-[0_2px_8px_rgba(17,125,255,0.3)]' : 'bg-[#f59e0b] text-white'
-          }`}>
-            <Activity size={12} />
-            <span>{healthy ? t('overview.online', 'Online') : t('overview.degraded', 'Degraded')}</span>
-          </div>
+        {/* The numbers that matter */}
+        <div className="ml-auto flex items-center gap-5 flex-wrap">
+          {STATS.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <React.Fragment key={s.key}>
+                {i > 0 && <span className="h-7 w-px bg-[#eae7e1] hidden sm:block" />}
+                <div className="flex items-center gap-2">
+                  <Icon size={14} className="text-[#117dff]" />
+                  <span className="text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums leading-none">
+                    {s.value ?? '—'}
+                  </span>
+                  <span className="text-[10px] text-[#a3a3a3] uppercase tracking-wider">{s.label}</span>
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
       </motion.div>
 
