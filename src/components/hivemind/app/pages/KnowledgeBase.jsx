@@ -23,6 +23,9 @@ import {
   Trash2,
   Code2,
   FileType,
+  Image as ImageIcon,
+  Presentation,
+  FileAudio,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -40,24 +43,19 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
   // attr; they were missing here, so the client rejected them before upload.
   'pptx', 'ppt', 'html', 'htm',
   // Images routed to /api/ingest/image (Groq vision pipeline) instead of docling.
-  'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif'];
+  'png', 'jpg', 'jpeg', 'tiff', 'tif', 'webp', 'gif',
+  // Audio transcribed server-side via Groq Whisper (server.js docling-adapter).
+  // These were in the dropzone accept= attr but missing here, so audio files
+  // were rejected client-side before they ever reached the upload pipeline.
+  'mp3', 'wav', 'm4a', 'ogg', 'flac'];
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac']);
 
 // File-based imports — typed entry cards below the upload dropzone. Each card
 // opens a file picker scoped to one document family, then feeds the SAME
 // queueFilesForUpload pipeline as the dropzone (scope modal → smart-extract →
 // handleFiles). The `accept` strings are subsets of the dropzone's accept attr.
 const IMPORT_TYPES = [
-  {
-    key: 'csv',
-    icon: Sheet,
-    iconColor: 'text-[#16a34a]',
-    accept: '.csv,.tsv,.xlsx,.xls',
-    titleKey: 'knowledgebase.importCsvTitle',
-    titleDefault: 'CSV',
-    descKey: 'knowledgebase.importCsvDesc',
-    descDefault: 'Import structured data from spreadsheets',
-  },
   {
     key: 'pdf',
     icon: FileText,
@@ -69,6 +67,36 @@ const IMPORT_TYPES = [
     descDefault: 'Extract content from PDF documents',
   },
   {
+    key: 'word',
+    icon: FileText,
+    iconColor: 'text-[#2563eb]',
+    accept: '.docx,.doc',
+    titleKey: 'knowledgebase.importWordTitle',
+    titleDefault: 'Word',
+    descKey: 'knowledgebase.importWordDesc',
+    descDefault: 'DOCX & DOC documents',
+  },
+  {
+    key: 'csv',
+    icon: Sheet,
+    iconColor: 'text-[#16a34a]',
+    accept: '.csv,.tsv,.xlsx,.xls',
+    titleKey: 'knowledgebase.importCsvTitle',
+    titleDefault: 'Spreadsheet',
+    descKey: 'knowledgebase.importCsvDesc',
+    descDefault: 'CSV, TSV & Excel data',
+  },
+  {
+    key: 'slides',
+    icon: Presentation,
+    iconColor: 'text-[#ea580c]',
+    accept: '.pptx,.ppt',
+    titleKey: 'knowledgebase.importSlidesTitle',
+    titleDefault: 'Slides',
+    descKey: 'knowledgebase.importSlidesDesc',
+    descDefault: 'PowerPoint presentations',
+  },
+  {
     key: 'text',
     icon: FileType,
     iconColor: 'text-[#525252]',
@@ -76,7 +104,7 @@ const IMPORT_TYPES = [
     titleKey: 'knowledgebase.importTextTitle',
     titleDefault: 'Text & Markdown',
     descKey: 'knowledgebase.importTextDesc',
-    descDefault: 'Import plain text and formatted notes',
+    descDefault: 'Plain text & formatted notes',
   },
   {
     key: 'html',
@@ -86,17 +114,27 @@ const IMPORT_TYPES = [
     titleKey: 'knowledgebase.importHtmlTitle',
     titleDefault: 'HTML',
     descKey: 'knowledgebase.importHtmlDesc',
-    descDefault: 'Import web pages and structured content',
+    descDefault: 'Web pages & structured content',
   },
   {
-    key: 'word',
-    icon: FileText,
-    iconColor: 'text-[#2563eb]',
-    accept: '.docx,.doc',
-    titleKey: 'knowledgebase.importWordTitle',
-    titleDefault: 'Word',
-    descKey: 'knowledgebase.importWordDesc',
-    descDefault: 'Bring your Word documents into the Knowledge Base',
+    key: 'image',
+    icon: ImageIcon,
+    iconColor: 'text-[#9333ea]',
+    accept: '.png,.jpg,.jpeg,.tiff,.tif,.webp,.gif',
+    titleKey: 'knowledgebase.importImageTitle',
+    titleDefault: 'Images',
+    descKey: 'knowledgebase.importImageDesc',
+    descDefault: 'PNG, JPG, TIFF — vision OCR',
+  },
+  {
+    key: 'audio',
+    icon: FileAudio,
+    iconColor: 'text-[#0891b2]',
+    accept: '.mp3,.wav,.m4a,.ogg,.flac',
+    titleKey: 'knowledgebase.importAudioTitle',
+    titleDefault: 'Audio',
+    descKey: 'knowledgebase.importAudioDesc',
+    descDefault: 'MP3, WAV, M4A — transcribed',
   },
 ];
 
@@ -1231,20 +1269,28 @@ export default function KnowledgeBase() {
       // Enterprise detect flow: process first file through detection.
       // Images bypass detection — they route straight to /api/ingest/image
       // (Groq vision), since the schema-detect path is for tabular docs.
+      // Images (vision OCR) and audio (Whisper) bypass the tabular schema-detect
+      // flow — they route straight through handleFiles to their own pipelines.
       const imageFiles = [];
-      const nonImageFiles = [];
+      const audioFiles = [];
+      const nonMediaFiles = [];
       for (const file of files) {
         const ext = (file.name.split('.').pop() || '').toLowerCase();
         if (IMAGE_EXTS.has(ext) || /^image\//.test(file.type || '')) {
           imageFiles.push(file);
+        } else if (AUDIO_EXTS.has(ext) || /^audio\//.test(file.type || '')) {
+          audioFiles.push(file);
         } else {
-          nonImageFiles.push(file);
+          nonMediaFiles.push(file);
         }
       }
       if (imageFiles.length) {
         handleFiles(imageFiles, { targetScope: selectedScope, project });
       }
-      for (const file of nonImageFiles) {
+      if (audioFiles.length) {
+        handleFiles(audioFiles, { targetScope: selectedScope, project });
+      }
+      for (const file of nonMediaFiles) {
         const ext = file.name.split('.').pop()?.toLowerCase();
         if (!ACCEPTED_EXTS.includes(ext)) {
           setUploads((prev) => [...prev, {
@@ -1470,13 +1516,13 @@ export default function KnowledgeBase() {
             e.target.value = '';
           }}
         />
-        <h3 className="text-[#0a0a0a] text-base font-bold font-['Space_Grotesk'] mb-1">
+        <h3 className="text-[#0a0a0a] text-[13px] font-bold font-['Space_Grotesk'] mb-0.5">
           {t('knowledgebase.fileBasedImports', 'File-based imports')}
         </h3>
-        <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mb-4">
-          {t('knowledgebase.fileBasedImportsSubtitle', 'Import DOCX, CSV, PDF, text, markdown, or HTML files to convert them to memories')}
+        <p className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] mb-3">
+          {t('knowledgebase.fileBasedImportsSubtitle', 'PDF · Word · Excel · Slides · Text · HTML · Images · Audio — converted to memories')}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {IMPORT_TYPES.map((type) => {
             const Icon = type.icon;
             return (
@@ -1484,17 +1530,15 @@ export default function KnowledgeBase() {
                 key={type.key}
                 type="button"
                 onClick={() => openTypedImport(type.accept)}
-                className="group text-left rounded-2xl border border-[#e3e0db] bg-white p-5 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
+                className="group flex items-center gap-2.5 rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 transition-all hover:border-[#117dff]/40 hover:bg-[#faf9f4] focus:outline-none focus:border-[#117dff]/60"
               >
-                <div className="flex items-center gap-2.5 mb-2">
-                  <Icon size={20} className={type.iconColor} />
-                  <span className="text-[#0a0a0a] text-base font-semibold font-['Space_Grotesk']">
-                    {t(type.titleKey, type.titleDefault)}
-                  </span>
-                </div>
-                <p className="text-[#525252] text-sm font-['Space_Grotesk'] leading-snug">
+                <Icon size={15} className={`${type.iconColor} shrink-0`} />
+                <span className="text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] shrink-0">
+                  {t(type.titleKey, type.titleDefault)}
+                </span>
+                <span className="text-[#a3a3a3] text-[11px] font-['Space_Grotesk'] truncate">
                   {t(type.descKey, type.descDefault)}
-                </p>
+                </span>
               </button>
             );
           })}
