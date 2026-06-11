@@ -15,7 +15,9 @@ import {
   FileText,
   GitFork,
   Globe,
+  HelpCircle,
   Hexagon,
+  Lightbulb,
   Loader2,
   Lock,
   Network,
@@ -126,6 +128,249 @@ function ChatBubble({ msg }) {
         {msg.content}
       </div>
     </div>
+  );
+}
+
+// ─── Cognitive band — drifting stream of swarm intelligence ─────
+// Three staggered marquee rows above the composer: synthesized insights
+// (canonical / principle / bridge from the cognition swarm), raw memories,
+// and questions derived from what the swarm extracted. Zig-zag layout:
+// alternating drift directions, offset row starts, per-chip vertical nudge.
+// Click an insight/memory → full cognitive memory modal. Click a question →
+// it lands in the composer ready to send.
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function cleanInsightTitle(m) {
+  let t = String(m.title || '');
+  t = t.replace(/^(Canonical fact|Principle|Bridge|Canonical):\s*/i, '')
+       .replace(/\s*\[conf=[\d.]+\]\s*$/i, '')
+       .replace(/\s*\(\d+\s*(sources|memories)[^)]*\)\s*$/i, '')
+       .trim();
+  // Machine-y topics (doc-id:<uuid>, filename:X) read terribly — use the
+  // synthesis content itself instead.
+  if (!t || /^(doc-id:|filename:|[0-9a-f-]{30,})/i.test(t)) {
+    t = String(m.content || '').replace(/\s+/g, ' ').trim();
+  }
+  return t.length > 92 ? `${t.slice(0, 89)}…` : t;
+}
+
+function entityLabel(tag) {
+  return tag.replace(/^(entity:|person:|topic:)/, '').replace(/[_-]+/g, ' ').trim();
+}
+
+const CHIP_KINDS = {
+  insight:   { icon: Sparkles,   chipClass: 'border-[#117dff]/30 bg-[#117dff]/[0.06] text-[#0a0a0a]', iconColor: '#117dff', label: 'Insight' },
+  principle: { icon: Lightbulb,  chipClass: 'border-[#0a0a0a]/20 bg-white text-[#0a0a0a]',            iconColor: '#0a0a0a', label: 'Principle' },
+  bridge:    { icon: GitFork,    chipClass: 'border-[#f59e0b]/40 bg-[#f59e0b]/[0.06] text-[#0a0a0a]', iconColor: '#b45309', label: 'Bridge' },
+  memory:    { icon: Brain,      chipClass: 'border-[#e3e0db] bg-white text-[#525252]',               iconColor: '#a3a3a3', label: 'Memory' },
+  question:  { icon: HelpCircle, chipClass: 'border-dashed border-[#117dff]/40 bg-white text-[#117dff]', iconColor: '#117dff', label: 'Ask' },
+};
+
+function BandChip({ item, onOpen, onAsk }) {
+  const kind = CHIP_KINDS[item.kind] || CHIP_KINDS.memory;
+  const Icon = kind.icon;
+  // Zig-zag: deterministic per-chip vertical nudge so columns never line up.
+  const nudge = [-3, 2, -1, 3, 0, -2][hashStr(item.key) % 6];
+  return (
+    <button
+      onClick={() => (item.kind === 'question' ? onAsk(item.text) : onOpen(item.memory))}
+      style={{ transform: `translateY(${nudge}px)` }}
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] whitespace-nowrap transition-all hover:shadow-sm hover:border-[#117dff] ${kind.chipClass}`}
+      title={item.kind === 'question' ? item.text : `${kind.label} — open`}
+    >
+      <Icon size={11} style={{ color: kind.iconColor }} className="flex-shrink-0" />
+      <span className="max-w-[340px] truncate">{item.text}</span>
+    </button>
+  );
+}
+
+function CognitiveBand({ onOpen, onAsk }) {
+  const { t } = useTranslation('dashboard');
+
+  // Swarm output (everything cognition-loop wrote) + recent raw memories.
+  const { data: synthData } = useApiQuery(
+    () => apiClient.listMemories({ tags: 'cognition-loop', limit: 18 }).catch(() => null),
+    []
+  );
+  const { data: recentData } = useApiQuery(
+    () => apiClient.listMemories({ limit: 18 }).catch(() => null),
+    []
+  );
+
+  const items = useMemo(() => {
+    const synth = (Array.isArray(synthData) ? synthData : (synthData?.memories || synthData?.data || []));
+    const recent = (Array.isArray(recentData) ? recentData : (recentData?.memories || recentData?.data || []));
+    const out = [];
+    const seen = new Set();
+
+    for (const m of synth) {
+      if (!m?.id || seen.has(m.id)) continue;
+      seen.add(m.id);
+      const role = m.cognitive_layer_role || m.cognitiveLayerRole
+        || ((m.tags || []).includes('synthesis:principle') ? 'principle'
+          : (m.tags || []).includes('synthesis:bridge') ? 'bridge' : 'canonical');
+      out.push({
+        key: `s-${m.id}`,
+        kind: role === 'principle' ? 'principle' : role === 'bridge' ? 'bridge' : 'insight',
+        text: cleanInsightTitle(m),
+        memory: m,
+      });
+    }
+
+    for (const m of recent) {
+      if (!m?.id || seen.has(m.id)) continue;
+      // Skip swarm exhaust + untitled noise in the raw row.
+      const tags = m.tags || [];
+      if (tags.includes('internal-audit') || tags.includes('cognition-loop')) continue;
+      seen.add(m.id);
+      const title = String(m.title || m.content || '').replace(/\s+/g, ' ').trim();
+      if (!title) continue;
+      out.push({
+        key: `m-${m.id}`,
+        kind: 'memory',
+        text: title.length > 80 ? `${title.slice(0, 77)}…` : title,
+        memory: m,
+      });
+    }
+
+    // Questions: derived from the entities the swarm actually extracted —
+    // each one is a one-click curiosity hook for the composer.
+    const entities = [];
+    const seenEnt = new Set();
+    for (const m of [...synth, ...recent]) {
+      for (const tag of (m.tags || [])) {
+        if (!/^(entity:|person:)/.test(tag)) continue;
+        const label = entityLabel(tag);
+        const k = label.toLowerCase();
+        if (!label || label.length < 3 || label.length > 32 || seenEnt.has(k)) continue;
+        seenEnt.add(k);
+        entities.push(label);
+      }
+    }
+    const Q_TEMPLATES = [
+      (e) => t('overview.band.q1', 'What do we know about {{e}}?', { e }),
+      (e) => t('overview.band.q2', "What's the latest on {{e}}?", { e }),
+      (e) => t('overview.band.q3', 'Summarize everything about {{e}}', { e }),
+    ];
+    entities.slice(0, 9).forEach((e, i) => {
+      out.push({ key: `q-${e}`, kind: 'question', text: Q_TEMPLATES[i % Q_TEMPLATES.length](e) });
+    });
+
+    return out;
+  }, [synthData, recentData, t]);
+
+  // Zig-zag rows: deterministic shuffle per row (different salt), alternating
+  // directions and speeds, offset starts — nothing lines up in columns.
+  const rows = useMemo(() => {
+    if (items.length < 6) return [];
+    const r = [[], [], []];
+    items.forEach((it, i) => r[i % 3].push(it));
+    return r.map((row, i) =>
+      [...row].sort((a, b) => hashStr(a.key + i) - hashStr(b.key + i))
+    ).filter((row) => row.length > 0);
+  }, [items]);
+
+  if (!rows.length) return null;
+
+  const ROW_CFG = [
+    { dir: 'hmDriftL', dur: 48, offset: 0 },
+    { dir: 'hmDriftR', dur: 64, offset: 28 },
+    { dir: 'hmDriftL', dur: 56, offset: 12 },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="hm-band relative mb-5 overflow-hidden"
+      style={{
+        maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+      }}
+    >
+      <style>{`
+        @keyframes hmDriftL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes hmDriftR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+        .hm-band:hover .hm-band-track { animation-play-state: paused; }
+      `}</style>
+      <div className="space-y-2.5 py-1">
+        {rows.map((row, i) => {
+          const cfg = ROW_CFG[i % ROW_CFG.length];
+          return (
+            <div key={i} className="overflow-hidden" style={{ paddingLeft: cfg.offset }}>
+              <div
+                className="hm-band-track flex items-center gap-2 w-max"
+                style={{ animation: `${cfg.dir} ${cfg.dur}s linear infinite` }}
+              >
+                {[...row, ...row].map((item, j) => (
+                  <BandChip key={`${item.key}-${j}`} item={item} onOpen={onOpen} onAsk={onAsk} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+// Full cognitive memory — opened from a band chip.
+function MemoryModal({ memory, onClose, t }) {
+  if (!memory) return null;
+  const role = memory.cognitive_layer_role || memory.cognitiveLayerRole || null;
+  const roleCfg = role === 'principle' ? CHIP_KINDS.principle
+    : role === 'bridge' ? CHIP_KINDS.bridge
+    : role ? CHIP_KINDS.insight
+    : CHIP_KINDS.memory;
+  const RoleIcon = roleCfg.icon;
+  const niceTags = (memory.tags || []).filter((x) => /^(entity:|person:|topic:)/.test(x)).slice(0, 10);
+  const date = memory.created_at ? new Date(memory.created_at).toLocaleString() : null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="mem-backdrop"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.97 }}
+          transition={{ duration: 0.22 }}
+          className="bg-white border border-[#e3e0db] rounded-2xl shadow-xl w-full max-w-lg p-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-medium ${roleCfg.chipClass}`}>
+                <RoleIcon size={10} style={{ color: roleCfg.iconColor }} />
+                {role ? (role === 'canonical' ? t('overview.band.insight', 'Insight') : role) : t('overview.band.memory', 'Memory')}
+              </span>
+              {date && <span className="text-[10px] text-[#a3a3a3] font-mono">{date}</span>}
+            </div>
+            <button onClick={onClose} className="p-1 text-[#a3a3a3] hover:text-[#0a0a0a]" aria-label="Close"><X size={14} /></button>
+          </div>
+          <h3 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-3 leading-snug">
+            {cleanInsightTitle(memory) || memory.title || t('overview.band.memory', 'Memory')}
+          </h3>
+          <div className="mt-2 max-h-[45vh] overflow-y-auto text-[13px] text-[#262626] leading-relaxed whitespace-pre-wrap">
+            {memory.content || ''}
+          </div>
+          {niceTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-4">
+              {niceTags.map((tag) => (
+                <span key={tag} className="px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[10px] text-[#525252]">{entityLabel(tag)}</span>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -402,6 +647,13 @@ function OverviewChat({ inputRef }) {
     runUploads(files, { targetScope: scope, project });
   };
 
+  // Cognitive band interactions: question chip → composer; insight chip → modal.
+  const [openMemory, setOpenMemory] = useState(null);
+  const handleBandAsk = (q) => {
+    setInput(q);
+    inputRef?.current?.focus();
+  };
+
   // Persist the conversation for the session so navigating away and back
   // keeps the thread (capped so storage stays small).
   useEffect(() => {
@@ -506,6 +758,9 @@ function OverviewChat({ inputRef }) {
         </div>
       )}
 
+      {/* Cognitive swarm band — drifting insights / memories / questions */}
+      {!hasThread && <CognitiveBand onOpen={setOpenMemory} onAsk={handleBandAsk} />}
+
       {/* Upload progress — slides up from the composer (tqdm-style) */}
       <AnimatePresence>
         <UploadDropUp key="overview-upload-dropup" t={t} />
@@ -578,6 +833,9 @@ function OverviewChat({ inputRef }) {
         onClose={() => { setScopeOpen(false); setPendingFiles([]); }}
         t={t}
       />
+
+      {/* Full cognitive memory — opened from a band chip */}
+      {openMemory && <MemoryModal memory={openMemory} onClose={() => setOpenMemory(null)} t={t} />}
     </motion.div>
   );
 }
