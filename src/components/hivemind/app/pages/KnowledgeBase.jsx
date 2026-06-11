@@ -242,7 +242,11 @@ function UploadScopeModal({
 
   if (!open) return null;
 
-  const requiresProject = selectedScope === 'organization' && projects.length > 0;
+  // Project is OPTIONAL for organization scope: leaving it blank files the
+  // upload org-wide (backend scope='organization', visible to all org members);
+  // picking one files it into that project. Was a hard requirement that disabled
+  // the upload button — which blocked the org-wide-by-default flow.
+  const requiresProject = false;
   const canUseTeamWorkspace = org?.plan === 'enterprise' || org?.plan === 'team';
 
   return (
@@ -354,7 +358,7 @@ function UploadScopeModal({
                     onChange={(e) => onProjectChange(e.target.value)}
                     className="w-full rounded-[8px] border border-[#e3e0db] px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
                   >
-                    <option value="">{t('knowledgebase.selectTeamProject', 'Select a team project')}</option>
+                    <option value="">{t('knowledgebase.orgWideNoProject', 'Entire organization (no project)')}</option>
                     {projects.map((project) => (
                       <option key={project.id} value={project.slug}>
                         {project.name} ({project.slug})
@@ -362,7 +366,7 @@ function UploadScopeModal({
                     ))}
                   </select>
                   <p className="mt-2 text-[11px] text-[#a3a3a3]">
-                    {t('knowledgebase.teamUploadsHint', 'Team uploads should be attached to a project when projects exist.')}
+                    {t('knowledgebase.teamUploadsHint', 'Leave blank to share with the whole organization, or attach to a project to scope it there.')}
                   </p>
                 </>
               ) : (
@@ -425,7 +429,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
   const [confirmedType, setConfirmedType] = useState(detectionResult?.detected_type || 'general');
   const [sheetConfigs, setSheetConfigs] = useState([]);
   const [modalTags, setModalTags] = useState('');
-  const [modalScope, setModalScope] = useState('personal');
+  const [modalScope, setModalScope] = useState('organization');
 
   useEffect(() => {
     if (detectionResult?.sheets) {
@@ -687,7 +691,7 @@ export default function KnowledgeBase() {
   const [customTags, setCustomTags] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
-  const [selectedScope, setSelectedScope] = useState('personal');
+  const [selectedScope, setSelectedScope] = useState('organization'); // org-visible by default; project optional
   const [selectedProject, setSelectedProject] = useState('');
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -991,7 +995,7 @@ export default function KnowledgeBase() {
     return Math.min(2, files.length); // >30MB → 2 (bandwidth bound)
   }, []);
 
-  const handleFiles = useCallback(async (files, { targetScope = 'personal', project = null } = {}) => {
+  const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null } = {}) => {
     // ── Step 1: validate + queue all entries up-front (optimistic UI) ──
     const validQueue = []; // { uploadEntry, file, controller }
     const nowBase = Date.now();
