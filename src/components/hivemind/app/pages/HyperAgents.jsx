@@ -24,7 +24,7 @@ import {
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
-  UserPlus, LogOut,
+  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -798,6 +798,12 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
+            {room.goal && (
+              <div className="mt-1 max-w-[720px] text-[11px] leading-snug text-[#525252] line-clamp-2">
+                <span className="font-mono uppercase tracking-wider text-[#117dff] text-[9px] mr-1">{t('hyperAgents.goalLbl', 'Goal')}</span>
+                {room.goal}
+              </div>
+            )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1021,6 +1027,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
   const finalReport = [...lines].reverse().find(l => l.t === 'final_report');
+  const webIntel = [...lines].reverse().find(l => l.t === 'web_intel');
   const ontology = lines.find(l => l.t === 'ontology');
   const workforceAssessment = lines.find(l => l.t === 'workforce_assessment');
   const flybyProposal = lines.find(l => l.t === 'flyby_proposal');
@@ -1301,7 +1308,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       )}
 
       {finalReport && (
-        <FinalReportCard report={finalReport} />
+        <FinalReportCard
+          report={finalReport}
+          webSources={webIntel?.sources || []}
+          onOpenMemory={setEvidenceMemoryId}
+        />
       )}
 
       {!seal && typing.length > 0 && (
@@ -1359,10 +1370,18 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   );
 }
 
-function FinalReportCard({ report }) {
+function FinalReportCard({ report, webSources = [], onOpenMemory }) {
   const { t } = useTranslation('dashboard');
   if (!report?.content) return null;
   const verdict = String(report.verdict || report.status || '').toUpperCase();
+  const evidence = Array.isArray(report.evidence) ? report.evidence.filter(e => e?.id) : [];
+  const sources = [
+    ...(Array.isArray(report.sources) ? report.sources : []),
+    ...(Array.isArray(webSources) ? webSources : []),
+  ].filter((src, index, arr) => {
+    const key = src?.url || src?.title || index;
+    return key && arr.findIndex(s => (s?.url || s?.title) === key) === index;
+  }).slice(0, 8);
   const tone = verdict.includes('AGREED') || verdict.includes('RESOLVED') || verdict.includes('COMPLETE')
     ? 'border-emerald-200 bg-emerald-50/40 text-emerald-700'
     : verdict.includes('CONDITIONAL') || verdict.includes('ESCALATED')
@@ -1385,6 +1404,68 @@ function FinalReportCard({ report }) {
       </div>
       <div className="px-3 py-3 text-[12px] leading-relaxed text-[#0a0a0a]">
         {renderMarkdownLite(report.content)}
+        {(evidence.length > 0 || sources.length > 0) && (
+          <div className="mt-3 space-y-3 border-t border-[#e3e0db] pt-3">
+            {evidence.length > 0 && (
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-wider text-[#737373] mb-1.5">
+                  {t('hyperAgents.reportMemories', 'Memory evidence')}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {evidence.map((mem) => (
+                    <button
+                      key={mem.id}
+                      type="button"
+                      onClick={() => onOpenMemory?.(mem.id)}
+                      className="max-w-full inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 text-[10.5px] font-medium transition-colors"
+                      title={mem.snippet || mem.title || t('hyperAgents.openMemoryEvidence', 'Open memory evidence')}
+                    >
+                      <Brain size={11} className="shrink-0" />
+                      <span className="truncate max-w-[220px]">{mem.title || t('hyperAgents.memoryEvidence', 'Memory evidence')}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sources.length > 0 && (
+              <div>
+                <div className="text-[9px] font-mono uppercase tracking-wider text-[#737373] mb-1.5">
+                  {t('hyperAgents.reportSources', 'Web sources')}
+                </div>
+                <div className="grid gap-1.5">
+                  {sources.map((src, i) => {
+                    const href = src.url || '';
+                    const body = (
+                      <>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Globe size={11} className="text-[#117dff] shrink-0" />
+                          <span className="truncate font-semibold">{src.title || href || t('hyperAgents.webSource', 'Web source')}</span>
+                          {href && <ExternalLink size={10} className="text-[#a3a3a3] shrink-0" />}
+                        </div>
+                        {src.snippet && <div className="mt-0.5 text-[10px] text-[#737373] line-clamp-2">{src.snippet}</div>}
+                      </>
+                    );
+                    return href ? (
+                      <a
+                        key={`${href}-${i}`}
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-2.5 py-2 text-[11px] text-[#0f172a] hover:border-[#117dff]/40 transition-colors"
+                      >
+                        {body}
+                      </a>
+                    ) : (
+                      <div key={`source-${i}`} className="rounded-lg border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-2 text-[11px] text-[#0f172a]">
+                        {body}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1508,27 +1589,69 @@ function EvidenceModal({ memoryId, onClose }) {
   }, [memoryId]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl w-full max-w-[640px] max-h-[80vh] overflow-y-auto shadow-2xl"
-           onClick={(e) => e.stopPropagation()}>
-        <header className="px-5 py-3 border-b border-[#e3e0db] flex items-center justify-between sticky top-0 bg-white">
-          <div className="text-[10px] font-mono text-[#737373]">memory · {memoryId}</div>
-          <button onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm lg:hidden" />
+      <div
+        className="absolute inset-y-0 right-0 w-full max-w-lg bg-[#faf9f4] border-l border-[#e3e0db] shadow-2xl flex flex-col animate-slideInRight"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-6 py-4 border-b border-[#e3e0db] flex items-center justify-between bg-[#faf9f4]">
+          <div className="flex items-center gap-2 min-w-0">
+            <Brain size={16} className="text-[#117dff] shrink-0" />
+            <span className="text-[14px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] truncate">
+              {t('hyperAgents.memoryPreview', 'Memory preview')}
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#f3f1ec] text-[#525252] hover:text-[#0a0a0a]">
+            <X size={16} />
+          </button>
         </header>
-        <div className="px-5 py-4 space-y-3">
-          {loading && <div className="text-[12px] text-[#a3a3a3]">{t('hyperAgents.loading', 'Loading…')}</div>}
-          {err && <div className="text-[12px] text-red-600">{err}</div>}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {loading && (
+            <div className="flex items-center gap-2 text-[12px] text-[#a3a3a3]">
+              <Loader2 size={13} className="animate-spin" /> {t('hyperAgents.loading', 'Loading...')}
+            </div>
+          )}
+          {err && <div className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
           {data && (
             <>
-              <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{data.title || '(untitled)'}</h3>
-              <div className="text-[10px] font-mono text-[#737373] flex flex-wrap gap-1">
-                {(data.tags || []).slice(0, 20).map((t) => (
-                  <span key={t} className="px-1.5 py-0.5 rounded bg-[#f3f1ec]">{t}</span>
-                ))}
+              <h3 className="text-[18px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-snug">
+                {data.title || t('hyperAgents.untitledMemory', 'Untitled memory')}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                {data.memory_type && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
+                    <FileText size={10} /> {data.memory_type}
+                  </span>
+                )}
+                {(data.source || data.source_platform || data.source_metadata?.source_platform) && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border bg-blue-50 text-blue-700 border-blue-200">
+                    <Globe size={10} /> {data.source || data.source_platform || data.source_metadata?.source_platform}
+                  </span>
+                )}
               </div>
-              <div className="text-[12px] whitespace-pre-wrap text-[#0a0a0a] leading-relaxed">
-                {data.content || '(empty)'}
+              <div>
+                <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                  {t('hyperAgents.content', 'Content')}
+                </label>
+                <div className="bg-white border border-[#e3e0db] rounded-xl p-4 text-[#525252] text-sm leading-relaxed whitespace-pre-wrap">
+                  {data.content || t('hyperAgents.noContent', 'No content')}
+                </div>
               </div>
+              {(data.tags || []).length > 0 && (
+                <div>
+                  <label className="block text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mb-1.5">
+                    {t('hyperAgents.tags', 'Tags')}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(data.tags || []).slice(0, 30).map((tag) => (
+                      <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-[#e3e0db] text-[10px] text-[#525252]">
+                        <Tag size={9} /> {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2247,6 +2370,7 @@ function AgentDmModal({ agent, onClose }) {
 function CreateRoomModal({ onClose, onCreated }) {
   const { t } = useTranslation('dashboard');
   const [name, setName] = useState('');
+  const [goal, setGoal] = useState('');
   // Default to Smart (auto) — the orchestrator picks the best format from the
   // first question. No-code users never have to understand the 10 templates.
   const [template, setTemplate] = useState('auto');
@@ -2291,11 +2415,12 @@ function CreateRoomModal({ onClose, onCreated }) {
 
   async function submit(e) {
     e?.preventDefault?.();
-    if (!name.trim() || picked.size === 0 || !scopeReady || busy) return;
+    if (!name.trim() || !goal.trim() || picked.size === 0 || !scopeReady || busy) return;
     setBusy(true); setErr(null);
     try {
       const payload = {
         name: name.trim(),
+        goal: goal.trim(),
         participant_ids: Array.from(picked),
         template,
       };
@@ -2382,6 +2507,24 @@ function CreateRoomModal({ onClose, onCreated }) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            <div>
+              <label className={`text-[10.5px] font-mono uppercase tracking-wider mb-1.5 block ${goal.trim() ? 'text-[#737373]' : 'text-red-500'}`}>
+                {t('hyperAgents.goalLbl', 'Goal')}
+                {!goal.trim() && <span className="ml-1 normal-case font-sans tracking-normal text-[10px]">· {t('hyperAgents.goalRequired', 'required')}</span>}
+              </label>
+              <textarea
+                value={goal}
+                onChange={e => setGoal(e.target.value)}
+                placeholder={t('hyperAgents.goalPlaceholder', 'Example: Decide our Q2 go-to-market plan and keep every discussion grounded in profitable enterprise growth.')}
+                rows={3}
+                maxLength={2000}
+                className="w-full resize-none px-3.5 py-2.5 text-[13px] leading-relaxed bg-[#faf9f4] border border-[#e3e0db] rounded-xl focus:outline-none focus:bg-white focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15 transition-all"
+              />
+              <div className="mt-1 text-[10px] text-[#737373]">
+                {t('hyperAgents.goalHint', 'This becomes the standing objective the lead and agents optimize for in every turn.')}
               </div>
             </div>
 
@@ -2640,8 +2783,8 @@ function CreateRoomModal({ onClose, onCreated }) {
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || picked.size === 0 || !scopeReady || busy}
-              title={picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : (!scopeReady ? t('hyperAgents.selectProject', '— select a project —') : undefined)}
+              disabled={!name.trim() || !goal.trim() || picked.size === 0 || !scopeReady || busy}
+              title={!goal.trim() ? t('hyperAgents.goalRequired', 'Goal is required') : (picked.size === 0 ? t('hyperAgents.pickAtLeastOne', 'pick at least 1') : (!scopeReady ? t('hyperAgents.selectProject', '— select a project —') : undefined))}
               className="text-white text-[12px] font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 bg-[#117dff] shadow-[0_4px_14px_rgba(17,125,255,0.32)] hover:bg-[#0066e0] hover:shadow-[0_6px_18px_rgba(17,125,255,0.42)] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all font-['Space_Grotesk']"
             >
               {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
