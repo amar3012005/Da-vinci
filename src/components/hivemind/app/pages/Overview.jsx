@@ -5,20 +5,28 @@ import OverviewTour, { useOverviewTour } from '../shared/OverviewTour';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
+  AlertCircle,
   ArrowUp,
   BookOpen,
   Boxes,
   Building2,
   Cable,
+  CheckCircle2,
+  FileText,
   Globe,
   Hexagon,
+  Loader2,
+  Lock,
   Network,
+  Paperclip,
   Sparkles,
   Users,
+  X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useHealthStatus } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
+import { useUploads, setUploads, updateUpload, removeUpload } from '../shared/upload-store';
 
 // ─── Animation variants ──────────────────────────────────────────
 
@@ -63,6 +71,13 @@ function ConsoleClock() {
 const CHAT_STORE_KEY = 'hm.overviewChat';
 const CHAT_MODEL = 'gpt-oss-120b';
 const HISTORY_CAP = 40;
+
+// Same accepted families as the Knowledge Base dropzone (docling + image
+// pipelines). Kept in sync with KnowledgeBase.jsx ACCEPTED_EXTS.
+const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
+  'pptx', 'ppt', 'html', 'htm', 'png', 'jpg', 'jpeg', 'webp', 'gif'];
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
+const FILE_ACCEPT = ACCEPTED_EXTS.map((e) => `.${e}`).join(',');
 
 function loadStoredChat() {
   try {
@@ -112,13 +127,278 @@ function ChatBubble({ msg }) {
   );
 }
 
+// ─── Upload: scope popup (compact replica of the KB modal) ──────
+function UploadScopeModal({ open, files, projects, onConfirm, onClose, t }) {
+  const [scope, setScope] = useState('personal');
+  const [project, setProject] = useState('');
+  useEffect(() => { if (open) { setScope('personal'); setProject(''); } }, [open]);
+  if (!open) return null;
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="scope-backdrop"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.97 }}
+          transition={{ duration: 0.22 }}
+          className="bg-white border border-[#e3e0db] rounded-2xl shadow-xl w-full max-w-md p-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="text-[#0a0a0a] text-[16px] font-semibold font-['Space_Grotesk']">
+            {t('knowledgebase.scopeModalTitle', 'Save uploaded memories to')}
+          </h3>
+          <p className="text-[12px] text-[#737373] mt-0.5 mb-4">
+            {t('knowledgebase.scopeModalSubtitle', 'Choose where these files should live before upload starts.')}
+            {files?.length ? ` · ${files.length} file${files.length === 1 ? '' : 's'}` : ''}
+          </p>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => setScope('personal')}
+              className={`w-full flex items-center gap-3 p-3 rounded-[10px] border text-left transition-colors ${
+                scope === 'personal' ? 'border-[#117dff] bg-[#117dff]/5' : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+              }`}
+            >
+              <Lock size={16} className={scope === 'personal' ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+              <span>
+                <span className="block text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopePersonalLabel', 'My Space')}</span>
+                <span className="block text-[11px] text-[#737373]">{t('knowledgebase.scopePersonalDesc', 'Private memories only visible in your personal workspace.')}</span>
+              </span>
+            </button>
+            <button
+              onClick={() => setScope('organization')}
+              className={`w-full flex items-center gap-3 p-3 rounded-[10px] border text-left transition-colors ${
+                scope === 'organization' ? 'border-[#117dff] bg-[#117dff]/5' : 'border-[#e3e0db] hover:border-[#d4d0ca]'
+              }`}
+            >
+              <Building2 size={16} className={scope === 'organization' ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+              <span>
+                <span className="block text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeTeamLabel', 'Team Workspace')}</span>
+                <span className="block text-[11px] text-[#737373]">{t('knowledgebase.scopeTeamDesc', 'Shared with your org.')}</span>
+              </span>
+            </button>
+          </div>
+
+          {scope === 'organization' && projects?.length > 0 && (
+            <div className="mt-3">
+              <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">{t('knowledgebase.scopeProject', 'Project')}</label>
+              <select
+                value={project}
+                onChange={(e) => setProject(e.target.value)}
+                className="mt-1 w-full bg-white border border-[#e3e0db] rounded-[6px] px-2.5 py-2 text-[12px] text-[#0a0a0a] focus:outline-none focus:border-[#117dff]"
+              >
+                <option value="">{t('knowledgebase.scopeOrgWide', 'Org-wide (no project)')}</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 mt-5">
+            <button onClick={onClose} className="px-3 py-2 rounded-[6px] text-[12px] text-[#525252] hover:bg-[#f3f1ec]">
+              {t('common.cancel', 'Cancel')}
+            </button>
+            <button
+              onClick={() => onConfirm({ scope, project: scope === 'organization' ? (project || null) : null })}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] hover:bg-[#0066e0]"
+            >
+              <Paperclip size={13} /> {t('knowledgebase.uploadFiles', 'Upload files')}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ─── Upload: drop-up strip (tqdm-style, slides above the composer) ──
+function rowState(u) {
+  if (u.status === 'success') return { icon: CheckCircle2, color: '#10b981' };
+  if (u.status === 'error' || u.status === 'cancelled') return { icon: AlertCircle, color: '#f59e0b' };
+  return { icon: Loader2, color: '#117dff' };
+}
+
+function UploadDropUp({ t }) {
+  const uploads = useUploads();
+  // Tick once a second while completed rows are on screen so they self-expire.
+  const [, setTick] = useState(0);
+  const hasDone = uploads.some((u) => u.status === 'success' && u._completedAt);
+  useEffect(() => {
+    if (!hasDone) return undefined;
+    const id = window.setInterval(() => setTick((v) => v + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [hasDone]);
+
+  const now = Date.now();
+  const visible = uploads.filter((u) => {
+    if (u.status === 'success') return u._completedAt ? now - u._completedAt < 8000 : true;
+    if (u.status === 'cancelled') return false;
+    return true; // queued | uploading | error
+  });
+  if (!visible.length) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, height: 0 }}
+      animate={{ opacity: 1, y: 0, height: 'auto' }}
+      exit={{ opacity: 0, y: 8, height: 0 }}
+      transition={{ duration: 0.25 }}
+      className="overflow-hidden"
+    >
+      <div className="bg-white border border-[#e3e0db] rounded-xl px-3 py-2 mb-2 space-y-2 shadow-sm">
+        {visible.slice(0, 4).map((u) => {
+          const { icon: Icon, color } = rowState(u);
+          const processing = u.status === 'uploading' && u.stage === 'processing';
+          return (
+            <div key={u.id}>
+              <div className="flex items-center gap-2">
+                <FileText size={12} className="text-[#a3a3a3] flex-shrink-0" />
+                <span className="text-[11px] text-[#0a0a0a] truncate flex-1">{u.filename}</span>
+                <span className="text-[10px] font-mono tabular-nums" style={{ color }}>
+                  {u.status === 'success'
+                    ? (u.deduped ? t('overview.upload.deduped', 'already saved') : `${u.promotedCount ?? u.chunks ?? ''} ${t('overview.upload.done', 'done')}`.trim())
+                    : u.status === 'error' ? (u.error || 'error').slice(0, 36)
+                    : processing ? `${t('overview.upload.processing', 'processing')}${u.processingSec ? ` · ${u.processingSec}s` : '…'}`
+                    : `${u.progress || 0}%`}
+                </span>
+                <Icon size={12} style={{ color }} className={u.status === 'uploading' && !processing ? '' : u.status === 'uploading' ? 'animate-spin' : ''} />
+                {(u.status === 'uploading' || u.status === 'queued') && u.controller && (
+                  <button onClick={() => { try { u.controller.abort(); } catch { /* noop */ } }} className="text-[#a3a3a3] hover:text-[#0a0a0a]" aria-label="Cancel">
+                    <X size={11} />
+                  </button>
+                )}
+                {(u.status === 'error') && (
+                  <button onClick={() => removeUpload(u.id)} className="text-[#a3a3a3] hover:text-[#0a0a0a]" aria-label="Dismiss">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+              {/* tqdm-style bar: determinate blue fill while bytes move, indeterminate sweep while the server parses/embeds */}
+              <div className="h-1 rounded-full bg-[#f3f1ec] mt-1.5 overflow-hidden relative">
+                {processing ? (
+                  <motion.div
+                    className="absolute inset-y-0 w-1/3 rounded-full bg-[#117dff]"
+                    animate={{ x: ['-100%', '300%'] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                ) : (
+                  <div
+                    className="h-full rounded-full bg-[#117dff] transition-all duration-300"
+                    style={{ width: `${u.status === 'success' ? 100 : (u.progress || 0)}%` }}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {visible.length > 4 && (
+          <p className="text-[10px] text-[#a3a3a3] text-center">+{visible.length - 4} {t('overview.upload.more', 'more')}</p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Upload engine — same pipeline as the KB page, writing to the global
+// upload-store so progress survives navigation (GlobalUploadStrip elsewhere).
+async function runUploads(files, { targetScope, project }) {
+  const valid = [];
+  const nowBase = Date.now();
+  files.forEach((file, idx) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ACCEPTED_EXTS.includes(ext)) {
+      setUploads((prev) => [...prev, { id: nowBase + idx + Math.random(), filename: file.name, status: 'error', error: `Unsupported type: .${ext}` }]);
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      setUploads((prev) => [...prev, { id: nowBase + idx + Math.random(), filename: file.name, status: 'error', error: 'File too large (max 100MB)' }]);
+      return;
+    }
+    const controller = new AbortController();
+    const entry = { id: nowBase + idx + Math.random(), filename: file.name, size: file.size, status: 'queued', progress: 0, controller };
+    valid.push({ entry, file });
+    setUploads((prev) => [...prev, entry]);
+  });
+
+  const uploadOne = async ({ entry, file }) => {
+    updateUpload(entry.id, { status: 'uploading' });
+    let processingTimer = null;
+    try {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      const isImage = IMAGE_EXTS.has(ext) || /^image\//.test(file.type || '');
+      const uploadFn = isImage ? apiClient.uploadImage.bind(apiClient) : apiClient.uploadDocument.bind(apiClient);
+      const opts = isImage
+        ? { projectId: targetScope === 'organization' ? null : (project || null), signal: entry.controller.signal }
+        : { targetScope, containerTag: targetScope === 'organization' ? (project || undefined) : undefined, signal: entry.controller.signal };
+      const result = await uploadFn(file, {
+        ...opts,
+        onUploadProgress: (e) => {
+          if (!e.total) return;
+          const pct = Math.round((e.loaded / e.total) * 100);
+          updateUpload(entry.id, { progress: pct, stage: pct < 100 ? 'uploading' : 'processing' });
+          if (pct >= 100 && !processingTimer) {
+            const tProc = Date.now();
+            processingTimer = setInterval(() => {
+              updateUpload(entry.id, { stage: 'processing', processingSec: Math.round((Date.now() - tProc) / 1000) });
+            }, 500);
+          }
+        },
+      });
+      if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
+      updateUpload(entry.id, {
+        status: 'success', _completedAt: Date.now(), progress: 100,
+        deduped: !!result?.deduped,
+        chunks: result?.chunks ?? result?.segmentCount ?? null,
+        promotedCount: result?.promotedCount ?? null,
+      });
+    } catch (err) {
+      if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
+      const cancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
+      updateUpload(entry.id, {
+        status: cancelled ? 'cancelled' : 'error',
+        error: cancelled ? 'Cancelled' : (err?.response?.data?.error || err?.message),
+      });
+    }
+  };
+
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(3, valid.length) }, async () => {
+    while (cursor < valid.length) {
+      const i = cursor++;
+      if (i >= valid.length) break;
+      await uploadOne(valid[i]);
+    }
+  });
+  await Promise.all(workers);
+}
+
 function OverviewChat({ inputRef }) {
   const { t, i18n } = useTranslation('dashboard');
-  const { activeProjectId } = useTeamContext() || {};
+  const { activeProjectId, projects } = useTeamContext() || {};
   const [messages, setMessages] = useState(() => (typeof window === 'undefined' ? [] : loadStoredChat()));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const threadRef = useRef(null);
+
+  // Knowledge upload from the composer — same scope-popup + pipeline as the
+  // KB page; progress renders in the drop-up strip above the composer.
+  const fileInputRef = useRef(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const onFilesPicked = (list) => {
+    const files = Array.from(list || []);
+    if (!files.length) return;
+    setPendingFiles(files);
+    setScopeOpen(true);
+  };
+  const confirmScope = ({ scope, project }) => {
+    const files = pendingFiles;
+    setScopeOpen(false);
+    setPendingFiles([]);
+    runUploads(files, { targetScope: scope, project });
+  };
 
   // Persist the conversation for the session so navigating away and back
   // keeps the thread (capped so storage stays small).
@@ -224,6 +504,11 @@ function OverviewChat({ inputRef }) {
         </div>
       )}
 
+      {/* Upload progress — slides up from the composer (tqdm-style) */}
+      <AnimatePresence>
+        <UploadDropUp key="overview-upload-dropup" t={t} />
+      </AnimatePresence>
+
       {/* Composer */}
       <div className={`bg-white border border-[#e3e0db] rounded-2xl shadow-sm focus-within:border-[#117dff] transition-colors ${hasThread ? '' : 'mt-2'}`}>
         <textarea
@@ -236,9 +521,27 @@ function OverviewChat({ inputRef }) {
           className="w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none"
         />
         <div className="flex items-center justify-between px-3 pb-2.5">
-          <span className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider pl-1">
-            {t('overview.chat.engine', 'HIVE · full recall + tools')}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={FILE_ACCEPT}
+              className="hidden"
+              onChange={(e) => { onFilesPicked(e.target.files); e.target.value = ''; }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#117dff] hover:bg-[#117dff]/10 transition-colors"
+              title={t('overview.upload.hint', 'Upload to Knowledge Base')}
+              aria-label={t('overview.upload.hint', 'Upload to Knowledge Base')}
+            >
+              <Paperclip size={14} />
+            </button>
+            <span className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider">
+              {t('overview.chat.engine', 'HIVE · full recall + tools')}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
               <button
@@ -263,6 +566,16 @@ function OverviewChat({ inputRef }) {
           </div>
         </div>
       </div>
+
+      {/* Upload scope popup — same choice flow as the KB page */}
+      <UploadScopeModal
+        open={scopeOpen}
+        files={pendingFiles}
+        projects={projects || []}
+        onConfirm={confirmScope}
+        onClose={() => { setScopeOpen(false); setPendingFiles([]); }}
+        t={t}
+      />
     </motion.div>
   );
 }
