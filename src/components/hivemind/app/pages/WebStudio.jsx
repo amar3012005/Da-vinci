@@ -270,7 +270,6 @@ export default function WebStudio() {
   }, [jobList, pollingId]);
 
   // Past research toggle (drop-down list above the chat bar).
-  const [pastOpen, setPastOpen] = useState(false);
   const [previewJob, setPreviewJob] = useState(null);
 
   // Persisted save snapshots so the graph-tree summary survives modal
@@ -335,12 +334,11 @@ export default function WebStudio() {
           <LiveResearchPanel job={activeResearchJob} />
         ) : (
           <PastResearchPanel
-            open={pastOpen}
-            onToggle={() => setPastOpen(v => !v)}
             jobs={researchJobs}
             onPick={setPreviewJob}
             locked={featureLocked}
             savedByJob={savedByJob}
+            onExample={(m, p) => { setForcedMode(m); setPrompt(p); }}
           />
         )}
 
@@ -495,41 +493,96 @@ function LiveResearchPanel({ job }) {
 
 /* ─── Past research toggle + list ────────────────────────────────── */
 
-function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = {} }) {
+/* ─── Guided start — what can I do here? ──────────────────────────
+   Shown when there are no research reports yet: three mode cards, each
+   with a plain-language description and tap-to-try examples that drop
+   straight into the prompt bar with the right mode forced. */
+function GuideCards({ onExample }) {
+  const { t } = useTranslation('dashboard');
+  const CARDS = [
+    {
+      mode: 'research', icon: Sparkles, color: '#8b5cf6', bg: 'bg-violet-50',
+      title: t('webstudio.guide.researchTitle', 'Deep Research'),
+      desc: t('webstudio.guide.researchDesc', 'Multi-source report with citations. Ask a question, get a compiled answer in 1–3 minutes.'),
+      examples: [
+        t('webstudio.guide.researchEx1', 'Compare vector databases for a 1M-document RAG system'),
+        t('webstudio.guide.researchEx2', 'EU AI Act obligations for SaaS companies in 2026'),
+      ],
+    },
+    {
+      mode: 'search', icon: Search, color: '#117dff', bg: 'bg-blue-50',
+      title: t('webstudio.guide.searchTitle', 'Quick Search'),
+      desc: t('webstudio.guide.searchDesc', 'Raw top-10 live results in seconds — when you just need links, not a report.'),
+      examples: [
+        t('webstudio.guide.searchEx1', 'Qdrant latest release notes'),
+        t('webstudio.guide.searchEx2', 'Slack Socket Mode rate limits'),
+      ],
+    },
+    {
+      mode: 'crawl', icon: LinkIcon, color: '#f59e0b', bg: 'bg-amber-50',
+      title: t('webstudio.guide.crawlTitle', 'Crawl a Site'),
+      desc: t('webstudio.guide.crawlDesc', 'Paste a URL — HIVEMIND reads the pages and can save them to your Knowledge Base.'),
+      examples: [
+        'docs.stripe.com/api',
+        'qdrant.tech/documentation',
+      ],
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
+      {CARDS.map((c) => {
+        const Icon = c.icon;
+        return (
+          <div key={c.mode} className="bg-white border border-[#e3e0db] rounded-xl p-4 hover:border-[#d4d0ca] transition-colors flex flex-col">
+            <div className={`w-8 h-8 rounded-lg ${c.bg} flex items-center justify-center mb-2`}>
+              <Icon size={15} style={{ color: c.color }} />
+            </div>
+            <p className="text-[13px] font-semibold text-[#0a0a0a]">{c.title}</p>
+            <p className="text-[11px] text-[#737373] mt-1 leading-relaxed flex-1">{c.desc}</p>
+            <div className="mt-3 space-y-1.5">
+              {c.examples.map((ex) => (
+                <button
+                  key={ex}
+                  onClick={() => onExample(c.mode, ex)}
+                  className="w-full text-left text-[11px] text-[#525252] hover:text-[#0a0a0a] bg-[#faf9f4] hover:bg-[#f3f1ec] border border-[#eae7e1] rounded-lg px-2.5 py-1.5 truncate transition-colors"
+                  title={ex}
+                >
+                  → {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PastResearchPanel({ jobs, onPick, locked, savedByJob = {}, onExample }) {
   const { t } = useTranslation('dashboard');
   if (locked) return <EmptyState locked={true} />;
 
   return (
     <div className="h-full">
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white border border-[#e3e0db] rounded-xl hover:border-[#d4d0ca] transition-colors"
-      >
-        <div className="flex items-center gap-2">
+      {/* Guided start when there's nothing to show yet; otherwise the
+          reports list is ALWAYS visible — no hidden dropdown to discover. */}
+      {jobs.length > 0 && (
+        <div className="flex items-center gap-2 px-1 pb-2">
           <Sparkles size={14} className="text-violet-500" />
-          <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('webstudio.pastResearch', 'Past research')}</span>
-          <span className="text-[10px] font-mono text-[#a3a3a3]">
-            {jobs.length === 0 ? t('webstudio.noRunsYet', 'no runs yet') : t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}
-          </span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.pastResearch', 'Research reports')}</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3]">{t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}</span>
         </div>
-        {open ? <ChevronUp size={14} className="text-[#a3a3a3]" /> : <ChevronDown size={14} className="text-[#a3a3a3]" />}
-      </button>
+      )}
 
       <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            className="mt-2"
-          >
+        <motion.div
+          key="research-list"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+        >
             {jobs.length === 0 ? (
-              <div className="bg-white border border-[#e3e0db] rounded-xl p-6 text-center">
-                <Sparkles size={18} className="text-[#117dff] mx-auto mb-2" />
-                <p className="text-[12px] text-[#0a0a0a] font-semibold">{t('webstudio.noPastResearch', 'No past research yet')}</p>
-                <p className="text-[10px] text-[#737373] mt-1">{t('webstudio.noPastResearchHint', 'Type a question in the chat bar below to start.')}</p>
-              </div>
+              <GuideCards onExample={onExample} />
             ) : (
               <div className="border border-[#e3e0db] rounded-xl bg-white divide-y divide-[#f3f1ec] max-h-[460px] overflow-y-auto">
                 {jobs.map(job => {
@@ -568,16 +621,8 @@ function PastResearchPanel({ open, onToggle, jobs, onPick, locked, savedByJob = 
                 })}
               </div>
             )}
-          </motion.div>
-        )}
+        </motion.div>
       </AnimatePresence>
-
-      {/* Quiet hint when nothing else fills the area */}
-      {!open && jobs.length === 0 && (
-        <div className="mt-6 text-center text-[11px] text-[#a3a3a3]">
-          {t('webstudio.askWebHint', 'Ask the web — type below. e.g.')} <code className="font-mono bg-[#f3f1ec] px-1 rounded">compare vector DBs for 1M-row RAG</code>
-        </div>
-      )}
     </div>
   );
 }
@@ -816,13 +861,13 @@ function PromptBar({
       ? t('webstudio.placeholder.research', 'Research the web…  e.g. "compare vector DBs for 1M-row RAG"')
       : t('webstudio.placeholder.search', 'Search the web…  e.g. "milvus vs qdrant benchmarks"');
 
-  // Cycle force: research → search → crawl → null (auto)
-  const cycleForce = () => {
-    if (forcedMode === null)       setForcedMode('search');
-    else if (forcedMode === 'search')   setForcedMode('crawl');
-    else if (forcedMode === 'crawl')    setForcedMode('research');
-    else                                 setForcedMode(null);
-  };
+  // Explicit mode pills — replaces the old "click to cycle" mystery button.
+  const MODE_PILLS = [
+    { id: null,        label: t('webstudio.pill.auto', 'Auto'),      icon: null,     active: 'bg-[#0a0a0a] text-white' },
+    { id: 'research',  label: t('webstudio.pill.research', 'Research'), icon: Sparkles, active: 'bg-violet-500 text-white' },
+    { id: 'search',    label: t('webstudio.pill.search', 'Search'),  icon: Search,   active: 'bg-[#117dff] text-white' },
+    { id: 'crawl',     label: t('webstudio.pill.crawl', 'Crawl'),    icon: LinkIcon, active: 'bg-amber-500 text-white' },
+  ];
 
   return (
     <div className={`relative bg-white border ${locked ? 'border-red-200' : 'border-[#e3e0db]'} rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden`}>
@@ -912,15 +957,27 @@ function PromptBar({
 
       {/* Footer */}
       <div className="px-4 py-2 bg-[#faf9f4] border-t border-[#f3f1ec] flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={cycleForce}
-            className="text-[10px] text-[#525252] hover:text-[#0a0a0a] px-2 py-1 rounded hover:bg-white border border-transparent hover:border-[#e3e0db]"
-            title={t('webstudio.cycleTitle', 'Cycle: auto → search → crawl → research')}
-          >
-            ↔ {forcedMode ? t('webstudio.forced', 'forced: {{mode}}', { mode: forcedMode }) : t('webstudio.autoClickToForce', 'auto · click to force')}
-          </button>
-          <span className="text-[10px] text-[#a3a3a3] ml-1">{t('webstudio.enterHint', 'Enter to send · Shift+Enter newline')}</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 bg-white border border-[#e3e0db] rounded-lg p-0.5">
+            {MODE_PILLS.map((p) => {
+              const isActive = forcedMode === p.id;
+              const PIcon = p.icon;
+              return (
+                <button
+                  key={String(p.id)}
+                  onClick={() => setForcedMode(p.id)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors ${
+                    isActive ? p.active : 'text-[#525252] hover:bg-[#f3f1ec]'
+                  }`}
+                  title={p.id === null ? t('webstudio.pill.autoTitle', 'Detect mode from input (URL → crawl, text → research)') : undefined}
+                >
+                  {PIcon && <PIcon size={10} />}
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-[10px] text-[#a3a3a3] hidden sm:inline">{t('webstudio.enterHint', 'Enter to send · Shift+Enter newline')}</span>
         </div>
         <button
           onClick={onSubmit}
