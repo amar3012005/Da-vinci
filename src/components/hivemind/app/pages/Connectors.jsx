@@ -3535,8 +3535,11 @@ export default function Connectors() {
         // 'organization' and non-admins 403 ("Only org admins can set
         // org-scope connectors"). Their intent is simply "connect MY account",
         // so retry personally instead of dead-ending.
-        const msg = scopeErr?.response?.data?.error || '';
-        if (scopeErr?.response?.status === 403 && /org admins|org-scope/i.test(msg) && targetScope !== 'personal') {
+        // Two backend gates can fire: assertPermission throws a bare
+        // "Forbidden", the scope validator says "Only org admins…". A
+        // personal start has NO 403 path, so any 403 here means the scope was
+        // the problem — retry personally regardless of message text.
+        if (scopeErr?.response?.status === 403 && targetScope !== 'personal') {
           startRes = await apiClient.startConnectorOAuth(
             provider,
             window.location.pathname,
