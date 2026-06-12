@@ -670,6 +670,15 @@ function OverviewChat({ inputRef }) {
     inputRef?.current?.focus();
   };
 
+  // Chat scope — org-wide or one project. Initialized from the global team
+  // switcher, overridable per-conversation from the composer drop-up.
+  const [chatScope, setChatScope] = useState(activeProjectId || null);
+  const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  const scopeLabel = chatScope
+    ? (projects?.find((p) => p.id === chatScope)?.name || t('overview.scope.project', 'Project'))
+    : t('overview.scope.org', 'Org-wide');
+
+
   // Persist the conversation for the session so navigating away and back
   // keeps the thread (capped so storage stays small).
   useEffect(() => {
@@ -694,12 +703,22 @@ function OverviewChat({ inputRef }) {
     setInput('');
     setLoading(true);
 
-    // Same strict-language directive the Talk-to-HIVE panel sends — UI keeps
-    // the clean text, only the wire payload carries it.
+    // Response language follows the NAVBAR language toggle — identical
+    // behavior + directive map to the Talk-to-HIVE slide panel (Chat.jsx).
+    const LANG_FULL = {
+      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
+      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
+      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
+      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
+      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
+      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
+      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
+    };
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
+    const langName = LANG_FULL[lang2] || 'English';
     const wireMessage = lang2 === 'en'
       ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in the UI language (${lang2}).]\n\n${trimmed}`;
+      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
 
     try {
       const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
@@ -707,7 +726,7 @@ function OverviewChat({ inputRef }) {
         model: CHAT_MODEL,
         history: fullHistory,
         language: lang2,
-        ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
+        ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
       });
       const chatData = chatRes.data || {};
       let content = chatData.response
@@ -730,7 +749,7 @@ function OverviewChat({ inputRef }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, activeProjectId, i18n.language, t]);
+  }, [input, loading, messages, chatScope, i18n.language, t]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -817,9 +836,51 @@ function OverviewChat({ inputRef }) {
             >
               <Paperclip size={14} />
             </button>
-            <span className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider">
-              {t('overview.chat.engine', 'HIVE · full recall + tools')}
-            </span>
+
+            {/* Scope drop-UP: org-wide vs one project */}
+            <div className="relative">
+              {scopeMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setScopeMenuOpen(false)} />}
+              <button
+                onClick={() => setScopeMenuOpen((v) => !v)}
+                className={`relative z-40 flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-medium transition-colors ${
+                  chatScope ? 'border-[#117dff]/40 bg-[#117dff]/[0.06] text-[#117dff]' : 'border-[#e3e0db] text-[#525252] hover:bg-[#f3f1ec]'
+                }`}
+                title={t('overview.scope.hint', 'Answer scope: org-wide or one project')}
+              >
+                {chatScope ? <Boxes size={10} /> : <Building2 size={10} />}
+                <span className="max-w-[110px] truncate">{scopeLabel}</span>
+              </button>
+              <AnimatePresence>
+                {scopeMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full mb-2 left-0 z-40 w-56 bg-white border border-[#e3e0db] rounded-xl shadow-lg p-1.5"
+                  >
+                    <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('overview.scope.title', 'Answer scope')}</p>
+                    <button
+                      onClick={() => { setChatScope(null); setScopeMenuOpen(false); }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-left transition-colors ${!chatScope ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}
+                    >
+                      <Building2 size={12} /> {t('overview.scope.org', 'Org-wide')}
+                    </button>
+                    {(projects || []).map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => { setChatScope(p.id); setScopeMenuOpen(false); }}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-left transition-colors ${chatScope === p.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] hover:bg-[#faf9f4]'}`}
+                      >
+                        <Boxes size={12} /> <span className="truncate">{p.name}</span>
+                      </button>
+                    ))}
+                    {(projects || []).length === 0 && (
+                      <p className="px-2 py-1.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
