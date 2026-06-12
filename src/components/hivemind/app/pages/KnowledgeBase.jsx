@@ -681,7 +681,7 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
 
 export default function KnowledgeBase() {
   const { t } = useTranslation('dashboard');
-  const { org } = useAuth();
+  const { org, user } = useAuth();
   // Uploads live in a module-level store so they survive navigation away
   // from this page. `setUploads` here is a pass-through writer; the
   // GlobalUploadStrip (mounted in AppShell) subscribes to the same store
@@ -772,8 +772,15 @@ export default function KnowledgeBase() {
       } catch { /* swallow — empty list is acceptable here */ }
     }
 
-    return docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-  }, []);
+    // OWN-DOCS-ONLY: KB doc-summaries are scope='organization' by default, so a
+    // scope:'all' fetch surfaces OTHER users' org/project-shared docs too. The
+    // Documents list must show only what THIS user uploaded → filter by owner.
+    // (Gate on a known user id; the query re-runs once auth resolves.)
+    const ownDocs = user?.id
+      ? docs.filter((d) => (d.user_id || d.owner?.id) === user.id)
+      : [];
+    return ownDocs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  }, [user?.id]);
 
   // Fetch per-doc relationship summaries in batch whenever the doc list changes.
   // Backend resolves doc+chunk cluster then groups by relationship type so we
