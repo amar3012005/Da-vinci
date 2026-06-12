@@ -1468,6 +1468,13 @@ export default function KnowledgeBase() {
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
             {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file')}
           </p>
+          {/* Two-tier ingestion: sections index synchronously (searchable in
+              seconds, no LLM in the request); facts + relations distill in a
+              background combined-LLM pass. The ✦-facts / enriching… badges on
+              each document reflect Tier-2 progress. */}
+          <p className="text-[#a3a3a3] text-[10px] font-mono mt-1.5">
+            {t('knowledgebase.tierHint', 'Searchable in seconds — facts & relations enrich in the background ✦')}
+          </p>
           <p className="text-[#a3a3a3] text-[10px] font-mono mt-2">
             {t('knowledgebase.chunkedHint', 'Files are chunked into semantic sections and stored as searchable memories')}
           </p>
@@ -1861,6 +1868,30 @@ export default function KnowledgeBase() {
                             title={`Edges touching this document cluster (${rs.cluster_size} memories)`}
                           >
                             {rs.total} relations{types ? `: ${types}` : ''}
+                          </span>
+                        );
+                      })()}
+                      {/* Tier-2 enrichment status: sections index instantly (searchable);
+                          the combined LLM pass distills facts in the background. */}
+                      {(() => {
+                        const rs = relSummaries[doc.id];
+                        if (!rs) return null;
+                        if (rs.facts > 0) {
+                          return (
+                            <span
+                              className="text-[#d97706] text-[10px] font-mono bg-[#d97706]/8 border border-[#d97706]/20 rounded px-1.5 py-0.5"
+                              title="Background enrichment complete — atomic facts distilled from this document (searchable + cited in recall)"
+                            >
+                              ✦ {rs.facts} facts
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            className="text-[#a3a3a3] text-[10px] font-mono bg-[#f3f1ec] border border-[#e3e0db] rounded px-1.5 py-0.5 animate-pulse"
+                            title="Document is already searchable (sections indexed). Fact distillation runs in the background and lands within minutes."
+                          >
+                            enriching…
                           </span>
                         );
                       })()}
