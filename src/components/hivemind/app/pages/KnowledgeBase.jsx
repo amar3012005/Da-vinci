@@ -1262,10 +1262,15 @@ export default function KnowledgeBase() {
   const queueFilesForUpload = useCallback((files) => {
     if (!files?.length) return;
     setPendingFiles(files);
-    setSelectedScope('personal');
+    // Open on Team Workspace (organization) scope for enterprise/team orgs so
+    // the project picker is visible immediately — KB uploads default to org
+    // visibility, and the project dropdown only renders under 'organization'.
+    // Personal-only workspaces have no team scope, so keep 'personal' there.
+    const teamCapable = org?.plan === 'enterprise' || org?.plan === 'team';
+    setSelectedScope(teamCapable ? 'organization' : 'personal');
     setSelectedProject('');
     setScopeModalOpen(true);
-  }, []);
+  }, [org?.plan]);
 
   // Typed file-based import: set the shared hidden input's accept to the chosen
   // family, then open it. Setting the attr imperatively (not via React state)
