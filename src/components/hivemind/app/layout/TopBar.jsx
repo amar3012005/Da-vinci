@@ -92,17 +92,6 @@ export default function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Invite your Team — bulk invitations in one go (admins/owners) */}
-        {canInvite && (
-          <button
-            onClick={() => setInviteOpen(true)}
-            className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
-          >
-            <UserPlus size={13} />
-            <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
-          </button>
-        )}
-
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
@@ -125,6 +114,18 @@ export default function TopBar() {
         >
           <BookOpen size={15} />
         </a>
+
+        {/* Invite your Team — bulk invitations in one go (admins/owners),
+            right next to the language toggle on the main navbar. */}
+        {canInvite && (
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
+          >
+            <UserPlus size={13} />
+            <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
+          </button>
+        )}
 
         {/* Language switcher */}
         <LangSwitcher />
