@@ -521,7 +521,7 @@ function RoomThread({ roomId, onArchived }) {
       'seal', 'error', 'heartbeat',
       // Phase 4 cognitive upgrades:
       'decision_required', 'decision_saved',
-      'final_report',
+      'final_report', 'harness_check',
       // Phase 4 swarm (R1-R5):
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
@@ -1027,6 +1027,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
   const finalReport = [...lines].reverse().find(l => l.t === 'final_report');
+  const harnessCheck = [...lines].reverse().find(l => l.t === 'harness_check');
   const webIntel = [...lines].reverse().find(l => l.t === 'web_intel');
   const ontology = lines.find(l => l.t === 'ontology');
   const workforceAssessment = lines.find(l => l.t === 'workforce_assessment');
@@ -1307,6 +1308,17 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
+      {harnessCheck?.status === 'warn' && (
+        <div className="mx-2 my-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+          <div className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[9px] mb-1">
+            <AlertTriangle size={11} /> {t('hyperAgents.harnessCheckWarn', 'Report quality check')}
+          </div>
+          {(harnessCheck.failed || []).length > 0
+            ? t('hyperAgents.harnessCheckFailed', 'Needs attention: {{items}}', { items: harnessCheck.failed.join(', ') })
+            : t('hyperAgents.harnessCheckGeneric', 'Some report quality checks need attention.')}
+        </div>
+      )}
+
       {finalReport && (
         <FinalReportCard
           report={finalReport}
@@ -1374,6 +1386,7 @@ function FinalReportCard({ report, webSources = [], onOpenMemory }) {
   const { t } = useTranslation('dashboard');
   if (!report?.content) return null;
   const verdict = String(report.verdict || report.status || '').toUpperCase();
+  const goalProgress = report.goal_progress && typeof report.goal_progress === 'object' ? report.goal_progress : null;
   const evidence = Array.isArray(report.evidence) ? report.evidence.filter(e => e?.id) : [];
   const sources = [
     ...(Array.isArray(report.sources) ? report.sources : []),
@@ -1403,6 +1416,30 @@ function FinalReportCard({ report, webSources = [], onOpenMemory }) {
         )}
       </div>
       <div className="px-3 py-3 text-[12px] leading-relaxed text-[#0a0a0a]">
+        {goalProgress && (
+          <div className="mb-3 rounded-lg border border-[#dbeafe] bg-[#eff6ff] px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[9px] font-mono uppercase tracking-wider text-[#117dff]">
+                  {t('hyperAgents.goalProgress', 'Goal progress')}
+                </div>
+                <div className="mt-0.5 text-[12px] font-semibold text-[#0f172a] truncate">
+                  {goalProgress.label || goalProgress.status || t('hyperAgents.goalProgressStatus', 'Progress')}
+                </div>
+              </div>
+              {goalProgress.score != null && (
+                <div className="shrink-0 text-[18px] font-bold text-[#117dff] font-['Space_Grotesk']">
+                  {goalProgress.score}<span className="text-[10px] text-[#64748b]">/100</span>
+                </div>
+              )}
+            </div>
+            {goalProgress.summary && (
+              <div className="mt-1.5 text-[10.5px] text-[#475569] leading-snug">
+                {goalProgress.summary}
+              </div>
+            )}
+          </div>
+        )}
         {renderMarkdownLite(report.content)}
         {(evidence.length > 0 || sources.length > 0) && (
           <div className="mt-3 space-y-3 border-t border-[#e3e0db] pt-3">
