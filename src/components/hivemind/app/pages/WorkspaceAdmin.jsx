@@ -37,7 +37,31 @@ export default function WorkspaceAdmin() {
   const { t } = useTranslation('dashboard');
   const { org } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'overview';
+
+  // Viewer-role probe: guests (project-scoped invitees) are NOT org admins —
+  // every admin endpoint correctly 403s for them. Without this gate the page
+  // fired members/invites/audit fetches unconditionally, spamming 403s and
+  // rendering broken admin panels. One probe decides: 200 → full admin
+  // surface; 403 → guest view (Projects tab only, which is role-filtered
+  // server-side).
+  const [viewerIsAdmin, setViewerIsAdmin] = useState(null); // null = probing
+  useEffect(() => {
+    if (!org?.id) return;
+    let cancelled = false;
+    apiClient.listMembers(org.id)
+      .then(() => { if (!cancelled) setViewerIsAdmin(true); })
+      .catch((err) => {
+        if (cancelled) return;
+        setViewerIsAdmin(err?.response?.status === 403 ? false : true);
+      });
+    return () => { cancelled = true; };
+  }, [org?.id]);
+
+  const visibleTabs = viewerIsAdmin === false
+    ? TABS.filter((tb) => tb.id === 'projects')
+    : TABS;
+  const requestedTab = searchParams.get('tab') || 'overview';
+  const activeTab = viewerIsAdmin === false ? 'projects' : requestedTab;
 
   const setTab = useCallback((id) => {
     setSearchParams(prev => {
@@ -66,12 +90,22 @@ export default function WorkspaceAdmin() {
         </p>
       </header>
 
-      {/* Metrics strip — always visible */}
-      <MetricsStrip orgId={org?.id} />
+      {/* Guest notice — restricted surface */}
+      {viewerIsAdmin === false && (
+        <div className="mb-4 flex items-center gap-2 bg-[#117dff]/[0.06] border border-[#117dff]/25 rounded-[10px] px-3 py-2 text-[12px] text-[#0a0a0a]">
+          <Users size={13} className="text-[#117dff]" />
+          {t('workspaceadmin.guestNotice', 'Guest access — you can see the projects shared with you. Workspace administration is limited to org admins.')}
+        </div>
+      )}
+
+      {/* Metrics strip — admin only (its endpoints 403 for guests). Held back
+          until the role probe resolves so a guest's first paint fires zero
+          admin fetches. */}
+      {viewerIsAdmin === true && <MetricsStrip orgId={org?.id} />}
 
       {/* Tab nav */}
       <nav className="mt-5 mb-4 border-b border-[#e3e0db] flex items-center gap-0.5 overflow-x-auto">
-        {TABS.map(tab => {
+        {visibleTabs.map(tab => {
           const Icon = tab.icon;
           const active = tab.id === activeTab;
           return (
@@ -91,12 +125,17 @@ export default function WorkspaceAdmin() {
         })}
       </nav>
 
-      {/* Tab body */}
+      {/* Tab body — held back until the role probe resolves */}
       <section className="pb-12">
-        {Tab.id === 'overview'   && <OverviewTab orgId={org?.id} setTab={setTab} />}
-        {Tab.id === 'invites'    && <InvitesTab orgId={org?.id} orgName={org?.name} />}
-        {Tab.id === 'cognition'  && <CognitionTab />}
-        {Tab.Component && (
+        {viewerIsAdmin === null && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={18} className="animate-spin text-[#a3a3a3]" />
+          </div>
+        )}
+        {viewerIsAdmin !== null && Tab.id === 'overview'   && <OverviewTab orgId={org?.id} setTab={setTab} />}
+        {viewerIsAdmin !== null && Tab.id === 'invites'    && <InvitesTab orgId={org?.id} orgName={org?.name} />}
+        {viewerIsAdmin !== null && Tab.id === 'cognition'  && <CognitionTab />}
+        {viewerIsAdmin !== null && Tab.Component && (
           <React.Suspense
             fallback={
               <div className="flex items-center justify-center py-12">
