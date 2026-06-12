@@ -950,7 +950,7 @@ export default function Overview() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto font-['Space_Grotesk'] flex flex-col min-h-[calc(100vh-104px)]">
+    <div className="max-w-6xl mx-auto font-['Space_Grotesk'] flex flex-col h-[calc(100vh-104px)] overflow-hidden">
       {/* First-visit guided tour */}
       <AnimatePresence>
         {tour.open && <OverviewTour onClose={tour.close} />}
