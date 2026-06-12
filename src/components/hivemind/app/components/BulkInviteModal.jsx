@@ -50,7 +50,9 @@ export default function BulkInviteModal({ open, onClose, org }) {
       const resp = await apiClient.bulkInvite(org.id, parsed.valid, role);
       setResults(resp);
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to send invitations');
+      setError(err.response?.status === 403
+        ? t('invite.adminOnly', 'Only organization admins can send invitations — ask your admin to invite the team.')
+        : (err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to send invitations'));
     } finally {
       setSending(false);
     }
