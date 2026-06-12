@@ -700,6 +700,26 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const theme = THEMES[themeProp] || THEMES.day;
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  // Upstream three.js OrbitControls race: a pointerup can reference a pointer
+  // whose position record was already removed (multi-touch / pointercancel /
+  // canvas re-mount mid-gesture) → uncaught "Cannot read properties of
+  // undefined (reading 'x')" from deep inside the controls' event listener.
+  // The listeners are instance-bound closures (registered refs can't be
+  // wrapped post-hoc), so suppress exactly this signature while the 3D graph
+  // is mounted — the gesture aborts harmlessly and controls recover on the
+  // next pointerdown.
+  useEffect(() => {
+    const swallow = (e) => {
+      const msg = e?.error?.message || e?.message || "";
+      if (/Cannot read properties of undefined \(reading '(x|y)'\)/.test(msg)) {
+        e.preventDefault();
+        // eslint-disable-next-line no-console
+        console.warn("[graph3d] suppressed OrbitControls pointer-race:", msg);
+      }
+    };
+    window.addEventListener("error", swallow);
+    return () => window.removeEventListener("error", swallow);
+  }, []);
   // When theme prop flips, re-apply backgroundColor + force a recolor pass
   // so existing materials swap immediately without remount.
   useEffect(() => {

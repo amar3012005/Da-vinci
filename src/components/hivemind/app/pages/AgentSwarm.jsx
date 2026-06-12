@@ -204,8 +204,17 @@ export default function AgentSwarm() {
             setResults(prev => ({ ...prev, [agentId]: data }));
             resolve(data);
           }
-        } catch {
+        } catch (err) {
           clearInterval(poll);
+          // Resident runs live in hm-core memory — a server restart wipes them
+          // and the poll starts returning 404. Surface that as an explicit
+          // 'expired' result instead of a silent dead-end.
+          if (err?.response?.status === 404) {
+            setResults(prev => ({
+              ...prev,
+              [agentId]: { status: 'expired', error: 'Run no longer available (server restarted) — re-run the agent.' },
+            }));
+          }
           resolve(null);
         }
       }, 2500);
