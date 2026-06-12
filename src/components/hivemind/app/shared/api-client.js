@@ -237,15 +237,6 @@ class HiveMindApiClient {
     return data;
   }
 
-  // Bulk invite: multiple emails in one go. Each invitee gets the branded
-  // `team_invite` system email + a join link. Returns per-email results.
-  async bulkInvite(orgId, emails, role = 'member', projectIds = []) {
-    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites/bulk`, {
-      emails, role, ...(projectIds.length ? { project_ids: projectIds } : {}),
-    });
-    return data;
-  }
-
   async listInvites(orgId, { status = 'all', projectId = null } = {}) {
     const params = new URLSearchParams();
     if (status && status !== 'all') params.set('status', status);

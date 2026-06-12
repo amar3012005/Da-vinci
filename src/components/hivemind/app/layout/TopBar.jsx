@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
 import { Search, BookOpen, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
-import BulkInviteModal from '../components/BulkInviteModal';
-import { useAuth } from '../auth/AuthProvider';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -58,8 +56,6 @@ export default function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
-  const { org } = useAuth() || {};
-  const [inviteOpen, setInviteOpen] = useState(false);
 
   const title = pageTitles[location.pathname] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';
@@ -113,10 +109,10 @@ export default function TopBar() {
         </a>
 
         {/* Invite your Team — ALWAYS visible on the main navbar, right next
-            to the language toggle. Sending is admin-gated server-side; a
-            non-admin who tries gets a clear message in the modal. */}
+            to the language toggle. Routes to the Workspace Admin members tab,
+            which owns the full invite flow (email + link + channels). */}
         <button
-          onClick={() => setInviteOpen(true)}
+          onClick={() => navigate('/hivemind/app/workspace?tab=members')}
           className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
         >
           <UserPlus size={13} />
@@ -143,8 +139,6 @@ export default function TopBar() {
           </span>
         </div>
       </div>
-
-      <BulkInviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} org={org} />
     </header>
   );
 }
