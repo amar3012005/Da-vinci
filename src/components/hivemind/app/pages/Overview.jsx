@@ -208,12 +208,19 @@ function CognitiveBand({ onOpen, onAsk }) {
     const out = [];
     const seen = new Set();
 
+    // Insights: STRICTLY verified swarm output only. The tag-filtered fetch
+    // can return loosely-matching rows depending on server defaults — a chip
+    // must carry a real cognitive_layer_role or a synthesis:* tag to be shown
+    // as swarm intelligence. No cognition artifacts → no insight chips, ever.
     for (const m of synth) {
       if (!m?.id || seen.has(m.id)) continue;
-      seen.add(m.id);
+      const tags = m.tags || [];
       const role = m.cognitive_layer_role || m.cognitiveLayerRole
-        || ((m.tags || []).includes('synthesis:principle') ? 'principle'
-          : (m.tags || []).includes('synthesis:bridge') ? 'bridge' : 'canonical');
+        || (tags.includes('synthesis:principle') ? 'principle'
+          : tags.includes('synthesis:bridge') ? 'bridge'
+          : tags.includes('synthesis:canonical') ? 'canonical' : null);
+      if (!role || !['canonical', 'principle', 'bridge'].includes(role)) continue;
+      seen.add(m.id);
       out.push({
         key: `s-${m.id}`,
         kind: role === 'principle' ? 'principle' : role === 'bridge' ? 'bridge' : 'insight',
@@ -222,14 +229,21 @@ function CognitiveBand({ onOpen, onAsk }) {
       });
     }
 
+    const seenTitles = new Set(out.map((x) => x.text.toLowerCase()));
     for (const m of recent) {
       if (!m?.id || seen.has(m.id)) continue;
       // Skip swarm exhaust + untitled noise in the raw row.
       const tags = m.tags || [];
       if (tags.includes('internal-audit') || tags.includes('cognition-loop')) continue;
+      if (m.cognitive_layer_role || m.cognitiveLayerRole) continue;
       seen.add(m.id);
       const title = String(m.title || m.content || '').replace(/\s+/g, ' ').trim();
       if (!title) continue;
+      // One chip per distinct title — a 20-chunk upload must not flood the
+      // band with twenty identical "pricing-calculator.html" pills.
+      const tKey = title.toLowerCase();
+      if (seenTitles.has(tKey)) continue;
+      seenTitles.add(tKey);
       out.push({
         key: `m-${m.id}`,
         kind: 'memory',
@@ -732,7 +746,7 @@ function OverviewChat({ inputRef }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 }}
-      className="max-w-3xl mx-auto w-full mt-auto pb-1"
+      className={`max-w-3xl mx-auto w-full pb-1 ${hasThread ? 'flex-1 min-h-0 flex flex-col mt-1' : 'mt-auto'}`}
     >
       {/* Hero — only while the thread is empty */}
       {!hasThread && (
@@ -749,11 +763,17 @@ function OverviewChat({ inputRef }) {
         </div>
       )}
 
-      {/* Thread — FIXED height, internal scroll. The page never grows. */}
+      {/* Thread — stretches from just under the launch bar down to the band.
+          No box, no border, no top line: it merges with the page; messages
+          fade out at the top edge and scroll internally. */}
       {hasThread && (
         <div
           ref={threadRef}
-          className="h-[min(38vh,380px)] overflow-y-auto bg-[#fdfcf9] border border-[#e3e0db] rounded-2xl p-4 space-y-3 mt-2 mb-3"
+          className="flex-1 min-h-0 overflow-y-auto px-1 pt-3 pb-3 space-y-3 mb-2"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent, black 28px)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 28px)',
+          }}
         >
           {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
           {loading && <TypingBubble />}
@@ -890,6 +910,14 @@ export default function Overview() {
   // from the team context, members from the org roster.
   const { data: profileData } = useApiQuery(() => apiClient.getProfile(), []);
   const profile = useMemo(() => profileData?.profile || profileData || null, [profileData]);
+  // Memories stat reads the SAME endpoint the Memories page paginates, so the
+  // two numbers can never diverge (the profile count uses a stricter
+  // user-scoped where-clause and drifts from the list view).
+  const { data: memTotalData } = useApiQuery(
+    () => apiClient.listMemories({ limit: 1 }).catch(() => null),
+    []
+  );
+  const memoriesTotal = memTotalData?.pagination?.total ?? null;
   const { projects } = useTeamContext() || {};
   const { org } = useAuth() || {};
   const { data: membersData } = useApiQuery(
@@ -902,7 +930,7 @@ export default function Overview() {
     return Array.isArray(list) ? list.length : null;
   }, [membersData]);
   const STATS = [
-    { key: 'memories',  icon: Brain,   value: profile?.memory_count,        label: t('overview.stats.memories', 'Memories') },
+    { key: 'memories',  icon: Brain,   value: memoriesTotal ?? profile?.memory_count, label: t('overview.stats.memories', 'Memories') },
     { key: 'relations', icon: GitFork, value: profile?.relationship_count,  label: t('overview.stats.relationships', 'Relationships') },
     { key: 'projects',  icon: Boxes,   value: projects?.length,             label: t('overview.stats.projects', 'Projects') },
     { key: 'members',   icon: Users,   value: memberCount,                  label: t('overview.stats.members', 'Members') },
