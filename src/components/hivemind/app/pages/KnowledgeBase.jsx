@@ -233,6 +233,8 @@ function UploadScopeModal({
   userRole,
   projects,
   loadingProjects,
+  projectsError,
+  onRetryProjects,
   selectedScope,
   onScopeChange,
   selectedProject,
@@ -350,6 +352,17 @@ function UploadScopeModal({
                 <div className="mt-3" onClick={(e) => e.stopPropagation()}>
                   {loadingProjects ? (
                     <p className="text-xs text-[#a3a3a3]">{t('knowledgebase.loadingProjects', 'Loading projects...')}</p>
+                  ) : projectsError ? (
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-[#dc2626]">{projectsError}</p>
+                      <button
+                        type="button"
+                        onClick={onRetryProjects}
+                        className="shrink-0 rounded-md border border-[#e3e0db] px-2 py-1 text-[11px] font-semibold text-[#525252] hover:bg-[#faf9f4]"
+                      >
+                        {t('knowledgebase.retry', 'Retry')}
+                      </button>
+                    </div>
                   ) : projects.length > 0 ? (
                     <>
                       <select
@@ -727,6 +740,7 @@ export default function KnowledgeBase() {
   const [selectedProject, setSelectedProject] = useState('');
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectsError, setProjectsError] = useState(null);
   // Hydrate pending docs from sessionStorage so a refresh mid-indexing
   // doesn't visually "lose" docs the user just uploaded.
   const [justUploadedDocs, setJustUploadedDocs] = useState(() => loadPendingFromSession());
@@ -995,33 +1009,45 @@ export default function KnowledgeBase() {
     }
   }, [refetchKb, setUploads]);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Role-scoped project list for the upload modal: the control-plane
+  // (listProjectsForUser) filters by the caller's hierarchy — admins/owners
+  // see all org projects, members only the projects they're invited to (or
+  // org_visible ones), guests only explicit memberships. One retry on a
+  // transient failure, and a visible error (instead of silently rendering
+  // "no projects") so an auth/network problem is debuggable from the UI.
+  const fetchProjects = useCallback(async () => {
     if ((org?.plan !== 'enterprise' && org?.plan !== 'team') || !org?.id) {
       setTeamProjects([]);
+      setProjectsError(null);
       return;
     }
     setLoadingProjects(true);
-    apiClient.listProjects(org.id)
-      .then((data) => {
-        if (!cancelled) {
-          setTeamProjects(data.projects || []);
+    setProjectsError(null);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const data = await apiClient.listProjects(org.id);
+        setTeamProjects(data.projects || []);
+        setLoadingProjects(false);
+        return;
+      } catch (err) {
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setTeamProjects([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingProjects(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+        setTeamProjects([]);
+        setProjectsError(err.response?.status === 401
+          ? 'Session expired — refresh the page to sign back in.'
+          : (err.response?.data?.error || err.message || 'Failed to load projects'));
+      }
+    }
+    setLoadingProjects(false);
   }, [org?.id, org?.plan]);
+
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  // Refetch each time the scope modal opens — projects may have been created
+  // or membership changed since page load, and a transient earlier failure
+  // shouldn't leave the picker permanently empty.
+  useEffect(() => { if (scopeModalOpen) fetchProjects(); }, [scopeModalOpen, fetchProjects]);
 
   // Adaptive concurrency: many small files = 10 parallel, few big files = 2.
   // Computed per-batch from median file size.
@@ -1619,6 +1645,8 @@ export default function KnowledgeBase() {
         userRole={user?.role}
         projects={teamProjects}
         loadingProjects={loadingProjects}
+        projectsError={projectsError}
+        onRetryProjects={fetchProjects}
         selectedScope={selectedScope}
         onScopeChange={setSelectedScope}
         selectedProject={selectedProject}
