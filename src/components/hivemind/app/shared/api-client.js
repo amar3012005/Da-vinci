@@ -775,6 +775,13 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Dashboard totals across the user's ENTIRE visible set (personal +
+  // org-wide + accessible projects + teams): { memories, relations }.
+  async getMemoryStats() {
+    const { data } = await this.controlPlane.get('/v1/proxy/memory/stats');
+    return data;
+  }
+
   async getMemory(id) {
     const { data } = await this.controlPlane.get(`/v1/proxy/memories/${id}`);
     return data;

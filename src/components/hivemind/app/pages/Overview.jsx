@@ -978,7 +978,15 @@ export default function Overview() {
     () => apiClient.listMemories({ limit: 1 }).catch(() => null),
     []
   );
-  const memoriesTotal = memTotalData?.pagination?.total ?? null;
+  // ALL-tier totals (personal + org-wide + accessible projects + teams):
+  // one endpoint returns BOTH memories and relations from the same scoped
+  // where-clause, so the two headline numbers can't diverge.
+  const { data: allStats } = useApiQuery(
+    () => apiClient.getMemoryStats().catch(() => null),
+    []
+  );
+  const memoriesTotal = allStats?.memories ?? memTotalData?.pagination?.total ?? null;
+  const relationsTotal = allStats?.relations ?? null;
   const { projects } = useTeamContext() || {};
   const { org } = useAuth() || {};
   const { data: membersData } = useApiQuery(
@@ -992,7 +1000,7 @@ export default function Overview() {
   }, [membersData]);
   const STATS = [
     { key: 'memories',  icon: Brain,   value: memoriesTotal ?? profile?.memory_count, label: t('overview.stats.memories', 'Memories') },
-    { key: 'relations', icon: GitFork, value: profile?.relationship_count,  label: t('overview.stats.relationships', 'Relationships') },
+    { key: 'relations', icon: GitFork, value: relationsTotal ?? profile?.relationship_count,  label: t('overview.stats.relationships', 'Relationships') },
     { key: 'projects',  icon: Boxes,   value: projects?.length,             label: t('overview.stats.projects', 'Projects') },
     { key: 'members',   icon: Users,   value: memberCount,                  label: t('overview.stats.members', 'Members') },
   ];

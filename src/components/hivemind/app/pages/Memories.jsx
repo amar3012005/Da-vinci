@@ -898,6 +898,9 @@ export default function Memories() {
   const [activeCognitiveRole, setActiveCognitiveRole] = useState(null);
   // is_latest toggle — when false, include superseded memories (post drift-compaction)
   const [showSuperseded, setShowSuperseded] = useState(false);
+  // Tier scope (ALL / Org-level / Project-level / Personal-level) — mirrors
+  // the Graph page switcher. 'visible' = ALL (merged personal+org+projects).
+  const [tierScope, setTierScope] = useState('visible');
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
   const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
@@ -959,8 +962,9 @@ export default function Memories() {
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
       ...(activeProjectId ? { project_id: activeProjectId } : {}),
+      ...(tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope],
   );
 
   // List-mode fetch
@@ -1125,15 +1129,40 @@ export default function Memories() {
               <p className="text-[#a3a3a3] text-xs">{t('memories.subtitle', 'Browse memories, documents, and evidence')}</p>
             </div>
           </div>
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-mono"
-            >
-              <X size={12} />
-              {t('memories.clearFilters', 'Clear filters')}
-            </button>
-          )}
+          <div className="flex items-start gap-4">
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 text-xs text-[#a3a3a3] hover:text-[#525252] transition-colors font-mono mt-1"
+              >
+                <X size={12} />
+                {t('memories.clearFilters', 'Clear filters')}
+              </button>
+            )}
+            {/* Tier scope switcher — same 4 tiers as the Graph page. ALL =
+                personal + org-wide + accessible projects (the visible set). */}
+            <div className="flex flex-col gap-1">
+              {[
+                { key: 'visible', label: 'ALL' },
+                { key: 'tier:organization', label: 'Org-level' },
+                { key: 'tier:project', label: 'Project-level' },
+                { key: 'tier:personal', label: 'Personal-level' },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setTierScope(option.key)}
+                  className={`rounded-lg border px-2.5 py-1 text-[10px] font-mono text-left transition-colors ${
+                    tierScope === option.key
+                      ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
+                      : 'border-[#e3e0db] bg-white text-[#a3a3a3] hover:text-[#525252]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ── Tab Navigation ── */}
@@ -1256,6 +1285,7 @@ export default function Memories() {
             setActiveTab={setActiveTab}
             showSuperseded={showSuperseded}
             setShowSuperseded={setShowSuperseded}
+            tierScope={tierScope}
           />
         )}
 
@@ -1297,6 +1327,7 @@ function MemoriesTab({
   setShowFilters,
   showSuperseded,
   setShowSuperseded,
+  tierScope,
   offset,
   setOffset,
   allMemories,
@@ -1334,8 +1365,9 @@ function MemoriesTab({
       // Project scope from TeamSwitcher — when active, backend filters to
       // memories whose projectId matches OR whose legacy project string matches.
       ...(activeProjectId ? { project_id: activeProjectId } : {}),
+      ...(tierScope && tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope],
   );
 
   // List-mode fetch

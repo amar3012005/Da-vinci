@@ -1031,26 +1031,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           ))}
         </div>
 
-        {/* Scope */}
-        <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
-          {[
-            { key: "visible", label: "My" },
-            { key: "team", label: "Team", disabled: org?.plan !== "enterprise" },
-            { key: "all", label: "All", disabled: org?.plan !== "enterprise" },
-          ].map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              disabled={option.disabled}
-              onClick={() => !option.disabled && setScope(option.key)}
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-mono ${
-                scope === option.key ? toolbarActiveClass : toolbarMutedClass
-              } ${option.disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {/* Scope moved to the vertical tier stack (top-right overlay) */}
 
         {/* Action buttons */}
 
@@ -1229,6 +1210,32 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             {error}
           </div>
         )}
+
+        {/* Tier scope switcher — vertical stack, top right. The graph scopes
+            to ONE hierarchy tier; ALL = the merged visible set (personal +
+            org-wide + the user's accessible projects), identical to what the
+            Memories list counts. */}
+        <div className="absolute top-16 right-4 z-20 flex flex-col gap-1.5">
+          {[
+            { key: 'visible', label: 'ALL' },
+            { key: 'tier:organization', label: 'Org-level' },
+            { key: 'tier:project', label: 'Project-level' },
+            { key: 'tier:personal', label: 'Personal-level' },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setScope(option.key)}
+              className={`rounded-lg border px-3 py-1.5 text-[11px] font-mono text-left transition-colors ${
+                scope === option.key
+                  ? 'border-[#117dff]/40 bg-[#117dff]/15 text-[#117dff]'
+                  : `${toolbarControlClass} ${toolbarMutedClass} hover:opacity-90`
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
         {graphData.nodes.length > 0 && !is2D && (
           <MemoryGraph3D
