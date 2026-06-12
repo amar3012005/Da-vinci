@@ -76,21 +76,24 @@ const CONNECTOR_CATEGORIES = [
 // Original brand marks (simple-icons CDN, official brand colors). Connectors
 // without a verified slug keep their lucide glyph. CSP img-src allows https:.
 const BRAND_LOGOS = {
+  // simple-icons purged several trademarks (openai, slack, salesforce → 404);
+  // those come from iconify's `logos` collection instead. Every URL below is
+  // curl-verified 200.
   'claude-web':    'https://cdn.simpleicons.org/claude',
   claude:          'https://cdn.simpleicons.org/claude',
-  chatgpt:         'https://cdn.simpleicons.org/openai',
+  chatgpt:         'https://api.iconify.design/logos/openai-icon.svg',
   'gemini-paste':  'https://cdn.simpleicons.org/googlegemini',
   'google-gemini': 'https://cdn.simpleicons.org/googlegemini',
   gmail:           'https://cdn.simpleicons.org/gmail',
   'google-docs':   'https://cdn.simpleicons.org/googledocs',
-  slack:           'https://cdn.simpleicons.org/slack',
+  slack:           'https://api.iconify.design/logos/slack-icon.svg',
   whatsapp:        'https://cdn.simpleicons.org/whatsapp',
   notion:          'https://cdn.simpleicons.org/notion/000000',
   confluence:      'https://cdn.simpleicons.org/confluence',
   atlassian:       'https://cdn.simpleicons.org/jira',
   github:          'https://cdn.simpleicons.org/github/181717',
   linear:          'https://cdn.simpleicons.org/linear',
-  salesforce:      'https://cdn.simpleicons.org/salesforce',
+  salesforce:      'https://api.iconify.design/logos/salesforce.svg',
 };
 
 const CONNECTORS = [
