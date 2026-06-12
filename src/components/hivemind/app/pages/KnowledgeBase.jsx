@@ -230,6 +230,7 @@ function UploadScopeModal({
   open,
   files,
   org,
+  userRole,
   projects,
   loadingProjects,
   selectedScope,
@@ -243,12 +244,15 @@ function UploadScopeModal({
 
   if (!open) return null;
 
-  // Project is OPTIONAL for organization scope: leaving it blank files the
-  // upload org-wide (backend scope='organization', visible to all org members);
-  // picking one files it into that project. Was a hard requirement that disabled
-  // the upload button — which blocked the org-wide-by-default flow.
-  const requiresProject = false;
+  // Three-tier upload hierarchy:
+  //   1. personal      — private to the uploader, everyone has it
+  //   2. project       — shared with that project's invited members (+ org
+  //                      admins, who see every project); requires picking one
+  //   3. organization  — org-wide, visible to ALL members; ADMIN/OWNER ONLY
+  //                      (one admin uploads once, whole org gets it)
   const canUseTeamWorkspace = org?.plan === 'enterprise' || org?.plan === 'team';
+  const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
+  const requiresProject = selectedScope === 'project';
 
   return (
     <AnimatePresence>
@@ -298,6 +302,7 @@ function UploadScopeModal({
           </div>
 
           <div className="space-y-3">
+            {/* Tier 1 — Personal: everyone, private */}
             <button
               type="button"
               onClick={() => onScopeChange('personal')}
@@ -318,65 +323,91 @@ function UploadScopeModal({
               </div>
             </button>
 
+            {/* Tier 2 — Project: shared with that project's invited members
+                (org admins see every project; members see only theirs) */}
+            <div
+              role="button"
+              tabIndex={canUseTeamWorkspace ? 0 : -1}
+              aria-disabled={!canUseTeamWorkspace}
+              onClick={() => canUseTeamWorkspace && onScopeChange('project')}
+              onKeyDown={(e) => { if (canUseTeamWorkspace && (e.key === 'Enter' || e.key === ' ')) onScopeChange('project'); }}
+              className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
+                selectedScope === 'project'
+                  ? 'border-[#117dff]/30 bg-[#117dff]/8'
+                  : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
+              } ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
+                  <FolderKanban size={16} className="text-[#117dff]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeProjectLabel', 'Project')}</p>
+                  <p className="text-xs text-[#525252]">{t('knowledgebase.scopeProjectDesc', 'Shared with the members invited to that project.')}</p>
+                </div>
+              </div>
+              {selectedScope === 'project' && (
+                <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                  {loadingProjects ? (
+                    <p className="text-xs text-[#a3a3a3]">{t('knowledgebase.loadingProjects', 'Loading projects...')}</p>
+                  ) : projects.length > 0 ? (
+                    <>
+                      <select
+                        value={selectedProject}
+                        onChange={(e) => onProjectChange(e.target.value)}
+                        className="w-full rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
+                      >
+                        <option value="">{t('knowledgebase.pickProject', 'Select a project…')}</option>
+                        {projects.map((project) => (
+                          <option key={project.id} value={project.slug}>
+                            {project.name} ({project.slug})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-[11px] text-[#a3a3a3]">
+                        {t('knowledgebase.projectUploadsHint', 'You only see projects you belong to. Org admins see all projects.')}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-[#a3a3a3]">
+                      {t('knowledgebase.noAccessibleProjects', "You're not a member of any project yet. Ask an org admin to invite you, or choose another scope.")}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Tier 3 — Organization-wide: ADMIN/OWNER only. Uploaded once,
+                visible to every member of the org. */}
             <button
               type="button"
-              disabled={!canUseTeamWorkspace}
-              onClick={() => canUseTeamWorkspace && onScopeChange('organization')}
+              disabled={!canUseTeamWorkspace || !isOrgAdmin}
+              onClick={() => canUseTeamWorkspace && isOrgAdmin && onScopeChange('organization')}
               className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
                 selectedScope === 'organization'
                   ? 'border-[#117dff]/30 bg-[#117dff]/8'
                   : 'border-[#e3e0db] bg-white hover:bg-[#faf9f4]'
-              } ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${(!canUseTeamWorkspace || !isOrgAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center">
                   <Users size={16} className="text-[#117dff]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeTeamLabel', 'Team Workspace')}</p>
-                  <p className="text-xs text-[#525252]">
+                  <p className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
                     {org?.name
-                      ? t('knowledgebase.scopeTeamDescNamed', 'Shared with your org: {{name}}', { name: org.name })
-                      : t('knowledgebase.scopeTeamDesc', 'Shared with your org.')}
+                      ? t('knowledgebase.scopeOrgLabelNamed', 'Entire organization: {{name}}', { name: org.name })
+                      : t('knowledgebase.scopeOrgLabel', 'Entire organization')}
+                  </p>
+                  <p className="text-xs text-[#525252]">
+                    {isOrgAdmin
+                      ? t('knowledgebase.scopeOrgDesc', 'Visible to every member of the org.')
+                      : t('knowledgebase.scopeOrgDescLocked', 'Org-wide uploads are reserved for organization admins.')}
                   </p>
                 </div>
               </div>
             </button>
           </div>
-
-          {selectedScope === 'organization' && (
-            <div className="mt-5">
-              <div className="flex items-center gap-2 mb-2">
-                <FolderKanban size={14} className="text-[#525252]" />
-                <p className="text-xs font-mono uppercase tracking-[0.08em] text-[#525252]">{t('knowledgebase.project', 'Project')}</p>
-              </div>
-              {loadingProjects ? (
-                <p className="text-xs text-[#a3a3a3]">{t('knowledgebase.loadingProjects', 'Loading projects...')}</p>
-              ) : projects.length > 0 ? (
-                <>
-                  <select
-                    value={selectedProject}
-                    onChange={(e) => onProjectChange(e.target.value)}
-                    className="w-full rounded-[8px] border border-[#e3e0db] px-3 py-2.5 text-sm text-[#0a0a0a] focus:outline-none focus:border-[#117dff]/40"
-                  >
-                    <option value="">{t('knowledgebase.orgWideNoProject', 'Entire organization (no project)')}</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.slug}>
-                        {project.name} ({project.slug})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-2 text-[11px] text-[#a3a3a3]">
-                    {t('knowledgebase.teamUploadsHint', 'Leave blank to share with the whole organization, or attach to a project to scope it there.')}
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-[#a3a3a3]">
-                  {t('knowledgebase.noTeamProjects', 'No team projects yet. This upload will be shared to the team workspace without a project bucket.')}
-                </p>
-              )}
-            </div>
-          )}
 
           <div className="flex items-center justify-end gap-3 mt-6">
             <button
@@ -1262,12 +1293,11 @@ export default function KnowledgeBase() {
   const queueFilesForUpload = useCallback((files) => {
     if (!files?.length) return;
     setPendingFiles(files);
-    // Open on Team Workspace (organization) scope for enterprise/team orgs so
-    // the project picker is visible immediately — KB uploads default to org
-    // visibility, and the project dropdown only renders under 'organization'.
-    // Personal-only workspaces have no team scope, so keep 'personal' there.
+    // Open on the Project tier for team-capable orgs so the project picker is
+    // visible immediately (the most common shared-upload target). Org-wide is
+    // a separate admin-only tier; personal-only workspaces start on personal.
     const teamCapable = org?.plan === 'enterprise' || org?.plan === 'team';
-    setSelectedScope(teamCapable ? 'organization' : 'personal');
+    setSelectedScope(teamCapable ? 'project' : 'personal');
     setSelectedProject('');
     setScopeModalOpen(true);
   }, [org?.plan]);
@@ -1284,7 +1314,11 @@ export default function KnowledgeBase() {
   }, []);
 
   const handleConfirmUploadScope = useCallback(async () => {
-    const project = selectedScope === 'organization' ? (selectedProject || null) : null;
+    // 3-tier mapping → upload params. 'project' and 'organization' both ship
+    // as targetScope='organization' (server derives scope='project' when a
+    // project/containerTag is present, scope='organization' when not).
+    const project = selectedScope === 'project' ? (selectedProject || null) : null;
+    const effectiveScope = selectedScope === 'personal' ? 'personal' : 'organization';
     const files = pendingFiles;
     setScopeModalOpen(false);
     setPendingFiles([]);
@@ -1309,10 +1343,10 @@ export default function KnowledgeBase() {
         }
       }
       if (imageFiles.length) {
-        handleFiles(imageFiles, { targetScope: selectedScope, project });
+        handleFiles(imageFiles, { targetScope: effectiveScope, project });
       }
       if (audioFiles.length) {
-        handleFiles(audioFiles, { targetScope: selectedScope, project });
+        handleFiles(audioFiles, { targetScope: effectiveScope, project });
       }
       for (const file of nonMediaFiles) {
         const ext = file.name.split('.').pop()?.toLowerCase();
@@ -1342,7 +1376,7 @@ export default function KnowledgeBase() {
         }
       }
     } else {
-      handleFiles(files, { targetScope: selectedScope, project });
+      handleFiles(files, { targetScope: effectiveScope, project });
     }
   }, [handleFiles, pendingFiles, selectedProject, selectedScope, smartExtract, setUploads]);
 
@@ -1376,8 +1410,8 @@ export default function KnowledgeBase() {
         confirmed_type: options.confirmedType,
         sheet_configs: options.sheetConfigs,
         tags: options.tags || customTags || undefined,
-        targetScope: options.scope || selectedScope,
-        containerTag: (options.scope || selectedScope) === 'organization' ? selectedProject : undefined,
+        targetScope: options.scope || (selectedScope === 'personal' ? 'personal' : 'organization'),
+        containerTag: selectedScope === 'project' ? (selectedProject || undefined) : undefined,
         model: options.model,
       });
       setUploads((prev) => [...prev, {
@@ -1582,6 +1616,7 @@ export default function KnowledgeBase() {
         open={scopeModalOpen}
         files={pendingFiles}
         org={org}
+        userRole={user?.role}
         projects={teamProjects}
         loadingProjects={loadingProjects}
         selectedScope={selectedScope}
