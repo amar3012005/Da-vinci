@@ -26,6 +26,7 @@ import {
   Image as ImageIcon,
   Presentation,
   FileAudio,
+  Copy,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
@@ -1198,12 +1199,19 @@ export default function KnowledgeBase() {
       } catch (err) {
         if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
+        // Upfront server-side dedup: 409 = identical content already ingested.
+        // Not a failure — mark distinctly and let the rest of the batch run.
+        const isDuplicate = err?.response?.status === 409 && err?.response?.data?.duplicate;
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? {
                 ...u,
-                status: isCancelled ? 'cancelled' : 'error',
-                error: isCancelled ? 'Cancelled by user' : (err.response?.data?.error || err.message),
+                status: isCancelled ? 'cancelled' : isDuplicate ? 'duplicate' : 'error',
+                error: isCancelled
+                  ? 'Cancelled by user'
+                  : isDuplicate
+                    ? (err.response?.data?.message || 'Duplicate — already in your knowledge base')
+                    : (err.response?.data?.error || err.message),
               }
             : u
         ));
@@ -1635,6 +1643,7 @@ export default function KnowledgeBase() {
               const uploading = uploads.filter((u) => u.status === 'uploading').length;
               const done = uploads.filter((u) => u.status === 'success').length;
               const failed = uploads.filter((u) => u.status === 'error' || u.status === 'cancelled').length;
+              const duplicates = uploads.filter((u) => u.status === 'duplicate').length;
               const inFlight = queued + uploading;
               const totalProgress = uploads.length > 0
                 ? Math.round(uploads.reduce((s, u) => s + (u.status === 'success' ? 100 : (u.progress || 0)), 0) / uploads.length)
@@ -1648,6 +1657,7 @@ export default function KnowledgeBase() {
                   {uploading > 0 && <span className="text-[#117dff]">{uploading} uploading</span>}
                   {done > 0 && <span className="text-[#16a34a]">{done} done</span>}
                   {failed > 0 && <span className="text-[#dc2626]">{failed} failed</span>}
+                  {duplicates > 0 && <span className="text-[#d97706]">{duplicates} duplicate{duplicates > 1 ? 's' : ''}</span>}
                   <div className="flex-1 h-1 rounded-full bg-[#e3e0db] overflow-hidden">
                     <div
                       className="h-full bg-[#117dff] transition-all duration-300"
@@ -1672,6 +1682,7 @@ export default function KnowledgeBase() {
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-mono relative overflow-hidden ${
                   u.status === 'success' ? 'bg-[#f0fdf4] border border-[#bbf7d0]' :
                   u.status === 'error' ? 'bg-[#fef2f2] border border-[#fecaca]' :
+                  u.status === 'duplicate' ? 'bg-[#fffbeb] border border-[#fde68a]' :
                   u.status === 'cancelled' ? 'bg-[#faf9f4] border border-[#e3e0db]' :
                   u.status === 'queued' ? 'bg-[#fafafa] border border-[#e3e0db]' :
                   'bg-white border border-[#117dff]/20'
@@ -1694,6 +1705,7 @@ export default function KnowledgeBase() {
                   {u.status === 'uploading' && <Loader2 size={14} className="text-[#117dff] animate-spin" />}
                   {u.status === 'success' && <CheckCircle size={14} className="text-[#16a34a]" />}
                   {u.status === 'error' && <XCircle size={14} className="text-[#dc2626]" />}
+                  {u.status === 'duplicate' && <Copy size={14} className="text-[#d97706]" />}
                   {u.status === 'cancelled' && <XCircle size={14} className="text-[#a3a3a3]" />}
                   <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
                   {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
