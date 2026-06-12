@@ -517,9 +517,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // matches the headline elsewhere. 'personal'/'team'/'all' stay as explicit
   // user-selectable scopes.
   const [scope, setScope] = useState("visible");
+  // Project-level tier: which single project to scope to. '' = all the
+  // user's accessible projects. Only applied while scope === 'tier:project'.
+  const [tierProject, setTierProject] = useState("");
   // Sync graph project filter with TeamSwitcher's active project so the
   // 3D atlas reflects the same scope as Chat / Memories / Overview.
-  const { activeProject } = useTeamContext() || {};
+  // `projects` is the role-scoped list (admins all, members invited-only).
+  const { activeProject, projects: accessibleProjects } = useTeamContext() || {};
   useEffect(() => {
     if (activeProject) setProjectFilter(activeProject.slug || activeProject.name || "");
     else setProjectFilter("");
@@ -579,8 +583,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // v2 cache key — bumped after backend started excluding 'extracted-fact'
   // children so stale localStorage doesn't keep showing the inflated counts.
   const cacheKey = useMemo(
-    () => `hm:graph:v2:${scope}:${projectFilter || ""}:${nodeLimit}`,
-    [scope, projectFilter, nodeLimit]
+    () => `hm:graph:v2:${scope}:${projectFilter || ""}:${tierProject || ""}:${nodeLimit}`,
+    [scope, projectFilter, tierProject, nodeLimit]
   );
 
   // Hydrate from localStorage on mount — show cached graph INSTANTLY
@@ -616,7 +620,9 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             project: projectFilter || undefined,
           })
         : await apiClient.getGraph({
-            project: projectFilter || undefined,
+            // Project-level tier with a picked project narrows to it; the
+            // server resolves uuid/slug/name → projectId FK + memory_projects.
+            project: (scope === 'tier:project' && tierProject) ? tierProject : (projectFilter || undefined),
             project_id: activeProject?.id || undefined,
             limit: nodeLimit,
             scope,
@@ -660,7 +666,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     } finally {
       setLoading(false);
     }
-  }, [projectFilter, scope, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter, activeProject?.id]);
+  }, [projectFilter, scope, tierProject, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter, activeProject?.id]);
 
   const userColorMap = useMemo(() => {
     const ids = [
@@ -1222,18 +1228,34 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             { key: 'tier:project', label: 'Project-level' },
             { key: 'tier:personal', label: 'Personal-level' },
           ].map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => setScope(option.key)}
-              className={`rounded-lg border px-3 py-1.5 text-[11px] font-mono text-left transition-colors ${
-                scope === option.key
-                  ? 'border-[#117dff]/40 bg-[#117dff]/15 text-[#117dff]'
-                  : `${toolbarControlClass} ${toolbarMutedClass} hover:opacity-90`
-              }`}
-            >
-              {option.label}
-            </button>
+            <React.Fragment key={option.key}>
+              <button
+                type="button"
+                onClick={() => setScope(option.key)}
+                className={`rounded-lg border px-3 py-1.5 text-[11px] font-mono text-left transition-colors ${
+                  scope === option.key
+                    ? 'border-[#117dff]/40 bg-[#117dff]/15 text-[#117dff]'
+                    : `${toolbarControlClass} ${toolbarMutedClass} hover:opacity-90`
+                }`}
+              >
+                {option.label}
+              </button>
+              {/* Project picker — slides in under the Project-level button.
+                  Lists only the user's role-scoped projects (admins see all,
+                  members only invited/visible ones). '' = all of them. */}
+              {option.key === 'tier:project' && scope === 'tier:project' && (
+                <select
+                  value={tierProject}
+                  onChange={(e) => setTierProject(e.target.value)}
+                  className={`rounded-lg border px-2 py-1.5 text-[11px] font-mono max-w-[180px] ${toolbarControlClass}`}
+                >
+                  <option value="">All my projects</option>
+                  {(accessibleProjects || []).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
+            </React.Fragment>
           ))}
         </div>
 

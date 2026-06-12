@@ -901,6 +901,10 @@ export default function Memories() {
   // Tier scope (ALL / Org-level / Project-level / Personal-level) — mirrors
   // the Graph page switcher. 'visible' = ALL (merged personal+org+projects).
   const [tierScope, setTierScope] = useState('visible');
+  // Project-level tier: which single project to narrow to. '' = all the
+  // user's accessible projects. Only applied while tierScope === 'tier:project'.
+  const [tierProject, setTierProject] = useState('');
+  const { projects: accessibleProjects } = useTeamContext() || {};
   const [showFilters, setShowFilters] = useState(false);
   // Phase 2 polish
   const [activeEntity, setActiveEntity] = useState(null);   // tag like "person:alice-wong"
@@ -961,10 +965,14 @@ export default function Memories() {
       // with a "Superseded" badge + Updates-target link so the timeline is
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
-      ...(activeProjectId ? { project_id: activeProjectId } : {}),
+      // Project-level tier with a picked project narrows to it (takes
+      // precedence over the TeamSwitcher project filter).
+      ...((tierScope === 'tier:project' && tierProject)
+        ? { project_id: tierProject }
+        : (activeProjectId ? { project_id: activeProjectId } : {})),
       ...(tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope, tierProject],
   );
 
   // List-mode fetch
@@ -1148,18 +1156,33 @@ export default function Memories() {
                 { key: 'tier:project', label: 'Project-level' },
                 { key: 'tier:personal', label: 'Personal-level' },
               ].map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setTierScope(option.key)}
-                  className={`rounded-lg border px-2.5 py-1 text-[10px] font-mono text-left transition-colors ${
-                    tierScope === option.key
-                      ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
-                      : 'border-[#e3e0db] bg-white text-[#a3a3a3] hover:text-[#525252]'
-                  }`}
-                >
-                  {option.label}
-                </button>
+                <React.Fragment key={option.key}>
+                  <button
+                    type="button"
+                    onClick={() => setTierScope(option.key)}
+                    className={`rounded-lg border px-2.5 py-1 text-[10px] font-mono text-left transition-colors ${
+                      tierScope === option.key
+                        ? 'border-[#117dff]/40 bg-[#117dff]/10 text-[#117dff]'
+                        : 'border-[#e3e0db] bg-white text-[#a3a3a3] hover:text-[#525252]'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                  {/* Project picker — appears under Project-level. Lists only
+                      the user's role-scoped projects. '' = all of them. */}
+                  {option.key === 'tier:project' && tierScope === 'tier:project' && (
+                    <select
+                      value={tierProject}
+                      onChange={(e) => setTierProject(e.target.value)}
+                      className="rounded-lg border border-[#e3e0db] bg-white px-2 py-1 text-[10px] font-mono text-[#525252] max-w-[160px]"
+                    >
+                      <option value="">All my projects</option>
+                      {(accessibleProjects || []).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -1286,6 +1309,7 @@ export default function Memories() {
             showSuperseded={showSuperseded}
             setShowSuperseded={setShowSuperseded}
             tierScope={tierScope}
+            tierProject={tierProject}
           />
         )}
 
@@ -1328,6 +1352,7 @@ function MemoriesTab({
   showSuperseded,
   setShowSuperseded,
   tierScope,
+  tierProject,
   offset,
   setOffset,
   allMemories,
@@ -1364,10 +1389,13 @@ function MemoriesTab({
       is_latest: showSuperseded ? 'false' : 'all',
       // Project scope from TeamSwitcher — when active, backend filters to
       // memories whose projectId matches OR whose legacy project string matches.
-      ...(activeProjectId ? { project_id: activeProjectId } : {}),
+      // Project-level tier with a picked project takes precedence.
+      ...((tierScope === 'tier:project' && tierProject)
+        ? { project_id: tierProject }
+        : (activeProjectId ? { project_id: activeProjectId } : {})),
       ...(tierScope && tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope],
+    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope, tierProject],
   );
 
   // List-mode fetch
