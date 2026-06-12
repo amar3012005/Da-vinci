@@ -442,6 +442,8 @@ function RoomThread({ roomId, onArchived }) {
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
+  const [goalDraft, setGoalDraft] = useState('');
+  const [savingGoal, setSavingGoal] = useState(false);
   const threadEndRef = useRef(null);
 
   // Projects for the scope badge / changer (room can be moved Org ↔ Project).
@@ -450,6 +452,10 @@ function RoomThread({ roomId, onArchived }) {
       .then(d => setProjects((d?.projects || d || []).filter(Boolean)))
       .catch(() => setProjects([]));
   }, []);
+
+  useEffect(() => {
+    setGoalDraft(room?.goal || '');
+  }, [room?.id, room?.goal]);
 
   // Change room scope after creation: null = org-wide, <id> = project HIVEMIND.
   const handleSetScope = useCallback(async (newProjectId) => {
@@ -464,6 +470,20 @@ function RoomThread({ roomId, onArchived }) {
       setSavingScope(false);
     }
   }, [roomId]);
+
+  const handleSaveGoal = useCallback(async () => {
+    const nextGoal = goalDraft.trim();
+    if (!nextGoal || savingGoal) return;
+    setSavingGoal(true);
+    try {
+      const resp = await apiClient.updateHyperRoom(roomId, { goal: nextGoal });
+      setRoom(prev => ({ ...prev, ...resp.room, participants: prev?.participants }));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setSavingGoal(false);
+    }
+  }, [goalDraft, roomId, savingGoal]);
 
   const mergeLiveEvents = useCallback((current, incoming) => {
     return mergeHyperEvents(current, incoming);
@@ -585,6 +605,10 @@ function RoomThread({ roomId, onArchived }) {
     e?.preventDefault?.();
     const msg = draft.trim();
     if (!msg || submitting) return;
+    if (!room?.goal?.trim()) {
+      setError(t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.'));
+      return;
+    }
     setSubmitting(true);
     setLiveLines([]);
     setDraft('');
@@ -661,6 +685,10 @@ function RoomThread({ roomId, onArchived }) {
   async function handleRerunTurn(turn) {
     const msg = (turn.userMessage || turn.user_message || '').trim();
     if (!msg || submitting) return;
+    if (!room?.goal?.trim()) {
+      setError(t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before rerunning this turn.'));
+      return;
+    }
     const oldId = turn.id;
     setSubmitting(true);
     setLiveLines([]);
@@ -798,10 +826,34 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
-            {room.goal && (
+            {room.goal ? (
               <div className="mt-1 max-w-[720px] text-[11px] leading-snug text-[#525252] line-clamp-2">
                 <span className="font-mono uppercase tracking-wider text-[#117dff] text-[9px] mr-1">{t('hyperAgents.goalLbl', 'Goal')}</span>
                 {room.goal}
+              </div>
+            ) : !archived && (
+              <div className="mt-2 max-w-[720px] flex items-center gap-1.5">
+                <input
+                  value={goalDraft}
+                  onChange={e => setGoalDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveGoal();
+                    }
+                  }}
+                  placeholder={t('hyperAgents.goalRequiredPlaceholder', 'Set this room goal before the next turn')}
+                  className="min-w-0 flex-1 h-7 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-[11px] text-[#0a0a0a] placeholder:text-amber-700/60 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveGoal}
+                  disabled={!goalDraft.trim() || savingGoal}
+                  className="h-7 px-2.5 rounded-lg bg-amber-500 text-white text-[10px] font-semibold disabled:opacity-50 flex items-center gap-1"
+                >
+                  {savingGoal ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                  {t('hyperAgents.saveGoal', 'Save goal')}
+                </button>
               </div>
             )}
             </div>
@@ -882,7 +934,8 @@ function RoomThread({ roomId, onArchived }) {
               </div>
               <button
                 type="submit"
-                disabled={!draft.trim() || submitting}
+                disabled={!draft.trim() || submitting || !room?.goal?.trim()}
+                title={!room?.goal?.trim() ? t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.') : undefined}
                 className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
               >
                 {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
