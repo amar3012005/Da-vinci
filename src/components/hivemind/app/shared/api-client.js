@@ -1239,15 +1239,22 @@ class HiveMindApiClient {
         continue; // transient — keep polling
       }
       const meta = st?.metadata || {};
+      // Doc fields may arrive nested under `metadata` (in-memory tracker path)
+      // or flat at the top level (durable-queue Redis mirror). Read both so a
+      // queued upload still resolves a real documentId.
+      const docId = meta.document_id ?? st.document_id;
+      const segs = meta.segmentCount ?? st.segmentCount;
+      const promoted = meta.promotedCount ?? st.promotedCount;
+      const candidates = meta.candidateCount ?? st.candidateCount;
       if (options.onStatus) {
-        options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: meta.segments, promoted: meta.promoted });
+        options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted });
       }
       if (st.status === 'indexed') {
         return {
-          documentId: meta.document_id,
-          segmentCount: meta.segmentCount,
-          candidateCount: meta.candidateCount,
-          promotedCount: meta.promotedCount,
+          documentId: docId,
+          segmentCount: segs,
+          candidateCount: candidates,
+          promotedCount: promoted,
           job_id: jobId,
         };
       }
