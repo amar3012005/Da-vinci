@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, Mail, Check, AlertCircle, Copy, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -85,13 +86,17 @@ export default function BulkInviteModal({ open, onClose, org }) {
     );
   };
 
-  return (
+  // PORTAL to document.body: the TopBar <header> uses backdrop-blur, which
+  // makes it the containing block for position:fixed descendants — a modal
+  // rendered inline there gets centered inside the 56px header strip and
+  // clips off-screen. Portaling escapes that stacking context entirely.
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4"
         onClick={handleClose}
       >
         <motion.div
@@ -169,7 +174,7 @@ export default function BulkInviteModal({ open, onClose, org }) {
               {error && <p className="mt-3 text-xs text-[#dc2626]">{error}</p>}
 
               <p className="mt-4 text-[11px] text-[#a3a3a3] font-mono">
-                {t('invite.footer', 'Each person receives: "{{name}} is on HIVEMIND — your admin has invited you" with a join link. Invitees join via OAuth and land in {{name}}.', { name: org?.name || 'your org' })}
+                {t('invite.footer', 'Each person gets a branded invitation email from your admin with a join link. Invitees join via OAuth and land directly in {{name}}.', { name: org?.name || 'your org' })}
               </p>
             </>
           ) : (
@@ -219,6 +224,7 @@ export default function BulkInviteModal({ open, onClose, org }) {
           )}
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
