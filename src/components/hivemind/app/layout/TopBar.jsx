@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHealthStatus } from '../shared/hooks';
-import { Search, BookOpen } from 'lucide-react';
+import { Search, BookOpen, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
+import BulkInviteModal from '../components/BulkInviteModal';
+import { useAuth } from '../auth/AuthProvider';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -56,6 +58,11 @@ export default function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
+  const { org, user } = useAuth() || {};
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // Invites are admin-gated server-side; only render the entry point for
+  // roles that can actually send them.
+  const canInvite = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'org_admin' || user?.role === 'org_owner';
 
   const title = pageTitles[location.pathname] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';
@@ -85,6 +92,17 @@ export default function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        {/* Invite your Team — bulk invitations in one go (admins/owners) */}
+        {canInvite && (
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#117dff] text-white hover:bg-[#0e6fe0] transition-all text-xs font-semibold"
+          >
+            <UserPlus size={13} />
+            <span className="hidden md:inline">{t('topbar.inviteTeam', 'Invite your Team')}</span>
+          </button>
+        )}
+
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
@@ -128,6 +146,8 @@ export default function TopBar() {
           </span>
         </div>
       </div>
+
+      <BulkInviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} org={org} />
     </header>
   );
 }
