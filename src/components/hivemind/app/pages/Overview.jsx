@@ -295,17 +295,19 @@ function CognitiveBand({ onOpen, onAsk }) {
       }}
     >
       <style>{`
-        @keyframes hmDriftL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @keyframes hmDriftR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
-        .hm-band:hover .hm-band-track { animation-play-state: paused; }
+        @keyframes hmDriftL { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
+        @keyframes hmDriftR { from { transform: translate3d(-50%,0,0); } to { transform: translate3d(0,0,0); } }
+        .hm-band-track { will-change: transform; backface-visibility: hidden; }
+        .hm-band-track > button { transition: box-shadow .18s ease, border-color .18s ease; }
+        .hm-band-track > button:hover { box-shadow: 0 2px 10px rgba(17,125,255,0.16); }
       `}</style>
-      <div className="space-y-2.5 py-1">
+      <div className="space-y-3 py-1">
         {rows.map((row, i) => {
           const cfg = ROW_CFG[i % ROW_CFG.length];
           return (
             <div key={i} className="overflow-hidden" style={{ paddingLeft: cfg.offset }}>
               <div
-                className="hm-band-track flex items-center gap-2 w-max"
+                className="hm-band-track flex items-center gap-2.5 w-max"
                 style={{ animation: `${cfg.dir} ${cfg.dur}s linear infinite` }}
               >
                 {[...row, ...row].map((item, j) => (
@@ -730,11 +732,11 @@ function OverviewChat({ inputRef }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 }}
-      className={`max-w-3xl mx-auto w-full ${hasThread ? 'mt-6' : 'mt-[32vh]'}`}
+      className="max-w-3xl mx-auto w-full mt-auto pb-1"
     >
       {/* Hero — only while the thread is empty */}
       {!hasThread && (
-        <div className="flex flex-col items-center text-center mb-8">
+        <div className="flex flex-col items-center text-center mb-7">
           <div className="w-14 h-14 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
             <Hexagon size={26} className="text-white" />
           </div>
@@ -751,15 +753,15 @@ function OverviewChat({ inputRef }) {
       {hasThread && (
         <div
           ref={threadRef}
-          className="h-[380px] overflow-y-auto bg-[#fdfcf9] border border-[#e3e0db] rounded-2xl p-4 space-y-3 mt-2 mb-3"
+          className="h-[min(38vh,380px)] overflow-y-auto bg-[#fdfcf9] border border-[#e3e0db] rounded-2xl p-4 space-y-3 mt-2 mb-3"
         >
           {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
           {loading && <TypingBubble />}
         </div>
       )}
 
-      {/* Cognitive swarm band — drifting insights / memories / questions */}
-      {!hasThread && <CognitiveBand onOpen={setOpenMemory} onAsk={handleBandAsk} />}
+      {/* Cognitive swarm band — always drifting, right above the composer */}
+      <CognitiveBand onOpen={setOpenMemory} onAsk={handleBandAsk} />
 
       {/* Upload progress — slides up from the composer (tqdm-style) */}
       <AnimatePresence>
@@ -920,7 +922,7 @@ export default function Overview() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto font-['Space_Grotesk']">
+    <div className="max-w-6xl mx-auto font-['Space_Grotesk'] flex flex-col min-h-[calc(100vh-104px)]">
       {/* First-visit guided tour */}
       <AnimatePresence>
         {tour.open && <OverviewTour onClose={tour.close} />}
