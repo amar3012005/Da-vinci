@@ -31,6 +31,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery } from '../shared/hooks';
 import { useAuth } from '../auth/AuthProvider';
+import { useTeamContext } from '../shared/team-context';
 import { PageIndexViewer } from '../PageIndexViewer';
 import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-store';
 
@@ -1015,8 +1016,15 @@ export default function KnowledgeBase() {
   // org_visible ones), guests only explicit memberships. One retry on a
   // transient failure, and a visible error (instead of silently rendering
   // "no projects") so an auth/network problem is debuggable from the UI.
+  // SAME data path as the working Workspace Admin → Projects tab
+  // (TeamProjects.jsx): GET /v1/teams/:activeTeamId/projects, falling back to
+  // GET /v1/projects (org-wide, role-scoped listProjectsForUser) when no team
+  // is active. The previous /v1/orgs/:id/projects route stacked extra gates
+  // (plan check + getOrgMembership) that intermittently left the picker stuck
+  // on "Loading projects...".
+  const { activeTeamId } = useTeamContext() || {};
   const fetchProjects = useCallback(async () => {
-    if ((org?.plan !== 'enterprise' && org?.plan !== 'team') || !org?.id) {
+    if (!org?.id) {
       setTeamProjects([]);
       setProjectsError(null);
       return;
@@ -1025,7 +1033,9 @@ export default function KnowledgeBase() {
     setProjectsError(null);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const data = await apiClient.listProjects(org.id);
+        const data = activeTeamId
+          ? await apiClient.listTeamProjects(activeTeamId)
+          : await apiClient.listAccessibleProjects();
         setTeamProjects(data.projects || []);
         setLoadingProjects(false);
         return;
@@ -1041,7 +1051,7 @@ export default function KnowledgeBase() {
       }
     }
     setLoadingProjects(false);
-  }, [org?.id, org?.plan]);
+  }, [org?.id, activeTeamId]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
   // Refetch each time the scope modal opens — projects may have been created
