@@ -512,7 +512,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [highlightNodes, setHighlightNodes] = useState(new Set());
   // eslint-disable-next-line no-unused-vars
   const [projectFilter, setProjectFilter] = useState("");
-  const [scope, setScope] = useState("personal");
+  // Default 'visible' = membership-based access_context — the same set the
+  // Memories/Overview pages count (listMemories), so the graph node count
+  // matches the headline elsewhere. 'personal'/'team'/'all' stay as explicit
+  // user-selectable scopes.
+  const [scope, setScope] = useState("visible");
   // Sync graph project filter with TeamSwitcher's active project so the
   // 3D atlas reflects the same scope as Chat / Memories / Overview.
   const { activeProject } = useTeamContext() || {};
@@ -1030,7 +1034,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Scope */}
         <div className={`flex items-center gap-0.5 rounded-lg border p-0.5 shrink-0 ${toolbarControlClass}`}>
           {[
-            { key: "personal", label: "My" },
+            { key: "visible", label: "My" },
             { key: "team", label: "Team", disabled: org?.plan !== "enterprise" },
             { key: "all", label: "All", disabled: org?.plan !== "enterprise" },
           ].map((option) => (
