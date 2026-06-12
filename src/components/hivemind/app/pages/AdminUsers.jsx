@@ -25,6 +25,7 @@ const ALL_ROLES = [
   { value: 'member', label: 'Member' },
   { value: 'viewer', label: 'Viewer' },
   { value: 'service_account', label: 'Service Account' },
+  { value: 'guest', label: 'Guest (project-scoped)' },
 ];
 
 const ROLE_COLORS = {
