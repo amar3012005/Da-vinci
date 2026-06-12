@@ -371,33 +371,23 @@ export default function MeetingNotes() {
   const save = useCallback(async () => {
     if (!transcript) return;
     try {
-      const title = insights?.title || `Meeting ${new Date().toLocaleString()}`;
-      const summary = insights?.summary || transcript.slice(0, 500);
-      const tMd = speakerSegments?.length ? speakerSegments.map((s) => `**${nameFor(s.speaker, insights?.speaker_names)}:** ${s.text}`).join('\n\n') : transcript;
-      const sect = (heading, items, fmt = (x) => `- ${x}`) => (items?.length ? `\n\n## ${heading}\n${items.map(fmt).join('\n')}` : '');
-      const content = `# ${title}\n\n## Summary\n${summary}`
-        + sect('Action Items', insights?.action_items, (a) => `- ${a.task}${a.owner ? ` (@${a.owner})` : ''}`)
-        + sect('Key Points', insights?.key_points)
-        + sect('Decisions', insights?.decisions)
-        + sect('Open Questions', insights?.questions)
-        + sect('Risks', insights?.risks)
-        + sect('Next Steps', insights?.next_steps)
-        + (notes?.trim() ? `\n\n## My Notes\n${notes.trim()}` : '')
-        + `\n\n## Transcript\n${tMd}`;
-      const mem = await apiClient.core.post('/api/memories', { title, content, tags: ['meeting', 'ai-meeting-notes', ...(speakerSegments?.length ? ['multi-speaker'] : []), ...(insights?.topics || []).slice(0, 5)], memory_type: 'event' });
-      const memId = mem?.data?.id || mem?.data?.memory_id || null;
-      // The meeting is already in Past meetings (auto-saved on finish). Just link
-      // the new HIVEMIND memory to that row — no duplicate. Only POST a fresh row
-      // if the auto-save earlier failed (no meetingId yet).
-      if (meetingId) {
-        await apiClient.core.patch(`/api/meetings/${meetingId}`, { source_memory_id: memId }).catch(() => { /* link best-effort */ });
-      } else {
-        const row = await persistRow({ insights, transcript, segments: speakerSegments, language, sourceMemoryId: memId, title }).catch(() => null);
-        if (row?.id) setMeetingId(row.id);
+      // Smart tree ingest reads the insights off the Past-meetings row, so make
+      // sure the row exists first (it's normally auto-saved on finish).
+      let mid = meetingId;
+      if (!mid) {
+        const row = await persistRow({ insights, transcript, segments: speakerSegments, language, title: insights?.title });
+        mid = row?.id || null;
+        if (mid) setMeetingId(mid);
       }
+      if (!mid) throw new Error('could not persist meeting');
+      // Parent `event` memory + first-class typed children (decisions, action
+      // items, key points, risks, next steps, transcript) — all through the
+      // canonical pipeline so each fact links into the graph + is type-boosted
+      // in recall. Idempotent server-side via meetings.source_memory_id.
+      await apiClient.core.post(`/api/meetings/${mid}/ingest`, {});
       setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
-  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId, notes]);
+  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
