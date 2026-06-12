@@ -3522,11 +3522,32 @@ export default function Connectors() {
         return;
       }
 
-      const { auth_url } = await apiClient.startConnectorOAuth(
-        provider,
-        window.location.pathname,
-        { target_scope: targetScope, team_id: teamId },
-      );
+      let startRes;
+      try {
+        startRes = await apiClient.startConnectorOAuth(
+          provider,
+          window.location.pathname,
+          { target_scope: targetScope, team_id: teamId },
+        );
+      } catch (scopeErr) {
+        // The scope selector preloads from EXISTING connector rows — if an
+        // admin connected this provider org-wide, every viewer inherits
+        // 'organization' and non-admins 403 ("Only org admins can set
+        // org-scope connectors"). Their intent is simply "connect MY account",
+        // so retry personally instead of dead-ending.
+        const msg = scopeErr?.response?.data?.error || '';
+        if (scopeErr?.response?.status === 403 && /org admins|org-scope/i.test(msg) && targetScope !== 'personal') {
+          startRes = await apiClient.startConnectorOAuth(
+            provider,
+            window.location.pathname,
+            { target_scope: 'personal' },
+          );
+          setToastMessage({ type: 'success', text: `Connecting ${provider} to your personal space (org-wide scope needs an org admin).` });
+        } else {
+          throw scopeErr;
+        }
+      }
+      const { auth_url } = startRes || {};
       if (auth_url) {
         window.location.href = auth_url;
       } else {
