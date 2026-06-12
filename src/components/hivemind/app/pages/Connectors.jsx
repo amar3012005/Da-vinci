@@ -73,6 +73,26 @@ const CONNECTOR_CATEGORIES = [
   },
 ];
 
+// Original brand marks (simple-icons CDN, official brand colors). Connectors
+// without a verified slug keep their lucide glyph. CSP img-src allows https:.
+const BRAND_LOGOS = {
+  'claude-web':    'https://cdn.simpleicons.org/claude',
+  claude:          'https://cdn.simpleicons.org/claude',
+  chatgpt:         'https://cdn.simpleicons.org/openai',
+  'gemini-paste':  'https://cdn.simpleicons.org/googlegemini',
+  'google-gemini': 'https://cdn.simpleicons.org/googlegemini',
+  gmail:           'https://cdn.simpleicons.org/gmail',
+  'google-docs':   'https://cdn.simpleicons.org/googledocs',
+  slack:           'https://cdn.simpleicons.org/slack',
+  whatsapp:        'https://cdn.simpleicons.org/whatsapp',
+  notion:          'https://cdn.simpleicons.org/notion/000000',
+  confluence:      'https://cdn.simpleicons.org/confluence',
+  atlassian:       'https://cdn.simpleicons.org/jira',
+  github:          'https://cdn.simpleicons.org/github/181717',
+  linear:          'https://cdn.simpleicons.org/linear',
+  salesforce:      'https://cdn.simpleicons.org/salesforce',
+};
+
 const CONNECTORS = [
   // MCP Clients (already working)
   {
@@ -581,6 +601,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
   const [scopeSaving, setScopeSaving] = useState(false);
   const Icon = connector.icon;
   const isActive = connector.status === 'connected' || connector.status === 'syncing';
+  const brandLogo = BRAND_LOGOS[connector.id];
   const isComingSoon = connector.status === 'coming_soon';
   const hasConfig = config && connector.configKey;
   const isSetupOnly = connector.setupOnly === true;
@@ -675,11 +696,11 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
               borderColor: `${connector.color}20`,
             }}
           >
-            <Icon
-              size={20}
-              style={{ color: connector.color }}
-              strokeWidth={1.75}
-            />
+            {brandLogo ? (
+              <img src={brandLogo} alt={connector.name} width={20} height={20} loading="lazy" />
+            ) : (
+              <Icon size={20} style={{ color: connector.color }} strokeWidth={1.75} />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] leading-tight truncate">
@@ -1916,7 +1937,11 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
             className="w-9 h-9 rounded-lg flex items-center justify-center border shrink-0"
             style={{ backgroundColor: `${connector.color}10`, borderColor: `${connector.color}25` }}
           >
-            <Icon size={18} style={{ color: connector.color }} />
+            {BRAND_LOGOS[connector.id] ? (
+              <img src={BRAND_LOGOS[connector.id]} alt={connector.name} width={18} height={18} loading="lazy" />
+            ) : (
+              <Icon size={18} style={{ color: connector.color }} />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight truncate">
