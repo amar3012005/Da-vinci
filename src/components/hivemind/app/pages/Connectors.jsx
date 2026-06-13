@@ -1062,7 +1062,6 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   // SAME saved filters every `autoMinutes`. Loaded from /connectors/cadence.
   const [autoSync, setAutoSync] = useState(false);
   const [autoMinutes, setAutoMinutes] = useState(360); // default 6h
-  const [savedCadence, setSavedCadence] = useState(null);
   // Preview/approval flow state
   const [step, setStep] = useState('config'); // config | preview | flushing
   const [previews, setPreviews] = useState([]);
@@ -1081,7 +1080,6 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         setAutoSync(true);
         setAutoMinutes(gmail.sync_interval_minutes);
       }
-      setSavedCadence(gmail || null);
     }).catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -1118,7 +1116,6 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   const saveAutoSyncOnly = async (enabled, minutes) => {
     try {
       await apiClient.setConnectorCadence('gmail', enabled ? minutes : null);
-      setSavedCadence({ provider: 'gmail', sync_interval_minutes: enabled ? minutes : null });
     } catch (e) { console.warn('[cadence] save failed:', e.message); }
   };
 
