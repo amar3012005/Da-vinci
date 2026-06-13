@@ -1352,6 +1352,21 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Connector auto-sync cadence (per-connector interval) ───
+  async getConnectorCadence() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/cadence');
+    return data;
+  }
+
+  // sync_interval_minutes: null = use global default; 15-43200 = override; pass null to also mean "off" alongside auto_sync=false handling client-side.
+  async setConnectorCadence(provider, syncIntervalMinutes) {
+    const { data } = await this.controlPlane.post('/v1/proxy/connectors/cadence', {
+      provider,
+      sync_interval_minutes: syncIntervalMinutes,
+    });
+    return data;
+  }
+
   // ─── Claude.ai remote-MCP connector status + disconnect ────
   async claudeWebStatus() {
     const { data } = await this.controlPlane.get('/v1/proxy/connectors/claude-web/status');

@@ -1057,6 +1057,12 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   };
   const removeBlockSender = (v) => setBlockSenders((prev) => prev.filter((x) => x !== v));
   const [syncing, setSyncing] = useState(false);
+  // Auto-sync: persisted per-connector cadence. autoSync=false → interval
+  // cleared (null = manual only). autoSync=true → scheduler re-runs the
+  // SAME saved filters every `autoMinutes`. Loaded from /connectors/cadence.
+  const [autoSync, setAutoSync] = useState(false);
+  const [autoMinutes, setAutoMinutes] = useState(360); // default 6h
+  const [savedCadence, setSavedCadence] = useState(null);
   // Preview/approval flow state
   const [step, setStep] = useState('config'); // config | preview | flushing
   const [previews, setPreviews] = useState([]);
@@ -1064,6 +1070,21 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   const [previewing, setPreviewing] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [flushed, setFlushed] = useState(null);
+
+  // Hydrate the saved auto-sync cadence so the toggle reflects reality.
+  React.useEffect(() => {
+    let alive = true;
+    apiClient.getConnectorCadence().then((d) => {
+      if (!alive) return;
+      const gmail = (d.connectors || []).find((c) => c.provider === 'gmail');
+      if (gmail && gmail.sync_interval_minutes) {
+        setAutoSync(true);
+        setAutoMinutes(gmail.sync_interval_minutes);
+      }
+      setSavedCadence(gmail || null);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const toggleFolder = (f) => setFolders(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
   const toggleExclude = (c) => setExcludeCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
@@ -1074,15 +1095,40 @@ function GmailSyncSettings({ email, onSync, onClose }) {
     return next;
   });
 
-  // Pure auto-sync (legacy) — bypass preview, push everything matching filters
+  // Sync now + persist config + persist auto-sync cadence in one round-trip.
+  // BE persists sync_config (so auto-sync replays these exact filters) and
+  // sets/clears syncIntervalMinutes from auto_sync_minutes.
   const handleStart = async () => {
     setSyncing(true);
     try {
-      await onSync({ date_range: dateRange, folders, exclude_categories: excludeCategories, max_emails: maxEmails, block_senders: blockSenders });
+      await onSync({
+        date_range: dateRange,
+        folders,
+        exclude_categories: excludeCategories,
+        max_emails: maxEmails,
+        block_senders: blockSenders,
+        auto_sync_minutes: autoSync ? autoMinutes : null,
+      });
     } finally {
       setSyncing(false);
     }
   };
+
+  // Save auto-sync setting WITHOUT triggering a full sync (just cadence).
+  const saveAutoSyncOnly = async (enabled, minutes) => {
+    try {
+      await apiClient.setConnectorCadence('gmail', enabled ? minutes : null);
+      setSavedCadence({ provider: 'gmail', sync_interval_minutes: enabled ? minutes : null });
+    } catch (e) { console.warn('[cadence] save failed:', e.message); }
+  };
+
+  const AUTO_OPTIONS = [
+    { value: 15, label: '15m' },
+    { value: 60, label: '1h' },
+    { value: 360, label: '6h' },
+    { value: 720, label: '12h' },
+    { value: 1440, label: 'Daily' },
+  ];
 
   // Preview-then-approve flow — fetches list, user picks, ingest only selected
   const handlePreview = async () => {
@@ -1151,146 +1197,188 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="bg-white rounded-[20px] shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto"
+        className="bg-white rounded-[18px] shadow-2xl max-w-xl w-full max-h-[92vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-[#f3f1ec] px-7 py-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] flex items-center justify-center shadow-inner">
-            <Mail size={22} className="text-[#ef4444]" />
+        {/* Compact header */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-[#f3f1ec] px-5 py-3.5 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#fef2f2] to-[#fee2e2] flex items-center justify-center shrink-0">
+            <Mail size={17} className="text-[#ef4444]" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-[#0a0a0a] text-[17px] font-bold font-['Space_Grotesk'] leading-tight">{t('connectors.configureGmailSync', 'Configure Gmail Sync')}</h2>
-            <p className="text-[#a3a3a3] text-[11px] font-mono leading-snug mt-0.5">
-              {email ? <>Account · <span className="text-[#525252]">{email}</span></> : 'Pick threads → preview → approve'}
+            <h2 className="text-[#0a0a0a] text-[14px] font-bold font-['Space_Grotesk'] leading-tight">{t('connectors.configureGmailSync', 'Gmail Sync')}</h2>
+            <p className="text-[#a3a3a3] text-[10px] font-mono leading-snug truncate">
+              {email ? <span className="text-[#737373]">{email}</span> : 'manual + auto-sync · noise-filtered'}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#737373] hover:bg-[#f3f1ec] transition-colors shrink-0"
             aria-label={t('connectors.close', 'Close')}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
-        <div className="px-7 py-6">
-        {/* Top grid: Date Range + Max Emails side-by-side on md+ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+        <div className="px-5 py-4">
+        {step === 'config' && (
+        <>
+        {/* Row 1: Date range pills (left) + Max slider (right) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 mb-3.5">
           <div>
-            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.dateRange', 'Date Range')}</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="text-[#737373] text-[9.5px] font-bold uppercase tracking-[0.1em] font-['Space_Grotesk'] block mb-1.5">{t('connectors.dateRange', 'Date Range')}</label>
+            <div className="flex flex-wrap gap-1">
               {dateOptions.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setDateRange(opt.value)}
-                  className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
                     dateRange === opt.value
-                      ? 'bg-[#117dff] text-white shadow-sm shadow-[#117dff]/25'
-                      : 'bg-[#f9f8f3] text-[#525252] border border-[#e3e0db] hover:border-[#117dff]/40 hover:bg-white'
+                      ? 'bg-[#117dff] text-white'
+                      : 'bg-[#f9f8f3] text-[#737373] border border-[#e9e6e0] hover:border-[#117dff]/40'
                   }`}
                 >
-                  {opt.label}
+                  {opt.label.replace('Last ', '')}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] flex items-center justify-between mb-2.5">
+            <label className="text-[#737373] text-[9.5px] font-bold uppercase tracking-[0.1em] font-['Space_Grotesk'] flex items-center justify-between mb-1.5">
               <span>{t('connectors.maxEmails', 'Max Emails')}</span>
-              <span className="text-[#117dff] text-[14px] font-mono normal-case tracking-normal">{maxEmails}</span>
+              <span className="text-[#117dff] text-[12px] font-mono normal-case tracking-normal">{maxEmails}</span>
             </label>
             <input
-              type="range"
-              min={50}
-              max={2000}
-              step={50}
-              value={maxEmails}
+              type="range" min={50} max={2000} step={50} value={maxEmails}
               onChange={e => setMaxEmails(Number(e.target.value))}
-              className="w-full accent-[#117dff] h-2"
+              className="w-full accent-[#117dff] h-1.5"
             />
-            <div className="flex justify-between text-[10px] text-[#a3a3a3] font-mono mt-1.5">
-              <span>50</span><span>500</span><span>1000</span><span>2000</span>
+            <div className="flex justify-between text-[9px] text-[#c4c1bb] font-mono mt-0.5">
+              <span>50</span><span>1k</span><span>2k</span>
             </div>
           </div>
         </div>
 
-        {/* Folders */}
-        <div className="mb-5">
-          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.foldersToSync', 'Folders to Sync')}</label>
-          <div className="flex flex-wrap gap-2">
-            {folderOptions.map(f => (
-              <button
-                key={f}
-                onClick={() => toggleFolder(f)}
-                className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
-                  folders.includes(f)
-                    ? 'bg-[#16a34a] text-white shadow-sm shadow-[#16a34a]/25'
-                    : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e3e0db] hover:border-[#16a34a]/40 hover:text-[#525252]'
-                }`}
-              >
-                {f.toLowerCase()}
-              </button>
-            ))}
+        {/* Row 2: Folders + Exclude — two compact chip rows */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3 mb-3.5">
+          <div>
+            <label className="text-[#737373] text-[9.5px] font-bold uppercase tracking-[0.1em] font-['Space_Grotesk'] block mb-1.5">{t('connectors.foldersToSync', 'Folders')}</label>
+            <div className="flex flex-wrap gap-1">
+              {folderOptions.map(f => (
+                <button
+                  key={f}
+                  onClick={() => toggleFolder(f)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                    folders.includes(f)
+                      ? 'bg-[#16a34a] text-white'
+                      : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e9e6e0] hover:text-[#525252]'
+                  }`}
+                >
+                  {f.toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-[#737373] text-[9.5px] font-bold uppercase tracking-[0.1em] font-['Space_Grotesk'] block mb-1.5">{t('connectors.excludeCategories', 'Exclude')}</label>
+            <div className="flex flex-wrap gap-1">
+              {categoryOptions.map(c => (
+                <button
+                  key={c}
+                  onClick={() => toggleExclude(c)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] transition-all ${
+                    excludeCategories.includes(c)
+                      ? 'bg-[#dc2626] text-white'
+                      : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e9e6e0] hover:text-[#525252]'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Exclude Categories */}
-        <div className="mb-5">
-          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.excludeCategories', 'Exclude Categories')}</label>
-          <div className="flex flex-wrap gap-2">
-            {categoryOptions.map(c => (
-              <button
-                key={c}
-                onClick={() => toggleExclude(c)}
-                className={`px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] transition-all ${
-                  excludeCategories.includes(c)
-                    ? 'bg-[#dc2626] text-white shadow-sm shadow-[#dc2626]/25'
-                    : 'bg-[#f9f8f3] text-[#a3a3a3] border border-[#e3e0db] hover:border-[#dc2626]/40 hover:text-[#525252]'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Block senders — kills noise at the Gmail query (never embeds) */}
-        <div className="mb-6">
-          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5 flex items-center gap-2">
+        {/* Block senders — compact inline input + chips */}
+        <div className="mb-3.5">
+          <label className="text-[#737373] text-[9.5px] font-bold uppercase tracking-[0.1em] font-['Space_Grotesk'] flex items-center gap-1.5 mb-1.5">
             <span>{t('connectors.blockSenders', 'Block Senders')}</span>
-            <span className="text-[10px] font-mono text-[#a3a3a3] normal-case tracking-normal">
-              {t('connectors.blockSendersHint', 'newsletters, noreply, calendar already blocked by default')}
-            </span>
+            <span className="text-[9px] font-mono text-[#c4c1bb] normal-case tracking-normal">{t('connectors.blockSendersHint', 'noreply / newsletters / calendar blocked by default')}</span>
           </label>
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-1.5">
             <input
               type="text"
               value={blockInput}
               onChange={(e) => setBlockInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addBlockSender(); } }}
               placeholder={t('connectors.blockSendersPlaceholder', 'sender@domain.com  or  *@domain.com')}
-              className="flex-1 rounded-xl border border-[#e3e0db] bg-[#f9f8f3] px-3 py-2 text-[12px] font-mono text-[#0a0a0a] focus:outline-none focus:border-[#dc2626]/40 focus:bg-white"
+              className="flex-1 rounded-lg border border-[#e9e6e0] bg-[#f9f8f3] px-2.5 py-1.5 text-[11px] font-mono text-[#0a0a0a] focus:outline-none focus:border-[#dc2626]/40 focus:bg-white"
             />
             <button
               onClick={addBlockSender}
               disabled={!blockInput.trim()}
-              className="px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#171717] disabled:opacity-40"
+              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#171717] disabled:opacity-40"
             >
               {t('connectors.add', 'Add')}
             </button>
           </div>
           {blockSenders.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1 mt-1.5">
               {blockSenders.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#dc2626]">
+                <span key={s} className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#dc2626]">
                   {s}
-                  <button onClick={() => removeBlockSender(s)} className="text-[#dc2626]/60 hover:text-[#dc2626] ml-0.5">×</button>
+                  <button onClick={() => removeBlockSender(s)} className="text-[#dc2626]/60 hover:text-[#dc2626]">×</button>
                 </span>
               ))}
             </div>
           )}
         </div>
+
+        {/* Auto-sync — toggle + interval pills. The headline feature: set it
+            once, the scheduler replays these exact filters on cadence. */}
+        <div className="mb-1 rounded-xl border border-[#e9e6e0] bg-[#faf9f4] px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <RefreshCw size={13} className={autoSync ? 'text-[#117dff]' : 'text-[#a3a3a3]'} />
+              <div className="min-w-0">
+                <p className="text-[12px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">{t('connectors.autoSync', 'Auto-sync')}</p>
+                <p className="text-[9.5px] font-mono text-[#a3a3a3] leading-tight">
+                  {autoSync
+                    ? t('connectors.autoSyncOn', 'replays these filters every {{n}}', { n: (AUTO_OPTIONS.find(o => o.value === autoMinutes) || {}).label || `${autoMinutes}m` })
+                    : t('connectors.autoSyncOff', 'manual only — runs when you click Sync')}
+                </p>
+              </div>
+            </div>
+            {/* iOS-style toggle */}
+            <button
+              type="button"
+              onClick={() => { const next = !autoSync; setAutoSync(next); saveAutoSyncOnly(next, autoMinutes); }}
+              className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${autoSync ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`}
+              aria-label="Toggle auto-sync"
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoSync ? 'translate-x-4' : ''}`} />
+            </button>
+          </div>
+          {autoSync && (
+            <div className="flex flex-wrap gap-1 mt-2.5 pl-[21px]">
+              {AUTO_OPTIONS.map(o => (
+                <button
+                  key={o.value}
+                  onClick={() => { setAutoMinutes(o.value); saveAutoSyncOnly(true, o.value); }}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold font-['Space_Grotesk'] transition-all ${
+                    autoMinutes === o.value
+                      ? 'bg-[#117dff] text-white'
+                      : 'bg-white text-[#737373] border border-[#e9e6e0] hover:border-[#117dff]/40'
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        </>
+        )}
 
         {/* Preview list (shown after Preview pressed) */}
         {step === 'preview' && (
