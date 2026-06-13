@@ -1166,7 +1166,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   };
 
   const handleFlush = async () => {
-    if (!window.confirm('Soft-delete ALL Gmail memories for this account? Recoverable via DB for ~30 days.')) return;
+    if (!window.confirm('Permanently delete ALL Gmail memories for this account (Postgres + vectors) and reset the sync cursor? This cannot be undone.')) return;
     setStep('flushing');
     try {
       const res = await apiClient.gmailFlush();
@@ -1455,10 +1455,10 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         {step === 'flushing' && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-[12px] font-semibold text-amber-800 font-['Space_Grotesk']">
-              {flushed === null ? 'Flushing Gmail memories…' : `Soft-deleted ${flushed} Gmail memor${flushed === 1 ? 'y' : 'ies'}.`}
+              {flushed === null ? 'Flushing Gmail memories…' : `Permanently deleted ${flushed} Gmail memor${flushed === 1 ? 'y' : 'ies'}.`}
             </p>
             <p className="text-[10.5px] text-amber-700 mt-1">
-              Next sync starts from a clean slate. Recovery window: ~30 days.
+              Memories + vectors wiped and the sync cursor reset — next sync starts completely fresh.
             </p>
           </div>
         )}
