@@ -755,24 +755,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Perf: render once, then DON'T poll. The old 30s setInterval refetched the
-  // whole graph every 30s in live mode → full rebuild + relayout → periodic
-  // lag spike. Instead refetch only when the tab returns to the foreground
-  // after being hidden (data may have gone stale while away). No periodic poll.
-  useEffect(() => {
-    if (!isLiveMode) return undefined;
-    let wasHidden = false;
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") { wasHidden = true; return; }
-      if (wasHidden) { wasHidden = false; fetchGraph(); }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [fetchGraph, isLiveMode]);
-
-  useEffect(() => {
-    if (isLiveMode) setTemporalProgress(1);
-  }, [isLiveMode]);
+  // Render once, then DON'T re-poll or refetch while the user stays on the
+  // page — no periodic interval, no refetch on tab-refocus. Rebuild+relayout on
+  // every visibility change was jarring (graph reset under the user). The graph
+  // stays intact for the whole visit; a manual Refresh button is the only reload.
 
   // Debounce search input
   useEffect(() => {
@@ -1401,7 +1387,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
         {/* Zoom + cluster panel controls */}
         <div className="absolute bottom-4 right-4 flex items-end gap-3 z-10">
-          {temporalBounds && (
+          {false && (
             <div className={`${panelClass} rounded-[22px] border backdrop-blur-xl px-3 py-3 w-[268px]`}>
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div>

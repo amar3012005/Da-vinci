@@ -762,6 +762,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColorRef = useRef(null);
   const getNodeLabelRef = useRef(null);
   const refreshHighlightRef = useRef(null);
+  // One-time "frame the whole graph" guard (reset when a new dataset loads).
+  const didInitialFitRef = useRef(false);
   // nodeId -> Sprite for persistent short tags (doc, gmail, @person ...)
   const nodeTagSpritesRef = useRef(new Map());
   const viewStateRef = useRef({
@@ -1154,6 +1156,15 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // every frame. Reheat on interaction is still bounded by these ticks.
       .cooldownTicks(80)
       .cooldownTime(8000)
+      // Wide-shot on load: once the layout settles, frame the WHOLE network so
+      // the user lands on the full graph (not the default zoomed-in camera).
+      // Guarded so it fires only on first settle per dataset, never fighting
+      // the user's manual zoom afterwards.
+      .onEngineStop(() => {
+        if (didInitialFitRef.current) return;
+        didInitialFitRef.current = true;
+        fgRef.current?.zoomToFit?.(700, 60);
+      })
       .nodeResolution(themeRef.current.name === "atlas" ? 10 : 12)
       .nodeRelSize(1.65)
       .nodeOpacity(themeRef.current.name === "atlas" ? 0.96 : 0.9)
@@ -1622,6 +1633,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       fg.graphData(graphData);
       refreshHighlight();
     });
+    // New dataset → allow one fresh wide-shot fit when it next settles.
+    didInitialFitRef.current = false;
   }, [graphData, refreshHighlight, withPausedAnimation]);
 
   useEffect(() => {
