@@ -12,6 +12,7 @@ import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
+  Volume2, MonitorSpeaker,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -276,6 +277,11 @@ export default function MeetingNotes() {
   const [saved, setSaved] = useState(false);
   const [meetingId, setMeetingId] = useState(null); // Past-meetings row id (persisted on finish, before any HIVEMIND save)
   const [multiSpeaker, setMultiSpeaker] = useState(false);
+  // 'mic'  → microphone only (in-person / you on a phone call)
+  // 'tab'  → capture the meeting TAB's audio (the other participants) merged
+  //          with your mic, via getDisplayMedia. Lets the web app transcribe
+  //          BOTH sides of a Google Meet / Zoom-web call without an extension.
+  const [captureMode, setCaptureMode] = useState('mic');
   const [speakerSegments, setSpeakerSegments] = useState(null);
   const [language, setLanguage] = useState(null);
   const [meetings, setMeetings] = useState([]);
@@ -284,6 +290,7 @@ export default function MeetingNotes() {
   const [detailErr, setDetailErr] = useState(false);
 
   const recRef = useRef(null); const chunksRef = useRef([]); const streamRef = useRef(null); const timerRef = useRef(null);
+  const audioCtxRef = useRef(null); const teardownRef = useRef([]); // extra streams/ctx to tear down (tab+mic merge)
 
   const loadMeetings = useCallback(async () => {
     try {
@@ -306,6 +313,10 @@ export default function MeetingNotes() {
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    // Tear down the raw tab + mic streams and the merge AudioContext first.
+    teardownRef.current.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
+    teardownRef.current = [];
+    if (audioCtxRef.current) { try { audioCtxRef.current.close(); } catch { /* ignore */ } audioCtxRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach((tr) => tr.stop()); streamRef.current = null; }
   }, []);
   useEffect(() => cleanup, [cleanup]);
@@ -354,17 +365,53 @@ export default function MeetingNotes() {
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
-    let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch { setError('Microphone permission denied.'); return; }
-    streamRef.current = stream; chunksRef.current = [];
+
+    // Mic is always part of the recording (your voice). In 'tab' mode we ALSO
+    // capture the meeting tab's audio (everyone else) and merge the two.
+    let mic;
+    try {
+      mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch { setError('Microphone permission denied.'); return; }
+    teardownRef.current.push(() => mic.getTracks().forEach((tr) => tr.stop()));
+
+    let recordStream;
+    if (captureMode === 'tab') {
+      // getDisplayMedia shows the tab/window picker; the user must pick the
+      // meeting TAB and tick "Share tab audio". video:true is required for the
+      // picker to even offer audio — we drop the video track immediately.
+      let display;
+      try {
+        display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } catch {
+        cleanup(); setError('Tab share was cancelled. Pick the meeting tab and enable "Share tab audio" to capture the other participants.'); return;
+      }
+      teardownRef.current.push(() => display.getTracks().forEach((tr) => tr.stop()));
+      const dispAudio = display.getAudioTracks();
+      if (!dispAudio.length) {
+        cleanup(); setError('No tab audio captured. When the picker opens, choose a TAB (not a window/screen) and tick "Share tab audio".'); return;
+      }
+      display.getVideoTracks().forEach((tr) => tr.stop()); // audio-only — free the video capture
+      // If the user clicks Chrome\'s "Stop sharing" bar, end the recording.
+      dispAudio[0].addEventListener('ended', () => { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); });
+
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = ctx;
+      const dest = ctx.createMediaStreamDestination();
+      ctx.createMediaStreamSource(new MediaStream(dispAudio)).connect(dest); // the other participants
+      ctx.createMediaStreamSource(mic).connect(dest);                        // you
+      recordStream = dest.stream;
+    } else {
+      recordStream = mic;
+    }
+
+    streamRef.current = recordStream; chunksRef.current = [];
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-    const rec = new MediaRecorder(stream, { mimeType: mime }); recRef.current = rec;
+    const rec = new MediaRecorder(recordStream, { mimeType: mime }); recRef.current = rec;
     rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
     rec.onstop = () => { cleanup(); process(new Blob(chunksRef.current, { type: 'audio/webm' })); };
     rec.start(1000); setStatus('recording');
     timerRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
-  }, [cleanup, process]);
+  }, [cleanup, process, captureMode]);
 
   const stop = useCallback(() => { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); }, []);
 
@@ -460,6 +507,37 @@ export default function MeetingNotes() {
                   {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
                   {busy ? (status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
                 </button>
+              )}
+            </div>
+
+            {/* Capture source — mic only vs the whole call (tab audio + mic) */}
+            <div className="mb-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">{t('meetingnotes.captureSource', 'Audio source')}</span>
+              </div>
+              <div className="inline-flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-[8px] p-0.5">
+                {[
+                  { id: 'mic', label: t('meetingnotes.srcMic', 'Microphone only'), Icon: Mic },
+                  { id: 'tab', label: t('meetingnotes.srcTab', 'This call (tab + mic)'), Icon: MonitorSpeaker },
+                ].map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={recording || busy}
+                    onClick={() => setCaptureMode(id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                      captureMode === id ? 'bg-[#0a0a0a] text-white' : 'text-[#525252] hover:bg-white'
+                    }`}
+                  >
+                    <Icon size={12} /> {label}
+                  </button>
+                ))}
+              </div>
+              {captureMode === 'tab' && (
+                <p className="text-[11px] text-[#737373] mt-1.5 leading-relaxed flex items-start gap-1.5">
+                  <Volume2 size={12} className="text-[#117dff] mt-0.5 shrink-0" />
+                  {t('meetingnotes.tabHint', 'On Start, pick the Google Meet / Zoom TAB and tick “Share tab audio” — this captures the other participants too, not just you.')}
+                </p>
               )}
             </div>
 
