@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft } from 'lucide-react';
+import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, Cloud, Server, Lock, Check, Crown, KeyRound } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 
@@ -73,6 +73,7 @@ export default function LoginPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
+  const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
   const [hivemindName, setHivemindName] = useState('');
@@ -113,6 +114,7 @@ export default function LoginPage() {
         name: userName,
         hivemind_name: hivemindName,
         enterprise: enterpriseName || null,
+        deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       }));
     } catch (e) {}
 
@@ -134,6 +136,7 @@ export default function LoginPage() {
     setShowOnboarding(false);
     setOnboardingStep(1);
     setAccountType(null);
+    setHostingChoice(null);
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
@@ -158,7 +161,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-md mx-4"
+        className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl' : 'max-w-md'}`}
       >
         <div className="bg-white backdrop-blur-xl border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           {/* Logo */}
@@ -300,9 +303,14 @@ export default function LoginPage() {
                   onClick={() => {
                     if (onboardingStep === 1) {
                       resetOnboarding();
+                    } else if (onboardingStep === 3) {
+                      // Enterprise setup form → back to hosting choice
+                      setOnboardingStep(2);
                     } else {
+                      // Step 2 (personal form OR enterprise hosting) → choose path
                       setOnboardingStep(1);
                       setAccountType(null);
+                      setHostingChoice(null);
                     }
                   }}
                   className="flex items-center gap-1.5 text-[#525252] hover:text-[#0a0a0a] text-sm font-['Space_Grotesk'] mb-6 transition-colors"
@@ -313,30 +321,47 @@ export default function LoginPage() {
 
                 {/* Step 1: Choose path */}
                 {onboardingStep === 1 && (
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">How will you use HIVEMIND?</h2>
+                  <div className="space-y-5">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">How will you use HIVEMIND?</h2>
+                      <p className="text-sm text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <button
                         onClick={() => { setAccountType('personal'); setOnboardingStep(2); }}
-                        className="p-6 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] transition-all text-left group"
+                        className="p-5 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                           <Brain size={24} className="text-blue-500" />
                         </div>
                         <h3 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Personal</h3>
-                        <p className="text-sm text-[#525252] mt-1">Your Second Brain — connect all your platforms</p>
+                        <p className="text-sm text-[#525252] mt-1 leading-snug">Your Second Brain — connect all your platforms</p>
+                        <ul className="mt-3 space-y-1.5">
+                          {['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start'].map((f) => (
+                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+                              <Check size={11} className="text-blue-500 shrink-0" /> {f}
+                            </li>
+                          ))}
+                        </ul>
                       </button>
 
                       <button
-                        onClick={() => { setAccountType('enterprise'); setOnboardingStep(2); }}
-                        className="p-6 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] transition-all text-left group"
+                        onClick={() => { setAccountType('enterprise'); setHostingChoice(null); setOnboardingStep(2); }}
+                        className="relative p-5 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-3">
+                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                           <Building2 size={24} className="text-purple-500" />
                         </div>
                         <h3 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Enterprise</h3>
-                        <p className="text-sm text-[#525252] mt-1">Memory Engine for your team</p>
+                        <p className="text-sm text-[#525252] mt-1 leading-snug">Sovereign Memory Engine for your team</p>
+                        <ul className="mt-3 space-y-1.5">
+                          {['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty'].map((f) => (
+                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+                              <Check size={11} className="text-purple-500 shrink-0" /> {f}
+                            </li>
+                          ))}
+                        </ul>
                       </button>
                     </div>
                   </div>
@@ -382,10 +407,103 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Step 2b: Enterprise details */}
+                {/* Step 2b: Enterprise hosting choice — Managed vs Self-Hosted Sovereign */}
                 {onboardingStep === 2 && accountType === 'enterprise' && (
+                  <div className="space-y-5">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Where should your memory live?</h2>
+                      <p className="text-sm text-[#737373] mt-1.5">Your organization's memory is your most valuable asset. Choose who holds it.</p>
+                    </div>
+
+                    {/* Managed cloud — the easy default */}
+                    <button
+                      onClick={() => { setHostingChoice('managed'); setOnboardingStep(3); }}
+                      className={`w-full text-left p-5 rounded-2xl border-2 transition-all group ${
+                        hostingChoice === 'managed' ? 'border-[#117dff] bg-[#117dff]/[0.03]' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Cloud size={22} className="text-[#117dff]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-[#0a0a0a] font-['Space_Grotesk']">Managed Cloud</h3>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Included</span>
+                          </div>
+                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">We host & operate it for you on EU-sovereign infrastructure (Frankfurt). Live in seconds, zero ops.</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
+                            {['Instant setup', 'Auto-scaling & backups', 'GDPR · EU-only'].map((f) => (
+                              <span key={f} className="flex items-center gap-1 text-[11px] text-[#737373]"><Check size={11} className="text-[#117dff]" /> {f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Self-hosted sovereign — the premium tier */}
+                    <button
+                      onClick={() => { setHostingChoice('self_hosted'); setOnboardingStep(3); }}
+                      className={`relative w-full text-left p-5 rounded-2xl transition-all group overflow-hidden ${
+                        hostingChoice === 'self_hosted' ? 'ring-2 ring-amber-400' : ''
+                      }`}
+                      style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #18181b 100%)' }}
+                    >
+                      {/* subtle gold sheen */}
+                      <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+                      <div className="absolute top-3 right-3">
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-full">
+                          <Crown size={10} /> Sovereign
+                        </span>
+                      </div>
+                      <div className="relative flex items-start gap-4">
+                        <div className="w-11 h-11 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Server size={22} className="text-amber-300" />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-16">
+                          <h3 className="text-base font-bold text-white font-['Space_Grotesk']">Self-Hosted Sovereign</h3>
+                          <p className="text-[12px] text-white/60 mt-1 leading-snug">
+                            Your servers. Your keys. Your data never leaves your walls. The ultimate tier for organizations where data <span className="text-amber-300/90 font-medium">is</span> the business.
+                          </p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
+                            {[
+                              { icon: Lock, t: 'Air-gapped / VPC deploy' },
+                              { icon: KeyRound, t: 'Customer-held encryption keys' },
+                              { icon: Shield, t: 'Full data residency control' },
+                            ].map((f) => (
+                              <span key={f.t} className="flex items-center gap-1 text-[11px] text-white/50"><f.icon size={11} className="text-amber-300/80" /> {f.t}</span>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                            <span className="text-[11px] font-semibold text-amber-300 font-['Space_Grotesk']">Custom pricing</span>
+                            <span className="text-[11px] text-white/40">·</span>
+                            <span className="text-[11px] text-white/50">White-glove onboarding & dedicated SLA</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <p className="text-[11px] text-[#a3a3a3] text-center leading-relaxed">
+                      Not sure? Start on Managed Cloud — you can migrate to a sovereign self-hosted instance at any time without losing a single memory.
+                    </p>
+                  </div>
+                )}
+
+                {/* Step 3: Enterprise details */}
+                {onboardingStep === 3 && accountType === 'enterprise' && (
                   <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Enterprise HIVEMIND</h2>
+                    <div>
+                      <h2 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Enterprise HIVEMIND</h2>
+                      {hostingChoice === 'self_hosted' ? (
+                        <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          <Crown size={11} /> Self-Hosted Sovereign · our team will reach out to provision
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20 px-2 py-0.5 rounded-full">
+                          <Cloud size={11} /> Managed Cloud · EU-sovereign (Frankfurt)
+                        </span>
+                      )}
+                    </div>
                     <div>
                       <label className="text-sm font-medium text-[#525252] block mb-1">Admin name</label>
                       <input
@@ -413,16 +531,25 @@ export default function LoginPage() {
                         className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
                       />
                     </div>
-                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                      <p className="text-sm text-purple-700 font-medium">Enterprise accounts start with a 14-day Scale trial</p>
-                      <p className="text-xs text-purple-500 mt-1">Full access to all features. No credit card required.</p>
-                    </div>
+                    {hostingChoice === 'self_hosted' ? (
+                      <div className="rounded-xl p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+                        <p className="text-sm text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
+                        <p className="text-xs text-amber-600/90 mt-1">Reserve your workspace now. Our solutions team contacts you within one business day to provision your private instance, encryption keys and SLA.</p>
+                      </div>
+                    ) : (
+                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <p className="text-sm text-purple-700 font-medium">Enterprise accounts start with a 14-day Scale trial</p>
+                        <p className="text-xs text-purple-500 mt-1">Full access to all features. No credit card required.</p>
+                      </div>
+                    )}
                     <button
                       onClick={() => handleCreateAccount('zitadel')}
                       disabled={!userName.trim() || !enterpriseName.trim()}
                       className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                     >
-                      <Shield size={14} /> Create with Enterprise SSO (EU)
+                      {hostingChoice === 'self_hosted'
+                        ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
+                        : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
                     </button>
                     <button
                       onClick={() => handleCreateAccount('google')}
