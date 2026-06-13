@@ -541,7 +541,7 @@ function RoomThread({ roomId, onArchived }) {
       'seal', 'error', 'heartbeat',
       // Phase 4 cognitive upgrades:
       'decision_required', 'decision_saved',
-      'final_report', 'harness_check',
+      'final_report', 'harness_check', 'memory_audit',
       // Phase 4 swarm (R1-R5):
       'round_start', 'round_end',
       'hypothesis', 'peer_review', 'chain_of_thought',
@@ -1081,6 +1081,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
   const finalReport = [...lines].reverse().find(l => l.t === 'final_report');
   const harnessCheck = [...lines].reverse().find(l => l.t === 'harness_check');
+  const memoryAudit = [...lines].reverse().find(l => l.t === 'memory_audit');
   const webIntel = [...lines].reverse().find(l => l.t === 'web_intel');
   const ontology = lines.find(l => l.t === 'ontology');
   const workforceAssessment = lines.find(l => l.t === 'workforce_assessment');
@@ -1358,6 +1359,28 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {decisionSaved && (
         <div className="mx-2 text-[10px] text-emerald-700 font-mono pl-2">
           {t('hyperAgents.savedToMemory', '✓ saved to memory · trigger: {{trigger}} · id: {{id}}', { trigger: decisionSaved.trigger, id: (decisionSaved.memory_id || '').slice(0, 8) })}
+        </div>
+      )}
+
+      {memoryAudit && (
+        <div className={`mx-2 my-2 rounded-lg border px-3 py-2 text-[11px] ${
+          memoryAudit.project_scoped && memoryAudit.project_hits === 0 && memoryAudit.web_allowed
+            ? 'border-amber-200 bg-amber-50 text-amber-800'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[9px] mb-1">
+            <Brain size={11} /> {t('hyperAgents.memoryAudit', 'Memory audit')}
+          </div>
+          {memoryAudit.project_scoped
+            ? t('hyperAgents.memoryAuditProject', 'Project hits: {{project}} · org fallback: {{org}} · web: {{web}}', {
+                project: memoryAudit.project_hits || 0,
+                org: memoryAudit.org_fallback_hits || 0,
+                web: memoryAudit.web_allowed ? memoryAudit.web_reason || 'allowed' : 'blocked',
+              })
+            : t('hyperAgents.memoryAuditOrg', 'Memory hits: {{hits}} · web: {{web}}', {
+                hits: memoryAudit.memory_hits || 0,
+                web: memoryAudit.web_allowed ? memoryAudit.web_reason || 'allowed' : 'blocked',
+              })}
         </div>
       )}
 
