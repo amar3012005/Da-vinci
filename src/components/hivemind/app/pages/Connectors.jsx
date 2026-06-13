@@ -1040,10 +1040,22 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
 
 function GmailSyncSettings({ email, onSync, onClose }) {
   const { t } = useTranslation('dashboard');
-  const [dateRange, setDateRange] = useState('30d');
+  const [dateRange, setDateRange] = useState('90d');
   const [folders, setFolders] = useState(['INBOX', 'SENT']);
   const [excludeCategories, setExcludeCategories] = useState(['promotions', 'social', 'updates', 'forums']);
-  const [maxEmails, setMaxEmails] = useState(50);
+  const [maxEmails, setMaxEmails] = useState(500);
+  // Sender blocklist — entries become Gmail `-from:` rules on the server.
+  // Backend ALSO applies a built-in default blocklist (noreply/substack/
+  // notifications/calendar etc.) — these are the user's EXTRA blocks.
+  const [blockSenders, setBlockSenders] = useState([]);
+  const [blockInput, setBlockInput] = useState('');
+  const addBlockSender = () => {
+    const v = blockInput.trim().toLowerCase();
+    if (!v) return;
+    setBlockSenders((prev) => prev.includes(v) ? prev : [...prev, v]);
+    setBlockInput('');
+  };
+  const removeBlockSender = (v) => setBlockSenders((prev) => prev.filter((x) => x !== v));
   const [syncing, setSyncing] = useState(false);
   // Preview/approval flow state
   const [step, setStep] = useState('config'); // config | preview | flushing
@@ -1066,7 +1078,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
   const handleStart = async () => {
     setSyncing(true);
     try {
-      await onSync({ date_range: dateRange, folders, exclude_categories: excludeCategories, max_emails: maxEmails });
+      await onSync({ date_range: dateRange, folders, exclude_categories: excludeCategories, max_emails: maxEmails, block_senders: blockSenders });
     } finally {
       setSyncing(false);
     }
@@ -1081,6 +1093,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         folders,
         exclude_categories: excludeCategories,
         max_emails: maxEmails,
+        block_senders: blockSenders,
       });
       setPreviews(data.previews || []);
       // Default: all selected so user can quick-approve
@@ -1223,7 +1236,7 @@ function GmailSyncSettings({ email, onSync, onClose }) {
         </div>
 
         {/* Exclude Categories */}
-        <div className="mb-6">
+        <div className="mb-5">
           <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5">{t('connectors.excludeCategories', 'Exclude Categories')}</label>
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map(c => (
@@ -1240,6 +1253,43 @@ function GmailSyncSettings({ email, onSync, onClose }) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Block senders — kills noise at the Gmail query (never embeds) */}
+        <div className="mb-6">
+          <label className="text-[#525252] text-[11px] font-bold uppercase tracking-[0.08em] font-['Space_Grotesk'] block mb-2.5 flex items-center gap-2">
+            <span>{t('connectors.blockSenders', 'Block Senders')}</span>
+            <span className="text-[10px] font-mono text-[#a3a3a3] normal-case tracking-normal">
+              {t('connectors.blockSendersHint', 'newsletters, noreply, calendar already blocked by default')}
+            </span>
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={blockInput}
+              onChange={(e) => setBlockInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addBlockSender(); } }}
+              placeholder={t('connectors.blockSendersPlaceholder', 'sender@domain.com  or  *@domain.com')}
+              className="flex-1 rounded-xl border border-[#e3e0db] bg-[#f9f8f3] px-3 py-2 text-[12px] font-mono text-[#0a0a0a] focus:outline-none focus:border-[#dc2626]/40 focus:bg-white"
+            />
+            <button
+              onClick={addBlockSender}
+              disabled={!blockInput.trim()}
+              className="px-3.5 py-2 rounded-xl text-[12px] font-semibold font-['Space_Grotesk'] bg-[#0a0a0a] text-white hover:bg-[#171717] disabled:opacity-40"
+            >
+              {t('connectors.add', 'Add')}
+            </button>
+          </div>
+          {blockSenders.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {blockSenders.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca] text-[#dc2626]">
+                  {s}
+                  <button onClick={() => removeBlockSender(s)} className="text-[#dc2626]/60 hover:text-[#dc2626] ml-0.5">×</button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Preview list (shown after Preview pressed) */}

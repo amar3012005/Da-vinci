@@ -898,6 +898,10 @@ export default function Memories() {
   const [activeCognitiveRole, setActiveCognitiveRole] = useState(null);
   // is_latest toggle — when false, include superseded memories (post drift-compaction)
   const [showSuperseded, setShowSuperseded] = useState(false);
+  // Hide noisy connector ingests (newsletters / promotions / social / forums
+  // / notifications) — they're recall-demoted but still listed by default.
+  // Toggle off to see your full inbox. ON by default for cleaner Memories.
+  const [hideNoise, setHideNoise] = useState(true);
   // Tier scope (ALL / Org-level / Project-level / Personal-level) — mirrors
   // the Graph page switcher. 'visible' = ALL (merged personal+org+projects).
   const [tierScope, setTierScope] = useState('visible');
@@ -965,6 +969,7 @@ export default function Memories() {
       // with a "Superseded" badge + Updates-target link so the timeline is
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
+      ...(hideNoise ? { hide_noise: 'true' } : {}),
       // Project-level tier with a picked project narrows to it (takes
       // precedence over the TeamSwitcher project filter).
       ...((tierScope === 'tier:project' && tierProject)
@@ -972,7 +977,7 @@ export default function Memories() {
         : (activeProjectId ? { project_id: activeProjectId } : {})),
       ...(tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope, tierProject],
+    [activeType, activeTag, activeEntity, showSuperseded, hideNoise, activeProjectId, tierScope, tierProject],
   );
 
   // List-mode fetch
@@ -1308,6 +1313,8 @@ export default function Memories() {
             setActiveTab={setActiveTab}
             showSuperseded={showSuperseded}
             setShowSuperseded={setShowSuperseded}
+            hideNoise={hideNoise}
+            setHideNoise={setHideNoise}
             tierScope={tierScope}
             tierProject={tierProject}
           />
@@ -1351,6 +1358,8 @@ function MemoriesTab({
   setShowFilters,
   showSuperseded,
   setShowSuperseded,
+  hideNoise,
+  setHideNoise,
   tierScope,
   tierProject,
   offset,
@@ -1387,6 +1396,7 @@ function MemoriesTab({
       // with a "Superseded" badge + Updates-target link so the timeline is
       // visible inline instead of hidden.
       is_latest: showSuperseded ? 'false' : 'all',
+      ...(hideNoise ? { hide_noise: 'true' } : {}),
       // Project scope from TeamSwitcher — when active, backend filters to
       // memories whose projectId matches OR whose legacy project string matches.
       // Project-level tier with a picked project takes precedence.
@@ -1395,7 +1405,7 @@ function MemoriesTab({
         : (activeProjectId ? { project_id: activeProjectId } : {})),
       ...(tierScope && tierScope !== 'visible' ? { scope: tierScope } : {}),
     }),
-    [activeType, activeTag, activeEntity, showSuperseded, activeProjectId, tierScope, tierProject],
+    [activeType, activeTag, activeEntity, showSuperseded, hideNoise, activeProjectId, tierScope, tierProject],
   );
 
   // List-mode fetch
@@ -1661,6 +1671,29 @@ function MemoriesTab({
                     {t('memories.showSuperseded', 'Show superseded')}
                     <span className="ml-1 text-[#a3a3a3]">
                       {t('memories.showSupersededHint', '(older versions hidden by cognition drift-compaction + Updates edges)')}
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              {/* Hide newsletters / promotions / notifications — connector noise */}
+              <div className="mb-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={hideNoise}
+                    onChange={(e) => {
+                      setHideNoise(e.target.checked);
+                      setOffset(0);
+                      setAllMemories([]);
+                      setHasMore(true);
+                    }}
+                    className="w-3.5 h-3.5 accent-[#117dff]"
+                  />
+                  <span className="text-[11px] font-mono text-[#525252]">
+                    {t('memories.hideNoise', 'Hide newsletters & notifications')}
+                    <span className="ml-1 text-[#a3a3a3]">
+                      {t('memories.hideNoiseHint', '(promotions / updates / social / forums / no-reply)')}
                     </span>
                   </span>
                 </label>
