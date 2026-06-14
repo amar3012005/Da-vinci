@@ -163,6 +163,18 @@ export default function CognitionSettings() {
     }
   }, [t]);
 
+  const loadRuns = useCallback(async () => {
+    setRunsLoading(true);
+    try {
+      const data = await apiClient.getCognitionRuns(20);
+      setRuns(Array.isArray(data?.runs) ? data.runs : []);
+    } catch {
+      /* non-blocking — runs are auxiliary */
+    } finally {
+      setRunsLoading(false);
+    }
+  }, []);
+
   const handleDreamNow = useCallback(async () => {
     setDreaming(true);
     setError(null);
@@ -202,18 +214,6 @@ export default function CognitionSettings() {
       loadRuns();
     }
   }, [showToast, t, loadRuns]);
-
-  const loadRuns = useCallback(async () => {
-    setRunsLoading(true);
-    try {
-      const data = await apiClient.getCognitionRuns(20);
-      setRuns(Array.isArray(data?.runs) ? data.runs : []);
-    } catch {
-      /* non-blocking — runs are auxiliary */
-    } finally {
-      setRunsLoading(false);
-    }
-  }, []);
 
   useEffect(() => { if (orgEnabled) loadRuns(); }, [orgEnabled, loadRuns]);
 
