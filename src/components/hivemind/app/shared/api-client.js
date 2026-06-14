@@ -1216,6 +1216,9 @@ class HiveMindApiClient {
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
+    // force=true re-ingests past the same-scope duplicate gate (user approved the
+    // "upload anyway" prompt shown on a 409 duplicate_document).
+    if (options.force) formData.append('force', 'true');
     formData.append('async', 'true');
 
     // 1. Kick off — fast 202 with job_id (only the byte-upload is awaited here).

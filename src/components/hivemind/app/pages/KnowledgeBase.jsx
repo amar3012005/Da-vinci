@@ -1125,10 +1125,10 @@ export default function KnowledgeBase() {
       };
     })();
 
-    const uploadOne = async ({ uploadEntry, file }) => {
+    const uploadOne = async ({ uploadEntry, file }, { force = false } = {}) => {
       // Move queued → uploading
       setUploads((prev) => prev.map((u) =>
-        u.id === uploadEntry.id ? { ...u, status: 'uploading' } : u
+        u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
       ));
 
       // ── Client-side SHA-256 dedup ──
@@ -1143,7 +1143,9 @@ export default function KnowledgeBase() {
         // For >25MB we fall back to backend-only dedup.
         clientHash = (await sha256File(file))?.slice(0, 16) || null;
       }
-      if (clientHash) {
+      // force = user already approved "upload anyway" on a duplicate → skip the
+      // client-side dedup short-circuit and let the backend re-ingest.
+      if (clientHash && !force) {
         const existing = (kbMemories || []).find((d) => getDocHashTag(d) === clientHash);
         if (existing) {
           setUploads((prev) => prev.map((u) =>
@@ -1171,6 +1173,7 @@ export default function KnowledgeBase() {
               tags: customTags || undefined,
               targetScope,
               containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
+              force, // re-ingest past the same-scope duplicate gate when approved
               signal: uploadEntry.controller.signal,
             };
         const result = await uploadFn(file, {
@@ -1284,8 +1287,12 @@ export default function KnowledgeBase() {
                 error: isCancelled
                   ? 'Cancelled by user'
                   : isDuplicate
-                    ? (err.response?.data?.message || 'Duplicate — already in your knowledge base')
+                    ? (err.response?.data?.message || 'This file is already in this scope.')
                     : (err.response?.data?.error || err.message),
+                // Duplicate → user gets an "Upload anyway" action. Stash the
+                // existing-doc info + a force re-ingest closure (same file/scope).
+                existingTitle: isDuplicate ? (err.response?.data?.existing_title || null) : undefined,
+                _retryForce: isDuplicate ? (() => uploadOne({ uploadEntry, file }, { force: true })) : undefined,
               }
             : u
         ));
@@ -1832,7 +1839,20 @@ export default function KnowledgeBase() {
                   {u.mode !== 'document_first' && u.chunks && (
                     <span className="text-[#16a34a]">{u.chunks} chunks</span>
                   )}
-                  {u.error && <span className="text-[#dc2626] truncate max-w-[200px]">{u.error}</span>}
+                  {u.error && (
+                    <span className={`truncate max-w-[220px] ${u.status === 'duplicate' ? 'text-[#d97706]' : 'text-[#dc2626]'}`}>
+                      {u.error}{u.status === 'duplicate' && u.existingTitle ? ` (as "${u.existingTitle}")` : ''}
+                    </span>
+                  )}
+                  {u.status === 'duplicate' && u._retryForce && (
+                    <button
+                      onClick={() => u._retryForce()}
+                      className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#d97706]/10 text-[#b45309] border border-[#fcd34d] hover:bg-[#d97706]/20 transition-colors whitespace-nowrap"
+                      title={t('knowledgebase.uploadAnyway', 'This file already exists in this scope. Upload another copy anyway?')}
+                    >
+                      {t('knowledgebase.uploadAnyway', 'Upload anyway')}
+                    </button>
+                  )}
                   {u.status === 'queued' && <span className="text-[#a3a3a3]">{t('knowledgebase.waiting', 'Waiting...')}</span>}
                   {(u.status === 'queued' || u.status === 'uploading') && u.controller && (
                     <button
