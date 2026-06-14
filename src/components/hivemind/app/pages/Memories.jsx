@@ -1412,9 +1412,11 @@ function MemoriesTab({
   const [lastRunDreams, setLastRunDreams] = useState([]);
   const [dreamsLoading, setDreamsLoading] = useState(false);
   const [dreamsDone, setDreamsDone] = useState(false); // fetched (even if empty) for this enable
-  // Fetch the last run's dreams EXACTLY ONCE per enable. Guard on showDreams only
-  // — keying on lastRunDreams.length/dreamsLoading caused an infinite refetch loop
-  // (empty result → length stays 0 → deps change → refetch → perpetual spinner).
+  // Fetch recent DREAMS (synthesis memories) EXACTLY ONCE per enable. We read the
+  // memories directly (memory_type=synthesis) rather than the cognition_run audit —
+  // the audit is sparse (only post-audit runs) and misses legacy dreams, so reading
+  // synthesis rows always surfaces the dreams. Guard on showDreams only (keying on
+  // length/loading caused an infinite refetch loop → perpetual spinner).
   useEffect(() => {
     if (!showDreams) { setDreamsDone(false); return; } // reset so re-enabling refetches
     if (dreamsDone || dreamsLoading) return;
@@ -1422,17 +1424,19 @@ function MemoriesTab({
     setDreamsLoading(true);
     (async () => {
       try {
-        const runsResp = await apiClient.getCognitionRuns(5);
-        const runs = Array.isArray(runsResp?.runs) ? runsResp.runs : [];
-        const run = runs.find((r) => (r.dream_count || 0) > 0) || runs[0];
-        if (run) {
-          const d = await apiClient.getCognitionRunDreams(run.id);
-          if (!cancelled) setLastRunDreams(Array.isArray(d?.dreams) ? d.dreams : []);
-        } else if (!cancelled) {
-          setLastRunDreams([]);
-        }
+        const data = await apiClient.listMemories({ limit: 12, memory_type: 'synthesis' });
+        const mems = Array.isArray(data?.memories) ? data.memories : (Array.isArray(data) ? data : []);
+        const dreams = mems.map((m) => ({
+          id: m.id,
+          title: m.title,
+          content: m.content,
+          role: m.cognitive_layer_role || m.role,
+          confidence: m.synthesis_confidence ?? m.confidence,
+          tags: m.tags || [],
+        }));
+        if (!cancelled) setLastRunDreams(dreams);
       } catch {
-        if (!cancelled) setLastRunDreams([]); // endpoint failed → empty, not stuck
+        if (!cancelled) setLastRunDreams([]); // failed → empty, never stuck
       } finally {
         if (!cancelled) { setDreamsLoading(false); setDreamsDone(true); }
       }
@@ -1820,13 +1824,13 @@ function MemoriesTab({
             <div className="mb-5 rounded-xl border border-[#8b5cf6]/30 bg-[#8b5cf6]/[0.04] p-3">
               <div className="flex items-center gap-2 mb-2 text-[11px] font-mono text-[#8b5cf6]">
                 <span>🌙</span>
-                <span>{t('memories.lastDreamRun', 'Last dream run')}</span>
+                <span>{t('memories.recentDreams', 'Recent dreams')}</span>
                 {dreamsLoading
                   ? <Loader2 size={10} className="animate-spin" />
                   : <span className="text-[#a3a3a3]">· {lastRunDreams.length}</span>}
               </div>
               {!dreamsLoading && lastRunDreams.length === 0 ? (
-                <p className="text-[10px] text-[#a3a3a3]">{t('memories.noDreamsYet', 'No dreams from the last run yet.')}</p>
+                <p className="text-[10px] text-[#a3a3a3]">{t('memories.noDreamsYet', 'No dreams yet — enable the cognitive layer + run a dream.')}</p>
               ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   {lastRunDreams.map((d) => (
