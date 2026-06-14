@@ -69,10 +69,12 @@ export default function MeetingIntelligencePanel({ intelligence, status, onOpenM
         <div className="px-4 py-3 border-b border-[#f3f1ec]">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-2 flex items-center gap-1"><CircleDot size={11} /> Still-open from before</div>
           {open_loops.map((o, i) => (
-            <button key={i} onClick={() => open(o.memory_id)} className="w-full text-left flex items-start gap-2 mb-1.5">
-              <span className="text-[12px] shrink-0 mt-0.5" style={{ color: o.kind === 'risk' ? '#dc2626' : '#117dff' }}>{o.kind === 'risk' ? '!' : '☐'}</span>
+            <button key={i} onClick={() => open(o.progress_memory_id || o.memory_id)} className="w-full text-left flex items-start gap-2 mb-1.5">
+              <span className="text-[12px] shrink-0 mt-0.5" style={{ color: o.kind === 'risk' ? '#dc2626' : o.loop_status === 'in_progress' ? '#f59e0b' : '#117dff' }}>{o.kind === 'risk' ? '!' : o.loop_status === 'in_progress' ? '◐' : '☐'}</span>
               <span className="text-[12px] text-[#525252] leading-snug">
+                {o.loop_status === 'in_progress' && <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 mr-1.5">in progress</span>}
                 {o.text}
+                {o.progress && <span className="text-[#b45309]"> — {o.progress}</span>}
                 {(o.source_meeting_title || o.age_days != null) && (
                   <span className="text-[#a3a3a3]"> · {o.source_meeting_title ? `from “${o.source_meeting_title}”` : 'earlier'}{o.age_days != null ? `, ${o.age_days}d ago` : ''}{o.owner ? ` · ${o.owner}` : ''}</span>
                 )}
