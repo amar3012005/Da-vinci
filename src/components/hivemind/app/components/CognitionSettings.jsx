@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, AlertCircle, Loader2, RefreshCw, Moon, Clock, Zap, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Brain, AlertCircle, Loader2, RefreshCw, Moon, Clock, Zap, Trash2, ChevronDown, ChevronRight, CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -252,6 +252,7 @@ export default function CognitionSettings() {
   }, [expandedRun, showToast, t]);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const lastRun = Array.isArray(runs) && runs.length ? runs[0] : null;
 
   return (
     <div className="bg-white border border-[#e3e0db] rounded-[10px] p-4 space-y-4">
@@ -409,6 +410,14 @@ export default function CognitionSettings() {
                   <span className="text-[10px] text-[#a3a3a3]">({schedule.tz})</span>
                 </div>
               )}
+              {/* Status: next scheduled run (computed) + last dream */}
+              <div className="flex items-center gap-1.5 pt-1 text-[10px] text-[#a3a3a3]">
+                <CalendarClock size={11} className="shrink-0" />
+                <span>{describeSchedule(schedule)}</span>
+                {lastRun && (
+                  <span>· last dream {formatRunWhen(lastRun.started_at)}{typeof lastRun.dream_count === 'number' ? ` (${lastRun.dream_count} dream${lastRun.dream_count === 1 ? '' : 's'})` : ''}</span>
+                )}
+              </div>
             </div>
           )}
 
@@ -532,6 +541,41 @@ function ToggleRow({ label, description, checked, disabled, busy, onToggle }) {
       </button>
     </div>
   );
+}
+
+/* ─── Schedule status helpers ────────────────────────────────────────────── */
+
+const pad2 = (h) => String(h ?? 0).padStart(2, '0');
+
+// Human description of WHEN dreams run, from the schedule config (no precise
+// countdown — honest about the configured cadence).
+function describeSchedule(s) {
+  const tz = s?.tz || 'UTC';
+  if (s?.mode === 'continuous') return 'Event-driven only — no fixed schedule';
+  if (s?.mode === 'interval') {
+    const a = pad2(s.window_start_hour ?? 0);
+    const b = pad2(s.window_end_hour ?? 6);
+    return `Runs daily between ${a}:00–${b}:00 (${tz})`;
+  }
+  // nightmode (default)
+  const h = pad2(Number.isInteger(s?.window_start_hour) ? s.window_start_hour : 0);
+  return `Runs nightly at ${h}:00 (${tz})`;
+}
+
+// Compact relative-ish label for a run timestamp.
+function formatRunWhen(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 /* ─── RunRow ─────────────────────────────────────────────────────────────── */
