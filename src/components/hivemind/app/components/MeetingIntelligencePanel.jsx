@@ -71,7 +71,12 @@ export default function MeetingIntelligencePanel({ intelligence, status, onOpenM
           {open_loops.map((o, i) => (
             <button key={i} onClick={() => open(o.memory_id)} className="w-full text-left flex items-start gap-2 mb-1.5">
               <span className="text-[12px] shrink-0 mt-0.5" style={{ color: o.kind === 'risk' ? '#dc2626' : '#117dff' }}>{o.kind === 'risk' ? '!' : '☐'}</span>
-              <span className="text-[12px] text-[#525252] leading-snug">{o.text}</span>
+              <span className="text-[12px] text-[#525252] leading-snug">
+                {o.text}
+                {(o.source_meeting_title || o.age_days != null) && (
+                  <span className="text-[#a3a3a3]"> · {o.source_meeting_title ? `from “${o.source_meeting_title}”` : 'earlier'}{o.age_days != null ? `, ${o.age_days}d ago` : ''}{o.owner ? ` · ${o.owner}` : ''}</span>
+                )}
+              </span>
             </button>
           ))}
         </div>
