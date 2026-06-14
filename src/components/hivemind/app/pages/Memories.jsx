@@ -911,7 +911,10 @@ export default function Memories() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeType, setActiveType] = useState(null);
+  // Default the Memories view to the 🌙 Dreams filter (memory_type=synthesis) so
+  // the cognitive loop's synthesized insight is front-and-center on open. Users
+  // click "All" (or any type chip) to switch — toggling the Dreams chip clears it.
+  const [activeType, setActiveType] = useState('synthesis');
   const [activeTag, setActiveTag] = useState(null);
   // Cognitive layer filter (canonical / bridge / compression / reflection)
   // Backed by client-side filter on the cognitive_layer_role field returned
