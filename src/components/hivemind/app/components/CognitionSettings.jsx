@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, AlertCircle, Loader2, RefreshCw, Moon, Clock, Zap } from 'lucide-react';
+import { Brain, AlertCircle, Loader2, RefreshCw, Moon, Clock, Zap, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -22,6 +22,11 @@ export default function CognitionSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(/** @type {string|null} */ (null));
   const [dreaming, setDreaming] = useState(false);
+  const [runs, setRuns] = useState(/** @type {Array<any>} */ ([]));
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [expandedRun, setExpandedRun] = useState(/** @type {string|null} */ (null));
+  const [runDreams, setRunDreams] = useState(/** @type {Record<string, any[]>} */ ({}));
+  const [deletingRun, setDeletingRun] = useState(/** @type {string|null} */ (null));
   const [error, setError] = useState(/** @type {string|null} */ (null));
   const [toast, setToast] = useState(/** @type {string|null} */ (null));
 
@@ -194,8 +199,57 @@ export default function CognitionSettings() {
       setError(err?.response?.data?.error || err?.message || t('cognition.errDream', 'Dream trigger failed.'));
     } finally {
       setDreaming(false);
+      loadRuns();
     }
-  }, [showToast, t]);
+  }, [showToast, t, loadRuns]);
+
+  const loadRuns = useCallback(async () => {
+    setRunsLoading(true);
+    try {
+      const data = await apiClient.getCognitionRuns(20);
+      setRuns(Array.isArray(data?.runs) ? data.runs : []);
+    } catch {
+      /* non-blocking — runs are auxiliary */
+    } finally {
+      setRunsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (orgEnabled) loadRuns(); }, [orgEnabled, loadRuns]);
+
+  const toggleRunDreams = useCallback(async (runId) => {
+    if (expandedRun === runId) { setExpandedRun(null); return; }
+    setExpandedRun(runId);
+    if (!runDreams[runId]) {
+      try {
+        const data = await apiClient.getCognitionRunDreams(runId);
+        setRunDreams((prev) => ({ ...prev, [runId]: Array.isArray(data?.dreams) ? data.dreams : [] }));
+      } catch {
+        setRunDreams((prev) => ({ ...prev, [runId]: [] }));
+      }
+    }
+  }, [expandedRun, runDreams]);
+
+  const handleDeleteRun = useCallback(async (runId, dreamCount) => {
+    const withDreams = dreamCount > 0
+      // eslint-disable-next-line no-alert
+      ? window.confirm(t('cognition.confirmDeleteDreams', `Also permanently delete the ${dreamCount} dream(s) this run produced? Click Cancel to remove only the run entry.`))
+      : false;
+    setDeletingRun(runId);
+    setError(null);
+    try {
+      const res = await apiClient.deleteCognitionRun(runId, withDreams);
+      setRuns((prev) => prev.filter((r) => r.id !== runId));
+      if (expandedRun === runId) setExpandedRun(null);
+      showToast(withDreams
+        ? t('cognition.toastRunDreamsDeleted', `Run + ${res?.dreams_deleted ?? 0} dream(s) deleted.`)
+        : t('cognition.toastRunDeleted', 'Run entry deleted.'));
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || t('cognition.errSave', 'Failed to delete run.'));
+    } finally {
+      setDeletingRun(null);
+    }
+  }, [expandedRun, showToast, t]);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -380,6 +434,42 @@ export default function CognitionSettings() {
               </button>
             </div>
           )}
+
+          {/* Run audit — single-line stack of past dreams */}
+          {orgEnabled && (
+            <div className="border-t border-[#e3e0db] pt-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[12px] font-medium text-[#0a0a0a]">
+                  {t('cognition.runsTitle', 'Dream runs')}
+                </div>
+                <button
+                  onClick={loadRuns}
+                  disabled={runsLoading}
+                  className="p-1 text-[#a3a3a3] hover:text-[#0a0a0a] disabled:opacity-50 transition-colors"
+                  title={t('cognition.refresh', 'Refresh')}
+                >
+                  <RefreshCw size={11} className={runsLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
+              {runs.length === 0 && !runsLoading && (
+                <p className="text-[11px] text-[#a3a3a3]">{t('cognition.noRuns', 'No dream runs yet.')}</p>
+              )}
+              <div className="space-y-1">
+                {runs.map((r) => (
+                  <RunRow
+                    key={r.id}
+                    run={r}
+                    expanded={expandedRun === r.id}
+                    dreams={runDreams[r.id]}
+                    deleting={deletingRun === r.id}
+                    canDelete={isAdmin}
+                    onToggle={() => toggleRunDreams(r.id)}
+                    onDelete={() => handleDeleteRun(r.id, r.dream_count)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -440,6 +530,87 @@ function ToggleRow({ label, description, checked, disabled, busy, onToggle }) {
           </span>
         )}
       </button>
+    </div>
+  );
+}
+
+/* ─── RunRow ─────────────────────────────────────────────────────────────── */
+
+const STATUS_COLOR = {
+  completed: 'text-[#16a34a]',
+  running: 'text-[#117dff]',
+  skipped: 'text-[#a3a3a3]',
+  error: 'text-[#dc2626]',
+};
+
+/**
+ * @param {{
+ *   run: any, expanded: boolean, dreams: any[]|undefined, deleting: boolean,
+ *   canDelete: boolean, onToggle: () => void, onDelete: () => void,
+ * }} props
+ */
+function RunRow({ run, expanded, dreams, deleting, canDelete, onToggle, onDelete }) {
+  const when = run.started_at ? new Date(run.started_at) : null;
+  const whenStr = when
+    ? `${when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${when.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+    : '—';
+  const secs = run.run_ms != null ? `${(run.run_ms / 1000).toFixed(1)}s` : '';
+  const statusCls = STATUS_COLOR[run.status] || 'text-[#737373]';
+  const summary = run.status === 'skipped'
+    ? (run.skipped_reason || 'skipped')
+    : run.status === 'error'
+      ? (run.error || 'error')
+      : `${run.dream_count} dream${run.dream_count === 1 ? '' : 's'}`;
+  const hasDreams = run.dream_count > 0;
+
+  return (
+    <div className="rounded-[6px] bg-[#f9f8f6] border border-[#ece9e4]">
+      {/* single line */}
+      <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={!hasDreams}
+          className="flex items-center gap-1.5 flex-1 min-w-0 text-left disabled:cursor-default"
+        >
+          {hasDreams
+            ? (expanded ? <ChevronDown size={12} className="text-[#a3a3a3] shrink-0" /> : <ChevronRight size={12} className="text-[#a3a3a3] shrink-0" />)
+            : <span className="w-3 shrink-0" />}
+          <span className="text-[#737373] tabular-nums shrink-0">{whenStr}</span>
+          <span className="px-1.5 py-0.5 rounded bg-[#ece9e4] text-[#737373] text-[10px] shrink-0">{run.trigger}</span>
+          <span className={`font-medium truncate ${statusCls}`}>{summary}</span>
+          {secs && <span className="text-[#a3a3a3] shrink-0">· {secs}</span>}
+        </button>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="p-1 text-[#a3a3a3] hover:text-[#dc2626] disabled:opacity-50 transition-colors shrink-0"
+            title="Delete run"
+          >
+            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+          </button>
+        )}
+      </div>
+      {/* expanded dreams */}
+      {expanded && (
+        <div className="border-t border-[#ece9e4] px-2.5 py-2 space-y-1.5">
+          {dreams === undefined && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#a3a3a3]"><Loader2 size={11} className="animate-spin" /> Loading…</div>
+          )}
+          {Array.isArray(dreams) && dreams.length === 0 && (
+            <p className="text-[10px] text-[#a3a3a3]">No dreams available (may have been deleted).</p>
+          )}
+          {Array.isArray(dreams) && dreams.map((d) => (
+            <div key={d.id} className="text-[10px] leading-relaxed">
+              <span className="px-1 py-0.5 rounded bg-indigo-50 text-indigo-600 mr-1">{d.role || 'synthesis'}</span>
+              <span className="text-[#0a0a0a]">{d.title || (d.content || '').slice(0, 80)}</span>
+              {typeof d.confidence === 'number' && <span className="text-[#a3a3a3]"> · conf {d.confidence.toFixed(2)}</span>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

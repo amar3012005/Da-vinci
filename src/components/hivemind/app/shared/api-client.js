@@ -1833,6 +1833,27 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** GET /api/cognition/runs — audit history of dream runs (single-line stack). */
+  async getCognitionRuns(limit = 20) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/cognition/runs?limit=${encodeURIComponent(limit)}`);
+    return data;
+  }
+
+  /** GET /api/cognition/run-dreams?run_id=… — dreams a specific run produced. */
+  async getCognitionRunDreams(runId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/cognition/run-dreams?run_id=${encodeURIComponent(runId)}`);
+    return data;
+  }
+
+  /** POST /api/cognition/run-delete — delete a run entry (admin); withDreams hard-deletes its dreams. */
+  async deleteCognitionRun(runId, withDreams = false) {
+    const { data } = await this.controlPlane.post(
+      `/v1/proxy/cognition/run-delete?run_id=${encodeURIComponent(runId)}&with_dreams=${withDreams ? 'true' : 'false'}`,
+      {},
+    );
+    return data;
+  }
+
   // ─── Hermes: Agents ──────────────────────────────────────────
 
   /** GET /hermes/agents → { agents: [{id,org_id,tenant_id,name,config,status,created_at,updated_at}] } */
