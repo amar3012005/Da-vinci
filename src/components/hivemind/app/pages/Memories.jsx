@@ -1424,8 +1424,11 @@ function MemoriesTab({
     setDreamsLoading(true);
     (async () => {
       try {
-        const data = await apiClient.listMemories({ limit: 12, memory_type: 'synthesis' });
-        const mems = Array.isArray(data?.memories) ? data.memories : (Array.isArray(data) ? data : []);
+        // Use the SAME params as the working Dreams filter pill (is_latest:'all',
+        // hide_noise, project scope) — only override type + limit. A bare call was
+        // scoped differently by the proxy and came back empty while the pill worked.
+        const data = await apiClient.listMemories({ ...listParams, memory_type: 'synthesis', limit: 12, offset: 0, tags: undefined });
+        const mems = Array.isArray(data?.memories) ? data.memories : (Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []));
         const dreams = mems.map((m) => ({
           id: m.id,
           title: m.title,
@@ -1442,6 +1445,8 @@ function MemoriesTab({
       }
     })();
     return () => { cancelled = true; };
+    // listParams intentionally omitted — snapshot at enable time; dreamsDone guards refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDreams, dreamsDone, dreamsLoading]);
 
   const listParams = useMemo(
