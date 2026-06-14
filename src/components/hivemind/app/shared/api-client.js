@@ -1810,6 +1810,17 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * POST /api/cognition/synthesize-now — dev one-shot dream trigger.
+   * Admin/owner gated. Optional { lookback_hours } for a wide cross-time dream.
+   * Returns { triggered, synth, compact, ms, skipped, reason }.
+   */
+  async triggerDreamNow(lookbackHours) {
+    const body = Number(lookbackHours) > 0 ? { lookback_hours: Number(lookbackHours) } : {};
+    const { data } = await this.controlPlane.post('/v1/proxy/cognition/synthesize-now', body);
+    return data;
+  }
+
   // ─── Hermes: Agents ──────────────────────────────────────────
 
   /** GET /hermes/agents → { agents: [{id,org_id,tenant_id,name,config,status,created_at,updated_at}] } */
