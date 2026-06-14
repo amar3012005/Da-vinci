@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
+import MeetingIntelligencePanel from '../components/MeetingIntelligencePanel';
 import { useTranslation } from 'react-i18next';
 
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
@@ -310,6 +311,27 @@ export default function MeetingNotes() {
       if (data?.meeting) setSelected((cur) => (cur && cur.id === m.id ? { ...m, ...data.meeting } : cur));
     } catch { setDetailErr(true); /* keep the list row — partial beats broken */ }
   }, []);
+
+  // Poll the open meeting's intelligence until it's ready (async generation).
+  useEffect(() => {
+    if (!selected?.id) return;
+    const st = selected.intelligence_status;
+    if (st !== 'pending' && st !== 'none') return;
+    let n = 0; let cancelled = false;
+    const iv = setInterval(async () => {
+      n += 1;
+      if (cancelled || n > 6) { clearInterval(iv); return; }
+      try {
+        const { data } = await apiClient.core.get(`/api/meetings/${selected.id}`);
+        const m = data?.meeting;
+        if (m && (m.intelligence_status === 'ready' || m.intelligence_status === 'empty' || m.intelligence_status === 'error')) {
+          setSelected((cur) => (cur && cur.id === m.id ? { ...cur, ...m } : cur));
+          clearInterval(iv);
+        }
+      } catch { /* keep polling */ }
+    }, 3000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [selected?.id, selected?.intelligence_status]);
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -679,6 +701,11 @@ export default function MeetingNotes() {
               </div>
             );
           })()}
+          <MeetingIntelligencePanel
+            intelligence={selected?.intelligence}
+            status={selected?.intelligence_status}
+            onOpenMemory={(id) => window.open(`/hivemind/app/memories?focus=${id}`, '_self')}
+          />
           {detailTab === 'notes' && (
             <p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">
               {selected.notes || t('meetingnotes.noNotes', 'No notes were added during this meeting.')}

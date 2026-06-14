@@ -1350,6 +1350,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async regenerateMeetingIntelligence(id) {
+    const { data } = await this.core.post(`/api/meetings/${id}/intelligence`, {});
+    return data;
+  }
+
   async gmailDisconnect() {
     const { data } = await this.controlPlane.post('/v1/proxy/connectors/gmail/disconnect');
     return data;
