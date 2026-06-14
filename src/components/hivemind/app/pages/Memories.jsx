@@ -911,10 +911,10 @@ export default function Memories() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  // Default the Memories view to the 🌙 Dreams filter (memory_type=synthesis) so
-  // the cognitive loop's synthesized insight is front-and-center on open. Users
-  // click "All" (or any type chip) to switch — toggling the Dreams chip clears it.
-  const [activeType, setActiveType] = useState('synthesis');
+  // Default the Memories view to ALL memories (no type filter). A separate
+  // "Show Dreams" toggle overlays the last dream-run's syntheses on top — dreams
+  // are no longer the default filter, they're an opt-in overlay.
+  const [activeType, setActiveType] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   // Cognitive layer filter (canonical / bridge / compression / reflection)
   // Backed by client-side filter on the cognitive_layer_role field returned
@@ -1407,6 +1407,33 @@ function MemoriesTab({
   const { activeProjectId } = useTeamContext() || {};
   const isSearching = debouncedQuery.trim().length > 0;
 
+  // ─── Show Dreams overlay (last dream-run, opt-in) ───────────────────
+  const [showDreams, setShowDreams] = useState(false);
+  const [lastRunDreams, setLastRunDreams] = useState([]);
+  const [dreamsLoading, setDreamsLoading] = useState(false);
+  useEffect(() => {
+    if (!showDreams || lastRunDreams.length > 0 || dreamsLoading) return;
+    let cancelled = false;
+    (async () => {
+      setDreamsLoading(true);
+      try {
+        const runsResp = await apiClient.getCognitionRuns(5);
+        const runs = Array.isArray(runsResp?.runs) ? runsResp.runs : [];
+        // most-recent run that actually produced dreams
+        const run = runs.find((r) => (r.dream_count || 0) > 0) || runs[0];
+        if (run) {
+          const d = await apiClient.getCognitionRunDreams(run.id);
+          if (!cancelled) setLastRunDreams(Array.isArray(d?.dreams) ? d.dreams : []);
+        }
+      } catch {
+        /* non-blocking — overlay just stays empty */
+      } finally {
+        if (!cancelled) setDreamsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showDreams, lastRunDreams.length, dreamsLoading]);
+
   const listParams = useMemo(
     () => ({
       limit: PAGE_SIZE,
@@ -1597,18 +1624,34 @@ function MemoriesTab({
 
       {/* ── Filter Bar ── */}
       <div className="mb-6">
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-1.5 text-xs font-mono mb-3 transition-colors ${
-            showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
-          }`}
-        >
-          <Filter size={12} />
-          {t('memories.filters', 'Filters')}
-          {(activeType || activeTag) && (
-            <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
-          )}
-        </button>
+        <div className="flex items-center gap-4 mb-3">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 text-xs font-mono transition-colors ${
+              showFilters ? 'text-[#117dff]' : 'text-[#a3a3a3] hover:text-[#525252]'
+            }`}
+          >
+            <Filter size={12} />
+            {t('memories.filters', 'Filters')}
+            {(activeType || activeTag) && (
+              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-[#117dff]" />
+            )}
+          </button>
+          {/* Show Dreams — opt-in overlay of the last dream-run on top of memories */}
+          <button
+            onClick={() => setShowDreams((v) => !v)}
+            className={`flex items-center gap-1.5 text-xs font-mono transition-colors ${
+              showDreams ? 'text-[#8b5cf6]' : 'text-[#a3a3a3] hover:text-[#525252]'
+            }`}
+            title={t('memories.showDreamsHint', 'Overlay the last dream run on top')}
+          >
+            <span>🌙</span>
+            {t('memories.showDreams', 'Show Dreams')}
+            <span className={`ml-1 inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${showDreams ? 'bg-[#8b5cf6]' : 'bg-[#d4d0ca]'}`}>
+              <span className={`h-2.5 w-2.5 rounded-full bg-white shadow-sm transition-transform ${showDreams ? 'translate-x-[12px]' : 'translate-x-0.5'}`} />
+            </span>
+          </button>
+        </div>
 
         <AnimatePresence>
           {showFilters && (
@@ -1766,6 +1809,37 @@ function MemoriesTab({
 
         {/* ── Content ── */}
         <div className="relative">
+          {/* Show Dreams overlay — last dream-run on top, 4-per-row half-height cards */}
+          {showDreams && (
+            <div className="mb-5 rounded-xl border border-[#8b5cf6]/30 bg-[#8b5cf6]/[0.04] p-3">
+              <div className="flex items-center gap-2 mb-2 text-[11px] font-mono text-[#8b5cf6]">
+                <span>🌙</span>
+                <span>{t('memories.lastDreamRun', 'Last dream run')}</span>
+                {dreamsLoading
+                  ? <Loader2 size={10} className="animate-spin" />
+                  : <span className="text-[#a3a3a3]">· {lastRunDreams.length}</span>}
+              </div>
+              {!dreamsLoading && lastRunDreams.length === 0 ? (
+                <p className="text-[10px] text-[#a3a3a3]">{t('memories.noDreamsYet', 'No dreams from the last run yet.')}</p>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {lastRunDreams.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setSelectedMemory({ id: d.id, title: d.title, content: d.content, cognitive_layer_role: d.role, tags: d.tags || [], memory_type: 'synthesis' })}
+                      className="text-left rounded-lg border border-[#8b5cf6]/20 bg-white/70 hover:border-[#8b5cf6]/50 transition-colors p-2 h-[72px] overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="px-1 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] text-[9px] font-semibold uppercase tracking-wide">{d.role || 'dream'}</span>
+                        {typeof d.confidence === 'number' && <span className="text-[9px] text-[#a3a3a3]">{d.confidence.toFixed(2)}</span>}
+                      </div>
+                      <p className="text-[10px] leading-tight text-[#0a0a0a] line-clamp-2">{d.title || d.content}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {loading && resolvedList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24">
               <Loader2 size={28} className="text-[#117dff]/50 animate-spin mb-4" />
