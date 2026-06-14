@@ -89,17 +89,32 @@ function TypeBadge({ type }) {
   );
 }
 
-// Cognitive-layer badge — shown when a memory was produced by the
-// governance cognitive layer (canonical / bridge / compression). Distinct
-// colour scheme + 'COG·' prefix so it stands apart from memory_type.
+// Cognitive-layer badge. Synthesis OUTPUTS of the dreaming loop (canonical /
+// bridge / principle) are the "dreams" — the system's own consolidated insight,
+// not ingested content. Brand them with a prominent highlighted 🌙 Dream badge
+// so they stand apart. Governance bookkeeping roles (compression / reflection)
+// keep the subtler COG· pill.
 const COGNITIVE_ROLE_COLORS = {
   canonical:   '#8b5cf6',
   bridge:      '#f97316',
+  principle:   '#6366f1',
   compression: '#0ea5e9',
   reflection:  '#94a3b8',
 };
+const DREAM_ROLES = new Set(['canonical', 'bridge', 'principle']);
 function CognitiveBadge({ role }) {
   if (!role) return null;
+  if (DREAM_ROLES.has(role)) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-['Space_Grotesk'] uppercase tracking-wider text-white shadow-[0_0_10px_rgba(139,92,246,0.45)]"
+        style={{ background: 'linear-gradient(90deg,#8b5cf6,#6366f1)' }}
+        title={`Dream — synthesized by the cognitive loop (${role})`}
+      >
+        🌙 Dream·{role}
+      </span>
+    );
+  }
   const color = COGNITIVE_ROLE_COLORS[role] || '#525252';
   return (
     <span
@@ -295,6 +310,10 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
   const isCognitive = !!memory.cognitive_layer_role
     || (memory.tags || []).some(t => typeof t === 'string'
         && (t === 'cognition-loop' || t.startsWith('synthesis:') || t === 'internal-audit'));
+  // A "dream" = a synthesis output of the cognitive loop. Highlight its row with
+  // an indigo left-accent + glow so it visibly stands apart from ingested memories.
+  const isDream = (memory.cognitive_layer_role && DREAM_ROLES.has(memory.cognitive_layer_role))
+    || (memory.tags || []).some(t => typeof t === 'string' && t.startsWith('synthesis:'));
   return (
     <motion.button
       layout
@@ -307,9 +326,11 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
       className={`w-full text-left rounded-xl border transition-all duration-200 p-4 group cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
         isSelected
           ? 'bg-[#117dff]/[0.06] border-[#117dff]/30 shadow-[0_0_20px_rgba(17,125,255,0.08)]'
-          : isCognitive
-            ? 'bg-[#f7f1e3] border-[#e6dabd] hover:border-[#d8c79c] hover:bg-[#f3ebd7]'
-            : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
+          : isDream
+            ? 'bg-[#f5f3ff] border-[#c7bfff] border-l-[3px] border-l-[#8b5cf6] hover:bg-[#efeaff] shadow-[0_0_14px_rgba(139,92,246,0.12)]'
+            : isCognitive
+              ? 'bg-[#f7f1e3] border-[#e6dabd] hover:border-[#d8c79c] hover:bg-[#f3ebd7]'
+              : 'bg-white border-[#e3e0db] hover:border-[#d4d0ca] hover:bg-[#f9f8f3]'
       }`}
     >
       {/* Top row */}
