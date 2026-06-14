@@ -1817,7 +1817,19 @@ class HiveMindApiClient {
    */
   async triggerDreamNow(lookbackHours) {
     const body = Number(lookbackHours) > 0 ? { lookback_hours: Number(lookbackHours) } : {};
-    const { data } = await this.controlPlane.post('/v1/proxy/cognition/synthesize-now', body);
+    // Server soft-races at ~25s and returns 202 {async:true} if the dream is still
+    // running; give the request a little headroom above that so the inline path
+    // (fast orgs returning counts) always lands rather than tripping the timeout.
+    const { data } = await this.controlPlane.post('/v1/proxy/cognition/synthesize-now', body, { timeout: 35000 });
+    return data;
+  }
+
+  /**
+   * GET /api/cognition/status — loop health + per-org last run counts.
+   * Used to poll for the result of an async (background) Dream-now run.
+   */
+  async getCognitionStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/cognition/status');
     return data;
   }
 

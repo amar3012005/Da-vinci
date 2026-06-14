@@ -161,13 +161,35 @@ export default function CognitionSettings() {
   const handleDreamNow = useCallback(async () => {
     setDreaming(true);
     setError(null);
+    const startedAt = Date.now();
     try {
       const res = await apiClient.triggerDreamNow(24);
       if (res?.skipped) {
         showToast(t('cognition.toastDreamSkip', `No new dreams (${res.reason || 'nothing to synthesize'}).`));
-      } else {
-        showToast(t('cognition.toastDreamDone', `Dream complete — ${res?.synth ?? 0} synthesized.`));
+        return;
       }
+      if (res?.async) {
+        // Long dream still running server-side — poll status until a newer tick
+        // lands (or give up after ~3min and tell the user it's still going).
+        showToast(t('cognition.toastDreamRunning', 'Dream running in the background…'));
+        const deadline = startedAt + 3 * 60 * 1000;
+        // eslint-disable-next-line no-constant-condition
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 5000));
+          let status;
+          try { status = await apiClient.getCognitionStatus(); } catch { continue; }
+          const org = status?.caller_org;
+          const tickAt = org?.lastTickAt ? new Date(org.lastTickAt).getTime() : 0;
+          const stillRunning = status?.running === true;
+          if (tickAt >= startedAt && !stillRunning) {
+            showToast(t('cognition.toastDreamDone', `Dream complete — ${org?.lastSynthCount ?? 0} synthesized.`));
+            return;
+          }
+        }
+        showToast(t('cognition.toastDreamStillRunning', 'Dream still running — check the Dreams list shortly.'));
+        return;
+      }
+      showToast(t('cognition.toastDreamDone', `Dream complete — ${res?.synth ?? 0} synthesized.`));
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || t('cognition.errDream', 'Dream trigger failed.'));
     } finally {
