@@ -1411,28 +1411,34 @@ function MemoriesTab({
   const [showDreams, setShowDreams] = useState(false);
   const [lastRunDreams, setLastRunDreams] = useState([]);
   const [dreamsLoading, setDreamsLoading] = useState(false);
+  const [dreamsDone, setDreamsDone] = useState(false); // fetched (even if empty) for this enable
+  // Fetch the last run's dreams EXACTLY ONCE per enable. Guard on showDreams only
+  // — keying on lastRunDreams.length/dreamsLoading caused an infinite refetch loop
+  // (empty result → length stays 0 → deps change → refetch → perpetual spinner).
   useEffect(() => {
-    if (!showDreams || lastRunDreams.length > 0 || dreamsLoading) return;
+    if (!showDreams) { setDreamsDone(false); return; } // reset so re-enabling refetches
+    if (dreamsDone || dreamsLoading) return;
     let cancelled = false;
+    setDreamsLoading(true);
     (async () => {
-      setDreamsLoading(true);
       try {
         const runsResp = await apiClient.getCognitionRuns(5);
         const runs = Array.isArray(runsResp?.runs) ? runsResp.runs : [];
-        // most-recent run that actually produced dreams
         const run = runs.find((r) => (r.dream_count || 0) > 0) || runs[0];
         if (run) {
           const d = await apiClient.getCognitionRunDreams(run.id);
           if (!cancelled) setLastRunDreams(Array.isArray(d?.dreams) ? d.dreams : []);
+        } else if (!cancelled) {
+          setLastRunDreams([]);
         }
       } catch {
-        /* non-blocking — overlay just stays empty */
+        if (!cancelled) setLastRunDreams([]); // endpoint failed → empty, not stuck
       } finally {
-        if (!cancelled) setDreamsLoading(false);
+        if (!cancelled) { setDreamsLoading(false); setDreamsDone(true); }
       }
     })();
     return () => { cancelled = true; };
-  }, [showDreams, lastRunDreams.length, dreamsLoading]);
+  }, [showDreams, dreamsDone, dreamsLoading]);
 
   const listParams = useMemo(
     () => ({
