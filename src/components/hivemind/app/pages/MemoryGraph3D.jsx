@@ -591,7 +591,7 @@ function makeMaterial(color, opacity = 0.96) {
   });
 }
 
-function makeNodeShape(node, color, clusterTint) {
+function makeNodeShape(node, color, clusterTint, lite = false) {
   const radius = getNodeRadius(node);
   const type = getNodeType(node);
   const group = new THREE.Group();
@@ -664,6 +664,14 @@ function makeNodeShape(node, color, clusterTint) {
     cachedGeo(`halo:${ct}:${rb}`, () => new THREE.SphereGeometry(rb * (ct ? 1.72 : 1.48), 12, 12)),
     haloMaterial,
   );
+  // Lite mode (massive graphs): skip the halo + field glow meshes — they're
+  // purely cosmetic and double/triple the draw-call count (3855 nodes × 3 meshes).
+  // Primary mesh only → ~2/3 fewer node draw calls at scale.
+  if (lite) {
+    group.add(mesh);
+    group.userData = { primaryMaterial, haloMaterial: null, fieldMaterial: null };
+    return group;
+  }
   halo.renderOrder = 2;
   field.renderOrder = 1;
   group.add(halo);
@@ -766,6 +774,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const didInitialFitRef = useRef(false);
   // nodeId -> Sprite for persistent short tags (doc, gmail, @person ...)
   const nodeTagSpritesRef = useRef(new Map());
+  // Label LOD: at massive/large scale, the set of node ids allowed a persistent
+  // text-sprite label (top-degree nodes). null = label all (small graphs). A text
+  // sprite per node is a canvas texture — 3855 of them is the dominant per-frame
+  // cost; capping to the top connected nodes is the biggest single FPS win.
+  const labelAllowRef = useRef(null);
   const viewStateRef = useRef({
     distance: 1100,
     inFrameNodeIds: new Set(),
@@ -1028,7 +1041,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getLinkParticles = useCallback((link) => {
     const nodeCount = graphDataRef.current?.nodes?.length || 0;
     const tier = getGraphSizeTier(nodeCount);
-    if (themeRef.current.name === "atlas" && (tier === "massive" || tier === "large")) {
+    if (tier === "massive") {
+      // No ambient particles at this scale — thousands of animated particle
+      // meshes re-rendered every frame is the dominant per-frame GPU cost.
+      // Keep them ONLY on the actively-highlighted path (a handful of links).
+      return highlightedLinksRef.current.has(link) ? 2 : 0;
+    }
+    if (themeRef.current.name === "atlas" && tier === "large") {
       return highlightedLinksRef.current.has(link) ? 0 : 1;
     }
     const style = getRelationStyle(link);
@@ -1059,8 +1078,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     object3d.userData.primaryMaterial.color.set(color);
     object3d.userData.primaryMaterial.emissive?.set?.(color);
     object3d.userData.primaryMaterial.emissiveIntensity = t.name === "atlas" ? 0.045 : 0.025;
-    object3d.userData.haloMaterial.color.set(haloColor || GRAPH_THEME.halo);
-    object3d.userData.haloMaterial.opacity = haloColor ? (t.name === "atlas" ? 0.28 : 0.24) : (t.name === "atlas" ? 0.055 : 0.08);
+    // halo/field absent in lite (massive-graph) nodes — guard.
+    if (object3d.userData.haloMaterial) {
+      object3d.userData.haloMaterial.color.set(haloColor || GRAPH_THEME.halo);
+      object3d.userData.haloMaterial.opacity = haloColor ? (t.name === "atlas" ? 0.28 : 0.24) : (t.name === "atlas" ? 0.055 : 0.08);
+    }
     if (object3d.userData.fieldMaterial) {
       object3d.userData.fieldMaterial.color.set(haloColor || color);
       object3d.userData.fieldMaterial.opacity = haloColor ? (t.name === "atlas" ? 0.16 : 0.1) : (t.name === "atlas" ? 0.045 : 0.07);
@@ -1069,6 +1091,29 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
   useEffect(() => {
     graphDataRef.current = graphData;
+    // Label LOD — only the top-degree nodes keep a persistent label sprite at
+    // massive/large scale (else 3855 canvas-texture sprites tank the frame rate).
+    // Others still label on hover/select. Computed here so it's ready before the
+    // node objects are (re)built by .graphData().
+    {
+      const nodes = graphData?.nodes || [];
+      const links = graphData?.links || graphData?.edges || [];
+      const tier = getGraphSizeTier(nodes.length);
+      if (tier === "massive" || tier === "large") {
+        const deg = new Map();
+        for (const l of links) {
+          const s = typeof l.source === "object" ? l.source?.id : l.source;
+          const tg = typeof l.target === "object" ? l.target?.id : l.target;
+          if (s != null) deg.set(s, (deg.get(s) || 0) + 1);
+          if (tg != null) deg.set(tg, (deg.get(tg) || 0) + 1);
+        }
+        const K = tier === "massive" ? 120 : 250;
+        const top = [...deg.entries()].sort((a, b) => b[1] - a[1]).slice(0, K).map((e) => e[0]);
+        labelAllowRef.current = new Set(top);
+      } else {
+        labelAllowRef.current = null; // small/medium → label everything
+      }
+    }
     neighborMapRef.current = neighborMap;
     onNodeClickRef.current = onNodeClick;
     onNodeHoverRef.current = onNodeHover;
@@ -1154,8 +1199,12 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // Perf: bound the physics sim so it settles fast then STOPS (idle = 0
       // CPU/GPU). Without this the layout engine ran indefinitely + re-rendered
       // every frame. Reheat on interaction is still bounded by these ticks.
-      .cooldownTicks(80)
-      .cooldownTime(8000)
+      // Adaptive cooldown: at massive scale the layout is the heaviest part of
+      // the warmup, so settle faster then STOP (idle = no per-frame sim). Paired
+      // with particles=0 (massive) the render loop goes fully idle when not
+      // interacting — interaction is then pure camera (smooth).
+      .cooldownTicks(getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive" ? 45 : 80)
+      .cooldownTime(getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive" ? 5000 : 8000)
       // Wide-shot on load: once the layout settles, frame the WHOLE network so
       // the user lands on the full graph (not the default zoomed-in camera).
       // Guarded so it fires only on first settle per dataset, never fighting
@@ -1172,10 +1221,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeVal((node) => getNodeRadius(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
-        const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint);
+        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive";
+        const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint, liteNode);
         // Append the memory-title label as a child of the node group so it
         // tracks the node automatically. Sprite opacity is camera-ranked.
-        const tag = getNodeDisplayLabel(node);
+        // Label LOD: at scale, only top-degree nodes get a persistent sprite.
+        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id))
+          ? null
+          : getNodeDisplayLabel(node);
         if (tag) {
           const sprite = makeNodeTagSprite(tag, themeRef.current.name);
           const radius = getNodeRadius(node);
@@ -1577,8 +1630,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeColor((node) => getNodeColor(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
-        const object3d = makeNodeShape(node, getNodeColor(node), clusterTint);
-        const tag = getNodeDisplayLabel(node);
+        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive";
+        const object3d = makeNodeShape(node, getNodeColor(node), clusterTint, liteNode);
+        const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id))
+          ? null
+          : getNodeDisplayLabel(node);
         if (tag) {
           const sprite = makeNodeTagSprite(tag, themeRef.current.name);
           const radius = getNodeRadius(node);
