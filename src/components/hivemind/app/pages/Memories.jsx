@@ -42,8 +42,8 @@ const MEMORY_TYPES = [
   { key: 'fact',       label: 'Fact',       color: '#22c55e' },
   { key: 'preference', label: 'Preference', color: '#a855f7' },
   { key: 'procedure',  label: 'Procedure',  color: '#ec4899' },
-  // Cognition-loop output (auto-generated, queryable bi-temporally)
-  { key: 'synthesis',  label: 'Synthesis',  color: '#8b5cf6' },
+  // Cognition-loop output = "dreams" (auto-synthesized, queryable bi-temporally)
+  { key: 'synthesis',  label: '🌙 Dreams',  color: '#8b5cf6' },
   { key: 'summary',    label: 'Summary',    color: '#06b6d4' },
 ];
 
