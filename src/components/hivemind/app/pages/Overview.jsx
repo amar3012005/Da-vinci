@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Loader2,
   Lock,
+  Moon,
   Network,
   Paperclip,
   Sparkles,
@@ -173,17 +174,24 @@ const CHIP_KINDS = {
 
 function BandChip({ item, onOpen, onAsk }) {
   const kind = CHIP_KINDS[item.kind] || CHIP_KINDS.memory;
-  const Icon = kind.icon;
+  // Dreams (the cognitive loop's own synthesis) get the 🌙 purple brand so the
+  // user can tell consolidated insight apart from raw memories at a glance.
+  const Icon = item.dream ? Moon : kind.icon;
+  const iconColor = item.dream ? '#8b5cf6' : kind.iconColor;
+  const chipClass = item.dream
+    ? 'border-[#8b5cf6]/45 bg-[#8b5cf6]/[0.07] text-[#0a0a0a]'
+    : kind.chipClass;
+  const hoverBorder = item.dream ? 'hover:border-[#8b5cf6]' : 'hover:border-[#117dff]';
   // Zig-zag: deterministic per-chip vertical nudge so columns never line up.
   const nudge = [-3, 2, -1, 3, 0, -2][hashStr(item.key) % 6];
   return (
     <button
       onClick={() => (item.kind === 'question' ? onAsk(item.text) : onOpen(item.memory))}
       style={{ transform: `translateY(${nudge}px)` }}
-      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] whitespace-nowrap transition-all hover:shadow-sm hover:border-[#117dff] ${kind.chipClass}`}
-      title={item.kind === 'question' ? item.text : `${kind.label} — open`}
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] whitespace-nowrap transition-all hover:shadow-sm ${hoverBorder} ${chipClass}`}
+      title={item.kind === 'question' ? item.text : `${item.dream ? 'Dream' : kind.label} — open`}
     >
-      <Icon size={11} style={{ color: kind.iconColor }} className="flex-shrink-0" />
+      <Icon size={11} style={{ color: iconColor }} className="flex-shrink-0" />
       <span className="max-w-[340px] truncate">{item.text}</span>
     </button>
   );
@@ -226,6 +234,7 @@ function CognitiveBand({ onOpen, onAsk }) {
         kind: role === 'principle' ? 'principle' : role === 'bridge' ? 'bridge' : 'insight',
         text: cleanInsightTitle(m),
         memory: m,
+        dream: true, // cognitive-loop synthesis = a dream → 🌙 branded + prioritized
       });
     }
 
@@ -275,15 +284,35 @@ function CognitiveBand({ onOpen, onAsk }) {
       out.push({ key: `q-${e}`, kind: 'question', text: Q_TEMPLATES[i % Q_TEMPLATES.length](e) });
     });
 
+    // Synthesis questions: turn the freshest dreams into one-click "so what?"
+    // hooks grounded in what the swarm just consolidated from recent activity.
+    // Templated (no LLM) — cheap, and only when dreams actually exist.
+    out.filter((x) => x.dream).slice(0, 4).forEach((d) => {
+      const topic = d.text.length > 52 ? `${d.text.slice(0, 49)}…` : d.text;
+      out.push({
+        key: `qd-${d.key}`,
+        kind: 'question',
+        text: t('overview.band.qDream', 'Why does this matter — {{e}}?', { e: topic }),
+      });
+    });
+
     return out;
   }, [synthData, recentData, t]);
 
   // Zig-zag rows: deterministic shuffle per row (different salt), alternating
   // directions and speeds, offset starts — nothing lines up in columns.
   const rows = useMemo(() => {
-    if (items.length < 6) return [];
+    const hasDream = items.some((it) => it.dream);
+    // When there ARE dreams, always surface them — don't gate on the 6-item
+    // minimum (a couple of fresh dreams should still show). No dreams + thin
+    // activity → stay hidden rather than show a near-empty belt.
+    if (items.length < 6 && !hasDream) return [];
+    // Dreams lead: order dreams → synthesis questions → entity questions → raw
+    // memories, so the belt foregrounds consolidated insight over raw rows.
+    const rank = (it) => (it.dream ? 0 : it.kind === 'question' ? 1 : 2);
+    const ordered = [...items].sort((a, b) => rank(a) - rank(b));
     const r = [[], [], []];
-    items.forEach((it, i) => r[i % 3].push(it));
+    ordered.forEach((it, i) => r[i % 3].push(it));
     return r.map((row, i) =>
       [...row].sort((a, b) => hashStr(a.key + i) - hashStr(b.key + i))
     ).filter((row) => row.length > 0);
