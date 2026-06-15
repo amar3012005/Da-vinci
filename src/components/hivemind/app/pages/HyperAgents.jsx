@@ -118,8 +118,10 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  // viewMode: 'thread' (room open) | 'roster' (back to agent grid)
-  const [viewMode, setViewMode] = useState('thread');
+  // viewMode: 'thread' (room open) | 'roster' (agent grid). Land on the roster
+  // dashboard, NOT straight into a room — user opens a room explicitly from the
+  // left rail. (activeRoomId may still pre-select for rail highlight.)
+  const [viewMode, setViewMode] = useState('roster');
 
   const fetchRooms = useCallback(async () => {
     setError(null);

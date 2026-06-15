@@ -46,7 +46,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
   const adminItems = [
     { to: '/hivemind/app/workspace', icon: Building2, label: tt('workspaceAdmin', 'Workspace Admin') },
     { to: '/hivemind/app/employees', icon: Bot,      label: tt('hyperAgents', 'Hyper Agents') },
-    { to: '/hivemind/app/employees', icon: Cpu,      label: tt('hermesAgents', 'Hermes Agents') },
+    { to: '/hivemind/app/hermes',    icon: Cpu,      label: tt('hermesAgents', 'Hermes Agents') },
   ];
 
   // Order is skill-graded: no-code-friendly groups first (Your Brain →
