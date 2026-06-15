@@ -674,6 +674,11 @@ function OverviewChat({ inputRef }) {
   // switcher, overridable per-conversation from the composer drop-up.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  // Follow the global project/team switcher: when the user sets the workspace
+  // scope, the chat uses it for every tool (recall + save) without the user
+  // having to name the project. The composer drop-up still overrides per
+  // conversation, but a fresh global selection re-syncs the chat scope.
+  useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const scopeLabel = chatScope
     ? (projects?.find((p) => p.id === chatScope)?.name || t('overview.scope.project', 'Project'))
     : t('overview.scope.org', 'Org-wide');
