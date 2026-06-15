@@ -276,6 +276,7 @@ export default function MeetingNotes() {
   const [insights, setInsights] = useState(null);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false); // ingest in flight — gives the button feedback + blocks double-submit
   const [meetingId, setMeetingId] = useState(null); // Past-meetings row id (persisted on finish, before any HIVEMIND save)
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   // 'mic'  → microphone only (in-person / you on a phone call)
@@ -356,7 +357,7 @@ export default function MeetingNotes() {
       source_memory_id: sourceMemoryId,
       insights: insights || {},
       notes: notes || null,
-    });
+    }, { timeout: 60000 }); // override the 15s core default — large transcript+insights payloads
     return data;
   }, [notes]);
 
@@ -438,7 +439,8 @@ export default function MeetingNotes() {
   const stop = useCallback(() => { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); }, []);
 
   const save = useCallback(async () => {
-    if (!transcript) return;
+    if (!transcript || saving || saved) return;
+    setSaving(true); setError(null);
     try {
       // Smart tree ingest reads the insights off the Past-meetings row, so make
       // sure the row exists first (it's normally auto-saved on finish).
@@ -453,10 +455,14 @@ export default function MeetingNotes() {
       // items, key points, risks, next steps, transcript) — all through the
       // canonical pipeline so each fact links into the graph + is type-boosted
       // in recall. Idempotent server-side via meetings.source_memory_id.
-      await apiClient.core.post(`/api/meetings/${mid}/ingest`, {});
+      // The pipeline is LLM-heavy (parent + ~20 children) and routinely runs
+      // 60-90s — MUST override the 15s core default or the browser aborts the
+      // request mid-ingest and the meeting never gets marked saved.
+      await apiClient.core.post(`/api/meetings/${mid}/ingest`, {}, { timeout: 180000 });
       setSaved(true); loadMeetings();
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
-  }, [transcript, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
+    finally { setSaving(false); }
+  }, [transcript, saving, saved, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
@@ -627,8 +633,9 @@ export default function MeetingNotes() {
                 </Panel>
               )}
               <div className="flex items-center gap-3 flex-wrap">
-                <button onClick={save} disabled={saved} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] font-medium hover:bg-[#262626] disabled:opacity-50">
-                  {saved ? <CheckCircle2 size={14} /> : <Save size={14} />} {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : t('meetingnotes.save', 'Save to HIVEMIND')}
+                <button onClick={save} disabled={saved || saving} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#0a0a0a] text-white text-[12px] font-medium hover:bg-[#262626] disabled:opacity-50">
+                  {saved ? <CheckCircle2 size={14} /> : saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {saved ? t('meetingnotes.saved', 'Saved to HIVEMIND') : saving ? t('meetingnotes.saving', 'Saving to HIVEMIND…') : t('meetingnotes.save', 'Save to HIVEMIND')}
                 </button>
                 {meetingId && (
                   <span className="inline-flex items-center gap-1.5 text-[11px] text-[#10b981]">
