@@ -23,6 +23,7 @@ import {
   Bot,
   Mic,
   Building2,
+  Gauge,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -88,6 +89,7 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
       label: tt('groups.account', 'Account'),
       items: [
         { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
+        { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
         { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
         { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
       ],

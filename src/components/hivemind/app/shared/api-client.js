@@ -677,6 +677,17 @@ class HiveMindApiClient {
   }
 
   /**
+   * High-level platform usage for the current org this period.
+   * Proxies core GET /api/billing/usage → planEnforcer.getUsageSummary:
+   *   { plan, planName, period:{month}, tokens:{used,limit}, searches, uploads,
+   *     memories, deepResearch, webIntel:{...,isDaily}, graphQueries, tara, ... }
+   */
+  async getUsage() {
+    const { data } = await this.controlPlane.get('/v1/proxy/billing/usage');
+    return data;
+  }
+
+  /**
    * Start a Stripe Checkout session for a plan upgrade. Returns
    *   { checkout_url, session_id }
    * Caller redirects window.location to checkout_url.
