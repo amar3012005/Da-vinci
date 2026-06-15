@@ -1976,6 +1976,11 @@ class HiveMindApiClient {
   // ─── Hermes: Persona (P2) ────────────────────────────────────
 
   /** PUT /hermes/agent/persona { name?, role?, behavior? } → { persona } */
+  async getHermesPersona() {
+    const { data } = await this.controlPlane.get('/hermes/agent/persona');
+    return data;
+  }
+
   async updateHermesPersona(payload) {
     const { data } = await this.controlPlane.put('/hermes/agent/persona', payload);
     return data;
