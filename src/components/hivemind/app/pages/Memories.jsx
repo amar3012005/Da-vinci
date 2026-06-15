@@ -1824,29 +1824,27 @@ function MemoriesTab({
         <div className="relative">
           {/* Show Dreams overlay — last dream-run on top, 4-per-row half-height cards */}
           {showDreams && (
-            <div className="mb-5 rounded-xl border border-[#8b5cf6]/30 bg-[#8b5cf6]/[0.04] p-3">
-              <div className="flex items-center gap-2 mb-2 text-[11px] font-mono text-[#8b5cf6]">
+            <div className="mb-4 rounded-lg border border-[#8b5cf6]/30 bg-[#8b5cf6]/[0.04] p-2">
+              <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-mono text-[#8b5cf6]">
                 <span>🌙</span>
                 <span>{t('memories.recentDreams', 'Recent dreams')}</span>
                 {dreamsLoading
-                  ? <Loader2 size={10} className="animate-spin" />
+                  ? <Loader2 size={9} className="animate-spin" />
                   : <span className="text-[#a3a3a3]">· {lastRunDreams.length}</span>}
               </div>
               {!dreamsLoading && lastRunDreams.length === 0 ? (
                 <p className="text-[10px] text-[#a3a3a3]">{t('memories.noDreamsYet', 'No dreams yet — enable the cognitive layer + run a dream.')}</p>
               ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
                   {lastRunDreams.map((d) => (
                     <button
                       key={d.id}
                       onClick={() => setSelectedMemory({ id: d.id, title: d.title, content: d.content, cognitive_layer_role: d.role, tags: d.tags || [], memory_type: 'synthesis' })}
-                      className="text-left rounded-lg border border-[#8b5cf6]/20 bg-white/70 hover:border-[#8b5cf6]/50 transition-colors p-2 h-[72px] overflow-hidden"
+                      title={d.title || d.content}
+                      className="text-left rounded-md border border-[#8b5cf6]/20 bg-white/70 hover:border-[#8b5cf6]/50 transition-colors px-1.5 py-1 h-[40px] overflow-hidden flex items-center gap-1.5"
                     >
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="px-1 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] text-[9px] font-semibold uppercase tracking-wide">{d.role || 'dream'}</span>
-                        {typeof d.confidence === 'number' && <span className="text-[9px] text-[#a3a3a3]">{d.confidence.toFixed(2)}</span>}
-                      </div>
-                      <p className="text-[10px] leading-tight text-[#0a0a0a] line-clamp-2">{d.title || d.content}</p>
+                      <span className="px-1 py-0.5 rounded bg-[#8b5cf6]/10 text-[#8b5cf6] text-[8px] font-semibold uppercase shrink-0">{(d.role || 'dream').slice(0, 4)}</span>
+                      <span className="text-[9px] leading-tight text-[#0a0a0a] line-clamp-2">{d.title || d.content}</span>
                     </button>
                   ))}
                 </div>
