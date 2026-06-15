@@ -1411,22 +1411,21 @@ function MemoriesTab({
   const [showDreams, setShowDreams] = useState(false);
   const [lastRunDreams, setLastRunDreams] = useState([]);
   const [dreamsLoading, setDreamsLoading] = useState(false);
-  const [dreamsDone, setDreamsDone] = useState(false); // fetched (even if empty) for this enable
   // Fetch recent DREAMS (synthesis memories) EXACTLY ONCE per enable. We read the
   // memories directly (memory_type=synthesis) rather than the cognition_run audit —
   // the audit is sparse (only post-audit runs) and misses legacy dreams, so reading
   // synthesis rows always surfaces the dreams. Guard on showDreams only (keying on
   // length/loading caused an infinite refetch loop → perpetual spinner).
+  // Deps = [showDreams] ONLY. Putting dreamsLoading/dreamsDone in deps re-ran the
+  // effect the instant we set dreamsLoading(true), whose cleanup cancelled the
+  // in-flight fetch → the cancelled fetch never cleared loading → perpetual
+  // spinner + empty strip. Run once per enable; no setState-triggered cancel.
   useEffect(() => {
-    if (!showDreams) { setDreamsDone(false); return; } // reset so re-enabling refetches
-    if (dreamsDone || dreamsLoading) return;
-    let cancelled = false;
+    if (!showDreams) return;
+    let active = true;
     setDreamsLoading(true);
     (async () => {
       try {
-        // Use the SAME params as the working Dreams filter pill (is_latest:'all',
-        // hide_noise, project scope) — only override type + limit. A bare call was
-        // scoped differently by the proxy and came back empty while the pill worked.
         const data = await apiClient.listMemories({ ...listParams, memory_type: 'synthesis', limit: 12, offset: 0, tags: undefined });
         const mems = Array.isArray(data?.memories) ? data.memories : (Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []));
         const dreams = mems.map((m) => ({
@@ -1437,17 +1436,16 @@ function MemoriesTab({
           confidence: m.synthesis_confidence ?? m.confidence,
           tags: m.tags || [],
         }));
-        if (!cancelled) setLastRunDreams(dreams);
+        if (active) setLastRunDreams(dreams);
       } catch {
-        if (!cancelled) setLastRunDreams([]); // failed → empty, never stuck
+        if (active) setLastRunDreams([]);
       } finally {
-        if (!cancelled) { setDreamsLoading(false); setDreamsDone(true); }
+        if (active) setDreamsLoading(false);
       }
     })();
-    return () => { cancelled = true; };
-    // listParams intentionally omitted — snapshot at enable time; dreamsDone guards refetch.
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDreams, dreamsDone, dreamsLoading]);
+  }, [showDreams]);
 
   const listParams = useMemo(
     () => ({
