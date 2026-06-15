@@ -688,6 +688,15 @@ class HiveMindApiClient {
   }
 
   /**
+   * Per-day usage series for the Usage page graphs (last `days`, default 30).
+   * → { days, series: [{ day, tokens, memories, searches, ... }] }
+   */
+  async getDailyUsage(days = 30) {
+    const { data } = await this.controlPlane.get('/v1/proxy/billing/usage/daily', { params: { days } });
+    return data;
+  }
+
+  /**
    * Start a Stripe Checkout session for a plan upgrade. Returns
    *   { checkout_url, session_id }
    * Caller redirects window.location to checkout_url.
