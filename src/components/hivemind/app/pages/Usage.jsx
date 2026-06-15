@@ -43,78 +43,58 @@ function lastNDays(n) {
   return out;
 }
 
-// smooth cubic path through points [{x,y}]
-function smoothPath(pts) {
-  if (pts.length < 2) return pts.length ? `M ${pts[0].x} ${pts[0].y}` : '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i === 0 ? 0 : i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
-  }
-  return d;
-}
-
-function AreaChart({ values, days, accent }) {
+// Bar chart — renders cleanly with ANY number of points (incl. a single day),
+// unlike an area line which is invisible at 1 point. Gradient bars + hover.
+function BarChart({ values, days, accent }) {
   const [hover, setHover] = useState(null);
-  const W = 760, H = 220, padL = 8, padR = 8, padT = 16, padB = 24;
+  const W = 760, H = 220, padL = 8, padR = 8, padT = 16, padB = 22;
   const innerW = W - padL - padR, innerH = H - padT - padB;
   const max = Math.max(1, ...values);
-  const n = values.length;
-  const xAt = (i) => padL + (n <= 1 ? innerW / 2 : (i / (n - 1)) * innerW);
-  const yAt = (v) => padT + innerH - (v / max) * innerH;
-  const pts = values.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
-  const line = smoothPath(pts);
-  const area = pts.length ? `${line} L ${pts[n - 1].x} ${padT + innerH} L ${pts[0].x} ${padT + innerH} Z` : '';
-  const gid = `grad-${accent.replace('#', '')}`;
+  const n = Math.max(1, values.length);
+  const slot = innerW / n;
+  const bw = Math.max(2, Math.min(slot * 0.7, 40)); // bar width capped (so 1 bar isn't huge)
+  const gid = `bargrad-${accent.replace('#', '')}`;
   const total = values.reduce((a, b) => a + b, 0);
   const peak = Math.max(0, ...values);
-
-  const onMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const rx = ((e.clientX - rect.left) / rect.width) * W;
-    let best = 0, bd = Infinity;
-    for (let i = 0; i < n; i++) { const dd = Math.abs(xAt(i) - rx); if (dd < bd) { bd = dd; best = i; } }
-    setHover(best);
-  };
+  const hasData = total > 0;
 
   return (
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 220 }}
-           onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+           onMouseLeave={() => setHover(null)}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={accent} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={accent} stopOpacity="0" />
+            <stop offset="0%" stopColor={accent} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={accent} stopOpacity="0.45" />
           </linearGradient>
         </defs>
-        {/* gridlines */}
         {[0, 0.25, 0.5, 0.75, 1].map((g) => (
           <line key={g} x1={padL} x2={W - padR} y1={padT + innerH * g} y2={padT + innerH * g}
                 stroke="#eceae4" strokeWidth="1" />
         ))}
-        {area && <path d={area} fill={`url(#${gid})`} />}
-        {line && <path d={line} fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />}
-        {/* last point */}
-        {pts.length > 0 && (
-          <g>
-            <circle cx={pts[n - 1].x} cy={pts[n - 1].y} r="6" fill={accent} opacity="0.18" />
-            <circle cx={pts[n - 1].x} cy={pts[n - 1].y} r="3.5" fill={accent} />
-          </g>
-        )}
-        {/* hover */}
-        {hover != null && pts[hover] && (
-          <g>
-            <line x1={pts[hover].x} x2={pts[hover].x} y1={padT} y2={padT + innerH} stroke={accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
-            <circle cx={pts[hover].x} cy={pts[hover].y} r="4" fill="#fff" stroke={accent} strokeWidth="2" />
-          </g>
-        )}
-        {/* x labels: first / mid / last */}
-        {[0, Math.floor(n / 2), n - 1].map((i) => days[i] && (
-          <text key={i} x={Math.min(W - padR - 28, Math.max(padL, xAt(i) - 14))} y={H - 6}
+        {values.map((v, i) => {
+          const h = Math.max(v > 0 ? 3 : 0, (v / max) * innerH);
+          const x = padL + i * slot + (slot - bw) / 2;
+          const y = padT + innerH - h;
+          const isH = hover === i;
+          return (
+            <g key={i} onMouseEnter={() => setHover(i)}>
+              {/* invisible hit area spanning the slot */}
+              <rect x={padL + i * slot} y={padT} width={slot} height={innerH} fill="transparent" />
+              <rect x={x} y={y} width={bw} height={h} rx={Math.min(4, bw / 2)}
+                    fill={`url(#${gid})`} opacity={hover == null || isH ? 1 : 0.55} />
+            </g>
+          );
+        })}
+        {[0, Math.floor((n - 1) / 2), n - 1].map((i) => days[i] && (
+          <text key={i} x={Math.min(W - padR - 26, Math.max(padL, padL + i * slot))} y={H - 5}
                 fontSize="10" fill="#aaa">{days[i]?.slice(5)}</text>
         ))}
+        {!hasData && (
+          <text x={W / 2} y={padT + innerH / 2} textAnchor="middle" fontSize="12" fill="#bbb">
+            No activity yet in this window
+          </text>
+        )}
       </svg>
       {hover != null && days[hover] && (
         <div className="absolute top-1 right-2 bg-white border border-[#e3e0db] rounded-lg px-2.5 py-1 shadow-sm pointer-events-none">
@@ -131,15 +111,16 @@ function AreaChart({ values, days, accent }) {
 }
 
 function Sparkline({ values, accent }) {
-  const W = 120, H = 28;
+  const W = 120, H = 28, n = Math.max(1, values.length);
   const max = Math.max(1, ...values);
-  const n = values.length;
-  if (!n) return null;
-  const pts = values.map((v, i) => ({ x: (i / Math.max(1, n - 1)) * W, y: H - (v / max) * (H - 4) - 2 }));
+  if (!values.length) return null;
+  const slot = W / n, bw = Math.max(1.5, slot * 0.7);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 28 }} preserveAspectRatio="none">
-      <path d={`${smoothPath(pts)} L ${W} ${H} L 0 ${H} Z`} fill={accent} opacity="0.10" />
-      <path d={smoothPath(pts)} fill="none" stroke={accent} strokeWidth="1.5" />
+      {values.map((v, i) => {
+        const h = Math.max(v > 0 ? 2 : 0, (v / max) * (H - 3));
+        return <rect key={i} x={i * slot + (slot - bw) / 2} y={H - h} width={bw} height={h} rx="1" fill={accent} opacity="0.55" />;
+      })}
     </svg>
   );
 }
@@ -246,7 +227,7 @@ export default function Usage() {
             ))}
           </div>
         </div>
-        <AreaChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
+        <BarChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
       </div>
 
       {/* Metric cards (click → set hero) */}
