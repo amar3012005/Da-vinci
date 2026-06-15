@@ -754,6 +754,8 @@ export default function KnowledgeBase() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [deletingDocId, setDeletingDocId] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  // Creator-only delete: set when a non-owner tries to delete (shows a popup).
+  const [notOwnerInfo, setNotOwnerInfo] = useState(null);
   // Bulk-select state — Map<docId, doc> so we can pass full objects to delete handler
   const [bulkSelected, setBulkSelected] = useState(new Map());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -771,8 +773,11 @@ export default function KnowledgeBase() {
     const tagQueries = ['document-summary', 'schema-record', 'knowledge-base'];
     // Bumped limit 100 → 500 per tag family. Earlier 100 silently truncated
     // accounts past 100 docs, which read as 'losing past documents'.
+    // owner_only:true scopes server-side to THIS user's own uploads so other
+    // members' org/project-shared docs never cross the wire (the client-side
+    // owner filter below stays as defense-in-depth).
     const settled = await Promise.allSettled(
-      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 500, scope: 'all' }))
+      tagQueries.map(tag => apiClient.listMemories({ tags: tag, limit: 500, scope: 'all', owner_only: true }))
     );
 
     const seenIds = new Set();
@@ -995,6 +1000,10 @@ export default function KnowledgeBase() {
         setJustUploadedDocs(prev => prev.filter(d => d.id !== docId));
         setDeleteConfirmId(null);
         refetchKb();
+      } else if (err?.response?.status === 403 && err?.response?.data?.code === 'not_owner') {
+        // Creator-only delete: someone else uploaded this. Prompt to ask the owner.
+        setNotOwnerInfo({ owner: err?.response?.data?.owner || null, docTitle: doc?.title || doc?.metadata?.document_title || 'this document' });
+        setDeleteConfirmId(null);
       } else {
         console.error('Delete failed:', err);
         const serverMsg = err?.response?.data?.error || err?.response?.data?.detail || err?.message || 'Unknown error';
@@ -2139,6 +2148,69 @@ export default function KnowledgeBase() {
                   selectedNodeId={null}
                   initialPath="/hivemind"
                 />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Creator-only delete: non-owner tried to delete someone else's doc */}
+      <AnimatePresence>
+        {notOwnerInfo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setNotOwnerInfo(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md bg-white rounded-2xl border border-[#e3e0db] shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#e3e0db] bg-[#faf9f4]">
+                <h3 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+                  {t('knowledgebase.notOwnerTitle', "You can't delete this document")}
+                </h3>
+                <button
+                  onClick={() => setNotOwnerInfo(null)}
+                  className="p-1.5 rounded-lg hover:bg-[#e3e0db] transition-colors"
+                  title={t('knowledgebase.close', 'Close')}
+                >
+                  <X size={16} className="text-[#525252]" />
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-sm text-[#404040] leading-relaxed">
+                  {(() => {
+                    const o = notOwnerInfo.owner;
+                    const who = o?.name || o?.email;
+                    return who
+                      ? t('knowledgebase.notOwnerBodyNamed', { defaultValue: 'Only {{who}}, who uploaded this document, can delete it. Please request them to remove it.', who })
+                      : t('knowledgebase.notOwnerBody', 'Only the person who uploaded this document can delete it. Please request the owner to remove it.');
+                  })()}
+                </p>
+                {notOwnerInfo.owner?.email && (
+                  <a
+                    href={`mailto:${notOwnerInfo.owner.email}?subject=${encodeURIComponent('Request to delete a document')}&body=${encodeURIComponent(`Hi,\n\nCould you please delete "${notOwnerInfo.docTitle}" from our HIVEMIND knowledge base?\n\nThanks.`)}`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#117dff] text-white text-xs font-medium hover:bg-[#0f6fe0] transition-colors"
+                    onClick={() => setNotOwnerInfo(null)}
+                  >
+                    {t('knowledgebase.requestOwner', 'Request {{who}} to delete', { who: notOwnerInfo.owner.name || notOwnerInfo.owner.email })}
+                  </a>
+                )}
+              </div>
+              <div className="px-5 py-3 border-t border-[#e3e0db] bg-[#faf9f4] flex justify-end">
+                <button
+                  onClick={() => setNotOwnerInfo(null)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#525252] hover:bg-[#e3e0db] transition-colors"
+                >
+                  {t('knowledgebase.gotIt', 'Got it')}
+                </button>
               </div>
             </motion.div>
           </motion.div>
