@@ -24,7 +24,11 @@ import {
   ListTodo,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  Link2,
+  Check,
 } from 'lucide-react';
+import apiClient from '../../shared/api-client';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,8 +79,11 @@ function RunStatusPill({ status }) {
 
 // ─── Single run history card ──────────────────────────────────────────────────
 
-function RunCard({ run }) {
+function RunCard({ run, agentId }) {
   const [expanded, setExpanded] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareInfo, setShareInfo] = useState(null); // { url, expires_at }
+  const [copied, setCopied] = useState(false);
 
   const isFailed = run.status === 'failed' || run.status === 'error';
   const resultText = run.result
@@ -139,6 +146,41 @@ function RunCard({ run }) {
           )}
           {!resultText && (
             <p className="text-[11px] text-[#a3a3a3] italic">No result recorded.</p>
+          )}
+
+          {/* View-as-HTML + temporary share link — only for succeeded runs with output. */}
+          {resultText && !isFailed && agentId && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => window.open(apiClient.hermesRunHtmlUrl(agentId, run.id), '_blank', 'noopener')}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-[#117dff] border border-[#cfe2ff] bg-[#f5f9ff] hover:bg-[#eaf3ff] transition-colors"
+              >
+                <ExternalLink size={12} /> View as HTML
+              </button>
+              <button
+                type="button"
+                disabled={sharing}
+                onClick={async () => {
+                  setSharing(true);
+                  try {
+                    const info = await apiClient.shareHermesRun(agentId, run.id);
+                    setShareInfo(info);
+                    try { await navigator.clipboard.writeText(info.url); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch (_) {}
+                  } catch (_) { /* surfaced inline below */ }
+                  finally { setSharing(false); }
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors disabled:opacity-50"
+              >
+                {copied ? <Check size={12} /> : <Link2 size={12} />}
+                {copied ? 'Link copied' : sharing ? 'Creating…' : 'Share link'}
+              </button>
+              {shareInfo?.url && (
+                <span className="text-[10px] text-[#a3a3a3] truncate max-w-[260px]" title={shareInfo.url}>
+                  {shareInfo.url} · expires {new Date(shareInfo.expires_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -396,7 +438,7 @@ export default function Tasks({ agent, apiClient, refresh }) {
         {runs.length > 0 && (
           <div className="space-y-3">
             {runs.map((run) => (
-              <RunCard key={run.id} run={run} />
+              <RunCard key={run.id} run={run} agentId={agent.id} />
             ))}
           </div>
         )}

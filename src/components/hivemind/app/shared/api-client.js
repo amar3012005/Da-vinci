@@ -1923,6 +1923,24 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Absolute URL to a run's HTML view (authed via session cookie on navigation). */
+  hermesRunHtmlUrl(agentId, jobId) {
+    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    return `${base}/hermes/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(jobId)}/html`;
+  }
+
+  /** POST /hermes/agents/:id/runs/:jobId/share → { url, expires_at, ttl_days } (public temp link) */
+  async shareHermesRun(agentId, jobId) {
+    const { data } = await this.controlPlane.post(`/hermes/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(jobId)}/share`);
+    return data;
+  }
+
+  /** POST /hermes/agents/:id/runs/:jobId/unshare → { ok } (revoke all links for the run) */
+  async unshareHermesRun(agentId, jobId) {
+    const { data } = await this.controlPlane.post(`/hermes/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(jobId)}/unshare`);
+    return data;
+  }
+
   /** GET /hermes/agents/:id/approvals → { approvals: [{id,action,status,payload,created_at}] } */
   async listHermesApprovals(id) {
     const { data } = await this.controlPlane.get(`/hermes/agents/${encodeURIComponent(id)}/approvals`);
