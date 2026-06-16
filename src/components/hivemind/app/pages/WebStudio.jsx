@@ -106,39 +106,33 @@ function mdToHtml(md) {
   return out.join('\n');
 }
 
-// In-app rendered-report stylesheet (the modal preview). Mirrors the
-// standalone Chrome report's editorial look — Bricolage display headings,
-// Newsreader serif body, bordered tables — scoped under `.hm-doc`.
+// In-app README-render stylesheet (per the render-readme skill): clean, bold,
+// tabular — GitHub/Notion document look. Flat white, sharp corners, heavy
+// grotesque headings, neutral sans body, real tables + verbatim code blocks.
 const RESEARCH_DOC_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap');
 /* SINGULANCE wordmark — heavy italic, slightly skewed, sharp speed-font feel */
-.sgl-logo{font-family:'Saira','Bricolage Grotesque',system-ui,sans-serif;font-style:italic;font-weight:900;letter-spacing:-.01em;transform:skewX(-7deg);display:inline-block;line-height:1;color:#0c1018;text-transform:uppercase}
-/* soft gradient orb auras for the report surface */
-.hm-report-shell{position:relative;background:#eef1f6;isolation:isolate}
-.hm-report-shell::before,.hm-report-shell::after{content:"";position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
-.hm-report-shell::before{width:460px;height:460px;top:-150px;right:-110px;background:radial-gradient(circle at 30% 30%,#9db8ff,#c9b6f5 55%,transparent 72%)}
-.hm-report-shell::after{width:420px;height:420px;bottom:-120px;left:-110px;background:radial-gradient(circle at 50% 50%,#7fe6ef,#9db8ff 55%,transparent 72%)}
-.hm-report-shell>*{position:relative;z-index:1}
-.hm-doc{--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#e2e6ee;--accent:#2f4a8a;--accent2:#5b8def;font-family:Newsreader,Georgia,serif;font-size:16.5px;line-height:1.72;color:var(--body)}
-.hm-doc h1,.hm-doc h2,.hm-doc h3,.hm-doc h4{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);line-height:1.18;letter-spacing:-.015em}
-.hm-doc h1{font-size:27px;font-weight:700;margin:1.3em 0 .45em}
-.hm-doc h2{font-size:21px;font-weight:700;margin:1.45em 0 .45em;padding-top:.65em;border-top:1px solid var(--line)}
-.hm-doc h3{font-size:17px;font-weight:600;margin:1.25em 0 .35em}
-.hm-doc h4{font-size:14px;font-weight:600;color:var(--sub);margin:1.15em 0 .3em}
-.hm-doc p{margin:.8em 0}
-.hm-doc ul,.hm-doc ol{margin:.65em 0;padding-left:1.3em}.hm-doc li{margin:.4em 0}
-.hm-doc strong{color:var(--ink);font-weight:600}
-.hm-doc a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,74,138,.3)}.hm-doc a:hover{border-bottom-color:var(--accent)}
-.hm-doc code{font-family:'IBM Plex Mono',monospace;font-size:.84em;background:#eef1f6;border:1px solid var(--line);border-radius:5px;padding:.1em .4em}
-.hm-doc pre{font-family:'IBM Plex Mono',monospace;background:#0c1018;color:#dbe2f0;border-radius:12px;padding:16px;overflow:auto;font-size:12.5px;line-height:1.6}.hm-doc pre code{background:none;border:none;color:inherit}
-.hm-doc blockquote{margin:1em 0;padding:.55em 1.1em;border-left:3px solid var(--accent2);background:linear-gradient(90deg,#f3f6ff,transparent);color:var(--ink);font-style:italic}
-.hm-doc hr{border:none;border-top:1px solid var(--line);margin:1.8em 0}
-.hm-doc table{width:100%;border-collapse:collapse;margin:1.5em 0;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:13.5px;border-radius:12px;overflow:hidden;box-shadow:0 12px 30px -24px rgba(20,30,60,.35)}
-.hm-doc th,.hm-doc td{border:1px solid var(--line);padding:10px 14px;text-align:left;vertical-align:top}
-.hm-doc thead th{background:#eef2fb;font-weight:700;color:var(--ink);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-.hm-doc tbody td{color:var(--body)}
-.hm-doc tbody tr:nth-child(even){background:#f7f9fd}
-.hm-doc tbody tr:hover{background:#eef2fb}
+.sgl-logo{font-family:'Saira','Bricolage Grotesque',system-ui,sans-serif;font-style:italic;font-weight:900;letter-spacing:-.01em;transform:skewX(-7deg);display:inline-block;line-height:1;color:#16181d;text-transform:uppercase}
+.rm-doc{--ink:#16181d;--body:#33373f;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#1a45c4;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16.5px;line-height:1.72;color:var(--body)}
+.rm-doc h1,.rm-doc h2,.rm-doc h3,.rm-doc h4{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);line-height:1.16;letter-spacing:-.015em}
+.rm-doc h1{font-size:28px;font-weight:800;margin:1.3em 0 .45em}
+.rm-doc h1:first-child,.rm-doc h2:first-child{margin-top:0;border-top:none;padding-top:0}
+.rm-doc h2{font-size:23px;font-weight:700;margin:1.5em 0 .5em;padding-top:.7em;border-top:1px solid var(--line)}
+.rm-doc h3{font-size:18px;font-weight:700;margin:1.25em 0 .35em}
+.rm-doc h4{font-size:15px;font-weight:700;color:var(--muted);margin:1.15em 0 .3em}
+.rm-doc p{margin:.85em 0}
+.rm-doc ul,.rm-doc ol{margin:.7em 0;padding-left:1.5em}.rm-doc li{margin:.42em 0}
+.rm-doc strong{color:var(--ink);font-weight:700}
+.rm-doc a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(26,69,196,.28)}.rm-doc a:hover{border-bottom-color:var(--accent)}
+.rm-doc code{font-family:'IBM Plex Mono',monospace;font-size:.86em;background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:.1em .4em}
+.rm-doc pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:18px 20px;overflow-x:auto;white-space:pre;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;color:var(--ink);margin:1.1em 0}.rm-doc pre code{background:none;border:none;padding:0;font-size:inherit}
+.rm-doc blockquote{margin:1.1em 0;padding:.1em 0 .1em 1.1em;border-left:3px solid var(--ink);color:#52586a}.rm-doc blockquote p{margin:.3em 0}
+.rm-doc hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+.rm-doc table{width:100%;border-collapse:collapse;margin:1.5em 0;font-size:14px;border:1px solid var(--line)}
+.rm-doc th,.rm-doc td{border:1px solid var(--line);padding:10px 14px;text-align:left;vertical-align:top}
+.rm-doc thead th{background:#f3f4f6;font-weight:700;color:var(--ink);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.rm-doc tbody td{color:var(--body)}
+.rm-doc tbody tr:nth-child(even){background:#fafbfc}
 `;
 
 // Self-contained, visually-rich HTML doc for a research report, with an
@@ -167,75 +161,71 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${title.replace(/</g, '&lt;')} — SINGULANCE Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#eef1f6;--paper:#fff;--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#dfe4ec;--accent:#2f4a8a;--accent2:#5b8def}
+  :root{--paper:#fff;--ink:#16181d;--body:#33373f;--sub:#6b7280;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#1a45c4}
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Newsreader,Georgia,serif;line-height:1.7;-webkit-font-smoothing:antialiased}
-  /* soft gradient auras — the reference's blurred orbs */
-  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
-  body::before{width:520px;height:520px;top:-160px;right:-120px;background:radial-gradient(circle at 30% 30%,#9db8ff,#c9b6f5 55%,transparent 72%)}
-  body::after{width:460px;height:460px;bottom:-140px;left:-120px;background:radial-gradient(circle at 50% 50%,#7fe6ef,#9db8ff 55%,transparent 72%)}
+  html,body{margin:0;background:#fff;color:var(--ink);font-family:'Hanken Grotesk',system-ui,sans-serif;line-height:1.72;-webkit-font-smoothing:antialiased}
   .mono{font-family:'IBM Plex Mono',monospace}
-  .grot{font-family:'Bricolage Grotesque',sans-serif}
   /* top brand bar */
-  .topbar{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:26px 28px 0;display:flex;align-items:center;justify-content:space-between}
-  .brand{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:21px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:var(--ink)}
-  .kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+  .topbar{max-width:880px;margin:0 auto;padding:34px 32px 0;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:20px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:var(--ink)}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  .rule{max-width:880px;margin:26px auto 0;border-top:1px solid var(--line)}
   /* hero */
-  .hero{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:46px 28px 30px}
+  .hero{max-width:880px;margin:0 auto;padding:34px 32px 0}
   .hero .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:9px;margin-bottom:18px}
-  .hero .tag i{width:7px;height:7px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2);font-style:normal}
-  h1.title{font-family:'Bricolage Grotesque';font-weight:700;font-size:clamp(34px,6vw,68px);line-height:1.02;letter-spacing:-.02em;margin:0 0 22px;max-width:18ch}
+  .hero .tag i{width:6px;height:6px;border-radius:50%;background:var(--accent);font-style:normal}
+  h1.title{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(32px,5vw,54px);line-height:1.06;letter-spacing:-.02em;margin:0 0 24px}
   .meta{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0}
-  .meta div{padding:0 22px;border-right:1px solid var(--line)}.meta div:first-child{padding-left:0}.meta div:last-child{border-right:none}
+  .meta div{padding:0 24px;border-right:1px solid var(--line)}.meta div:first-child{padding-left:0}.meta div:last-child{border-right:none}
   .meta .k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
-  .meta .v{font-family:'Bricolage Grotesque';font-weight:600;font-size:15px;color:var(--ink)}
-  /* paper */
-  .wrap{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 28px 150px}
-  .card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:48px 56px;box-shadow:0 30px 80px -40px rgba(20,30,60,.25)}
-  article{font-size:17px;color:var(--body)}
-  article h1,article h2,article h3,article h4{font-family:'Bricolage Grotesque';color:var(--ink);line-height:1.18;letter-spacing:-.015em}
-  article h1{font-size:30px;margin:1.4em 0 .5em}
-  article h2{font-size:23px;margin:1.5em 0 .5em;padding-top:.7em;border-top:1px solid var(--line)}
-  article h3{font-size:18px;margin:1.3em 0 .4em}article h4{font-size:15px;color:var(--sub);margin:1.2em 0 .3em;font-weight:600}
+  .meta .v{font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;color:var(--ink)}
+  /* document — flat, on the page, no card box */
+  .wrap{max-width:880px;margin:0 auto;padding:36px 32px 140px}
+  article{font-size:16.5px;color:var(--body)}
+  article h1,article h2,article h3,article h4{font-family:'Bricolage Grotesque';color:var(--ink);line-height:1.16;letter-spacing:-.015em}
+  article h1{font-size:28px;font-weight:800;margin:1.3em 0 .45em}
+  article h2{font-size:23px;font-weight:700;margin:1.5em 0 .5em;padding-top:.7em;border-top:1px solid var(--line)}
+  article h3{font-size:18px;font-weight:700;margin:1.25em 0 .35em}article h4{font-size:15px;color:var(--muted);margin:1.15em 0 .3em;font-weight:700}
   article p{margin:.85em 0}
-  article ul,article ol{margin:.7em 0;padding-left:1.3em}article li{margin:.45em 0}
-  article strong{color:var(--ink);font-weight:600}
-  article a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,74,138,.3)}article a:hover{border-bottom-color:var(--accent)}
-  article code{font-family:'IBM Plex Mono',monospace;font-size:.84em;background:#eef1f6;border:1px solid var(--line);border-radius:5px;padding:.12em .42em}
-  article pre{font-family:'IBM Plex Mono',monospace;background:#0c1018;color:#dbe2f0;border-radius:12px;padding:18px;overflow:auto;font-size:13px;line-height:1.6}article pre code{background:none;border:none;color:inherit}
-  article blockquote{margin:1em 0;padding:.6em 1.2em;border-left:3px solid var(--accent2);background:linear-gradient(90deg,#f3f6ff,transparent);color:var(--ink);font-style:italic}
+  article ul,article ol{margin:.7em 0;padding-left:1.5em}article li{margin:.42em 0}
+  article strong{color:var(--ink);font-weight:700}
+  article a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(26,69,196,.28)}article a:hover{border-bottom-color:var(--accent)}
+  article code{font-family:'IBM Plex Mono',monospace;font-size:.86em;background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:.1em .4em}
+  article pre{font-family:'IBM Plex Mono',monospace;background:var(--code-bg);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:18px 20px;overflow-x:auto;white-space:pre;font-size:13px;line-height:1.6;margin:1.1em 0}article pre code{background:none;border:none;padding:0;color:inherit}
+  article blockquote{margin:1.1em 0;padding:.1em 0 .1em 1.1em;border-left:3px solid var(--ink);color:#52586a}article blockquote p{margin:.3em 0}
   article hr{border:none;border-top:1px solid var(--line);margin:2em 0}
-  article table{width:100%;border-collapse:collapse;margin:1.6em 0;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;box-shadow:0 12px 30px -22px rgba(20,30,60,.35);border-radius:12px;overflow:hidden}
-  article th,article td{border:1px solid var(--line);padding:11px 15px;text-align:left;vertical-align:top}
-  article thead th{background:#eef2fb;font-weight:700;color:var(--ink);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+  article table{width:100%;border-collapse:collapse;margin:1.5em 0;font-size:14px;border:1px solid var(--line)}
+  article th,article td{border:1px solid var(--line);padding:10px 14px;text-align:left;vertical-align:top}
+  article thead th{background:#f3f4f6;font-weight:700;color:var(--ink);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
   article tbody td{color:var(--body)}
-  article tbody tr:nth-child(even){background:#f7f9fd}
-  article tbody tr:hover{background:#eef2fb}
+  article tbody tr:nth-child(even){background:#fafbfc}
   .sources{margin-top:40px;padding-top:28px;border-top:1px solid var(--line)}
-  .sec-h{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin:0 0 18px}
+  .sec-h{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px}
   .src{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line);text-decoration:none}
   .src:hover .src-t{color:var(--accent)}
-  .src-n{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent2);font-weight:500}
-  .src-b{min-width:0}.src-t{display:block;font-family:'Bricolage Grotesque';font-weight:600;font-size:15px;color:var(--ink);transition:color .15s}
+  .src-n{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);font-weight:500}
+  .src-b{min-width:0}.src-t{display:block;font-family:'Bricolage Grotesque';font-weight:700;font-size:15px;color:var(--ink);transition:color .15s}
   .src-u{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
   /* footer */
-  .foot{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 28px 60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-  .foot .made{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--sub)}
+  .foot{max-width:880px;margin:0 auto;padding:0 32px 56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .foot .made{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--muted)}
   .foot .made b{color:var(--ink);font-weight:500}
-  .foot .mk{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:15px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:var(--muted)}
-  /* floating glass toolbar */
-  .toolbar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.4);border:1px solid #d6dbe6;border-radius:16px;padding:10px 12px;box-shadow:0 18px 50px -12px rgba(20,30,60,.35);z-index:50}
-  .toolbar select{font-family:'Bricolage Grotesque';font-weight:600;font-size:12px;color:var(--ink);background:#f2f4f9;border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;cursor:pointer}
-  .btn{font-family:'Bricolage Grotesque';font-size:12px;font-weight:700;border:none;border-radius:10px;padding:10px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:filter .15s}
-  .btn-save{background:linear-gradient(135deg,#2f4a8a,#5b8def);color:#fff}.btn-save:hover{filter:brightness(1.08)}.btn-save:disabled{opacity:.55;cursor:default}
-  .btn-print{background:#eceff5;color:#3a4150}.btn-print:hover{background:#e2e6ee}
-  .toast{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#2e7d4f;max-width:240px;line-height:1.35}
-  @media (max-width:640px){.card{padding:30px 22px}.meta div{padding:0 14px}}
-  @media print{.toolbar{display:none}body::before,body::after{display:none}.card{box-shadow:none}}
+  .foot .mk{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:15px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:#b5bac4}
+  /* sticky action bar — flat, sharp */
+  .toolbar{position:fixed;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:flex-end;gap:10px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:12px 32px;z-index:50}
+  .toolbar .tb-inner{width:100%;max-width:880px;display:flex;align-items:center;justify-content:flex-end;gap:10px}
+  .toolbar select{font-family:'Hanken Grotesk',sans-serif;font-weight:600;font-size:12px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:0;padding:9px 11px;outline:none;cursor:pointer}
+  .btn{font-family:'Hanken Grotesk',sans-serif;font-size:12px;font-weight:700;border:none;border-radius:0;padding:10px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+  .btn-save{background:#16181d;color:#fff}.btn-save:hover{background:#000}.btn-save:disabled{opacity:.55;cursor:default}
+  .btn-print{background:#fff;color:#33373f;border:1px solid var(--line)}.btn-print:hover{border-color:#16181d}
+  .toast{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#2e7d4f;max-width:240px;line-height:1.35;margin-right:auto}
+  @media (max-width:640px){.wrap,.hero,.topbar,.foot{padding-left:20px;padding-right:20px}.meta div{padding:0 14px}}
+  @media print{.toolbar{display:none}}
 </style></head><body>
   <div class="topbar"><div class="brand">Singulance</div><div class="kicker">Intelligence Report · ${yr}</div></div>
+  <div class="rule"></div>
   <div class="hero">
     <div class="tag"><i></i> Deep Research Dossier</div>
     <h1 class="title">${title.replace(/</g, '&lt;')}</h1>
@@ -246,19 +236,19 @@ function buildResearchReportHtml(job, scopeOptions = []) {
       <div><span class="k">Issued</span><span class="v">${dateStr}</span></div>
     </div>
   </div>
-  <div class="wrap"><div class="card"><article>${bodyHtml}</article>
+  <div class="wrap"><article>${bodyHtml}</article>
     ${sources.length ? `<div class="sources"><div class="sec-h">References · ${sources.length}</div>${sourcesHtml}</div>` : ''}
-  </div></div>
+  </div>
   <div class="foot">
     <div class="made">Built with <b>HIVEMIND</b> · enterprise memory intelligence</div>
     <div class="mk">SINGULANCE</div>
   </div>
-  <div class="toolbar">
-    <select id="hm-scope" title="Where to save">${optionsHtml}</select>
-    <button class="btn btn-save" id="hm-save">Save to HIVEMIND</button>
-    <button class="btn btn-print" onclick="window.print()">Print</button>
+  <div class="toolbar"><div class="tb-inner">
     <span class="toast" id="hm-toast"></span>
-  </div>
+    <select id="hm-scope" title="Where to save">${optionsHtml}</select>
+    <button class="btn btn-print" onclick="window.print()">Print</button>
+    <button class="btn btn-save" id="hm-save">Save to HIVEMIND</button>
+  </div></div>
 <script>
   (function(){
     var JOB=${J(job.id)};
@@ -993,101 +983,97 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-[#0c1018]/55 backdrop-blur-[3px] z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 bg-[#16181d]/45 z-50 flex items-start justify-center overflow-y-auto py-6 sm:py-10 px-4"
       onClick={onClose}
     >
       <style>{RESEARCH_DOC_CSS}</style>
       <motion.div
-        initial={{ scale: 0.97, opacity: 0, y: 12 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.97, opacity: 0, y: 12 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-        className="hm-report-shell w-full max-w-[1080px] max-h-[92vh] rounded-[22px] overflow-hidden shadow-[0_50px_120px_-30px_rgba(8,16,32,0.7)] flex flex-col"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 14 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[900px] bg-white border border-[#e6e8ec] shadow-[0_24px_70px_-30px_rgba(22,24,29,0.5)]"
         onClick={e => e.stopPropagation()}
       >
-        {/* close — bare, floating; no window titlebar */}
+        {/* close — sharp, top-right */}
         <button
           onClick={onClose}
           title={t('common.close', 'Close')}
-          className="absolute top-4 right-4 z-20 w-9 h-9 grid place-items-center rounded-full bg-white/70 backdrop-blur border border-[#d6dbe6] text-[#6b7280] hover:text-[#0c1018] hover:bg-white transition-colors"
+          className="absolute top-5 right-5 z-20 w-8 h-8 grid place-items-center border border-[#e6e8ec] text-[#8a909c] hover:text-[#16181d] hover:border-[#c4c9d2] transition-colors"
         >
           <X size={15} />
         </button>
 
-        <div className="overflow-y-auto flex-1">
-          {/* brand bar */}
-          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pt-7 flex items-center justify-between">
-            <span className="sgl-logo text-[17px]">Singulance</span>
-            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[#6b7280]">Intelligence Report · {yr}</span>
-          </div>
+        {/* brand bar */}
+        <div className="px-9 sm:px-14 pt-9 flex items-center justify-between">
+          <span className="sgl-logo text-[16px]">Singulance</span>
+          <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[#8a909c] mr-10">Intelligence Report · {yr}</span>
+        </div>
+        <div className="mx-9 sm:mx-14 mt-7 border-t border-[#e6e8ec]" />
 
-          {/* hero */}
-          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pt-9 pb-6">
-            <div className="flex items-center gap-2 mb-4 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#2f4a8a]">
-              <span className="w-[7px] h-[7px] rounded-full bg-[#5b8def] shadow-[0_0_12px_#5b8def]" />
-              Deep Research Dossier
-            </div>
-            <h2 className="font-['Bricolage_Grotesque'] font-bold text-[#0c1018] leading-[1.04] tracking-[-0.02em] text-[clamp(26px,4.5vw,42px)] max-w-[20ch]">
-              {title}
-            </h2>
-            <div className="mt-6 flex flex-wrap items-stretch border-t border-b border-[#dfe4ec] divide-x divide-[#dfe4ec]">
-              {[['Model', model], dur && ['Compiled in', dur], ['Sources', String(srcCount)], ['Issued', issued]]
-                .filter(Boolean)
-                .map(([k, v], i) => (
-                  <div key={i} className={`py-3 ${i === 0 ? 'pr-5' : 'px-5'}`}>
-                    <span className="block font-mono text-[9px] tracking-[0.18em] uppercase text-[#9aa3b2] mb-1">{k}</span>
-                    <span className="block font-['Bricolage_Grotesque'] font-semibold text-[14px] text-[#0c1018]">{v}</span>
-                  </div>
-                ))}
-            </div>
+        {/* hero */}
+        <div className="px-9 sm:px-14 pt-8">
+          <div className="flex items-center gap-2 mb-4 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#1a45c4]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[#1a45c4]" />
+            Deep Research Dossier
           </div>
-
-          {/* paper */}
-          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pb-28">
-            {saveErr && (
-              <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700">
-                <AlertTriangle size={12} /> {saveErr}
-              </div>
-            )}
-            {saved && (
-              <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                <div className="text-[13px] text-[#0a0a0a]">
-                  <span className="font-semibold">{t('webstudio.savedAsMemory', 'Saved to HIVEMIND as a memory')}</span>
-                  <span className="text-[#737373]"> · {saved.scopeLabel || saved.scope || 'personal'}</span>
+          <h2 className="font-['Bricolage_Grotesque'] font-extrabold text-[#16181d] leading-[1.06] tracking-[-0.02em] text-[clamp(28px,4.5vw,46px)]">
+            {title}
+          </h2>
+          <div className="mt-7 flex flex-wrap border-t border-b border-[#e6e8ec] divide-x divide-[#e6e8ec]">
+            {[['Model', model], dur && ['Compiled in', dur], ['Sources', String(srcCount)], ['Issued', issued]]
+              .filter(Boolean)
+              .map(([k, v], i) => (
+                <div key={i} className={`py-3.5 ${i === 0 ? 'pr-6' : 'px-6'}`}>
+                  <span className="block font-mono text-[9px] tracking-[0.18em] uppercase text-[#8a909c] mb-1">{k}</span>
+                  <span className="block font-['Bricolage_Grotesque'] font-bold text-[14px] text-[#16181d]">{v}</span>
                 </div>
-              </div>
-            )}
-
-            <div className="bg-white border border-[#e2e6ee] rounded-2xl px-8 py-9 sm:px-12 shadow-[0_30px_80px_-50px_rgba(20,30,60,0.35)]">
-              {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
-              {!result && (
-                <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
-              )}
-            </div>
-
-            <div className="mt-7 flex items-center justify-between gap-4">
-              <span className="font-mono text-[10.5px] text-[#6b7280]">Built with <span className="text-[#0c1018] font-medium">HIVEMIND</span> · enterprise memory intelligence</span>
-              <span className="sgl-logo text-[13px] text-[#9aa3b2]">Singulance</span>
-            </div>
+              ))}
           </div>
         </div>
 
-        {/* floating glass action bar */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-white/82 backdrop-blur-xl border border-[#d6dbe6] rounded-2xl px-3 py-2.5 shadow-[0_18px_50px_-12px_rgba(20,30,60,0.4)]">
+        {/* document body — rendered directly on the paper, no nested card */}
+        <div className="px-9 sm:px-14 pt-8 pb-28">
+          {saveErr && (
+            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-2 text-[12px] text-red-700">
+              <AlertTriangle size={12} /> {saveErr}
+            </div>
+          )}
+          {saved && (
+            <div className="mb-5 bg-emerald-50 border border-emerald-200 p-4 flex items-center gap-3">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              <div className="text-[13px] text-[#16181d]">
+                <span className="font-semibold">{t('webstudio.savedAsMemory', 'Saved to HIVEMIND as a memory')}</span>
+                <span className="text-[#8a909c]"> · {saved.scopeLabel || saved.scope || 'personal'}</span>
+              </div>
+            </div>
+          )}
+
+          {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
+          {!result && (
+            <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
+          )}
+
+          <div className="mt-10 pt-5 border-t border-[#e6e8ec] flex items-center justify-between gap-4">
+            <span className="font-mono text-[10.5px] text-[#8a909c]">Built with <span className="text-[#16181d] font-medium">HIVEMIND</span> · enterprise memory intelligence</span>
+            <span className="sgl-logo text-[13px] text-[#b5bac4]">Singulance</span>
+          </div>
+        </div>
+
+        {/* sticky action bar — flat, sharp */}
+        <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2.5 bg-white/95 backdrop-blur border-t border-[#e6e8ec] px-9 sm:px-14 py-3.5">
           <button
             onClick={onOpenReport}
             disabled={!result}
             title={t('webstudio.openReportHint', 'Open the full rendered report in a new tab')}
-            className="flex items-center gap-1.5 bg-[#eceff5] hover:bg-[#e2e6ee] disabled:opacity-50 text-[#3a4150] text-[12px] font-semibold px-3.5 py-2 rounded-xl transition-colors"
+            className="flex items-center gap-1.5 bg-white border border-[#d6dbe6] hover:border-[#16181d] disabled:opacity-50 text-[#33373f] text-[12px] font-semibold px-3.5 py-2 transition-colors"
           >
             <Chrome size={13} /> {t('webstudio.viewInChrome', 'Open in Chrome')}
           </button>
           <button
             onClick={handleSaveToHivemind}
             disabled={saving || !!saved || !result}
-            className="flex items-center gap-1.5 text-white text-[12px] font-bold px-4 py-2 rounded-xl disabled:opacity-55 transition-[filter] hover:brightness-110"
-            style={{ background: 'linear-gradient(135deg,#2f4a8a,#5b8def)' }}
+            className="flex items-center gap-1.5 bg-[#16181d] hover:bg-[#000] text-white text-[12px] font-bold px-4 py-2 disabled:opacity-55 transition-colors"
           >
             {saving ? <Loader2 size={13} className="animate-spin" />
               : saved ? <CheckCircle2 size={13} />
@@ -1614,7 +1600,7 @@ function ResearchReport({ result, fallbackProgress }) {
         <CollapsibleProgress progress={progress} />
       )}
 
-      <article className="hm-doc" dangerouslySetInnerHTML={{ __html: mdToHtml(text) }} />
+      <article className="rm-doc" dangerouslySetInnerHTML={{ __html: mdToHtml(text) }} />
 
       {sources.length > 0 && (
         <section className="mt-6 pt-4 border-t border-[#e3e0db]">
