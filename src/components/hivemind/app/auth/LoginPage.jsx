@@ -164,19 +164,20 @@ export default function LoginPage() {
         className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl md:max-w-[1000px]' : 'max-w-md md:max-w-3xl'}`}
       >
         <div className="flex flex-col md:flex-row items-stretch bg-white border border-[#e3e0db] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+          {/* Left: Login form */}
           <div className={`p-8 transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
             {/* Logo */}
             <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-              <Hexagon size={22} className="text-[#117dff]" />
+              <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+                <Hexagon size={22} className="text-[#117dff]" />
+              </div>
+              <div>
+                <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">
+                  HIVEMIND
+                </h1>
+                <p className="text-[#a3a3a3] text-xs font-mono">Memory Engine</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">
-                HIVEMIND
-              </h1>
-              <p className="text-[#a3a3a3] text-xs font-mono">Memory Engine</p>
-            </div>
-          </div>
 
           {/* CLI flow banner — shown when user was bounced here from
               `hivemind` CLI's browser handshake. Tells them why they're
@@ -566,13 +567,14 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        {/* Right pane — poster bleeds full-bleed to the center seam + edges,
-            clipped by the unified card's rounded corners (no inner card/padding). */}
-        <div className="hidden md:flex flex-1 items-stretch overflow-hidden">
+        {/* Right pane — full poster, never cropped.
+            The image fills the exact height of the left login card while showing every pixel.
+            Uses object-contain so the complete poster (including bottom branding) is always visible. */}
+        <div className="hidden md:flex flex-1 items-center justify-center bg-[#f8f7f2] overflow-hidden">
           <img
             src="/images/hivemind-poster-1.png"
             alt="HIVEMIND memory system"
-            className="w-full h-full object-cover"
+            className="h-full w-auto max-w-full object-contain"
           />
         </div>
 
