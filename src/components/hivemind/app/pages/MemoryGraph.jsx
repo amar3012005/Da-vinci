@@ -506,7 +506,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [projectNames, setProjectNames] = useState([]);
   const [userInvolvedProjects, setUserInvolvedProjects] = useState([]);
   // Real named leaves for the Meetings / Connectors / Employees hubs.
-  const [mossHubItems, setMossHubItems] = useState({ meetings: [], connectors: [], employees: [] });
+  const [mossHubItems, setMossHubItems] = useState({ meetings: [], connectors: [], employees: [], knowledge: [] });
   useEffect(() => {
     if (!org?.id) return undefined;
     let cancelled = false;
@@ -528,12 +528,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       apiClient.core.get('/api/meetings?limit=40').then((r) => r.data?.meetings || r.data || []),
       apiClient.listOAuthConnectors().then((d) => d?.connectors || d || []),
       apiClient.listMembers(org.id).then((d) => d?.members || d || []),
-    ]).then(([mtg, conn, mem]) => {
+      apiClient.listDocuments({ limit: 8 }).then((d) => d?.documents || d || []),
+    ]).then(([mtg, conn, mem, docs]) => {
       if (cancelled) return;
       const meetings = (mtg.value || []).map((m) => ({ id: m.id, name: m.title || m.name || 'Meeting' }));
       const connectors = (conn.value || []).map((c) => ({ id: c.id || c.provider, name: c.displayName || c.name || c.label || c.provider }));
       const employees = (mem.value || []).map((u) => ({ id: u.userId || u.id, name: u.name || u.displayName || u.email || 'Member' }));
-      setMossHubItems({ meetings, connectors, employees });
+      const knowledge = (docs.value || []).map((d) => ({ id: d.id, name: d.title || d.name || 'Document' }));
+      setMossHubItems({ meetings, connectors, employees, knowledge });
     });
 
     return () => { cancelled = true; };
@@ -1404,7 +1406,13 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 employees: mossHubItems.employees.length || hubCounts.employees,
               }}
               hubLeaves={{ projects: projectNames }}
-              hubItems={mossHubItems}
+              hubItems={{
+                ...mossHubItems,
+                personal: (graphData.nodes || [])
+                  .filter((n) => (n.scope === 'personal') || (n.tags || []).includes('personal'))
+                  .slice(0, 6)
+                  .map((n) => ({ id: n.id, name: n.title || n.label || 'Memory' })),
+              }}
               projects={userInvolvedProjects}
               onSelectProject={(proj) => {
                 if (proj?.slug || proj?.name) {
