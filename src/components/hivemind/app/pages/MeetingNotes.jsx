@@ -12,7 +12,7 @@ import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
-  Volume2, MonitorSpeaker, FolderOpen, UserPlus, X,
+  Volume2, MonitorSpeaker, FolderOpen, UserPlus, X, Trash2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -203,7 +203,7 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
 
 /* Past-meeting card — small light card matching the operator-console theme.
    Emoji tile, prominent @date·time, soft blue ruler strip, emoji micro-stats. */
-function MeetingCard({ m, onOpen }) {
+function MeetingCard({ m, onOpen, onDelete }) {
   const actions = Array.isArray(m.action_items) ? m.action_items.length : 0;
   const keyPts = Array.isArray(m.key_points) ? m.key_points.length : 0;
   const quests = Array.isArray(m.questions) ? m.questions.length : 0;
@@ -212,13 +212,23 @@ function MeetingCard({ m, onOpen }) {
   const [atDay, ...atRest] = atLabel.split(' ');
   return (
     <motion.button whileHover={{ y: -2 }} transition={{ type: 'spring', stiffness: 420, damping: 30 }} onClick={() => onOpen(m)}
-      className="text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 hover:border-[#0a0a0a] hover:shadow-sm transition-all group">
+      className="text-left bg-white border border-[#e3e0db] rounded-[12px] p-3 hover:border-[#0a0a0a] hover:shadow-sm transition-all group relative">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-7 h-7 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center flex-shrink-0"><MeetingNotesIcon size={14} className="text-[#117dff]" /></span>
           <span className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">{m.title || 'Meeting'}</span>
         </div>
-        <ArrowUpRight size={12} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] flex-shrink-0 transition-colors" />
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={(e) => onDelete(m, e)}
+            className="text-[#a3a3a3] hover:text-[#ef4444] transition-colors p-0.5 rounded"
+            aria-label="Delete meeting"
+          >
+            <Trash2 size={13} />
+          </button>
+          <ArrowUpRight size={12} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] transition-colors" />
+        </div>
       </div>
       {/* prominent @date · time */}
       <div className="mt-2 font-['Space_Grotesk'] leading-none">
@@ -290,6 +300,14 @@ export default function MeetingNotes() {
   const [selected, setSelected] = useState(null);
   const [detailTab, setDetailTab] = useState('summary');
   const [detailErr, setDetailErr] = useState(false);
+
+  // Delete-meeting modal state
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deletePreview, setDeletePreview] = useState(null);
+  const [deleteScope, setDeleteScope] = useState('both');
+  const [deleteHard, setDeleteHard] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState(null);
 
   // Meeting setup — participants and scope (set before recording starts)
   const [participants, setParticipants] = useState([]); // { type:'member'|'external', id?, name, email?, slackName? }
@@ -580,6 +598,39 @@ export default function MeetingNotes() {
     finally { setSaving(false); }
   }, [transcript, saving, saved, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
 
+  const openDeleteModal = useCallback(async (m, e) => {
+    e.stopPropagation();
+    setDeleteTarget(m);
+    setDeletePreview(null);
+    setDeleteScope('both');
+    setDeleteHard(false);
+    setDeleteErr(null);
+    try {
+      const { data } = await apiClient.core.get(`/api/meetings/${m.id}/delete-preview`);
+      setDeletePreview(data);
+    } catch (err) {
+      setDeletePreview({ can_delete: false, ingested: false, memory_count: 0, memories: [], _err: err?.response?.data?.error || err.message });
+    }
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteErr(null);
+    try {
+      await apiClient.core.delete(`/api/meetings/${deleteTarget.id}?scope=${deleteScope}&hard=${deleteHard}`);
+      const wasSelected = selected?.id === deleteTarget.id;
+      setDeleteTarget(null);
+      setDeletePreview(null);
+      if (wasSelected) setSelected(null);
+      loadMeetings();
+    } catch (err) {
+      setDeleteErr(err?.response?.data?.error || err.message || 'Delete failed.');
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, deleteScope, deleteHard, selected, loadMeetings]);
+
   const busy = status === 'transcribing' || status === 'analyzing';
   const recording = status === 'recording';
 
@@ -632,6 +683,170 @@ export default function MeetingNotes() {
           <RecordingModal key="rec-modal" status={status} elapsed={elapsed} notes={notes} setNotes={setNotes}
             multiSpeaker={multiSpeaker} setMultiSpeaker={setMultiSpeaker} onStop={stop}
             title={insights?.title} stream={streamRef.current} t={t} />
+        )}
+      </AnimatePresence>
+
+      {/* ───────── DELETE MEETING MODAL ───────── */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            key="delete-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0a0a0a]/25 backdrop-blur-[3px]"
+            onClick={() => { if (!deleting) { setDeleteTarget(null); setDeletePreview(null); } }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 12 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+              className="bg-white border border-[#e3e0db] rounded-[18px] shadow-xl w-full max-w-[520px] p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-[10px] bg-red-50 border border-red-200 grid place-items-center flex-shrink-0">
+                    <Trash2 size={15} className="text-[#ef4444]" />
+                  </span>
+                  <div>
+                    <h3 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight">Delete meeting</h3>
+                    <p className="text-[12px] text-[#737373] mt-0.5 leading-tight truncate max-w-[340px]">{deleteTarget.title || 'Meeting'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setDeleteTarget(null); setDeletePreview(null); }}
+                  disabled={deleting}
+                  className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors disabled:opacity-50"
+                  aria-label="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Preview body */}
+              <div className="rounded-[10px] bg-[#faf9f4] border border-[#e3e0db] p-4 mb-4 min-h-[80px] flex flex-col justify-center">
+                {deletePreview === null ? (
+                  <div className="flex items-center gap-2 text-[12px] text-[#737373]">
+                    <Loader2 size={14} className="animate-spin text-[#117dff]" />
+                    Loading preview…
+                  </div>
+                ) : deletePreview.can_delete === false ? (
+                  <div className="flex items-start gap-2 text-[12px] text-[#ef4444]">
+                    <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                    Only the meeting owner can delete this.
+                  </div>
+                ) : deletePreview.ingested ? (
+                  <div>
+                    <p className="text-[12px] text-[#525252] mb-2">
+                      This meeting saved <span className="font-semibold text-[#0a0a0a]">{deletePreview.memory_count}</span> {deletePreview.memory_count === 1 ? 'memory' : 'memories'} to HIVEMIND:
+                    </p>
+                    <ul className="space-y-1">
+                      {(deletePreview.memories || []).slice(0, 8).map((mem) => (
+                        <li key={mem.id} className="text-[11px] text-[#737373] flex items-start gap-1.5">
+                          <span className="text-[#117dff] mt-0.5 flex-shrink-0">·</span>
+                          <span className="line-clamp-1">{mem.title}</span>
+                        </li>
+                      ))}
+                      {(deletePreview.memories || []).length > 8 && (
+                        <li className="text-[11px] text-[#a3a3a3]">+{deletePreview.memories.length - 8} more</li>
+                      )}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-[#737373]">This meeting was not saved to HIVEMIND.</p>
+                )}
+              </div>
+
+              {/* Options — only show when preview loaded and can delete */}
+              {deletePreview && deletePreview.can_delete !== false && (
+                <div className="space-y-3 mb-4">
+                  {/* Scope radio group */}
+                  <div className="space-y-2">
+                    {deletePreview.ingested && (
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="deleteScope"
+                          value="memories"
+                          checked={deleteScope === 'memories'}
+                          onChange={() => setDeleteScope('memories')}
+                          className="mt-0.5 accent-[#117dff]"
+                        />
+                        <span className="text-[12px] text-[#525252] leading-snug">
+                          Remove from HIVEMIND memories only <span className="text-[#a3a3a3]">(keep the meeting in Past meetings)</span>
+                        </span>
+                      </label>
+                    )}
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deleteScope"
+                        value="both"
+                        checked={deleteScope === 'both'}
+                        onChange={() => setDeleteScope('both')}
+                        className="mt-0.5 accent-[#117dff]"
+                      />
+                      <span className="text-[12px] text-[#525252] leading-snug">
+                        Delete the meeting <span className="font-medium text-[#0a0a0a]">AND</span> its HIVEMIND memories
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Hard-delete checkbox */}
+                  <label className="flex items-start gap-2.5 cursor-pointer mt-1">
+                    <input
+                      type="checkbox"
+                      checked={deleteHard}
+                      onChange={(e) => setDeleteHard(e.target.checked)}
+                      className="mt-0.5 accent-[#ef4444]"
+                    />
+                    <span className="text-[12px] text-[#b45309] font-medium leading-snug">
+                      Hard delete — permanent, cannot be undone
+                    </span>
+                  </label>
+                  {deleteHard && (
+                    <p className="text-[11px] text-[#ef4444] bg-red-50 border border-red-200 rounded-[6px] px-2.5 py-1.5 flex items-start gap-1.5">
+                      <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" />
+                      This permanently erases the data; it cannot be recovered.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Error */}
+              {deleteErr && (
+                <p className="text-[11px] text-[#ef4444] bg-red-50 border border-red-200 rounded-[6px] px-2.5 py-1.5 mb-3 flex items-start gap-1.5">
+                  <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" />
+                  {deleteErr}
+                </p>
+              )}
+
+              {/* Buttons */}
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setDeleteTarget(null); setDeletePreview(null); }}
+                  disabled={deleting}
+                  className="px-3 py-2 rounded-[8px] text-[12px] font-medium text-[#525252] hover:bg-[#faf9f4] border border-[#e3e0db] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deleting || !deletePreview || deletePreview.can_delete === false}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] bg-[#ef4444] text-white text-[12px] font-semibold hover:bg-[#dc2626] disabled:opacity-50 transition-colors"
+                >
+                  {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  {deleteHard ? 'Permanently delete' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -929,7 +1144,7 @@ export default function MeetingNotes() {
       {tab === 'past' && !selected && (
         meetings.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-            {meetings.map((m) => <MeetingCard key={m.id} m={m} onOpen={openMeeting} />)}
+            {meetings.map((m) => <MeetingCard key={m.id} m={m} onOpen={openMeeting} onDelete={openDeleteModal} />)}
           </div>
         ) : (
           <div className="bg-white border border-[#e3e0db] rounded-[10px] p-10 text-center">
