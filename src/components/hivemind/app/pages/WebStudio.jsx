@@ -5,7 +5,7 @@ import {
   Globe, Search, Link as LinkIcon, Send, Loader2, AlertTriangle, Lock, X,
   ChevronDown, ChevronUp, RefreshCw, Save, BookmarkPlus, CheckCircle2,
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
-  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Brain, ArrowUpRight, Chrome, Eye,
+  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, ArrowUpRight, Chrome, Eye,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -469,7 +469,8 @@ export default function WebStudio() {
       const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
       if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
       try {
-        const resp = await apiClient.saveResearchToKnowledge({
+        // Atomic save_memory path (canonical) — NOT KB evidence/segments.
+        await apiClient.saveResearchAsMemory({
           title: deriveJobTitle(job, job.results || []),
           markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
           sources: result.sources || [],
@@ -478,8 +479,8 @@ export default function WebStudio() {
           targetScope: d.scope || 'personal',
           projectId: d.projectId || undefined,
         });
-        recordSave(job.id, { upload: resp, relations: {}, savedAt: Date.now(), scopeLabel: d.scopeLabel });
-        reply({ ok: true, memories: resp.promotedCount ?? resp.promotedMemoryIds?.length ?? 0 });
+        recordSave(job.id, { memory: true, scope: d.scope, savedAt: Date.now(), scopeLabel: d.scopeLabel });
+        reply({ ok: true, memories: 1 });
       } catch (err) {
         reply({ ok: false, error: err.response?.data?.error || err.message });
       }
@@ -808,7 +809,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
                           <span>{relTime(job.createdAt || job.created_at)}</span>
                           {sourceCount > 0 && <><span>·</span><span>{sourceCount} sources</span></>}
                           {job.duration_ms != null && <><span>·</span><span>{formatMs(job.duration_ms)}</span></>}
-                          {saved && <><span>·</span><span>{(saved.promotedMemoryIds?.length || 0)} memories</span></>}
+                          {saved && <><span>·</span><span>{saved.scopeLabel || 'saved'}</span></>}
                         </div>
                       </div>
                       {/* Two actions per report: View (in-app modal) + View in Chrome (polished new tab) */}
@@ -848,66 +849,31 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
   const title = deriveJobTitle(job, job.results || []);
 
   const [saving, setSaving] = useState(false);
-  // Hydrate from persisted snapshot so re-opens skip the prompt and
-  // jump straight to the graph-tree view.
-  const [saved, setSaved] = useState(savedSnapshot?.upload || null);
+  // Hydrate from persisted snapshot (memory-save: { memory, scope, scopeLabel }).
+  const [saved, setSaved] = useState(savedSnapshot?.memory ? savedSnapshot : null);
   const [saveErr, setSaveErr] = useState(null);
-  const [relations, setRelations] = useState(savedSnapshot?.relations || {});
 
-  // Re-sync if the parent's snapshot changes while the modal stays open
-  // (e.g. another save happened in a peer tab).
+  // Re-sync if the parent's snapshot changes while the modal stays open.
   useEffect(() => {
-    if (savedSnapshot?.upload) setSaved(savedSnapshot.upload);
-    if (savedSnapshot?.relations) setRelations(savedSnapshot.relations);
+    if (savedSnapshot?.memory) setSaved(savedSnapshot);
   }, [savedSnapshot]);
-
-  // Refresh relations on open if we have promoted ids but the relations
-  // map is stale (e.g. saved in another session / before relations RPC
-  // was implemented). Best-effort.
-  useEffect(() => {
-    const ids = saved?.promotedMemoryIds || [];
-    if (!ids.length) return;
-    const missing = ids.filter(mid => !relations[mid]);
-    if (missing.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      const next = { ...relations };
-      await Promise.all(missing.slice(0, 8).map(async (mid) => {
-        try { next[mid] = await apiClient.getMemoryRelations(mid); }
-        catch { /* silent */ }
-      }));
-      if (!cancelled) {
-        setRelations(next);
-        onSaved?.({ upload: saved, relations: next });
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saved?.documentId]);
 
   async function handleSaveToHivemind() {
     if (!result || saved) return;
     setSaving(true); setSaveErr(null);
     try {
-      const resp = await apiClient.saveResearchToKnowledge({
+      // Atomic save_memory path (canonical) — NOT KB evidence/segments.
+      await apiClient.saveResearchAsMemory({
         title,
         markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
         sources: result.sources || [],
         tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
         jobId: job.id,
+        targetScope: 'personal',
       });
-      setSaved(resp);
-
-      // Fetch relations for each promoted memory so we can render a
-      // mini graph tree of the ingestion outcome.
-      const ids = Array.isArray(resp.promotedMemoryIds) ? resp.promotedMemoryIds.slice(0, 8) : [];
-      const relMap = {};
-      await Promise.all(ids.map(async (mid) => {
-        try { relMap[mid] = await apiClient.getMemoryRelations(mid); }
-        catch { /* silent */ }
-      }));
-      setRelations(relMap);
-      onSaved?.({ upload: resp, relations: relMap, savedAt: Date.now() });
+      const snap = { memory: true, scope: 'personal', scopeLabel: '🔒 Personal' };
+      setSaved(snap);
+      onSaved?.({ ...snap, savedAt: Date.now() });
     } catch (e) {
       setSaveErr(e.response?.data?.error || e.message);
     } finally {
@@ -973,7 +939,15 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
               <AlertTriangle size={12} /> {saveErr}
             </div>
           )}
-          {saved && <PostUploadGraphTree saved={saved} relations={relations} />}
+          {saved && (
+            <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              <div className="text-[13px] text-[#0a0a0a]">
+                <span className="font-semibold">{t('webstudio.savedAsMemory', 'Saved to HIVEMIND as a memory')}</span>
+                <span className="text-[#737373]"> · {saved.scopeLabel || saved.scope || 'personal'}</span>
+              </div>
+            </div>
+          )}
 
           {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
           {!result && (
@@ -982,73 +956,6 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
         </div>
       </motion.div>
     </motion.div>
-  );
-}
-
-/* ─── After-upload graph tree (segments → memories → relations) ─── */
-
-function PostUploadGraphTree({ saved, relations }) {
-  const { t } = useTranslation('dashboard');
-  const totalRelations = Object.values(relations).reduce((acc, r) => acc + (r?.counts?.total || (r?.out?.length || 0) + (r?.in?.length || 0)), 0);
-  return (
-    <div className="mb-4 bg-violet-50 border border-violet-200 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <CheckCircle2 size={14} className="text-emerald-600" />
-        <span className="text-[12px] font-semibold text-[#0a0a0a]">{t('webstudio.savedToHivemind', 'Saved to HIVEMIND')}</span>
-        <span className="text-[10px] text-[#737373] font-mono ml-auto">
-          docId: <code>{(saved.documentId || '').slice(0, 8)}…</code>
-        </span>
-      </div>
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <Stat label={t('webstudio.segments', 'Segments')} value={saved.segmentCount ?? 0} />
-        <Stat label={t('webstudio.memories', 'Memories')} value={saved.promotedCount ?? saved.promotedMemoryIds?.length ?? 0} />
-        <Stat label={t('webstudio.relations', 'Relations')} value={totalRelations} />
-      </div>
-      {Array.isArray(saved.promotedMemoryIds) && saved.promotedMemoryIds.length > 0 && (
-        <details>
-          <summary className="text-[10px] uppercase tracking-wider font-mono text-[#737373] cursor-pointer">
-            {t('webstudio.memoryTree', 'Memory tree')}
-          </summary>
-          <ul className="mt-2 space-y-1.5">
-            {saved.promotedMemoryIds.slice(0, 8).map(mid => {
-              const rel = relations[mid];
-              return (
-                <li key={mid} className="text-[11px]">
-                  <div className="flex items-center gap-1.5">
-                    <Brain size={10} className="text-violet-500" />
-                    <code className="text-[10px] text-[#525252] font-mono">{mid.slice(0, 8)}…</code>
-                    {rel && (
-                      <span className="text-[10px] text-[#a3a3a3]">
-                        · {(rel.out?.length || 0)} out / {(rel.in?.length || 0)} in
-                      </span>
-                    )}
-                  </div>
-                  {rel?.out?.length > 0 && (
-                    <ul className="ml-4 mt-0.5 text-[10px] text-[#737373]">
-                      {rel.out.slice(0, 3).map((r, i) => (
-                        <li key={i} className="truncate">↳ {r.type}: {r.peer_title || r.target_id?.slice(0, 8)}</li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-            {saved.promotedMemoryIds.length > 8 && (
-              <li className="text-[10px] text-[#a3a3a3]">{t('webstudio.moreMemories', '+{{count}} more memories', { count: saved.promotedMemoryIds.length - 8 })}</li>
-            )}
-          </ul>
-        </details>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <div className="bg-white border border-violet-200 rounded-lg p-2">
-      <div className="text-[18px] font-semibold tabular-nums text-violet-700 leading-none">{value}</div>
-      <div className="text-[9px] uppercase tracking-wider text-[#737373] mt-1 font-mono">{label}</div>
-    </div>
   );
 }
 

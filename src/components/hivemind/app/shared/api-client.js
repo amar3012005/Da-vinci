@@ -812,6 +812,32 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Save a finished research report as ONE atomic canonical memory (the
+  // high-level save_memory path — NOT the KB evidence/segment pipeline; those
+  // segments are reserved for KB uploads). Scoped via scope + project_id so
+  // org / project saves land where the dropdown chose. Returns { ok, scope }.
+  async saveResearchAsMemory({ title, markdown, sources = [], tags = [], jobId, targetScope = 'personal', projectId = null }) {
+    const sourcesMd = sources.length
+      ? '\n\n---\n\n## Sources\n\n' + sources.map((s, i) => `${i + 1}. [${s.title || s.url}](${s.url})`).join('\n')
+      : '';
+    const scope = targetScope === 'organization' ? 'organization'
+      : (targetScope === 'project' && projectId) ? 'project'
+      : 'personal';
+    const payload = {
+      title: (title || 'Research report').slice(0, 200),
+      content: (markdown || '') + sourcesMd,
+      memory_type: 'fact',
+      tags: ['web-research', ...(jobId ? [`research-job:${jobId}`] : []), ...tags],
+      scope,
+      // Org saves must be org-visible (scope + visibility both). Personal stays
+      // private; project rows inherit project visibility via project_id.
+      visibility: scope === 'organization' ? 'organization' : 'private',
+      ...(scope === 'project' ? { project_ids: [projectId], project_id: projectId } : {}),
+    };
+    const data = await this.createMemory(payload);
+    return { ok: true, scope, raw: data };
+  }
+
   async deleteMemory(id, { hard = true } = {}) {
     const { data } = await this.controlPlane.delete(`/v1/proxy/memories/${id}${hard ? '?hard=true' : ''}`);
     return data;
