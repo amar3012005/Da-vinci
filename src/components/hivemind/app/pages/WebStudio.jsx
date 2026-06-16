@@ -5,7 +5,7 @@ import {
   Globe, Search, Link as LinkIcon, Send, Loader2, AlertTriangle, Lock, X,
   ChevronDown, ChevronUp, RefreshCw, Save, BookmarkPlus, CheckCircle2,
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
-  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, ArrowUpRight, Chrome, Eye,
+  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Chrome, Eye,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -110,7 +110,15 @@ function mdToHtml(md) {
 // standalone Chrome report's editorial look — Bricolage display headings,
 // Newsreader serif body, bordered tables — scoped under `.hm-doc`.
 const RESEARCH_DOC_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap');
+/* SINGULANCE wordmark — heavy italic, slightly skewed, sharp speed-font feel */
+.sgl-logo{font-family:'Saira','Bricolage Grotesque',system-ui,sans-serif;font-style:italic;font-weight:900;letter-spacing:-.01em;transform:skewX(-7deg);display:inline-block;line-height:1;color:#0c1018;text-transform:uppercase}
+/* soft gradient orb auras for the report surface */
+.hm-report-shell{position:relative;background:#eef1f6;isolation:isolate}
+.hm-report-shell::before,.hm-report-shell::after{content:"";position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
+.hm-report-shell::before{width:460px;height:460px;top:-150px;right:-110px;background:radial-gradient(circle at 30% 30%,#9db8ff,#c9b6f5 55%,transparent 72%)}
+.hm-report-shell::after{width:420px;height:420px;bottom:-120px;left:-110px;background:radial-gradient(circle at 50% 50%,#7fe6ef,#9db8ff 55%,transparent 72%)}
+.hm-report-shell>*{position:relative;z-index:1}
 .hm-doc{--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#e2e6ee;--accent:#2f4a8a;--accent2:#5b8def;font-family:Newsreader,Georgia,serif;font-size:16.5px;line-height:1.72;color:var(--body)}
 .hm-doc h1,.hm-doc h2,.hm-doc h3,.hm-doc h4{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);line-height:1.18;letter-spacing:-.015em}
 .hm-doc h1{font-size:27px;font-weight:700;margin:1.3em 0 .45em}
@@ -159,7 +167,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${title.replace(/</g, '&lt;')} — SINGULANCE Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#eef1f6;--paper:#fff;--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#dfe4ec;--accent:#2f4a8a;--accent2:#5b8def}
   *{box-sizing:border-box}
@@ -172,8 +180,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
   .grot{font-family:'Bricolage Grotesque',sans-serif}
   /* top brand bar */
   .topbar{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:26px 28px 0;display:flex;align-items:center;justify-content:space-between}
-  .brand{font-family:'Bricolage Grotesque';font-weight:800;font-size:18px;letter-spacing:.04em;color:var(--ink)}
-  .brand b{color:var(--accent2)}
+  .brand{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:21px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:var(--ink)}
   .kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
   /* hero */
   .hero{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:46px 28px 30px}
@@ -217,7 +224,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
   .foot{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 28px 60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   .foot .made{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--sub)}
   .foot .made b{color:var(--ink);font-weight:500}
-  .foot .mk{font-family:'Bricolage Grotesque';font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--muted)}
+  .foot .mk{font-family:'Saira','Bricolage Grotesque',sans-serif;font-style:italic;font-weight:900;font-size:15px;letter-spacing:-.01em;text-transform:uppercase;transform:skewX(-7deg);display:inline-block;color:var(--muted)}
   /* floating glass toolbar */
   .toolbar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.4);border:1px solid #d6dbe6;border-radius:16px;padding:10px 12px;box-shadow:0 18px 50px -12px rgba(20,30,60,.35);z-index:50}
   .toolbar select{font-family:'Bricolage Grotesque';font-weight:600;font-size:12px;color:var(--ink);background:#f2f4f9;border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;cursor:pointer}
@@ -228,7 +235,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
   @media (max-width:640px){.card{padding:30px 22px}.meta div{padding:0 14px}}
   @media print{.toolbar{display:none}body::before,body::after{display:none}.card{box-shadow:none}}
 </style></head><body>
-  <div class="topbar"><div class="brand">SINGU<b>LANCE</b></div><div class="kicker">Intelligence Report · ${yr}</div></div>
+  <div class="topbar"><div class="brand">Singulance</div><div class="kicker">Intelligence Report · ${yr}</div></div>
   <div class="hero">
     <div class="tag"><i></i> Deep Research Dossier</div>
     <h1 class="title">${title.replace(/</g, '&lt;')}</h1>
@@ -976,83 +983,117 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
 
   if (!job) return null;
 
+  const model = job.params?.model || 'auto';
+  const dur = job.duration_ms != null ? formatMs(job.duration_ms) : '';
+  const srcCount = Array.isArray(result?.sources) ? result.sources.length : 0;
+  const issued = new Date(job.createdAt || job.created_at || Date.now())
+    .toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const yr = new Date(job.createdAt || job.created_at || Date.now()).getFullYear();
+
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-[#0c1018]/55 backdrop-blur-[3px] z-50 flex items-center justify-center p-4 sm:p-6"
       onClick={onClose}
     >
+      <style>{RESEARCH_DOC_CSS}</style>
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-2xl w-full max-w-[1040px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+        initial={{ scale: 0.97, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.97, opacity: 0, y: 12 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+        className="hm-report-shell w-full max-w-[1080px] max-h-[92vh] rounded-[22px] overflow-hidden shadow-[0_50px_120px_-30px_rgba(8,16,32,0.7)] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <header className="px-7 py-4 border-b border-[#e3e0db] flex items-start justify-between gap-4 bg-white">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2.5 mb-1.5">
-              <span className="font-['Bricolage_Grotesque'] font-extrabold text-[13px] tracking-[0.05em] text-[#0c1018]">SINGU<span className="text-[#5b8def]">LANCE</span></span>
-              <span className="text-[#d4d9e3]">·</span>
-              <span className="text-[9.5px] uppercase tracking-[0.18em] font-mono text-[#9aa3b2]">Intelligence Report</span>
-              <StatusBadge status={job.status} polling={false} />
-              {job.duration_ms != null && (
-                <span className="text-[10px] font-mono text-[#a3a3a3]">{formatMs(job.duration_ms)}</span>
+        {/* close — bare, floating; no window titlebar */}
+        <button
+          onClick={onClose}
+          title={t('common.close', 'Close')}
+          className="absolute top-4 right-4 z-20 w-9 h-9 grid place-items-center rounded-full bg-white/70 backdrop-blur border border-[#d6dbe6] text-[#6b7280] hover:text-[#0c1018] hover:bg-white transition-colors"
+        >
+          <X size={15} />
+        </button>
+
+        <div className="overflow-y-auto flex-1">
+          {/* brand bar */}
+          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pt-7 flex items-center justify-between">
+            <span className="sgl-logo text-[17px]">Singulance</span>
+            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[#6b7280]">Intelligence Report · {yr}</span>
+          </div>
+
+          {/* hero */}
+          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pt-9 pb-6">
+            <div className="flex items-center gap-2 mb-4 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#2f4a8a]">
+              <span className="w-[7px] h-[7px] rounded-full bg-[#5b8def] shadow-[0_0_12px_#5b8def]" />
+              Deep Research Dossier
+            </div>
+            <h2 className="font-['Bricolage_Grotesque'] font-bold text-[#0c1018] leading-[1.04] tracking-[-0.02em] text-[clamp(26px,4.5vw,42px)] max-w-[20ch]">
+              {title}
+            </h2>
+            <div className="mt-6 flex flex-wrap items-stretch border-t border-b border-[#dfe4ec] divide-x divide-[#dfe4ec]">
+              {[['Model', model], dur && ['Compiled in', dur], ['Sources', String(srcCount)], ['Issued', issued]]
+                .filter(Boolean)
+                .map(([k, v], i) => (
+                  <div key={i} className={`py-3 ${i === 0 ? 'pr-5' : 'px-5'}`}>
+                    <span className="block font-mono text-[9px] tracking-[0.18em] uppercase text-[#9aa3b2] mb-1">{k}</span>
+                    <span className="block font-['Bricolage_Grotesque'] font-semibold text-[14px] text-[#0c1018]">{v}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* paper */}
+          <div className="max-w-[860px] mx-auto px-7 sm:px-10 pb-28">
+            {saveErr && (
+              <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700">
+                <AlertTriangle size={12} /> {saveErr}
+              </div>
+            )}
+            {saved && (
+              <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <div className="text-[13px] text-[#0a0a0a]">
+                  <span className="font-semibold">{t('webstudio.savedAsMemory', 'Saved to HIVEMIND as a memory')}</span>
+                  <span className="text-[#737373]"> · {saved.scopeLabel || saved.scope || 'personal'}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white border border-[#e2e6ee] rounded-2xl px-8 py-9 sm:px-12 shadow-[0_30px_80px_-50px_rgba(20,30,60,0.35)]">
+              {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
+              {!result && (
+                <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
               )}
             </div>
-            <h2 className="font-['Bricolage_Grotesque'] text-[22px] font-bold text-[#0c1018] leading-tight tracking-[-0.015em]">{title}</h2>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={onOpenReport}
-              disabled={!result}
-              title={t('webstudio.openReportHint', 'Open the full rendered report in a new tab')}
-              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-2 rounded-lg"
-            >
-              <ArrowUpRight size={12} /> {t('webstudio.openReport', 'Open report')}
-            </button>
-            <button
-              onClick={handleSaveToHivemind}
-              disabled={saving || !!saved || !result}
-              className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-2 rounded-lg"
-            >
-              {saving ? <Loader2 size={12} className="animate-spin" />
-                : saved ? <CheckCircle2 size={12} />
-                : <Save size={12} />}
-              {saving ? t('webstudio.saving', 'Saving') : saved ? t('webstudio.savedBtn', 'Saved') : t('webstudio.saveToHivemind', 'Save to HIVEMIND')}
-            </button>
-            <button onClick={onClose} className="p-1.5 text-[#a3a3a3] hover:text-[#0a0a0a] rounded hover:bg-[#faf9f4]">
-              <X size={14} />
-            </button>
-          </div>
-        </header>
 
-        <div className="overflow-y-auto flex-1 bg-[#eef1f6] px-6 py-7 sm:px-10">
-          {saveErr && (
-            <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700">
-              <AlertTriangle size={12} /> {saveErr}
-            </div>
-          )}
-          {saved && (
-            <div className="mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
-              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-              <div className="text-[13px] text-[#0a0a0a]">
-                <span className="font-semibold">{t('webstudio.savedAsMemory', 'Saved to HIVEMIND as a memory')}</span>
-                <span className="text-[#737373]"> · {saved.scopeLabel || saved.scope || 'personal'}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="mx-auto max-w-[860px] bg-white border border-[#e2e6ee] rounded-2xl px-8 py-9 sm:px-12 shadow-[0_30px_80px_-50px_rgba(20,30,60,0.35)]">
-            {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
-            {!result && (
-              <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
-            )}
-            <div className="mt-10 pt-5 border-t border-[#e2e6ee] flex items-center justify-between gap-4">
+            <div className="mt-7 flex items-center justify-between gap-4">
               <span className="font-mono text-[10.5px] text-[#6b7280]">Built with <span className="text-[#0c1018] font-medium">HIVEMIND</span> · enterprise memory intelligence</span>
-              <span className="font-['Bricolage_Grotesque'] font-extrabold text-[12px] tracking-[0.06em] text-[#9aa3b2]">SINGULANCE</span>
+              <span className="sgl-logo text-[13px] text-[#9aa3b2]">Singulance</span>
             </div>
           </div>
+        </div>
+
+        {/* floating glass action bar */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-white/82 backdrop-blur-xl border border-[#d6dbe6] rounded-2xl px-3 py-2.5 shadow-[0_18px_50px_-12px_rgba(20,30,60,0.4)]">
+          <button
+            onClick={onOpenReport}
+            disabled={!result}
+            title={t('webstudio.openReportHint', 'Open the full rendered report in a new tab')}
+            className="flex items-center gap-1.5 bg-[#eceff5] hover:bg-[#e2e6ee] disabled:opacity-50 text-[#3a4150] text-[12px] font-semibold px-3.5 py-2 rounded-xl transition-colors"
+          >
+            <Chrome size={13} /> {t('webstudio.viewInChrome', 'Open in Chrome')}
+          </button>
+          <button
+            onClick={handleSaveToHivemind}
+            disabled={saving || !!saved || !result}
+            className="flex items-center gap-1.5 text-white text-[12px] font-bold px-4 py-2 rounded-xl disabled:opacity-55 transition-[filter] hover:brightness-110"
+            style={{ background: 'linear-gradient(135deg,#2f4a8a,#5b8def)' }}
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" />
+              : saved ? <CheckCircle2 size={13} />
+              : <Save size={13} />}
+            {saving ? t('webstudio.saving', 'Saving') : saved ? t('webstudio.savedBtn', 'Saved') : t('webstudio.saveToHivemind', 'Save to HIVEMIND')}
+          </button>
         </div>
       </motion.div>
     </motion.div>
