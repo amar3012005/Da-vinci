@@ -1357,7 +1357,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             <MemoryMoss
               memories={graphData.nodes}
               orgName={org?.name || 'Your memory'}
-              theme={graphTheme === 'night' ? 'night' : 'day'}
+              theme="day"
               onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
               hubCounts={hubCounts}

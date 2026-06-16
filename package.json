@@ -12,6 +12,7 @@
     "@react-three/fiber": "^8.18.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
+    "@xyflow/react": "12.11.0",
     "3d-force-graph": "^1.80.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
