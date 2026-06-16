@@ -681,6 +681,11 @@ export default function MeetingNotes() {
                                   ? prev.filter((p) => !(p.type === 'member' && p.id === id))
                                   : [...prev, { type: 'member', id, name, email: u.email }]
                               );
+                              // Auto-suggest broader scope: adding a member while
+                              // scope is still Personal would keep insights private
+                              // to you — bump to Organization so they can recall it.
+                              // (Reversible — the user can pick another scope after.)
+                              if (!isOn && scope === 'personal') setScope('organization');
                             }}
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
                               isOn
@@ -783,6 +788,11 @@ export default function MeetingNotes() {
                       </button>
                     ))}
                   </div>
+                  {participants.some((p) => p.type === 'member') && scope === 'personal' && (
+                    <p className="mt-1.5 text-[11px] text-[#b45309]">
+                      Participants added — on <b>Personal</b> scope only you can recall these insights. Pick Project or Org so they can too.
+                    </p>
+                  )}
                   {scope === 'project' && orgProjects.length > 0 && (
                     <div className="mt-2">
                       <select
