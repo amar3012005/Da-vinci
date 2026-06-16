@@ -5,7 +5,7 @@ import {
   Globe, Search, Link as LinkIcon, Send, Loader2, AlertTriangle, Lock, X,
   ChevronDown, ChevronUp, RefreshCw, Save, BookmarkPlus, CheckCircle2,
   RotateCcw, ExternalLink, Activity, Layers, TrendingUp, Zap, Info,
-  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Brain, ArrowUpRight,
+  ShieldAlert, ShieldCheck, Ban, FileText, Sparkles, Brain, ArrowUpRight, Chrome, Eye,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -48,6 +48,144 @@ function isFeatureLocked(err) {
   const msg = err?.response?.data?.error || err?.message || '';
   return /feature.*not.*enabled|upgrade|locked/i.test(msg)
     || err?.response?.data?.code === 'feature_not_enabled';
+}
+
+/* ─── Standalone report (new-tab) — premium rendered HTML ──────────── */
+
+// Lightweight, dependency-free Markdown → HTML. Escapes first, then applies
+// block + inline transforms. Good enough for Tavily research output.
+function mdToHtml(md) {
+  if (!md) return '';
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s)]+)(?=[\s).,]|$)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  const lines = String(md).replace(/\r\n/g, '\n').split('\n');
+  const out = [];
+  let inUl = false, inOl = false, inCode = false, para = [];
+  const flushPara = () => { if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; } };
+  const closeLists = () => { if (inUl) { out.push('</ul>'); inUl = false; } if (inOl) { out.push('</ol>'); inOl = false; } };
+  for (const line of lines) {
+    if (/^```/.test(line)) { flushPara(); closeLists(); if (!inCode) { out.push('<pre><code>'); inCode = true; } else { out.push('</code></pre>'); inCode = false; } continue; }
+    if (inCode) { out.push(esc(line)); continue; }
+    if (/^\s*$/.test(line)) { flushPara(); closeLists(); continue; }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { flushPara(); closeLists(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+    if (/^\s*([-*+])\s+/.test(line)) { flushPara(); if (inOl) { out.push('</ol>'); inOl = false; } if (!inUl) { out.push('<ul>'); inUl = true; } out.push(`<li>${inline(line.replace(/^\s*[-*+]\s+/, ''))}</li>`); continue; }
+    if (/^\s*\d+\.\s+/.test(line)) { flushPara(); if (inUl) { out.push('</ul>'); inUl = false; } if (!inOl) { out.push('<ol>'); inOl = true; } out.push(`<li>${inline(line.replace(/^\s*\d+\.\s+/, ''))}</li>`); continue; }
+    if (/^\s*>\s?/.test(line)) { flushPara(); closeLists(); out.push(`<blockquote>${inline(line.replace(/^\s*>\s?/, ''))}</blockquote>`); continue; }
+    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { flushPara(); closeLists(); out.push('<hr/>'); continue; }
+    para.push(line.trim());
+  }
+  flushPara(); closeLists(); if (inCode) out.push('</code></pre>');
+  return out.join('\n');
+}
+
+// Self-contained, visually-rich HTML doc for a research report, with an
+// embedded "Save to HIVEMIND" + scope dropdown. On save it postMessages the
+// opener (same-origin via window.open + document.write); the opener performs
+// the authenticated, scoped save and posts the result back.
+function buildResearchReportHtml(job, scopeOptions = []) {
+  const result = Array.isArray(job.results) ? job.results[0] : null;
+  const title = deriveJobTitle(job, job.results || []);
+  const md = result ? (typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2)) : '';
+  const sources = (result && Array.isArray(result.sources)) ? result.sources : [];
+  const bodyHtml = mdToHtml(md);
+  const model = job.params?.model || 'auto';
+  const dur = job.duration_ms != null ? `${Math.round(job.duration_ms / 1000)}s` : '';
+  const dateStr = new Date(job.createdAt || job.created_at || Date.now()).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  const J = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
+  const optionsHtml = scopeOptions.map((o) => `<option data-scope="${o.scope}" data-project="${o.projectId || ''}">${(o.label || '').replace(/</g, '&lt;')}</option>`).join('');
+  const sourcesHtml = sources.map((s, i) => `
+      <a class="src" href="${(s.url || '#').replace(/"/g, '&quot;')}" target="_blank" rel="noopener">
+        <span class="src-n">${i + 1}</span>
+        <span class="src-b"><span class="src-t">${(s.title || s.url || '').replace(/</g, '&lt;')}</span>
+        <span class="src-u">${(s.url || '').replace(/</g, '&lt;')}</span></span></a>`).join('');
+
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${title.replace(/</g, '&lt;')} · HIVEMIND Research</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#faf9f4;--card:#fff;--ink:#0a0a0a;--body:#3f3f46;--sub:#737373;--muted:#a3a3a3;--line:#e3e0db;--accent:#117dff;--violet:#8b5cf6}
+  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;line-height:1.65}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px 130px}
+  .hero{background:linear-gradient(135deg,#0a0a0a 0%,#1d1b3a 55%,#3b2f6b 100%);color:#fff;padding:48px 0 42px;margin-bottom:-28px}
+  .hero-in{max-width:880px;margin:0 auto;padding:0 24px}
+  .eyebrow{font-family:'Space Grotesk';font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#b9b4e6;display:flex;align-items:center;gap:8px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);box-shadow:0 0 10px var(--violet)}
+  h1.title{font-family:'Space Grotesk';font-weight:700;font-size:30px;line-height:1.2;margin:14px 0 16px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-family:'Space Grotesk';font-size:11px;font-weight:500;color:#e7e5f5;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px 36px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  article h1,article h2,article h3,article h4{font-family:'Space Grotesk';line-height:1.3;margin:1.6em 0 .5em;color:var(--ink)}
+  article h1{font-size:23px}article h2{font-size:19px;padding-top:.3em;border-top:1px solid #f0eee9}article h3{font-size:16px}article h4{font-size:14px;color:var(--sub)}
+  article p{margin:.7em 0;color:var(--body);font-size:15px}
+  article ul,article ol{margin:.6em 0;padding-left:1.4em}article li{margin:.3em 0;color:var(--body);font-size:15px}
+  article a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(17,125,255,.25)}article a:hover{border-bottom-color:var(--accent)}
+  article code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:#f3f1ec;border:1px solid #eae7e1;border-radius:5px;padding:.1em .4em}
+  article pre{background:#0f0f12;color:#e6e6ea;border-radius:10px;padding:16px;overflow:auto;font-size:13px}article pre code{background:none;border:none;color:inherit}
+  article blockquote{margin:.8em 0;padding:.4em 1em;border-left:3px solid var(--violet);background:#faf8ff;color:var(--body);border-radius:0 8px 8px 0}
+  article hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+  .sec-h{font-family:'Space Grotesk';font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin:0 0 14px;display:flex;align-items:center;gap:8px}
+  .sources{margin-top:28px}
+  .src{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;text-decoration:none;background:#fff;transition:border-color .15s,transform .15s}
+  .src:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .src-n{flex:0 0 auto;width:22px;height:22px;border-radius:7px;background:#eef4ff;color:var(--accent);font-family:'Space Grotesk';font-weight:600;font-size:11px;display:grid;place-items:center}
+  .src-b{min-width:0}.src-t{display:block;font-weight:600;font-size:13px;color:var(--ink)}.src-u{display:block;font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toolbar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(15,15,18,.94);backdrop-filter:blur(10px);border:1px solid #2a2a30;border-radius:14px;padding:10px 12px;box-shadow:0 12px 40px rgba(0,0,0,.35);z-index:50}
+  .toolbar select{font-family:'Space Grotesk';font-size:12px;color:#fff;background:#1c1c22;border:1px solid #34343c;border-radius:9px;padding:8px 10px;outline:none;cursor:pointer}
+  .btn{font-family:'Space Grotesk';font-size:12px;font-weight:600;border:none;border-radius:9px;padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn-save{background:var(--accent);color:#fff}.btn-save:hover{background:#0066e0}.btn-save:disabled{opacity:.55;cursor:default}
+  .btn-print{background:#26262e;color:#cfcfd6}.btn-print:hover{background:#32323c}
+  .toast{font-family:'Space Grotesk';font-size:12px;color:#9ad7a0;max-width:230px;line-height:1.3}
+  @media print{.toolbar{display:none}}
+</style></head><body>
+  <div class="hero"><div class="hero-in">
+    <div class="eyebrow"><span class="dot"></span> HIVEMIND · DEEP RESEARCH</div>
+    <h1 class="title">${title.replace(/</g, '&lt;')}</h1>
+    <div class="meta"><span class="chip">🔮 ${model}</span>${dur ? `<span class="chip">⚡ ${dur}</span>` : ''}<span class="chip">📚 ${sources.length} sources</span><span class="chip">🗓 ${dateStr}</span></div>
+  </div></div>
+  <div class="wrap"><div class="card"><article>${bodyHtml}</article>
+    ${sources.length ? `<div class="sources"><div class="sec-h">📚 Sources (${sources.length})</div>${sourcesHtml}</div>` : ''}
+  </div></div>
+  <div class="toolbar">
+    <select id="hm-scope" title="Where to save">${optionsHtml}</select>
+    <button class="btn btn-save" id="hm-save">💾 Save to HIVEMIND</button>
+    <button class="btn btn-print" onclick="window.print()">🖨 Print</button>
+    <span class="toast" id="hm-toast"></span>
+  </div>
+<script>
+  (function(){
+    var JOB=${J(job.id)};
+    var btn=document.getElementById('hm-save'),sel=document.getElementById('hm-scope'),toast=document.getElementById('hm-toast');
+    function setToast(m,ok){toast.textContent=m;toast.style.color=ok?'#9ad7a0':'#f0a0a0';}
+    btn.addEventListener('click',function(){
+      if(!window.opener){setToast('Open from HIVEMIND to enable saving',false);return;}
+      btn.disabled=true;btn.textContent='⏳ Saving…';setToast('',true);
+      var o=sel.options[sel.selectedIndex];
+      window.opener.postMessage({type:'hm-save-research',jobId:JOB,scope:o.dataset.scope||'personal',projectId:o.dataset.project||null,scopeLabel:o.text},'*');
+    });
+    window.addEventListener('message',function(e){
+      var d=e.data||{};if(d.type!=='hm-save-result'||d.jobId!==JOB)return;
+      if(d.ok){btn.textContent='✅ Saved';setToast((d.memories||0)+' memories saved · '+(d.scopeLabel||''),true);}
+      else{btn.disabled=false;btn.textContent='💾 Save to HIVEMIND';setToast('Save failed: '+(d.error||'error'),false);}
+    });
+  })();
+</script></body></html>`;
+}
+
+// Open the report in a new tab (same-origin via document.write so it can
+// postMessage the opener for the authenticated save).
+function openResearchReportTab(job, scopeOptions) {
+  const w = window.open('', '_blank');
+  if (!w) return false; // popup blocked
+  w.document.open(); w.document.write(buildResearchReportHtml(job, scopeOptions)); w.document.close();
+  return true;
 }
 
 /* ─── Page ─────────────────────────────────────────────────────────── */
@@ -294,6 +432,62 @@ export default function WebStudio() {
     }));
   }, []);
 
+  // Projects for the report's "Save to HIVEMIND" scope dropdown.
+  const [projects, setProjects] = useState([]);
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      try {
+        const data = await apiClient.listAccessibleProjects();
+        const list = Array.isArray(data) ? data : (data?.projects || []);
+        if (on) setProjects(list.filter(Boolean));
+      } catch { /* non-fatal — dropdown just shows Personal + Organization */ }
+    })();
+    return () => { on = false; };
+  }, []);
+
+  const scopeOptions = useMemo(() => ([
+    { label: '🔒 Personal', scope: 'personal', projectId: null },
+    { label: '🏢 Organization', scope: 'organization', projectId: null },
+    ...projects.map((p) => ({ label: `📁 ${p.name || p.slug || 'Project'}`, scope: 'project', projectId: p.id })),
+  ]), [projects]);
+
+  // Open the finished report as a premium standalone HTML page in a new tab.
+  const openReport = useCallback((job) => {
+    const ok = openResearchReportTab(job, scopeOptions);
+    if (!ok) window.alert('Popup blocked — allow popups for HIVEMIND to open the report.');
+  }, [scopeOptions]);
+
+  // Bridge: the report tab postMessages a scoped save request; perform the
+  // authenticated save here and post the result back to that tab.
+  useEffect(() => {
+    const handler = async (e) => {
+      const d = e.data || {};
+      if (d.type !== 'hm-save-research' || !d.jobId) return;
+      const job = jobList.find(j => j.id === d.jobId);
+      const result = job && Array.isArray(job.results) ? job.results[0] : null;
+      const reply = (msg) => { try { e.source?.postMessage({ type: 'hm-save-result', jobId: d.jobId, scopeLabel: d.scopeLabel, ...msg }, '*'); } catch { /* tab closed */ } };
+      if (!job || !result) { reply({ ok: false, error: 'report not found' }); return; }
+      try {
+        const resp = await apiClient.saveResearchToKnowledge({
+          title: deriveJobTitle(job, job.results || []),
+          markdown: typeof result.content === 'string' ? result.content : JSON.stringify(result.content, null, 2),
+          sources: result.sources || [],
+          tags: [job.params?.model ? `tavily-${job.params.model}` : 'tavily'],
+          jobId: job.id,
+          targetScope: d.scope || 'personal',
+          projectId: d.projectId || undefined,
+        });
+        recordSave(job.id, { upload: resp, relations: {}, savedAt: Date.now(), scopeLabel: d.scopeLabel });
+        reply({ ok: true, memories: resp.promotedCount ?? resp.promotedMemoryIds?.length ?? 0 });
+      } catch (err) {
+        reply({ ok: false, error: err.response?.data?.error || err.message });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [jobList, recordSave]);
+
   const researchJobs = useMemo(
     () => jobList.filter(j => j.type === 'research' && (j.status === 'succeeded' || j.status === 'failed')),
     [jobList]
@@ -336,6 +530,7 @@ export default function WebStudio() {
           <PastResearchPanel
             jobs={researchJobs}
             onPick={setPreviewJob}
+            onOpenReport={openReport}
             locked={featureLocked}
             savedByJob={savedByJob}
             onExample={(m, p) => { setForcedMode(m); setPrompt(p); }}
@@ -455,6 +650,7 @@ export default function WebStudio() {
             job={previewJob}
             savedSnapshot={savedByJob[previewJob.id] || null}
             onSaved={(snap) => recordSave(previewJob.id, snap)}
+            onOpenReport={() => openReport(previewJob)}
             onClose={() => setPreviewJob(null)}
           />
         )}
@@ -558,7 +754,7 @@ function GuideCards({ onExample }) {
   );
 }
 
-function PastResearchPanel({ jobs, onPick, locked, savedByJob = {}, onExample }) {
+function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}, onExample }) {
   const { t } = useTranslation('dashboard');
   if (locked) return <EmptyState locked={true} />;
 
@@ -590,11 +786,11 @@ function PastResearchPanel({ jobs, onPick, locked, savedByJob = {}, onExample })
                   const title = deriveJobTitle(job, results);
                   const sourceCount = results[0]?.sources?.length || 0;
                   const saved = savedByJob[job.id];
+                  const done = job.status === 'succeeded';
                   return (
-                    <button
+                    <div
                       key={job.id}
-                      onClick={() => onPick(job)}
-                      className="w-full px-4 py-2.5 text-left hover:bg-[#faf9f4] transition-colors flex items-center gap-3"
+                      className="w-full px-4 py-2.5 hover:bg-[#faf9f4] transition-colors flex items-center gap-3"
                     >
                       <Sparkles size={13} className="text-violet-500 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -615,8 +811,25 @@ function PastResearchPanel({ jobs, onPick, locked, savedByJob = {}, onExample })
                           {saved && <><span>·</span><span>{(saved.promotedMemoryIds?.length || 0)} memories</span></>}
                         </div>
                       </div>
-                      <ArrowUpRight size={12} className="text-[#a3a3a3] shrink-0" />
-                    </button>
+                      {/* Two actions per report: View (in-app modal) + View in Chrome (polished new tab) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => onPick(job)}
+                          title={t('webstudio.view', 'View')}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-[#525252] hover:text-[#0a0a0a] bg-white hover:bg-[#f3f1ec] border border-[#e3e0db] rounded-lg px-2.5 py-1.5 transition-colors"
+                        >
+                          <Eye size={12} /> {t('webstudio.view', 'View')}
+                        </button>
+                        <button
+                          onClick={() => onOpenReport?.(job)}
+                          disabled={!done}
+                          title={t('webstudio.viewInChrome', 'Open rendered report in a new tab')}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg px-2.5 py-1.5 transition-colors"
+                        >
+                          <Chrome size={12} /> {t('webstudio.viewInChrome', 'View in Chrome')}
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -629,7 +842,7 @@ function PastResearchPanel({ jobs, onPick, locked, savedByJob = {}, onExample })
 
 /* ─── Past research preview modal (with one-click save) ──────────── */
 
-function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
+function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onOpenReport }) {
   const { t } = useTranslation('dashboard');
   const result = Array.isArray(job.results) ? job.results[0] : null;
   const title = deriveJobTitle(job, job.results || []);
@@ -730,6 +943,14 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved }) {
             <h2 className="text-[16px] font-semibold text-[#0a0a0a] leading-tight">{title}</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onOpenReport}
+              disabled={!result}
+              title={t('webstudio.openReportHint', 'Open the full rendered report in a new tab')}
+              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-[12px] font-semibold px-3 py-2 rounded-lg"
+            >
+              <ArrowUpRight size={12} /> {t('webstudio.openReport', 'Open report')}
+            </button>
             <button
               onClick={handleSaveToHivemind}
               disabled={saving || !!saved || !result}
