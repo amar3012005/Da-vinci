@@ -226,6 +226,7 @@ export default function MemoryMoss({
   theme = 'day',
   hubCounts = {},
   hubLeaves = {},          // { projects: ['Acme', ...], ... } real labels per hub
+  hubItems = {},           // { meetings:[{id,name}], connectors:[...], employees:[...] } real named leaves
   memories = [],
   projects = [],           // user's accessible projects
   onSelectPrimary,
@@ -252,47 +253,42 @@ export default function MemoryMoss({
         data: { ...p, count: hubCounts[p.key] ?? null, tint: TINT[p.key], T, isNight } });
       es.push({ id: `e-${p.key}`, source: 'core', target: id, type: 'floating', style: { stroke: T.line, strokeWidth: 1.3, strokeDasharray: DASH } });
 
-      if (p.key === 'projects' && Array.isArray(projects) && projects.length > 0) {
-        const gc = projects.length;
-        // Fan wider as projects grow + step radius in 3 tiers so the ~160px
-        // project chips never collide horizontally.
+      // Real named leaves per hub — projects (legacy `projects` prop) + the
+      // generic hubItems map (meetings / connectors / employees / …). Each item
+      // is { id?, name } (strings accepted too). Rendered as colour-initial
+      // chips with a dashed coloured link, fanned so wide chips never collide.
+      const rawItems = (p.key === 'projects' && Array.isArray(projects) && projects.length)
+        ? projects
+        : (Array.isArray(hubItems[p.key]) ? hubItems[p.key] : []);
+      const items = rawItems.map((it) => (typeof it === 'string' ? { name: it } : it))
+        .filter((it) => it && (it.name || it.title))
+        .slice(0, 6);
+
+      if (items.length > 0) {
+        const gc = items.length;
         const wedge = Math.min(1.35, 0.42 + gc * 0.14);
         for (let g = 0; g < gc; g++) {
           const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
           const gr = Rsec + 20 + (g % 3) * 92;
           const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
-          
-          const proj = projects[g];
-          const projName = proj.name || 'Project';
-          const initials = getProjectInitials(projName);
-          const colorIdx = Math.floor(seed(projName + g) * PROJECT_PALETTES.length);
+          const it = items[g];
+          const nm = it.name || it.title || 'Item';
+          const initials = getProjectInitials(nm);
+          const colorIdx = Math.floor(seed(p.key + nm + g) * PROJECT_PALETTES.length);
           const colorPalette = PROJECT_PALETTES[colorIdx] || PROJECT_PALETTES[0];
-          
-          const pid = `projNode-${proj.id || g}`;
-          ns.push({
-            id: pid,
-            type: 'projectNode',
-            position: { x: gx - 80, y: gy - 17 },
-            draggable: false,
-            data: { name: projName, initials, T, colorPalette, isNight, ...proj },
-          });
-          es.push({
-            id: `ep-${p.key}-${g}`,
-            source: id,
-            target: pid,
-            type: 'floating',
-            style: { stroke: colorPalette.color, strokeWidth: 1.1, strokeDasharray: DASH, opacity: 0.85 },
-          });
+          const pid = `leaf-${p.key}-${it.id || g}`;
+          ns.push({ id: pid, type: 'projectNode', position: { x: gx - 80, y: gy - 17 }, draggable: false,
+            data: { name: nm, initials, colorPalette, isNight, hubKey: p.key, ...it } });
+          es.push({ id: `el-${p.key}-${g}`, source: id, target: pid, type: 'floating',
+            style: { stroke: colorPalette.color, strokeWidth: 1.1, strokeDasharray: DASH, opacity: 0.85 } });
         }
       } else {
-        // Leaf labels: explicit hubLeaves (e.g. real project names) take priority,
-        // else fall back to matching memory titles.
-        let labels = Array.isArray(hubLeaves[p.key]) && hubLeaves[p.key].length
-          ? hubLeaves[p.key]
-          : memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key).slice(0, 2).map((m) => m.title || m.content);
+        // Fallback: matching memory titles as faint ghost pills.
+        let labels = memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key)
+          .slice(0, 2).map((m) => m.title || m.content);
         labels = labels.filter(Boolean).slice(0, 6);
         const gc = labels.length;
-        const wedge = 0.52; // angular fan within the spoke sector
+        const wedge = 0.52;
         for (let g = 0; g < gc; g++) {
           const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
           const gr = Rsec + (g % 2) * 72 + (seed(p.key + g) - 0.5) * 26;
@@ -311,7 +307,7 @@ export default function MemoryMoss({
     es.push({ id: 'e-add', source: 'core', target: 'add', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
 
     return { nodes: ns, edges: es };
-  }, [primaries, hubCounts, hubLeaves, memories, projects, T, isNight]);
+  }, [primaries, hubCounts, hubItems, memories, projects, T, isNight]);
 
   const onNodeClick = useCallback((_e, node) => {
     if (node.id === 'add') { onAddMemory && onAddMemory(); return; }

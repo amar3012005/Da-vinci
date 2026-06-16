@@ -505,6 +505,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Real org project names (user-scoped by the backend) for the Projects hub.
   const [projectNames, setProjectNames] = useState([]);
   const [userInvolvedProjects, setUserInvolvedProjects] = useState([]);
+  // Real named leaves for the Meetings / Connectors / Employees hubs.
+  const [mossHubItems, setMossHubItems] = useState({ meetings: [], connectors: [], employees: [] });
   useEffect(() => {
     if (!org?.id) return undefined;
     let cancelled = false;
@@ -521,6 +523,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         if (!cancelled) setUserInvolvedProjects(Array.isArray(list) ? list : []);
       })
       .catch(() => { /* non-fatal */ });
+
+    Promise.allSettled([
+      apiClient.core.get('/api/meetings?limit=40').then((r) => r.data?.meetings || r.data || []),
+      apiClient.listOAuthConnectors().then((d) => d?.connectors || d || []),
+      apiClient.listMembers(org.id).then((d) => d?.members || d || []),
+    ]).then(([mtg, conn, mem]) => {
+      if (cancelled) return;
+      const meetings = (mtg.value || []).map((m) => ({ id: m.id, name: m.title || m.name || 'Meeting' }));
+      const connectors = (conn.value || []).map((c) => ({ id: c.id || c.provider, name: c.displayName || c.name || c.label || c.provider }));
+      const employees = (mem.value || []).map((u) => ({ id: u.userId || u.id, name: u.name || u.displayName || u.email || 'Member' }));
+      setMossHubItems({ meetings, connectors, employees });
+    });
 
     return () => { cancelled = true; };
   }, [org?.id]);
@@ -1382,8 +1396,15 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               theme={graphTheme === 'night' ? 'night' : 'day'}
               onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
-              hubCounts={hubCounts}
+              hubCounts={{
+                ...hubCounts,
+                projects: userInvolvedProjects.length || hubCounts.projects,
+                meetings: mossHubItems.meetings.length || hubCounts.meetings,
+                connectors: mossHubItems.connectors.length || hubCounts.connectors,
+                employees: mossHubItems.employees.length || hubCounts.employees,
+              }}
               hubLeaves={{ projects: projectNames }}
+              hubItems={mossHubItems}
               projects={userInvolvedProjects}
               onSelectProject={(proj) => {
                 if (proj?.slug || proj?.name) {
