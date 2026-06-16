@@ -15,7 +15,7 @@
  * Props: orgName, subtitle, primaries[{key,label,Icon}], theme, hubCounts{},
  *        memories[], onSelectPrimary(p), onAddMemory().
  */
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   ReactFlow, Background, BaseEdge, Handle, Position,
   useInternalNode, getStraightPath,
@@ -235,15 +235,50 @@ export default function MemoryMoss({
 }) {
   const T = THEMES[theme] || THEMES.day;
   const isNight = theme === 'night';
+  // Recenter: when a hub is clicked it becomes the focused centre and its
+  // leaves ring around it; clicking the core returns to the org view.
+  const [activeHub, setActiveHub] = useState(null);
 
   const { nodes, edges } = useMemo(() => {
     const R = 240;            // hub ring radius (flow units; fitView scales)
     const Rsec = 400;         // secondary pill base radius
     const N = primaries.length || 1;
     const DASH = '5 5';
+    const HUB = 29, GH = 14, ADD = 23;
+
+    // ── Focused (recentred) view: one hub at the centre, its leaves around ──
+    if (activeHub) {
+      const p = primaries.find((x) => x.key === activeHub) || { key: activeHub, label: activeHub };
+      const rawItems = (activeHub === 'projects' && Array.isArray(projects) && projects.length)
+        ? projects
+        : (Array.isArray(hubItems[activeHub]) ? hubItems[activeHub] : []);
+      const items = rawItems.map((it) => (typeof it === 'string' ? { name: it } : it))
+        .filter((it) => it && (it.name || it.title)).slice(0, 14);
+      const fns = [{ id: `hub-${activeHub}`, type: 'hub', position: { x: -HUB, y: -HUB }, draggable: false,
+        data: { ...p, count: hubCounts[activeHub] ?? null, tint: TINT[activeHub], T, isNight } }];
+      const fes = [];
+      // back-to-org core, above the hub
+      fns.push({ id: 'core', type: 'sun', position: { x: -60, y: -R * 0.95 - 60 }, draggable: false, selectable: true, data: { T } });
+      fes.push({ id: 'e-back', source: `hub-${activeHub}`, target: 'core', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
+      const M = items.length || 1;
+      items.forEach((it, g) => {
+        const a = -Math.PI / 2 + ((g + 0.5) * 2 * Math.PI) / M;
+        const gr = R * 1.05 + (g % 2) * 70;
+        const gx = Math.cos(a) * gr, gy = Math.sin(a) * gr;
+        const nm = it.name || it.title || 'Item';
+        const initials = getProjectInitials(nm);
+        const colorPalette = PROJECT_PALETTES[Math.floor(seed(activeHub + nm + g) * PROJECT_PALETTES.length)] || PROJECT_PALETTES[0];
+        const pid = `leaf-${activeHub}-${it.id || g}`;
+        fns.push({ id: pid, type: 'projectNode', position: { x: gx - 80, y: gy - 17 }, draggable: false,
+          data: { name: nm, initials, colorPalette, isNight, hubKey: activeHub, ...it } });
+        fes.push({ id: `el-${activeHub}-${g}`, source: `hub-${activeHub}`, target: pid, type: 'floating',
+          style: { stroke: colorPalette.color, strokeWidth: 1.1, strokeDasharray: DASH, opacity: 0.85 } });
+      });
+      return { nodes: fns, edges: fes };
+    }
+
     const ns = [{ id: 'core', type: 'sun', position: { x: -60, y: -60 }, draggable: false, selectable: false, data: { T } }];
     const es = [];
-    const HUB = 29, GH = 14, ADD = 23;
 
     primaries.forEach((p, i) => {
       const a = -Math.PI / 2 + (i * 2 * Math.PI) / N;
@@ -307,11 +342,14 @@ export default function MemoryMoss({
     es.push({ id: 'e-add', source: 'core', target: 'add', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
 
     return { nodes: ns, edges: es };
-  }, [primaries, hubCounts, hubItems, memories, projects, T, isNight]);
+  }, [primaries, hubCounts, hubItems, memories, projects, T, isNight, activeHub]);
 
   const onNodeClick = useCallback((_e, node) => {
     if (node.id === 'add') { onAddMemory && onAddMemory(); return; }
-    if (node.type === 'hub' && onSelectPrimary) onSelectPrimary(node.data);
+    // Core/sun click → return to org view (from a focused hub).
+    if (node.type === 'sun') { setActiveHub(null); return; }
+    // Hub click → recenter on that hub (and still notify).
+    if (node.type === 'hub') { setActiveHub(node.data.key); if (onSelectPrimary) onSelectPrimary(node.data); return; }
     if (node.type === 'projectNode' && onSelectProject) onSelectProject(node.data);
   }, [onAddMemory, onSelectPrimary, onSelectProject]);
 
@@ -320,6 +358,7 @@ export default function MemoryMoss({
       {/* atmosphere vignette behind the flow */}
       <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 50%, ${T.vignette} 0%, transparent 58%)` }} />
       <ReactFlow
+        key={activeHub || 'org'}
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
