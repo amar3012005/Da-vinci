@@ -502,6 +502,19 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     safeStorageSet("hm-graph-theme", graphTheme);
   }, [graphTheme]);
   const { org } = useAuth();
+  // Real org project names (user-scoped by the backend) for the Projects hub.
+  const [projectNames, setProjectNames] = useState([]);
+  useEffect(() => {
+    if (!org?.id) return undefined;
+    let cancelled = false;
+    apiClient.listProjects(org.id)
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data?.projects || []);
+        if (!cancelled) setProjectNames(list.map((p) => p.name || p.title).filter(Boolean));
+      })
+      .catch(() => { /* non-fatal */ });
+    return () => { cancelled = true; };
+  }, [org?.id]);
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
@@ -1361,6 +1374,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
               hubCounts={hubCounts}
+              hubLeaves={{ projects: projectNames }}
             />
           </div>
         )}

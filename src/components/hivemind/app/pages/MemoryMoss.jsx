@@ -21,7 +21,7 @@ import {
   useInternalNode, getStraightPath,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { FolderOpen, Mic, Plug, Users, UserRound, BookOpen, Plus } from 'lucide-react';
+import { FolderOpen, Mic, Plug, Users, UserRound, BookOpen, Plus, Brain } from 'lucide-react';
 
 // Per-type tint — mirrors the app's soft tinted icon chips (MCP Server page).
 const TINT = {
@@ -48,7 +48,7 @@ const THEMES = {
   day: {
     bg: '#faf9f4', dot: '#e3ded3', line: 'rgba(17,125,255,0.30)', lineDim: 'rgba(17,125,255,0.10)',
     title: '#0a0a0a', sub: '#737373',
-    nodeBg: '#ffffff', nodeBorder: '#ece9e2', nodeIcon: '#4b4b4b', tinted: true,
+    nodeBg: '#ffffff', nodeBorder: '#ece9e2', nodeIcon: '#4b4b4b', tinted: true, coreIcon: '#117dff',
     badgeBg: '#ffffff', badgeText: '#6b6b6b',
     pill: '#ffffff', pillBorder: '#ece9e2', pillText: '#3a3530',
     addBg: '#ffffff', addBorder: '#ece9e2', addIcon: '#117dff',
@@ -60,7 +60,7 @@ const THEMES = {
   night: {
     bg: '#070708', dot: 'rgba(255,255,255,0.06)', line: 'rgba(233,255,106,0.5)', lineDim: 'rgba(233,255,106,0.12)',
     title: '#f6f6f4', sub: 'rgba(246,246,244,0.5)',
-    nodeBg: 'rgba(255,255,255,0.05)', nodeBorder: 'rgba(255,255,255,0.16)', nodeIcon: '#e7e7e3', tinted: false,
+    nodeBg: 'rgba(255,255,255,0.05)', nodeBorder: 'rgba(255,255,255,0.16)', nodeIcon: '#e7e7e3', tinted: false, coreIcon: '#9ca3af',
     badgeBg: '#101010', badgeText: '#cfcfcf',
     pill: 'rgba(255,255,255,0.05)', pillBorder: 'rgba(255,255,255,0.1)', pillText: '#cfcfcf',
     addBg: 'rgba(20,22,16,0.85)', addBorder: 'rgba(255,255,255,0.16)', addIcon: '#e9ff6a',
@@ -93,24 +93,21 @@ const hidden = { opacity: 0, width: 1, height: 1, minWidth: 0, minHeight: 0, bor
 
 // ── Custom nodes ────────────────────────────────────────────────────────────
 function SunNode({ data }) {
-  const { orgName, subtitle, T, isNight } = data;
+  const { T } = data;
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 132, height: 132 }}>
+    <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
       <Handle type="source" position={Position.Top} style={hidden} isConnectable={false} />
-      {/* title above */}
-      <div className="absolute left-1/2 -translate-x-1/2 text-center whitespace-nowrap" style={{ bottom: '100%', marginBottom: 26 }}>
-        <div className="font-bold tracking-[-0.02em]" style={{
-          fontSize: 30, color: isNight ? 'transparent' : T.title,
-          background: isNight ? 'linear-gradient(180deg,#fff,#c9c9c4)' : 'none',
-          WebkitBackgroundClip: isNight ? 'text' : undefined, backgroundClip: isNight ? 'text' : undefined,
-        }}>{orgName}</div>
-        <div style={{ fontSize: 14, color: T.sub, marginTop: 2 }}>{subtitle}</div>
-      </div>
-      {/* glow */}
-      <div className="absolute rounded-full pointer-events-none" style={{ width: 240, height: 240, background: T.orbGlow }} />
-      {/* orb */}
-      <div className="relative rounded-full" style={{ width: 104, height: 104, background: T.orb, boxShadow: T.orbShadow }}>
-        <div className="absolute rounded-full" style={{ left: '30%', top: '24%', width: 26, height: 18, background: 'radial-gradient(circle, rgba(255,255,255,0.95), transparent 70%)', filter: 'blur(2px)' }} />
+      {/* white glass sphere + glass brain — blends into the background, no colour glow */}
+      <div className="relative rounded-full flex items-center justify-center" style={{
+        width: 108, height: 108,
+        background: 'radial-gradient(circle at 38% 30%, #ffffff 0%, #f6f4ef 58%, #ece9e2 100%)',
+        border: '1px solid rgba(255,255,255,0.9)',
+        boxShadow: '0 14px 38px rgba(20,20,30,0.10), inset 0 3px 6px rgba(255,255,255,0.95), inset 0 -6px 14px rgba(0,0,0,0.05)',
+        backdropFilter: 'blur(6px)',
+      }}>
+        {/* glossy highlight */}
+        <div className="absolute rounded-full pointer-events-none" style={{ left: '26%', top: '18%', width: 34, height: 22, background: 'radial-gradient(circle, rgba(255,255,255,0.95), transparent 72%)', filter: 'blur(2px)' }} />
+        <Brain size={46} strokeWidth={1.4} style={{ color: T.coreIcon, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))' }} />
       </div>
     </div>
   );
@@ -172,6 +169,7 @@ export default function MemoryMoss({
   primaries = DEFAULT_PRIMARIES,
   theme = 'day',
   hubCounts = {},
+  hubLeaves = {},          // { projects: ['Acme', ...], ... } real labels per hub
   memories = [],
   onSelectPrimary,
   onAddMemory,
@@ -181,11 +179,11 @@ export default function MemoryMoss({
 
   const { nodes, edges } = useMemo(() => {
     const R = 240;            // hub ring radius (flow units; fitView scales)
-    const Rsec = 400;         // secondary pill radius
+    const Rsec = 400;         // secondary pill base radius
     const N = primaries.length || 1;
-    const ns = [{ id: 'core', type: 'sun', position: { x: -66, y: -66 }, draggable: false, selectable: false, data: { orgName, subtitle, T, isNight } }];
+    const DASH = '5 5';
+    const ns = [{ id: 'core', type: 'sun', position: { x: -60, y: -60 }, draggable: false, selectable: false, data: { T } }];
     const es = [];
-    // half-sizes for centre-anchored placement
     const HUB = 29, GH = 14, ADD = 23;
 
     primaries.forEach((p, i) => {
@@ -194,30 +192,34 @@ export default function MemoryMoss({
       const id = `hub-${p.key}`;
       ns.push({ id, type: 'hub', position: { x: hx - HUB, y: hy - HUB }, draggable: false,
         data: { ...p, count: hubCounts[p.key] ?? null, tint: TINT[p.key], T, isNight } });
-      es.push({ id: `e-${p.key}`, source: 'core', target: id, type: 'floating', style: { stroke: T.line, strokeWidth: 1.4 } });
+      es.push({ id: `e-${p.key}`, source: 'core', target: id, type: 'floating', style: { stroke: T.line, strokeWidth: 1.3, strokeDasharray: DASH } });
 
-      // secondary memory pills on-spoke
-      const hubMem = memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key);
-      const picks = hubMem.slice(0, 2);
-      const gc = picks.length || 1;
+      // Leaf labels: explicit hubLeaves (e.g. real project names) take priority,
+      // else fall back to matching memory titles.
+      let labels = Array.isArray(hubLeaves[p.key]) && hubLeaves[p.key].length
+        ? hubLeaves[p.key]
+        : memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key).slice(0, 2).map((m) => m.title || m.content);
+      labels = labels.filter(Boolean).slice(0, 6);
+      const gc = labels.length;
+      const wedge = 0.52; // angular fan within the spoke sector
       for (let g = 0; g < gc; g++) {
-        const ga = a + (g === 0 ? -0.16 : 0.18);
-        const gr = Rsec + (seed(p.key + g) - 0.5) * 60;
+        const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
+        const gr = Rsec + (g % 2) * 72 + (seed(p.key + g) - 0.5) * 26;
         const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
-        const label = picks[g] ? truncate(picks[g].title || picks[g].content) : null;
-        const w = label ? Math.min(210, 84 + label.length * 5.6) : 96;
+        const label = truncate(labels[g]);
+        const w = Math.min(210, 84 + label.length * 5.6);
         const gid = `ghost-${p.key}-${g}`;
         ns.push({ id: gid, type: 'ghost', position: { x: gx - w / 2, y: gy - GH }, draggable: false, selectable: false, data: { label, w, T } });
-        es.push({ id: `eg-${p.key}-${g}`, source: id, target: gid, type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9 } });
+        es.push({ id: `eg-${p.key}-${g}`, source: id, target: gid, type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
       }
     });
 
     // add-memory below core
     ns.push({ id: 'add', type: 'add', position: { x: -ADD, y: R * 0.62 }, draggable: false, data: { T } });
-    es.push({ id: 'e-add', source: 'core', target: 'add', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9 } });
+    es.push({ id: 'e-add', source: 'core', target: 'add', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
 
     return { nodes: ns, edges: es };
-  }, [primaries, hubCounts, memories, T, isNight, orgName, subtitle]);
+  }, [primaries, hubCounts, hubLeaves, memories, T, isNight]);
 
   const onNodeClick = useCallback((_e, node) => {
     if (node.id === 'add') { onAddMemory && onAddMemory(); return; }
