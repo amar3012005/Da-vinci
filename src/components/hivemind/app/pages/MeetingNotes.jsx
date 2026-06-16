@@ -294,6 +294,25 @@ export default function MeetingNotes() {
   const recRef = useRef(null); const chunksRef = useRef([]); const streamRef = useRef(null); const timerRef = useRef(null);
   const audioCtxRef = useRef(null); const teardownRef = useRef([]); // extra streams/ctx to tear down (tab+mic merge)
 
+  // ── Segmented capture for long meetings (>50 min) ───────────────────────────
+  // A single recording exceeds Groq Whisper's per-call size cap (~25 MB ≈ <1 hr),
+  // which is why long meetings failed. We rotate the MediaRecorder every
+  // SEGMENT_MS: each finished 10-min segment is an independently-decodable webm
+  // that transcribes IN PARALLEL while the next segment is already recording. At
+  // stop we await all segment transcriptions, stitch them in order into one full
+  // transcript, then run insights ONCE on the whole meeting.
+  const SEGMENT_MS = 10 * 60 * 1000;
+  const segTimerRef = useRef(null);    // rotation interval
+  const segIdxRef = useRef(0);         // next segment index to assign
+  const segChunksRef = useRef([]);     // chunks for the CURRENT segment
+  const segPromisesRef = useRef([]);   // in-flight transcription promises
+  const segTextsRef = useRef({});      // idx -> transcript text (ordered at stop)
+  const segSegsRef = useRef({});       // idx -> speakerSegments
+  const languageRef = useRef(null);    // first detected language wins
+  const finalizingRef = useRef(false); // true once Stop pressed — stops rotation
+  const [segDone, setSegDone] = useState(0);
+  const [segTotal, setSegTotal] = useState(0);
+
   const loadMeetings = useCallback(async () => {
     try {
       // Persistent org-level meetings table (structured rows).
@@ -336,6 +355,7 @@ export default function MeetingNotes() {
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (segTimerRef.current) { clearInterval(segTimerRef.current); segTimerRef.current = null; }
     // Tear down the raw tab + mic streams and the merge AudioContext first.
     teardownRef.current.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
     teardownRef.current = [];
@@ -361,33 +381,70 @@ export default function MeetingNotes() {
     return data;
   }, [notes]);
 
-  const process = useCallback(async (blob) => {
-    setError(null);
+  // Transcribe ONE segment in the background (fired the instant a segment
+  // closes). Failures are swallowed per-segment so one bad 10-min chunk never
+  // loses the whole meeting — the rest still stitch.
+  const transcribeSegment = useCallback((idx, blob) => {
+    setSegTotal((n) => Math.max(n, idx + 1));
+    const p = apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent((notes || '').slice(0, 800))}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 })
+      .then((tr) => {
+        segTextsRef.current[idx] = tr.data?.transcript || '';
+        if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
+        if (tr.data?.language && !languageRef.current) languageRef.current = tr.data.language;
+      })
+      .catch(() => { if (segTextsRef.current[idx] === undefined) segTextsRef.current[idx] = ''; })
+      .finally(() => setSegDone((n) => n + 1));
+    segPromisesRef.current.push(p);
+  }, [multiSpeaker, notes]);
+
+  // Roll one segment recorder on the live stream. On stop it ships the segment
+  // for transcription and (unless we're finalizing) immediately starts the next
+  // one — so recording never pauses while older segments transcribe in parallel.
+  const startSegmentRecorder = useCallback(() => {
+    const stream = streamRef.current; if (!stream) return;
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    segChunksRef.current = [];
+    const rec = new MediaRecorder(stream, { mimeType: mime }); recRef.current = rec;
+    rec.ondataavailable = (e) => { if (e.data.size) segChunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const idx = segIdxRef.current++;
+      const blob = new Blob(segChunksRef.current, { type: 'audio/webm' });
+      if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+      if (!finalizingRef.current) startSegmentRecorder(); // roll the next segment instantly
+    };
+    rec.start(1000);
+  }, [transcribeSegment]);
+
+  // Stitch all segments in order → full transcript → ONE insights pass.
+  const finalize = useCallback(async () => {
+    setError(null); setStatus('transcribing');
     try {
-      setStatus('transcribing');
-      const tr = await apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent((notes || '').slice(0, 800))}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 });
-      const text = tr.data?.transcript || ''; const segs = tr.data?.speakerSegments || null;
-      const lang = tr.data?.language || null;
-      setTranscript(text); setSpeakerSegments(segs); setLanguage(lang);
-      if (!text.trim()) { setStatus('error'); setError('No speech detected.'); return; }
+      await Promise.allSettled(segPromisesRef.current);
+      const idxs = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b);
+      const text = idxs.map((i) => segTextsRef.current[i]).filter(Boolean).join('\n').trim();
+      const segs = idxs.flatMap((i) => segSegsRef.current[i] || []); // NOTE: speaker labels are per-segment (not globally reconciled yet)
+      const lang = languageRef.current;
+      setTranscript(text); setSpeakerSegments(segs.length ? segs : null); setLanguage(lang);
+      if (!text) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
-      const input = segs && segs.length ? segs.map((s) => `${s.speaker}: ${s.text}`).join('\n') : text;
-      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 120000 });
+      const input = segs.length ? segs.map((s) => `${s.speaker}: ${s.text}`).join('\n') : text;
+      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 240000 });
       const insights = ins.data?.insights || null;
       setInsights(insights); setStatus('done');
-      // Auto-save to Past meetings the moment the meeting finishes — regardless
-      // of whether the user later saves it to HIVEMIND. "Save to HIVEMIND" is a
-      // separate step that additionally ingests it as memories (and links here).
       try {
-        const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs, language: lang });
+        const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs.length ? segs : null, language: lang });
         if (row?.id) setMeetingId(row.id);
         loadMeetings();
       } catch { /* non-fatal — recording is still usable / re-savable */ }
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
-  }, [notes, multiSpeaker, persistRow, loadMeetings]);
+  }, [notes, persistRow, loadMeetings]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
+    // reset segmented-capture state
+    segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
+    segTextsRef.current = {}; segSegsRef.current = {}; languageRef.current = null;
+    finalizingRef.current = false; setSegDone(0); setSegTotal(0);
 
     // Mic is always part of the recording (your voice). In 'tab' mode we ALSO
     // capture the meeting tab's audio (everyone else) and merge the two.
@@ -428,15 +485,31 @@ export default function MeetingNotes() {
     }
 
     streamRef.current = recordStream; chunksRef.current = [];
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-    const rec = new MediaRecorder(recordStream, { mimeType: mime }); recRef.current = rec;
-    rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
-    rec.onstop = () => { cleanup(); process(new Blob(chunksRef.current, { type: 'audio/webm' })); };
-    rec.start(1000); setStatus('recording');
+    startSegmentRecorder(); setStatus('recording');
+    // Rotate to a fresh segment every SEGMENT_MS — stopping the current recorder
+    // fires its onstop (ship for transcription + roll next). Short meetings never
+    // hit this and behave as a single segment.
+    segTimerRef.current = setInterval(() => {
+      if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
+    }, SEGMENT_MS);
     timerRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
-  }, [cleanup, process, captureMode]);
+  }, [cleanup, startSegmentRecorder, captureMode, SEGMENT_MS]);
 
-  const stop = useCallback(() => { if (recRef.current && recRef.current.state !== 'inactive') recRef.current.stop(); }, []);
+  const stop = useCallback(() => {
+    finalizingRef.current = true; // halt rotation re-arm
+    if (segTimerRef.current) { clearInterval(segTimerRef.current); segTimerRef.current = null; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    const rec = recRef.current;
+    if (rec && rec.state !== 'inactive') {
+      rec.onstop = () => { // final (possibly partial) segment → ship, tear down, stitch
+        const idx = segIdxRef.current++;
+        const blob = new Blob(segChunksRef.current, { type: 'audio/webm' });
+        if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+        cleanup(); finalize();
+      };
+      rec.stop();
+    } else { cleanup(); finalize(); }
+  }, [transcribeSegment, finalize, cleanup]);
 
   const save = useCallback(async () => {
     if (!transcript || saving || saved) return;
@@ -533,7 +606,7 @@ export default function MeetingNotes() {
               ) : (
                 <button onClick={start} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-[6px] bg-[#117dff] text-white text-[12px] font-medium hover:bg-[#0066e0] disabled:opacity-50">
                   {busy ? <Loader2 size={13} className="animate-spin" /> : <Mic size={13} />}
-                  {busy ? (status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
+                  {busy ? (status === 'transcribing' ? `${t('meetingnotes.transcribing', 'Transcribing…')}${segTotal > 1 ? ` ${segDone}/${segTotal}` : ''}` : t('meetingnotes.analyzing', 'Analyzing…')) : t('meetingnotes.start', 'Start transcribing')}
                 </button>
               )}
             </div>
