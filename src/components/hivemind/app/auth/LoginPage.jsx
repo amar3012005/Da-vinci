@@ -567,14 +567,13 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        {/* Right pane — full poster, never cropped.
-            The image fills the exact height of the left login card while showing every pixel.
-            Uses object-contain so the complete poster (including bottom branding) is always visible. */}
-        <div className="hidden md:flex flex-1 items-center justify-center bg-[#f8f7f2] overflow-hidden">
+        {/* Right pane — poster fills its half edge-to-edge, equal size to the
+            left login card (matches reference layout: two equal halves). */}
+        <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
           <img
             src="/images/hivemind-poster-1.png"
             alt="HIVEMIND memory system"
-            className="h-full w-auto max-w-full object-contain"
+            className="h-full w-full object-cover block"
           />
         </div>
 
