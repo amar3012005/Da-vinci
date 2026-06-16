@@ -1068,15 +1068,20 @@ export default function KnowledgeBase() {
   // shouldn't leave the picker permanently empty.
   useEffect(() => { if (scopeModalOpen) fetchProjects(); }, [scopeModalOpen, fetchProjects]);
 
-  // Adaptive concurrency: many small files = 10 parallel, few big files = 2.
-  // Computed per-batch from median file size.
+  // Adaptive upload concurrency. The bottleneck is SERVER-SIDE PROCESSING
+  // (each upload runs synchronous Docling parse → vision/OCR → distill → embed,
+  // holding a DB connection), NOT client bandwidth. A large burst (e.g. 10
+  // concurrent) exhausts the core's Prisma pool (connection_limit=20 →
+  // `$executeRawUnsafe` N/A failures) and times out the proxy upstream (502/503).
+  // So keep concurrency LOW; the server's BullMQ kb-queue (cap 6) drains the
+  // rest. Tunable but conservative by default.
   const pickConcurrency = useCallback((files) => {
     if (!files?.length) return 1;
     const sizes = files.map((f) => f.size || 0).sort((a, b) => a - b);
     const median = sizes[Math.floor(sizes.length / 2)];
-    if (median < 5 * 1024 * 1024) return Math.min(10, files.length); // <5MB → up to 10
-    if (median < 30 * 1024 * 1024) return Math.min(5, files.length); // 5-30MB → 5
-    return Math.min(2, files.length); // >30MB → 2 (bandwidth bound)
+    if (median < 5 * 1024 * 1024) return Math.min(4, files.length); // <5MB → up to 4
+    if (median < 30 * 1024 * 1024) return Math.min(2, files.length); // 5-30MB → 2
+    return 1; // >30MB → 1 (heavy parse + bandwidth)
   }, []);
 
   const handleFiles = useCallback(async (files, { targetScope = 'organization', project = null } = {}) => {
