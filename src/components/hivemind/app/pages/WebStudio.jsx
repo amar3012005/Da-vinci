@@ -68,10 +68,32 @@ function mdToHtml(md) {
   let inUl = false, inOl = false, inCode = false, para = [];
   const flushPara = () => { if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; } };
   const closeLists = () => { if (inUl) { out.push('</ul>'); inUl = false; } if (inOl) { out.push('</ol>'); inOl = false; } };
-  for (const line of lines) {
+  // GFM pipe-table helpers. Separator row = pipes + dashes (+ optional `:` align).
+  const isTableSep = (s) => /^[\s|:-]+$/.test(s) && s.includes('-') && s.includes('|');
+  const splitRow = (r) => r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (/^```/.test(line)) { flushPara(); closeLists(); if (!inCode) { out.push('<pre><code>'); inCode = true; } else { out.push('</code></pre>'); inCode = false; } continue; }
     if (inCode) { out.push(esc(line)); continue; }
     if (/^\s*$/.test(line)) { flushPara(); closeLists(); continue; }
+    // GFM table: header row with a pipe + a separator row immediately after.
+    if (line.includes('|') && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      flushPara(); closeLists();
+      const headers = splitRow(line);
+      const aligns = splitRow(lines[i + 1]).map((c) => {
+        const l = c.startsWith(':'), r = c.endsWith(':');
+        return l && r ? 'center' : r ? 'right' : l ? 'left' : '';
+      });
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].includes('|') && !/^\s*$/.test(lines[i])) { rows.push(splitRow(lines[i])); i++; }
+      i--; // step back; the for-loop will advance past the consumed block
+      const sty = (ci) => (aligns[ci] ? ` style="text-align:${aligns[ci]}"` : '');
+      const th = headers.map((hd, ci) => `<th${sty(ci)}>${inline(hd)}</th>`).join('');
+      const trs = rows.map((r) => `<tr>${headers.map((_, ci) => `<td${sty(ci)}>${inline(r[ci] || '')}</td>`).join('')}</tr>`).join('');
+      out.push(`<table><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`);
+      continue;
+    }
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) { flushPara(); closeLists(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
     if (/^\s*([-*+])\s+/.test(line)) { flushPara(); if (inOl) { out.push('</ol>'); inOl = false; } if (!inUl) { out.push('<ul>'); inUl = true; } out.push(`<li>${inline(line.replace(/^\s*[-*+]\s+/, ''))}</li>`); continue; }
@@ -83,6 +105,33 @@ function mdToHtml(md) {
   flushPara(); closeLists(); if (inCode) out.push('</code></pre>');
   return out.join('\n');
 }
+
+// In-app rendered-report stylesheet (the modal preview). Mirrors the
+// standalone Chrome report's editorial look — Bricolage display headings,
+// Newsreader serif body, bordered tables — scoped under `.hm-doc`.
+const RESEARCH_DOC_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+.hm-doc{--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#e2e6ee;--accent:#2f4a8a;--accent2:#5b8def;font-family:Newsreader,Georgia,serif;font-size:16.5px;line-height:1.72;color:var(--body)}
+.hm-doc h1,.hm-doc h2,.hm-doc h3,.hm-doc h4{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);line-height:1.18;letter-spacing:-.015em}
+.hm-doc h1{font-size:27px;font-weight:700;margin:1.3em 0 .45em}
+.hm-doc h2{font-size:21px;font-weight:700;margin:1.45em 0 .45em;padding-top:.65em;border-top:1px solid var(--line)}
+.hm-doc h3{font-size:17px;font-weight:600;margin:1.25em 0 .35em}
+.hm-doc h4{font-size:14px;font-weight:600;color:var(--sub);margin:1.15em 0 .3em}
+.hm-doc p{margin:.8em 0}
+.hm-doc ul,.hm-doc ol{margin:.65em 0;padding-left:1.3em}.hm-doc li{margin:.4em 0}
+.hm-doc strong{color:var(--ink);font-weight:600}
+.hm-doc a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,74,138,.3)}.hm-doc a:hover{border-bottom-color:var(--accent)}
+.hm-doc code{font-family:'IBM Plex Mono',monospace;font-size:.84em;background:#eef1f6;border:1px solid var(--line);border-radius:5px;padding:.1em .4em}
+.hm-doc pre{font-family:'IBM Plex Mono',monospace;background:#0c1018;color:#dbe2f0;border-radius:12px;padding:16px;overflow:auto;font-size:12.5px;line-height:1.6}.hm-doc pre code{background:none;border:none;color:inherit}
+.hm-doc blockquote{margin:1em 0;padding:.55em 1.1em;border-left:3px solid var(--accent2);background:linear-gradient(90deg,#f3f6ff,transparent);color:var(--ink);font-style:italic}
+.hm-doc hr{border:none;border-top:1px solid var(--line);margin:1.8em 0}
+.hm-doc table{width:100%;border-collapse:collapse;margin:1.5em 0;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:13.5px;border-radius:12px;overflow:hidden;box-shadow:0 12px 30px -24px rgba(20,30,60,.35)}
+.hm-doc th,.hm-doc td{border:1px solid var(--line);padding:10px 14px;text-align:left;vertical-align:top}
+.hm-doc thead th{background:#eef2fb;font-weight:700;color:var(--ink);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.hm-doc tbody td{color:var(--body)}
+.hm-doc tbody tr:nth-child(even){background:#f7f9fd}
+.hm-doc tbody tr:hover{background:#eef2fb}
+`;
 
 // Self-contained, visually-rich HTML doc for a research report, with an
 // embedded "Save to HIVEMIND" + scope dropdown. On save it postMessages the
@@ -151,6 +200,12 @@ function buildResearchReportHtml(job, scopeOptions = []) {
   article pre{font-family:'IBM Plex Mono',monospace;background:#0c1018;color:#dbe2f0;border-radius:12px;padding:18px;overflow:auto;font-size:13px;line-height:1.6}article pre code{background:none;border:none;color:inherit}
   article blockquote{margin:1em 0;padding:.6em 1.2em;border-left:3px solid var(--accent2);background:linear-gradient(90deg,#f3f6ff,transparent);color:var(--ink);font-style:italic}
   article hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+  article table{width:100%;border-collapse:collapse;margin:1.6em 0;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;box-shadow:0 12px 30px -22px rgba(20,30,60,.35);border-radius:12px;overflow:hidden}
+  article th,article td{border:1px solid var(--line);padding:11px 15px;text-align:left;vertical-align:top}
+  article thead th{background:#eef2fb;font-weight:700;color:var(--ink);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+  article tbody td{color:var(--body)}
+  article tbody tr:nth-child(even){background:#f7f9fd}
+  article tbody tr:hover{background:#eef2fb}
   .sources{margin-top:40px;padding-top:28px;border-top:1px solid var(--line)}
   .sec-h{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin:0 0 18px}
   .src{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line);text-decoration:none}
@@ -188,7 +243,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
     ${sources.length ? `<div class="sources"><div class="sec-h">References · ${sources.length}</div>${sourcesHtml}</div>` : ''}
   </div></div>
   <div class="foot">
-    <div class="made">Made with <b>HIVEMIND</b> · enterprise memory intelligence</div>
+    <div class="made">Built with <b>HIVEMIND</b> · enterprise memory intelligence</div>
     <div class="mk">SINGULANCE</div>
   </div>
   <div class="toolbar">
@@ -931,20 +986,21 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-2xl w-full max-w-[860px] max-h-[88vh] overflow-hidden flex flex-col shadow-2xl"
+        className="bg-white rounded-2xl w-full max-w-[1040px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        <header className="px-5 py-4 border-b border-[#e3e0db] flex items-start justify-between gap-4">
+        <header className="px-7 py-4 border-b border-[#e3e0db] flex items-start justify-between gap-4 bg-white">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={14} className="text-violet-500" />
-              <span className="text-[10px] uppercase tracking-wider font-mono text-[#737373]">research</span>
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <span className="font-['Bricolage_Grotesque'] font-extrabold text-[13px] tracking-[0.05em] text-[#0c1018]">SINGU<span className="text-[#5b8def]">LANCE</span></span>
+              <span className="text-[#d4d9e3]">·</span>
+              <span className="text-[9.5px] uppercase tracking-[0.18em] font-mono text-[#9aa3b2]">Intelligence Report</span>
               <StatusBadge status={job.status} polling={false} />
               {job.duration_ms != null && (
                 <span className="text-[10px] font-mono text-[#a3a3a3]">{formatMs(job.duration_ms)}</span>
               )}
             </div>
-            <h2 className="text-[16px] font-semibold text-[#0a0a0a] leading-tight">{title}</h2>
+            <h2 className="font-['Bricolage_Grotesque'] text-[22px] font-bold text-[#0c1018] leading-tight tracking-[-0.015em]">{title}</h2>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -971,7 +1027,7 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
           </div>
         </header>
 
-        <div className="overflow-y-auto flex-1 px-5 py-4">
+        <div className="overflow-y-auto flex-1 bg-[#eef1f6] px-6 py-7 sm:px-10">
           {saveErr && (
             <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-[12px] text-red-700">
               <AlertTriangle size={12} /> {saveErr}
@@ -987,10 +1043,16 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
             </div>
           )}
 
-          {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
-          {!result && (
-            <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
-          )}
+          <div className="mx-auto max-w-[860px] bg-white border border-[#e2e6ee] rounded-2xl px-8 py-9 sm:px-12 shadow-[0_30px_80px_-50px_rgba(20,30,60,0.35)]">
+            {result && <ResearchReport result={result} fallbackProgress={job.progress} />}
+            {!result && (
+              <div className="text-[12px] text-[#a3a3a3]">{t('webstudio.noReportContent', 'No report content available.')}</div>
+            )}
+            <div className="mt-10 pt-5 border-t border-[#e2e6ee] flex items-center justify-between gap-4">
+              <span className="font-mono text-[10.5px] text-[#6b7280]">Built with <span className="text-[#0c1018] font-medium">HIVEMIND</span> · enterprise memory intelligence</span>
+              <span className="font-['Bricolage_Grotesque'] font-extrabold text-[12px] tracking-[0.06em] text-[#9aa3b2]">SINGULANCE</span>
+            </div>
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -1500,19 +1562,18 @@ function ResearchReport({ result, fallbackProgress }) {
   const sources = Array.isArray(result.sources) ? result.sources : [];
   // Build collapsible step timeline from saved progress[] when present.
   const progress = Array.isArray(fallbackProgress) ? fallbackProgress : [];
-  // Render markdown as plain pre-wrapped text. Heavy markdown formatter
-  // would add a dep; keeping it lightweight + readable.
+  // Render markdown (headings, bold, lists, blockquotes, GFM tables) to the
+  // same editorial look as the standalone report. mdToHtml escapes all HTML
+  // before emitting only its own known tags, so dangerouslySetInnerHTML here
+  // cannot inject markup from the (already-trusted) research output.
   return (
     <div>
+      <style>{RESEARCH_DOC_CSS}</style>
       {progress.length > 0 && (
         <CollapsibleProgress progress={progress} />
       )}
 
-      <article className="prose prose-sm max-w-none">
-        <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
-{text}
-        </pre>
-      </article>
+      <article className="hm-doc" dangerouslySetInnerHTML={{ __html: mdToHtml(text) }} />
 
       {sources.length > 0 && (
         <section className="mt-6 pt-4 border-t border-[#e3e0db]">
