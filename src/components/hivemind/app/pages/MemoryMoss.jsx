@@ -147,6 +147,62 @@ function GhostNode({ data }) {
   );
 }
 
+const PROJECT_PALETTES = [
+  { color: '#117dff', border: 'rgba(17,125,255,0.22)' }, // blue
+  { color: '#10b981', border: 'rgba(16,185,129,0.22)' }, // emerald
+  { color: '#8b5cf6', border: 'rgba(139,92,246,0.22)' }, // violet
+  { color: '#f59e0b', border: 'rgba(245,158,11,0.22)' }, // amber
+  { color: '#ef4444', border: 'rgba(239,68,68,0.22)' },  // red
+  { color: '#0ea5e9', border: 'rgba(14,165,233,0.22)' }, // sky
+  { color: '#ec4899', border: 'rgba(236,72,153,0.22)' }, // pink
+  { color: '#14b8a6', border: 'rgba(20,184,166,0.22)' }, // teal
+];
+
+function getProjectInitials(name) {
+  if (!name) return 'P';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function ProjectNode({ data }) {
+  const { name, initials, colorPalette, isNight } = data;
+  return (
+    <div 
+      className="rounded-full flex items-center gap-2 px-2 py-0.5 transition-all duration-300 hover:scale-105 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]" 
+      style={{ 
+        height: 32, 
+        minWidth: 100, 
+        maxWidth: 220, 
+        background: isNight ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)', 
+        border: `1px solid ${colorPalette.border}`, 
+        backdropFilter: 'blur(10px)',
+        boxShadow: isNight ? '0 4px 14px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.06)',
+      }}
+    >
+      <Handle type="target" position={Position.Top} style={hidden} isConnectable={false} />
+      {/* Circle logo */}
+      <div 
+        className="rounded-full flex items-center justify-center font-bold text-[10px] tracking-tight text-white shrink-0 antialiased"
+        style={{ 
+          width: 22,
+          height: 22,
+          background: colorPalette.color,
+          boxShadow: `0 2px 6px ${colorPalette.color}40`,
+        }}
+      >
+        {initials}
+      </div>
+      {/* Project name */}
+      <span className="truncate pr-1 font-['Space_Grotesk'] text-[11px] font-semibold" style={{ color: isNight ? '#f6f6f4' : '#1a1a1a' }}>
+        {name}
+      </span>
+    </div>
+  );
+}
+
 function AddNode({ data }) {
   const { T } = data;
   return (
@@ -160,7 +216,7 @@ function AddNode({ data }) {
   );
 }
 
-const NODE_TYPES = { sun: SunNode, hub: HubNode, ghost: GhostNode, add: AddNode };
+const NODE_TYPES = { sun: SunNode, hub: HubNode, ghost: GhostNode, add: AddNode, projectNode: ProjectNode };
 const EDGE_TYPES = { floating: FloatingEdge };
 
 export default function MemoryMoss({
@@ -171,8 +227,10 @@ export default function MemoryMoss({
   hubCounts = {},
   hubLeaves = {},          // { projects: ['Acme', ...], ... } real labels per hub
   memories = [],
+  projects = [],           // user's accessible projects
   onSelectPrimary,
   onAddMemory,
+  onSelectProject,
 }) {
   const T = THEMES[theme] || THEMES.day;
   const isNight = theme === 'night';
@@ -194,23 +252,57 @@ export default function MemoryMoss({
         data: { ...p, count: hubCounts[p.key] ?? null, tint: TINT[p.key], T, isNight } });
       es.push({ id: `e-${p.key}`, source: 'core', target: id, type: 'floating', style: { stroke: T.line, strokeWidth: 1.3, strokeDasharray: DASH } });
 
-      // Leaf labels: explicit hubLeaves (e.g. real project names) take priority,
-      // else fall back to matching memory titles.
-      let labels = Array.isArray(hubLeaves[p.key]) && hubLeaves[p.key].length
-        ? hubLeaves[p.key]
-        : memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key).slice(0, 2).map((m) => m.title || m.content);
-      labels = labels.filter(Boolean).slice(0, 6);
-      const gc = labels.length;
-      const wedge = 0.52; // angular fan within the spoke sector
-      for (let g = 0; g < gc; g++) {
-        const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
-        const gr = Rsec + (g % 2) * 72 + (seed(p.key + g) - 0.5) * 26;
-        const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
-        const label = truncate(labels[g]);
-        const w = Math.min(210, 84 + label.length * 5.6);
-        const gid = `ghost-${p.key}-${g}`;
-        ns.push({ id: gid, type: 'ghost', position: { x: gx - w / 2, y: gy - GH }, draggable: false, selectable: false, data: { label, w, T } });
-        es.push({ id: `eg-${p.key}-${g}`, source: id, target: gid, type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
+      if (p.key === 'projects' && Array.isArray(projects) && projects.length > 0) {
+        const gc = projects.length;
+        // Fan wider as projects grow + step radius in 3 tiers so the ~160px
+        // project chips never collide horizontally.
+        const wedge = Math.min(1.35, 0.42 + gc * 0.14);
+        for (let g = 0; g < gc; g++) {
+          const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
+          const gr = Rsec + 20 + (g % 3) * 92;
+          const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
+          
+          const proj = projects[g];
+          const projName = proj.name || 'Project';
+          const initials = getProjectInitials(projName);
+          const colorIdx = Math.floor(seed(projName + g) * PROJECT_PALETTES.length);
+          const colorPalette = PROJECT_PALETTES[colorIdx] || PROJECT_PALETTES[0];
+          
+          const pid = `projNode-${proj.id || g}`;
+          ns.push({
+            id: pid,
+            type: 'projectNode',
+            position: { x: gx - 80, y: gy - 17 },
+            draggable: false,
+            data: { name: projName, initials, T, colorPalette, isNight, ...proj },
+          });
+          es.push({
+            id: `ep-${p.key}-${g}`,
+            source: id,
+            target: pid,
+            type: 'floating',
+            style: { stroke: colorPalette.color, strokeWidth: 1.1, strokeDasharray: DASH, opacity: 0.85 },
+          });
+        }
+      } else {
+        // Leaf labels: explicit hubLeaves (e.g. real project names) take priority,
+        // else fall back to matching memory titles.
+        let labels = Array.isArray(hubLeaves[p.key]) && hubLeaves[p.key].length
+          ? hubLeaves[p.key]
+          : memories.filter((m) => (m.category || m.memory_type || m.type || '').toLowerCase() === p.key).slice(0, 2).map((m) => m.title || m.content);
+        labels = labels.filter(Boolean).slice(0, 6);
+        const gc = labels.length;
+        const wedge = 0.52; // angular fan within the spoke sector
+        for (let g = 0; g < gc; g++) {
+          const ga = gc === 1 ? a : a - wedge / 2 + (wedge * g) / (gc - 1);
+          const gr = Rsec + (g % 2) * 72 + (seed(p.key + g) - 0.5) * 26;
+          const gx = Math.cos(ga) * gr, gy = Math.sin(ga) * gr;
+          const label = truncate(labels[g]);
+          const w = Math.min(210, 84 + label.length * 5.6);
+          const gid = `ghost-${p.key}-${g}`;
+          ns.push({ id: gid, type: 'ghost', position: { x: gx - w / 2, y: gy - GH }, draggable: false, selectable: false, data: { label, w, T } });
+          es.push({ id: `eg-${p.key}-${g}`, source: id, target: gid, type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
+        }
       }
     });
 
@@ -219,12 +311,13 @@ export default function MemoryMoss({
     es.push({ id: 'e-add', source: 'core', target: 'add', type: 'floating', style: { stroke: T.lineDim, strokeWidth: 0.9, strokeDasharray: DASH } });
 
     return { nodes: ns, edges: es };
-  }, [primaries, hubCounts, hubLeaves, memories, T, isNight]);
+  }, [primaries, hubCounts, hubLeaves, memories, projects, T, isNight]);
 
   const onNodeClick = useCallback((_e, node) => {
     if (node.id === 'add') { onAddMemory && onAddMemory(); return; }
     if (node.type === 'hub' && onSelectPrimary) onSelectPrimary(node.data);
-  }, [onAddMemory, onSelectPrimary]);
+    if (node.type === 'projectNode' && onSelectProject) onSelectProject(node.data);
+  }, [onAddMemory, onSelectPrimary, onSelectProject]);
 
   return (
     <div className="relative w-full h-full min-h-[600px] overflow-hidden" style={{ background: T.bg }}>

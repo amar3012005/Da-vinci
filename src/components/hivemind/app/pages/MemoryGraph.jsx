@@ -504,6 +504,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const { org } = useAuth();
   // Real org project names (user-scoped by the backend) for the Projects hub.
   const [projectNames, setProjectNames] = useState([]);
+  const [userInvolvedProjects, setUserInvolvedProjects] = useState([]);
   useEffect(() => {
     if (!org?.id) return undefined;
     let cancelled = false;
@@ -513,6 +514,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         if (!cancelled) setProjectNames(list.map((p) => p.name || p.title).filter(Boolean));
       })
       .catch(() => { /* non-fatal */ });
+
+    apiClient.listAccessibleProjects?.()
+      .then((data) => {
+        const list = data?.projects || data || [];
+        if (!cancelled) setUserInvolvedProjects(Array.isArray(list) ? list : []);
+      })
+      .catch(() => { /* non-fatal */ });
+
     return () => { cancelled = true; };
   }, [org?.id]);
   const graphRef = useRef();
@@ -1370,11 +1379,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             <MemoryMoss
               memories={graphData.nodes}
               orgName={org?.name || 'Your memory'}
-              theme="day"
+              theme={graphTheme === 'night' ? 'night' : 'day'}
               onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
               hubCounts={hubCounts}
               hubLeaves={{ projects: projectNames }}
+              projects={userInvolvedProjects}
+              onSelectProject={(proj) => {
+                if (proj?.slug || proj?.name) {
+                  const target = proj.slug || proj.name;
+                  navigate(`/hivemind/app/memories?project=${target}`);
+                }
+              }}
             />
           </div>
         )}
