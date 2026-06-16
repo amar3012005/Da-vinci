@@ -45,6 +45,7 @@ import LangSwitcher from "../layout/LangSwitcher";
 import { PageIndexViewer } from "../PageIndexViewer";
 import MemoryGraph3D from "./MemoryGraph3D";
 import MemoryGraph2DCanvas from "./MemoryGraph2DCanvas";
+import MemoryMoss from "./MemoryMoss";
 import { PageWalkthrough, GRAPH_STEPS } from "../shared/Walkthrough";
 
 /* ─── Constants ──────────────────────────────────────────────────── */
@@ -489,6 +490,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return dimension;
   });
   const is2D = graphDim === '2d';
+  const isMoss = graphDim === 'moss';
   useEffect(() => {
     try { localStorage.setItem('hivemind:graphDim', graphDim); } catch {}
   }, [graphDim]);
@@ -1029,7 +1031,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
         {/* 3D / 2D toggle — segmented pill */}
         <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
-          {['3d', '2d'].map((dim) => (
+          {['3d', '2d', 'moss'].map((dim) => (
             <button
               key={dim}
               onClick={() => setGraphDim(dim)}
@@ -1038,7 +1040,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   ? toolbarActiveClass
                   : toolbarMutedClass
               }`}
-              title={dim === '3d' ? '3D force graph' : '2D force graph'}
+              title={dim === '3d' ? '3D force graph' : dim === '2d' ? '2D force graph' : 'Organic moss view (curated)'}
             >
               {dim.toUpperCase()}
             </button>
@@ -1245,7 +1247,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           ))}
         </div>
 
-        {graphData.nodes.length > 0 && !is2D && (
+        {graphData.nodes.length > 0 && graphDim === '3d' && (
           <MemoryGraph3D
             ref={graphRef}
             graphData={graphData}
@@ -1312,6 +1314,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               height={
                 typeof window !== "undefined" ? window.innerHeight - 52 : 600
               }
+            />
+          </div>
+        )}
+
+        {/* Organic "moss" view — curated radial growth, glass nodes, light theme */}
+        {graphData.nodes.length > 0 && isMoss && (
+          <div className="absolute inset-0" style={{ right: selectedNode ? 340 : 0 }}>
+            <MemoryMoss
+              memories={graphData.nodes}
+              orgName={org?.name || 'Your memory'}
+              onSelectMemory={handleNodeClick}
+              onAddMemory={() => navigate('/hivemind/app/memories')}
             />
           </div>
         )}

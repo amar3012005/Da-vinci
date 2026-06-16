@@ -22,3 +22,11 @@ if (rootEl.hasChildNodes()) {
 } else {
   createRoot(rootEl).render(tree);
 }
+
+// Register the PWA service worker (enables Android install prompt + offline
+// launch shell). Best-effort; never blocks the app. Served from origin root.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* non-fatal */ });
+  });
+}

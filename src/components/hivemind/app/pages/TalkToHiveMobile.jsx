@@ -34,9 +34,11 @@ import {
   CheckCircle2,
   FileWarning,
   X,
+  Download,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useTeamContext } from '../shared/team-context';
+import PwaInstall from '../shared/PwaInstall';
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
@@ -853,6 +855,12 @@ export default function TalkToHiveMobile() {
                 <Plus size={14} className="text-[#525252]" /> New chat
               </button>
               <button
+                onClick={() => { setMenuOpen(false); window.dispatchEvent(new Event('hive:install')); }}
+                className="w-full text-left px-3 py-2.5 text-[13px] text-[#0a0a0a] active:bg-[#f3f1ec] flex items-center gap-2"
+              >
+                <Download size={14} className="text-[#525252]" /> Install app
+              </button>
+              <button
                 onClick={clearChat}
                 className="w-full text-left px-3 py-2.5 text-[13px] text-[#dc2626] active:bg-[#fef2f2] flex items-center gap-2"
               >
@@ -985,6 +993,9 @@ export default function TalkToHiveMobile() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── PWA install (Android one-tap / iOS Add-to-Home-Screen) ── */}
+      <PwaInstall />
 
       {/* ── Composer ───────────────────────────────── */}
       <div className="flex-shrink-0 px-3 pt-2.5 pb-3 bg-[#faf9f4] border-t border-[#ece9e2]">

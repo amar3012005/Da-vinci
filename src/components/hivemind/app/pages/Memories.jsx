@@ -10,7 +10,6 @@ import {
   X,
   Clock,
   Tag,
-  Layers,
   Monitor,
   AlertTriangle,
   Loader2,
@@ -1964,31 +1963,48 @@ function MemoriesTab({
 
 function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelectedDocument }) {
   const { t } = useTranslation('dashboard');
-  const PAGE_SIZE = 20;
-  // eslint-disable-next-line no-unused-vars
+  const PAGE_SIZE = 40;
   const [offset, setOffset] = useState(0);
   const [documents, setDocuments] = useState([]);
+  const [total, setTotal] = useState(0);
 
   const debouncedQuery = useDebounce(searchQuery, 350);
   const isSearching = debouncedQuery.trim().length > 0;
 
-  // Fetch documents
+  // Reset paging whenever the search term flips.
+  useEffect(() => { setOffset(0); setDocuments([]); }, [debouncedQuery]);
+
+  // Fetch documents (search returns all matches; list is paged + appended).
   const {
     data,
     loading,
     error,
   } = useApiQuery(
     () => isSearching
-      ? apiClient.searchDocuments(debouncedQuery, { limit: PAGE_SIZE })
+      ? apiClient.searchDocuments(debouncedQuery, { limit: 200 })
       : apiClient.listDocuments({ limit: PAGE_SIZE, offset }),
     [isSearching, debouncedQuery, offset]
   );
 
   useEffect(() => {
-    if (data) {
-      setDocuments(isSearching ? (data.results || []) : (data.documents || []));
+    if (!data) return;
+    if (isSearching) {
+      setDocuments(data.results || []);
+      setTotal((data.results || []).length);
+      return;
     }
-  }, [data, isSearching]);
+    const page = data.documents || [];
+    // Append on paging (offset>0), replace on first page. Dedup by id so a
+    // re-fetch of page 0 never double-lists.
+    setDocuments((prev) => {
+      const base = offset === 0 ? [] : prev;
+      const seen = new Set(base.map((d) => d.id));
+      return [...base, ...page.filter((d) => !seen.has(d.id))];
+    });
+    setTotal(data.pagination?.total ?? data.total ?? 0);
+  }, [data, isSearching, offset]);
+
+  const hasMore = !isSearching && total > 0 && documents.length < total;
 
   return (
     <>
@@ -2038,6 +2054,23 @@ function DocumentsTab({ searchQuery, setSearchQuery, selectedDocument, setSelect
               isSelected={selectedDocument?.id === doc.id}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Load more (show ALL uploaded docs, not just the first page) ── */}
+      {!loading && !error && documents.length > 0 && (
+        <div className="flex items-center justify-center gap-3 pt-5">
+          <span className="text-xs text-[#a3a3a3]">
+            {t('memories.showingDocs', 'Showing')} {documents.length}{total ? ` / ${total}` : ''}
+          </span>
+          {hasMore && (
+            <button
+              onClick={() => setOffset((o) => o + PAGE_SIZE)}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-white border border-[#e5e2dc] text-[#525252] hover:bg-[#f5f3ee] transition-colors"
+            >
+              {t('memories.loadMore', 'Load more')}
+            </button>
+          )}
         </div>
       )}
 
@@ -2373,7 +2406,7 @@ function DocumentDetailPanel({ document, onClose }) {
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-[#faf9f4] shadow-2xl overflow-y-auto"
+        className="absolute right-0 top-0 bottom-0 w-full max-w-3xl bg-[#faf9f4] shadow-2xl overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 space-y-6">
@@ -2452,20 +2485,43 @@ function DocumentDetailPanel({ document, onClose }) {
               {detailData.segments && detailData.segments.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-[#0a0a0a] mb-3 flex items-center gap-2">
-                    <Layers size={16} />
-                    {t('memories.segments', 'Segments')} ({detailData.segments.length})
+                    <FileText size={16} />
+                    {t('memories.documentPreview', 'Document preview')}
+                    <span className="text-xs font-normal text-[#a3a3a3]">({detailData.segments.length} {t('memories.segments', 'segments')})</span>
                   </h3>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {detailData.segments.map(seg => (
-                      <div key={seg.id} className="p-3 bg-transparent border border-[#e3e0db] rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-mono text-[#a3a3a3]">{t('memories.segment', 'Segment')} {seg.segmentIndex + 1}</span>
-                          <span className="text-xs font-mono text-[#d4d0ca]">{seg.wordCount} words</span>
-                        </div>
-                        <p className="text-xs text-[#525252] line-clamp-4">{seg.content}</p>
-                      </div>
-                    ))}
+                  {/* Clean rendered extraction: segments ordered by index and
+                      rendered by type into a readable document — full content,
+                      no truncation. */}
+                  <div className="bg-white border border-[#e5e2dc] rounded-xl px-6 py-5 leading-relaxed">
+                    {[...detailData.segments]
+                      .sort((a, b) => (a.segmentIndex ?? 0) - (b.segmentIndex ?? 0))
+                      .map((seg) => {
+                        const text = seg.content || '';
+                        const type = seg.segmentType || 'paragraph';
+                        if (type === 'heading') {
+                          return <h4 key={seg.id} className="text-base font-semibold text-[#0a0a0a] mt-5 mb-1.5 first:mt-0">{text}</h4>;
+                        }
+                        if (type === 'code_block') {
+                          return <pre key={seg.id} className="text-xs font-mono bg-[#f5f3ee] text-[#404040] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap mb-3">{text}</pre>;
+                        }
+                        if (type === 'table') {
+                          return <pre key={seg.id} className="text-xs font-mono bg-[#f5f3ee] text-[#404040] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap mb-3 border border-[#e5e2dc]">{text}</pre>;
+                        }
+                        return <p key={seg.id} className="text-sm text-[#404040] whitespace-pre-wrap mb-3 last:mb-0">{text}</p>;
+                      })}
                   </div>
+                </div>
+              )}
+              {detailData.document && (!detailData.segments || detailData.segments.length === 0) && (
+                <div className="bg-white border border-[#e5e2dc] rounded-xl px-6 py-8 text-center">
+                  <FileText size={20} className="mx-auto mb-2 text-[#d4d0ca]" />
+                  <p className="text-sm text-[#a3a3a3]">
+                    {detailData.document.parseStatus === 'failed'
+                      ? t('memories.parseFailed', 'Extraction failed for this document.')
+                      : detailData.document.parseStatus === 'pending'
+                        ? t('memories.parsePending', 'Extraction still processing…')
+                        : t('memories.noExtraction', 'No extracted content available.')}
+                  </p>
                 </div>
               )}
             </>
