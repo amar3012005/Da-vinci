@@ -161,11 +161,12 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl' : 'max-w-md'}`}
+        className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl md:max-w-[1000px]' : 'max-w-md md:max-w-3xl'}`}
       >
-        <div className="bg-white backdrop-blur-xl border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-col md:flex-row items-stretch gap-6">
+          <div className={`bg-white backdrop-blur-xl border border-[#e3e0db] rounded-2xl p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
+            {/* Logo */}
+            <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
               <Hexagon size={22} className="text-[#117dff]" />
             </div>
@@ -565,23 +566,34 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        {/* Feature pills */}
-        <div className="flex items-center justify-center gap-4 mt-6">
-          {[
-            { icon: Brain, label: 'Persistent Memory' },
-            { icon: Zap, label: 'Sub-50ms Recall' },
-            { icon: Shield, label: 'EU Sovereign' },
-          ].map((feat) => (
-            <div
-              key={feat.label}
-              className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-['Space_Grotesk']"
-            >
-              <feat.icon size={12} />
-              <span>{feat.label}</span>
-            </div>
-          ))}
+        {/* Right side poster image card, matching the main card's height exactly */}
+        <div className="hidden md:flex flex-1 bg-white border border-[#e3e0db] rounded-2xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] items-stretch justify-center overflow-hidden">
+          <img
+            src="/images/hivemind-poster-1.png"
+            alt="HIVEMIND memory system"
+            className="w-full h-full object-cover rounded-xl"
+          />
         </div>
-      </motion.div>
+
+      </div>
+
+      {/* Feature pills */}
+      <div className="flex items-center justify-center gap-4 mt-6">
+        {[
+          { icon: Brain, label: 'Persistent Memory' },
+          { icon: Zap, label: 'Sub-50ms Recall' },
+          { icon: Shield, label: 'EU Sovereign' },
+        ].map((feat) => (
+          <div
+            key={feat.label}
+            className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-['Space_Grotesk']"
+          >
+            <feat.icon size={12} />
+            <span>{feat.label}</span>
+          </div>
+        ))}
+      </div>
+    </motion.div>
     </div>
   );
 }
