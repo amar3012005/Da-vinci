@@ -12,7 +12,7 @@ import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
-  Volume2, MonitorSpeaker,
+  Volume2, MonitorSpeaker, FolderOpen, UserPlus, X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -291,6 +291,17 @@ export default function MeetingNotes() {
   const [detailTab, setDetailTab] = useState('summary');
   const [detailErr, setDetailErr] = useState(false);
 
+  // Meeting setup — participants and scope (set before recording starts)
+  const [participants, setParticipants] = useState([]); // { type:'member'|'external', id?, name, email?, slackName? }
+  const [scope, setScope] = useState('personal'); // 'personal' | 'project' | 'team' | 'organization'
+  const [scopeProjectId, setScopeProjectId] = useState(null);
+  const [orgMembers, setOrgMembers] = useState([]);
+  const [orgProjects, setOrgProjects] = useState([]);
+  // External participant add-form state (local to setup card)
+  const [extName, setExtName] = useState('');
+  const [extEmail, setExtEmail] = useState('');
+  const [extSlack, setExtSlack] = useState('');
+
   const recRef = useRef(null); const chunksRef = useRef([]); const streamRef = useRef(null); const timerRef = useRef(null);
   const audioCtxRef = useRef(null); const teardownRef = useRef([]); // extra streams/ctx to tear down (tab+mic merge)
 
@@ -321,6 +332,24 @@ export default function MeetingNotes() {
     } catch { /* non-fatal */ }
   }, []);
   useEffect(() => { loadMeetings(); }, [loadMeetings]);
+
+  // Load org members and projects for meeting setup (best-effort, non-fatal)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await apiClient.core.get('/api/team/members');
+        if (!cancelled) setOrgMembers(data?.members || []);
+      } catch { /* non-fatal */ }
+    })();
+    (async () => {
+      try {
+        const { data } = await apiClient.core.get('/api/team/projects');
+        if (!cancelled) setOrgProjects(data?.projects || []);
+      } catch { /* non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // The list endpoint is light (no transcript/notes/insights) — fetch the full
   // row when a past meeting is opened so every section + transcript renders.
@@ -377,16 +406,21 @@ export default function MeetingNotes() {
       source_memory_id: sourceMemoryId,
       insights: insights || {},
       notes: notes || null,
+      participants,
+      scope,
+      project_id: scope === 'project' ? scopeProjectId : null,
     }, { timeout: 60000 }); // override the 15s core default — large transcript+insights payloads
     return data;
-  }, [notes]);
+  }, [notes, participants, scope, scopeProjectId]);
 
   // Transcribe ONE segment in the background (fired the instant a segment
   // closes). Failures are swallowed per-segment so one bad 10-min chunk never
   // loses the whole meeting — the rest still stitch.
   const transcribeSegment = useCallback((idx, blob) => {
     setSegTotal((n) => Math.max(n, idx + 1));
-    const p = apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent((notes || '').slice(0, 800))}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 })
+    const participantNames = participants.map((p) => p.name).filter(Boolean).join(', ');
+    const promptHint = [notes, participantNames ? `Participants: ${participantNames}` : ''].filter(Boolean).join(' — ').slice(0, 800);
+    const p = apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent(promptHint)}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 })
       .then((tr) => {
         segTextsRef.current[idx] = tr.data?.transcript || '';
         if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
@@ -395,7 +429,7 @@ export default function MeetingNotes() {
       .catch(() => { if (segTextsRef.current[idx] === undefined) segTextsRef.current[idx] = ''; })
       .finally(() => setSegDone((n) => n + 1));
     segPromisesRef.current.push(p);
-  }, [multiSpeaker, notes]);
+  }, [multiSpeaker, notes, participants]);
 
   // Roll one segment recorder on the live stream. On stop it ships the segment
   // for transcription and (unless we're finalizing) immediately starts the next
@@ -428,7 +462,7 @@ export default function MeetingNotes() {
       if (!text) { setStatus('error'); setError('No speech detected.'); return; }
       setStatus('analyzing');
       const input = segs.length ? segs.map((s) => `${s.speaker}: ${s.text}`).join('\n') : text;
-      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes }, { timeout: 240000 });
+      const ins = await apiClient.core.post('/api/meetings/insights', { transcript: input, notes, participants: participants.map((p) => p.name) }, { timeout: 240000 });
       const insights = ins.data?.insights || null;
       setInsights(insights); setStatus('done');
       try {
@@ -437,7 +471,7 @@ export default function MeetingNotes() {
         loadMeetings();
       } catch { /* non-fatal — recording is still usable / re-savable */ }
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
-  }, [notes, persistRow, loadMeetings]);
+  }, [notes, participants, persistRow, loadMeetings]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
@@ -445,6 +479,15 @@ export default function MeetingNotes() {
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
     segTextsRef.current = {}; segSegsRef.current = {}; languageRef.current = null;
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
+
+    // Best-effort invite for external participants — do not await, never block recording
+    const extWithEmail = participants.filter((p) => p.type === 'external' && p.email);
+    if (extWithEmail.length) {
+      apiClient.core.post('/api/meetings/invite', {
+        participants: extWithEmail,
+        title: (notes || '').slice(0, 120) || 'Meeting',
+      }).catch(() => {});
+    }
 
     // Mic is always part of the recording (your voice). In 'tab' mode we ALSO
     // capture the meeting tab's audio (everyone else) and merge the two.
@@ -493,7 +536,7 @@ export default function MeetingNotes() {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
     }, SEGMENT_MS);
     timerRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
-  }, [cleanup, startSegmentRecorder, captureMode, SEGMENT_MS]);
+  }, [cleanup, startSegmentRecorder, captureMode, SEGMENT_MS, participants, notes]);
 
   const stop = useCallback(() => {
     finalizingRef.current = true; // halt rotation re-arm
@@ -610,6 +653,156 @@ export default function MeetingNotes() {
                 </button>
               )}
             </div>
+
+            {/* ── Meeting setup — participants + scope (idle only) ─────── */}
+            {status === 'idle' && (
+              <div className="mb-4 rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] p-4 space-y-4">
+                {/* PARTICIPANTS */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users size={13} className="text-[#117dff]" />
+                    <span className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">Participants</span>
+                  </div>
+                  {/* Org member chips */}
+                  {orgMembers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {orgMembers.map((m) => {
+                        const u = m.user || m;
+                        const id = u.id;
+                        const name = u.displayName || u.email || id;
+                        const isOn = participants.some((p) => p.type === 'member' && p.id === id);
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              setParticipants((prev) =>
+                                isOn
+                                  ? prev.filter((p) => !(p.type === 'member' && p.id === id))
+                                  : [...prev, { type: 'member', id, name, email: u.email }]
+                              );
+                            }}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${
+                              isOn
+                                ? 'bg-[#117dff] text-white border-[#117dff]'
+                                : 'bg-white text-[#525252] border-[#e3e0db] hover:border-[#117dff]/50'
+                            }`}
+                          >
+                            <User size={10} />
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* External participants — added chips */}
+                  {participants.filter((p) => p.type === 'external').length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {participants.map((p, globalIdx) => p.type !== 'external' ? null : (
+                        <span key={globalIdx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#f59e0b]/10 text-[#b45309] border border-[#f59e0b]/30">
+                          <UserPlus size={10} />
+                          {p.name}
+                          <button
+                            type="button"
+                            onClick={() => setParticipants((prev) => prev.filter((_, j) => j !== globalIdx))}
+                            className="ml-0.5 hover:text-[#ef4444] transition-colors"
+                            aria-label={`Remove ${p.name}`}
+                          >
+                            <X size={9} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Add external mini-form */}
+                  <details className="group">
+                    <summary className="flex items-center gap-1 cursor-pointer text-[11px] text-[#737373] hover:text-[#0a0a0a] list-none select-none">
+                      <UserPlus size={12} className="text-[#a3a3a3] group-open:text-[#117dff]" />
+                      Add external participant
+                    </summary>
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={extName}
+                        onChange={(e) => setExtName(e.target.value)}
+                        className="px-2.5 py-1.5 text-[12px] rounded-[6px] border border-[#e3e0db] bg-white focus:outline-none focus:border-[#117dff]/40 placeholder-[#a3a3a3]"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email (optional)"
+                        value={extEmail}
+                        onChange={(e) => setExtEmail(e.target.value)}
+                        className="px-2.5 py-1.5 text-[12px] rounded-[6px] border border-[#e3e0db] bg-white focus:outline-none focus:border-[#117dff]/40 placeholder-[#a3a3a3]"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Slack name (optional)"
+                        value={extSlack}
+                        onChange={(e) => setExtSlack(e.target.value)}
+                        className="px-2.5 py-1.5 text-[12px] rounded-[6px] border border-[#e3e0db] bg-white focus:outline-none focus:border-[#117dff]/40 placeholder-[#a3a3a3]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!extName.trim()}
+                      onClick={() => {
+                        if (!extName.trim()) return;
+                        setParticipants((prev) => [...prev, { type: 'external', name: extName.trim(), email: extEmail.trim() || undefined, slackName: extSlack.trim() || undefined }]);
+                        setExtName(''); setExtEmail(''); setExtSlack('');
+                      }}
+                      className="mt-1.5 flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-[#0a0a0a] text-white text-[11px] font-medium hover:bg-[#262626] disabled:opacity-40 transition-colors"
+                    >
+                      <UserPlus size={11} /> Add
+                    </button>
+                  </details>
+                </div>
+
+                {/* SCOPE */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <FolderOpen size={13} className="text-[#117dff]" />
+                    <span className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider">Save memories to</span>
+                  </div>
+                  <div className="inline-flex items-center gap-0.5 bg-white border border-[#e3e0db] rounded-[8px] p-0.5 flex-wrap">
+                    {[
+                      { id: 'personal', label: 'Personal', Icon: User },
+                      { id: 'project', label: 'Project', Icon: FolderOpen },
+                      { id: 'team', label: 'Team', Icon: Users },
+                      { id: 'organization', label: 'Org', Icon: Building2 },
+                    ].map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => { setScope(id); if (id !== 'project') setScopeProjectId(null); }}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-[6px] text-[11px] font-medium transition-colors ${
+                          scope === id ? 'bg-[#0a0a0a] text-white' : 'text-[#525252] hover:bg-[#faf9f4]'
+                        }`}
+                      >
+                        <Icon size={11} /> {label}
+                      </button>
+                    ))}
+                  </div>
+                  {scope === 'project' && orgProjects.length > 0 && (
+                    <div className="mt-2">
+                      <select
+                        value={scopeProjectId || ''}
+                        onChange={(e) => setScopeProjectId(e.target.value || null)}
+                        className="px-2.5 py-1.5 text-[12px] rounded-[6px] border border-[#e3e0db] bg-white focus:outline-none focus:border-[#117dff]/40 text-[#0a0a0a]"
+                      >
+                        <option value="">Select project…</option>
+                        {orgProjects.map((proj) => (
+                          <option key={proj.id} value={proj.id}>{proj.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {scope === 'project' && orgProjects.length === 0 && (
+                    <p className="mt-1.5 text-[11px] text-[#a3a3a3]">No projects found.</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Capture source — mic only vs the whole call (tab audio + mic) */}
             <div className="mb-3">
