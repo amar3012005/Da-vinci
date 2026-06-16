@@ -105,75 +105,113 @@ function buildResearchReportHtml(job, scopeOptions = []) {
         <span class="src-b"><span class="src-t">${(s.title || s.url || '').replace(/</g, '&lt;')}</span>
         <span class="src-u">${(s.url || '').replace(/</g, '&lt;')}</span></span></a>`).join('');
 
+  const yr = new Date(job.createdAt || job.created_at || Date.now()).getFullYear();
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>${title.replace(/</g, '&lt;')} · HIVEMIND Research</title>
+<title>${title.replace(/</g, '&lt;')} — SINGULANCE Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#faf9f4;--card:#fff;--ink:#0a0a0a;--body:#3f3f46;--sub:#737373;--muted:#a3a3a3;--line:#e3e0db;--accent:#117dff;--violet:#8b5cf6}
-  *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;line-height:1.65}
-  .wrap{max-width:880px;margin:0 auto;padding:0 24px 130px}
-  .hero{background:linear-gradient(135deg,#0a0a0a 0%,#1d1b3a 55%,#3b2f6b 100%);color:#fff;padding:48px 0 42px;margin-bottom:-28px}
-  .hero-in{max-width:880px;margin:0 auto;padding:0 24px}
-  .eyebrow{font-family:'Space Grotesk';font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#b9b4e6;display:flex;align-items:center;gap:8px}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--violet);box-shadow:0 0 10px var(--violet)}
-  h1.title{font-family:'Space Grotesk';font-weight:700;font-size:30px;line-height:1.2;margin:14px 0 16px}
-  .meta{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{font-family:'Space Grotesk';font-size:11px;font-weight:500;color:#e7e5f5;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 10px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px 36px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-  article h1,article h2,article h3,article h4{font-family:'Space Grotesk';line-height:1.3;margin:1.6em 0 .5em;color:var(--ink)}
-  article h1{font-size:23px}article h2{font-size:19px;padding-top:.3em;border-top:1px solid #f0eee9}article h3{font-size:16px}article h4{font-size:14px;color:var(--sub)}
-  article p{margin:.7em 0;color:var(--body);font-size:15px}
-  article ul,article ol{margin:.6em 0;padding-left:1.4em}article li{margin:.3em 0;color:var(--body);font-size:15px}
-  article a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(17,125,255,.25)}article a:hover{border-bottom-color:var(--accent)}
-  article code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:#f3f1ec;border:1px solid #eae7e1;border-radius:5px;padding:.1em .4em}
-  article pre{background:#0f0f12;color:#e6e6ea;border-radius:10px;padding:16px;overflow:auto;font-size:13px}article pre code{background:none;border:none;color:inherit}
-  article blockquote{margin:.8em 0;padding:.4em 1em;border-left:3px solid var(--violet);background:#faf8ff;color:var(--body);border-radius:0 8px 8px 0}
-  article hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
-  .sec-h{font-family:'Space Grotesk';font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sub);margin:0 0 14px;display:flex;align-items:center;gap:8px}
-  .sources{margin-top:28px}
-  .src{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;text-decoration:none;background:#fff;transition:border-color .15s,transform .15s}
-  .src:hover{border-color:var(--accent);transform:translateY(-1px)}
-  .src-n{flex:0 0 auto;width:22px;height:22px;border-radius:7px;background:#eef4ff;color:var(--accent);font-family:'Space Grotesk';font-weight:600;font-size:11px;display:grid;place-items:center}
-  .src-b{min-width:0}.src-t{display:block;font-weight:600;font-size:13px;color:var(--ink)}.src-u{display:block;font-size:11px;color:var(--muted);font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .toolbar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(15,15,18,.94);backdrop-filter:blur(10px);border:1px solid #2a2a30;border-radius:14px;padding:10px 12px;box-shadow:0 12px 40px rgba(0,0,0,.35);z-index:50}
-  .toolbar select{font-family:'Space Grotesk';font-size:12px;color:#fff;background:#1c1c22;border:1px solid #34343c;border-radius:9px;padding:8px 10px;outline:none;cursor:pointer}
-  .btn{font-family:'Space Grotesk';font-size:12px;font-weight:600;border:none;border-radius:9px;padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  .btn-save{background:var(--accent);color:#fff}.btn-save:hover{background:#0066e0}.btn-save:disabled{opacity:.55;cursor:default}
-  .btn-print{background:#26262e;color:#cfcfd6}.btn-print:hover{background:#32323c}
-  .toast{font-family:'Space Grotesk';font-size:12px;color:#9ad7a0;max-width:230px;line-height:1.3}
-  @media print{.toolbar{display:none}}
+  :root{--bg:#eef1f6;--paper:#fff;--ink:#0c1018;--body:#3a4150;--sub:#6b7280;--muted:#9aa3b2;--line:#dfe4ec;--accent:#2f4a8a;--accent2:#5b8def}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Newsreader,Georgia,serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  /* soft gradient auras — the reference's blurred orbs */
+  body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
+  body::before{width:520px;height:520px;top:-160px;right:-120px;background:radial-gradient(circle at 30% 30%,#9db8ff,#c9b6f5 55%,transparent 72%)}
+  body::after{width:460px;height:460px;bottom:-140px;left:-120px;background:radial-gradient(circle at 50% 50%,#7fe6ef,#9db8ff 55%,transparent 72%)}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .grot{font-family:'Bricolage Grotesque',sans-serif}
+  /* top brand bar */
+  .topbar{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:26px 28px 0;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-family:'Bricolage Grotesque';font-weight:800;font-size:18px;letter-spacing:.04em;color:var(--ink)}
+  .brand b{color:var(--accent2)}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub)}
+  /* hero */
+  .hero{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:46px 28px 30px}
+  .hero .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:9px;margin-bottom:18px}
+  .hero .tag i{width:7px;height:7px;border-radius:50%;background:var(--accent2);box-shadow:0 0 12px var(--accent2);font-style:normal}
+  h1.title{font-family:'Bricolage Grotesque';font-weight:700;font-size:clamp(34px,6vw,68px);line-height:1.02;letter-spacing:-.02em;margin:0 0 22px;max-width:18ch}
+  .meta{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0}
+  .meta div{padding:0 22px;border-right:1px solid var(--line)}.meta div:first-child{padding-left:0}.meta div:last-child{border-right:none}
+  .meta .k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  .meta .v{font-family:'Bricolage Grotesque';font-weight:600;font-size:15px;color:var(--ink)}
+  /* paper */
+  .wrap{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 28px 150px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:48px 56px;box-shadow:0 30px 80px -40px rgba(20,30,60,.25)}
+  article{font-size:17px;color:var(--body)}
+  article h1,article h2,article h3,article h4{font-family:'Bricolage Grotesque';color:var(--ink);line-height:1.18;letter-spacing:-.015em}
+  article h1{font-size:30px;margin:1.4em 0 .5em}
+  article h2{font-size:23px;margin:1.5em 0 .5em;padding-top:.7em;border-top:1px solid var(--line)}
+  article h3{font-size:18px;margin:1.3em 0 .4em}article h4{font-size:15px;color:var(--sub);margin:1.2em 0 .3em;font-weight:600}
+  article p{margin:.85em 0}
+  article ul,article ol{margin:.7em 0;padding-left:1.3em}article li{margin:.45em 0}
+  article strong{color:var(--ink);font-weight:600}
+  article a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(47,74,138,.3)}article a:hover{border-bottom-color:var(--accent)}
+  article code{font-family:'IBM Plex Mono',monospace;font-size:.84em;background:#eef1f6;border:1px solid var(--line);border-radius:5px;padding:.12em .42em}
+  article pre{font-family:'IBM Plex Mono',monospace;background:#0c1018;color:#dbe2f0;border-radius:12px;padding:18px;overflow:auto;font-size:13px;line-height:1.6}article pre code{background:none;border:none;color:inherit}
+  article blockquote{margin:1em 0;padding:.6em 1.2em;border-left:3px solid var(--accent2);background:linear-gradient(90deg,#f3f6ff,transparent);color:var(--ink);font-style:italic}
+  article hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+  .sources{margin-top:40px;padding-top:28px;border-top:1px solid var(--line)}
+  .sec-h{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--sub);margin:0 0 18px}
+  .src{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line);text-decoration:none}
+  .src:hover .src-t{color:var(--accent)}
+  .src-n{flex:0 0 auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent2);font-weight:500}
+  .src-b{min-width:0}.src-t{display:block;font-family:'Bricolage Grotesque';font-weight:600;font-size:15px;color:var(--ink);transition:color .15s}
+  .src-u{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  /* footer */
+  .foot{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:0 28px 60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .foot .made{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--sub)}
+  .foot .made b{color:var(--ink);font-weight:500}
+  .foot .mk{font-family:'Bricolage Grotesque';font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--muted)}
+  /* floating glass toolbar */
+  .toolbar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.82);backdrop-filter:blur(16px) saturate(1.4);border:1px solid #d6dbe6;border-radius:16px;padding:10px 12px;box-shadow:0 18px 50px -12px rgba(20,30,60,.35);z-index:50}
+  .toolbar select{font-family:'Bricolage Grotesque';font-weight:600;font-size:12px;color:var(--ink);background:#f2f4f9;border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none;cursor:pointer}
+  .btn{font-family:'Bricolage Grotesque';font-size:12px;font-weight:700;border:none;border-radius:10px;padding:10px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:filter .15s}
+  .btn-save{background:linear-gradient(135deg,#2f4a8a,#5b8def);color:#fff}.btn-save:hover{filter:brightness(1.08)}.btn-save:disabled{opacity:.55;cursor:default}
+  .btn-print{background:#eceff5;color:#3a4150}.btn-print:hover{background:#e2e6ee}
+  .toast{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#2e7d4f;max-width:240px;line-height:1.35}
+  @media (max-width:640px){.card{padding:30px 22px}.meta div{padding:0 14px}}
+  @media print{.toolbar{display:none}body::before,body::after{display:none}.card{box-shadow:none}}
 </style></head><body>
-  <div class="hero"><div class="hero-in">
-    <div class="eyebrow"><span class="dot"></span> HIVEMIND · DEEP RESEARCH</div>
+  <div class="topbar"><div class="brand">SINGU<b>LANCE</b></div><div class="kicker">Intelligence Report · ${yr}</div></div>
+  <div class="hero">
+    <div class="tag"><i></i> Deep Research Dossier</div>
     <h1 class="title">${title.replace(/</g, '&lt;')}</h1>
-    <div class="meta"><span class="chip">🔮 ${model}</span>${dur ? `<span class="chip">⚡ ${dur}</span>` : ''}<span class="chip">📚 ${sources.length} sources</span><span class="chip">🗓 ${dateStr}</span></div>
-  </div></div>
+    <div class="meta">
+      <div><span class="k">Model</span><span class="v">${model}</span></div>
+      ${dur ? `<div><span class="k">Compiled in</span><span class="v">${dur}</span></div>` : ''}
+      <div><span class="k">Sources</span><span class="v">${sources.length}</span></div>
+      <div><span class="k">Issued</span><span class="v">${dateStr}</span></div>
+    </div>
+  </div>
   <div class="wrap"><div class="card"><article>${bodyHtml}</article>
-    ${sources.length ? `<div class="sources"><div class="sec-h">📚 Sources (${sources.length})</div>${sourcesHtml}</div>` : ''}
+    ${sources.length ? `<div class="sources"><div class="sec-h">References · ${sources.length}</div>${sourcesHtml}</div>` : ''}
   </div></div>
+  <div class="foot">
+    <div class="made">Made with <b>HIVEMIND</b> · enterprise memory intelligence</div>
+    <div class="mk">SINGULANCE</div>
+  </div>
   <div class="toolbar">
     <select id="hm-scope" title="Where to save">${optionsHtml}</select>
-    <button class="btn btn-save" id="hm-save">💾 Save to HIVEMIND</button>
-    <button class="btn btn-print" onclick="window.print()">🖨 Print</button>
+    <button class="btn btn-save" id="hm-save">Save to HIVEMIND</button>
+    <button class="btn btn-print" onclick="window.print()">Print</button>
     <span class="toast" id="hm-toast"></span>
   </div>
 <script>
   (function(){
     var JOB=${J(job.id)};
     var btn=document.getElementById('hm-save'),sel=document.getElementById('hm-scope'),toast=document.getElementById('hm-toast');
-    function setToast(m,ok){toast.textContent=m;toast.style.color=ok?'#9ad7a0':'#f0a0a0';}
+    function setToast(m,ok){toast.textContent=m;toast.style.color=ok?'#2e7d4f':'#c0392b';}
     btn.addEventListener('click',function(){
       if(!window.opener){setToast('Open from HIVEMIND to enable saving',false);return;}
-      btn.disabled=true;btn.textContent='⏳ Saving…';setToast('',true);
+      btn.disabled=true;btn.textContent='Saving…';setToast('',true);
       var o=sel.options[sel.selectedIndex];
       window.opener.postMessage({type:'hm-save-research',jobId:JOB,scope:o.dataset.scope||'personal',projectId:o.dataset.project||null,scopeLabel:o.text},'*');
     });
     window.addEventListener('message',function(e){
       var d=e.data||{};if(d.type!=='hm-save-result'||d.jobId!==JOB)return;
-      if(d.ok){btn.textContent='✅ Saved';setToast((d.memories||0)+' memories saved · '+(d.scopeLabel||''),true);}
-      else{btn.disabled=false;btn.textContent='💾 Save to HIVEMIND';setToast('Save failed: '+(d.error||'error'),false);}
+      if(d.ok){btn.textContent='✓ Saved';setToast((d.memories||0)+' memory saved · '+(d.scopeLabel||''),true);}
+      else{btn.disabled=false;btn.textContent='Save to HIVEMIND';setToast('Save failed: '+(d.error||'error'),false);}
     });
   })();
 </script></body></html>`;
