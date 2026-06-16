@@ -847,6 +847,31 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   const matchCount = highlightNodes.size;
 
+  const hubCounts = useMemo(() => {
+    const counts = { projects: 0, meetings: 0, connectors: 0, employees: 0, personal: 0, knowledge: 0 };
+    graphData.nodes.forEach((n) => {
+      const cat = (n.category || n.type || '').toLowerCase();
+      if (cat === 'project' || cat === 'projects') counts.projects++;
+      else if (cat === 'meeting' || cat === 'meetings') counts.meetings++;
+      else if (cat === 'connector' || cat === 'connectors') counts.connectors++;
+      else if (cat === 'employee' || cat === 'employees') counts.employees++;
+      else if (cat === 'personal') counts.personal++;
+      else if (cat === 'knowledge' || cat === 'fact' || cat === 'decision') counts.knowledge++;
+    });
+    // Fallback: distribute evenly if no categories found
+    if (counts.projects + counts.meetings + counts.connectors + counts.employees + counts.personal + counts.knowledge === 0) {
+      const perHub = Math.floor(graphData.nodes.length / 6);
+      const remainder = graphData.nodes.length % 6;
+      counts.projects = perHub + (remainder > 0 ? 1 : 0);
+      counts.meetings = perHub + (remainder > 1 ? 1 : 0);
+      counts.connectors = perHub + (remainder > 2 ? 1 : 0);
+      counts.employees = perHub + (remainder > 3 ? 1 : 0);
+      counts.personal = perHub + (remainder > 4 ? 1 : 0);
+      counts.knowledge = perHub + (remainder > 5 ? 1 : 0);
+    }
+    return counts;
+  }, [graphData.nodes]);
+
   const temporalNodes = useMemo(() => {
     return graphData.nodes
       .map((node) => ({ node, timestamp: getNodeTimestamp(node) }))
@@ -1318,14 +1343,24 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           </div>
         )}
 
-        {/* Organic "moss" view — curated radial growth, glass nodes, light theme */}
+        {/* Organic constellation view — explicit viewport sizing (mirrors the
+            2D/3D canvases) so it centers correctly instead of inheriting an
+            over-tall container. */}
         {graphData.nodes.length > 0 && isMoss && (
-          <div className="absolute inset-0" style={{ right: selectedNode ? 340 : 0 }}>
+          <div
+            className="absolute top-0 left-0 overflow-hidden"
+            style={{
+              width: typeof window !== 'undefined' ? window.innerWidth - (selectedNode ? 340 : 0) : 800,
+              height: typeof window !== 'undefined' ? window.innerHeight - 52 : 600,
+            }}
+          >
             <MemoryMoss
               memories={graphData.nodes}
               orgName={org?.name || 'Your memory'}
+              theme={graphTheme === 'night' ? 'night' : 'day'}
               onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
+              hubCounts={hubCounts}
             />
           </div>
         )}
