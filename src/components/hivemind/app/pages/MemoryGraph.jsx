@@ -543,6 +543,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
+  // Guards: prevent the mount fetch + the deferred warm fetch from both
+  // hitting the network (double round-trip on every refresh). hasPaintedRef
+  // lets the warm skip entirely once data is on screen.
+  const fetchInFlightRef = useRef(false);
+  const hasPaintedRef = useRef(false);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -638,9 +643,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       // Cap stale display at 24h — older than that, don't bother
       if (Date.now() - (cached.savedAt || 0) > 24 * 60 * 60 * 1000) return false;
       const { nodes, links } = normalizeGraphPayload(cached.nodes, cached.edges);
+      const nodeIdSet = new Set(nodes.map((node) => node.id));
       setGraphData({ nodes, links });
-      setRawEdges(cached.edges.filter((edge) => nodes.some((node) => node.id === edge.source) && nodes.some((node) => node.id === edge.target)));
+      setRawEdges(cached.edges.filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
       setMeta(cached.meta || null);
+      if (nodes.length) hasPaintedRef.current = true;
       return true;
     } catch (_e) {
       return false;
@@ -649,6 +656,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   // Fetch graph data — uses cached snapshot for instant render, then revalidates.
   const fetchGraph = useCallback(async () => {
+    // De-dupe concurrent calls (mount effect + deferred warm) — one network
+    // round-trip per refresh, not two.
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
     const hadCache = hydrateFromCache();
     // Only show spinner if no cache to display
     setLoading(!hadCache);
@@ -681,8 +692,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         nodes = norm.nodes; links = norm.links;
       }
       setGraphData({ nodes, links });
-      setRawEdges((data.edges || []).filter((edge) => nodes.some((node) => node.id === edge.source) && nodes.some((node) => node.id === edge.target)));
+      const nodeIdSet = new Set(nodes.map((node) => node.id));
+      setRawEdges((data.edges || []).filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)));
       setMeta(data.meta || null);
+      if (nodes.length) hasPaintedRef.current = true;
       // Persist for next mount — show instantly on refresh
       try {
         const snapshot = {
@@ -705,6 +718,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
       }
     } finally {
       setLoading(false);
+      fetchInFlightRef.current = false;
     }
   }, [projectFilter, scope, tierProject, nodeLimit, hydrateFromCache, cacheKey, intelligentMode, edgeTypeFilter, activeProject?.id]);
 
@@ -789,7 +803,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // Fire one deferred re-fetch shortly after mount so the graph reliably
   // paints (and the WebGL viewport re-measures) on first visit.
   useEffect(() => {
-    const t = window.setTimeout(() => fetchGraph(), 650);
+    // Only fire the warm re-fetch if the first paint never happened (the
+    // blank-canvas race this guards). If data already painted from cache or
+    // the mount fetch, skip — no redundant second network round-trip.
+    const t = window.setTimeout(() => {
+      if (!hasPaintedRef.current) fetchGraph();
+    }, 650);
     return () => window.clearTimeout(t);
     // mount-only warm — fetchGraph identity is stable enough for this nudge
     // eslint-disable-next-line react-hooks/exhaustive-deps
