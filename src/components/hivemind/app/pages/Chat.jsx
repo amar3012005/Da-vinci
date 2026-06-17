@@ -16,8 +16,11 @@ import {
   CheckCircle2,
   Sparkles,
   Zap,
+  Mic,
+  Square,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -836,6 +839,13 @@ export function ChatPanel({ isOpen, onClose }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
+
+  // Push-to-talk dictation — same Groq Whisper path as AI Meeting Notes.
+  // Appends transcript to the composer; user can edit before sending.
+  const dictation = useDictation((text) => {
+    setInput((prev) => (prev ? prev.replace(/\s*$/, '') + ' ' : '') + text);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  });
   // Active upload rows — { id, name, status, progress, title, memoryId, error }
   const [uploads, setUploads] = useState([]);
   const updateUpload = useCallback((id, patch) =>
@@ -1230,6 +1240,24 @@ export function ChatPanel({ isOpen, onClose }) {
                       {charCount}/{MAX_CHARS}
                     </span>
                   )}
+                  {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
+                  <button
+                    onClick={dictation.toggle}
+                    disabled={dictation.state === 'transcribing' || loading}
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 ${
+                      dictation.state === 'recording'
+                        ? 'bg-[#ef4444] text-white animate-pulse'
+                        : 'text-[#a3a3a3] hover:text-[#117dff] hover:bg-white border border-transparent hover:border-[#e3e0db]'
+                    }`}
+                    title={dictation.error || (dictation.state === 'recording' ? 'Stop & transcribe' : 'Speak')}
+                    aria-label={dictation.state === 'recording' ? 'Stop recording' : 'Dictate'}
+                  >
+                    {dictation.state === 'transcribing'
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : dictation.state === 'recording'
+                        ? <Square size={12} />
+                        : <Mic size={14} />}
+                  </button>
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || loading || overLimit}

@@ -35,8 +35,11 @@ import {
   FileWarning,
   X,
   Download,
+  Mic,
+  Square,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import PwaInstall from '../shared/PwaInstall';
 
@@ -538,6 +541,16 @@ export default function TalkToHiveMobile() {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Push-to-talk dictation — same Groq Whisper path as AI Meeting Notes.
+  // Appends transcript to the composer; user can edit before sending.
+  const dictation = useDictation((text) => {
+    setInput((prev) => {
+      const next = (prev ? prev.replace(/\s*$/, '') + ' ' : '') + text;
+      return next.slice(0, MAX_CHARS);
+    });
+    requestAnimationFrame(() => inputRef.current?.focus());
+  });
+
   // Persist messages.
   useEffect(() => { saveMsgs(messages); }, [messages]);
 
@@ -1036,6 +1049,24 @@ export default function TalkToHiveMobile() {
             className="flex-1 resize-none border-none outline-none bg-transparent text-[15px] py-2 placeholder:text-[#c0bcb4] max-h-[120px] leading-snug"
             style={{ fontFamily: 'inherit' }}
           />
+          {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
+          <button
+            onClick={dictation.toggle}
+            disabled={dictation.state === 'transcribing' || loading}
+            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 active:scale-95 transition-all disabled:opacity-40 ${
+              dictation.state === 'recording'
+                ? 'bg-[#ef4444] text-white animate-pulse'
+                : 'text-[#525252] active:bg-[#ece9e2]/60'
+            }`}
+            aria-label={dictation.state === 'recording' ? 'Stop recording' : 'Dictate'}
+            title={dictation.error || (dictation.state === 'recording' ? 'Stop & transcribe' : 'Speak')}
+          >
+            {dictation.state === 'transcribing'
+              ? <Loader2 size={18} className="animate-spin" />
+              : dictation.state === 'recording'
+                ? <Square size={16} />
+                : <Mic size={18} />}
+          </button>
           <button
             onClick={send}
             disabled={!input.trim() || loading}
