@@ -415,6 +415,19 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Per-character connector grants (P4 HyperAgents×Connectors).
+  // { "<employeeId>": ["github","notion",...] }
+  async getRoomConnectors(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/connectors`);
+    return data; // { agent_connectors }
+  }
+  async setRoomConnectors(roomId, agentConnectors) {
+    const { data } = await this.controlPlane.patch(`/v1/hyper-rooms/${roomId}/connectors`, {
+      agent_connectors: agentConnectors,
+    });
+    return data; // { ok, agent_connectors }
+  }
+
   // Mint a short-lived Cartesia agent access token (server holds the key).
   async mintCartesiaToken() {
     const { data } = await this.controlPlane.post('/v1/tara/cartesia-token', {});
