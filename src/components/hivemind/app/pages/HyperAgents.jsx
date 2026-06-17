@@ -34,12 +34,14 @@ import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 // 3rd-party connector catalog (mirrors core/src/connectors/mcp/catalog-seed.js).
 // Granting one to a character gives that agent its live MCP tools in the room.
 const ROOM_CONNECTORS = [
-  { id: 'github', label: 'GitHub', color: '#24292f' },
-  { id: 'notion', label: 'Notion', color: '#0a0a0a' },
-  { id: 'slack', label: 'Slack', color: '#611f69' },
-  { id: 'hubspot', label: 'HubSpot', color: '#ff7a59' },
-  { id: 'airtable', label: 'Airtable', color: '#2d7ff9' },
-  { id: 'linear', label: 'Linear', color: '#5e6ad2' },
+  { id: 'gmail', label: 'Gmail', color: '#ea4335', desc: 'Read & search email' },
+  { id: 'google_docs', label: 'Google Docs', color: '#1a73e8', desc: 'Create & write docs' },
+  { id: 'github', label: 'GitHub', color: '#24292f', desc: 'Repos, issues, PRs' },
+  { id: 'notion', label: 'Notion', color: '#0a0a0a', desc: 'Pages & databases' },
+  { id: 'slack', label: 'Slack', color: '#611f69', desc: 'Channels & messages' },
+  { id: 'hubspot', label: 'HubSpot', color: '#ff7a59', desc: 'CRM records' },
+  { id: 'airtable', label: 'Airtable', color: '#2d7ff9', desc: 'Bases & records' },
+  { id: 'linear', label: 'Linear', color: '#5e6ad2', desc: 'Issues & projects' },
 ];
 
 function relTime(ts) {
@@ -1015,7 +1017,6 @@ function RoomThread({ roomId, onArchived }) {
         {showConnectors && (
           <RoomToolsModal
             room={room}
-            participants={participants}
             onClose={() => setShowConnectors(false)}
           />
         )}
@@ -2941,11 +2942,11 @@ function CreateRoomModal({ onClose, onCreated }) {
 
 /* ─── Agent picker modal (add to room) ───────────────────────────────── */
 
-/* ─── Room tools — per-character connector grants (P4) ──────────────── */
+/* ─── Room tools — room-level connector toggles (like the web tool) ──── */
 
-function RoomToolsModal({ room, participants, onClose }) {
+function RoomToolsModal({ room, onClose }) {
   const { t } = useTranslation('dashboard');
-  const [grants, setGrants] = useState({});          // { employeeId: [connectorId] }
+  const [enabled, setEnabled] = useState(new Set());   // connector ids on for the room
   const [connected, setConnected] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2957,17 +2958,19 @@ function RoomToolsModal({ room, participants, onClose }) {
     (async () => {
       try {
         const [g, conns] = await Promise.all([
-          apiClient.getRoomConnectors(room.id).catch(() => ({ agent_connectors: {} })),
+          apiClient.getRoomConnectors(room.id).catch(() => ({ enabled_connectors: [] })),
           apiClient.listOAuthConnectors().catch(() => ({})),
         ]);
         if (!alive) return;
-        setGrants(g?.agent_connectors || {});
+        setEnabled(new Set(g?.enabled_connectors || []));
         const list = conns?.connectors || conns?.integrations || conns || [];
         const ids = new Set(
           (Array.isArray(list) ? list : [])
             .filter(c => (c.status ? (c.status === 'active' || c.connected) : true))
             .map(c => String(c.provider || c.providerKey || c.provider_config_key || c.id || c.unique_key || '').toLowerCase())
         );
+        // google-docs Nango key → our 'google_docs' id
+        if (ids.has('google-docs')) ids.add('google_docs');
         setConnected(ids);
       } catch (e) {
         if (alive) setErr(e.message);
@@ -2978,13 +2981,11 @@ function RoomToolsModal({ room, participants, onClose }) {
     return () => { alive = false; };
   }, [room.id]);
 
-  function toggle(empId, connId) {
+  function toggle(connId) {
     setSaved(false);
-    setGrants(prev => {
-      const cur = new Set(prev[empId] || []);
-      if (cur.has(connId)) cur.delete(connId); else cur.add(connId);
-      const next = { ...prev };
-      if (cur.size) next[empId] = [...cur]; else delete next[empId];
+    setEnabled(prev => {
+      const next = new Set(prev);
+      if (next.has(connId)) next.delete(connId); else next.add(connId);
       return next;
     });
   }
@@ -2992,8 +2993,8 @@ function RoomToolsModal({ room, participants, onClose }) {
   async function save() {
     setSaving(true); setErr(null);
     try {
-      const resp = await apiClient.setRoomConnectors(room.id, grants);
-      setGrants(resp?.agent_connectors || grants);
+      const resp = await apiClient.setRoomConnectors(room.id, [...enabled]);
+      setEnabled(new Set(resp?.enabled_connectors || [...enabled]));
       setSaved(true);
     } catch (e) {
       setErr(e.response?.data?.error || e.message);
@@ -3001,8 +3002,6 @@ function RoomToolsModal({ room, participants, onClose }) {
       setSaving(false);
     }
   }
-
-  const totalGrants = Object.values(grants).reduce((n, a) => n + (a?.length || 0), 0);
 
   return (
     <motion.div
@@ -3013,7 +3012,7 @@ function RoomToolsModal({ room, participants, onClose }) {
       <motion.div
         initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 14 }}
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        className="bg-white rounded-none w-full max-w-[680px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.3)]"
+        className="bg-white rounded-none w-full max-w-[560px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.3)]"
         onClick={e => e.stopPropagation()}
       >
         <header className="px-6 py-4 border-b border-[#e3e0db] flex items-center justify-between">
@@ -3021,7 +3020,7 @@ function RoomToolsModal({ room, participants, onClose }) {
             <div className="w-10 h-10 rounded-none grid place-items-center bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff]"><Boxes size={17} /></div>
             <div>
               <h2 className="text-[16px] font-bold text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">{t('hyperAgents.roomTools', 'Room tools')}</h2>
-              <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.roomToolsSub', 'Give each agent 3rd-party connector access for this room')}</p>
+              <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.roomToolsSub2', 'Toggle a connector on — every agent in the room can use it during the discussion (like the web tool).')}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-none grid place-items-center border border-[#e3e0db] text-[#a3a3a3] hover:text-[#0a0a0a] hover:border-[#c4c9d2]"><X size={15} /></button>
@@ -3029,44 +3028,34 @@ function RoomToolsModal({ room, participants, onClose }) {
 
         <div className="overflow-y-auto flex-1 px-6 py-4 bg-[#faf9f4]">
           {loading && <div className="text-[12px] text-[#a3a3a3] py-10 text-center">{t('common.loading', 'Loading…')}</div>}
-          {!loading && participants.length === 0 && (
-            <div className="text-[12px] text-[#a3a3a3] py-10 text-center">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</div>
-          )}
-          {!loading && participants.map(p => {
-            const granted = new Set(grants[p.id] || []);
-            const meta = LANE_META[p.lane || p.hyper?.lane || p.roleArchetype || 'Communicator'] || LANE_META.Communicator;
+          {!loading && ROOM_CONNECTORS.map(c => {
+            const on = enabled.has(c.id);
+            const conn = connected.has(c.id);
             return (
-              <div key={p.id} className="mb-3 bg-white border border-[#e3e0db] rounded-none px-3.5 py-3">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <span className="w-7 h-7 rounded-none grid place-items-center text-[11px] font-semibold ring-1 ring-[#e3e0db]" style={{ background: meta.bg, color: meta.color }}>{(p.name?.[0] || '?').toUpperCase()}</span>
-                  <span className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{p.name}</span>
-                  {granted.size > 0 && <span className="text-[10px] font-mono text-[#117dff] ml-auto">{granted.size} {t('hyperAgents.grantedWord', 'granted')}</span>}
+              <button
+                key={c.id} type="button" onClick={() => toggle(c.id)}
+                className={`w-full mb-2 flex items-center gap-3 px-3.5 py-3 rounded-none border text-left transition-colors ${on ? 'border-[#117dff] bg-[#117dff]/5' : 'border-[#e3e0db] bg-white hover:border-[#117dff]/40'}`}
+              >
+                <span className="w-9 h-9 rounded-none grid place-items-center text-[13px] font-bold text-white shrink-0" style={{ background: c.color }}>{c.label[0]}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.label}</span>
+                    <span className="w-1.5 h-1.5 rounded-full" title={conn ? t('hyperAgents.connected', 'Connected') : t('hyperAgents.notConnected', 'Not connected — connect it on the Connectors page')} style={{ background: conn ? '#22c55e' : '#cbd5e1' }} />
+                  </div>
+                  <div className="text-[10.5px] text-[#737373]">{c.desc}{!conn && <span className="text-[#c2410c]"> · not connected</span>}</div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {ROOM_CONNECTORS.map(c => {
-                    const on = granted.has(c.id);
-                    const conn = connected.has(c.id);
-                    return (
-                      <button
-                        key={c.id} type="button" onClick={() => toggle(p.id, c.id)}
-                        title={conn ? undefined : t('hyperAgents.connectorNotConnected', 'Not connected yet — connect it on the Connectors page; the grant still saves.')}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-none border text-[11.5px] font-medium transition-colors ${on ? 'bg-[#117dff] border-[#117dff] text-white' : 'bg-white border-[#e3e0db] text-[#525252] hover:border-[#117dff]/40'}`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: conn ? '#22c55e' : '#cbd5e1' }} />
-                        {c.label}
-                        {on && <Check size={11} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                {/* toggle switch */}
+                <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${on ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`}>
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+                </span>
+              </button>
             );
           })}
-          {err && <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-none px-2 py-1.5"><AlertTriangle size={11} className="inline mr-1" />{err}</div>}
+          {err && <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-none px-2 py-1.5 mt-1"><AlertTriangle size={11} className="inline mr-1" />{err}</div>}
         </div>
 
         <footer className="px-6 py-3.5 border-t border-[#e3e0db] flex items-center justify-between gap-2">
-          <span className="text-[10.5px] text-[#737373] font-mono">{totalGrants} {t('hyperAgents.grantsWord', 'grants')} · <span className="text-[#22c55e]">●</span> {t('hyperAgents.connectedWord', 'connected')}</span>
+          <span className="text-[10.5px] text-[#737373] font-mono">{enabled.size} {t('hyperAgents.enabledWord', 'enabled')} · <span className="text-[#22c55e]">●</span> {t('hyperAgents.connectedWord', 'connected')}</span>
           <div className="flex items-center gap-2">
             <button type="button" onClick={onClose} className="text-[12px] font-medium text-[#525252] hover:text-[#0a0a0a] px-3 py-2 rounded-none hover:bg-[#faf9f4]">{t('hyperAgents.cancel', 'Cancel')}</button>
             <button
@@ -3074,7 +3063,7 @@ function RoomToolsModal({ room, participants, onClose }) {
               className="flex items-center gap-1.5 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-50 text-white text-[12px] font-bold px-4 py-2 rounded-none font-['Space_Grotesk']"
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : <Boxes size={13} />}
-              {saving ? t('hyperAgents.saving', 'Saving') : saved ? t('hyperAgents.saved', 'Saved') : t('hyperAgents.saveGrants', 'Save')}
+              {saving ? t('hyperAgents.saving', 'Saving') : saved ? t('hyperAgents.saved', 'Saved') : t('hyperAgents.saveTools', 'Save')}
             </button>
           </div>
         </footer>
