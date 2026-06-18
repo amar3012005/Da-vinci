@@ -455,6 +455,7 @@ function RoomThread({ roomId, onArchived }) {
   const [showConnectors, setShowConnectors] = useState(false);
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
+  const [approveBusy, setApproveBusy] = useState(null); // approval_id being resolved
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -570,6 +571,9 @@ function RoomThread({ roomId, onArchived }) {
       'cycle_start', 'cycle_end', 'convergence',
       // Prod hardening events (cost cap / wall-clock deadline / role warnings):
       'cost_cap_hit', 'deadline_hit', 'warning',
+      // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
+      // goalkeeper re-plan rounds:
+      'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -742,6 +746,23 @@ function RoomThread({ roomId, onArchived }) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setFlybyBusy(false);
+    }
+  }
+
+  async function handleApprove(turn, approvalId, decision) {
+    if (!approvalId || approveBusy) return;
+    setApproveBusy(approvalId);
+    setError(null);
+    try {
+      await apiClient.approveHyperRoomWrite(roomId, approvalId, decision);
+      // Re-load so the approval_resolved event (with the produced artifact)
+      // surfaces in the turn's lines.
+      if (turn?.id) setActiveTurnId(turn.id);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setApproveBusy(null);
     }
   }
 
@@ -921,6 +942,8 @@ function RoomThread({ roomId, onArchived }) {
               onRerun={() => handleRerunTurn(turn)}
               onFlybyDecision={(decision, spec) => handleFlybyDecision(turn, decision, spec)}
               flybyBusy={flybyBusy}
+              onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
+              approveBusy={approveBusy}
             />
           ))}
           {error && (
@@ -1086,7 +1109,7 @@ function SwarmSpinningUp() {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -1159,6 +1182,17 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const deadlineHit = lines.find(l => l.t === 'deadline_hit');
   const roomWarnings = lines.filter(l => l.t === 'warning');
 
+  // Phase 1-6 — lead plan, recon/verify verdict, write-approval cards, and the
+  // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
+  // under the same turn_id), so take the LATEST plan/verdict and group rounds.
+  const planLine = [...lines].reverse().find(l => l.t === 'plan');
+  const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
+  const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
+  const approvalRequests = lines.filter(l => l.t === 'approval_request');
+  const approvalResolutions = lines.filter(l => l.t === 'approval_resolved');
+  const resolutionById = {};
+  approvalResolutions.forEach(r => { if (r.approval_id) resolutionById[r.approval_id] = r; });
+
   // Phase 4 polish — clickable evidence chips open this memory modal.
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
 
@@ -1203,6 +1237,52 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           </div>
         )}
       </div>
+
+      {/* Phase 1/3/6 — the lead's plan + goal progress. Frames the turn: target
+          output, done-criterion, ordered steps, per-agent assignments, and (if
+          the goalkeeper re-planned) the current round. */}
+      {planLine && (
+        <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2">
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+            <ListChecks size={12} className="text-violet-600" />
+            <span className="text-[11px] font-medium text-violet-800">{t('hyperAgents.planLabel', 'Plan')}</span>
+            <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[9px] font-mono uppercase tracking-wider">→ {planLine.intended_output}</span>
+            {goalkeeperRounds.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-mono uppercase tracking-wider" title={t('hyperAgents.goalkeeperTitle', 'The goalkeeper re-planned because the previous round fell short of the done-criterion.')}>
+                {t('hyperAgents.round', 'round')} {goalkeeperRounds.length + 1}
+              </span>
+            )}
+          </div>
+          {planLine.done_criterion && (
+            <div className="text-[10px] text-[#525252] mb-1">
+              <span className="text-[#a3a3a3]">{t('hyperAgents.doneWhen', 'done when:')}</span> {planLine.done_criterion}
+            </div>
+          )}
+          {Array.isArray(planLine.steps) && planLine.steps.length > 0 && (
+            <ol className="list-decimal list-inside text-[10px] text-[#525252] space-y-0.5 mb-1 marker:text-violet-400">
+              {planLine.steps.map((s, i) => <li key={i}>{s}</li>)}
+            </ol>
+          )}
+          {planLine.assignments && Object.keys(planLine.assignments).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {Object.entries(planLine.assignments).map(([who, task]) => (
+                <span key={who} className="px-1.5 py-0.5 rounded bg-white border border-violet-100 text-[9px] text-[#525252]" title={String(task)}>
+                  <span className="text-violet-700 font-medium">{who}</span>: {String(task).slice(0, 64)}{String(task).length > 64 ? '…' : ''}
+                </span>
+              ))}
+            </div>
+          )}
+          {goalkeeperRounds.length > 0 && (
+            <div className="mt-1.5 pt-1.5 border-t border-violet-100 space-y-0.5">
+              {goalkeeperRounds.map((g, i) => (
+                <div key={i} className="text-[9px] text-amber-700 font-mono">
+                  ↻ {t('hyperAgents.replanned', 'round')} {g.round} → {g.next_round}: {(g.gaps || []).join('; ') || t('hyperAgents.unmet', 'done-criterion unmet')}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Live turn with nothing rendered yet — show the swarm spinning up so the
           room feels alive instead of blank while the first events arrive. */}
@@ -1431,6 +1511,86 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           webSources={webIntel?.sources || []}
           onOpenMemory={setEvidenceMemoryId}
         />
+      )}
+
+      {/* Phase 5 — recon/verify verdict vs the done-criterion. */}
+      {verifyLine && (
+        <div className={`rounded-lg border px-3 py-2 ${verifyLine.met ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50'}`}>
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+            {verifyLine.met
+              ? <CheckCheck size={12} className="text-emerald-600" />
+              : <AlertTriangle size={12} className="text-amber-600" />}
+            <span className={`text-[11px] font-medium ${verifyLine.met ? 'text-emerald-800' : 'text-amber-800'}`}>
+              {verifyLine.met ? t('hyperAgents.verifyMet', 'Verified — done-criterion met') : t('hyperAgents.verifyGaps', 'Recon — gaps remain')}
+            </span>
+            <div className="ml-auto flex gap-1">
+              {[['artifact', 'artifact_ok'], ['assign', 'assignments_ok'], ['grounded', 'grounded_ok']].map(([lbl, k]) => (
+                <span key={k} className={`px-1 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider ${verifyLine[k] ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{lbl}</span>
+              ))}
+            </div>
+          </div>
+          {!verifyLine.met && Array.isArray(verifyLine.gaps) && verifyLine.gaps.length > 0 && (
+            <ul className="list-disc list-inside text-[10px] text-amber-800 space-y-0.5">
+              {verifyLine.gaps.map((g, i) => <li key={i}>{g}</li>)}
+            </ul>
+          )}
+          {verifyLine.note && <div className="text-[9px] text-[#a3a3a3] mt-1 italic">{verifyLine.note}</div>}
+        </div>
+      )}
+
+      {/* Phase 4/7 — write-approval cards. Side-effectful writes (send email,
+          create/append doc, CRM/PR) are held until the user approves here. */}
+      {approvalRequests.length > 0 && (
+        <div className="space-y-1.5">
+          {approvalRequests.map((a, i) => {
+            const resolved = resolutionById[a.approval_id];
+            const busyHere = approveBusy === a.approval_id;
+            const artifactUrl = resolved?.result?.result?.url || resolved?.result?.url;
+            return (
+              <div key={a.approval_id || i} className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <Shield size={12} className="text-blue-600" />
+                  <span className="text-[11px] font-medium text-blue-800">{t('hyperAgents.approvalNeeded', 'Approval needed')}</span>
+                  {a.label && <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-mono">{a.label}</span>}
+                </div>
+                {a.summary && <div className="text-[10px] text-[#525252] mb-1.5">{a.summary}</div>}
+                {resolved ? (
+                  <div className="text-[10px] font-mono flex items-center gap-2">
+                    {resolved.decision === 'approve'
+                      ? <span className="text-emerald-700 flex items-center gap-1"><Check size={11} /> {t('hyperAgents.approved', 'Approved')}</span>
+                      : <span className="text-red-600 flex items-center gap-1"><X size={11} /> {t('hyperAgents.denied', 'Denied')}</span>}
+                    {artifactUrl && (
+                      <a href={artifactUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                        <ExternalLink size={10} /> {t('hyperAgents.openArtifact', 'open')}
+                      </a>
+                    )}
+                  </div>
+                ) : archived ? (
+                  <div className="text-[9px] text-[#a3a3a3] font-mono">{t('hyperAgents.archivedNoAction', 'archived — no action')}</div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      disabled={busyHere || !onApprove}
+                      onClick={() => onApprove && onApprove(a.approval_id, 'approve')}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+                    >
+                      {busyHere ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} {t('hyperAgents.approve', 'Approve')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyHere || !onApprove}
+                      onClick={() => onApprove && onApprove(a.approval_id, 'deny')}
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-white border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
+                    >
+                      <X size={11} /> {t('hyperAgents.deny', 'Deny')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {!seal && typing.length > 0 && (

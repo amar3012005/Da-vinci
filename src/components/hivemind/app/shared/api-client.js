@@ -428,6 +428,15 @@ class HiveMindApiClient {
     return data; // { ok, enabled_connectors }
   }
 
+  // Resolve a queued connector write (Phase 7 approval card). decision = "approve"|"deny".
+  async approveHyperRoomWrite(roomId, approvalId, decision) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/approve`, {
+      approval_id: approvalId,
+      decision,
+    });
+    return data; // { ok, approval_id, decision, result }
+  }
+
   // Mint a short-lived Cartesia agent access token (server holds the key).
   async mintCartesiaToken() {
     const { data } = await this.controlPlane.post('/v1/tara/cartesia-token', {});
