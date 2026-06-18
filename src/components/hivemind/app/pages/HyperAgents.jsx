@@ -29,6 +29,7 @@ import {
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
+import { BRAND_LOGOS } from '../shared/connectors-catalog';
 
 // Compact relative-time for room last-used. Pure, no deps.
 // 3rd-party connector catalog (mirrors core/src/connectors/mcp/catalog-seed.js).
@@ -36,6 +37,7 @@ import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 const ROOM_CONNECTORS = [
   { id: 'gmail', label: 'Gmail', color: '#ea4335', desc: 'Read & search email' },
   { id: 'google_docs', label: 'Google Docs', color: '#1a73e8', desc: 'Create & write docs' },
+  { id: 'google_sheets', label: 'Google Sheets', color: '#0f9d58', desc: 'Build & fill spreadsheets' },
   { id: 'github', label: 'GitHub', color: '#24292f', desc: 'Repos, issues, PRs' },
   { id: 'notion', label: 'Notion', color: '#0a0a0a', desc: 'Pages & databases' },
   { id: 'slack', label: 'Slack', color: '#611f69', desc: 'Channels & messages' },
@@ -574,6 +576,7 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
+      'connector_logo',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1188,6 +1191,13 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
   const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
+  // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
+  // connector's brand logo. Dedup to the last per (connector,url).
+  const connectorLogos = (() => {
+    const byUrl = {};
+    lines.filter(l => l.t === 'connector_logo' && l.url).forEach(l => { byUrl[l.url] = l; });
+    return Object.values(byUrl);
+  })();
   const approvalRequests = lines.filter(l => l.t === 'approval_request');
   const approvalResolutions = lines.filter(l => l.t === 'approval_resolved');
   const resolutionById = {};
@@ -1511,6 +1521,34 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           webSources={webIntel?.sources || []}
           onOpenMemory={setEvidenceMemoryId}
         />
+      )}
+
+      {/* Produced deliverables (docs/sheets) — connector-logo "view in new tab"
+          buttons. The swarm built these after reaching consensus; no approval. */}
+      {connectorLogos.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {connectorLogos.map((art, i) => {
+            const logo = BRAND_LOGOS[art.connector];
+            return (
+              <a
+                key={art.url || i}
+                href={art.url}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 transition-colors"
+                title={art.title || art.label || 'Open'}
+              >
+                {logo
+                  ? <img src={logo} alt={art.connector} className="w-4 h-4" />
+                  : <ExternalLink size={14} className="text-emerald-700" />}
+                <span className="text-[11px] font-medium text-emerald-800 truncate max-w-[220px]">
+                  {art.label || art.title || t('hyperAgents.openArtifact', 'Open')}
+                </span>
+                <ExternalLink size={11} className="text-emerald-500 group-hover:text-emerald-700" />
+              </a>
+            );
+          })}
+        </div>
       )}
 
       {/* Phase 5 — recon/verify verdict vs the done-criterion. */}

@@ -225,6 +225,28 @@ export const CONNECTOR_CATALOG = [
 
 export const CONNECTOR_BY_ID = Object.fromEntries(CONNECTOR_CATALOG.map(c => [c.id, c]));
 
+// Original brand marks (simple-icons CDN / iconify, official brand colors).
+// Single source for both the Connectors page and the HyperAgents room
+// "view in new tab" connector_logo buttons. CSP img-src allows https:.
+export const BRAND_LOGOS = {
+  'claude-web':    'https://cdn.simpleicons.org/claude',
+  claude:          'https://cdn.simpleicons.org/claude',
+  chatgpt:         'https://api.iconify.design/logos/openai-icon.svg',
+  'gemini-paste':  'https://cdn.simpleicons.org/googlegemini',
+  'google-gemini': 'https://cdn.simpleicons.org/googlegemini',
+  gmail:           'https://cdn.simpleicons.org/gmail',
+  'google-docs':   'https://cdn.simpleicons.org/googledocs',
+  'google-sheets': 'https://cdn.simpleicons.org/googlesheets',
+  slack:           'https://api.iconify.design/logos/slack-icon.svg',
+  whatsapp:        'https://cdn.simpleicons.org/whatsapp',
+  notion:          'https://cdn.simpleicons.org/notion/000000',
+  confluence:      'https://cdn.simpleicons.org/confluence',
+  atlassian:       'https://cdn.simpleicons.org/jira',
+  github:          'https://cdn.simpleicons.org/github/181717',
+  linear:          'https://cdn.simpleicons.org/linear',
+  salesforce:      'https://api.iconify.design/logos/salesforce.svg',
+};
+
 export const CONNECTOR_CATEGORIES = [
   { id: 'email', name: 'Email' },
   { id: 'files', name: 'Files' },
