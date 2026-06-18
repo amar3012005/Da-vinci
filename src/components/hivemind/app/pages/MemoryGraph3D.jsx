@@ -1176,9 +1176,55 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.cameraPosition(next, target, duration);
   }, []);
 
-  const fitView = useCallback((duration = 500) => {
-    fgRef.current?.zoomToFit?.(duration, 50);
+  // Guarded wide-shot. Two failure modes this fixes:
+  //  • "not loading" — zoomToFit on a 0-sized canvas (SPA mount) or a
+  //    pre-layout degenerate bbox positions the camera at Infinity/NaN, so the
+  //    canvas goes black and never recovers (didInitialFit already latched).
+  //  • "zooming out too much" — zoomToFit frames ALL nodes incl. far orphans,
+  //    so a spread force-layout pushes the camera absurdly far.
+  // Returns false when it could not fit yet (no fg / no nodes / no dims) so the
+  // caller can retry on the next frame without latching the one-time guard.
+  const safeFit = useCallback((duration = 600, padding = 50) => {
+    const fg = fgRef.current;
+    const el = containerRef.current;
+    if (!fg || !el) return false;
+    const nodeCount = graphDataRef.current?.nodes?.length || 0;
+    if (nodeCount === 0) return false;
+    if (el.clientWidth <= 0 || el.clientHeight <= 0) return false;
+
+    fg.zoomToFit(duration, padding);
+
+    // After the fit animation, sanitize + clamp the resulting camera distance.
+    const tier = getGraphSizeTier(nodeCount);
+    const MAX_FIT = tier === "massive" ? 2200 : tier === "large" ? 1700 : 1200;
+    const MIN_FIT = 150;
+    window.setTimeout(() => {
+      const inst = fgRef.current;
+      if (!inst) return;
+      const camera = inst.camera?.();
+      const controls = inst.controls?.();
+      if (!camera) return;
+      const target = controls?.target?.clone?.() || new THREE.Vector3();
+      const dist = camera.position.distanceTo(target);
+      if (!Number.isFinite(dist) || dist <= 0) {
+        // Degenerate fit → restore a sane default so the canvas isn't black.
+        camera.position.set(0, 40, 300);
+        camera.updateProjectionMatrix?.();
+        return;
+      }
+      if (dist > MAX_FIT || dist < MIN_FIT) {
+        const clamped = Math.min(MAX_FIT, Math.max(MIN_FIT, dist));
+        const dir = camera.position.clone().sub(target).normalize();
+        const next = target.clone().add(dir.multiplyScalar(clamped));
+        inst.cameraPosition(next, target, 300);
+      }
+    }, duration + 80);
+    return true;
   }, []);
+
+  const fitView = useCallback((duration = 500) => {
+    safeFit(duration, 50);
+  }, [safeFit]);
 
   useImperativeHandle(ref, () => ({
     d3Force: (...args) => fgRef.current?.d3Force?.(...args),
@@ -1211,8 +1257,19 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       // the user's manual zoom afterwards.
       .onEngineStop(() => {
         if (didInitialFitRef.current) return;
-        didInitialFitRef.current = true;
-        fgRef.current?.zoomToFit?.(700, 60);
+        // Retry across a few frames: on SPA mount the canvas can still be
+        // 0-sized when the sim settles. Only latch the one-time guard once the
+        // fit actually succeeds — otherwise the page can stay blank.
+        let tries = 0;
+        const tryFit = () => {
+          if (didInitialFitRef.current) return;
+          if (safeFit(700, 50)) {
+            didInitialFitRef.current = true;
+          } else if (tries++ < 30) {
+            window.requestAnimationFrame(tryFit);
+          }
+        };
+        tryFit();
       })
       .nodeResolution(themeRef.current.name === "atlas" ? 10 : 12)
       .nodeRelSize(1.65)
