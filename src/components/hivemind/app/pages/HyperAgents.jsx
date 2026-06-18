@@ -576,7 +576,7 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
-      'connector_logo',
+      'connector_logo', 'gather',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1189,6 +1189,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
   // under the same turn_id), so take the LATEST plan/verdict and group rounds.
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
+  const gatherLine = [...lines].reverse().find(l => l.t === 'gather');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
   const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
   // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
@@ -1291,6 +1292,19 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* GATHER phase — evidence pulled from all sources before the team reasons. */}
+      {gatherLine && (gatherLine.contacts > 0 || gatherLine.correspondence > 0 || (gatherLine.sources || []).length > 1) && (
+        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-[#525252] pl-2">
+          <Search size={11} className="text-sky-600" />
+          <span className="font-medium text-sky-800">{t('hyperAgents.gathered', 'Gathered evidence')}</span>
+          {(gatherLine.sources || []).map((s, i) => (
+            <span key={i} className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[9px] font-mono">{s}</span>
+          ))}
+          {gatherLine.contacts > 0 && <span className="text-[#737373]">· {gatherLine.contacts} contact{gatherLine.contacts > 1 ? 's' : ''}</span>}
+          {gatherLine.correspondence > 0 && <span className="text-[#737373]">· {gatherLine.correspondence} prior email{gatherLine.correspondence > 1 ? 's' : ''}</span>}
         </div>
       )}
 
