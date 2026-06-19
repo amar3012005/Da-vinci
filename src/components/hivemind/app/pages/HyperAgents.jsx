@@ -23,7 +23,7 @@ import {
   AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
-  Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search,
+  Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -576,7 +576,7 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
-      'connector_logo', 'gather', 'recon_pre',
+      'connector_logo', 'gather', 'recon_pre', 'execute',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1191,6 +1191,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
   const gatherLine = [...lines].reverse().find(l => l.t === 'gather');
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
+  const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
   const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
   // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
@@ -1316,6 +1317,28 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           {reconPreLine.sufficient
             ? <><CheckCheck size={11} className="text-emerald-600 mt-px" /><span className="text-emerald-700">Evidence sufficient — ready to produce</span></>
             : <><AlertTriangle size={11} className="text-amber-600 mt-px" /><span className="text-amber-700">Evidence gaps (resolve before producing):</span><span className="text-amber-800">{(reconPreLine.missing || []).join('; ')}</span></>}
+        </div>
+      )}
+
+      {/* EXECUTE — each assigned owner did their slice (phased, sequential
+          handoff) before the team integrated. The visible "phases" of work. */}
+      {executeLines.length > 0 && (
+        <div className="pl-2 space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <Layers size={11} className="text-indigo-600" />
+            <span className="font-medium text-indigo-800">{t('hyperAgents.executed', 'Executed by owners')}</span>
+            <span className="text-[#a3a3a3]">· {executeLines.length} {executeLines.length > 1 ? 'parts' : 'part'}</span>
+          </div>
+          {executeLines.map((e, i) => (
+            <div key={i} className="ml-3 border-l-2 border-indigo-100 pl-2 py-0.5">
+              <div className="text-[10px] font-medium text-[#404040]">
+                {e.name || e.owner} <span className="text-[#a3a3a3] font-normal">— {e.subtask}</span>
+              </div>
+              {e.contribution && (
+                <div className="text-[10px] text-[#737373] leading-snug mt-0.5 whitespace-pre-wrap">{e.contribution}</div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
