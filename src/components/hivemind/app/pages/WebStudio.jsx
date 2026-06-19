@@ -113,7 +113,7 @@ const RESEARCH_DOC_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap');
 /* SINGULANCE wordmark — heavy italic, slightly skewed, sharp speed-font feel */
 .sgl-logo{font-family:'Saira','Bricolage Grotesque',system-ui,sans-serif;font-style:italic;font-weight:900;letter-spacing:-.01em;transform:skewX(-7deg);display:inline-block;line-height:1;color:#16181d;text-transform:uppercase}
-.rm-doc{--ink:#16181d;--body:#33373f;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#1a45c4;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16.5px;line-height:1.72;color:var(--body)}
+.rm-doc{--ink:#16181d;--body:#33373f;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#117dff;font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16.5px;line-height:1.72;color:var(--body)}
 .rm-doc h1,.rm-doc h2,.rm-doc h3,.rm-doc h4{font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);line-height:1.16;letter-spacing:-.015em}
 .rm-doc h1{font-size:28px;font-weight:800;margin:1.3em 0 .45em}
 .rm-doc h1:first-child,.rm-doc h2:first-child{margin-top:0;border-top:none;padding-top:0}
@@ -163,7 +163,7 @@ function buildResearchReportHtml(job, scopeOptions = []) {
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Saira:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
 <style>
-  :root{--paper:#fff;--ink:#16181d;--body:#33373f;--sub:#6b7280;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#1a45c4}
+  :root{--paper:#fff;--ink:#16181d;--body:#33373f;--sub:#6b7280;--muted:#8a909c;--line:#e6e8ec;--code-bg:#f5f6f7;--accent:#117dff}
   *{box-sizing:border-box}
   html,body{margin:0;background:#fff;color:var(--ink);font-family:'Hanken Grotesk',system-ui,sans-serif;line-height:1.72;-webkit-font-smoothing:antialiased}
   .mono{font-family:'IBM Plex Mono',monospace}
@@ -765,10 +765,10 @@ function LiveResearchPanel({ job }) {
     <div ref={ref} className="h-full">
       <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
         <header className="px-4 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4] flex items-center gap-2">
-          <Sparkles size={14} className="text-violet-500" />
+          <Sparkles size={14} className="text-blue-500" />
           <span className="text-[12px] font-semibold text-[#0a0a0a]">{job.params?.input || 'Research'}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{t('webstudio.streaming', 'streaming')} · {job.params?.model || 'auto'}</span>
-          <Loader2 size={12} className="text-violet-500 animate-spin" />
+          <Loader2 size={12} className="text-blue-500 animate-spin" />
         </header>
         <div className="p-4">
           <ResearchLiveView job={job} />
@@ -788,7 +788,7 @@ function GuideCards({ onExample }) {
   const { t } = useTranslation('dashboard');
   const CARDS = [
     {
-      mode: 'research', icon: Sparkles, color: '#8b5cf6', bg: 'bg-violet-50',
+      mode: 'research', icon: Sparkles, color: '#117dff', bg: 'bg-blue-50',
       title: t('webstudio.guide.researchTitle', 'Deep Research'),
       desc: t('webstudio.guide.researchDesc', 'Multi-source report with citations. Ask a question, get a compiled answer in 1–3 minutes.'),
       examples: [
@@ -855,7 +855,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
           reports list is ALWAYS visible — no hidden dropdown to discover. */}
       {jobs.length > 0 && (
         <div className="flex items-center gap-2 px-1 pb-2">
-          <Sparkles size={14} className="text-violet-500" />
+          <Sparkles size={14} className="text-blue-500" />
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#737373]">{t('webstudio.pastResearch', 'Research reports')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3]">{t('webstudio.reportCount', '{{count}} report', { count: jobs.length })}</span>
         </div>
@@ -883,7 +883,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
                       key={job.id}
                       className="w-full px-4 py-2.5 hover:bg-[#faf9f4] transition-colors flex items-center gap-3"
                     >
-                      <Sparkles size={13} className="text-violet-500 shrink-0" />
+                      <Sparkles size={13} className="text-blue-500 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[13px] font-semibold text-[#0a0a0a] truncate">{title}</span>
@@ -915,7 +915,7 @@ function PastResearchPanel({ jobs, onPick, onOpenReport, locked, savedByJob = {}
                           onClick={() => onOpenReport?.(job)}
                           disabled={!done}
                           title={t('webstudio.viewInChrome', 'Open rendered report in a new tab')}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg px-2.5 py-1.5 transition-colors"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg px-2.5 py-1.5 transition-colors"
                         >
                           <Chrome size={12} /> {t('webstudio.viewInChrome', 'View in Chrome')}
                         </button>
@@ -1013,8 +1013,8 @@ function ResearchPreviewModal({ job, onClose, savedSnapshot = null, onSaved, onO
 
         {/* hero */}
         <div className="px-9 sm:px-14 pt-8">
-          <div className="flex items-center gap-2 mb-4 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#1a45c4]">
-            <span className="w-[6px] h-[6px] rounded-full bg-[#1a45c4]" />
+          <div className="flex items-center gap-2 mb-4 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#117dff]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[#117dff]" />
             Deep Research Dossier
           </div>
           <h2 className="font-['Bricolage_Grotesque'] font-extrabold text-[#16181d] leading-[1.06] tracking-[-0.02em] text-[clamp(28px,4.5vw,46px)]">
@@ -1100,7 +1100,7 @@ function PromptBar({
     : mode === 'research' ? Sparkles
     : Search;
   const modeColor = mode === 'crawl' ? 'text-amber-500'
-    : mode === 'research' ? 'text-violet-500'
+    : mode === 'research' ? 'text-blue-500'
     : 'text-[#117dff]';
   const modeLabel = mode === 'crawl' ? t('webstudio.mode.crawl', 'Crawl mode')
     : mode === 'research' ? t('webstudio.mode.research', 'Research mode')
@@ -1119,7 +1119,7 @@ function PromptBar({
   // Explicit mode pills — replaces the old "click to cycle" mystery button.
   const MODE_PILLS = [
     { id: null,        label: t('webstudio.pill.auto', 'Auto'),      icon: null,     active: 'bg-[#0a0a0a] text-white' },
-    { id: 'research',  label: t('webstudio.pill.research', 'Research'), icon: Sparkles, active: 'bg-violet-500 text-white' },
+    { id: 'research',  label: t('webstudio.pill.research', 'Research'), icon: Sparkles, active: 'bg-blue-500 text-white' },
     { id: 'search',    label: t('webstudio.pill.search', 'Search'),  icon: Search,   active: 'bg-[#117dff] text-white' },
     { id: 'crawl',     label: t('webstudio.pill.crawl', 'Crawl'),    icon: LinkIcon, active: 'bg-amber-500 text-white' },
   ];
@@ -1161,7 +1161,7 @@ function PromptBar({
                 onClick={() => setResearchModel(opt)}
                 className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase transition-colors ${
                   researchModel === opt
-                    ? 'bg-violet-500 text-white'
+                    ? 'bg-blue-500 text-white'
                     : 'text-[#525252] hover:bg-white'
                 }`}
                 title={opt === 'mini' ? t('webstudio.modelMiniTitle', 'Targeted, fast (single-angle)') : opt === 'pro' ? t('webstudio.modelProTitle', 'Comprehensive, multi-subtopic') : t('webstudio.modelAutoTitle', 'Auto-pick best for query')}
@@ -1314,7 +1314,7 @@ function jobIcon(type) {
 
 function jobColor(type) {
   if (type === 'crawl')    return 'text-amber-500';
-  if (type === 'research') return 'text-violet-500';
+  if (type === 'research') return 'text-blue-500';
   return 'text-[#117dff]';
 }
 
@@ -1503,9 +1503,9 @@ function ResearchLiveView({ job }) {
       {partialContent && (
         <div>
           <div className="text-[10px] uppercase tracking-wider font-mono text-[#737373] mb-1.5 flex items-center gap-1.5">
-            <Sparkles size={11} className="text-violet-500" />
+            <Sparkles size={11} className="text-blue-500" />
             {t('webstudio.reportStreaming', 'Report — streaming')}
-            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full animate-pulse" />
+            <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
           </div>
           <pre className="whitespace-pre-wrap font-['Space_Grotesk'] text-[13px] text-[#0a0a0a] leading-[1.65] m-0 bg-transparent p-0">
 {partialContent}
@@ -1527,7 +1527,7 @@ function ResearchStep({ step }) {
   const TOOL_META = {
     Planning:         { color: 'text-[#525252]', emoji: '🧭', label: 'Planning' },
     WebSearch:        { color: 'text-[#117dff]', emoji: '🔎', label: 'Web search' },
-    ResearchSubtopic: { color: 'text-violet-600', emoji: '🧪', label: 'Subtopic research' },
+    ResearchSubtopic: { color: 'text-blue-600', emoji: '🧪', label: 'Subtopic research' },
     Generating:       { color: 'text-emerald-600', emoji: '✍️', label: 'Generating report' },
   };
   const meta = TOOL_META[step.tool] || { color: 'text-[#737373]', emoji: '•', label: step.tool || 'step' };

@@ -220,7 +220,7 @@ const TYPE_LABELS = {
 
 const TYPE_COLORS = {
   invoice: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  contract: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
+  contract: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   sop: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   spreadsheet: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
   meeting: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
@@ -1844,7 +1844,7 @@ export default function KnowledgeBase() {
                   )}
                   {u.enterprise?.detected_type && (
                     <span
-                      className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#8b5cf6]/10 text-[#7c3aed] border border-[#8b5cf6]/30"
+                      className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/30"
                       title={`Enterprise type detected: ${u.enterprise.detected_type} (confidence ${(u.enterprise.confidence * 100).toFixed(0)}%). ${u.enterprise.reasoning || ''}`}
                     >
                       {u.enterprise.detected_type}{u.enterprise.schema_fields ? ' · schema extracted' : ''}
@@ -1979,7 +1979,7 @@ export default function KnowledgeBase() {
                       )}
                       {docProject(doc) && (
                         <span
-                          className="text-[#7c3aed] text-[10px] font-mono bg-[#7c3aed]/8 border border-[#7c3aed]/20 rounded px-1.5 py-0.5"
+                          className="text-[#117dff] text-[10px] font-mono bg-[#117dff]/8 border border-[#117dff]/20 rounded px-1.5 py-0.5"
                           title="Project scope"
                         >
                           {docProject(doc)}

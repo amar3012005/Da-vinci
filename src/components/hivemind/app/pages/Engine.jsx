@@ -18,7 +18,6 @@ function Badge({ children, color = 'blue' }) {
     green: 'bg-emerald-500/10 text-emerald-600',
     amber: 'bg-amber-500/10 text-amber-600',
     red: 'bg-red-500/10 text-red-600',
-    purple: 'bg-purple-500/10 text-purple-600',
     cyan: 'bg-cyan-500/10 text-cyan-600',
   };
   return (
@@ -73,7 +72,7 @@ function CognitiveFramePanel() {
     setLoading(false);
   };
 
-  const intentColors = { temporal: 'amber', action: 'blue', factual: 'green', emotional: 'purple', exploratory: 'cyan' };
+  const intentColors = { temporal: 'amber', action: 'blue', factual: 'green', emotional: 'blue', exploratory: 'cyan' };
 
   return (
     <Card>
@@ -565,7 +564,7 @@ function CognitionLoopPanel() {
                   <div key={r.id} className="bg-[#faf9f4] rounded-lg p-3 border border-[#ece8de]">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11px] font-mono font-semibold text-[#0a0a0a] truncate flex-1">{r.title}</span>
-                      <Badge color={r.type === 'synthesis' ? 'purple' : 'cyan'}>{r.type}</Badge>
+                      <Badge color={r.type === 'synthesis' ? 'blue' : 'cyan'}>{r.type}</Badge>
                     </div>
                     <p className="text-[11px] text-[#525252] leading-relaxed">{r.preview}{r.full_chars > 280 ? '…' : ''}</p>
                     <div className="text-[9px] text-[#a3a3a3] font-mono mt-1">
@@ -615,7 +614,7 @@ export default function Engine() {
       <motion.div variants={fadeUp} className="flex gap-2 flex-wrap">
         {[
           { icon: Zap, key: 'predict-calibrate', label: t('engine.featurePredictCalibrate', 'Predict-Calibrate'), color: 'blue' },
-          { icon: Brain, key: 'cognitive-frame', label: t('engine.featureCognitiveFrame', 'Cognitive Frame'), color: 'purple' },
+          { icon: Brain, key: 'cognitive-frame', label: t('engine.featureCognitiveFrame', 'Cognitive Frame'), color: 'blue' },
           { icon: RefreshCw, key: 'context-autopilot', label: t('engine.featureContextAutopilot', 'Context Autopilot'), color: 'cyan' },
           { icon: Clock, key: 'bi-temporal', label: t('engine.featureBiTemporal', 'Bi-Temporal'), color: 'amber' },
           { icon: GitBranch, key: 'stigmergic-cot', label: t('engine.featureStigmergicCoT', 'Stigmergic CoT'), color: 'green' },

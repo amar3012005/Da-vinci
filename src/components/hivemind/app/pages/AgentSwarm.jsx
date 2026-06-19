@@ -26,9 +26,9 @@ const AGENTS = [
     name: 'Feynman',
     role: 'Analyst',
     icon: Brain,
-    color: '#8b5cf6',
-    bg: 'from-violet-500/10 to-purple-500/10',
-    border: 'border-violet-500/20',
+    color: '#117dff',
+    bg: 'from-blue-500/10 to-blue-500/10',
+    border: 'border-blue-500/20',
     desc: 'Forms testable hypotheses from detected patterns with verification checks.',
   },
   {
@@ -682,13 +682,13 @@ export default function AgentSwarm() {
               <FindingsPanel
                 title={t('agentswarm.feynmanHypothesesTitle', 'Feynman Hypotheses')}
                 subtitle={t('agentswarm.hypothesesCount', '{{count}} hypotheses', { count: feynmanHyps.length })}
-                color="#8b5cf6"
+                color="#117dff"
                 icon={Brain}
               >
                 {feynmanHyps.map((hyp, i) => (
                   <div key={hyp.id || i} className="py-2 border-b border-[#f5f3ee] last:border-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
                         {(hyp.hypothesis_type || 'pattern').replace(/_/g, ' ')}
                       </span>
                       {confBar(hyp.confidence)}
@@ -927,7 +927,7 @@ export default function AgentSwarm() {
                     noise: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200' },
                     stale: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
                     orphan: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
-                    artifact: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                    artifact: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
                     contradiction: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
                   };
                   const cc = catColors[proposal.category] || catColors.stale;

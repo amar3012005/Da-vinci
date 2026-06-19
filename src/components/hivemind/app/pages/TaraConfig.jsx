@@ -104,7 +104,7 @@ function ConfigEditor({ config, onSave, saving }) {
             {t('taraconfig.clinicalPromptLabel', 'Clinical Reasoning Prompt (optional — enables background analysis)')}
           </label>
           {clinicalPrompt && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200">
               {t('taraconfig.clinicalPromptActive', 'Active')}
             </span>
           )}
@@ -113,7 +113,7 @@ function ConfigEditor({ config, onSave, saving }) {
           value={clinicalPrompt}
           onChange={(e) => setClinicalPrompt(e.target.value)}
           rows={5}
-          className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-purple-400/40 focus:ring-2 focus:ring-purple-400/10 resize-y"
+          className="w-full p-4 rounded-xl border border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] text-sm font-['JetBrains_Mono','Fira_Code',monospace] focus:outline-none focus:border-blue-400/40 focus:ring-2 focus:ring-blue-400/10 resize-y"
           placeholder={t('taraconfig.clinicalPromptPlaceholder', 'Leave empty to disable clinical reasoning. When set, a background reasoning model analyzes each turn and provides strategic insights to the main agent...')}
         />
         {clinicalPrompt && (
@@ -122,7 +122,7 @@ function ConfigEditor({ config, onSave, saving }) {
             <select
               value={clinicalModel}
               onChange={(e) => setClinicalModel(e.target.value)}
-              className="w-full md:w-1/2 px-3 py-2 rounded-lg border border-purple-200 bg-purple-50/30 text-[#0a0a0a] text-xs font-mono focus:outline-none focus:border-purple-400/40"
+              className="w-full md:w-1/2 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50/30 text-[#0a0a0a] text-xs font-mono focus:outline-none focus:border-blue-400/40"
             >
               <option value="">{t('taraconfig.reasoningModelSameAsMain', 'Same as main model')}</option>
               <optgroup label={t('taraconfig.reasoningGroupRecommended', 'Reasoning (recommended for clinical)')}>
@@ -360,7 +360,7 @@ function LiveTest() {
           <button
             onClick={handleEndSession}
             disabled={analyzing}
-            className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-['Space_Grotesk'] font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {analyzing ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
             {analyzing ? t('taraconfig.btnRunningAnalytics', 'Running Analytics...') : t('taraconfig.btnEndSession', 'End Session & Run Analytics')}
@@ -372,7 +372,7 @@ function LiveTest() {
       {analytics && (
         <div className="mt-5 p-4 rounded-xl bg-[#faf9f4] border border-[#e3e0db]">
           <div className="flex items-center gap-2 mb-3">
-            <Brain size={16} className="text-purple-600" />
+            <Brain size={16} className="text-blue-600" />
             <h4 className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk']">{t('taraconfig.analyticsReportHeading', 'Session Analytics Report')}</h4>
           </div>
 
@@ -525,7 +525,7 @@ function skillIcon(skill) {
 function SkillCard({ skill, selected, onOpen, onToggle }) {
   const isInternal = skill.kind === 'internal';
   const chars = (skill.primary_prompt || '').length + (skill.secondary_prompt || '').length;
-  const accent = isInternal ? '#7c3aed' : '#117dff';
+  const accent = isInternal ? '#117dff' : '#117dff';
   const tabBg = isInternal ? '#f3ecff' : '#eef5ff';
   const Icon = skillIcon(skill);
   return (
@@ -809,7 +809,7 @@ export default function TaraConfig() {
           { icon: Play, label: 'Total Calls', value: String(calls.length), color: '#117dff' },
           { icon: Clock, label: 'This Week', value: String(weekCount), color: '#117dff' },
           { icon: MessageSquare, label: 'Turns', value: String(totalTurns), color: '#16a34a' },
-          { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#7c3aed' },
+          { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#117dff' },
           { icon: Clock, label: 'Last Call', value: lastCall, color: '#a3a3a3' },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
