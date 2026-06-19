@@ -762,7 +762,7 @@ function LiveResearchPanel({ job }) {
   }, [job.partial_content, job.progress?.length]);
 
   return (
-    <div ref={ref} className="h-full">
+    <div ref={ref} className="h-full overflow-y-auto">
       <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
         <header className="px-4 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4] flex items-center gap-2">
           <Sparkles size={14} className="text-blue-500" />

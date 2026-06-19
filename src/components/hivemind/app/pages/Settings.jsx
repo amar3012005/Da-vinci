@@ -501,7 +501,7 @@ export default function Settings() {
               </p>
               <div className="flex items-center gap-4">
                 <a
-                  href="https://docs.hivemind.dev"
+                  href="https://hivemind.davinciai.eu"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-[#117dff] hover:text-[#0066e0] text-xs font-mono transition-colors"
@@ -510,7 +510,7 @@ export default function Settings() {
                   <ExternalLink size={11} />
                 </a>
                 <a
-                  href="https://hivemind.dev/support"
+                  href="https://hivemind.davinciai.eu"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-[#117dff] hover:text-[#0066e0] text-xs font-mono transition-colors"
