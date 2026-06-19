@@ -328,7 +328,7 @@ export default function Settings() {
         </SectionCard>
 
         {/* ── Project Access Policy ──────────────────────────────── */}
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'owner') && (
           <SectionCard>
             <SectionHeader
               icon={Shield}

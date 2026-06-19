@@ -2838,7 +2838,7 @@ function CreateRoomModal({ onClose, onCreated }) {
         onSubmit={submit}
         initial={{ scale: 0.97, opacity: 0, y: 14 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.97, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-        className="bg-white rounded-none-[24px] w-full max-w-[1220px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)] overflow-hidden"
+        className="bg-white rounded-none w-full max-w-[1220px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <header className="px-7 py-5 flex items-center justify-between flex-shrink-0 border-b border-[#e3e0db] bg-white">
@@ -3113,7 +3113,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                 <div className="mt-1 text-[12px] font-semibold text-[#0f172a]">{picked.size} / {allowedEmployees.length}</div>
               </div>
             </div>
-            <div className="flex-1 min-h-[220px] overflow-y-auto bg-white border border-[#dfe7f3] rounded-none-[20px] p-2">
+            <div className="flex-1 min-h-[220px] overflow-y-auto bg-white border border-[#dfe7f3] rounded-none p-2">
               {employees.length === 0 && (
                 <div className="px-3 py-10 text-center text-[11px] text-[#a3a3a3]">
                   {t('hyperAgents.noEmployeesYet', 'No employees yet.')}

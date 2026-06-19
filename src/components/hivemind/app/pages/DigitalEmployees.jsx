@@ -447,7 +447,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
         <span>·</span>
         <span>{tokens} tok</span>
         <span>·</span>
-        <span>{employee.model.split('-').slice(0, 2).join('-')}</span>
+        <span>{(employee.model || '').split('-').slice(0, 2).join('-')}</span>
       </div>
 
       {!selectable && (
