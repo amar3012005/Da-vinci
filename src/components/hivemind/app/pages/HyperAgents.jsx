@@ -576,7 +576,7 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
-      'connector_logo', 'gather',
+      'connector_logo', 'gather', 'recon_pre',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1190,6 +1190,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // under the same turn_id), so take the LATEST plan/verdict and group rounds.
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
   const gatherLine = [...lines].reverse().find(l => l.t === 'gather');
+  const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
   const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
   // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
@@ -1305,6 +1306,15 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           ))}
           {gatherLine.contacts > 0 && <span className="text-[#737373]">· {gatherLine.contacts} contact{gatherLine.contacts > 1 ? 's' : ''}</span>}
           {gatherLine.correspondence > 0 && <span className="text-[#737373]">· {gatherLine.correspondence} prior email{gatherLine.correspondence > 1 ? 's' : ''}</span>}
+        </div>
+      )}
+
+      {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
+      {reconPreLine && (
+        <div className="flex items-start gap-1.5 flex-wrap text-[10px] pl-2">
+          {reconPreLine.sufficient
+            ? <><CheckCheck size={11} className="text-emerald-600 mt-px" /><span className="text-emerald-700">Evidence sufficient — ready to produce</span></>
+            : <><AlertTriangle size={11} className="text-amber-600 mt-px" /><span className="text-amber-700">Evidence gaps (resolve before producing):</span><span className="text-amber-800">{(reconPreLine.missing || []).join('; ')}</span></>}
         </div>
       )}
 
