@@ -1558,7 +1558,7 @@ function renderInline(s, k0) {
     const tok = m[0];
     if (tok.startsWith('**')) parts.push(<strong key={k++}>{tok.slice(2, -2)}</strong>);
     else if (tok.startsWith('`')) parts.push(<code key={k++} className="rounded bg-black/5 px-1 py-0.5 font-mono text-[12px]">{tok.slice(1, -1)}</code>);
-    else if (tok.startsWith('[')) { const lm = tok.match(/\[([^\]]+)\]\(([^)]+)\)/); parts.push(<a key={k++} href={lm[2]} target="_blank" rel="noreferrer" className="text-[#117dff] underline">{lm[1]}</a>); }
+    else if (tok.startsWith('[')) { const lm = tok.match(/\[([^\]]+)\]\(([^)]+)\)/); if (lm && /^https?:/i.test(lm[2])) parts.push(<a key={k++} href={lm[2]} target="_blank" rel="noreferrer" className="text-[#117dff] underline">{lm[1]}</a>); else parts.push(<span key={k++}>{tok}</span>); }
     else parts.push(<em key={k++}>{tok.slice(1, -1)}</em>);
     rem = rem.slice(m.index + tok.length);
   }

@@ -132,7 +132,7 @@ function UserAvatar({ displayName, email }) {
     .join('');
 
   return (
-    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#117dff] to-[#6366f1] flex items-center justify-center shadow-lg select-none">
+    <div className="w-16 h-16 rounded-[10px] bg-[#117dff] flex items-center justify-center select-none">
       <span className="text-white text-xl font-bold font-mono">{initials || '?'}</span>
     </div>
   );

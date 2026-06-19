@@ -362,17 +362,17 @@ function SwarmActivity() {
             </div>
           )}
 
-          {(traces.affordances || []).map((t, i) => (
+          {(traces.affordances || []).map((tr, i) => (
             <div key={i} className="text-[11px] bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 flex items-center gap-2">
               <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
-              <span className="text-[#525252] line-clamp-1">{(t.content || '').slice(0, 150)}</span>
+              <span className="text-[#525252] line-clamp-1">{(tr.content || '').slice(0, 150)}</span>
             </div>
           ))}
 
-          {(traces.disturbances || []).map((t, i) => (
+          {(traces.disturbances || []).map((tr, i) => (
             <div key={i} className="text-[11px] bg-red-50 border border-red-200 rounded px-2.5 py-1.5 flex items-center gap-2">
               <AlertTriangle size={12} className="text-red-400 shrink-0" />
-              <span className="text-[#525252] line-clamp-1">{(t.content || '').slice(0, 150)}</span>
+              <span className="text-[#525252] line-clamp-1">{(tr.content || '').slice(0, 150)}</span>
             </div>
           ))}
 

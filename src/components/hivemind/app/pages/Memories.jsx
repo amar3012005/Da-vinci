@@ -178,9 +178,9 @@ function ImportanceBar({ score }) {
 // ─── Source Provenance Badge ──────────────────────────────────────────────────
 
 const SOURCE_BADGE_STYLES = {
-  vector:  { label: 'Vector',  color: 'text-purple-400/70', bg: 'bg-purple-500/10' },
-  keyword: { label: 'Keyword', color: 'text-blue-400/70',   bg: 'bg-blue-500/10' },
-  graph:   { label: 'Graph',   color: 'text-amber-400/70',  bg: 'bg-amber-500/10' },
+  vector:  { label: 'Vector',  color: 'text-[#117dff]', bg: 'bg-[#117dff]/10' },
+  keyword: { label: 'Keyword', color: 'text-[#525252]', bg: 'bg-[#0a0a0a]/[0.06]' },
+  graph:   { label: 'Graph',   color: 'text-amber-700',  bg: 'bg-amber-500/10' },
 };
 
 function SourceBadge({ source }) {
@@ -277,7 +277,7 @@ function RelationshipIndicator({ memory }) {
     chips.push(
       <span
         key="exp"
-        className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/70 uppercase tracking-wider"
+        className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 uppercase tracking-wider"
       >
         <GitFork size={8} />
         {relType}
@@ -2301,7 +2301,7 @@ function DocumentCard({ document, index, onSelect, isSelected }) {
       {/* Created date */}
       <div className="flex items-center gap-1 mt-3 text-[10px] text-[#d4d0ca] font-mono">
         <Clock size={10} />
-        {new Date(document.createdAt).toLocaleDateString()}
+        {(document.createdAt && !isNaN(new Date(document.createdAt)) ? new Date(document.createdAt).toLocaleDateString() : '—')}
       </div>
     </motion.button>
   );
@@ -2459,7 +2459,7 @@ function DocumentDetailPanel({ document, onClose }) {
                 </div>
                 <div>
                   <span className="text-[#a3a3a3] text-xs font-mono uppercase">{t('memories.created', 'Created')}</span>
-                  <p className="text-[#0a0a0a] font-semibold">{new Date(document.createdAt).toLocaleDateString()}</p>
+                  <p className="text-[#0a0a0a] font-semibold">{(document.createdAt && !isNaN(new Date(document.createdAt)) ? new Date(document.createdAt).toLocaleDateString() : '—')}</p>
                 </div>
               </div>
 

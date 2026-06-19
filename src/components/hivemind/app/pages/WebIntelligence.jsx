@@ -905,7 +905,7 @@ export default function WebIntelligence() {
                 <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                   <Loader2 size={14} className="animate-spin text-blue-500" />
                   <span className="text-blue-700 text-xs">
-                    {t('webintelligence.pollingMessage', 'Job {{jobId}} is running... Polling for updates.', { jobId: <span className="font-mono">{pollingJobId?.slice(0, 8)}</span> })}
+                    {t('webintelligence.pollingMessage', 'Job {{jobId}} is running... Polling for updates.', { jobId: pollingJobId?.slice(0, 8) || '' })}
                   </span>
                 </div>
               </motion.div>

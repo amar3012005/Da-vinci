@@ -1199,11 +1199,13 @@ export default function MeetingNotes() {
               </div>
             );
           })()}
-          <MeetingIntelligencePanel
-            intelligence={selected?.intelligence}
-            status={selected?.intelligence_status}
-            onOpenMemory={(id) => window.open(`/hivemind/app/memories?focus=${id}`, '_self')}
-          />
+          {detailTab === 'summary' && (
+            <MeetingIntelligencePanel
+              intelligence={selected?.intelligence}
+              status={selected?.intelligence_status}
+              onOpenMemory={(id) => window.open(`/hivemind/app/memories?focus=${id}`, '_self')}
+            />
+          )}
           {detailTab === 'notes' && (
             <p className="text-[13px] text-[#525252] leading-relaxed whitespace-pre-wrap">
               {selected.notes || t('meetingnotes.noNotes', 'No notes were added during this meeting.')}
