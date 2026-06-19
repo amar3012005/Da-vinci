@@ -298,10 +298,11 @@ export default function TaraConfig() {
 
   // Aggregates for stat cards + usage tab
   const now = Date.now();
-  const weekCount = calls.filter((c) => now - new Date(c.startedAt).getTime() < 7 * 864e5).length;
+  const _validTs = (d) => { const ts = new Date(d).getTime(); return Number.isNaN(ts) ? null : ts; };
+  const weekCount = calls.filter((c) => { const ts = _validTs(c.startedAt); return ts !== null && now - ts < 7 * 864e5; }).length;
   const totalTurns = calls.reduce((a, c) => a + (c.turnCount || 0), 0);
   const totalTokens = calls.reduce((a, c) => a + (c.promptTokens || 0) + (c.completionTokens || 0), 0);
-  const lastCall = calls[0] ? new Date(calls[0].startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+  const lastCall = (calls[0] && _validTs(calls[0].startedAt) !== null) ? new Date(calls[0].startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
@@ -379,7 +380,7 @@ export default function TaraConfig() {
                 <button onClick={() => (callDetail?.call?.id === c.id ? setCallDetail(null) : openCall(c.id))}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#faf9f4] transition-colors text-left">
                   <div>
-                    <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{new Date(c.startedAt).toLocaleString()}</span>
+                    <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
                     <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.mode} · {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
                   </div>
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${c.status==='completed'?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'}`}>{c.status}</span>

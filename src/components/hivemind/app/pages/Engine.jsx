@@ -623,7 +623,7 @@ export default function Engine() {
           <div key={key} className="flex items-center gap-1.5 bg-white border border-[#e3e0db] rounded-lg px-3 py-1.5">
             <Icon size={12} className="text-[#117dff]" />
             <span className="text-[11px] font-medium text-[#0a0a0a]">{label}</span>
-            <Badge color={color}>{t('engine.active', 'active')}</Badge>
+            <Badge color={color}>{t('engine.builtIn', 'built-in')}</Badge>
           </div>
         ))}
       </motion.div>
