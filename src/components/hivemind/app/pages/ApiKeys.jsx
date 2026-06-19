@@ -322,14 +322,18 @@ export default function ApiKeysPage() {
   };
 
   const handleRevoke = async (id) => {
-    await apiClient.revokeApiKey(id);
+    try {
+      await apiClient.revokeApiKey(id);
+    } catch {
+      // revoke failed — surfaced by the refetch below leaving the key in the list
+    }
     refetch();
   };
 
   const keyList = Array.isArray(keys) ? keys : keys?.keys || [];
 
   return (
-    <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
+    <div className="max-w-5xl mx-auto">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <motion.div

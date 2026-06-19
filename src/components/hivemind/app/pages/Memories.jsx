@@ -1149,7 +1149,7 @@ export default function Memories() {
   // ─── Render ─────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#faf9f4] font-['Space_Grotesk']">
+    <div className="font-['Space_Grotesk']">
       {/* Ambient glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#117dff]/[0.012] blur-[120px] pointer-events-none" />
 

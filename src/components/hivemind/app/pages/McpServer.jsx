@@ -1168,7 +1168,7 @@ export default function McpServer() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf9f4] p-6 md:p-10">
+    <div className="max-w-5xl mx-auto">
       {isGuidedWalkthrough && (
         <div className="fixed inset-0 z-10 bg-[#0a0a0a]/35 backdrop-blur-[2px] pointer-events-none" />
       )}
