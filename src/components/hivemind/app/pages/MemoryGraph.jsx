@@ -1415,7 +1415,6 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               memories={graphData.nodes}
               orgName={org?.name || 'Your memory'}
               theme={graphTheme === 'night' ? 'night' : 'day'}
-              onSelectMemory={handleNodeClick}
               onAddMemory={() => navigate('/hivemind/app/memories')}
               hubCounts={{
                 ...hubCounts,
@@ -1903,9 +1902,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               <div className="h-[calc(100%-60px)] p-4">
                 <PageIndexViewer
                   userId={org?.userId || 'current'}
-                  onSelectNode={(node) => {
-                    console.log('Selected node:', node);
-                  }}
+                  onSelectNode={() => { /* node-select side panel not yet wired */ }}
                   selectedNodeId={null}
                   initialPath={pageIndexRootPath}
                   refreshKey={pageIndexRefreshKey}

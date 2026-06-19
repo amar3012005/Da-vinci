@@ -62,7 +62,7 @@ function ConsoleClock() {
         <p className="text-[#0a0a0a] text-[11px] font-semibold">{day}</p>
         <p className="text-[#a3a3a3] text-[10px] -mt-0.5">{date}</p>
       </div>
-      <span className="text-[#0a0a0a] text-2xl font-bold tracking-tight tabular-nums font-mono">{time}</span>
+      <span className="text-[#0a0a0a] text-xl font-semibold tracking-tight tabular-nums font-mono">{time}</span>
     </div>
   );
 }

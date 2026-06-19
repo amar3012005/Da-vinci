@@ -2146,10 +2146,7 @@ export default function KnowledgeBase() {
               <div className="h-[calc(100%-60px)] p-4">
                 <PageIndexViewer
                   userId={org?.userId || 'current'}
-                  onSelectNode={(node) => {
-                    console.log('Selected node:', node);
-                    // Could load memories from this node in a side panel
-                  }}
+                  onSelectNode={() => { /* node-select side panel not yet wired */ }}
                   selectedNodeId={null}
                   initialPath="/hivemind"
                 />
