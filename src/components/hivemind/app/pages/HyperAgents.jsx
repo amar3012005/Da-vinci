@@ -1306,6 +1306,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           ))}
           {gatherLine.contacts > 0 && <span className="text-[#737373]">· {gatherLine.contacts} contact{gatherLine.contacts > 1 ? 's' : ''}</span>}
           {gatherLine.correspondence > 0 && <span className="text-[#737373]">· {gatherLine.correspondence} prior email{gatherLine.correspondence > 1 ? 's' : ''}</span>}
+          {(gatherLine.connector_hits || []).length > 0 && <span className="text-[#737373]">· {gatherLine.connector_hits.length} file{gatherLine.connector_hits.length > 1 ? 's' : ''}</span>}
         </div>
       )}
 
