@@ -744,7 +744,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
       cancelEdit();
       onRefresh();
     } catch (err) {
-      console.error('Failed to update fact:', err);
+      setAddError(err.response?.data?.error || err.message || 'Failed to update fact');
     } finally {
       setSaving(false);
     }
@@ -758,7 +758,7 @@ function ProfileFactsSection({ facts, onRefresh }) {
       setDeleteTarget(null);
       onRefresh();
     } catch (err) {
-      console.error('Failed to delete fact:', err);
+      setAddError(err.response?.data?.error || err.message || 'Failed to delete fact');
     } finally {
       setDeleteLoading(false);
     }
@@ -1312,7 +1312,7 @@ export default function Profile() {
         {/* Section 2: Knowledge Identity Card */}
         <KnowledgeIdentityCard
           facts={facts}
-          onToggleEditor={() => setFactsExpanded((p) => !p)}
+          onToggleEditor={() => setFactsExpanded(true)}
         />
 
         {/* Section 3: Knowledge Breakdown */}

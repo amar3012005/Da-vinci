@@ -1929,6 +1929,7 @@ export default function KnowledgeBase() {
                   {/* Bulk-select checkbox — visible on hover OR when any selection active */}
                   <input
                     type="checkbox"
+                    aria-label={`Select ${doc.title || doc.name || doc.filename || 'document'}`}
                     checked={bulkSelected.has(doc.id)}
                     onChange={(e) => {
                       e.stopPropagation();
@@ -2069,6 +2070,7 @@ export default function KnowledgeBase() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(doc.id); }}
                         className="p-1.5 rounded-lg text-[#d4d0ca] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                        aria-label={`Delete ${doc.title || doc.name || doc.filename || 'document'}`}
                         title={t('knowledgebase.deleteDocTitle', 'Delete document + every chunk + every fact + Qdrant vectors')}
                       >
                         <Trash2 size={14} />
