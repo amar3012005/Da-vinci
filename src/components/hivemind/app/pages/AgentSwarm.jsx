@@ -86,6 +86,8 @@ function verdictBadge(verdict) {
 
 export default function AgentSwarm() {
   const { t } = useTranslation('dashboard');
+  const [toast, setToast] = useState(null);  // { msg, kind } — themed, replaces window.alert
+  const showToast = (msg, kind = 'info') => { setToast({ msg, kind }); window.setTimeout(() => setToast(null), 4500); };
   const [selected, setSelected] = useState(null); // 'faraday' | 'feynman' | 'turing' | 'all'
   const [scope, setScope] = useState('workspace');
   const [goal, setGoal] = useState('');
@@ -144,11 +146,11 @@ export default function AgentSwarm() {
     try {
       const result = await apiClient.approveResearchProposals(sessionId, kinds ? { kinds } : {});
       // eslint-disable-next-line no-alert
-      window.alert(`Approved: ${result.persisted} memories persisted${result.errors ? `, ${result.errors} errors` : ''}.`);
+      showToast(`Approved: ${result.persisted} memories persisted${result.errors ? `, ${result.errors} errors` : ''}.`);
       await refreshResearchSessions();
     } catch (err) {
       // eslint-disable-next-line no-alert
-      window.alert(`Approve failed: ${err?.response?.data?.message || err.message}`);
+      showToast(`Approve failed: ${err?.response?.data?.message || err.message}`);
     } finally {
       setResearchActingOn(null);
     }
@@ -163,7 +165,7 @@ export default function AgentSwarm() {
       await refreshResearchSessions();
     } catch (err) {
       // eslint-disable-next-line no-alert
-      window.alert(`Discard failed: ${err?.response?.data?.message || err.message}`);
+      showToast(`Discard failed: ${err?.response?.data?.message || err.message}`);
     } finally {
       setResearchActingOn(null);
     }
@@ -266,7 +268,7 @@ export default function AgentSwarm() {
       console.error('Execute failed:', err?.response?.data?.error || err.message);
       // Surface to user — DON'T mark executed if it actually failed
       // eslint-disable-next-line no-alert
-      window.alert(`Action failed: ${err?.response?.data?.error || err.message}\n\nProposal stays in queue. Check console for details.`);
+      showToast(`Action failed: ${err?.response?.data?.error || err.message}\n\nProposal stays in queue. Check console for details.`);
     } finally {
       setExecutingIds(prev => { const n = new Set(prev); n.delete(proposal.id); return n; });
     }
@@ -363,6 +365,11 @@ export default function AgentSwarm() {
 
   return (
     <div className="h-full flex flex-col font-['Space_Grotesk']">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[60] max-w-sm px-4 py-2.5 rounded-[10px] text-xs shadow-[0_8px_30px_-8px_rgba(0,0,0,0.3)] whitespace-pre-line ${toast.kind === 'error' ? 'bg-red-600 text-white' : 'bg-[#0a0a0a] text-white'}`}>
+          {toast.msg}
+        </div>
+      )}
       {/* ── Header (compact) ── */}
       <div className="shrink-0 px-5 pt-4 pb-3 flex items-center justify-between">
         <div>
@@ -838,7 +845,7 @@ export default function AgentSwarm() {
                           const n = dry.matched_count || 0;
                           if (n === 0) {
                             // eslint-disable-next-line no-alert
-                            window.alert('No memories match the tag/date filter. Nothing to delete.');
+                            showToast('No memories match the tag/date filter. Nothing to delete.');
                             return;
                           }
                           // eslint-disable-next-line no-alert
@@ -855,12 +862,12 @@ export default function AgentSwarm() {
                             if (!res.matched || res.matched === 0) break;
                           }
                           // eslint-disable-next-line no-alert
-                          window.alert(`Deleted ${totalDeleted} memories. Re-scanning graph...`);
+                          showToast(`Deleted ${totalDeleted} memories. Re-scanning graph...`);
                           await runHygieneScan();
                         } catch (err) {
                           console.error('Bulk delete by tag failed:', err);
                           // eslint-disable-next-line no-alert
-                          window.alert(`Bulk delete failed: ${err?.response?.data?.message || err.message}`);
+                          showToast(`Bulk delete failed: ${err?.response?.data?.message || err.message}`);
                         }
                       }}
                       className="text-[10px] px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors font-semibold"
