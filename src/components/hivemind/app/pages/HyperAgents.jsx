@@ -24,7 +24,7 @@ import {
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
-  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes,
+  UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -453,6 +453,11 @@ function RoomThread({ roomId, onArchived }) {
   const [activeTurnId, setActiveTurnId] = useState(null);
   const [liveLines, setLiveLines] = useState([]);
   const [draft, setDraft] = useState('');
+  // Uploaded attachments for the next turn — each {id, name, status, documentId, error}.
+  // On upload they ingest into HIVEMIND (persist); the turn references them so the
+  // team recalls their content this turn too (hybrid: persist + immediate use).
+  const [attachments, setAttachments] = useState([]);
+  const fileInputRef = useRef(null);
   const [showPicker, setShowPicker] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
   const [dmAgent, setDmAgent] = useState(null);
@@ -624,24 +629,55 @@ function RoomThread({ roomId, onArchived }) {
     if (!activeTurnId) setLiveLines([]);
   }, [activeTurnId]);
 
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    for (const file of files) {
+      const id = (window.crypto?.randomUUID?.() || `att-${Date.now()}-${Math.random()}`);
+      setAttachments(prev => [...prev, { id, name: file.name, status: 'uploading', documentId: null }]);
+      try {
+        // Ingest into HIVEMIND (persists; awaits 'indexed' so the team can recall it).
+        const res = await apiClient.uploadDocument(file, { targetScope: 'org' });
+        const documentId = res?.documentId || res?.document_id || null;
+        setAttachments(prev => prev.map(a => (a.id === id ? { ...a, status: 'done', documentId } : a)));
+      } catch (e) {
+        setAttachments(prev => prev.map(a => (a.id === id ? { ...a, status: 'error', error: e?.response?.data?.error || e?.message } : a)));
+      }
+    }
+  }
+
+  function removeAttachment(id) {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  }
+
   async function handleSubmit(e) {
     e?.preventDefault?.();
-    const msg = draft.trim();
-    if (!msg || submitting) return;
+    const base = draft.trim();
+    const doneAtts = attachments.filter(a => a.status === 'done');
+    if (attachments.some(a => a.status === 'uploading')) return;   // wait for uploads
+    if ((!base && doneAtts.length === 0) || submitting) return;
     if (!room?.goal?.trim()) {
       setError(t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.'));
       return;
     }
+    // Reference the just-ingested docs so the team recalls their content this turn.
+    const names = doneAtts.map(a => a.name).join(', ');
+    const attNote = doneAtts.length
+      ? `\n\n[Attached document${doneAtts.length > 1 ? 's' : ''} (now in HIVEMIND — recall ${doneAtts.length > 1 ? 'them' : 'it'} to read the content): ${names}]`
+      : '';
+    const msg = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`) + attNote;
+    const echo = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`)
+      + (doneAtts.length ? `   📎 ${names}` : '');
     setSubmitting(true);
     setLiveLines([]);
     setDraft('');
+    setAttachments([]);
     // Instant optimistic echo — render the user's message IMMEDIATELY, before
     // the network round-trip, so the room never looks frozen while the POST is
     // in flight. Reconciled with the real turn id on response.
     const tempId = (window.crypto?.randomUUID?.() || `pending-${Date.now()}`);
     setTurns(prev => [
       ...prev,
-      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
+      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: echo, status: 'live', lines: [], createdAt: new Date().toISOString() },
     ]);
     setActiveTurnId(tempId);
     try {
@@ -960,7 +996,39 @@ function RoomThread({ roomId, onArchived }) {
         {/* Composer */}
         {!archived && (
           <form onSubmit={handleSubmit} className="border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
+            />
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {attachments.map(a => (
+                  <span
+                    key={a.id}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] border ${a.status === 'error' ? 'border-red-200 bg-red-50 text-red-700' : a.status === 'uploading' ? 'border-[#e3e0db] bg-white text-[#737373]' : 'border-[#117dff]/30 bg-[#117dff]/5 text-[#0a0a0a]'}`}
+                    title={a.status === 'error' ? a.error : a.status === 'done' ? t('hyperAgents.attachDone', 'Ingested into HIVEMIND — the team can recall it') : undefined}
+                  >
+                    {a.status === 'uploading' ? <Loader2 size={10} className="animate-spin" /> : a.status === 'error' ? <AlertTriangle size={10} /> : <FileText size={10} className="text-[#117dff]" />}
+                    <span className="max-w-[160px] truncate">{a.name}</span>
+                    {a.status === 'uploading' && <span className="text-[#a3a3a3]">{t('hyperAgents.ingesting', 'ingesting…')}</span>}
+                    <button type="button" onClick={() => removeAttachment(a.id)} className="text-[#a3a3a3] hover:text-red-600 ml-0.5"><X size={10} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={submitting}
+                title={t('hyperAgents.attachHint', 'Attach a document or image — ingested into HIVEMIND and used by the team this turn')}
+                className="h-9 w-9 grid place-items-center border border-[#e3e0db] bg-white rounded-lg text-[#525252] hover:text-[#117dff] hover:border-[#117dff]/40 transition-colors shrink-0 disabled:opacity-50"
+              >
+                <Paperclip size={15} />
+              </button>
               <button
                 type="button"
                 onClick={() => setShowConnectors(true)}
@@ -984,7 +1052,7 @@ function RoomThread({ roomId, onArchived }) {
               </div>
               <button
                 type="submit"
-                disabled={!draft.trim() || submitting || !room?.goal?.trim()}
+                disabled={(!draft.trim() && !attachments.some(a => a.status === 'done')) || submitting || !room?.goal?.trim() || attachments.some(a => a.status === 'uploading')}
                 title={!room?.goal?.trim() ? t('hyperAgents.goalRequiredBeforeSend', 'Set a room goal before sending the next turn.') : undefined}
                 className="h-9 px-3 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
               >
