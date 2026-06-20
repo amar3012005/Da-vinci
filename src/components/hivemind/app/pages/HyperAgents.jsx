@@ -1313,16 +1313,33 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             <Search size={12} className="text-sky-600" />
             <span className="text-[11px] font-medium text-sky-800">{t('hyperAgents.activity', 'Room activity')}</span>
           </div>
-          {gathers.length > 0 && (() => {
-            const hits = gathers.reduce((n, g) => n + (g.memory_hits || 0), 0);
+          {(() => {
+            // recall sweeps (company brain) vs live connector reads (gmail/slack/…)
+            const recalls = gathers.filter(g => !g.tool);
+            const connectorReads = gathers.filter(g => g.tool);
+            const hits = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
             return (
-              <div className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
-                <span className="text-sky-600">🧠</span>
-                <span>
-                  <span className="font-medium">{gathers.length}</span> {gathers.length > 1 ? 'recall sweeps' : 'recall sweep'} of the company brain
-                  {hits > 0 && <> · <span className="font-medium">{hits}</span> facts</>}
-                </span>
-              </div>
+              <>
+                {recalls.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
+                    <span className="text-sky-600">🧠</span>
+                    <span>
+                      <span className="font-medium">{recalls.length}</span> {recalls.length > 1 ? 'recall sweeps' : 'recall sweep'} of the company brain
+                      {hits > 0 && <> · <span className="font-medium">{hits}</span> facts</>}
+                    </span>
+                  </div>
+                )}
+                {connectorReads.map((g, i) => (
+                  <div key={`conn-${i}`} className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
+                    <span className="text-sky-600">🔌</span>
+                    <span>
+                      <span className="font-medium">{(g.sources || [])[0] || 'connector'}</span>
+                      {' · '}<span className="font-mono text-[9.5px] text-sky-700">{g.tool}</span>
+                      {g.query ? <> · “{g.query}”</> : null}
+                    </span>
+                  </div>
+                ))}
+              </>
             );
           })()}
           {webIntels.map((w, i) => (
