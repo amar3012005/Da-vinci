@@ -1965,23 +1965,33 @@ function renderMarkdownLite(raw) {
   let i = 0;
   let key = 0;
 
-  const inline = (s) => {
-    // bold
-    const parts = [];
-    let rest = s;
+  const fmt = (seg, out, kp) => {
+    let rest = seg;
     let mIdx = 0;
     while (rest.length) {
       const b = rest.match(/\*\*([^*]+)\*\*/);
       const it = rest.match(/`([^`]+)`/);
       const first = [b, it].filter(Boolean).sort((a, c) => a.index - c.index)[0];
-      if (!first) { parts.push(rest); break; }
-      if (first.index > 0) parts.push(rest.slice(0, first.index));
-      if (first === b) parts.push(<strong key={`b-${mIdx++}`}>{b[1]}</strong>);
-      else parts.push(<code key={`c-${mIdx++}`} className="px-1 py-0.5 rounded bg-black/5 text-[12px] font-mono">{it[1]}</code>);
+      if (!first) { out.push(rest); break; }
+      if (first.index > 0) out.push(rest.slice(0, first.index));
+      if (first === b) out.push(<strong key={`${kp}b-${mIdx++}`}>{b[1]}</strong>);
+      else out.push(<code key={`${kp}c-${mIdx++}`} className="px-1 py-0.5 rounded bg-black/5 text-[12px] font-mono">{it[1]}</code>);
       rest = rest.slice(first.index + first[0].length);
     }
-    return parts;
   };
+  // inline: handle **bold**, `code`, and <br> (LLMs emit literal <br> inside table cells)
+  const inline = (s) => {
+    const segs = String(s == null ? '' : s).split(/<br\s*\/?>/i);
+    const out = [];
+    segs.forEach((seg, si) => {
+      if (si > 0) out.push(<br key={`br-${si}`} />);
+      fmt(seg, out, `s${si}-`);
+    });
+    return out;
+  };
+  const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(l || '');
+  const isTableSep = (l) => /^\s*\|?[\s:|-]+\|?\s*$/.test(l || '') && (l || '').includes('-');
+  const splitRow = (r) => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
 
   while (i < lines.length) {
     const line = lines[i];
@@ -1996,6 +2006,34 @@ function renderMarkdownLite(raw) {
                 : 'text-[12px] font-semibold uppercase tracking-wider text-[#525252] mt-1.5 mb-0.5';
       blocks.push(<div key={key++} className={cls}>{inline(h[2])}</div>);
       i++;
+      continue;
+    }
+    // Table — a "| a | b |" row followed by a "|---|---|" separator → real <table>.
+    if (isTableRow(line) && isTableSep(lines[i + 1])) {
+      const header = splitRow(line);
+      i += 2; // consume header + separator
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) { rows.push(splitRow(lines[i])); i++; }
+      blocks.push(
+        <div key={key++} className="my-2 overflow-x-auto rounded-md border border-[#e3e0db]">
+          <table className="w-full text-[11.5px] border-collapse">
+            <thead>
+              <tr>{header.map((hc, hi) => (
+                <th key={hi} className="text-left font-semibold text-[#0a0a0a] bg-[#f3f1ec] border-b border-[#e3e0db] px-2.5 py-1.5 align-top">{inline(hc)}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {rows.map((cells, ri) => (
+                <tr key={ri} className={ri % 2 ? 'bg-[#faf9f4]' : 'bg-white'}>
+                  {cells.map((c, ci) => (
+                    <td key={ci} className="border-t border-[#ece9e3] px-2.5 py-1.5 align-top text-[#262626] leading-relaxed">{inline(c)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
       continue;
     }
     // Bullet list
@@ -2028,7 +2066,9 @@ function renderMarkdownLite(raw) {
     }
     // Paragraph
     const para = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|\s*[*-]\s+|\s*\d+\.\s+)/.test(lines[i])) {
+    while (i < lines.length && lines[i].trim()
+           && !/^(#{1,3}\s|\s*[*-]\s+|\s*\d+\.\s+)/.test(lines[i])
+           && !isTableRow(lines[i])) {
       para.push(lines[i].trim());
       i++;
     }
