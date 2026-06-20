@@ -630,6 +630,18 @@ function RoomThread({ roomId, onArchived }) {
     if (!activeTurnId) setLiveLines([]);
   }, [activeTurnId]);
 
+  async function setQualityMode(mode) {
+    if (!room || (room.quality_mode || 'auto') === mode) return;
+    const prevMode = room.quality_mode || 'auto';
+    setRoom(prev => ({ ...prev, quality_mode: mode }));  // optimistic
+    try {
+      await apiClient.updateHyperRoom(roomId, { quality_mode: mode });
+    } catch (e) {
+      setRoom(prev => ({ ...prev, quality_mode: prevMode }));
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+
   async function handleFiles(fileList) {
     const files = Array.from(fileList || []);
     for (const file of files) {
@@ -903,6 +915,27 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
+            {!archived && (
+              <div className="mt-1 inline-flex items-center gap-1.5">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.quality', 'Quality')}</span>
+                <div className="inline-flex rounded-lg border border-[#e3e0db] overflow-hidden">
+                  {[
+                    ['auto', t('hyperAgents.qAuto', 'Auto'), t('hyperAgents.qAutoHint', 'Multi-model: cheap gather + debate, strong 120b synthesis. Best value (~⅓ cost).')],
+                    ['best', t('hyperAgents.qBest', 'Best'), t('hyperAgents.qBestHint', 'All gpt-oss-120b — maximum rigor, higher cost.')],
+                  ].map(([val, label, hint]) => {
+                    const on = (room.quality_mode || 'auto') === val;
+                    return (
+                      <button
+                        key={val} type="button" onClick={() => setQualityMode(val)} title={hint}
+                        className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${on ? 'bg-[#117dff] text-white' : 'bg-white text-[#737373] hover:text-[#117dff]'}`}
+                      >
+                        {label}{val === 'auto' && on ? ' ⚡' : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {room.goal ? (
               <div className="mt-1 max-w-[720px] text-[11px] leading-snug text-[#525252] line-clamp-2">
                 <span className="font-mono uppercase tracking-wider text-[#117dff] text-[9px] mr-1">{t('hyperAgents.goalLbl', 'Goal')}</span>
