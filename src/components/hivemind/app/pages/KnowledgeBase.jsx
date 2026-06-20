@@ -1139,7 +1139,7 @@ export default function KnowledgeBase() {
       };
     })();
 
-    const uploadOne = async ({ uploadEntry, file }, { force = false } = {}) => {
+    const uploadOne = async ({ uploadEntry, file }, { force = false, attempt = 1 } = {}) => {
       // Move queued → uploading
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
@@ -1293,6 +1293,26 @@ export default function KnowledgeBase() {
         // Upfront server-side dedup: 409 = identical content already ingested.
         // Not a failure — mark distinctly and let the rest of the batch run.
         const isDuplicate = err?.response?.status === 409 && err?.response?.data?.duplicate;
+        // Transient saturation: during a bulk upload the core is briefly overloaded
+        // (heavy docling parses hold the Prisma pool) → the proxy returns 502/503/504
+        // or 429, or the request times out with no response. NOT a real failure —
+        // auto-retry with exponential backoff so a file that merely landed mid-burst
+        // doesn't show red. Real 4xx, cancel, and 409 (dedup) do NOT retry.
+        const _st = err?.response?.status;
+        const isTransient = !isCancelled && !isDuplicate
+          && (_st === 502 || _st === 503 || _st === 504 || _st === 429 || _st === undefined);
+        const MAX_UPLOAD_ATTEMPTS = 4;
+        if (isTransient && attempt < MAX_UPLOAD_ATTEMPTS) {
+          const backoff = Math.min(8000, 1000 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 400);
+          setUploads((prev) => prev.map((u) =>
+            u.id === uploadEntry.id
+              ? { ...u, status: 'uploading', stage: 'retrying', error: undefined,
+                  message: `Server busy — retrying (${attempt}/${MAX_UPLOAD_ATTEMPTS - 1})…` }
+              : u
+          ));
+          await new Promise((r) => setTimeout(r, backoff));
+          return uploadOne({ uploadEntry, file }, { force, attempt: attempt + 1 });
+        }
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
             ? {
