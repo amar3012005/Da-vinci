@@ -221,6 +221,45 @@ export const CONNECTOR_CATALOG = [
     status: 'stable',
     description: 'Crawl URL into chunks. Tavily-backed.',
   },
+
+  // ── INGESTION — HR ───────────────────────────────────────────────────
+  {
+    id: 'personio-v2',
+    name: 'Personio',
+    description: 'HR management — employees, departments, positions, org chart',
+    category: 'hr',
+    nangoProvider: 'personio-v2',
+    icon: '👥',
+    mode: ['ingestion'],
+    authType: 'oauth2',
+    status: 'beta',
+  },
+
+  // ── INGESTION — Accounting ────────────────────────────────────────────
+  {
+    id: 'datev',
+    name: 'DATEV',
+    description: 'German accounting and payroll — invoices, bookkeeping, payroll data',
+    category: 'accounting',
+    nangoProvider: 'datev',
+    icon: '📊',
+    mode: ['ingestion'],
+    authType: 'oauth2',
+    status: 'planned',
+  },
+
+  // ── INGESTION — ERP ───────────────────────────────────────────────────
+  {
+    id: 'sap-business-one',
+    name: 'SAP Business One',
+    description: 'ERP — business processes, inventory, financials, sales orders',
+    category: 'erp',
+    nangoProvider: 'sap-business-one',
+    icon: '🏭',
+    mode: ['ingestion'],
+    authType: 'oauth2',
+    status: 'planned',
+  },
 ];
 
 export const CONNECTOR_BY_ID = Object.fromEntries(CONNECTOR_CATALOG.map(c => [c.id, c]));
@@ -259,6 +298,9 @@ export const CONNECTOR_CATEGORIES = [
   { id: 'code', name: 'Code & DevOps' },
   { id: 'database', name: 'Databases' },
   { id: 'web', name: 'Web' },
+  { id: 'hr', name: 'HR & People' },
+  { id: 'accounting', name: 'Accounting & Finance' },
+  { id: 'erp', name: 'ERP' },
 ];
 
 export const CONNECTOR_MODES = {
