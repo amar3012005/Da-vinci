@@ -1193,7 +1193,10 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
   // under the same turn_id), so take the LATEST plan/verdict and group rounds.
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
-  const gatherLine = [...lines].reverse().find(l => l.t === 'gather');
+  // Every tool call the room made, in order — recall sweeps + live web searches —
+  // so the simulation shows its working (not just the final answer).
+  const gathers = lines.filter(l => l.t === 'gather');
+  const webIntels = lines.filter(l => l.t === 'web_intel');
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -1301,17 +1304,44 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
-      {/* GATHER phase — evidence pulled from all sources before the team reasons. */}
-      {gatherLine && (gatherLine.contacts > 0 || gatherLine.correspondence > 0 || (gatherLine.sources || []).length > 1) && (
-        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-[#525252] pl-2">
-          <Search size={11} className="text-sky-600" />
-          <span className="font-medium text-sky-800">{t('hyperAgents.gathered', 'Gathered evidence')}</span>
-          {(gatherLine.sources || []).map((s, i) => (
-            <span key={i} className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[9px] font-mono">{s}</span>
+      {/* ROOM ACTIVITY — every tool call the room made, in order: brain recalls +
+          live web searches (with clickable sources). Shows the simulation working,
+          not just the final answer. */}
+      {(gathers.length > 0 || webIntels.length > 0) && (
+        <div className="rounded-lg border border-sky-100 bg-sky-50/40 px-3 py-2 space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Search size={12} className="text-sky-600" />
+            <span className="text-[11px] font-medium text-sky-800">{t('hyperAgents.activity', 'Room activity')}</span>
+          </div>
+          {gathers.length > 0 && (() => {
+            const hits = gathers.reduce((n, g) => n + (g.memory_hits || 0), 0);
+            return (
+              <div className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
+                <span className="text-sky-600">🧠</span>
+                <span>
+                  <span className="font-medium">{gathers.length}</span> {gathers.length > 1 ? 'recall sweeps' : 'recall sweep'} of the company brain
+                  {hits > 0 && <> · <span className="font-medium">{hits}</span> facts</>}
+                </span>
+              </div>
+            );
+          })()}
+          {webIntels.map((w, i) => (
+            <div key={`web-${i}`} className="flex items-start gap-1.5 text-[10.5px] text-[#525252]">
+              <span className="text-sky-600 mt-px">🌐</span>
+              <span className="min-w-0">
+                <span className="font-medium">{t('hyperAgents.webSearch', 'Web search')}</span>{w.query ? <> · “{w.query}”</> : null}
+                {(w.sources || []).length > 0 && (
+                  <span className="flex flex-wrap gap-1 mt-0.5">
+                    {(w.sources || []).slice(0, 5).map((s, j) => (
+                      <a key={j} href={s.url} target="_blank" rel="noopener noreferrer"
+                         className="px-1.5 py-0.5 rounded bg-white border border-sky-200 text-sky-700 hover:bg-sky-100 text-[9px] truncate max-w-[200px]"
+                         title={s.url}>{s.title || s.url}</a>
+                    ))}
+                  </span>
+                )}
+              </span>
+            </div>
           ))}
-          {gatherLine.contacts > 0 && <span className="text-[#737373]">· {gatherLine.contacts} contact{gatherLine.contacts > 1 ? 's' : ''}</span>}
-          {gatherLine.correspondence > 0 && <span className="text-[#737373]">· {gatherLine.correspondence} prior email{gatherLine.correspondence > 1 ? 's' : ''}</span>}
-          {(gatherLine.connector_hits || []).length > 0 && <span className="text-[#737373]">· {gatherLine.connector_hits.length} file{gatherLine.connector_hits.length > 1 ? 's' : ''}</span>}
         </div>
       )}
 
@@ -1420,8 +1450,10 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
-      {/* Phase 4 — swarm R1-R5 rendering. Only shown for swarm template. */}
-      {isSwarm && (
+      {/* Swarm R1-R5 widget — only when the OLD engine emitted hypotheses/votes.
+          The single-director engine streams the debate as the agent bubbles below
+          (round dividers + per-persona react), so we skip the empty vote widget. */}
+      {isSwarm && (hypotheses.length > 0 || votes.length > 0) && (
         <SwarmRounds
           participants={participants}
           hypotheses={hypotheses}
@@ -1454,25 +1486,54 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         />
       )}
 
-      {reactions.map((r, i) => (
-        <AgentBubble
-          key={`react-${i}`}
-          agent={participants[r.agent] || { slug: r.agent, lane: 'Communicator' }}
-          content={r.content}
-          kind="react"
-          agreement={r.agreement}
-          confidence={r.confidence}
-          ts={eventDisplayTs(r)}
-        />
-      ))}
+      {reactions.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#737373] pl-1">
+            <MessageCircle size={11} className="text-violet-500" />
+            {t('hyperAgents.discussion', 'Discussion')}
+            <span className="text-[#a3a3a3] normal-case font-sans tracking-normal">· {reactions.length} {reactions.length > 1 ? 'messages' : 'message'}</span>
+          </div>
+          {reactions.map((r, i) => {
+            const prev = reactions[i - 1];
+            const showRound = r.round && (!prev || prev.round !== r.round);
+            return (
+              <div key={`react-${i}`} className="space-y-1.5">
+                {showRound && (
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="h-px flex-1 bg-[#e3e0db]" />
+                    <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.round', 'round')} {r.round}</span>
+                    <div className="h-px flex-1 bg-[#e3e0db]" />
+                  </div>
+                )}
+                <AgentBubble
+                  agent={participants[r.agent] || { slug: r.agent, name: r.name, lane: r.lane || 'Communicator' }}
+                  content={r.content || r.line}
+                  kind="react"
+                  agreement={r.agreement}
+                  confidence={r.confidence}
+                  ts={eventDisplayTs(r)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {synthLine && (
-        <AgentBubble
-          agent={participants[synthLine.agent] || { slug: synthLine.agent, lane: 'Communicator' }}
-          content={synthLine.content}
-          kind="synthesis"
-          ts={eventDisplayTs(synthLine)}
-        />
+        <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/60 to-white shadow-sm overflow-hidden">
+          <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-violet-100 bg-violet-50/50">
+            <Sparkles size={13} className="text-violet-600" />
+            <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
+              {t('hyperAgents.finalOutput', 'Final — room synthesis')}
+            </span>
+            {synthLine && eventDisplayTs(synthLine) ? (
+              <span className="ml-auto text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
+            ) : null}
+          </div>
+          <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
+            {renderMarkdownLite(synthLine.content)}
+          </div>
+        </div>
       )}
 
       {revises.map((rev, i) => (
