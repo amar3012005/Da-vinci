@@ -3291,6 +3291,7 @@ function RoomToolsModal({ room, onClose }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState(null);
+  const [connecting, setConnecting] = useState(null);  // connector id mid-OAuth
 
   useEffect(() => {
     let alive = true;
@@ -3321,12 +3322,56 @@ function RoomToolsModal({ room, onClose }) {
   }, [room.id]);
 
   function toggle(connId) {
+    // Only connected connectors can be toggled on — an enabled-but-unconnected
+    // connector would hand the agents tools that fail at the bridge (no token).
+    if (!connected.has(connId) && !enabled.has(connId)) return;
     setSaved(false);
     setEnabled(prev => {
       const next = new Set(prev);
       if (next.has(connId)) next.delete(connId); else next.add(connId);
       return next;
     });
+  }
+
+  // Connect a connector right here (same Nango popup as the Connectors page), so
+  // the user doesn't have to leave the room. On success, mark it connected + turn
+  // it on for the room.
+  async function connect(c) {
+    setConnecting(c.id); setErr(null);
+    try {
+      const { connect_session_token } = await apiClient.getNangoConnectSession(c.id);
+      const NangoMod = await import('@nangohq/frontend');
+      const NangoCtor = NangoMod.default || NangoMod.Nango || NangoMod;
+      const nango = new NangoCtor();
+      const baseURL = process.env.REACT_APP_NANGO_CONNECT_URL || 'https://api.hivemind.davinciai.eu:8043';
+      const apiURL = process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042';
+      await new Promise((resolve, reject) => {
+        const ui = nango.openConnectUI({
+          sessionToken: connect_session_token, baseURL, apiURL,
+          onEvent: async (event) => {
+            try {
+              if (event?.type === 'connect') {
+                const p = event.payload || {};
+                const pKey = p.providerConfigKey || p.provider_config_key;
+                const connectionId = p.connectionId || p.connection_id;
+                if (!connectionId) throw new Error('Nango did not return a connection id');
+                await apiClient.finalizeNangoConnection(pKey, connectionId);
+                setConnected(prev => new Set(prev).add(c.id));
+                setEnabled(prev => new Set(prev).add(c.id));  // auto-on now that it's connected
+                setSaved(false);
+                resolve();
+              } else if (event?.type === 'close') { resolve(); }
+              else if (event?.type === 'error') { reject(new Error(event?.payload?.error || 'Nango connect error')); }
+            } catch (e) { reject(e); }
+          },
+        });
+        if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+      });
+    } catch (e) {
+      setErr(e?.response?.data?.error || e?.message || 'Connect failed');
+    } finally {
+      setConnecting(null);
+    }
   }
 
   async function save() {
@@ -3372,21 +3417,31 @@ function RoomToolsModal({ room, onClose }) {
             const conn = connected.has(c.id);
             return (
               <button
-                key={c.id} type="button" onClick={() => toggle(c.id)}
-                className={`w-full mb-2 flex items-center gap-3 px-3.5 py-3 rounded-none border text-left transition-colors ${on ? 'border-[#117dff] bg-[#117dff]/5' : 'border-[#e3e0db] bg-white hover:border-[#117dff]/40'}`}
+                key={c.id} type="button"
+                onClick={() => (conn ? toggle(c.id) : connect(c))}
+                disabled={connecting === c.id}
+                className={`w-full mb-2 flex items-center gap-3 px-3.5 py-3 rounded-none border text-left transition-colors disabled:opacity-60 ${on ? 'border-[#117dff] bg-[#117dff]/5' : conn ? 'border-[#e3e0db] bg-white hover:border-[#117dff]/40' : 'border-dashed border-[#e3e0db] bg-[#faf9f4] hover:border-[#117dff]/50'}`}
               >
-                <span className="w-9 h-9 rounded-none grid place-items-center text-[13px] font-bold text-white shrink-0" style={{ background: c.color }}>{c.label[0]}</span>
+                <span className="w-9 h-9 rounded-none grid place-items-center text-[13px] font-bold text-white shrink-0" style={{ background: c.color, opacity: conn ? 1 : 0.55 }}>{c.label[0]}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.label}</span>
-                    <span className="w-1.5 h-1.5 rounded-full" title={conn ? t('hyperAgents.connected', 'Connected') : t('hyperAgents.notConnected', 'Not connected — connect it on the Connectors page')} style={{ background: conn ? '#22c55e' : '#cbd5e1' }} />
+                    <span className="w-1.5 h-1.5 rounded-full" title={conn ? t('hyperAgents.connected', 'Connected') : t('hyperAgents.notConnected', 'Not connected')} style={{ background: conn ? '#22c55e' : '#cbd5e1' }} />
                   </div>
-                  <div className="text-[10.5px] text-[#737373]">{c.desc}{!conn && <span className="text-[#c2410c]"> · not connected</span>}</div>
+                  <div className="text-[10.5px] text-[#737373]">{c.desc}{!conn && <span className="text-[#c2410c]"> · {t('hyperAgents.connectToUse', 'connect it to use in the room')}</span>}</div>
                 </div>
-                {/* toggle switch */}
-                <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${on ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`}>
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
-                </span>
+                {conn ? (
+                  /* toggle switch — only for connected connectors */
+                  <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${on ? 'bg-[#117dff]' : 'bg-[#d4d0ca]'}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+                  </span>
+                ) : (
+                  /* not connected → connect inline (same Nango popup as Connectors) */
+                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-none border border-[#117dff]/50 text-[#117dff] text-[10px] font-mono uppercase tracking-wider">
+                    {connecting === c.id ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                    {connecting === c.id ? t('hyperAgents.connecting', 'Connecting…') : t('hyperAgents.connect', 'Connect')}
+                  </span>
+                )}
               </button>
             );
           })}
