@@ -3304,13 +3304,21 @@ function RoomToolsModal({ room, onClose }) {
         if (!alive) return;
         setEnabled(new Set(g?.enabled_connectors || []));
         const list = conns?.connectors || conns?.integrations || conns || [];
-        const ids = new Set(
-          (Array.isArray(list) ? list : [])
-            .filter(c => (c.status ? (c.status === 'active' || c.connected) : true))
-            .map(c => String(c.provider || c.providerKey || c.provider_config_key || c.id || c.unique_key || '').toLowerCase())
-        );
-        // google-docs Nango key → our 'google_docs' id
-        if (ids.has('google-docs')) ids.add('google_docs');
+        // Build the connected set, normalizing BOTH hyphen and underscore forms so a
+        // provider key like 'google-docs' matches our room id 'google_docs' (and vice
+        // versa) — without this, already-connected Google connectors wrongly showed
+        // the "Connect" button and a click hit the Nango connect-session (404 for
+        // Google, which connects via OAuth-redirect, not the Nango popup).
+        const ids = new Set();
+        (Array.isArray(list) ? list : [])
+          .filter(c => (c.status ? (c.status === 'active' || c.connected) : true))
+          .map(c => String(c.provider || c.providerKey || c.provider_config_key || c.id || c.unique_key || '').toLowerCase())
+          .forEach(k => {
+            if (!k) return;
+            ids.add(k);
+            ids.add(k.replace(/_/g, '-'));
+            ids.add(k.replace(/-/g, '_'));
+          });
         setConnected(ids);
       } catch (e) {
         if (alive) setErr(e.message);
@@ -3339,7 +3347,10 @@ function RoomToolsModal({ room, onClose }) {
   async function connect(c) {
     setConnecting(c.id); setErr(null);
     try {
-      const { connect_session_token } = await apiClient.getNangoConnectSession(c.id);
+      // Catalog keys are hyphenated (google-docs); room ids are underscored
+      // (google_docs). Send the hyphen form so the backend's nango_provider lookup
+      // resolves (else connect-session 404s).
+      const { connect_session_token } = await apiClient.getNangoConnectSession(c.id.replace(/_/g, '-'));
       const NangoMod = await import('@nangohq/frontend');
       const NangoCtor = NangoMod.default || NangoMod.Nango || NangoMod;
       const nango = new NangoCtor();
@@ -3356,7 +3367,11 @@ function RoomToolsModal({ room, onClose }) {
                 const connectionId = p.connectionId || p.connection_id;
                 if (!connectionId) throw new Error('Nango did not return a connection id');
                 await apiClient.finalizeNangoConnection(pKey, connectionId);
-                setConnected(prev => new Set(prev).add(c.id));
+                setConnected(prev => {
+                  const n = new Set(prev);
+                  n.add(c.id); n.add(c.id.replace(/_/g, '-')); n.add(c.id.replace(/-/g, '_'));
+                  return n;
+                });
                 setEnabled(prev => new Set(prev).add(c.id));  // auto-on now that it's connected
                 setSaved(false);
                 resolve();
