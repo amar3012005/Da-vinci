@@ -1125,6 +1125,10 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
   const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
   const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
+  // Honest dead-end — the goal was un-reachable with the connected tools / data;
+  // the backend surfaces WHY (what it searched, what it couldn't do) instead of
+  // looping or shipping a fabricated result. Rendered as a distinct banner.
+  const deadEndLine = lines.find(l => l.t === 'line' && l.kind === 'dead_end');
   const reactions = lines.filter(l => l.t === 'react' && l.agreement !== 'abstain');
   // Multi-round debate: collect all revises + validates (was single).
   const revises = lines.filter(l => l.t === 'revise');
@@ -1689,21 +1693,32 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
+      {deadEndLine?.content && (
+        <div className="mx-2 my-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-900">
+          <div className="flex items-center gap-1.5 font-mono uppercase tracking-wider text-[9px] mb-1 text-amber-700">
+            <AlertTriangle size={11} /> {t('hyperAgents.deadEnd', "Couldn't fully finish — here's why")}
+          </div>
+          {deadEndLine.content}
+        </div>
+      )}
       {seal && (
         <div className="space-y-1 py-1">
           <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${
             sealStatus === 'escalated' ? 'text-amber-700' :
+            sealStatus === 'blocked' ? 'text-amber-700' :
             sealStatus === 'failed' ? 'text-red-600' :
             qualityLow ? 'text-amber-600' :
             'text-[#a3a3a3]'
           }`}>
             {errorLine
               ? t('hyperAgents.sealFailed', '─── failed: {{msg}} ───', { msg: errorLine.message || t('hyperAgents.unknownError', 'unknown error') })
-              : sealStatus === 'escalated'
-                ? t('hyperAgents.sealEscalated', '─── escalated · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                : qualityLow
-                  ? t('hyperAgents.sealLowQuality', '─── sealed (low quality) · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                  : t('hyperAgents.sealComplete', '─── sealed · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })}
+              : sealStatus === 'blocked'
+                ? t('hyperAgents.sealBlocked', '─── blocked · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
+                : sealStatus === 'escalated'
+                  ? t('hyperAgents.sealEscalated', '─── escalated · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
+                  : qualityLow
+                    ? t('hyperAgents.sealLowQuality', '─── sealed (low quality) · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
+                    : t('hyperAgents.sealComplete', '─── sealed · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })}
           </div>
           {Object.keys(trustDeltas).length > 0 && (
             <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2">
