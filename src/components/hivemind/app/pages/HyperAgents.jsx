@@ -962,6 +962,19 @@ function RoomThread({ roomId, onArchived }) {
                 >
                   {(room.sim_mode || 'off') === 'on' ? '👥 On' : 'Off'}
                 </button>
+                {(room.sim_mode || 'off') === 'on' && (
+                  <span className="inline-flex items-center gap-1.5" title={t('hyperAgents.simAgentsHint', 'Number of simulated voices (10–100)')}>
+                    <input
+                      type="range" min={10} max={100} step={5}
+                      value={room.sim_agents || 24}
+                      onChange={e => setRoom(p => ({ ...p, sim_agents: +e.target.value }))}
+                      onMouseUp={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
+                      onTouchEnd={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
+                      className="w-24 accent-violet-600 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono text-violet-600 w-10 text-right">{(room.sim_agents || 24)} voices</span>
+                  </span>
+                )}
               </div>
             )}
             {room.goal ? (
@@ -1669,13 +1682,14 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
-      {/* Additional Population-Sim report — hideable popup dashboard (opt-in feature). The
-          main synthesis below already incorporates it; this just surfaces the raw population read. */}
+      {/* Additional Population-Sim — a chip that opens the FULL report as a popup modal
+          (report + every voice). The synthesis below already incorporates it; this surfaces
+          the raw population. Guarded: absent on normal turns, every field defensive. */}
       {simReport && (
-        <div className="rounded-xl border border-violet-200 bg-white shadow-sm overflow-hidden">
+        <>
           <button
-            type="button" onClick={() => setShowSim(s => !s)}
-            className="w-full flex items-center gap-2 px-3.5 py-2 bg-violet-50/60 hover:bg-violet-50 transition-colors text-left"
+            type="button" onClick={() => setShowSim(true)}
+            className="w-full flex items-center gap-2 px-3.5 py-2 rounded-xl border border-violet-200 bg-violet-50/60 hover:bg-violet-50 transition-colors text-left"
           >
             <Users size={13} className="text-violet-600" />
             <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
@@ -1684,28 +1698,53 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             <span className="text-[10px] text-violet-500 font-mono">
               {(simReport.n_personas || 0)} voices · {(simReport.n_posts || 0)} posts
             </span>
-            <span className="ml-auto text-[10px] text-violet-600 font-mono">{showSim ? '▲ hide' : '▼ show'}</span>
+            <span className="ml-auto text-[10px] text-violet-600 font-mono">▸ {t('hyperAgents.open', 'open')}</span>
           </button>
           {showSim && (
-            <div className="px-4 py-3 space-y-2">
-              {Array.isArray(simReport.ontology) && simReport.ontology.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {simReport.ontology.map((o, i) => (
-                    <span key={i} className="px-1.5 py-0.5 rounded bg-violet-50 border border-violet-100 text-[9.5px] text-violet-700">{String(o)}</span>
-                  ))}
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowSim(false)}>
+              <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-violet-100 bg-violet-50/60 shrink-0">
+                  <Users size={15} className="text-violet-600" />
+                  <span className="text-[13px] font-semibold text-violet-900">{t('hyperAgents.popSimTitle', 'Population Simulation')}</span>
+                  <span className="text-[11px] text-violet-500 font-mono">{(simReport.n_personas || 0)} voices · {(simReport.n_posts || 0)} posts</span>
+                  <button type="button" onClick={() => setShowSim(false)} className="ml-auto text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"><X size={16} /></button>
                 </div>
-              )}
-              {simReport.role_mix && Object.keys(simReport.role_mix).length > 0 && (
-                <div className="text-[10px] text-[#737373] font-mono break-words">
-                  {Object.entries(simReport.role_mix).map(([r, n]) => `${r}×${n}`).join(' · ')}
+                <div className="overflow-y-auto px-5 py-4 space-y-3">
+                  {Array.isArray(simReport.ontology) && simReport.ontology.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {simReport.ontology.map((o, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded bg-violet-50 border border-violet-100 text-[10px] text-violet-700">{String(o)}</span>
+                      ))}
+                    </div>
+                  )}
+                  {simReport.role_mix && Object.keys(simReport.role_mix).length > 0 && (
+                    <div className="text-[10px] text-[#737373] font-mono break-words">
+                      {Object.entries(simReport.role_mix).map(([r, n]) => `${r}×${n}`).join(' · ')}
+                    </div>
+                  )}
+                  <div className="text-[12.5px] text-[#0a0a0a] leading-relaxed break-words space-y-1 border-t border-violet-100 pt-3">
+                    {renderMarkdownLite(String(simReport.report || ''))}
+                  </div>
+                  {Array.isArray(simReport.posts) && simReport.posts.length > 0 && (
+                    <div className="border-t border-violet-100 pt-3">
+                      <div className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono mb-1.5">
+                        {t('hyperAgents.theVoices', 'The voices')} ({simReport.posts.length})
+                      </div>
+                      <div className="space-y-1.5">
+                        {simReport.posts.map((p, i) => (
+                          <div key={i} className="rounded-md border border-[#ece9e3] bg-[#faf9f4] px-2.5 py-1.5">
+                            <div className="text-[10px] font-mono text-violet-600">{p.name} · {p.role}{p.stance ? ` · ${p.stance}` : ''}</div>
+                            <div className="text-[11.5px] text-[#262626] leading-relaxed mt-0.5 break-words">{p.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="text-[12.5px] text-[#0a0a0a] leading-relaxed break-words space-y-1 border-t border-violet-100 pt-2">
-                {renderMarkdownLite(String(simReport.report || ''))}
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {synthLine && (
