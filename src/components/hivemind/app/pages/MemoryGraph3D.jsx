@@ -1039,20 +1039,14 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   }, []);
 
   const getLinkParticles = useCallback((link) => {
-    const nodeCount = graphDataRef.current?.nodes?.length || 0;
-    const tier = getGraphSizeTier(nodeCount);
-    if (tier === "massive") {
-      // No ambient particles at this scale — thousands of animated particle
-      // meshes re-rendered every frame is the dominant per-frame GPU cost.
-      // Keep them ONLY on the actively-highlighted path (a handful of links).
-      return highlightedLinksRef.current.has(link) ? 2 : 0;
-    }
-    if (themeRef.current.name === "atlas" && tier === "large") {
-      return highlightedLinksRef.current.has(link) ? 0 : 1;
-    }
-    const style = getRelationStyle(link);
-    if (highlightedLinksRef.current.has(link)) return 0;
-    return themeRef.current.name === "atlas" ? Math.min(2, style.particles) : style.particles;
+    // Ambient directional particles animate the render loop EVERY frame forever
+    // — the engine never idles while any link carries particles. On small/large
+    // graphs that meant hundreds–thousands of particle meshes re-rendered
+    // continuously, which is the dominant cause of load + interaction jank.
+    // Show particles ONLY on the actively-highlighted path (a handful of links
+    // on hover/focus); at rest the loop goes fully idle = smooth. refreshHighlight
+    // re-evaluates this per link on every hover, so highlighted links still flow.
+    return highlightedLinksRef.current.has(link) ? 2 : 0;
   }, []);
 
   const getLinkParticleSpeed = useCallback((link) => {
@@ -1278,7 +1272,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeVal((node) => getNodeRadius(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
-        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive";
+        // Drop the additive halo+field glow meshes (3 meshes/node → 1) on any
+        // non-small graph. Additive blending is fill-rate heavy and the extra
+        // draw calls stack up fast; only small graphs keep the glow.
+        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) !== "small";
         const shape = makeNodeShape(node, getNodeColorRef.current(node), clusterTint, liteNode);
         // Append the memory-title label as a child of the node group so it
         // tracks the node automatically. Sprite opacity is camera-ranked.
@@ -1687,7 +1684,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       .nodeColor((node) => getNodeColor(node))
       .nodeThreeObject((node) => {
         const clusterTint = getClusterHaloColor(node);
-        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) === "massive";
+        // Drop the additive halo+field glow meshes (3 meshes/node → 1) on any
+        // non-small graph. Additive blending is fill-rate heavy and the extra
+        // draw calls stack up fast; only small graphs keep the glow.
+        const liteNode = getGraphSizeTier(graphDataRef.current?.nodes?.length || 0) !== "small";
         const object3d = makeNodeShape(node, getNodeColor(node), clusterTint, liteNode);
         const tag = (labelAllowRef.current && !labelAllowRef.current.has(node.id))
           ? null

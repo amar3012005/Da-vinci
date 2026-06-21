@@ -2,6 +2,7 @@
   "name": "my-app",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@elevenlabs/client": "^0.13.0",
     "@elevenlabs/react": "^0.13.0",
