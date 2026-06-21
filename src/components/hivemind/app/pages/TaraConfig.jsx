@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,9 +22,15 @@ import {
   Headphones,
   Calendar,
   FolderOpen,
+  Phone,
+  PhoneOff,
+  PhoneCall,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
+
+const _AAAS_WS = process.env.REACT_APP_AAAS_WS || 'wss://core.hivemind.davinciai.eu:8050/aaas/voice';
+const AAAS_HTTP = _AAAS_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '');
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -282,6 +288,139 @@ function SkillsManager() {
   );
 }
 
+// ─── Outbound Call Panel ───────────────────────────────────────────────────
+const STATE_COLOR = { dialing: '#d97706', connected: '#16a34a', ended: '#a3a3a3', error: '#dc2626' };
+
+function OutboundPanel({ identity, onSwitchTab }) {
+  const [phone, setPhone] = useState('');
+  const [callState, setCallState] = useState(null); // null|'dialing'|'connected'|'ended'|'error'
+  const [callLegId, setCallLegId] = useState(null);
+  const [err, setErr] = useState(null);
+  const pollRef = useRef(null);
+
+  const phoneValid = /^\+[1-9]\d{7,14}$/.test(phone.trim());
+
+  const stopPoll = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  }, []);
+
+  useEffect(() => stopPoll, [stopPoll]);
+
+  useEffect(() => {
+    if (!callLegId || !callState || callState === 'ended' || callState === 'error') return;
+    stopPoll();
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${AAAS_HTTP}/calls/outbound/${callLegId}/status`);
+        if (!r.ok) return;
+        const d = await r.json();
+        setCallState(d.status);
+        if (d.status === 'ended' || d.status === 'error') stopPoll();
+      } catch { /* network hiccup */ }
+    }, 2000);
+    return stopPoll;
+  }, [callLegId, callState, stopPoll]);
+
+  const startCall = async () => {
+    if (!phoneValid) return;
+    setErr(null);
+    setCallState('dialing');
+    try {
+      const r = await fetch(`${AAAS_HTTP}/calls/outbound`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: phone.trim(),
+          session_id: `out-${Date.now()}`,
+          user_id: identity?.userId,
+          org_id: identity?.orgId,
+          language: 'en',
+        }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+      const d = await r.json();
+      setCallLegId(d.call_leg_id);
+    } catch (e) {
+      setCallState('error');
+      setErr(e.message);
+    }
+  };
+
+  const hangup = async () => {
+    if (!callLegId) return;
+    try { await fetch(`${AAAS_HTTP}/calls/outbound/${callLegId}/hangup`, { method: 'POST' }); } catch { /* ignore */ }
+    setCallState('ended');
+    stopPoll();
+  };
+
+  const reset = () => { stopPoll(); setCallState(null); setCallLegId(null); setErr(null); };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3 flex items-start gap-2">
+        <Shield size={14} className="text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-[12px] text-amber-700">
+          Requires <span className="font-mono">TARA_OUTBOUND_ENABLED=true</span> + Telnyx configured.
+          Numbers must be in <span className="font-mono">TELNYX_ALLOWED_NUMBERS</span>. AI disclosure plays automatically at call open (EU AI Act Art 50).
+        </p>
+      </div>
+
+      {!callState && (
+        <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5 space-y-4">
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Destination (E.164)</label>
+            <input
+              type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+              placeholder="+49123456789"
+              className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[14px] font-mono focus:outline-none focus:border-[#117dff] transition-colors"
+            />
+            {phone && !phoneValid && <p className="text-[11px] text-red-500 mt-1">Use E.164 format: +country_code + number</p>}
+          </div>
+          <button
+            onClick={startCall} disabled={!phoneValid}
+            className="flex items-center gap-2 px-4 py-2 bg-[#117dff] text-white rounded-[6px] text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0e6de0] transition-colors"
+          >
+            <Phone size={14} /> Start Outbound Call
+          </button>
+        </div>
+      )}
+
+      {callState && (
+        <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              {callState === 'dialing' && <Loader2 size={15} className="text-amber-600 animate-spin" />}
+              {callState === 'connected' && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+              {(callState === 'ended' || callState === 'error') && <span className="inline-block w-2 h-2 rounded-full bg-[#d4d0ca]" />}
+              <span className="text-[13px] font-['Space_Grotesk'] font-semibold" style={{ color: STATE_COLOR[callState] }}>
+                {callState === 'dialing' ? `Dialing ${phone}…` : callState === 'connected' ? `Connected · ${phone}` : callState === 'error' ? 'Call failed' : 'Call ended'}
+              </span>
+            </div>
+            {callState === 'connected' && (
+              <button onClick={hangup} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-[6px] text-[12px] font-medium hover:bg-red-100 transition-colors">
+                <PhoneOff size={13} /> End Call
+              </button>
+            )}
+          </div>
+          {err && <p className="text-[12px] text-red-500">{err}</p>}
+          {callLegId && <p className="text-[10px] font-mono text-[#c8c4be]">leg {callLegId}</p>}
+          {(callState === 'ended' || callState === 'error') && (
+            <div className="flex items-center gap-3 pt-0.5">
+              <button onClick={reset} className="text-[12px] text-[#117dff] hover:underline">New call</button>
+              {callState === 'ended' && (
+                <button onClick={() => onSwitchTab('history')} className="text-[12px] text-[#a3a3a3] hover:text-[#525252]">
+                  View transcript in Call History &rarr;
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function TaraConfig() {
   const { t } = useTranslation('dashboard');
 
@@ -358,6 +497,7 @@ export default function TaraConfig() {
             { id: 'history', label: 'Call History', icon: Clock },
             { id: 'insights', label: 'Insights', icon: Brain },
             { id: 'usage', label: 'Usage', icon: Zap },
+            { id: 'outbound', label: 'Outbound', icon: PhoneCall },
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
@@ -433,6 +573,7 @@ export default function TaraConfig() {
             ))}
           </div>
         )}
+        {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} />}
       </motion.div>
     </motion.div>
   );
