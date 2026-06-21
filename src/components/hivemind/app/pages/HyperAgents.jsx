@@ -2144,9 +2144,48 @@ function FinalReportCard({ report, webSources = [], onOpenMemory }) {
   );
 }
 
+/* ─── Mermaid diagram (lazy, sandboxed, fail-safe) ─────────────────────
+ * Renders a ```mermaid block in the synthesis as a real diagram. mermaid is
+ * lazy-imported (own chunk — no main-bundle bloat) and rendered with
+ * securityLevel:'strict' (mermaid sanitizes its own SVG, so the
+ * dangerouslySetInnerHTML is safe). ANY parse/render failure falls back to the
+ * raw code in a <pre> — a malformed diagram never breaks the report.
+ */
+function MermaidDiagram({ code }) {
+  const [svg, setSvg] = useState('');
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const mermaid = (await import('mermaid')).default;
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral', fontFamily: 'inherit' });
+        const id = 'mmd-' + Math.random().toString(36).slice(2, 10);
+        const { svg: out } = await mermaid.render(id, String(code || '').trim());
+        if (alive) setSvg(out);
+      } catch (e) {
+        if (alive) setFailed(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, [code]);
+  if (failed) {
+    return (
+      <pre className="my-2 overflow-x-auto rounded-md border border-[#e3e0db] bg-[#faf9f4] p-2 text-[11px] font-mono text-[#525252] whitespace-pre">
+        {code}
+      </pre>
+    );
+  }
+  if (!svg) {
+    return <div className="my-2 text-[11px] text-[#a3a3a3] italic">rendering diagram…</div>;
+  }
+  // eslint-disable-next-line react/no-danger -- svg sanitized by mermaid securityLevel:'strict'
+  return <div className="mermaid-diagram my-2 overflow-x-auto rounded-md border border-[#e3e0db] bg-white p-3" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
 /* ─── Markdown-lite renderer ───────────────────────────────────────────
  * Just enough to make lead reports look like a clean Slack message.
- * Headers, lists, bold, inline code. No full markdown engine.
+ * Headers, lists, bold, inline code, tables, and ```mermaid diagrams. No full markdown engine.
  */
 function renderMarkdownLite(raw) {
   if (!raw) return null;
@@ -2188,6 +2227,24 @@ function renderMarkdownLite(raw) {
     const line = lines[i];
     const trimmed = line.trim();
     if (!trimmed) { i++; continue; }
+    // Fenced code block ```lang … ``` — render ```mermaid as a real diagram, else a <pre>.
+    const fence = trimmed.match(/^`{3,}\s*([a-zA-Z0-9_-]*)\s*$/);
+    if (fence) {
+      const lang = (fence[1] || '').toLowerCase();
+      i++;
+      const buf = [];
+      while (i < lines.length && !/^`{3,}\s*$/.test(lines[i].trim())) { buf.push(lines[i]); i++; }
+      if (i < lines.length) i++;  // consume closing fence
+      const code = buf.join('\n');
+      if (lang === 'mermaid') {
+        blocks.push(<MermaidDiagram key={key++} code={code} />);
+      } else {
+        blocks.push(
+          <pre key={key++} className="my-2 overflow-x-auto rounded-md border border-[#e3e0db] bg-[#faf9f4] p-2 text-[11px] font-mono text-[#262626] whitespace-pre">{code}</pre>,
+        );
+      }
+      continue;
+    }
     // Heading
     const h = trimmed.match(/^(#{1,3})\s+(.+)$/);
     if (h) {
