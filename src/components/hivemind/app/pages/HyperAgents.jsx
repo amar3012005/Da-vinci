@@ -663,6 +663,23 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  // Self-evolving employees toggle (opt-in, additive). When on, employees reflect each turn
+  // into a per-employee playbook and recall it next turn — they get better at THIS room over
+  // time. Optimistic + reverts on failure; a failed PATCH never blocks running the room.
+  async function setEvoMode(on) {
+    if (!room) return;
+    const next = on ? 'on' : 'off';
+    const prev = room.evo_mode || 'off';
+    if (prev === next) return;
+    setRoom(p => ({ ...p, evo_mode: next }));  // optimistic
+    try {
+      await apiClient.updateHyperRoom(roomId, { evo_mode: next });
+    } catch (e) {
+      setRoom(p => ({ ...p, evo_mode: prev }));
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+
   // First-run setup walkthrough: show once per room (localStorage). Configures quality /
   // pop-sim / connectors live; finishing just closes it — the room then works as usual.
   useEffect(() => {
@@ -996,6 +1013,17 @@ function RoomThread({ roomId, onArchived }) {
                     <span className="text-[10px] font-mono text-violet-600 w-10 text-right">{(room.sim_agents || 24)} voices</span>
                   </span>
                 )}
+                {/* Self-evolving employees — opt-in; default off. On = employees learn a playbook
+                    from each turn's outcome and apply it next turn (better over time in THIS room). */}
+                <span className="ml-2 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.evoLbl', 'Self-evolve')}</span>
+                <button
+                  type="button"
+                  onClick={() => setEvoMode((room.evo_mode || 'off') !== 'on')}
+                  title={t('hyperAgents.evoHint', 'Additional: after each turn, employees reflect the outcome into a private playbook and recall it next turn — they get sharper at this room over time. Off = static employees.')}
+                  className={`px-2 py-0.5 rounded-lg border text-[10px] font-medium transition-colors ${(room.evo_mode || 'off') === 'on' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[#737373] border-[#e3e0db] hover:text-emerald-600'}`}
+                >
+                  {(room.evo_mode || 'off') === 'on' ? '🧬 On' : 'Off'}
+                </button>
               </div>
             )}
             {room.goal ? (
