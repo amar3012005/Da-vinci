@@ -14,7 +14,7 @@ const AppleIcon = ({ size = 14 }) => (
 
 const DownloadMacButton = ({ className = '' }) => {
   const [version, setVersion] = useState(null);
-  const [dmgUrl, setDmgUrl] = useState(GITHUB_RELEASE_URL);
+  const [dmgUrl, setDmgUrl] = useState(null);
   const [isMac, setIsMac] = useState(false);
 
   useEffect(() => {
@@ -37,14 +37,28 @@ const DownloadMacButton = ({ className = '' }) => {
       .catch(() => {});
   }, []);
 
+  const handleClick = (e) => {
+    e.preventDefault();
+    if (dmgUrl) {
+      // Trigger real file download (not navigate)
+      const a = document.createElement('a');
+      a.href = dmgUrl;
+      a.download = `HIVEMIND-${version || '1.0.0'}.dmg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Fallback: open releases page
+      window.open(GITHUB_RELEASE_URL, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
-    <motion.a
-      href={dmgUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+    <motion.button
+      onClick={handleClick}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className={`inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0a0a0a] text-white font-medium rounded-lg border border-[#1a1a1a] hover:bg-[#1a1a1a] transition-colors text-xs sm:text-sm ${className}`}
+      className={`inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#0a0a0a] text-white font-medium rounded-lg border border-[#1a1a1a] hover:bg-[#1a1a1a] transition-colors text-xs sm:text-sm cursor-pointer ${className}`}
     >
       <AppleIcon size={14} />
       <span>
@@ -58,7 +72,7 @@ const DownloadMacButton = ({ className = '' }) => {
       {!isMac && (
         <span className="ml-1 text-[10px] text-white/40">(macOS)</span>
       )}
-    </motion.a>
+    </motion.button>
   );
 };
 
