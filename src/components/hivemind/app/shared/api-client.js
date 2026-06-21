@@ -1065,6 +1065,15 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Per-tenant OAuth/Nango connection status across the connector catalog.
+  // Returns { connectors: [{ id, name, connection: {...}|null }] } — connected iff
+  // connection != null. This is the authoritative "is X connected" source (overlays
+  // active Nango connections), unlike listOAuthConnectors.
+  async getConnectorConnectionStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/connectors/status');
+    return data;
+  }
+
   async listConnectorJobs() {
     const { data } = await this.controlPlane.get('/v1/proxy/connectors/mcp/jobs');
     return data;

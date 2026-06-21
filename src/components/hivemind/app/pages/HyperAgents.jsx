@@ -3496,28 +3496,33 @@ function RoomToolsModal({ room, onClose }) {
     let alive = true;
     (async () => {
       try {
-        const [g, conns] = await Promise.all([
+        const [g, st] = await Promise.all([
           apiClient.getRoomConnectors(room.id).catch(() => ({ enabled_connectors: [] })),
-          apiClient.listOAuthConnectors().catch(() => ({})),
+          // Authoritative per-tenant connection status (same source the Connectors page
+          // uses) — connected iff connection != null. listOAuthConnectors did NOT reflect
+          // real connected state, so connectors connected on the Connectors page showed
+          // as "not connected" here.
+          apiClient.getConnectorConnectionStatus().catch(() => ({ connectors: [] })),
         ]);
         if (!alive) return;
         setEnabled(new Set(g?.enabled_connectors || []));
-        const list = conns?.connectors || conns?.integrations || conns || [];
-        // Build the connected set, normalizing BOTH hyphen and underscore forms so a
-        // provider key like 'google-docs' matches our room id 'google_docs' (and vice
-        // versa) — without this, already-connected Google connectors wrongly showed
-        // the "Connect" button and a click hit the Nango connect-session (404 for
-        // Google, which connects via OAuth-redirect, not the Nango popup).
         const ids = new Set();
-        (Array.isArray(list) ? list : [])
-          .filter(c => (c.status ? (c.status === 'active' || c.connected) : true))
-          .map(c => String(c.provider || c.providerKey || c.provider_config_key || c.id || c.unique_key || '').toLowerCase())
-          .forEach(k => {
-            if (!k) return;
-            ids.add(k);
-            ids.add(k.replace(/_/g, '-'));
-            ids.add(k.replace(/-/g, '_'));
-          });
+        let googleConnected = false;
+        for (const c of (st?.connectors || [])) {
+          if (!c || !c.connection) continue;          // connection==null → not connected
+          const id = String(c.id || '').toLowerCase();
+          if (!id) continue;
+          ids.add(id);
+          ids.add(id.replace(/_/g, '-'));
+          ids.add(id.replace(/-/g, '_'));
+          if (id === 'gmail' || id.startsWith('google')) googleConnected = true;
+        }
+        // Google products share ONE OAuth token (the bridge falls back across
+        // gmail/docs/sheets/drive), so any connected Google connector means all are usable.
+        if (googleConnected) {
+          ['gmail', 'google_docs', 'google-docs', 'google_sheets', 'google-sheets',
+           'google_drive', 'google-drive'].forEach(x => ids.add(x));
+        }
         setConnected(ids);
       } catch (e) {
         if (alive) setErr(e.message);
