@@ -1867,7 +1867,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
           {typing.map((typingLine, i) => (
             <span key={i} className="flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" /> {t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
+              <Loader2 size={10} className="animate-spin" /> {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
             </span>
           ))}
         </div>
