@@ -33,7 +33,10 @@ const Layout = ({ children }) => (
 
 function App() {
   const isHivemindHost =
-    typeof window !== 'undefined' && window.location.hostname === HIVEMIND_SITE_HOST;
+    typeof window !== 'undefined' && (
+      window.location.hostname === HIVEMIND_SITE_HOST ||
+      window.location.protocol === 'file:'
+    );
 
   return (
     <Router>
