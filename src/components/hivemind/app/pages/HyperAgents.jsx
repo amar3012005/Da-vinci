@@ -1282,6 +1282,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // Additional Population-Sim report (opt-in). Guarded — absent on normal turns.
   const simReport = lines.find(l => l.t === 'sim_report' && (l.report || l.n_personas));
   const [showSim, setShowSim] = useState(false);
+  const [vFilter, setVFilter] = useState('all');  // population-sim voices filter
   // Phase 4 events:
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
@@ -1729,24 +1730,97 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                       {Object.entries(simReport.role_mix).map(([r, n]) => `${r}×${n}`).join(' · ')}
                     </div>
                   )}
+                  {Array.isArray(simReport.posts) && simReport.posts.length > 0 && (() => {
+                    const ps = simReport.posts;
+                    const S = { positive: 0, neutral: 0, negative: 0 };
+                    ps.forEach(p => { const s = (p.sentiment === 'positive' || p.sentiment === 'negative') ? p.sentiment : 'neutral'; S[s]++; });
+                    const total = ps.length || 1;
+                    const score = (S.positive - S.negative) / total;
+                    const pct = Math.round(((score + 1) / 2) * 100);
+                    const ang = Math.PI * (1 - pct / 100);
+                    const nx = 80 + 58 * Math.cos(ang), ny = 70 - 58 * Math.sin(ang);
+                    const col = score > 0.15 ? '#16a34a' : score < -0.15 ? '#dc2626' : '#d97706';
+                    const byRole = {};
+                    ps.forEach(p => { const r = p.role || '—'; const s = (p.sentiment === 'positive' || p.sentiment === 'negative') ? p.sentiment : 'neutral'; (byRole[r] = byRole[r] || { positive: 0, neutral: 0, negative: 0, n: 0 }); byRole[r][s]++; byRole[r].n++; });
+                    const factions = Object.entries(byRole).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
+                    return (
+                      <div className="border-t border-violet-100 pt-3 space-y-2">
+                        <div className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">{t('hyperAgents.popSentiment', 'Population sentiment')}</div>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <svg viewBox="0 0 160 80" className="w-36 h-20 shrink-0">
+                            <path d="M20 70 A60 60 0 0 1 140 70" fill="none" stroke="#ece9e3" strokeWidth="9" strokeLinecap="round" />
+                            <line x1="80" y1="70" x2={nx} y2={ny} stroke={col} strokeWidth="3" strokeLinecap="round" />
+                            <circle cx="80" cy="70" r="3.5" fill={col} />
+                            <text x="80" y="52" textAnchor="middle" style={{ fontSize: '16px', fontWeight: 700, fill: col }}>{pct}</text>
+                            <text x="80" y="64" textAnchor="middle" style={{ fontSize: '6.5px', fill: '#737373' }}>net sentiment</text>
+                          </svg>
+                          <div className="flex-1 min-w-[180px]">
+                            <div className="flex h-3.5 rounded overflow-hidden border border-[#ece9e3]">
+                              <div style={{ width: `${Math.round(S.positive / total * 100)}%` }} className="bg-green-500" />
+                              <div style={{ width: `${Math.round(S.neutral / total * 100)}%` }} className="bg-[#d4d0ca]" />
+                              <div style={{ width: `${Math.round(S.negative / total * 100)}%` }} className="bg-red-500" />
+                            </div>
+                            <div className="flex gap-3 mt-1 text-[10px] text-[#525252]">
+                              <span><span className="inline-block w-2 h-2 rounded-sm bg-green-500 mr-1 align-middle" />{S.positive} positive</span>
+                              <span><span className="inline-block w-2 h-2 rounded-sm bg-[#d4d0ca] mr-1 align-middle" />{S.neutral} neutral</span>
+                              <span><span className="inline-block w-2 h-2 rounded-sm bg-red-500 mr-1 align-middle" />{S.negative} negative</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {factions.map(([r, d]) => (
+                            <div key={r} className="flex items-center gap-2 text-[10px]">
+                              <span className="w-28 truncate text-[#525252]" title={r}>{r}</span>
+                              <div className="flex-1 flex h-2 rounded overflow-hidden border border-[#ece9e3]">
+                                <div style={{ width: `${d.positive / d.n * 100}%` }} className="bg-green-500" />
+                                <div style={{ width: `${d.neutral / d.n * 100}%` }} className="bg-[#d4d0ca]" />
+                                <div style={{ width: `${d.negative / d.n * 100}%` }} className="bg-red-500" />
+                              </div>
+                              <span className="w-5 text-right text-[#a3a3a3] font-mono">{d.n}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="text-[12.5px] text-[#0a0a0a] leading-relaxed break-words space-y-1 border-t border-violet-100 pt-3">
                     {renderMarkdownLite(String(simReport.report || ''))}
                   </div>
-                  {Array.isArray(simReport.posts) && simReport.posts.length > 0 && (
-                    <div className="border-t border-violet-100 pt-3">
-                      <div className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono mb-1.5">
-                        {t('hyperAgents.theVoices', 'The voices')} ({simReport.posts.length})
+                  {Array.isArray(simReport.posts) && simReport.posts.length > 0 && (() => {
+                    const dot = s => s === 'positive' ? 'bg-green-500' : s === 'negative' ? 'bg-red-500' : 'bg-[#d4d0ca]';
+                    const filtered = simReport.posts.filter(p =>
+                      vFilter === 'all' ? true
+                        : ['positive', 'neutral', 'negative'].includes(vFilter) ? ((p.sentiment || 'neutral') === vFilter)
+                          : p.role === vFilter);
+                    const roles = Array.from(new Set(simReport.posts.map(p => p.role).filter(Boolean))).slice(0, 8);
+                    const chip = (val, label) => (
+                      <button key={val} type="button" onClick={() => setVFilter(val)}
+                        className={`px-1.5 py-0.5 rounded text-[9.5px] border transition-colors ${vFilter === val ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-[#737373] border-[#e3e0db] hover:text-violet-600'}`}>{label}</button>
+                    );
+                    return (
+                      <div className="border-t border-violet-100 pt-3">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                          <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono mr-1">
+                            {t('hyperAgents.theVoices', 'The voices')} ({filtered.length})
+                          </span>
+                          {chip('all', t('hyperAgents.fAll', 'All'))}
+                          {chip('positive', '😀 +')}{chip('neutral', '😐')}{chip('negative', '😟 −')}
+                          {roles.map(r => chip(r, r))}
+                        </div>
+                        <div className="space-y-1.5">
+                          {filtered.map((p, i) => (
+                            <div key={i} className="rounded-md border border-[#ece9e3] bg-[#faf9f4] px-2.5 py-1.5">
+                              <div className="text-[10px] font-mono text-violet-600 flex items-center gap-1.5">
+                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot(p.sentiment)}`} />
+                                {p.name} · {p.role}{p.stance ? ` · ${p.stance}` : ''}
+                              </div>
+                              <div className="text-[11.5px] text-[#262626] leading-relaxed mt-0.5 break-words">{p.text}</div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        {simReport.posts.map((p, i) => (
-                          <div key={i} className="rounded-md border border-[#ece9e3] bg-[#faf9f4] px-2.5 py-1.5">
-                            <div className="text-[10px] font-mono text-violet-600">{p.name} · {p.role}{p.stance ? ` · ${p.stance}` : ''}</div>
-                            <div className="text-[11.5px] text-[#262626] leading-relaxed mt-0.5 break-words">{p.text}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             </div>
