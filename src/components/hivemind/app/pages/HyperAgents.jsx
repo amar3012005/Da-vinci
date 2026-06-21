@@ -582,6 +582,8 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
+      // Additional Population-Sim report (hideable popup dashboard):
+      'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
@@ -638,6 +640,22 @@ function RoomThread({ roomId, onArchived }) {
       await apiClient.updateHyperRoom(roomId, { quality_mode: mode });
     } catch (e) {
       setRoom(prev => ({ ...prev, quality_mode: prevMode }));
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+
+  // Additional Population-Sim toggle (opt-in). Optimistic + reverts on failure — and since
+  // it's purely additive, a failed PATCH never blocks running the room normally.
+  async function setSimMode(on) {
+    if (!room) return;
+    const next = on ? 'on' : 'off';
+    const prev = room.sim_mode || 'off';
+    if (prev === next) return;
+    setRoom(p => ({ ...p, sim_mode: next }));  // optimistic
+    try {
+      await apiClient.updateHyperRoom(roomId, { sim_mode: next });
+    } catch (e) {
+      setRoom(p => ({ ...p, sim_mode: prev }));
       setError(e.response?.data?.error || e.message);
     }
   }
@@ -934,6 +952,16 @@ function RoomThread({ roomId, onArchived }) {
                     );
                   })}
                 </div>
+                {/* Additional Population-Sim toggle — opt-in; default off leaves the main flow untouched. */}
+                <span className="ml-2 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.simLbl', 'Pop-sim')}</span>
+                <button
+                  type="button"
+                  onClick={() => setSimMode((room.sim_mode || 'off') !== 'on')}
+                  title={t('hyperAgents.simHint', 'Additional: simulate a population of stakeholder voices and fold their report into the answer. Adds ~10s. Off = normal room.')}
+                  className={`px-2 py-0.5 rounded-lg border text-[10px] font-medium transition-colors ${(room.sim_mode || 'off') === 'on' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-[#737373] border-[#e3e0db] hover:text-violet-600'}`}
+                >
+                  {(room.sim_mode || 'off') === 'on' ? '👥 On' : 'Off'}
+                </button>
               </div>
             )}
             {room.goal ? (
@@ -1238,6 +1266,9 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const seal = lines.find(l => l.t === 'seal');
   const errorLine = lines.find(l => l.t === 'error');
   const typing = lines.filter(l => l.t === 'typing').slice(-2);
+  // Additional Population-Sim report (opt-in). Guarded — absent on normal turns.
+  const simReport = lines.find(l => l.t === 'sim_report' && (l.report || l.n_personas));
+  const [showSim, setShowSim] = useState(false);
   // Phase 4 events:
   const decisionRequired = lines.find(l => l.t === 'decision_required');
   const decisionSaved = lines.find(l => l.t === 'decision_saved');
@@ -1635,6 +1666,45 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Additional Population-Sim report — hideable popup dashboard (opt-in feature). The
+          main synthesis below already incorporates it; this just surfaces the raw population read. */}
+      {simReport && (
+        <div className="rounded-xl border border-violet-200 bg-white shadow-sm overflow-hidden">
+          <button
+            type="button" onClick={() => setShowSim(s => !s)}
+            className="w-full flex items-center gap-2 px-3.5 py-2 bg-violet-50/60 hover:bg-violet-50 transition-colors text-left"
+          >
+            <Users size={13} className="text-violet-600" />
+            <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
+              {t('hyperAgents.popReport', 'Population report')}
+            </span>
+            <span className="text-[10px] text-violet-500 font-mono">
+              {(simReport.n_personas || 0)} voices · {(simReport.n_posts || 0)} posts
+            </span>
+            <span className="ml-auto text-[10px] text-violet-600 font-mono">{showSim ? '▲ hide' : '▼ show'}</span>
+          </button>
+          {showSim && (
+            <div className="px-4 py-3 space-y-2">
+              {Array.isArray(simReport.ontology) && simReport.ontology.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {simReport.ontology.map((o, i) => (
+                    <span key={i} className="px-1.5 py-0.5 rounded bg-violet-50 border border-violet-100 text-[9.5px] text-violet-700">{String(o)}</span>
+                  ))}
+                </div>
+              )}
+              {simReport.role_mix && Object.keys(simReport.role_mix).length > 0 && (
+                <div className="text-[10px] text-[#737373] font-mono break-words">
+                  {Object.entries(simReport.role_mix).map(([r, n]) => `${r}×${n}`).join(' · ')}
+                </div>
+              )}
+              <div className="text-[12.5px] text-[#0a0a0a] leading-relaxed break-words space-y-1 border-t border-violet-100 pt-2">
+                {renderMarkdownLite(String(simReport.report || ''))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
