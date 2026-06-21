@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { getMobileCopy } from './mobileCopy';
+import DownloadMacButton from '../hivemind/cartesia/DownloadMacButton';
 
 const ease = [0.16, 1, 0.3, 1];
 const fade = (delay) => ({
@@ -102,7 +103,7 @@ const MobileHero = () => {
               </motion.h1>
 
               {/* Arrow CTA — pill shape like reference */}
-              <motion.div className="flex items-center gap-6 mt-10" {...fade(0.25)}>
+              <motion.div className="flex flex-wrap items-center gap-4 mt-10" {...fade(0.25)}>
                 <a
                   href="/hivemind"
                   className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
@@ -116,6 +117,7 @@ const MobileHero = () => {
                 >
                   <ScrambleText text={copy.secondaryCta} startDelay={580} />
                 </a>
+                <DownloadMacButton />
               </motion.div>
 
               {/* Bottom tagline */}
