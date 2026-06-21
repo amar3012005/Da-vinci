@@ -1909,9 +1909,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                   · {Number(seal.tokens_cached).toLocaleString()} cached ⚡
                 </span>
               )}
-              {seal.tok_by && ((seal.tok_by.director || 0) + (seal.tok_by.debate || 0) + (seal.tok_by.web || 0)) > 0 && (
-                <span>
-                  · director {Math.round((seal.tok_by.director || 0) / 1000)}k · debate {Math.round((seal.tok_by.debate || 0) / 1000)}k
+              {seal.tok_by && ((seal.tok_by.director || 0) + (seal.tok_by.synth || 0) + (seal.tok_by.debate || 0) + (seal.tok_by.web || 0)) > 0 && (
+                <span title={t('hyperAgents.tokByHint', 'director = gather plan (fast model) · synth = final deliverable (best model) · debate = the room · web = live search')}>
+                  · plan {Math.round((seal.tok_by.director || 0) / 1000)}k
+                  {(seal.tok_by.synth || 0) > 0 ? ` · synth ${Math.round(seal.tok_by.synth / 1000)}k` : ''}
+                  {(seal.tok_by.debate || 0) > 0 ? ` · debate ${Math.round(seal.tok_by.debate / 1000)}k` : ''}
                   {(seal.tok_by.web || 0) > 0 ? ` · web ${Math.round(seal.tok_by.web / 1000)}k` : ''}
                 </span>
               )}
