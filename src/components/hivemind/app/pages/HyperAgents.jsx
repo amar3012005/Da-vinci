@@ -1475,16 +1475,23 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                     </span>
                   </div>
                 )}
-                {connectorReads.map((g, i) => (
-                  <div key={`conn-${i}`} className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
-                    <span className="text-sky-600">🔌</span>
-                    <span>
-                      <span className="font-medium">{(g.sources || [])[0] || 'connector'}</span>
-                      {' · '}<span className="font-mono text-[9.5px] text-sky-700">{g.tool}</span>
-                      {g.query ? <> · “{g.query}”</> : null}
-                    </span>
-                  </div>
-                ))}
+                {connectorReads.map((g, i) => {
+                  const cid = (g.sources || [])[0] || 'connector';
+                  const logo = BRAND_LOGOS[cid] || BRAND_LOGOS[String(cid).replace(/_/g, '-')]
+                    || BRAND_LOGOS[String(cid).replace(/-/g, '_')];
+                  return (
+                    <div key={`conn-${i}`} className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
+                      {logo
+                        ? <img src={logo} alt={cid} className="w-3 h-3 shrink-0" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                        : <span className="text-sky-600">🔌</span>}
+                      <span>
+                        <span className="font-medium">{cid}</span>
+                        {' · '}<span className="font-mono text-[9.5px] text-sky-700">{g.tool}</span>
+                        {g.query ? <> · “{g.query}”</> : null}
+                      </span>
+                    </div>
+                  );
+                })}
               </>
             );
           })()}
