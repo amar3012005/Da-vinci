@@ -461,6 +461,9 @@ function RoomThread({ roomId, onArchived }) {
   const fileInputRef = useRef(null);
   const [showPicker, setShowPicker] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
+  // First-run setup walkthrough (4 slides, per-room, no Save — changes apply live).
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupStep, setSetupStep] = useState(0);
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(null); // approval_id being resolved
@@ -658,6 +661,24 @@ function RoomThread({ roomId, onArchived }) {
       setRoom(p => ({ ...p, sim_mode: prev }));
       setError(e.response?.data?.error || e.message);
     }
+  }
+
+  // First-run setup walkthrough: show once per room (localStorage). Configures quality /
+  // pop-sim / connectors live; finishing just closes it — the room then works as usual.
+  useEffect(() => {
+    if (!room?.id) return;
+    if (room.archived_at) return;  // no setup walkthrough on archived rooms
+    try {
+      if (!window.localStorage.getItem(`hm-room-setup-${room.id}`)) {
+        setSetupStep(0);
+        setShowSetup(true);
+      }
+    } catch { /* noop */ }
+  }, [room?.id, room?.archived_at]);
+
+  function finishSetup() {
+    try { window.localStorage.setItem(`hm-room-setup-${room?.id}`, '1'); } catch { /* noop */ }
+    setShowSetup(false);
   }
 
   async function handleFiles(fileList) {
@@ -1196,6 +1217,104 @@ function RoomThread({ roomId, onArchived }) {
           />
         )}
       </AnimatePresence>
+
+      {/* First-run setup walkthrough — 4 small slides. No Save: each choice applies live.
+          Finishing (or skipping) just closes it; the room then works as usual. */}
+      {showSetup && room && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={finishSetup}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 pt-3">
+              <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.setupOf', 'Set up · {{n}}/4', { n: setupStep + 1 })}</span>
+              <button type="button" onClick={finishSetup} className="text-[#a3a3a3] hover:text-[#0a0a0a]" title={t('hyperAgents.skip', 'Skip')}><X size={15} /></button>
+            </div>
+            <div className="px-5 py-3 min-h-[210px]">
+              {setupStep === 0 && (
+                <div>
+                  <div className="text-[15px] font-bold text-[#0a0a0a] flex items-center gap-1.5"><Users size={16} className="text-violet-600" /> {t('hyperAgents.setupIntroTitle', 'Welcome to HyperAgents')}</div>
+                  <p className="mt-2 text-[12.5px] text-[#525252] leading-relaxed">
+                    {t('hyperAgents.setupIntroBody', 'A room of AI teammates that pull from your company brain + connected tools, debate the question, and write ONE grounded, cited answer.')}
+                  </p>
+                  <p className="mt-2 text-[12.5px] text-[#525252] leading-relaxed">
+                    {t('hyperAgents.setupIntroUse', 'Use it for decisions, research, drafts, and simulating how a population of stakeholders would react. Quick setup — 20 seconds.')}
+                  </p>
+                </div>
+              )}
+              {setupStep === 1 && (
+                <div>
+                  <div className="text-[14px] font-bold text-[#0a0a0a]">{t('hyperAgents.setupQualityTitle', 'Answer quality')}</div>
+                  <p className="mt-1 text-[11.5px] text-[#737373]">{t('hyperAgents.setupQualitySub', 'Pick the model mix. You can change it anytime.')}</p>
+                  <div className="mt-2.5 space-y-2">
+                    {[
+                      ['auto', t('hyperAgents.qAuto', 'Auto'), t('hyperAgents.setupAutoDesc', 'Multi-model — cheap gather + debate, strong 120B synthesis. Best value (~⅓ the cost). Recommended.')],
+                      ['best', t('hyperAgents.qBest', 'Best'), t('hyperAgents.setupBestDesc', 'Everything on the strongest model (120B) — maximum rigor, higher cost.')],
+                    ].map(([val, label, desc]) => {
+                      const on = (room.quality_mode || 'auto') === val;
+                      return (
+                        <button key={val} type="button" onClick={() => setQualityMode(val)}
+                          className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${on ? 'border-[#117dff] bg-[#117dff]/5' : 'border-[#e3e0db] hover:border-[#117dff]/40'}`}>
+                          <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#0a0a0a]">{label}{on && <span className="text-[#117dff]">✓</span>}{val === 'auto' && ' ⚡'}</div>
+                          <div className="text-[11px] text-[#737373] mt-0.5 leading-snug">{desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {setupStep === 2 && (
+                <div>
+                  <div className="text-[14px] font-bold text-[#0a0a0a]">{t('hyperAgents.setupSimTitle', 'Population simulation')}</div>
+                  <p className="mt-1 text-[11.5px] text-[#737373] leading-snug">{t('hyperAgents.setupSimSub', 'Optional. Simulate a population of stakeholder voices; their report folds into the answer (adds ~10s).')}</p>
+                  <button type="button" onClick={() => setSimMode((room.sim_mode || 'off') !== 'on')}
+                    className={`mt-2.5 w-full flex items-center justify-between rounded-lg border px-3 py-2 transition-colors ${(room.sim_mode || 'off') === 'on' ? 'border-violet-500 bg-violet-50' : 'border-[#e3e0db] hover:border-violet-300'}`}>
+                    <span className="text-[12.5px] font-semibold text-[#0a0a0a]">👥 {t('hyperAgents.setupSimToggle', 'Population sim')}</span>
+                    <span className={`text-[11px] font-medium ${(room.sim_mode || 'off') === 'on' ? 'text-violet-700' : 'text-[#a3a3a3]'}`}>{(room.sim_mode || 'off') === 'on' ? t('hyperAgents.on', 'On') : t('hyperAgents.off', 'Off')}</span>
+                  </button>
+                  {(room.sim_mode || 'off') === 'on' && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-[11px] text-[#525252] mb-1">
+                        <span>{t('hyperAgents.setupVoices', 'Number of voices')}</span>
+                        <span className="font-mono text-violet-600">{room.sim_agents || 24}</span>
+                      </div>
+                      <input type="range" min={10} max={100} step={5} value={room.sim_agents || 24}
+                        onChange={e => setRoom(p => ({ ...p, sim_agents: +e.target.value }))}
+                        onMouseUp={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
+                        onTouchEnd={e => apiClient.updateHyperRoom(roomId, { sim_agents: +e.target.value }).catch(() => {})}
+                        className="w-full accent-violet-600 cursor-pointer" />
+                      <div className="flex justify-between text-[9px] text-[#a3a3a3] font-mono"><span>10</span><span>100</span></div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {setupStep === 3 && (
+                <div>
+                  <div className="text-[14px] font-bold text-[#0a0a0a]">{t('hyperAgents.setupConnTitle', 'Connect your tools')}</div>
+                  <p className="mt-1 text-[12px] text-[#525252] leading-relaxed">{t('hyperAgents.setupConnBody', 'Toggle on Gmail, Notion, Slack, Drive… so the room reads live data instead of guessing. Each connector becomes a read-tool for the agents.')}</p>
+                  <button type="button" onClick={() => setShowConnectors(true)}
+                    className="mt-3 w-full rounded-lg border border-[#117dff] bg-[#117dff]/5 px-3 py-2 text-[12.5px] font-semibold text-[#117dff] hover:bg-[#117dff]/10 transition-colors">
+                    {t('hyperAgents.setupOpenConn', 'Open connector settings →')}
+                  </button>
+                  <p className="mt-2 text-[10.5px] text-[#a3a3a3]">{t('hyperAgents.setupConnLater', 'You can also manage connectors anytime from the room header.')}</p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#ece9e3] bg-[#faf9f4]">
+              <div className="flex items-center gap-1">
+                {[0, 1, 2, 3].map(s => <span key={s} className={`w-1.5 h-1.5 rounded-full ${s === setupStep ? 'bg-violet-600' : 'bg-[#d4d0ca]'}`} />)}
+              </div>
+              <div className="flex items-center gap-2">
+                {setupStep > 0 && (
+                  <button type="button" onClick={() => setSetupStep(s => s - 1)} className="px-2.5 py-1 text-[11px] font-medium text-[#737373] hover:text-[#0a0a0a]">{t('hyperAgents.back', 'Back')}</button>
+                )}
+                {setupStep < 3 ? (
+                  <button type="button" onClick={() => setSetupStep(s => s + 1)} className="px-3 py-1 rounded-lg bg-violet-600 text-white text-[11px] font-semibold hover:bg-violet-700 transition-colors">{t('hyperAgents.next', 'Next')}</button>
+                ) : (
+                  <button type="button" onClick={finishSetup} className="px-3 py-1 rounded-lg bg-violet-600 text-white text-[11px] font-semibold hover:bg-violet-700 transition-colors">{t('hyperAgents.finish', 'Finish')}</button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
