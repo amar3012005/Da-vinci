@@ -22,6 +22,20 @@ const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindA
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 
+/**
+ * Hard-redirect any /hivemind* hit on a non-HIVEMIND host (e.g. singulancelabs.com,
+ * davinciai.eu) to the canonical HIVEMIND subdomain, preserving the full path,
+ * query, and hash. The HIVEMIND app is never served from the marketing domain —
+ * it only runs on HIVEMIND_SITE_HOST.
+ */
+const HivemindExternalRedirect = () => {
+  React.useEffect(() => {
+    const { pathname, search, hash } = window.location;
+    window.location.replace(`https://${HIVEMIND_SITE_HOST}${pathname}${search}${hash}`);
+  }, []);
+  return <div className="min-h-screen bg-[#0a0a0a]" />;
+};
+
 const Layout = ({ children }) => (
   <div className="min-h-screen bg-black text-white">
     <Navbar />
@@ -59,20 +73,18 @@ function App() {
           element={<VoiceAgentTestPage config={bundbTestConfig.config} brand={bundbTestConfig.brand} />}
         />
 
-        {/* HIVEMIND — consolidated parent route */}
+        {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
+            on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
         <Route path="/hivemind">
-          {/* Exact /hivemind → landing on localhost, app on production */}
           <Route index element={isHivemindHost
             ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
-            : <HivemindRedirect />
+            : <HivemindExternalRedirect />
           } />
-          {/* /hivemind/login, /hivemind/app/* → dashboard app */}
           <Route
             path="*"
-            element={
-              <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
-                <HiveMindApp />
-              </React.Suspense>
+            element={isHivemindHost
+              ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
+              : <HivemindExternalRedirect />
             }
           />
         </Route>
