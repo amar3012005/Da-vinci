@@ -5,28 +5,33 @@
   <meta charset="utf-8" />
   <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000" />
-  <meta name="description" content="Da'vinci Solutions builds AI-powered enterprise automation systems. TARA conversational AI and HIVEMIND memory engine help businesses scale operations with sovereign, GDPR-compliant agentic intelligence." />
+  <meta name="theme-color" content="#05070f" />
 
-  <!-- Canonical URL -->
-  <link rel="canonical" href="https://www.davinciai.eu/" />
+  <!-- Preload the SINGULANCE hero cover (WebP) so it paints immediately -->
+  <link rel="preload" as="image" href="%PUBLIC_URL%/singulance-cover.webp" fetchpriority="high" />
+  <meta name="description" content="SINGULANCE — the AI operating layer for regulated Europe. Run your institution as an AI company with a sovereign, GDPR-native AI workforce that runs inside your organization's memory: TARA (voice), HIVEMIND (sovereign memory), and HYPERAGENTS (agent swarm)." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+
+  <!-- Canonical URL — SINGULANCE primary domain -->
+  <link rel="canonical" href="https://singulancelabs.com/" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Da'vinci Solutions" />
-  <meta property="og:title" content="Da'vinci Solutions — AI-Powered Enterprise Automation" />
-  <meta property="og:description" content="Enterprise AI systems for agentic automation. TARA conversational AI and HIVEMIND sovereign memory engine for small and medium enterprises." />
-  <meta property="og:url" content="https://www.davinciai.eu/" />
-  <meta property="og:image" content="https://www.davinciai.eu/main_background.jpeg" />
+  <meta property="og:site_name" content="SINGULANCE" />
+  <meta property="og:title" content="SINGULANCE — AI Workforce That Runs Inside Memory" />
+  <meta property="og:description" content="The AI operating layer for regulated Europe. Run your institution as an AI company: a sovereign, GDPR-native AI workforce — TARA, HIVEMIND, HYPERAGENTS." />
+  <meta property="og:url" content="https://singulancelabs.com/" />
+  <meta property="og:image" content="https://singulancelabs.com/og-cover.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="SINGULANCE — AI workforce that runs inside memory" />
   <meta property="og:locale" content="en_US" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Da'vinci Solutions — AI-Powered Enterprise Automation" />
-  <meta name="twitter:description" content="Enterprise AI systems for agentic automation. TARA conversational AI and HIVEMIND sovereign memory engine." />
-  <meta name="twitter:image" content="https://www.davinciai.eu/main_background.jpeg" />
+  <meta name="twitter:title" content="SINGULANCE — AI Workforce That Runs Inside Memory" />
+  <meta name="twitter:description" content="The AI operating layer for regulated Europe. Sovereign, GDPR-native AI workforce: TARA, HIVEMIND, HYPERAGENTS." />
+  <meta name="twitter:image" content="https://singulancelabs.com/og-cover.jpg" />
 
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.jpeg" />
   <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/hive-apple-touch-180.png" />
@@ -36,7 +41,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="HIVE" />
+  <meta name="apple-mobile-web-app-title" content="SINGULANCE" />
 
   <!-- Fonts — reduced to 3 families for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,10 +49,6 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet">
-
-  <!-- Hero image preload removed — was firing on every route (graph/memories/connectors)
-       but only used on landing hero, producing console warning + wasted bandwidth.
-       Component that uses it sets bg via inline style, browser fetches on-demand. -->
 
   <script>
     (function () {
@@ -66,26 +67,28 @@
     })();
   </script>
 
-  <title>Da'vinci Solutions — AI-Powered Enterprise Automation</title>
+  <title>SINGULANCE — AI Workforce That Runs Inside Memory</title>
 
   <!-- JSON-LD: Organization -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Da'vinci Solutions",
-    "url": "https://www.davinciai.eu",
-    "logo": "https://www.davinciai.eu/logo.svg",
-    "description": "Da'vinci Solutions builds sovereign, GDPR-compliant AI automation systems for small and medium European enterprises — TARA conversational voice AI and HIVEMIND, a graph-based enterprise memory engine.",
+    "name": "SINGULANCE",
+    "alternateName": ["SINGULANCE AI", "Singulance", "Singulance AI"],
+    "url": "https://singulancelabs.com",
+    "logo": "https://singulancelabs.com/og-cover.jpg",
+    "description": "SINGULANCE is the AI operating layer for regulated Europe — a sovereign, GDPR-native AI workforce that runs inside an organization's memory. Products: TARA (voice agent), HIVEMIND (sovereign memory engine), HYPERAGENTS (agent swarm).",
+    "slogan": "Beyond the horizon of intelligence.",
     "areaServed": "EU",
     "knowsLanguage": ["en","de","fr","es","it","nl","pl","cs","sk"],
     "contactPoint": {
       "@type": "ContactPoint",
-      "email": "enterprise@davinciai.eu",
+      "email": "enterprise@singulancelabs.com",
       "contactType": "sales",
       "availableLanguage": ["English","German"]
     },
-    "sameAs": ["https://www.linkedin.com/company/davinci-solutions","https://www.youtube.com/@davinciai"]
+    "sameAs": ["https://www.linkedin.com/company/singulance","https://x.com/singulanceai"]
   }
   </script>
 
@@ -94,9 +97,10 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Da'vinci Solutions",
-    "url": "https://www.davinciai.eu",
-    "publisher": { "@type": "Organization", "name": "Da'vinci Solutions" },
+    "name": "SINGULANCE",
+    "alternateName": "SINGULANCE AI",
+    "url": "https://singulancelabs.com",
+    "publisher": { "@type": "Organization", "name": "SINGULANCE" },
     "inLanguage": "en"
   }
   </script>
@@ -110,13 +114,10 @@
     "applicationCategory": "BusinessApplication",
     "applicationSubCategory": "Conversational Voice AI",
     "operatingSystem": "Web",
-    "url": "https://www.davinciai.eu/",
-    "description": "TARA is a conversational AI voice agent for enterprise automation. It handles customer interactions, scheduling, and support with multilingual natural language understanding.",
-    "featureList": ["Multilingual voice conversations","Appointment scheduling","Customer support automation","Natural language understanding"],
-    "creator": {
-      "@type": "Organization",
-      "name": "Da'vinci Solutions"
-    }
+    "url": "https://singulancelabs.com/",
+    "description": "TARA is SINGULANCE's enterprise voice agent — it reasons in real time rather than retrieving scripts, handling calls, lead qualification, appointment booking, and support with multilingual natural language understanding.",
+    "featureList": ["Real-time reasoning voice agent","Multilingual voice conversations","Appointment scheduling","Customer support automation"],
+    "creator": { "@type": "Organization", "name": "SINGULANCE" }
   }
   </script>
 
@@ -129,13 +130,26 @@
     "applicationCategory": "BusinessApplication",
     "applicationSubCategory": "AI Memory Engine",
     "operatingSystem": "Web",
-    "url": "https://hivemind.davinciai.eu/",
-    "description": "HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine that gives AI agents persistent long-term memory through graph-based knowledge storage, semantic recall, and cross-agent memory sharing.",
-    "featureList": ["Graph-based knowledge storage","Semantic recall across sessions","Cross-agent memory sharing","MCP integration for AI assistants","GDPR and DPDP compliant data residency"],
-    "creator": {
-      "@type": "Organization",
-      "name": "Da'vinci Solutions"
-    }
+    "url": "https://singulancelabs.com/",
+    "description": "HIVEMIND is SINGULANCE's sovereign, GDPR-native memory engine — sub-50ms recall across everything an organization knows, with graph-based knowledge storage, semantic recall, cross-agent memory sharing, and MCP integration.",
+    "featureList": ["Sub-50ms semantic recall","Graph-based knowledge storage","Cross-agent memory sharing","MCP integration for AI assistants","GDPR / DPDP data residency"],
+    "creator": { "@type": "Organization", "name": "SINGULANCE" }
+  }
+  </script>
+
+  <!-- JSON-LD: SoftwareApplication — HYPERAGENTS -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "HYPERAGENTS",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Multi-Agent System",
+    "operatingSystem": "Web",
+    "url": "https://singulancelabs.com/",
+    "description": "HYPERAGENTS is SINGULANCE's digital-employee swarm — many AI agents that watch, decide, and act as one, coordinated and grounded in HIVEMIND memory, running inside the organization's walls.",
+    "featureList": ["Multi-agent coordination","Digital employees / autonomous agents","Memory-grounded reasoning","Sovereign on-prem execution"],
+    "creator": { "@type": "Organization", "name": "SINGULANCE" }
   }
   </script>
 
@@ -145,9 +159,11 @@
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      {"@type":"Question","name":"What is HIVEMIND?","acceptedAnswer":{"@type":"Answer","text":"HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine. It gives AI agents persistent, graph-based long-term memory with semantic recall and cross-agent memory sharing, so assistants remember facts, decisions, and context across sessions. It is built by Da'vinci Solutions for small and medium European enterprises and complies with GDPR and DPDP regulations."}},
-      {"@type":"Question","name":"What is TARA?","acceptedAnswer":{"@type":"Answer","text":"TARA is a conversational AI voice agent from Da'vinci Solutions. It handles customer interactions, appointment scheduling, and support using natural language understanding, supports multilingual conversations, and automates routine business operations for SMEs."}},
-      {"@type":"Question","name":"Is Da'vinci Solutions GDPR compliant?","acceptedAnswer":{"@type":"Answer","text":"Yes. Da'vinci Solutions builds sovereign AI systems that are GDPR and DPDP compliant. Data is stored within compliant infrastructure, giving European businesses control and data residency over their conversational AI and memory data."}}
+      {"@type":"Question","name":"What is SINGULANCE?","acceptedAnswer":{"@type":"Answer","text":"SINGULANCE is the AI operating layer for regulated Europe — a sovereign, GDPR-native AI workforce that runs inside an organization's memory. It lets institutions run as AI companies through three products: TARA (a real-time reasoning voice agent), HIVEMIND (a sub-50ms sovereign memory engine), and HYPERAGENTS (a coordinated swarm of digital employees)."}},
+      {"@type":"Question","name":"What is HIVEMIND?","acceptedAnswer":{"@type":"Answer","text":"HIVEMIND is SINGULANCE's sovereign, GDPR-compliant memory engine. It gives AI agents persistent, graph-based long-term memory with sub-50ms semantic recall and cross-agent memory sharing, so assistants remember facts, decisions, and context across sessions."}},
+      {"@type":"Question","name":"What is TARA?","acceptedAnswer":{"@type":"Answer","text":"TARA is SINGULANCE's enterprise voice agent. It reasons in real time to handle calls, lead qualification, appointment scheduling, and support with multilingual natural language understanding."}},
+      {"@type":"Question","name":"What is HYPERAGENTS?","acceptedAnswer":{"@type":"Answer","text":"HYPERAGENTS is SINGULANCE's digital-employee swarm — multiple AI agents that coordinate to watch, decide, and act as one, grounded in HIVEMIND memory and running inside the organization's own infrastructure."}},
+      {"@type":"Question","name":"Is SINGULANCE GDPR compliant?","acceptedAnswer":{"@type":"Answer","text":"Yes. SINGULANCE is sovereign and GDPR / DPDP compliant by design, with data residency inside compliant EU infrastructure — built specifically for regulated European institutions."}}
     ]
   }
   </script>
@@ -155,16 +171,17 @@
 
 <body>
   <noscript>
-    <h1>Da'vinci Solutions — AI-Powered Enterprise Automation</h1>
-    <p>Da'vinci Solutions builds AI-powered enterprise automation systems for small and medium enterprises. Our platform includes TARA, a conversational AI voice agent for customer interactions and business automation, and HIVEMIND, a sovereign memory engine with GDPR-compliant graph-based knowledge storage.</p>
+    <h1>SINGULANCE — AI workforce that runs inside memory</h1>
+    <p>SINGULANCE is the AI operating layer for regulated Europe. Run your institution as an AI company with a sovereign, GDPR-native AI workforce that runs inside your organization's memory.</p>
     <h2>Products</h2>
     <ul>
-      <li><strong>TARA</strong> — Conversational AI voice agent that handles customer interactions, scheduling, and support with natural language understanding.</li>
-      <li><strong>HIVEMIND</strong> — Enterprise memory engine providing semantic recall, cross-agent memory sharing, and sovereign data storage compliant with GDPR and DPDP regulations.</li>
+      <li><strong>TARA</strong> — Enterprise voice agent that reasons in real time: calls, lead qualification, scheduling, and support with multilingual natural language understanding.</li>
+      <li><strong>HIVEMIND</strong> — Sovereign memory engine with sub-50ms semantic recall, graph-based knowledge storage, cross-agent memory sharing, and MCP integration. GDPR / DPDP compliant.</li>
+      <li><strong>HYPERAGENTS</strong> — A swarm of digital employees that watch, decide, and act as one, grounded in HIVEMIND memory and running inside your walls.</li>
     </ul>
     <h2>Contact</h2>
-    <p>Email: <a href="mailto:enterprise@davinciai.eu">enterprise@davinciai.eu</a></p>
-    <p>Visit <a href="https://www.davinciai.eu">www.davinciai.eu</a> with JavaScript enabled for the full experience.</p>
+    <p>Email: <a href="mailto:enterprise@singulancelabs.com">enterprise@singulancelabs.com</a></p>
+    <p>Visit <a href="https://singulancelabs.com">singulancelabs.com</a> with JavaScript enabled for the full experience.</p>
   </noscript>
   <div id="root"></div>
 </body>

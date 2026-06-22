@@ -2,10 +2,8 @@ import React from 'react';
 import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
-import SolutionTara from './SolutionTara';
-import SolutionHivemind from './SolutionHivemind';
-import SolutionEnterprise from './SolutionEnterprise';
-import PhaseOneBrandSection from './PhaseOneBrandSection';
+import SubProducts from './SubProducts';
+import ThesisSection from './ThesisSection';
 import ResearchTeaser from './ResearchTeaser';
 import MobileAboutSection from './MobileAboutSection';
 import TaraVoiceWidget from './TaraVoiceWidget';
@@ -30,10 +28,8 @@ const PageContent = () => {
         <div className={`min-h-screen ${c.bg} ${c.text} overflow-x-hidden transition-colors duration-300`}>
             <MobileNavigation />
             <MobileHero />
-            <SolutionTara />
-            <SolutionHivemind />
-            <SolutionEnterprise />
-            <PhaseOneBrandSection />
+            <SubProducts />
+            <ThesisSection />
             <ResearchTeaser />
             <MobileAboutSection />
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />}
@@ -48,3 +44,5 @@ const MobileHomepage = () => (
 );
 
 export default MobileHomepage;
+
+

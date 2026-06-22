@@ -1,188 +1,120 @@
-import React from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
-import { useTheme, t } from './ThemeContext';
-import { getMobileCopy } from './mobileCopy';
-import DownloadMacButton from '../hivemind/cartesia/DownloadMacButton';
+import { ArrowRight, ChevronDown } from 'lucide-react';
+import { COVER_LQIP } from './three/coverLqip';
 
+const HeroScene = lazy(() => import('./three/HeroScene'));
+const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
+
+/**
+ * SINGULANCE cinematic hero.
+ * Desktop: full-bleed R3F cover (HeroScene) with overlays.
+ * Mobile: the full poster fit to the screen width as a band (no crop — the baked
+ * wordmark and corner labels stay intact), with the same water-warp shader, and
+ * the eyebrow / copy / CTA stacked above and below it.
+ * Reduced-motion: static cover, no canvas.
+ */
 const ease = [0.16, 1, 0.3, 1];
-const fade = (delay) => ({
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.8, delay, ease },
-});
+const COVER = '/singulance-cover.webp';
 
-const ScrambleText = ({
-  text,
-  as: Component = 'span',
-  className = '',
-}) => {
-  return (
-    <Component
-      className={className}
-      style={{
-        display: 'inline-block',
-        whiteSpace: 'pre-wrap',
-      }}
-    >
-      {text}
-    </Component>
-  );
+const useHeroMode = () => {
+  const [mode, setMode] = useState('static-desktop');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const wide = window.matchMedia('(min-width: 768px)').matches;
+    setMode(wide ? (reduced ? 'static-desktop' : 'immersive') : reduced ? 'static-mobile' : 'water-mobile');
+  }, []);
+  return mode;
 };
 
+/* ---------- desktop full-bleed ---------- */
+const DesktopHero = ({ immersive }) => (
+  <section
+    id="hero"
+    className="relative hidden h-[100svh] w-full overflow-hidden md:block"
+    style={{ background: '#05070f', backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+  >
+    {immersive ? (
+      <Suspense fallback={<img src={COVER} alt="" className="absolute inset-0 h-full w-full object-cover" />}>
+        <HeroScene />
+      </Suspense>
+    ) : (
+      <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" />
+    )}
+
+    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#05070f]/55 via-transparent to-[#05070f]/80" />
+
+    <motion.p
+      initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
+      className="pointer-events-none absolute inset-x-0 top-24 z-10 px-6 text-center text-xs font-medium uppercase tracking-[0.32em] text-white/75"
+    >
+      The AI Operating Layer for Regulated Europe
+    </motion.p>
+
+    <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-6 px-6 pb-[8vh] text-center">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="pointer-events-none max-w-2xl">
+        <p className="text-2xl font-semibold tracking-tight text-white">Run your institution as an AI company</p>
+        <p className="mt-2 text-base font-light leading-relaxed text-white/70">The AI workforce that runs inside your organization&apos;s memory.</p>
+      </motion.div>
+      <motion.a href="/hivemind" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.75, ease }}
+        className="group inline-flex items-center gap-3 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white no-underline backdrop-blur-md transition-colors hover:bg-white/20">
+        Enter SINGULANCE <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+      </motion.a>
+    </div>
+  </section>
+);
+
+/* ---------- mobile width-fit band ---------- */
+const MobileHeroBand = ({ water }) => (
+  <section id="hero-m" className="relative flex min-h-[100svh] flex-col justify-center gap-8 pb-10 pt-24 md:hidden" style={{ background: '#05070f' }}>
+    <motion.p
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
+      className="px-5 text-center text-[10px] font-medium uppercase tracking-[0.32em] text-white/70"
+    >
+      The AI Operating Layer for Regulated Europe
+    </motion.p>
+
+    {/* full poster fit to screen edges (no side padding, no rounding), water shader */}
+    <motion.div
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
+      className="relative aspect-[1586/992] w-full overflow-hidden bg-[#05070f]"
+      style={{ backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover' }}
+    >
+      {water ? (
+        <Suspense fallback={<img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" />}>
+          <CinematicPlate src={COVER} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
+        </Suspense>
+      ) : (
+        <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+      )}
+    </motion.div>
+
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="px-5 text-center">
+      <p className="text-xl font-semibold tracking-tight text-white">Run your institution as an AI company</p>
+      <p className="mt-2 text-sm font-light leading-relaxed text-white/65">The AI workforce that runs inside your organization&apos;s memory.</p>
+    </motion.div>
+
+    {/* scroll-down cue replaces the CTA */}
+    <button
+      onClick={() => document.getElementById('solutions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      aria-label="Scroll down"
+      className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-white backdrop-blur-md"
+    >
+      <motion.span animate={{ y: [0, 5, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+        <ChevronDown size={20} />
+      </motion.span>
+    </button>
+  </section>
+);
+
 const MobileHero = () => {
-  const { isDark, locale } = useTheme();
-  const c = t(isDark);
-  const copy = getMobileCopy(locale).hero;
-  const headlineClass = locale === 'de'
-    ? 'text-4xl md:text-5xl lg:text-[5rem] font-bold tracking-tight leading-[0.95]'
-    : 'text-5xl md:text-6xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95]';
-
+  const mode = useHeroMode();
   return (
-    <section className={`${c.bg} pt-28 pb-0 lg:pt-28 relative overflow-hidden`}>
-      <div className={`max-w-[1200px] mx-auto border-x ${c.border} relative`}>
-
-        {/* Subtle grid lines */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className={`absolute top-0 left-1/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
-          <div className={`absolute top-0 left-2/3 w-px h-full ${isDark ? 'bg-white/[0.04]' : 'bg-black/[0.04]'}`} />
-        </div>
-
-        {/* Main layout — editorial overlap */}
-        <div className="relative px-6 md:px-10 lg:px-20 pt-8 pb-0">
-
-          {/* Top metadata row */}
-          <motion.div
-            className="flex items-center justify-between mb-8"
-            {...fade(0)}
-          >
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              <ScrambleText text={copy.series} startDelay={0} />
-            </span>
-            <span className={`text-[10px] font-mono uppercase tracking-[0.25em] ${c.textMuted}`}>
-              <ScrambleText text={copy.year} startDelay={80} />
-            </span>
-          </motion.div>
-
-          {/* Two-column editorial layout */}
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-0 items-end relative">
-
-            {/* Left column — Text content */}
-            <div className="relative z-10 pb-12 lg:pb-20">
-              {/* Solid accent square — design element */}
-              <motion.div
-                className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} mb-8`}
-                {...fade(0.05)}
-              />
-
-              {/* Label */}
-              <motion.p
-                className={`text-[10px] font-mono uppercase tracking-[0.3em] ${c.textMuted} mb-6`}
-                {...fade(0.1)}
-              >
-                <ScrambleText text={copy.metaCode} startDelay={120} />
-                <span className="ml-8">
-                  <ScrambleText text={copy.coordinates} startDelay={180} />
-                </span>
-              </motion.p>
-
-              {/* Main headline */}
-              <motion.h1
-                className={`${headlineClass} ${c.text} font-['Space_Grotesk']`}
-                {...fade(0.15)}
-              >
-                <span className="block">
-                  <ScrambleText text={copy.headline[0]} startDelay={220} />
-                </span>
-                <span className="block">
-                  <ScrambleText text={copy.headline[1]} startDelay={320} />
-                </span>
-                <span className={`block ${isDark ? 'text-white' : 'text-[#0a0a0a]'}`}>
-                  <ScrambleText text={copy.headline[2]} startDelay={420} />
-                </span>
-              </motion.h1>
-
-              {/* Arrow CTA — pill shape like reference */}
-              <motion.div className="flex flex-wrap items-center gap-4 mt-10" {...fade(0.25)}>
-                <a
-                  href="/hivemind"
-                  className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
-                >
-                  <ScrambleText text={copy.primaryCta} startDelay={520} />
-                  <ArrowRight size={14} />
-                </a>
-                <a
-                  href="https://enterprise.davinciai.eu"
-                  className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}
-                >
-                  <ScrambleText text={copy.secondaryCta} startDelay={580} />
-                </a>
-                <DownloadMacButton />
-              </motion.div>
-
-              {/* Bottom tagline */}
-              <motion.p
-                className={`text-sm ${c.textSecondary} mt-10 max-w-md leading-relaxed`}
-                {...fade(0.3)}
-              >
-                <ScrambleText text={copy.taglineLead} startDelay={640} />
-                <span className={`${c.text} font-medium`}>
-                  <ScrambleText text={copy.taglineStrong} startDelay={720} />
-                </span>
-              </motion.p>
-            </div>
-
-            {/* Right column — Image as element */}
-            <motion.div
-              className="relative lg:-mr-20 lg:ml-0"
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 1, delay: 0.2, ease }}
-            >
-              {/* Image element — NOT background */}
-              <div className="relative">
-                {/* Small solid accent square — overlapping top-left */}
-                <div className={`absolute -top-4 -left-4 w-16 h-16 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
-
-                {/* The featured image */}
-                <div className="relative overflow-hidden rounded-none">
-                  <img
-                    src="/hivemind_bg.jpeg"
-                    alt="Da Vinci AI"
-                    className="w-full h-[500px] md:h-[600px] lg:h-[700px] object-cover"
-                  />
-                  {/* Subtle overlay for text contrast */}
-                  <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-t from-[#080808]/60 via-transparent to-transparent' : 'bg-gradient-to-t from-[#faf9f4]/60 via-transparent to-transparent'}`} />
-                </div>
-
-                {/* Small solid accent square — bottom-right */}
-                <div className={`absolute -bottom-3 -right-3 w-10 h-10 ${isDark ? 'bg-white' : 'bg-[#0a0a0a]'} z-20`} />
-
-                {/* Metadata overlay on image */}
-                <div className={`absolute bottom-6 left-6 z-10`}>
-                  <span className="text-white/70 text-[9px] font-mono uppercase tracking-[0.2em]">
-                    <ScrambleText text={copy.imageLocation} startDelay={780} />
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Bottom row — footer metadata */}
-          <motion.div
-            className={`flex items-center justify-between py-6 border-t ${c.border} mt-0`}
-            {...fade(0.4)}
-          >
-            <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              <ScrambleText text={copy.footerLeft} startDelay={840} />
-            </span>
-            <span className={`text-[10px] font-mono ${c.textMuted}`}>
-              <ScrambleText text={copy.footerRight} startDelay={900} />
-            </span>
-          </motion.div>
-        </div>
-      </div>
-    </section>
+    <>
+      <DesktopHero immersive={mode === 'immersive'} />
+      <MobileHeroBand water={mode === 'water-mobile'} />
+    </>
   );
 };
 

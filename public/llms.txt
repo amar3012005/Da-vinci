@@ -1,43 +1,59 @@
-# Da'vinci Solutions
+# SINGULANCE
 
-> AI-powered enterprise automation for small and medium enterprises.
+> The AI operating layer for regulated Europe. Run your institution as an AI company.
 
-Da'vinci Solutions builds sovereign, GDPR-compliant AI systems that help businesses automate operations through conversational intelligence and persistent memory.
+SINGULANCE is a sovereign, GDPR-native AI workforce that runs inside an organization's memory. It is built for regulated European institutions (finance, healthcare, government, enterprise) that need autonomous AI which remembers, reasons, and acts — without sending data outside their walls.
+
+Slogan: "Beyond the horizon of intelligence." Tagline: "AI workforce that runs inside memory."
+
+Primary domain: https://singulancelabs.com (also served on https://davinciai.eu). Also known as: SINGULANCE AI, Singulance, Singulance AI.
 
 ## Products
 
-- [TARA](https://www.davinciai.eu/): Conversational AI voice agent for customer interactions, scheduling, and business automation. Supports multilingual conversations with natural language understanding.
-- [HIVEMIND](https://hivemind.davinciai.eu/): Enterprise memory engine with graph-based knowledge storage, semantic recall, and cross-agent memory sharing. GDPR and DPDP compliant. Capabilities: graph-based memory storage, semantic recall across sessions, cross-agent memory sharing, MCP integration for AI assistants.
+- [TARA](https://singulancelabs.com/): Enterprise voice agent that reasons in real time (not a script that retrieves). Handles calls, lead qualification, appointment booking, and support with multilingual natural language understanding. Sub-500ms responses.
+- [HIVEMIND](https://singulancelabs.com/): Sovereign memory engine. Sub-50ms semantic recall across everything an organization knows. Graph-based knowledge storage, cross-agent memory sharing, MCP integration for AI assistants (Claude, etc.). GDPR / DPDP compliant data residency.
+- [HYPERAGENTS](https://singulancelabs.com/hivemind/app/employees): A swarm of digital employees — multiple AI agents that watch, decide, and act as one, coordinated and grounded in HIVEMIND memory, running inside the organization's own infrastructure.
 
-The platform supports 31 languages and multilingual conversations.
+## Why SINGULANCE
+
+Today's AI is amnesiac: it dazzles for a session, then forgets. SINGULANCE solves the memory, continuity, and coordination problems so intelligence stops being a feature you rent and becomes a presence you keep — sovereign, sub-50ms, and compliant by design.
 
 ## Capabilities
 
-- Graph-based memory storage — entities, relationships, and knowledge graphs persisted across sessions.
-- Semantic recall — retrieve relevant memories by meaning, not keywords.
-- Cross-agent memory sharing — multiple AI agents share a common memory cortex.
-- MCP integration — expose memory to any MCP-compatible AI assistant (Claude, etc.).
 - Sovereign, GDPR/DPDP-compliant data residency — data stays in compliant EU infrastructure.
+- Sub-50ms semantic recall — retrieve by meaning, not keywords.
+- Graph-based memory — entities, relationships, and knowledge graphs persisted across sessions.
+- Cross-agent memory sharing — many agents share one memory cortex.
+- MCP integration — expose memory and tools to any MCP-compatible AI assistant.
+- Real-time reasoning voice — TARA processes intent, meaning, root problem, and optimal path in parallel.
+- Multi-agent coordination — HYPERAGENTS act as one autonomous digital workforce.
 
 ## Key Pages
 
-- [Homepage](https://www.davinciai.eu/): Product overview and platform capabilities
-- [About](https://www.davinciai.eu/about): Company information
-- [Demo](https://www.davinciai.eu/demo): Product demonstration
-- [Terms](https://www.davinciai.eu/terms): Terms of service
+- [Homepage](https://singulancelabs.com/): Product overview and the SINGULANCE stack
+- [About](https://singulancelabs.com/about): Company information
+- [Research](https://singulancelabs.com/research): The SINGULANCE research lab
+- [Demo](https://singulancelabs.com/demo): Product demonstration
+- [Benchmark](https://singulancelabs.com/benchmark): Memory benchmark results
 
 ## FAQ
 
+### What is SINGULANCE?
+SINGULANCE is the AI operating layer for regulated Europe — a sovereign, GDPR-native AI workforce that runs inside an organization's memory, via three products: TARA (voice), HIVEMIND (sovereign memory), and HYPERAGENTS (agent swarm).
+
 ### What is HIVEMIND?
-HIVEMIND is a sovereign, GDPR-compliant enterprise memory engine that gives AI agents persistent, graph-based long-term memory with semantic recall and cross-agent memory sharing, built by Da'vinci Solutions for small and medium European enterprises.
+HIVEMIND is SINGULANCE's sovereign memory engine with sub-50ms semantic recall, graph-based knowledge storage, cross-agent memory sharing, and MCP integration. GDPR / DPDP compliant.
 
 ### What is TARA?
-TARA is a conversational AI voice agent from Da'vinci Solutions that handles customer interactions, appointment scheduling, and support with multilingual natural language understanding.
+TARA is SINGULANCE's enterprise voice agent that reasons in real time to handle calls, scheduling, and support with multilingual natural language understanding.
 
-### Is Da'vinci Solutions GDPR compliant?
-Yes. Da'vinci Solutions builds sovereign AI systems that are GDPR and DPDP compliant, with data residency for European businesses.
+### What is HYPERAGENTS?
+HYPERAGENTS is SINGULANCE's swarm of digital employees — AI agents that coordinate to watch, decide, and act as one, grounded in HIVEMIND memory.
+
+### Is SINGULANCE GDPR compliant?
+Yes. SINGULANCE is sovereign and GDPR / DPDP compliant by design, with EU data residency, built for regulated European institutions.
 
 ## Contact
 
-- Email: enterprise@davinciai.eu
-- Website: https://www.davinciai.eu
+- Email: enterprise@singulancelabs.com
+- Website: https://singulancelabs.com

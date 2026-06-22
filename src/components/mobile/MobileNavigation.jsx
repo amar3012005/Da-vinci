@@ -41,10 +41,10 @@ const MobileNavigation = () => {
 
   return (
     <>
-      <nav className={`fixed top-0 inset-x-0 z-[100] ${c.navBg} border-b ${c.border}`}>
-        <div className={`max-w-[1200px] mx-auto border-x ${c.border}`}>
+      <nav className="fixed top-0 inset-x-0 z-[100] bg-[#05070f]/40 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-[1200px] mx-auto border-x border-white/10">
           <div className="px-6 h-16 flex items-center justify-between">
-            {/* Logo */}
+            {/* Logo — SINGULANCE wordmark */}
             <button
               onClick={() => {
                 if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
@@ -53,13 +53,9 @@ const MobileNavigation = () => {
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex items-center bg-transparent border-none cursor-pointer"
+              className="flex items-center bg-transparent border-none cursor-pointer p-0"
             >
-              <img
-                src="/images/davinci-logo.svg"
-                alt="Da Vinci"
-                className={`h-8 ${isDark ? 'invert brightness-150' : ''}`}
-              />
+              <span className="text-white text-lg font-semibold tracking-[0.04em]">SINGULANCE</span>
             </button>
 
             {/* Center Links — Desktop */}
