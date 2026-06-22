@@ -2489,21 +2489,45 @@ function FinalReportCard({ report, webSources = [], onOpenMemory }) {
  * dangerouslySetInnerHTML is safe). ANY parse/render failure falls back to the
  * raw code in a <pre> — a malformed diagram never breaks the report.
  */
+// Repair the common invalid-mermaid the LLM emits so a near-valid diagram still renders.
+// gantt is the frequent offender: `parallel <id>` is not a mermaid keyword, and a task line
+// needs a SPACE before its `:id,` metadata (`check:d3` → `check :d3`). Conservative — only
+// touches task lines, leaves valid diagrams unchanged.
+function sanitizeMermaid(code) {
+  let s = String(code || '').trim();
+  const lines = s.split('\n');
+  if (!/^\s*gantt\b/.test(lines[0] || '')) return s;
+  return lines.map((ln) => {
+    if (/^\s*(gantt|dateFormat|title|section|excludes|axisFormat|todayMarker|tickInterval|weekday)\b/.test(ln)) return ln;
+    let l = ln;
+    l = l.replace(/([^\s:]):([A-Za-z][\w-]*\s*,)/, '$1 :$2');   // ensure space before metadata colon
+    l = l.replace(/\bparallel\s+([A-Za-z][\w-]*)/g, 'after $1'); // `parallel X` (invalid) → `after X`
+    return l;
+  }).join('\n');
+}
+
 function MermaidDiagram({ code }) {
   const [svg, setSvg] = useState('');
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
     (async () => {
-      try {
-        const mermaid = (await import('mermaid')).default;
-        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral', fontFamily: 'inherit' });
+      const mermaid = (await import('mermaid')).default;
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral', fontFamily: 'inherit' });
+      const raw = String(code || '').trim();
+      // Try the raw diagram first, then a sanitized repair — only fall back to <pre> if both fail.
+      for (const candidate of [raw, sanitizeMermaid(raw)]) {
         const id = 'mmd-' + Math.random().toString(36).slice(2, 10);
-        const { svg: out } = await mermaid.render(id, String(code || '').trim());
-        if (alive) setSvg(out);
-      } catch (e) {
-        if (alive) setFailed(true);
+        try {
+          const { svg: out } = await mermaid.render(id, candidate);
+          if (alive) setSvg(out);
+          return;
+        } catch (e) {
+          // mermaid v10 leaves a temp/error node ("Syntax error in text") in the DOM on failure — purge it.
+          [id, 'd' + id].forEach((x) => document.getElementById(x)?.remove());
+        }
       }
+      if (alive) setFailed(true);
     })();
     return () => { alive = false; };
   }, [code]);
