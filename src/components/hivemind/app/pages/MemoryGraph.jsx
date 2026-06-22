@@ -125,6 +125,26 @@ function truncate(str, len = 80) {
   return str.length > len ? str.slice(0, len) + "..." : str;
 }
 
+// True when the 3D WebGL force graph is a bad default for this device: phones
+// (narrow viewport / coarse pointer / mobile UA) or no WebGL context at all.
+// Used only to pick the INITIAL view when the user has no stored preference —
+// they can still switch to 3D, and that choice persists.
+function preferLightGraphForDevice() {
+  try {
+    const narrow = typeof window !== "undefined" && window.matchMedia
+      && window.matchMedia("(max-width: 820px), (pointer: coarse)").matches;
+    const uaMobile = typeof navigator !== "undefined"
+      && (/(android|iphone|ipad|ipod|mobile)/i.test(navigator.userAgent || "")
+          || !!(navigator.userAgentData && navigator.userAgentData.mobile));
+    if (narrow || uaMobile) return true;
+    // No-WebGL fallback (rare desktops / locked-down browsers).
+    const c = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    const gl = c && (c.getContext("webgl") || c.getContext("experimental-webgl"));
+    if (!gl) return true;
+  } catch { /* be permissive — default to 3D on detection failure */ }
+  return false;
+}
+
 function safeStorageGet(key) {
   if (typeof window === "undefined") return null;
   try {
@@ -485,9 +505,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [graphDim, setGraphDim] = useState(() => {
     try {
       const stored = localStorage.getItem('hivemind:graphDim');
-      if (stored === '2d' || stored === '3d') return stored;
+      if (stored === '2d' || stored === '3d' || stored === 'moss') return stored;
     } catch {}
-    return dimension;
+    // No stored choice → default phones / WebGL-less devices to the 2D canvas
+    // (the 3D force graph janks or blanks there). Desktop keeps the 3D default.
+    // The user can still switch to 3D manually; that choice then persists.
+    return preferLightGraphForDevice() ? '2d' : dimension;
   });
   const is2D = graphDim === '2d';
   const isMoss = graphDim === 'moss';
