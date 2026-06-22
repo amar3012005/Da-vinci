@@ -32,6 +32,13 @@ function pickRecorderMime() {
   return ''; // let the browser choose its own default
 }
 
+// Tab-audio capture needs getDisplayMedia — absent on iOS Safari and audio-less
+// on desktop Safari. Hide the "tab + mic" source there so users aren't offered
+// a mode that can't work; mic-only still records fine everywhere.
+const TAB_CAPTURE_SUPPORTED = typeof navigator !== 'undefined'
+  && !!navigator.mediaDevices
+  && typeof navigator.mediaDevices.getDisplayMedia === 'function';
+
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -1051,7 +1058,7 @@ export default function MeetingNotes() {
               <div className="inline-flex items-center gap-0.5 bg-[#faf9f4] border border-[#e3e0db] rounded-[8px] p-0.5">
                 {[
                   { id: 'mic', label: t('meetingnotes.srcMic', 'Microphone only'), Icon: Mic },
-                  { id: 'tab', label: t('meetingnotes.srcTab', 'This call (tab + mic)'), Icon: MonitorSpeaker },
+                  ...(TAB_CAPTURE_SUPPORTED ? [{ id: 'tab', label: t('meetingnotes.srcTab', 'This call (tab + mic)'), Icon: MonitorSpeaker }] : []),
                 ].map(({ id, label, Icon }) => (
                   <button
                     key={id}
