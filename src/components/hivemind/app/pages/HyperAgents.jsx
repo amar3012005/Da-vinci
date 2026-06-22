@@ -462,6 +462,7 @@ function RoomThread({ roomId, onArchived }) {
   const [showPicker, setShowPicker] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
   const [showEvo, setShowEvo] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
   // First-run setup walkthrough (4 slides, per-room, no Save — changes apply live).
   const [showSetup, setShowSetup] = useState(false);
   const [setupStep, setSetupStep] = useState(0);
@@ -692,6 +693,19 @@ function RoomThread({ roomId, onArchived }) {
       await apiClient.updateHyperRoom(roomId, { evo_reset: target });
     } catch (e) {
       setRoom(p => ({ ...p, evo_playbooks: prev }));
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+
+  // Clear the room's journal (forget prior-turn memory). Optimistic + reverts.
+  async function resetJournal() {
+    if (!room) return;
+    const prev = room.evo_journal || [];
+    setRoom(p => ({ ...p, evo_journal: [] }));
+    try {
+      await apiClient.updateHyperRoom(roomId, { journal_reset: true });
+    } catch (e) {
+      setRoom(p => ({ ...p, evo_journal: prev }));
       setError(e.response?.data?.error || e.message);
     }
   }
@@ -1054,6 +1068,42 @@ function RoomThread({ roomId, onArchived }) {
                     </button>
                   );
                 })()}
+                {(() => {
+                  const jr = Array.isArray(room.evo_journal) ? room.evo_journal : [];
+                  if (!jr.length) return null;
+                  return (
+                    <button type="button" onClick={() => setShowJournal(true)}
+                      title={t('hyperAgents.journalHint', "The room's memory of prior turns — what was asked, decided, and who argued what")}
+                      className="ml-1 text-[10px] font-mono text-[#117dff] hover:text-[#0a5fd0] underline decoration-dotted">
+                      {t('hyperAgents.journalLink', '🧠 memory ({{n}})', { n: jr.length })}
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+            {showJournal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowJournal(false)}>
+                <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-[#cfe2ff] bg-[#eef5ff] shrink-0">
+                    <span className="text-[15px]">🧠</span>
+                    <span className="text-[13px] font-semibold text-[#0a3a7a]">{t('hyperAgents.journalTitle', 'Room memory')}</span>
+                    <button type="button"
+                      onClick={() => { if (window.confirm(t('hyperAgents.journalClearConfirm', "Clear this room's memory of prior turns? Future turns start fresh."))) { resetJournal(); setShowJournal(false); } }}
+                      className="ml-auto text-[10px] font-medium text-[#a3a3a3] hover:text-red-600 transition-colors">
+                      {t('hyperAgents.journalClear', 'Clear memory')}
+                    </button>
+                    <button type="button" onClick={() => setShowJournal(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"><X size={16} /></button>
+                  </div>
+                  <div className="overflow-y-auto px-5 py-4 space-y-2">
+                    <p className="text-[11px] text-[#737373] leading-snug">{t('hyperAgents.journalBlurb', 'What this room asked and decided in prior turns — injected at the start of each new turn so the team has continuity (and answers direct recall questions instantly).')}</p>
+                    {(Array.isArray(room.evo_journal) ? room.evo_journal : []).map((entry, i) => (
+                      <div key={i} className="flex gap-2 border border-[#e3e0db] rounded-lg px-3 py-2 text-[11px] leading-snug text-[#404040] bg-[#faf9f7]">
+                        <span className="text-[#117dff] font-mono shrink-0">{i + 1}.</span>
+                        <span className="break-words">{String(entry)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             {showEvo && (
