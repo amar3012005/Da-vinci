@@ -19,6 +19,19 @@ import MeetingNotesIcon from '../shared/MeetingNotesIcon';
 import MeetingIntelligencePanel from '../components/MeetingIntelligencePanel';
 import { useTranslation } from 'react-i18next';
 
+// Pick a MediaRecorder MIME the browser actually supports. Chrome/Firefox do
+// webm/opus; Safari + iOS do NOT support webm and only offer mp4 — hardcoding
+// 'audio/webm' made `new MediaRecorder` throw there, killing recording on those
+// browsers. Falls through to '' (UA default) as a last resort.
+const RECORDER_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mp4;codecs=mp4a.40.2'];
+function pickRecorderMime() {
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
+  for (const m of RECORDER_MIME_CANDIDATES) {
+    if (MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return ''; // let the browser choose its own default
+}
+
 const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -454,13 +467,14 @@ export default function MeetingNotes() {
   // one — so recording never pauses while older segments transcribe in parallel.
   const startSegmentRecorder = useCallback(() => {
     const stream = streamRef.current; if (!stream) return;
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    const mime = pickRecorderMime();
     segChunksRef.current = [];
-    const rec = new MediaRecorder(stream, { mimeType: mime }); recRef.current = rec;
+    // Empty mime → omit the option so the UA picks its own supported default.
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); recRef.current = rec;
     rec.ondataavailable = (e) => { if (e.data.size) segChunksRef.current.push(e.data); };
     rec.onstop = () => {
       const idx = segIdxRef.current++;
-      const blob = new Blob(segChunksRef.current, { type: 'audio/webm' });
+      const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
       if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
       if (!finalizingRef.current) startSegmentRecorder(); // roll the next segment instantly
     };
@@ -564,7 +578,7 @@ export default function MeetingNotes() {
     if (rec && rec.state !== 'inactive') {
       rec.onstop = () => { // final (possibly partial) segment → ship, tear down, stitch
         const idx = segIdxRef.current++;
-        const blob = new Blob(segChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(segChunksRef.current, { type: rec.mimeType || 'audio/webm' });
         if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
         cleanup(); finalize();
       };
