@@ -461,6 +461,7 @@ function RoomThread({ roomId, onArchived }) {
   const fileInputRef = useRef(null);
   const [showPicker, setShowPicker] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
+  const [showEvo, setShowEvo] = useState(false);
   // First-run setup walkthrough (4 slides, per-room, no Save — changes apply live).
   const [showSetup, setShowSetup] = useState(false);
   const [setupStep, setSetupStep] = useState(0);
@@ -676,6 +677,21 @@ function RoomThread({ roomId, onArchived }) {
       await apiClient.updateHyperRoom(roomId, { evo_mode: next });
     } catch (e) {
       setRoom(p => ({ ...p, evo_mode: prev }));
+      setError(e.response?.data?.error || e.message);
+    }
+  }
+
+  // Reset learned playbooks. target=true → wipe all; target="<slug>" → wipe one employee.
+  // Optimistic + reverts; the room re-learns over future turns.
+  async function resetEvo(target = true) {
+    if (!room) return;
+    const prev = room.evo_playbooks || {};
+    const next = target === true ? {} : (() => { const c = { ...prev }; delete c[target]; return c; })();
+    setRoom(p => ({ ...p, evo_playbooks: next }));  // optimistic
+    try {
+      await apiClient.updateHyperRoom(roomId, { evo_reset: target });
+    } catch (e) {
+      setRoom(p => ({ ...p, evo_playbooks: prev }));
       setError(e.response?.data?.error || e.message);
     }
   }
@@ -1024,6 +1040,59 @@ function RoomThread({ roomId, onArchived }) {
                 >
                   {(room.evo_mode || 'off') === 'on' ? '🧬 On' : 'Off'}
                 </button>
+                {(() => {
+                  const pb = room.evo_playbooks || {};
+                  const n = Object.values(pb).reduce((a, v) => a + (Array.isArray(v) ? v.length : 0), 0);
+                  if (!n) return null;
+                  return (
+                    <button type="button" onClick={() => setShowEvo(true)}
+                      title={t('hyperAgents.evoLearnedHint', 'See what each employee has learned in this room')}
+                      className="text-[10px] font-mono text-emerald-700 hover:text-emerald-900 underline decoration-dotted">
+                      {t('hyperAgents.evoLearned', 'learned ({{n}})', { n })}
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
+            {showEvo && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowEvo(false)}>
+                <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-100 bg-emerald-50/60 shrink-0">
+                    <span className="text-[15px]">🧬</span>
+                    <span className="text-[13px] font-semibold text-emerald-900">{t('hyperAgents.evoPanelTitle', 'What the employees learned')}</span>
+                    <button type="button"
+                      onClick={() => { if (window.confirm(t('hyperAgents.evoResetAllConfirm', 'Reset ALL learned playbooks in this room? They re-learn over future turns.'))) { resetEvo(true); setShowEvo(false); } }}
+                      className="ml-auto text-[10px] font-medium text-[#a3a3a3] hover:text-red-600 transition-colors">
+                      {t('hyperAgents.evoResetAll', 'Reset all')}
+                    </button>
+                    <button type="button" onClick={() => setShowEvo(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"><X size={16} /></button>
+                  </div>
+                  <div className="overflow-y-auto px-5 py-4 space-y-4">
+                    <p className="text-[11px] text-[#737373] leading-snug">{t('hyperAgents.evoPanelBlurb', 'Lessons each employee distilled from past turns in this room and now applies before it speaks. Stored privately per room — not in the company brain.')}</p>
+                    {Object.entries(room.evo_playbooks || {}).filter(([, v]) => Array.isArray(v) && v.length).map(([slug, lessons]) => {
+                      const emp = (room.participants || []).find(p => (p.slug || p.id) === slug);
+                      const nm = emp?.name || slug;
+                      return (
+                        <div key={slug} className="border border-[#e3e0db] rounded-lg overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-2 bg-[#faf9f7] border-b border-[#eeece8]">
+                            <span className="text-[12px] font-semibold text-[#0a0a0a]">{nm}</span>
+                            {emp?._lane && <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-700">{emp._lane}</span>}
+                            <span className="text-[10px] text-[#a3a3a3] font-mono ml-1">{lessons.length} {t('hyperAgents.evoLessons', 'lessons')}</span>
+                            <button type="button" onClick={() => resetEvo(slug)}
+                              className="ml-auto text-[10px] text-[#a3a3a3] hover:text-red-600 transition-colors">{t('hyperAgents.evoForget', 'Forget')}</button>
+                          </div>
+                          <ul className="px-3 py-2 space-y-1.5">
+                            {lessons.map((l, i) => (
+                              <li key={i} className="flex gap-2 text-[11px] leading-snug text-[#404040]">
+                                <span className="text-emerald-500 shrink-0">▹</span><span>{l}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
             {room.goal ? (
