@@ -462,6 +462,9 @@ function RoomThread({ roomId, onArchived }) {
   const [showPicker, setShowPicker] = useState(false);
   const [showConnectors, setShowConnectors] = useState(false);
   const [showEvo, setShowEvo] = useState(false);
+  // Live per-turn self-evolve signal: {added, employees:[{slug,name,added,total}]} → transient chip.
+  const [evoFlash, setEvoFlash] = useState(null);
+  const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
   // First-run setup walkthrough (4 slides, per-room, no Save — changes apply live).
   const [showSetup, setShowSetup] = useState(false);
@@ -554,6 +557,16 @@ function RoomThread({ roomId, onArchived }) {
     const onAny = (e) => {
       try {
         const data = JSON.parse(e.data);
+        // Self-evolve: employees reflected this turn into their playbook. Update the playbook view
+        // race-free (the event arrives just before seal) + flash a live "learned N" chip. Not a
+        // thread line, so don't merge it into liveLines.
+        if (e.type === 'self_evolve' || data.t === 'self_evolve') {
+          setRoom(p => (p ? { ...p, evo_playbooks: data.playbooks || p.evo_playbooks } : p));
+          setEvoFlash({ added: data.added || 0, employees: Array.isArray(data.employees) ? data.employees : [] });
+          if (evoFlashTimer.current) clearTimeout(evoFlashTimer.current);
+          evoFlashTimer.current = setTimeout(() => setEvoFlash(null), 7000);
+          return;
+        }
         setLiveLines(prev => mergeLiveEvents(prev, [{ ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]));
         if (e.type === 'seal' || data.t === 'seal') {
           es.close();
@@ -590,6 +603,8 @@ function RoomThread({ roomId, onArchived }) {
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
+      // Self-evolving employees: per-turn playbook learning signal.
+      'self_evolve',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1237,6 +1252,22 @@ function RoomThread({ roomId, onArchived }) {
           )}
           <div ref={threadEndRef} />
         </div>
+
+        {/* Self-evolve live signal — employees reflected this turn into their playbook */}
+        {evoFlash && evoFlash.added > 0 && (
+          <button
+            type="button"
+            onClick={() => { setEvoFlash(null); setShowEvo(true); }}
+            title={t('hyperAgents.evoFlashHint', 'Employees reflected this turn into their private playbook — click to view what they learned.')}
+            className="mx-4 mb-1 flex items-center gap-2 self-start rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 transition-colors hover:bg-emerald-100"
+          >
+            <span>🧬</span>
+            <span>
+              {(evoFlash.employees || []).filter(e => e.added > 0).map(e => e.name).join(' & ') || t('hyperAgents.evoFlashEmps', 'Employees')}
+              {' '}{t('hyperAgents.evoFlashLearned', 'learned')} {evoFlash.added} {evoFlash.added === 1 ? t('hyperAgents.evoFlashLesson', 'lesson') : t('hyperAgents.evoFlashLessons', 'lessons')} {t('hyperAgents.evoFlashThisTurn', 'this turn')}
+            </span>
+          </button>
+        )}
 
         {/* Composer */}
         {!archived && (
