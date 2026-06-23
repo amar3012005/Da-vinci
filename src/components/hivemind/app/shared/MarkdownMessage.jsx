@@ -17,8 +17,8 @@ export default function MarkdownMessage({ children, className = '' }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" className="text-[#117dff] underline underline-offset-2" />
+          a: ({ node, children, ...props }) => (
+            <a {...props} target="_blank" rel="noopener noreferrer" className="text-[#117dff] underline underline-offset-2">{children}</a>
           ),
           table: ({ node, ...props }) => (
             <div className="overflow-x-auto my-2">
@@ -38,9 +38,9 @@ export default function MarkdownMessage({ children, className = '' }) {
           ),
           ul: ({ node, ...props }) => <ul {...props} className="list-disc pl-5 my-1.5 space-y-0.5" />,
           ol: ({ node, ...props }) => <ol {...props} className="list-decimal pl-5 my-1.5 space-y-0.5" />,
-          h1: ({ node, ...props }) => <h1 {...props} className="text-[15px] font-bold mt-2 mb-1" />,
-          h2: ({ node, ...props }) => <h2 {...props} className="text-[14px] font-bold mt-2 mb-1" />,
-          h3: ({ node, ...props }) => <h3 {...props} className="text-[13px] font-semibold mt-2 mb-1" />,
+          h1: ({ node, children, ...props }) => <h1 {...props} className="text-[15px] font-bold mt-2 mb-1">{children}</h1>,
+          h2: ({ node, children, ...props }) => <h2 {...props} className="text-[14px] font-bold mt-2 mb-1">{children}</h2>,
+          h3: ({ node, children, ...props }) => <h3 {...props} className="text-[13px] font-semibold mt-2 mb-1">{children}</h3>,
           p: ({ node, ...props }) => <p {...props} className="my-1.5 first:mt-0 last:mb-0" />,
         }}
       >

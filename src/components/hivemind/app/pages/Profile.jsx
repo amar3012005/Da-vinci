@@ -165,7 +165,7 @@ const CATEGORIES = ['static', 'dynamic', 'preference', 'goal'];
 
 const CATEGORY_CONFIG = {
   static: { variant: 'blue', icon: User, label: 'Static' },
-  dynamic: { variant: 'purple', icon: Sparkles, label: 'Dynamic' },
+  dynamic: { variant: 'slate', icon: Sparkles, label: 'Dynamic' },
   preference: { variant: 'amber', icon: Settings2, label: 'Preference' },
   goal: { variant: 'green', icon: Target, label: 'Goal' },
 };
@@ -178,7 +178,7 @@ function CategoryBadge({ category }) {
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono border ${
         {
           blue: 'bg-[#117dff]/10 text-[#117dff] border-[#117dff]/20',
-          purple: 'bg-purple-50 text-purple-700 border-purple-200',
+          slate: 'bg-slate-100 text-slate-700 border-slate-300',
           amber: 'bg-amber-50 text-amber-700 border-amber-200',
           green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           gray: 'bg-[#f3f1ec] text-[#525252] border-[#e3e0db]',
@@ -438,9 +438,15 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
     );
   }
 
-  // Separate preferences from identity facts
-  const identityFacts = facts.filter((f) => f.category !== 'preference');
-  const preferences = facts.filter((f) => f.category === 'preference');
+  // Grouped, supermemory-style: durable Identity + live Current context + Goals,
+  // then Preferences. Each group only renders when it has facts.
+  const byCat = (c) => facts.filter((f) => (f.category || 'static') === c);
+  const groups = [
+    { cat: 'static', label: t('profile.identity', 'Identity'), icon: User },
+    { cat: 'dynamic', label: t('profile.currentContext', 'Current context'), icon: Sparkles },
+    { cat: 'goal', label: t('profile.goals', 'Goals'), icon: Target },
+  ];
+  const preferences = byCat('preference');
 
   return (
     <Card>
@@ -452,46 +458,75 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
         <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
       </div>
 
-      {/* Identity grid */}
-      {identityFacts.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-          {identityFacts.map((fact) => {
-            const Icon = getIconForKey(fact.key);
-            return (
-              <div
-                key={fact.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/30 transition-colors group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
-                  <Icon size={14} className="text-[#117dff]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">{fact.key}</p>
-                  <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold truncate">{fact.value}</p>
-                </div>
+      <div className="space-y-5">
+        {groups.map(({ cat, label, icon: GIcon }) => {
+          const items = byCat(cat);
+          if (items.length === 0) return null;
+          return (
+            <div key={cat}>
+              <div className="flex items-center gap-2 mb-2.5">
+                <GIcon size={13} className="text-[#117dff]" />
+                <span className="text-[#0a0a0a] text-[13px] font-semibold font-['Space_Grotesk']">{label}</span>
+                <span className="text-[#a3a3a3] text-[11px] font-mono">{items.length}</span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              {cat === 'static' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {items.map((fact) => {
+                    const Icon = getIconForKey(fact.key);
+                    return (
+                      <div
+                        key={fact.id}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db] hover:border-[#117dff]/30 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
+                          <Icon size={14} className="text-[#117dff]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider truncate">{fact.key}</p>
+                          <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{fact.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {items.map((fact) => (
+                    <div key={fact.id} className="flex items-start gap-3 p-3 rounded-xl bg-[#faf9f4] border border-[#e3e0db]">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk']">{fact.value}</p>
+                        {fact.confirmedCount > 1 && (
+                          <p className="text-[#a3a3a3] text-[10px] font-mono mt-0.5">confirmed {fact.confirmedCount}×</p>
+                        )}
+                      </div>
+                      {typeof fact.confidence === 'number' && <ConfidenceBar value={fact.confidence} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-      {/* Preferences */}
-      {preferences.length > 0 && (
-        <div className="mb-4">
-          <p className="text-[#a3a3a3] text-xs font-mono uppercase tracking-wider mb-2">{t('profile.preferences', 'Preferences')}</p>
-          <div className="flex flex-wrap gap-2">
-            {preferences.map((pref) => (
-              <PillBadge key={pref.id} variant="amber">
-                {pref.key}: {pref.value}
-              </PillBadge>
-            ))}
+        {preferences.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <Settings2 size={13} className="text-[#117dff]" />
+              <span className="text-[#0a0a0a] text-[13px] font-semibold font-['Space_Grotesk']">{t('profile.preferences', 'Preferences')}</span>
+              <span className="text-[#a3a3a3] text-[11px] font-mono">{preferences.length}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {preferences.map((pref) => (
+                <PillBadge key={pref.id} variant="amber">{pref.value}</PillBadge>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <button
         onClick={onToggleEditor}
-        className="flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
+        className="mt-5 flex items-center gap-2 text-sm font-['Space_Grotesk'] font-semibold text-[#117dff] hover:text-[#0066e0] transition-colors"
       >
         <Pencil size={13} />
         {t('profile.editProfileFacts', 'Edit Profile Facts')}
