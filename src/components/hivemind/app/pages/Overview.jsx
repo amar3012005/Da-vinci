@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import MarkdownMessage from '../shared/MarkdownMessage';
 import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -123,10 +124,10 @@ function ChatBubble({ msg }) {
   }
   return (
     <div className="flex justify-start">
-      <div className={`max-w-[85%] bg-white border rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
-        msg.error ? 'border-[#f59e0b]/50 text-[#92400e]' : 'border-[#e3e0db] text-[#262626]'
+      <div className={`max-w-[85%] bg-white border rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed break-words ${
+        msg.error ? 'border-[#f59e0b]/50 text-[#92400e] whitespace-pre-wrap' : 'border-[#e3e0db] text-[#262626]'
       }`}>
-        {msg.content}
+        {msg.error ? msg.content : <MarkdownMessage>{msg.content}</MarkdownMessage>}
       </div>
     </div>
   );
