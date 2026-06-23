@@ -571,9 +571,9 @@ export default function LoginPage() {
             left login card (matches reference layout: two equal halves). */}
         <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
           <img
-            src="/images/hivemind-poster-1.png"
+            src="/images/hivemind-login-art.webp"
             alt="HIVEMIND memory system"
-            className="h-full w-full object-cover block"
+            className="h-full w-full object-cover object-top block"
           />
         </div>
 
