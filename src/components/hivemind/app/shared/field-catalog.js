@@ -94,5 +94,9 @@ export const FIELD_CATALOG = [
   },
 ];
 
+// Prefilled name suggestions for the hire popup — click to fill, or type your own. Diverse,
+// human, neutral. The profession title is offered separately as a "use the role name" option.
+export const NAME_SUGGESTIONS = ['Maya', 'Jonah', 'Lina', 'Eli', 'Nora', 'Amelia', 'Theo', 'Ava', 'Priya', 'Kai', 'Mara', 'Noah'];
+
 export const FIELDS = FIELD_CATALOG.map((f) => ({ field: f.field, icon: f.icon, blurb: f.blurb, count: f.professions.length }));
 export const professionsForField = (field) => (FIELD_CATALOG.find((f) => f.field === field)?.professions || []);

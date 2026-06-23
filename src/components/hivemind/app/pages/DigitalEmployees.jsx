@@ -35,7 +35,7 @@ import {
   buildPersonaContractLike,
   contractPills,
 } from '../shared/persona-contract';
-import { FIELDS, professionsForField } from '../shared/field-catalog';
+import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
@@ -1717,6 +1717,8 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
   const [selField, setSelField] = useState(null);
   const [rankByField, setRankByField] = useState({});   // field → { ranked:[{title,why_fits}], org_grounded }
   const [rankingField, setRankingField] = useState(null);
+  const [naming, setNaming] = useState(null);   // { prof, field } → open the name-entry popup
+  const [nameDraft, setNameDraft] = useState('');
   useEffect(() => {
     if (!open || !selField || rankByField[selField]) return;
     let cancelled = false;
@@ -1807,7 +1809,7 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
                         <button
                           type="button"
                           disabled={!isAdmin || busy}
-                          onClick={() => onHireProfession(prof, selField)}
+                          onClick={() => { setNameDraft(''); setNaming({ prof, field: selField }); }}
                           title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
                           className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
                         >
@@ -1875,6 +1877,48 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
           })}
         </div>
       </div>
+      {naming && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setNaming(null); }}>
+          <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
+              <span className="text-[14px]">🪪</span>
+              <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('digitalemployees.nameTitle', 'Name your {{role}}', { role: naming.prof.title })}</span>
+              <button type="button" onClick={() => setNaming(null)} className="ml-auto text-[#a3a3a3] transition-colors hover:text-[#0a0a0a]"><X size={16} /></button>
+            </div>
+            <div className="space-y-3 px-5 py-4">
+              <p className="text-[11px] leading-snug text-[#737373]">{t('digitalemployees.nameBlurb', 'Pick a name (tap a suggestion) or type your own. The persona is tuned to your org either way.')}</p>
+              <input
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && nameDraft.trim()) { onHireProfession(naming.prof, naming.field, nameDraft.trim()); setNaming(null); } }}
+                placeholder={t('digitalemployees.namePlaceholder', 'Give them a name…')}
+                className="w-full rounded-lg border border-[#e3e0db] px-3 py-2 text-[13px] outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {[naming.prof.title, ...NAME_SUGGESTIONS].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNameDraft(n)}
+                    className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${nameDraft === n ? 'border-[#117dff] bg-[#117dff]/10 text-[#117dff]' : 'border-[#e3e0db] bg-[#faf9f4] text-[#404040] hover:border-[#117dff]/50 hover:text-[#117dff]'}`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={!nameDraft.trim()}
+                onClick={() => { onHireProfession(naming.prof, naming.field, nameDraft.trim()); setNaming(null); }}
+                className="w-full rounded-lg bg-[#117dff] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
+              >
+                {t('digitalemployees.nameProceed', 'Hire {{name}}', { name: nameDraft.trim() || naming.prof.title })}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1998,29 +2042,30 @@ export default function DigitalEmployees() {
   }
   // Hire a marketplace PROFESSION (field → profession). Generates an org-tuned persona from the
   // profession brief (optimize-persona with ground_org → grounded in THIS company), then creates it.
-  async function handleHireProfession(prof, field) {
+  async function handleHireProfession(prof, field, chosenName) {
     if (!isOrgAdmin) {
       setError(t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.'));
       return;
     }
+    const empName = (chosenName || '').trim() || prof.title;
     setHiringProf(prof.title);
     setError(null);
     try {
       let persona = prof.brief;
       try {
         const { persona: p } = await apiClient.optimizeEmployeePersona({
-          brief: prof.brief, name: prof.title, role: prof.role_archetype, ground_org: true,
+          brief: prof.brief, name: empName, role: prof.role_archetype, ground_org: true,
         });
         if (p) persona = p;
       } catch { /* fall back to the brief as the persona */ }
       await apiClient.createEmployee({
-        name: prof.title, persona, scope: 'organization', team_id: null,
+        name: empName, persona, scope: 'organization', team_id: null,
         slack_team_id: null, slack_channels_allowed: [], tools: [],
         role_archetype: prof.role_archetype,
         policy_rules: { rate_limit_per_min: 30, marketplace_category: field, marketplace_profession: prof.title },
       });
       await fetch();
-      flash(t('digitalemployees.professionHired', '{{name}} hired into your organization.', { name: prof.title }));
+      flash(t('digitalemployees.professionHired', '{{name}} hired into your organization.', { name: empName }));
     } catch (e) {
       setError(e.response?.data?.error || e.message);
     } finally {
