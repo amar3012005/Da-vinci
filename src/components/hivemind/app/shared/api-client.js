@@ -553,6 +553,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Rank a marketplace field's professions by relevance to the caller's org (org-grounded).
+  async rankProfessions(field, professions) {
+    const { data } = await this.controlPlane.post('/v1/marketplace/rank-professions', { field, professions });
+    return data;
+  }
+
   // ─── OAuth client registry (ChatGPT, Claude Desktop, custom GPTs, ...) ─
 
   async listOAuthClients() {

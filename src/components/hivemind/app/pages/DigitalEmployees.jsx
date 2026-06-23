@@ -1715,6 +1715,19 @@ function ExpertChatDrawer({ employee, onClose }) {
 function AgentMarketplaceModal({ open, onClose, employees, installingId, onInstall, onHireProfession, hiringProf, isAdmin }) {
   const { t } = useTranslation('dashboard');
   const [selField, setSelField] = useState(null);
+  const [rankByField, setRankByField] = useState({});   // field → { ranked:[{title,why_fits}], org_grounded }
+  const [rankingField, setRankingField] = useState(null);
+  useEffect(() => {
+    if (!open || !selField || rankByField[selField]) return;
+    let cancelled = false;
+    setRankingField(selField);
+    apiClient
+      .rankProfessions(selField, professionsForField(selField).map((p) => ({ title: p.title, blurb: p.blurb })))
+      .then((res) => { if (!cancelled) setRankByField((m) => ({ ...m, [selField]: res || { ranked: [] } })); })
+      .catch(() => { if (!cancelled) setRankByField((m) => ({ ...m, [selField]: { ranked: [] } })); })
+      .finally(() => { if (!cancelled) setRankingField(null); });
+    return () => { cancelled = true; };
+  }, [open, selField, rankByField]);
   if (!open) return null;
   const existingSlugs = new Set((employees || []).map((emp) => emp.slug));
   return (
@@ -1762,32 +1775,52 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
               </button>
             ))}
           </div>
-          {selField && (
-            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {professionsForField(selField).map((prof) => {
-                const busy = hiringProf === prof.title;
-                return (
-                  <article key={prof.title} className="flex flex-col rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-['Space_Grotesk'] text-[13px] font-semibold text-[#0a0a0a]">{prof.title}</h3>
-                      <span className="ml-auto shrink-0 rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{prof.role_archetype}</span>
-                    </div>
-                    <p className="mt-1 flex-1 text-[11px] leading-relaxed text-[#525252]">{prof.blurb}</p>
-                    <button
-                      type="button"
-                      disabled={!isAdmin || busy}
-                      onClick={() => onHireProfession(prof, selField)}
-                      title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
-                      className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
-                    >
-                      {busy ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                      {busy ? t('digitalemployees.hiring', 'Hiring…') : t('digitalemployees.hireProfession', 'Hire — tuned to your org')}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+          {selField && (() => {
+            const rank = rankByField[selField];
+            const whyMap = {};
+            (rank?.ranked || []).forEach((x) => { if (x?.title) whyMap[x.title] = x.why_fits; });
+            const base = professionsForField(selField);
+            const ordered = (rank?.ranked?.length)
+              ? rank.ranked.map((x) => base.find((p) => p.title === x.title)).filter(Boolean)
+              : base;
+            return (
+              <>
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3]">
+                  {rankingField === selField
+                    ? <><RefreshCw size={10} className="animate-spin" />{t('digitalemployees.ranking', 'ranking for your org…')}</>
+                    : rank?.org_grounded
+                      ? <span className="text-[#117dff]">{t('digitalemployees.rankedForOrg', '✨ closest to your business first')}</span>
+                      : null}
+                </div>
+                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {ordered.map((prof) => {
+                    const busy = hiringProf === prof.title;
+                    const why = whyMap[prof.title];
+                    return (
+                      <article key={prof.title} className="flex flex-col rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-['Space_Grotesk'] text-[13px] font-semibold text-[#0a0a0a]">{prof.title}</h3>
+                          <span className="ml-auto shrink-0 rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{prof.role_archetype}</span>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-relaxed text-[#525252]">{prof.blurb}</p>
+                        {why && <p className="mt-1 flex-1 text-[10.5px] italic leading-snug text-[#117dff]">→ {why}</p>}
+                        <button
+                          type="button"
+                          disabled={!isAdmin || busy}
+                          onClick={() => onHireProfession(prof, selField)}
+                          title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
+                          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
+                        >
+                          {busy ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                          {busy ? t('digitalemployees.hiring', 'Hiring…') : t('digitalemployees.hireProfession', 'Hire — tuned to your org')}
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#faf9f4] p-4 md:grid-cols-2 xl:grid-cols-3">
