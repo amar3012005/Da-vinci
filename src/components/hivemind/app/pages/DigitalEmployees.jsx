@@ -35,6 +35,7 @@ import {
   buildPersonaContractLike,
   contractPills,
 } from '../shared/persona-contract';
+import { FIELDS, professionsForField } from '../shared/field-catalog';
 
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 
@@ -1711,8 +1712,9 @@ function ExpertChatDrawer({ employee, onClose }) {
   );
 }
 
-function AgentMarketplaceModal({ open, onClose, employees, installingId, onInstall, isAdmin }) {
+function AgentMarketplaceModal({ open, onClose, employees, installingId, onInstall, onHireProfession, hiringProf, isAdmin }) {
   const { t } = useTranslation('dashboard');
+  const [selField, setSelField] = useState(null);
   if (!open) return null;
   const existingSlugs = new Set((employees || []).map((emp) => emp.slug));
   return (
@@ -1744,6 +1746,49 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
             <X size={16} />
           </button>
         </header>
+
+        {/* Field → profession browse: pick a field, hire the closest real profession (org-tuned). */}
+        <div className="border-b border-[#e3e0db] bg-white px-5 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('digitalemployees.browseByField', 'Browse by field')}</span>
+            {FIELDS.map((f) => (
+              <button
+                key={f.field}
+                type="button"
+                onClick={() => setSelField(selField === f.field ? null : f.field)}
+                className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${selField === f.field ? 'border-[#117dff] bg-[#117dff] text-white' : 'border-[#e3e0db] bg-white text-[#404040] hover:border-[#117dff]/40'}`}
+              >
+                <span className="mr-1">{f.icon}</span>{f.field}
+              </button>
+            ))}
+          </div>
+          {selField && (
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {professionsForField(selField).map((prof) => {
+                const busy = hiringProf === prof.title;
+                return (
+                  <article key={prof.title} className="flex flex-col rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-['Space_Grotesk'] text-[13px] font-semibold text-[#0a0a0a]">{prof.title}</h3>
+                      <span className="ml-auto shrink-0 rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{prof.role_archetype}</span>
+                    </div>
+                    <p className="mt-1 flex-1 text-[11px] leading-relaxed text-[#525252]">{prof.blurb}</p>
+                    <button
+                      type="button"
+                      disabled={!isAdmin || busy}
+                      onClick={() => onHireProfession(prof, selField)}
+                      title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
+                      className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
+                    >
+                      {busy ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                      {busy ? t('digitalemployees.hiring', 'Hiring…') : t('digitalemployees.hireProfession', 'Hire — tuned to your org')}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#faf9f4] p-4 md:grid-cols-2 xl:grid-cols-3">
           {MARKETPLACE_AGENT_PRESETS.map((preset) => {
@@ -1818,6 +1863,7 @@ export default function DigitalEmployees() {
   const [reminting, setReminting] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [installingMarketplaceId, setInstallingMarketplaceId] = useState(null);
+  const [hiringProf, setHiringProf] = useState(null);
   const flash = useCallback((msg) => { setNotice(msg); setTimeout(() => setNotice(null), 4000); }, []);
 
   // Collapse the sidebar to a rail while on the Hyper Agents area (roster).
@@ -1915,6 +1961,37 @@ export default function DigitalEmployees() {
       setError(e.response?.data?.error || e.message);
     } finally {
       setInstallingMarketplaceId(null);
+    }
+  }
+  // Hire a marketplace PROFESSION (field → profession). Generates an org-tuned persona from the
+  // profession brief (optimize-persona with ground_org → grounded in THIS company), then creates it.
+  async function handleHireProfession(prof, field) {
+    if (!isOrgAdmin) {
+      setError(t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.'));
+      return;
+    }
+    setHiringProf(prof.title);
+    setError(null);
+    try {
+      let persona = prof.brief;
+      try {
+        const { persona: p } = await apiClient.optimizeEmployeePersona({
+          brief: prof.brief, name: prof.title, role: prof.role_archetype, ground_org: true,
+        });
+        if (p) persona = p;
+      } catch { /* fall back to the brief as the persona */ }
+      await apiClient.createEmployee({
+        name: prof.title, persona, scope: 'organization', team_id: null,
+        slack_team_id: null, slack_channels_allowed: [], tools: [],
+        role_archetype: prof.role_archetype,
+        policy_rules: { rate_limit_per_min: 30, marketplace_category: field, marketplace_profession: prof.title },
+      });
+      await fetch();
+      flash(t('digitalemployees.professionHired', '{{name}} hired into your organization.', { name: prof.title }));
+    } catch (e) {
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setHiringProf(null);
     }
   }
   function handleOpen(emp) {
@@ -2154,6 +2231,8 @@ export default function DigitalEmployees() {
         employees={employees}
         installingId={installingMarketplaceId}
         onInstall={handleInstallMarketplaceAgent}
+        onHireProfession={handleHireProfession}
+        hiringProf={hiringProf}
         isAdmin={isOrgAdmin}
       />
 
