@@ -17,6 +17,7 @@ export default function CognitionSettings() {
   const [orgEnabled, setOrgEnabled] = useState(false);
   const [personalEnabled, setPersonalEnabled] = useState(false);
   const [crossProjectEnabled, setCrossProjectEnabled] = useState(false);
+  const [profileAutomaintain, setProfileAutomaintain] = useState(false);
   const [projects, setProjects] = useState(/** @type {Array<{id:string,name:string,self_evolve_enabled:boolean}>} */ ([]));
   const [schedule, setSchedule] = useState({ mode: 'nightmode', window_start_hour: null, window_end_hour: null, tz: 'UTC' });
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ export default function CognitionSettings() {
       setOrgEnabled(Boolean(data.org_enabled));
       setPersonalEnabled(Boolean(data.personal_enabled));
       setCrossProjectEnabled(Boolean(data.cross_project_enabled));
+      setProfileAutomaintain(Boolean(data.profile_automaintain_enabled));
       setProjects(Array.isArray(data.projects) ? data.projects : []);
       if (data.schedule && typeof data.schedule === 'object') {
         setSchedule({
@@ -147,6 +149,29 @@ export default function CognitionSettings() {
       setSaving(null);
     }
   }, [showToast, t]);
+
+  const handleProfileAutomaintainToggle = useCallback(async () => {
+    const next = !profileAutomaintain;
+    setProfileAutomaintain(next);
+    setSaving('profile');
+    setError(null);
+    try {
+      await apiClient.updateCognitionSettings({ profile_automaintain_enabled: next });
+      showToast(next
+        ? t('cognition.toastProfileOn', 'User profiles will be auto-maintained for this organization.')
+        : t('cognition.toastProfileOff', 'User profile auto-maintenance disabled.'));
+    } catch (err) {
+      setProfileAutomaintain(!next); // revert
+      const status = err?.response?.status;
+      if (status === 403) {
+        setError(t('cognition.err403', 'Admin or owner role required to view cognitive layer settings.'));
+      } else {
+        setError(err?.response?.data?.error || err?.message || t('cognition.errSave', 'Failed to save setting.'));
+      }
+    } finally {
+      setSaving(null);
+    }
+  }, [profileAutomaintain, showToast, t]);
 
   const handleProjectToggle = useCallback(async (projectId, current) => {
     const next = !current;
@@ -340,6 +365,17 @@ export default function CognitionSettings() {
               onToggle={handleCrossProjectToggle}
             />
           </div>
+
+          {/* User-profile auto-maintenance — independent of the synthesis layer */}
+          <ToggleRow
+            label={t('cognition.profileAutomaintainLabel', 'Auto-maintain user profiles')}
+            description={t('cognition.profileAutomaintainDesc',
+              'Each member’s evolving profile (identity, goals, preferences, current focus) is distilled from their memories automatically and kept fresh. Re-runs only when a member has new memories.')}
+            checked={profileAutomaintain}
+            disabled={saving !== null || !isAdmin}
+            busy={saving === 'profile'}
+            onToggle={handleProfileAutomaintainToggle}
+          />
 
           {/* Per-project scope toggles */}
           {orgEnabled && projects.length > 0 && (
