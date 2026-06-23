@@ -478,6 +478,14 @@ function RoomThread({ roomId, onArchived }) {
   const [goalDraft, setGoalDraft] = useState('');
   const [savingGoal, setSavingGoal] = useState(false);
   const threadEndRef = useRef(null);
+  const scrollRef = useRef(null);
+  // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
+  // events don't yank them back down while they scroll up to read. Updated on manual scroll.
+  const pinnedRef = useRef(true);
+  const onThreadScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) pinnedRef.current = (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
+  }, []);
 
   // Projects for the scope badge / changer (room can be moved Org ↔ Project).
   useEffect(() => {
@@ -539,9 +547,12 @@ function RoomThread({ roomId, onArchived }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Auto-scroll on new content
+  // Auto-scroll on new content — ONLY when pinned to the bottom, and INSTANTLY (no 'smooth', which
+  // fights itself when live SSE events fire in rapid succession). Scrolls just the thread container,
+  // never the page. This removes the jank + the scroll-up-yank-back glitch.
   useEffect(() => {
-    threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const el = scrollRef.current;
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
   }, [turns, liveLines]);
 
   // SSE subscription while a turn is live
@@ -782,6 +793,7 @@ function RoomThread({ roomId, onArchived }) {
     const echo = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`)
       + (doneAtts.length ? `   📎 ${names}` : '');
     setSubmitting(true);
+    pinnedRef.current = true;  // user just sent → pin to bottom so they see their message + the reply
     setLiveLines([]);
     setDraft('');
     setAttachments([]);
@@ -1224,7 +1236,7 @@ function RoomThread({ roomId, onArchived }) {
         </header>
 
         {/* Thread */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+        <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {turns.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
