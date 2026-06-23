@@ -466,10 +466,11 @@ class HiveMindApiClient {
     return data;
   }
 
-  async postHyperTurn(roomId, { user_message, idempotency_key, turn_id, user_signal }) {
+  async postHyperTurn(roomId, { user_message, idempotency_key, turn_id, user_signal, language }) {
     const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/turns`, {
       user_message, idempotency_key, turn_id,
       ...(user_signal ? { user_signal } : {}),
+      ...(language ? { language } : {}),  // run-wide output language (navbar i18n locale)
     });
     return data;
   }

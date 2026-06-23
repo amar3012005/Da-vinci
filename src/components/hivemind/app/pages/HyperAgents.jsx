@@ -445,7 +445,7 @@ function mergeHyperEvents(base, overlay) {
 }
 
 function RoomThread({ roomId, onArchived }) {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -800,6 +800,7 @@ function RoomThread({ roomId, onArchived }) {
         user_message: msg,
         idempotency_key: idempo,
         turn_id: tempId,
+        language: i18n?.language,  // run-wide output language from the navbar toggle
       });
       // Swap the temp turn for the real id, then start streaming/polling.
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
