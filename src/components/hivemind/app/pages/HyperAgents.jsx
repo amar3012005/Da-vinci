@@ -466,6 +466,10 @@ function RoomThread({ roomId, onArchived }) {
   const [evoFlash, setEvoFlash] = useState(null);
   const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
+  // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
+  const [showSwarm, setShowSwarm] = useState(false);
+  const [swarmDraft, setSwarmDraft] = useState('');
+  const [savingSwarm, setSavingSwarm] = useState(false);
   // First-run setup walkthrough (4 slides, per-room, no Save — changes apply live).
   const [showSetup, setShowSetup] = useState(false);
   const [setupStep, setSetupStep] = useState(0);
@@ -733,6 +737,24 @@ function RoomThread({ roomId, onArchived }) {
     } catch (e) {
       setRoom(p => ({ ...p, evo_journal: prev }));
       setError(e.response?.data?.error || e.message);
+    }
+  }
+
+  // Save the room's Swarm Instructions (custom override directives). Optimistic + reverts.
+  async function saveSwarm() {
+    if (!room) return;
+    const prev = room.swarm_instructions || '';
+    const next = swarmDraft.slice(0, 4000);
+    setSavingSwarm(true);
+    setRoom(p => ({ ...p, swarm_instructions: next }));  // optimistic
+    try {
+      await apiClient.updateHyperRoom(roomId, { swarm_instructions: next });
+      setShowSwarm(false);
+    } catch (e) {
+      setRoom(p => ({ ...p, swarm_instructions: prev }));
+      setError(e.response?.data?.error || e.message);
+    } finally {
+      setSavingSwarm(false);
     }
   }
 
@@ -1107,6 +1129,12 @@ function RoomThread({ roomId, onArchived }) {
                     </button>
                   );
                 })()}
+                {/* Swarm Instructions — per-room custom directives the director obeys on top of defaults */}
+                <button type="button" onClick={() => { setSwarmDraft(room.swarm_instructions || ''); setShowSwarm(true); }}
+                  title={t('hyperAgents.swarmHint', "Custom instructions the director follows on top of all defaults — e.g. ‘no Gaps to confirm’, ‘no mermaid’")}
+                  className="ml-1 text-[10px] font-mono text-[#7c3aed] hover:text-[#5b21b6] underline decoration-dotted">
+                  {t('hyperAgents.swarmLink', '📋 instructions')}{(room.swarm_instructions || '').trim() ? ' •' : ''}
+                </button>
               </div>
             )}
             {showJournal && (
@@ -1171,6 +1199,38 @@ function RoomThread({ roomId, onArchived }) {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              </div>
+            )}
+            {showSwarm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowSwarm(false)}>
+                <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e9d5ff] bg-[#f5f0ff] shrink-0">
+                    <span className="text-[15px]">📋</span>
+                    <span className="text-[13px] font-semibold text-[#5b21b6]">{t('hyperAgents.swarmTitle', 'Swarm instructions')}</span>
+                    <button type="button" onClick={() => setShowSwarm(false)} className="ml-auto text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"><X size={16} /></button>
+                  </div>
+                  <div className="overflow-y-auto px-5 py-4 space-y-3">
+                    <p className="text-[11px] text-[#737373] leading-snug">{t('hyperAgents.swarmBlurb', 'Custom instructions the director follows on TOP of all defaults, every turn — overriding them on conflict. Examples: “Never add a ‘Gaps to confirm’ section.” · “No mermaid diagrams.” · “Always answer in bullet points.” · “Keep replies under 200 words.”')}</p>
+                    <textarea
+                      value={swarmDraft}
+                      onChange={e => setSwarmDraft(e.target.value)}
+                      maxLength={4000}
+                      rows={12}
+                      placeholder={t('hyperAgents.swarmPlaceholder', '- Do NOT include a “Gaps to confirm” section.\n- No mermaid diagrams.\n- …')}
+                      className="w-full rounded-lg border border-[#e3e0db] bg-[#faf9f7] px-3 py-2 text-[12px] font-mono leading-relaxed text-[#0a0a0a] outline-none focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/15 resize-y"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#a3a3a3] font-mono">{swarmDraft.length}/4000</span>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => setShowSwarm(false)} className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-[#737373] hover:text-[#0a0a0a]">{t('hyperAgents.swarmCancel', 'Cancel')}</button>
+                        <button type="button" onClick={saveSwarm} disabled={savingSwarm}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] disabled:opacity-60">
+                          {savingSwarm ? t('hyperAgents.swarmSaving', 'Saving…') : t('hyperAgents.swarmSave', 'Save instructions')}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
