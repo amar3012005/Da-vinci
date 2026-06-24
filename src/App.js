@@ -8,6 +8,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 import ResearchPage from './components/ResearchPage';
+import IcarusResearch from './components/IcarusResearch';
 import BenchmarkPage from './components/BenchmarkPage';
 import VoiceAgentTestPage from './components/testing/VoiceAgentTestPage';
 import TestingIndexPage from './components/testing/TestingIndexPage';
@@ -62,6 +63,7 @@ function App() {
         <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/research" element={<ResearchPage />} />
+        <Route path="/research/icarus" element={<IcarusResearch />} />
         <Route path="/benchmark" element={<BenchmarkPage />} />
         <Route path="/test" element={<TestingIndexPage />} />
         <Route
