@@ -143,7 +143,7 @@ function PersonaContractRow({ contract }) {
       {pills.map((pill) => (
         <span
           key={pill}
-          className="inline-flex max-w-full items-center rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#525252] truncate"
+          className="inline-flex max-w-full items-center rounded border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#525252] truncate"
           title={pill}
         >
           {pill}
@@ -263,7 +263,7 @@ function StatusBadge({ status }) {
   };
   const s = STATUS_STYLES_I18N[status] || STATUS_STYLES_I18N.draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${s.bg} ${s.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium ${s.bg} ${s.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
@@ -281,7 +281,7 @@ function HyperStateBadge({ hyper }) {
   if (!hyper) return null;
   const cls = HYPER_STATE_STYLES[hyper.state] || HYPER_STATE_STYLES.baseline;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
+    <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
       <Sparkles size={10} />
       {hyper.state_label || 'Baseline'}
     </span>
@@ -328,15 +328,15 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
   return (
     <div
       onClick={handleClick}
-      className={`bg-white border rounded-xl p-4 transition-all cursor-pointer flex flex-col shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
+      className={`bg-white border rounded-lg p-4 transition-all cursor-pointer flex flex-col ${
         selected
-          ? 'border-[#117dff] ring-2 ring-[#117dff]/20'
-          : 'border-[#e3e0db] hover:border-[#117dff]/30'
+          ? 'border-[#117dff] ring-1 ring-[#117dff]/20'
+          : 'border-[#e3e0db] hover:border-[#117dff]/40'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+          <div className={`w-9 h-9 rounded-lg border flex items-center justify-center flex-shrink-0 ${
             selected ? 'bg-[#117dff] border-[#117dff]' : 'bg-[#117dff]/10 border-[#117dff]/20'
           }`}>
             <Bot size={16} className={selected ? 'text-white' : 'text-[#117dff]'} />
@@ -354,7 +354,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
       )}
       <PersonaContractRow contract={contract} />
 
-      <div className="mb-3 rounded-[10px] border border-[#ece8e1] bg-[#fbfaf7] p-3">
+      <div className="mb-3 rounded-md border border-[#ece8e1] bg-[#fbfaf7] p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#8b857c]">{t('digitalemployees.hyperAgent', 'Hyper Agent')}</p>
@@ -660,7 +660,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
                 <button
                   key={emp.id}
                   onClick={() => toggleSlug(emp.slug)}
-                  className={`w-full text-left rounded-[12px] border p-3 transition-all ${
+                  className={`w-full text-left rounded-lg border p-3 transition-all ${
                     selectedSlugs.includes(emp.slug)
                       ? 'border-[#117dff] ring-2 ring-[#117dff]/20 bg-[#f5f9ff]'
                       : 'border-[#e3e0db] bg-white hover:border-[#d4d0ca]'
