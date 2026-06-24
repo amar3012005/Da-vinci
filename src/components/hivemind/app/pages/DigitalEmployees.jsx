@@ -26,6 +26,7 @@ import {
   Quote,
   Rocket,
   KeyRound,
+  Info,
   Store,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
@@ -1684,6 +1685,7 @@ function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, is
   const [rankingField, setRankingField] = useState(null);
   const [naming, setNaming] = useState(null);   // { prof, field } → open the name-entry popup
   const [nameDraft, setNameDraft] = useState('');
+  const [infoProf, setInfoProf] = useState(null);   // { prof, field, why } → open the details popup
   useEffect(() => {
     if (!open || !selField || rankByField[selField]) return;
     let cancelled = false;
@@ -1791,15 +1793,26 @@ function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, is
                           <p className="mt-2 text-[11.5px] leading-relaxed text-[#525252]">{prof.blurb}</p>
                           {why && <p className="mt-1.5 text-[10.5px] italic leading-snug text-[#117dff]">→ {why}</p>}
                           <div className="flex-1" />
-                          <button
-                            type="button"
-                            disabled={!isAdmin || busy}
-                            onClick={() => { setNameDraft(''); setNaming({ prof, field: selField }); }}
-                            title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
-                            className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#117dff] disabled:bg-[#cbd5e1]"
-                          >
-                            {busy ? <><RefreshCw size={13} className="animate-spin" />{t('digitalemployees.hiring', 'Hiring…')}</> : <>{t('digitalemployees.hireProfession', 'Hire')} ›</>}
-                          </button>
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={!isAdmin || busy}
+                              onClick={() => { setNameDraft(''); setNaming({ prof, field: selField }); }}
+                              title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
+                              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#117dff] disabled:bg-[#cbd5e1]"
+                            >
+                              {busy ? <><RefreshCw size={13} className="animate-spin" />{t('digitalemployees.hiring', 'Hiring…')}</> : <>{t('digitalemployees.hireProfession', 'Hire')} ›</>}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setInfoProf({ prof, field: selField, why })}
+                              title={t('digitalemployees.viewDetails', 'View details')}
+                              aria-label={t('digitalemployees.viewDetails', 'View details')}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[#e3e0db] text-[#525252] transition-colors hover:border-[#117dff]/50 hover:text-[#117dff]"
+                            >
+                              <Info size={15} />
+                            </button>
+                          </div>
                         </div>
                       </article>
                     );
@@ -1847,6 +1860,51 @@ function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, is
                 className="w-full rounded-lg bg-[#117dff] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
               >
                 {t('digitalemployees.nameProceed', 'Hire {{name}}', { name: nameDraft.trim() || naming.prof.title })}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agent detail popup — opened by the Info button beside Hire */}
+      {infoProf && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setInfoProf(null); }}>
+          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* gradient header */}
+            <div className="relative flex h-[120px] items-end p-5" style={{ background: `linear-gradient(135deg, ${tintFor(infoProf.field).from}, ${tintFor(infoProf.field).to})` }}>
+              <button type="button" onClick={() => setInfoProf(null)} className="absolute right-3 top-3 rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/15 hover:text-white"><X size={16} /></button>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-wider text-white/70">{infoProf.field}</p>
+                <h3 className="font-['Space_Grotesk'] mt-1 text-2xl font-bold leading-tight text-white">{infoProf.prof.title}</h3>
+              </div>
+            </div>
+            {/* body */}
+            <div className="space-y-4 px-5 py-5">
+              <span className="inline-block rounded border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-[#737373]">{infoProf.prof.role_archetype}</span>
+              <p className="text-[14px] font-medium text-[#0a0a0a]">{infoProf.prof.blurb}</p>
+              {infoProf.prof.brief && (
+                <div>
+                  <p className="mb-1 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('digitalemployees.whatTheyDo', 'What they do')}</p>
+                  <p className="text-[13px] leading-relaxed text-[#525252]">{infoProf.prof.brief}</p>
+                </div>
+              )}
+              {infoProf.why && (
+                <div>
+                  <p className="mb-1 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('digitalemployees.whyForYourOrg', 'Why for your org')}</p>
+                  <p className="text-[13px] italic leading-relaxed text-[#117dff]">{infoProf.why}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#e3e0db] bg-[#e3e0db] text-[12px]">
+                <div className="bg-white px-4 py-2.5"><span className="text-[#a3a3a3]">{t('digitalemployees.field', 'Field')}</span><div className="mt-0.5 font-medium text-[#0a0a0a]">{infoProf.field}</div></div>
+                <div className="bg-white px-4 py-2.5"><span className="text-[#a3a3a3]">{t('digitalemployees.archetype', 'Archetype')}</span><div className="mt-0.5 font-medium text-[#0a0a0a]">{infoProf.prof.role_archetype}</div></div>
+              </div>
+              <button
+                type="button"
+                disabled={!isAdmin}
+                onClick={() => { const p = infoProf; setInfoProf(null); setNameDraft(''); setNaming({ prof: p.prof, field: p.field }); }}
+                className="w-full rounded-lg bg-[#0a0a0a] px-3 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#117dff] disabled:bg-[#cbd5e1]"
+              >
+                {t('digitalemployees.hireProfession', 'Hire')} {infoProf.prof.title} ›
               </button>
             </div>
           </div>
