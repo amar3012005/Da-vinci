@@ -670,6 +670,14 @@ async function runUploads(files, { targetScope, project }) {
 function OverviewChat({ inputRef }) {
   const { t, i18n } = useTranslation('dashboard');
   const { activeProjectId, projects } = useTeamContext() || {};
+  const { user } = useAuth() || {};
+  // First name for the greeting: prefer a real name, else derive from the email
+  // local-part (amarsai@… → "Amar"). Title-cased, first token only.
+  const firstName = useMemo(() => {
+    const raw = user?.name || user?.displayName || (user?.email || '').split('@')[0] || '';
+    const tok = String(raw).replace(/[._-]+/g, ' ').trim().split(' ')[0];
+    return tok ? tok.charAt(0).toUpperCase() + tok.slice(1) : '';
+  }, [user]);
   const [messages, setMessages] = useState(() => (typeof window === 'undefined' ? [] : loadStoredChat()));
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -802,18 +810,19 @@ function OverviewChat({ inputRef }) {
       transition={{ duration: 0.35, delay: 0.1 }}
       className={`max-w-3xl mx-auto w-full pb-1 ${hasThread ? 'flex-1 min-h-0 flex flex-col mt-1' : 'mt-auto'}`}
     >
-      {/* Hero — only while the thread is empty */}
+      {/* Hero — only while the thread is empty. Left-aligned welcome: brand
+          mark, then "Welcome back, <name>". The cognitive belt + composer
+          follow directly below (belt sits between welcome and chat). */}
       {!hasThread && (
-        <div className="flex flex-col items-center text-center mb-7">
-          <div className="w-14 h-14 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
-            <Hexagon size={26} className="text-white" />
+        <div className="flex flex-col items-start text-left mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-[#0a0a0a] flex items-center justify-center shadow-sm">
+            <Hexagon size={24} className="text-white" />
           </div>
-          <h1 className="text-[26px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-4">
-            {t('overview.chat.title', 'How can I help you today?')}
+          <h1 className="text-[34px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-5">
+            {firstName
+              ? t('overview.chat.welcomeBack', 'Welcome back, {{name}}', { name: firstName })
+              : t('overview.chat.welcome', 'Welcome back')}
           </h1>
-          <p className="text-[12px] text-[#737373] mt-1">
-            {t('overview.chat.subtitle', 'Ask your second brain — it recalls, saves and acts across your connected apps.')}
-          </p>
         </div>
       )}
 
