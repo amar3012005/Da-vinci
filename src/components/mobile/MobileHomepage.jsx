@@ -2,10 +2,12 @@ import React from 'react';
 import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
+import LatestUpdates from './LatestUpdates';
 import SubProducts from './SubProducts';
 import ThesisSection from './ThesisSection';
 import ResearchTeaser from './ResearchTeaser';
 import MobileAboutSection from './MobileAboutSection';
+import SingulanceFooter from './SingulanceFooter';
 import TaraVoiceWidget from './TaraVoiceWidget';
 import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
 import { useTheme, t } from './ThemeContext';
@@ -28,10 +30,12 @@ const PageContent = () => {
         <div className={`min-h-screen ${c.bg} ${c.text} overflow-x-hidden transition-colors duration-300`}>
             <MobileNavigation />
             <MobileHero />
+            <LatestUpdates />
             <SubProducts />
             <ThesisSection />
             <ResearchTeaser />
             <MobileAboutSection />
+            <SingulanceFooter />
             {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />}
         </div>
     );
