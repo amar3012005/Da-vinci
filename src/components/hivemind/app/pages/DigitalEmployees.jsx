@@ -394,50 +394,53 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
         )}
       </div>
 
-      <div className="flex items-center gap-3 text-[10px] text-[#a3a3a3] font-mono mt-auto pt-2 border-t border-[#eae7e1]">
-        <span className="flex items-center gap-1"><Activity size={10} /> {msgs} msgs</span>
-        <span>·</span>
-        <span>{tokens} tok</span>
-        <span>·</span>
-        <span>{(employee.model || '').split('-').slice(0, 2).join('-')}</span>
-      </div>
-
+      {/* action row */}
       {!selectable && (
-        <div className="flex items-center gap-1 mt-3">
+        <div className="flex items-center gap-1 mt-auto pt-3">
           {(isDraft || isError) && (
             <button onClick={(e) => { e.stopPropagation(); onDeploy && onDeploy(employee); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-white bg-[#117dff] hover:bg-[#0066e0]">
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-white bg-[#117dff] hover:bg-[#0066e0]">
               <Rocket size={11} /> {isError ? t('digitalemployees.retryDeploy', 'Retry') : t('digitalemployees.deploy', 'Deploy')}
             </button>
           )}
           {isDeploying && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-blue-700">
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] text-blue-700">
               <RefreshCw size={11} className="animate-spin" /> {t('digitalemployees.deploying', 'Deploying')}
             </span>
           )}
           {isRunning && (
             <button onClick={(e) => { e.stopPropagation(); onPause(employee); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-amber-700 hover:bg-amber-500/10">
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-amber-700 hover:bg-amber-500/10">
               <Pause size={11} /> {t('digitalemployees.pause', 'Pause')}
             </button>
           )}
           {isPaused && (
             <button onClick={(e) => { e.stopPropagation(); onResume(employee); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#16a34a] hover:bg-emerald-500/10">
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-medium text-[#16a34a] hover:bg-emerald-500/10">
               <Play size={11} /> {t('digitalemployees.resume', 'Resume')}
             </button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#525252] hover:bg-[#f3f1ec] ml-auto">
-            {t('digitalemployees.details', 'Details')} <ChevronRight size={11} />
-          </button>
           <button onClick={(e) => { e.stopPropagation(); onArchive(employee); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[10px] text-[#dc2626]/60 hover:text-[#dc2626] hover:bg-red-50"
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] text-[#dc2626]/50 hover:text-[#dc2626] hover:bg-red-50 ml-auto"
             title={t('digitalemployees.archive', 'Archive')}>
             <Trash2 size={11} />
           </button>
         </div>
       )}
+
+      {/* full-bleed 2-cell footer (carousel style): meta | model → */}
+      <div className="-mx-4 -mb-4 mt-3 grid grid-cols-2 border-t border-[#eae7e1] text-[10px] font-mono text-[#a3a3a3]">
+        <div className="flex items-center gap-1.5 truncate border-r border-[#eae7e1] px-4 py-2.5">
+          <Activity size={10} /> {msgs} msgs · {tokens} tok
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
+          className="flex items-center justify-between px-4 py-2.5 text-[#737373] transition-colors hover:bg-[#faf9f4]"
+        >
+          <span className="truncate">{(employee.model || '').split('-').slice(0, 2).join('-')}</span>
+          <ChevronRight size={12} className="shrink-0" />
+        </button>
+      </div>
     </div>
   );
 }
