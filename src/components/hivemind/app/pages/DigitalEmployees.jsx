@@ -86,57 +86,8 @@ const PERSONA_PRESETS = [
   },
 ];
 
-const MARKETPLACE_AGENT_PRESETS = [
-  ...PERSONA_PRESETS,
-  {
-    id: 'cfo',
-    name: 'Nora Klein',
-    summary: 'Finance operator for runway, margins, pricing, and unit economics decisions.',
-    role_archetype: 'strategist',
-    peer_review_targets: ['skeptic', 'generalist'],
-    llm_provider: 'groq',
-    model: DEFAULT_GROQ_MODEL,
-    tools: ['hivemind_recall', 'hivemind_save_memory'],
-    persona: 'You are Nora Klein, a finance operator with a sharp eye for margin, runway, pricing, and unit economics. You speak in concrete tradeoffs, call out hidden costs, and turn vague growth plans into numbers, risks, and decision thresholds. You are direct, calm, and skeptical of plans that cannot explain how they become profitable.',
-    category: 'Finance',
-  },
-  {
-    id: 'security',
-    name: 'Victor Shah',
-    summary: 'Security and compliance reviewer for enterprise readiness and risk reduction.',
-    role_archetype: 'skeptic',
-    peer_review_targets: ['generalist', 'coordinator'],
-    llm_provider: 'groq',
-    model: DEFAULT_GROQ_MODEL,
-    tools: ['hivemind_recall', 'hivemind_save_memory'],
-    persona: 'You are Victor Shah, an enterprise security and compliance reviewer. You challenge weak access controls, unclear data boundaries, vendor risk, audit gaps, and operational shortcuts. You speak like an internal reviewer who wants the company to win enterprise deals without creating avoidable security debt.',
-    category: 'Risk',
-  },
-  {
-    id: 'gtm',
-    name: 'Amelia Ross',
-    summary: 'GTM strategist for positioning, partnerships, pipeline, and customer expansion.',
-    role_archetype: 'coordinator',
-    peer_review_targets: ['skeptic', 'investigator'],
-    llm_provider: 'groq',
-    model: DEFAULT_GROQ_MODEL,
-    tools: ['hivemind_recall', 'hivemind_save_memory', 'hivemind_slack_post'],
-    persona: 'You are Amelia Ross, a GTM strategist focused on positioning, partner leverage, pipeline quality, and customer expansion. You translate product capability into buyer language, identify where deals will stall, and push the team toward clear offers, channels, and follow-up actions.',
-    category: 'GTM',
-  },
-  {
-    id: 'product',
-    name: 'Theo Brandt',
-    summary: 'Product systems thinker for roadmap, sequencing, dependencies, and execution quality.',
-    role_archetype: 'generalist',
-    peer_review_targets: ['investigator', 'skeptic'],
-    llm_provider: 'groq',
-    model: DEFAULT_GROQ_MODEL,
-    tools: ['hivemind_recall', 'hivemind_save_memory'],
-    persona: 'You are Theo Brandt, a senior product systems thinker. You care about sequencing, dependencies, customer value, and the smallest useful next release. You are practical, concise, and willing to reject attractive ideas when they would distract from the current product constraint.',
-    category: 'Product',
-  },
-];
+// Legacy flat presets removed — the marketplace is now field → profession (see field-catalog.js +
+// AgentMarketplaceModal). PERSONA_PRESETS (above) is still the seeded-employee set.
 
 const TASK_TEMPLATES = [
   'Simulate a launch review for a feature that has one severe bug, one confused customer signal, and a hard deadline tomorrow. Debate options, react to strong points, and end with a recommendation plus next actions.',
@@ -1712,7 +1663,18 @@ function ExpertChatDrawer({ employee, onClose }) {
   );
 }
 
-function AgentMarketplaceModal({ open, onClose, employees, installingId, onInstall, onHireProfession, hiringProf, isAdmin }) {
+// Per-field accent (day mode): each field gets its own identity — the bar's left edge + the
+// profession card's header block. Day-mode tints, HIVEMIND blue as the neutral fallback.
+const FIELD_TINT = {
+  Marketing: { from: '#f59e0b', to: '#d97706' },
+  Fintech: { from: '#10b981', to: '#059669' },
+  Legal: { from: '#6366f1', to: '#4f46e5' },
+  Product: { from: '#8b5cf6', to: '#7c3aed' },
+  Operations: { from: '#0ea5e9', to: '#0369a1' },
+};
+const tintFor = (field) => FIELD_TINT[field] || { from: '#117dff', to: '#0a5fd0' };
+
+function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, isAdmin }) {
   const { t } = useTranslation('dashboard');
   const [selField, setSelField] = useState(null);
   const [rankByField, setRankByField] = useState({});   // field → { ranked:[{title,why_fits}], org_grounded }
@@ -1731,53 +1693,70 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
     return () => { cancelled = true; };
   }, [open, selField, rankByField]);
   if (!open) return null;
-  const existingSlugs = new Set((employees || []).map((emp) => emp.slug));
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/55 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1917]/35 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="w-full max-w-[1080px] max-h-[86vh] overflow-hidden rounded-[22px] border border-[#e3e0db] bg-white shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)]"
+        className="w-full max-w-[1040px] max-h-[88vh] overflow-hidden rounded-[20px] border border-[#e3e0db] bg-[#faf9f4] shadow-[0_30px_80px_-24px_rgba(0,0,0,0.32)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-[#e3e0db] bg-white px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 text-[#117dff]">
-              <Store size={19} />
-            </div>
-            <div>
-              <h2 className="font-['Space_Grotesk'] text-[18px] font-bold leading-tight text-[#0a0a0a]">
-                {t('digitalemployees.marketplaceTitle', 'Agent Marketplace')}
-              </h2>
-              <p className="mt-0.5 text-[11px] text-[#a3a3a3]">
-                {t('digitalemployees.marketplaceSubtitle', 'Install polished, role-specific agents into this organization.')}
-              </p>
-            </div>
+        <header className="flex items-center gap-3 border-b border-[#e3e0db] bg-white px-6 py-5">
+          {selField && (
+            <button
+              type="button"
+              onClick={() => setSelField(null)}
+              aria-label={t('digitalemployees.back', 'Back to fields')}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e3e0db] pb-0.5 text-[20px] leading-none text-[#525252] transition-colors hover:border-[#117dff]/40 hover:text-[#117dff]"
+            >
+              ‹
+            </button>
+          )}
+          <div className="min-w-0">
+            <h2 className="font-['Space_Grotesk'] text-[22px] font-bold leading-none tracking-tight text-[#0a0a0a]">
+              <span className="text-[#117dff]">@</span>Marketplace
+              {selField && <span className="font-medium text-[#a3a3a3]">{'  ·  '}{selField}</span>}
+            </h2>
+            <p className="mt-1.5 text-[12px] text-[#737373]">
+              {selField
+                ? t('digitalemployees.fieldSub', 'Hire the closest specialist — named and tuned to your org.')
+                : t('digitalemployees.fieldsSub', 'Pick a field. Hire a real specialist for your team.')}
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#a3a3a3] transition-colors hover:bg-[#faf9f4] hover:text-[#0a0a0a]"
+            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#a3a3a3] transition-colors hover:bg-[#faf9f4] hover:text-[#0a0a0a]"
             aria-label="Close"
           >
             <X size={16} />
           </button>
         </header>
 
-        {/* Field → profession browse: pick a field, hire the closest real profession (org-tuned). */}
-        <div className="border-b border-[#e3e0db] bg-white px-5 py-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('digitalemployees.browseByField', 'Browse by field')}</span>
-            {FIELDS.map((f) => (
-              <button
-                key={f.field}
-                type="button"
-                onClick={() => setSelField(selField === f.field ? null : f.field)}
-                className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${selField === f.field ? 'border-[#117dff] bg-[#117dff] text-white' : 'border-[#e3e0db] bg-white text-[#404040] hover:border-[#117dff]/40'}`}
-              >
-                <span className="mr-1">{f.icon}</span>{f.field}
-              </button>
-            ))}
-          </div>
-          {selField && (() => {
+        {/* Blueprint: @Marketplace heading → long horizontal field bars → click → profession cards. */}
+        <div className="max-h-[calc(88vh-96px)] overflow-y-auto px-6 py-5">
+          {!selField ? (
+            <div className="space-y-2.5">
+              {FIELDS.map((f) => {
+                const c = tintFor(f.field);
+                return (
+                  <button
+                    key={f.field}
+                    type="button"
+                    onClick={() => setSelField(f.field)}
+                    style={{ borderLeftColor: c.from }}
+                    className="group flex w-full items-center gap-4 rounded-xl border border-[#e3e0db] border-l-[5px] bg-white px-5 py-4 text-left transition-all hover:-translate-y-px hover:shadow-[0_10px_28px_-12px_rgba(0,0,0,0.28)]"
+                  >
+                    <span className="text-[24px] leading-none">{f.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-['Space_Grotesk'] text-[17px] font-semibold leading-tight text-[#0a0a0a]">{f.field}</div>
+                      <div className="mt-0.5 text-[11.5px] text-[#737373]">{f.blurb}</div>
+                    </div>
+                    <span className="shrink-0 font-mono text-[11px] text-[#a3a3a3]">{t('digitalemployees.roleCount', '{{n}} roles', { n: f.count })}</span>
+                    <span className="shrink-0 text-[20px] leading-none text-[#cbd5e1] transition-all group-hover:translate-x-0.5 group-hover:text-[#117dff]">›</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (() => {
             const rank = rankByField[selField];
             const whyMap = {};
             (rank?.ranked || []).forEach((x) => { if (x?.title) whyMap[x.title] = x.why_fits; });
@@ -1785,37 +1764,40 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
             const ordered = (rank?.ranked?.length)
               ? rank.ranked.map((x) => base.find((p) => p.title === x.title)).filter(Boolean)
               : base;
+            const c = tintFor(selField);
             return (
               <>
-                <div className="mt-2 flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3]">
+                <div className="mb-3 flex h-4 items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider">
                   {rankingField === selField
-                    ? <><RefreshCw size={10} className="animate-spin" />{t('digitalemployees.ranking', 'ranking for your org…')}</>
+                    ? <span className="flex items-center gap-1.5 text-[#a3a3a3]"><RefreshCw size={10} className="animate-spin" />{t('digitalemployees.ranking', 'ranking for your org…')}</span>
                     : rank?.org_grounded
                       ? <span className="text-[#117dff]">{t('digitalemployees.rankedForOrg', '✨ closest to your business first')}</span>
-                      : null}
+                      : <span className="text-[#a3a3a3]">{t('digitalemployees.pickRole', 'pick a role to hire')}</span>}
                 </div>
-                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <div className="flex snap-x gap-3 overflow-x-auto pb-3">
                   {ordered.map((prof) => {
                     const busy = hiringProf === prof.title;
                     const why = whyMap[prof.title];
                     return (
-                      <article key={prof.title} className="flex flex-col rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-['Space_Grotesk'] text-[13px] font-semibold text-[#0a0a0a]">{prof.title}</h3>
-                          <span className="ml-auto shrink-0 rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#117dff]">{prof.role_archetype}</span>
+                      <article key={prof.title} className="flex w-[270px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+                        <div className="flex h-[116px] items-end p-4" style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}>
+                          <h3 className="font-['Space_Grotesk'] text-[18px] font-bold leading-[1.1] text-white">{prof.title}</h3>
                         </div>
-                        <p className="mt-1 text-[11px] leading-relaxed text-[#525252]">{prof.blurb}</p>
-                        {why && <p className="mt-1 flex-1 text-[10.5px] italic leading-snug text-[#117dff]">→ {why}</p>}
-                        <button
-                          type="button"
-                          disabled={!isAdmin || busy}
-                          onClick={() => { setNameDraft(''); setNaming({ prof, field: selField }); }}
-                          title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
-                          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1]"
-                        >
-                          {busy ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-                          {busy ? t('digitalemployees.hiring', 'Hiring…') : t('digitalemployees.hireProfession', 'Hire — tuned to your org')}
-                        </button>
+                        <div className="flex flex-1 flex-col p-4">
+                          <span className="self-start rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#737373]">{prof.role_archetype}</span>
+                          <p className="mt-2 text-[11.5px] leading-relaxed text-[#525252]">{prof.blurb}</p>
+                          {why && <p className="mt-1.5 text-[10.5px] italic leading-snug text-[#117dff]">→ {why}</p>}
+                          <div className="flex-1" />
+                          <button
+                            type="button"
+                            disabled={!isAdmin || busy}
+                            onClick={() => { setNameDraft(''); setNaming({ prof, field: selField }); }}
+                            title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
+                            className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#117dff] disabled:bg-[#cbd5e1]"
+                          >
+                            {busy ? <><RefreshCw size={13} className="animate-spin" />{t('digitalemployees.hiring', 'Hiring…')}</> : <>{t('digitalemployees.hireProfession', 'Hire')} ›</>}
+                          </button>
+                        </div>
                       </article>
                     );
                   })}
@@ -1823,58 +1805,6 @@ function AgentMarketplaceModal({ open, onClose, employees, installingId, onInsta
               </>
             );
           })()}
-        </div>
-
-        <div className="grid max-h-[calc(86vh-88px)] grid-cols-1 gap-0 overflow-y-auto bg-[#faf9f4] p-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETPLACE_AGENT_PRESETS.map((preset) => {
-            const slug = slugifyName(preset.name);
-            const installed = existingSlugs.has(slug);
-            const busy = installingId === preset.id;
-            const contract = buildPersonaContractLike(preset);
-            return (
-              <div key={preset.id} className="p-2">
-                <article className="flex h-full flex-col rounded-xl border border-[#e3e0db] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-colors hover:border-[#117dff]/30">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 font-mono text-[13px] font-bold text-[#117dff]">
-                      {initialsOf(preset.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate font-['Space_Grotesk'] text-[14px] font-semibold text-[#0a0a0a]">{preset.name}</h3>
-                        <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-emerald-700">
-                          {preset.category || 'Core'}
-                        </span>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-[#525252]">{preset.summary}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {(preset.tools || []).slice(0, 4).map((tool) => (
-                      <span key={tool} className="rounded-md bg-[#faf9f4] border border-[#e3e0db] px-2 py-0.5 text-[9px] font-mono text-[#525252]">
-                        {tool.replace('hivemind_', '')}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="mt-3 line-clamp-4 flex-1 text-[11px] leading-relaxed text-[#737373]">{preset.persona}</p>
-                  <PersonaContractRow contract={contract} />
-                  <button
-                    type="button"
-                    disabled={!isAdmin || installed || busy}
-                    onClick={() => onInstall(preset)}
-                    className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-[#117dff] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:bg-[#cbd5e1] disabled:text-white"
-                    title={!isAdmin ? t('digitalemployees.adminOnlyInstall', 'Only org admins can install agents.') : undefined}
-                  >
-                    {busy ? <RefreshCw size={13} className="animate-spin" /> : installed ? <CheckCircle2 size={13} /> : <Plus size={13} />}
-                    {installed
-                      ? t('digitalemployees.installed', 'Installed')
-                      : busy
-                        ? t('digitalemployees.installing', 'Installing...')
-                        : t('digitalemployees.installAgent', 'Install agent')}
-                  </button>
-                </article>
-              </div>
-            );
-          })}
         </div>
       </div>
       {naming && (
