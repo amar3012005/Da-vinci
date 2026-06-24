@@ -1,70 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
- * Latest updates — horizontal news carousel (Mistral "Latest updates." pattern,
- * rebuilt pixel-faithful in the SINGULANCE dark skin). Dark navy section, big
- * heading, prev/next square buttons + a scroll-progress pill, and overflowing
- * cards (image / category badge / title / desc / footer row date|source→).
+ * Latest updates — Mistral "Latest updates." carousel, matched exactly:
+ * dark-navy section, light heading, a drag-pill (left) + two square arrow
+ * buttons (right), and overflowing cards with small radius, thin borders,
+ * amber/gray category badges, and a 2-cell bordered footer (date | source ›).
+ * SINGULANCE content; Mistral chrome/colors/edges.
  */
 
-const CARDS = [
-  {
-    cat: 'PRODUCT',
-    img: '/sp-hivemind.webp',
-    title: 'HIVEMIND',
-    desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.',
-    date: 'Jun 22, 2026',
-    source: 'SINGULANCE',
-    href: '/products/hivemind',
-  },
-  {
-    cat: 'PRODUCT',
-    img: '/sp-tara.webp',
-    title: 'TARA gets to work.',
-    desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.',
-    date: 'Jun 22, 2026',
-    source: 'SINGULANCE',
-    href: '/products/tara',
-  },
-  {
-    cat: 'PRODUCT',
-    img: '/sp-hyperagents.webp',
-    title: 'HYPERAGENTS',
-    desc: 'A swarm of digital employees that watch, decide, and act as one — grounded in memory.',
-    date: 'Jun 22, 2026',
-    source: 'SINGULANCE',
-    href: '/products/hyperagents',
-  },
-  {
-    cat: 'RESEARCH',
-    img: '/thesis-greekgod.webp',
-    title: 'Cognitive Swarm Intelligence',
-    desc: 'The system remembers. The agents act. The architecture behind HIVEMIND, published.',
-    date: 'Jun 20, 2026',
-    source: 'SINGULANCE Labs',
-    href: '/research',
-  },
-  {
-    cat: 'COMPANY',
-    img: '/singulance-cover.webp',
-    title: 'Beyond the horizon of intelligence',
-    desc: 'The AI operating layer for regulated Europe. Run your institution as an AI company.',
-    date: 'Jun 24, 2026',
-    source: 'SINGULANCE',
-    href: '/about',
-  },
-];
+const NAVY = '#0a0d1a';
+const CARD = '#13151f';
+const BORDER = 'rgba(255,255,255,0.08)';
 
-const BADGE = {
-  COMPANY: 'bg-[#ff7a2f] text-[#05070f]',
-  PRODUCT: 'bg-white/10 text-white/70',
-  RESEARCH: 'bg-[#1f4f55] text-[#9fe9f0]',
-};
+const CARDS = [
+  { cat: 'PRODUCT', img: '/sp-hivemind.webp', title: 'HIVEMIND', desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hivemind' },
+  { cat: 'PRODUCT', img: '/sp-tara.webp', title: 'TARA gets to work.', desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/tara' },
+  { cat: 'PRODUCT', img: '/sp-hyperagents.webp', title: 'HYPERAGENTS', desc: 'A swarm of digital employees that watch, decide, and act as one — grounded in memory.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hyperagents' },
+  { cat: 'COMPANY', img: '/thesis-greekgod.webp', title: 'Cognitive Swarm Intelligence', desc: 'The system remembers. The agents act. The architecture behind HIVEMIND, published.', date: 'Jun 20, 2026', source: 'SINGULANCE Labs', href: '/research' },
+  { cat: 'COMPANY', img: '/singulance-cover.webp', title: 'Beyond the horizon of intelligence', desc: 'The AI operating layer for regulated Europe. Run your institution as an AI company.', date: 'Jun 24, 2026', source: 'SINGULANCE', href: '/about' },
+];
 
 const LatestUpdates = () => {
   const track = useRef(null);
-  const [progress, setProgress] = useState(0); // 0..1
+  const [progress, setProgress] = useState(0);
 
   const onScroll = useCallback(() => {
     const el = track.current;
@@ -85,85 +44,91 @@ const LatestUpdates = () => {
     const el = track.current;
     if (!el) return;
     const card = el.querySelector('[data-card]');
-    const step = card ? card.offsetWidth + 24 : 400;
+    const step = card ? card.offsetWidth + 16 : 420;
     el.scrollBy({ left: dir * step, behavior: 'smooth' });
   };
 
   return (
-    <section className="relative overflow-hidden py-20 md:py-24" style={{ background: '#0a0d18' }}>
-      <div className="mx-auto max-w-[1200px] px-6">
+    <section className="relative overflow-hidden py-16 md:py-20" style={{ background: NAVY }}>
+      <div className="mx-auto max-w-[1280px] px-6 md:px-10">
         {/* heading */}
-        <h2 className="font-['Space_Grotesk'] text-4xl font-semibold tracking-tight text-white md:text-5xl">
+        <h2 className="font-['Space_Grotesk'] text-4xl font-medium tracking-tight text-white md:text-6xl">
           Latest updates.
         </h2>
 
-        {/* controls row: progress pill (left) + arrows (right) */}
-        <div className="mt-10 flex items-center justify-between">
-          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-white/60 transition-[width,margin] duration-150"
-              style={{ width: '38%', marginLeft: `${progress * 62}%` }}
-            />
+        {/* controls: drag-pill (left) + square arrows (right) */}
+        <div className="mt-12 flex items-center justify-between">
+          {/* drag pill */}
+          <div
+            className="flex h-9 w-32 items-center gap-2 rounded-full px-3"
+            style={{ background: '#1a1d2b' }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+            <div className="relative h-1.5 flex-1 rounded-full bg-white/10">
+              <div
+                className="absolute top-0 h-full w-1/2 rounded-full bg-white/70"
+                style={{ left: `${progress * 50}%` }}
+              />
+            </div>
           </div>
+          {/* arrows */}
           <div className="flex gap-2">
-            <button
-              onClick={() => scrollBy(-1)}
-              aria-label="Previous"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.03] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            >
+            <button onClick={() => scrollBy(-1)} aria-label="Previous"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-white/55 transition-colors hover:text-white"
+              style={{ background: '#1a1d2b' }}>
               <ChevronLeft size={18} />
             </button>
-            <button
-              onClick={() => scrollBy(1)}
-              aria-label="Next"
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/[0.03] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            >
+            <button onClick={() => scrollBy(1)} aria-label="Next"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-white/80 transition-colors hover:text-white"
+              style={{ background: '#23263a' }}>
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* cards track — overflows right edge like the reference */}
+      {/* cards track — overflows both edges */}
       <div
         ref={track}
-        className="mt-8 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-pl-6 pb-2 pl-6 pr-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-7 flex snap-x gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        style={{ paddingLeft: 'max(1.5rem,calc((100vw - 1280px)/2 + 2.5rem))', paddingRight: '1.5rem' }}
       >
-        {/* spacer to align first card with max-w container on wide screens */}
-        <div className="hidden shrink-0 lg:block lg:w-[calc((100vw-1200px)/2-24px)]" aria-hidden />
         {CARDS.map((card) => (
           <a
             key={card.title}
             data-card
             href={card.href}
-            className="group block w-[300px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/8 bg-[#12151f] no-underline sm:w-[360px]"
+            className="group block w-[300px] shrink-0 snap-start overflow-hidden rounded-lg no-underline sm:w-[400px]"
+            style={{ background: CARD, border: `1px solid ${BORDER}` }}
           >
             {/* image */}
-            <div className="relative aspect-[16/10] overflow-hidden bg-[#05070f]">
-              <img
-                src={card.img}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]"
-              />
+            <div className="relative aspect-[16/9] overflow-hidden" style={{ background: '#05070f' }}>
+              <img src={card.img} alt="" loading="lazy" decoding="async"
+                className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
             </div>
             {/* body */}
-            <div className="p-5">
-              <span className={`inline-block rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${BADGE[card.cat]}`}>
+            <div className="px-6 pb-7 pt-5">
+              <span
+                className="inline-block rounded px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.06em]"
+                style={card.cat === 'COMPANY'
+                  ? { background: '#f5c24b', color: '#0a0d1a' }
+                  : { background: '#23262f', color: '#aeb2bd' }}
+              >
                 {card.cat}
               </span>
-              <h3 className="font-['Space_Grotesk'] mt-4 text-xl font-semibold leading-snug tracking-tight text-white">
+              <h3 className="font-['Space_Grotesk'] mt-5 text-2xl font-medium leading-snug tracking-tight text-white">
                 {card.title}
               </h3>
-              <p className="mt-2 text-sm font-light leading-relaxed text-white/55">{card.desc}</p>
+              <p className="mt-3 text-[15px] font-light leading-relaxed text-white/55">{card.desc}</p>
             </div>
-            {/* footer */}
-            <div className="grid grid-cols-2 border-t border-white/8 text-[11px] font-mono text-white/45">
-              <div className="border-r border-white/8 px-5 py-3">{card.date}</div>
-              <div className="flex items-center justify-between px-5 py-3">
+            {/* footer — 2 bordered cells: date | source › */}
+            <div className="grid grid-cols-2" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <div className="px-6 py-4 text-[13px] text-white/40" style={{ borderRight: `1px solid ${BORDER}` }}>
+                {card.date}
+              </div>
+              <div className="flex items-center justify-between px-6 py-4 text-[13px] text-white/40">
                 <span>{card.source}</span>
-                <ArrowUpRight size={14} className="text-white/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                <ChevronRight size={16} className="text-white/35 transition-transform group-hover:translate-x-0.5" />
               </div>
             </div>
           </a>
