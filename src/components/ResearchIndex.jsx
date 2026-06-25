@@ -11,7 +11,6 @@ import Seo from './Seo';
  */
 const PAPER = '#FBFBF8';
 const INK = '#0a0a0a';
-const EMBER = '#FF5229';
 const BORDER = '#E4E3DE';
 
 const ITEMS = [
