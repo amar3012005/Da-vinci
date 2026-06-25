@@ -121,6 +121,13 @@ const NewsArticleLayout = ({
   );
 };
 
+/* break out of the centered article column to a full-bleed, edge-to-edge band */
+export const FullBleed = ({ children, dark = true }) => (
+  <div className="relative left-1/2 right-1/2 -mx-[50vw] my-14 w-screen" style={dark ? { background: '#05070f' } : undefined}>
+    {children}
+  </div>
+);
+
 /* small section helpers for the article body */
 export const H2 = ({ children }) => (
   <h2 className="font-['Space_Grotesk'] mt-12 text-2xl font-semibold tracking-tight md:text-3xl" style={{ color: '#0a0a0a' }}>{children}</h2>

@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
+import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
+import InteractiveByteSlot from './research/InteractiveByteSlot';
 
 const IcarusHeroScene = lazy(() => import('./research/three/IcarusHeroScene'));
 
@@ -54,18 +55,23 @@ const IcarusResearch = () => {
     <P>Today’s stacks serve these as separate systems fused in app code — each hop a network round-trip. ICARUS’s claim: the network hop, not the search algorithm, was the bottleneck all along.</P>
 
     <H2>The .amr format — the moat</H2>
-    <P>Every memory is a fixed-stride <strong>202-byte slot</strong>; slot <em>i</em> lives at a computable offset — no index lookup to find a record. The frozen, little-endian layout:</P>
-    <Table head={['Offset', 'Size', 'Field', 'Purpose']} rows={[
-      ['0', '4', 'id', 'stable slot id (never renumbered)'],
-      ['4', '2', 'flags', 'TOMBSTONE · PQ_TRAINED · TEXT_INLINE · GRAPH_DIRTY'],
-      ['6', '8', 'created_at', 'ingestion time — bi-temporal axis 1 (ns)'],
-      ['14', '8', 'valid_from', 'fact validity — bi-temporal axis 2 (ns)'],
-      ['22', '12', 'text_ptr / lens', 'offset + LZ4 + raw length into the text region'],
-      ['34', '128', 'vector_pq', '1024-dim embedding → 128 B via Product Quantization (32×)'],
-      ['162', '8', 'entity_bitmap', '64 canonical entities, 1 bit each → O(1) AND filter'],
-      ['170', '32', 'adjacency', '8 graph-neighbour slot ids inline → no join'],
-    ]} />
+    <P>Every memory is a fixed-stride <strong>202-byte slot</strong>; slot <em>i</em> lives at a computable offset — no index lookup to find a record. Explore the layout:</P>
+    <InteractiveByteSlot />
     <P>The embedding is inline (PQ-compressed, not a foreign key); the entity filter is a single bitwise AND; bi-temporal anchors are inline i64s; graph adjacency is inline — a 2-hop traversal is pointer-following within the same mmap, never a join. One slot carries everything a recall needs.</P>
+
+    {motionOk && (
+      <FullBleed>
+        <div className="relative h-[70vh] w-full overflow-hidden">
+          <Suspense fallback={null}><IcarusHeroScene /></Suspense>
+          <div className="pointer-events-none absolute inset-0 flex items-end p-8 md:p-14">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-white/55">The shard, live</p>
+              <p className="font-['Space_Grotesk'] mt-3 max-w-xl text-3xl font-semibold leading-tight text-white md:text-4xl">Every memory is a slot. Recall sweeps the file in one mmap read.</p>
+            </div>
+          </div>
+        </div>
+      </FullBleed>
+    )}
 
     <H2>Benchmarks — the production shadow eval</H2>
     <P>The decisive test: 8,682 real production vectors (the exact data serving live recall) were scrolled read-only out of production Qdrant; a local ICARUS shard was built from them; 200 leave-one-out queries compared top-10s — with zero production risk.</P>

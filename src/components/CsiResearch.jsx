@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
+import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
+import ForceRouting from './research/ForceRouting';
 
 const CsiHeroScene = lazy(() => import('./research/three/CsiHeroScene'));
 
@@ -73,14 +74,26 @@ const CsiResearch = () => {
       ['Control & Learning', 'meta/*', 'Evaluative signals — reputation, trail weights, decay schedules, blueprint thresholds, routing parameters. The control plane.'],
     ]} />
 
+    {motionOk && (
+      <FullBleed>
+        <div className="relative h-[70vh] w-full overflow-hidden">
+          <Suspense fallback={null}><CsiHeroScene /></Suspense>
+          <div className="pointer-events-none absolute inset-0 flex items-end p-8 md:p-14">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-white/55">The swarm, live</p>
+              <p className="font-['Space_Grotesk'] mt-3 max-w-xl text-3xl font-semibold leading-tight text-white md:text-4xl">Coordination emerges from the environment — trails between neighbours, not messages.</p>
+            </div>
+          </div>
+        </div>
+      </FullBleed>
+    )}
+
     <H2>[04] Key concepts — how CSI works</H2>
     <P>Five interconnected mechanisms let intelligence emerge from the environment rather than reside in any single agent.</P>
     <P><strong>Trails — behavior as first-class structure.</strong> A trail is a compact, structured representation of how progress toward a goal can be made. Unlike raw logs, trails are directly actionable — connecting goal context to next steps, shaped by success, failure, cost, latency, conflict, congestion, and reputation. <em>“Given this context and this goal, what path has proven useful?”</em></P>
     <P><strong>Blueprints — from repetition to procedure.</strong> When the system detects repeated successful patterns across execution traces, it promotes them into reusable composite trails — its emerging habits. This is how the system learns <strong>how to act</strong>, not merely remember what happened.</P>
-    <P><strong>Force-Based Routing — cognitive physics for action selection.</strong> Instead of hard-coded path selection, the system computes a force profile over candidate trails, combined via softmax to preserve exploration while exploiting strong pathways.</P>
-    <Table head={['Attractive forces', 'Repulsive forces']} rows={[
-      ['Goal attraction · Affordance · Blueprint prior · Social · Momentum', 'Conflict · Congestion · Cost'],
-    ]} />
+    <P><strong>Force-Based Routing — cognitive physics for action selection.</strong> Instead of hard-coded path selection, the system computes a force profile over candidate trails, combined via softmax to preserve exploration while exploiting strong pathways. Toggle the forces to feel how the swarm chooses:</P>
+    <ForceRouting />
     <P><strong>Agent Identity — without agent-centric intelligence.</strong> Each agent has an identity, role, declared skills, observed competence, reputation, and specialization confidence — yet intelligence remains shared. <em>“Agents have roles. The environment has memory. Intelligence emerges from their interaction.”</em></P>
     <P><strong>The Meta-Loop — safe self-improvement.</strong> A bounded three-part loop turns self-improvement from uncontrolled self-editing into policy evolution through configuration: a read-only <strong>Dashboard</strong> (success rates, blueprint usage, force contributions), a batch <strong>MetaEvaluator</strong> (detects patterns, produces recommendations), and an auditable <strong>Parameter Registry</strong> with rollback.</P>
 
