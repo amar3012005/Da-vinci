@@ -1,5 +1,16 @@
-import React from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
+
+const IcarusHeroScene = lazy(() => import('./research/three/IcarusHeroScene'));
+
+const useMotionOk = () => {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setOk(window.matchMedia('(min-width: 768px)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }, []);
+  return ok;
+};
 
 /**
  * ICARUS — SINGULANCE's memory filesystem (mneme engine, .amr format).
@@ -7,13 +18,16 @@ import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
  */
 const HERO_IMG = '/research-icarus-hero.png'; // drop the background image here to swap
 
-const IcarusResearch = () => (
+const IcarusResearch = () => {
+  const motionOk = useMotionOk();
+  return (
   <NewsArticleLayout
     badge="Research"
     title="Introducing ICARUS"
     date="June 24, 2026"
     author="SINGULANCE Labs"
     heroImg={HERO_IMG}
+    heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
     seo={{
       title: 'ICARUS — A Memory Filesystem for AI Agents | SINGULANCE Research',
       description: "ICARUS is SINGULANCE's memory filesystem: the .amr byte layout co-locates embedding, entity bitmap, bi-temporal anchors, and graph adjacency in one fixed-stride slot. Equal recall to a live vector DB, 7.5× smaller storage, 32× compression, zero servers.",
@@ -68,6 +82,7 @@ const IcarusResearch = () => (
     <H2>What it is — and isn’t</H2>
     <P>ICARUS is a vector + temporal + adjacency substrate, not a cognition layer. It deliberately does not implement typed graph edges, synthesis, or conflict resolution — those live above it. It replaces exactly one component: the vector store. The format is frozen in an RFC — magic, every field offset, the four file formats, the six invariants — published before the code, so the layout is the contract.</P>
   </NewsArticleLayout>
-);
+  );
+};
 
 export default IcarusResearch;

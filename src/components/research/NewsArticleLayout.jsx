@@ -24,6 +24,7 @@ const NewsArticleLayout = ({
   seo,
   product,        // { name, tag, desc }
   highlights = [],
+  heroScene,      // optional R3F node rendered behind the hero
   children,
 }) => {
   const navigate = useNavigate();
@@ -43,6 +44,10 @@ const NewsArticleLayout = ({
           backgroundPosition: 'center',
         }}
       >
+        {/* interactive R3F scene behind the hero */}
+        {heroScene && <div className="absolute inset-0 z-0">{heroScene}</div>}
+        {heroScene && <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(60%_60%_at_50%_45%,transparent,rgba(5,7,15,0.55))]" />}
+
         {/* top bar */}
         <div className="relative z-10 flex items-center justify-between px-6 py-4 md:px-10">
           <button onClick={() => navigate('/')} className="flex items-center gap-2 bg-transparent text-[13px] font-medium text-white/80 hover:text-white">
@@ -52,7 +57,7 @@ const NewsArticleLayout = ({
         </div>
 
         {/* centered title */}
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
+        <div className="pointer-events-none relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
           <span className="rounded bg-white/15 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-white backdrop-blur-sm">{badge}</span>
           <h1 className="font-['Space_Grotesk'] mt-6 max-w-4xl text-4xl font-medium leading-[1.08] tracking-tight text-white md:text-6xl">{title}</h1>
           <p className="mt-5 font-mono text-[12px] uppercase tracking-[0.2em] text-white/65">{date} &nbsp;·&nbsp; By {author}</p>

@@ -1,5 +1,16 @@
-import React from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
+
+const CsiHeroScene = lazy(() => import('./research/three/CsiHeroScene'));
+
+const useMotionOk = () => {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setOk(window.matchMedia('(min-width: 768px)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }, []);
+  return ok;
+};
 
 /**
  * Cognitive Swarm Intelligence (CSI) — the full SINGULANCE Labs paper in the
@@ -8,13 +19,16 @@ import NewsArticleLayout, { H2, P, Table } from './research/NewsArticleLayout';
  */
 const HERO_IMG = '/research-csi-hero.png'; // drop the background image here to swap
 
-const CsiResearch = () => (
+const CsiResearch = () => {
+  const motionOk = useMotionOk();
+  return (
   <NewsArticleLayout
     badge="Research"
     title="Cognitive Swarm Intelligence"
     date="2026"
     author="SINGULANCE Labs"
     heroImg={HERO_IMG}
+    heroScene={motionOk ? <Suspense fallback={null}><CsiHeroScene /></Suspense> : null}
     seo={{
       title: 'Cognitive Swarm Intelligence (CSI) — Environment-Centric AI | SINGULANCE Research',
       description: 'CSI: an environment-centric architecture where intelligence is an emergent property of a shared, persistent, structured cognitive environment — combining structured memory, stigmergic coordination, adaptive routing, procedural consolidation, agent identity, and a controlled meta-loop.',
@@ -96,6 +110,7 @@ const CsiResearch = () => (
     ]} />
     <P className="text-[15px] text-[#737367]">The system remembers. The agents act. Licensed CC BY 4.0 · SINGULANCE Labs.</P>
   </NewsArticleLayout>
-);
+  );
+};
 
 export default CsiResearch;
