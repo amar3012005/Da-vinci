@@ -9,6 +9,7 @@ import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 import ResearchPage from './components/ResearchPage';
 import IcarusResearch from './components/IcarusResearch';
+import CsiResearch from './components/CsiResearch';
 import SolutionPage from './components/SolutionPage';
 import BenchmarkPage from './components/BenchmarkPage';
 import VoiceAgentTestPage from './components/testing/VoiceAgentTestPage';
@@ -65,6 +66,7 @@ function App() {
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/research" element={<ResearchPage />} />
         <Route path="/research/icarus" element={<IcarusResearch />} />
+        <Route path="/research/cognitive-swarm-intelligence" element={<CsiResearch />} />
         <Route path="/solutions/:field" element={<SolutionPage />} />
         <Route path="/benchmark" element={<BenchmarkPage />} />
         <Route path="/test" element={<TestingIndexPage />} />

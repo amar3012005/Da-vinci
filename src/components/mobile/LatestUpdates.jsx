@@ -18,7 +18,7 @@ const CARDS = [
   { cat: 'PRODUCT', img: '/sp-hivemind.webp', title: 'HIVEMIND', desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hivemind' },
   { cat: 'PRODUCT', img: '/sp-tara.webp', title: 'TARA gets to work.', desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/tara' },
   { cat: 'PRODUCT', img: '/sp-hyperagents.webp', title: 'HYPERAGENTS', desc: 'A swarm of digital employees that watch, decide, and act as one — grounded in memory.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hyperagents' },
-  { cat: 'COMPANY', img: '/thesis-greekgod.webp', title: 'Cognitive Swarm Intelligence', desc: 'The system remembers. The agents act. The architecture behind HIVEMIND, published.', date: 'Jun 20, 2026', source: 'SINGULANCE Labs', href: '/research' },
+  { cat: 'COMPANY', img: '/thesis-greekgod.webp', title: 'Cognitive Swarm Intelligence', desc: 'The system remembers. The agents act. The architecture behind HIVEMIND, published.', date: 'Jun 20, 2026', source: 'SINGULANCE Labs', href: '/research/cognitive-swarm-intelligence' },
   { cat: 'COMPANY', img: '/singulance-cover.webp', title: 'Beyond the horizon of intelligence', desc: 'The AI operating layer for regulated Europe. Run your institution as an AI company.', date: 'Jun 24, 2026', source: 'SINGULANCE', href: '/about' },
 ];
 
