@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
@@ -30,9 +31,11 @@ const PageContent = () => {
         try { chosen = window.localStorage.getItem('singulance-field'); } catch (e) {}
         if (!chosen) { const tmr = setTimeout(() => setPickerOpen(true), 1200); return () => clearTimeout(tmr); }
     }, []);
+    const navigate = useNavigate();
     const pickField = (id) => {
         setField(id); setPickerOpen(false);
         try { window.localStorage.setItem('singulance-field', id); } catch (e) {}
+        navigate(`/solutions/${id}`);
     };
 
     const [isIndicDomain, setIsIndicDomain] = React.useState(false);
