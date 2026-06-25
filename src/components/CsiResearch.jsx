@@ -2,7 +2,8 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import NewsArticleLayout, { H2, P, Table, FullBleed } from './research/NewsArticleLayout';
 import ForceRouting from './research/ForceRouting';
 
-const CsiHeroScene = lazy(() => import('./research/three/CsiHeroScene'));
+// CSI uses the same memory-slot grid animation as ICARUS.
+const CsiHeroScene = lazy(() => import('./research/three/IcarusHeroScene'));
 
 const useMotionOk = () => {
   const [ok, setOk] = useState(false);
