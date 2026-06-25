@@ -11,9 +11,8 @@ const COLS = 30;
 const ROWS = 16;
 const N = COLS * ROWS;
 
-function Grid({ pointer }) {
+function Grid() {
   const mesh = useRef();
-  const group = useRef();
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const base = useMemo(() => new THREE.Color('#13203a'), []);
   const ember = useMemo(() => new THREE.Color('#ff6a2a'), []);
@@ -43,32 +42,21 @@ function Grid({ pointer }) {
     }
     mesh.current.instanceMatrix.needsUpdate = true;
     if (mesh.current.instanceColor) mesh.current.instanceColor.needsUpdate = true;
-    if (group.current) {
-      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, pointer.current.x * 0.25, 0.05);
-      group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, pointer.current.y * -0.2, 0.05);
-    }
   });
 
   return (
-    <group ref={group}>
-      <instancedMesh ref={mesh} args={[null, null, N]}>
-        <boxGeometry args={[0.5, 0.5, 0.18]} />
-        <meshBasicMaterial toneMapped={false} />
-      </instancedMesh>
-    </group>
+    <instancedMesh ref={mesh} args={[null, null, N]}>
+      <boxGeometry args={[0.5, 0.5, 0.18]} />
+      <meshBasicMaterial toneMapped={false} />
+    </instancedMesh>
   );
 }
 
 export default function IcarusHeroScene() {
-  const pointer = useRef({ x: 0, y: 0 });
-  const onMove = (e) => {
-    pointer.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-    pointer.current.y = -((e.clientY / window.innerHeight) * 2 - 1);
-  };
   return (
-    <div className="absolute inset-0" onPointerMove={onMove}>
+    <div className="absolute inset-0">
       <Canvas dpr={[1, 1.8]} camera={{ position: [0, 0, 12], fov: 42 }} gl={{ antialias: true, alpha: true }}>
-        <Grid pointer={pointer} />
+        <Grid />
       </Canvas>
     </div>
   );
