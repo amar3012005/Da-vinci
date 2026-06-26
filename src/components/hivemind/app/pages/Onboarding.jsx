@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Building2, Hexagon, Lock, Users } from 'lucide-react';
+import { ArrowRight, Building2, Hexagon, Lock, Users, Cloud, Server } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
+import SelfHostSetup from './SelfHostSetup';
 
 const ORG_MODES = {
   personal: {
@@ -39,6 +40,8 @@ export default function OnboardingFlow() {
   const [slug, setSlug] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
+  const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
+  const [showSelfHost, setShowSelfHost] = useState(false);
 
   const selectedMode = ORG_MODES[mode];
   const derivedSlug = useMemo(() => deriveSlug(orgName), [orgName]);
@@ -56,13 +59,18 @@ export default function OnboardingFlow() {
         name: orgName.trim(),
         slug: mode === 'enterprise' ? effectiveSlug : undefined,
         plan: selectedMode.plan,
+        deployment, // 'managed' | 'selfhost'
       });
+      // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
+      if (deployment === 'selfhost') { setShowSelfHost(true); return; }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
       setCreating(false);
     }
   };
+
+  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/app'; }} />;
 
   return (
     <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4 py-10">
@@ -169,6 +177,25 @@ export default function OnboardingFlow() {
                     ? t('onboarding.enterpriseSummary', 'Creates an enterprise org with a shareable slug and team-ready memory model.')
                     : t('onboarding.personalSummary', 'Creates a private org on the free plan so you can start immediately.')}
                 </p>
+              </div>
+
+              {/* Deployment: we host (managed) vs run it on your own server (self-host) */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'managed', icon: Cloud, label: t('onboarding.managed', 'Managed'), desc: t('onboarding.managedDesc', 'We host it') },
+                  { id: 'selfhost', icon: Server, label: t('onboarding.selfhost', 'Self-host'), desc: t('onboarding.selfhostDesc', 'Your server') },
+                ].map(({ id, icon: Icon, label, desc }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setDeployment(id)}
+                    className={`text-left rounded-xl border px-3 py-2.5 transition ${deployment === id ? 'border-[#117dff] bg-[#117dff]/[0.05]' : 'border-[#e3e0db] hover:border-[#c9c5bd]'}`}
+                  >
+                    <Icon size={16} className={deployment === id ? 'text-[#117dff]' : 'text-[#737373]'} />
+                    <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-1">{label}</div>
+                    <div className="text-[11px] text-[#737373]">{desc}</div>
+                  </button>
+                ))}
               </div>
 
               <button
