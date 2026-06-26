@@ -415,14 +415,24 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
         {truncate(memory.content)}
       </p>
 
-      {/* Footer: tags + date + importance */}
+      {/* Footer: tags + date + importance.
+          entity:* tags already render as @-chips above, and synthesis/cognition
+          tags drive the badges — filter them out so the footer never duplicates. */}
+      {(() => {
+        const footerTags = (memory.tags || []).filter((t) =>
+          typeof t === 'string' &&
+          !t.startsWith('entity:') &&
+          !t.startsWith('synthesis:') &&
+          !['cognition-loop', 'internal-audit'].includes(t)
+        );
+        return (
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
-          {(memory.tags || []).slice(0, 3).map((tag) => (
+          {footerTags.slice(0, 3).map((tag) => (
             <TagPill key={tag} label={tag} />
           ))}
-          {(memory.tags || []).length > 3 && (
-            <span className="text-[10px] text-[#d4d0ca] font-mono">+{memory.tags.length - 3}</span>
+          {footerTags.length > 3 && (
+            <span className="text-[10px] text-[#d4d0ca] font-mono">+{footerTags.length - 3}</span>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
@@ -438,6 +448,8 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
           </span>
         </div>
       </div>
+        );
+      })()}
     </motion.button>
   );
 }
