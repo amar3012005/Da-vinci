@@ -193,15 +193,15 @@ const CONNECTORS = [
   // Enterprise stack (Microsoft + Atlassian + Salesforce — top-of-stack ARR)
   {
     id: 'outlook',
-    name: 'Microsoft Outlook',
-    description: 'Outlook mail + Calendar + Teams chat + SharePoint via single Azure AD OAuth',
+    name: 'Microsoft 365',
+    description: 'Outlook mail + Calendar events → memory. Auto token refresh via Nango.',
     icon: Mail,
     category: 'workspace',
-    status: 'needs_oauth_setup',
+    status: 'available',
     color: '#0078d4',
     priority: 1,
-    oauthProvider: 'outlook',
-    setupHint: 'Set MICROSOFT_CLIENT_ID + MICROSOFT_CLIENT_SECRET on the control plane',
+    oauthProvider: 'microsoft',
+    nangoProvider: 'microsoft',
   },
   {
     id: 'atlassian',
