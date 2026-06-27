@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Building2, Hexagon, Lock, Users, Cloud, Server } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
@@ -42,6 +42,47 @@ export default function OnboardingFlow() {
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
   const [showSelfHost, setShowSelfHost] = useState(false);
+  // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage before
+  // OAuth). Consume it here and create the org silently — never re-ask. Only show the form below as a
+  // fallback when there's no saved choice (e.g. a direct visit to onboarding).
+  const [autoCreating, setAutoCreating] = useState(() => {
+    try { return !!localStorage.getItem('hivemind_onboarding'); } catch { return false; }
+  });
+  const autoRan = useRef(false);
+
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* ignore */ }
+    if (!saved) { setAutoCreating(false); return; }
+    const isEnt = saved.type === 'enterprise';
+    const name = isEnt
+      ? (saved.enterprise || saved.hivemind_name || 'My Organization')
+      : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
+    const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
+    (async () => {
+      try {
+        await createOrg({
+          name,
+          slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
+          plan: isEnt ? 'enterprise' : 'free',
+          deployment: dep,
+        });
+        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+        if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
+        window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
+      } catch (err) {
+        // Creation failed → drop to the manual form so the user can retry / adjust.
+        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+        setError(err?.response?.data?.error || err?.message || 'Could not create your workspace — please choose below.');
+        setMode(isEnt ? 'enterprise' : 'personal');
+        setDeployment(dep);
+        setOrgName(name);
+        setAutoCreating(false);
+      }
+    })();
+  }, [createOrg]);
 
   const selectedMode = ORG_MODES[mode];
   const derivedSlug = useMemo(() => deriveSlug(orgName), [orgName]);
@@ -70,7 +111,19 @@ export default function OnboardingFlow() {
     }
   };
 
-  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/app'; }} />;
+  if (showSelfHost) return <SelfHostSetup onDone={() => { window.location.href = '/hivemind/app/overview'; }} />;
+
+  // Auto-creating from the login-page choice — no second prompt.
+  if (autoCreating) {
+    return (
+      <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4">
+        <div className="flex items-center gap-3 text-[#525252]">
+          <div className="w-5 h-5 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-['Space_Grotesk']">{t('onboarding.settingUp', 'Setting up your workspace…')}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center px-4 py-10">
