@@ -167,41 +167,58 @@ export default function OnboardingFlow() {
               </p>
             </div>
 
-            <div className="md:col-span-2 flex items-center justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">
-              <div>
-                <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
-                  {t(selectedMode.titleKey, selectedMode.titleDefault)} {t('onboarding.workspace', 'workspace')}
-                </p>
-                <p className="text-[#525252] text-sm">
-                  {mode === 'enterprise'
-                    ? t('onboarding.enterpriseSummary', 'Creates an enterprise org with a shareable slug and team-ready memory model.')
-                    : t('onboarding.personalSummary', 'Creates a private org on the free plan so you can start immediately.')}
-                </p>
-              </div>
-
-              {/* Deployment: we host (managed) vs run it on your own server (self-host) */}
-              <div className="grid grid-cols-2 gap-2">
+            {/* Deployment: we host (managed) vs run it on your own server (self-host) — full-width row */}
+            <div className="md:col-span-2">
+              <p className="text-[11px] font-medium text-[#737373] uppercase tracking-[0.08em] font-mono mb-2">
+                {t('onboarding.deployment', 'Deployment')}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { id: 'managed', icon: Cloud, label: t('onboarding.managed', 'Managed'), desc: t('onboarding.managedDesc', 'We host it') },
-                  { id: 'selfhost', icon: Server, label: t('onboarding.selfhost', 'Self-host'), desc: t('onboarding.selfhostDesc', 'Your server') },
+                  { id: 'managed', icon: Cloud, label: t('onboarding.managed', 'Managed'), desc: t('onboarding.managedDesc', 'We host it on Singulance cloud.') },
+                  { id: 'selfhost', icon: Server, label: t('onboarding.selfhost', 'Self-host'), desc: t('onboarding.selfhostDesc', 'Runs on your server — your data stays on your box.') },
                 ].map(({ id, icon: Icon, label, desc }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => setDeployment(id)}
-                    className={`text-left rounded-xl border px-3 py-2.5 transition ${deployment === id ? 'border-[#117dff] bg-[#117dff]/[0.05]' : 'border-[#e3e0db] hover:border-[#c9c5bd]'}`}
+                    className={`flex items-start gap-3 text-left rounded-xl border px-4 py-3.5 transition ${deployment === id ? 'border-[#117dff] bg-[#117dff]/[0.05]' : 'border-[#e3e0db] hover:border-[#c9c5bd]'}`}
                   >
-                    <Icon size={16} className={deployment === id ? 'text-[#117dff]' : 'text-[#737373]'} />
-                    <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mt-1">{label}</div>
-                    <div className="text-[11px] text-[#737373]">{desc}</div>
+                    <span className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${deployment === id ? 'bg-[#117dff]/10' : 'bg-[#f3f1ec]'}`}>
+                      <Icon size={17} className={deployment === id ? 'text-[#117dff]' : 'text-[#737373]'} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{label}</span>
+                      <span className="block text-[12px] leading-snug text-[#737373] mt-0.5">{desc}</span>
+                    </span>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Summary + create */}
+            <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">
+              <div className="min-w-0">
+                <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk']">
+                  {t(selectedMode.titleKey, selectedMode.titleDefault)} {t('onboarding.workspace', 'workspace')}
+                  {deployment === 'selfhost' && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-[#117dff] bg-[#117dff]/8 border border-[#117dff]/20 rounded-full px-2 py-0.5 align-middle">
+                      <Server size={11} /> {t('onboarding.selfhost', 'Self-host')}
+                    </span>
+                  )}
+                </p>
+                <p className="text-[#525252] text-sm">
+                  {deployment === 'selfhost'
+                    ? t('onboarding.selfhostNext', 'Next: mint a key and run one command on your server.')
+                    : mode === 'enterprise'
+                    ? t('onboarding.enterpriseSummary', 'Creates an enterprise org with a shareable slug and team-ready memory model.')
+                    : t('onboarding.personalSummary', 'Creates a private org on the free plan so you can start immediately.')}
+                </p>
               </div>
 
               <button
                 type="submit"
                 disabled={!orgName.trim() || creating || (mode === 'enterprise' && !effectiveSlug)}
-                className="min-w-[220px] flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-[8px] transition-all text-sm font-['Space_Grotesk'] group uppercase tracking-[0.075em]"
+                className="shrink-0 min-w-[220px] flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-[8px] transition-all text-sm font-['Space_Grotesk'] group uppercase tracking-[0.075em]"
               >
                 {creating ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

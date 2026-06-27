@@ -785,6 +785,15 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * Self-host connection status (polled during onboarding).
+   * Returns { registered, reachable, kind?, transport? }
+   */
+  async selfHostStatus(apiKey) {
+    const { data } = await this.controlPlane.post('/v1/selfhost/status', { apiKey });
+    return data;
+  }
+
   // ─── Control Plane: Client Descriptors ───────────────────────
 
   /**
