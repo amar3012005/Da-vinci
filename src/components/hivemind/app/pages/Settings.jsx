@@ -111,6 +111,12 @@ export default function Settings() {
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policySaved, setPolicySaved] = useState(false);
   const timeoutRef = useRef(null);
+  // Account deletion (self-host-aware)
+  const [isSelfHost, setIsSelfHost] = useState(false);
+  const [deleteStage, setDeleteStage] = useState(0); // 0 idle · 1 reviewing · 2 (managed) final confirm
+  const [deleteText, setDeleteText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   const controlPlaneUrl = apiClient.controlPlane.defaults.baseURL;
   const coreApiUrl = apiClient.core.defaults.baseURL;
@@ -181,6 +187,30 @@ export default function Settings() {
   const handleSignOutAll = useCallback(async () => {
     await logout();
   }, [logout]);
+
+  // Detect self-host so the delete flow can reassure ("data stays on your server") vs warn harder.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const s = await apiClient.selfHostStatus();
+        if (alive) setIsSelfHost(!!(s && s.registered));
+      } catch { /* default managed */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (deleteText !== 'DELETE') return;
+    setDeleting(true); setDeleteError(null);
+    try {
+      await apiClient.deleteAccount('DELETE');
+      await logout(); // session is gone server-side; clear client + redirect to login
+    } catch (e) {
+      setDeleteError(e?.response?.data?.error || e?.message || 'Deletion failed');
+      setDeleting(false);
+    }
+  }, [deleteText, logout]);
 
   const createdDate = org?.created_at
     ? new Date(org.created_at).toLocaleDateString('en-US', {
@@ -476,6 +506,114 @@ export default function Settings() {
                   <Trash2 size={12} />
                   {t('settings.revokeAll', 'Revoke All')}
                 </button>
+              )}
+            </div>
+
+            {/* Delete Account — self-host-aware */}
+            <div className="bg-white border border-red-300 rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">
+                    {t('settings.deleteAccount', 'Delete Account')}
+                  </p>
+                  <p className="text-[#a3a3a3] text-xs mt-0.5">
+                    {t('settings.deleteAccountDesc', 'Permanently closes your account and removes your identity, keys, orgs you solely own, and central data.')}
+                  </p>
+                </div>
+                {deleteStage === 0 && (
+                  <button
+                    onClick={() => { setDeleteStage(1); setDeleteText(''); setDeleteError(null); }}
+                    className="flex-shrink-0 ml-4 flex items-center gap-1.5 text-white bg-red-600 hover:bg-red-500 text-xs font-mono rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <Trash2 size={12} />
+                    {t('settings.deleteAccountBtn', 'Delete Account')}
+                  </button>
+                )}
+              </div>
+
+              {deleteStage >= 1 && (
+                <div className="mt-3 pt-3 border-t border-red-100">
+                  {/* Residency notice: reassure self-host, warn harder for managed */}
+                  {isSelfHost ? (
+                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 mb-3">
+                      <p className="text-emerald-800 text-xs font-semibold font-['Space_Grotesk']">
+                        {t('settings.deleteSelfHostTitle', 'Your memory data stays with you')}
+                      </p>
+                      <p className="text-emerald-700 text-xs mt-0.5 leading-relaxed">
+                        {t('settings.deleteSelfHostBody', "You're self-hosted — your memories, vectors, and relationship graph live in the .amr (and Postgres) on your own server. Deleting only removes your Singulance identity, API keys, and the connection. Your data on your box is untouched and remains yours.")}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 mb-3">
+                      <p className="text-red-800 text-xs font-semibold font-['Space_Grotesk']">
+                        {t('settings.deleteManagedTitle', 'This permanently erases all your data')}
+                      </p>
+                      <p className="text-red-700 text-xs mt-0.5 leading-relaxed">
+                        {t('settings.deleteManagedBody', 'All your memories, syntheses, connectors, and knowledge live on Singulance and will be permanently deleted. This cannot be undone.')}
+                      </p>
+                    </div>
+                  )}
+
+                  {deleteStage === 2 ? (
+                    <div className="rounded-lg bg-red-100 border border-red-300 px-3 py-2.5 mb-3">
+                      <p className="text-red-900 text-xs font-semibold">
+                        {t('settings.deleteFinalConfirm', 'Are you absolutely sure? Your data cannot be recovered after this.')}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block text-[#525252] text-xs mb-1.5">
+                        {t('settings.deleteTypeConfirm', 'Type DELETE to confirm')}
+                      </label>
+                      <input
+                        type="text"
+                        value={deleteText}
+                        onChange={(e) => setDeleteText(e.target.value)}
+                        placeholder="DELETE"
+                        autoComplete="off"
+                        className="w-full sm:w-64 bg-white border border-red-200 rounded-lg px-3 py-2 text-sm font-mono text-[#0a0a0a] focus:outline-none focus:border-red-400 mb-3"
+                      />
+                    </>
+                  )}
+
+                  {deleteError && <p className="text-red-600 text-xs mb-2 font-mono">{deleteError}</p>}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => { setDeleteStage(0); setDeleteText(''); setDeleteError(null); }}
+                      disabled={deleting}
+                      className="text-[#525252] hover:text-[#0a0a0a] text-xs font-mono px-3 py-2 transition-colors"
+                    >
+                      {t('settings.cancel', 'Cancel')}
+                    </button>
+                    {/* Managed gets a second confirmation step; self-host deletes after one. */}
+                    {(!isSelfHost && deleteStage === 1) ? (
+                      <button
+                        onClick={() => setDeleteStage(2)}
+                        disabled={deleteText !== 'DELETE'}
+                        className="flex items-center gap-1.5 text-white bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono rounded-lg px-3 py-2 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                        {t('settings.continue', 'Continue')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deleting || (deleteStage !== 2 && deleteText !== 'DELETE')}
+                        className="flex items-center gap-1.5 text-white bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-mono rounded-lg px-3 py-2 transition-colors"
+                      >
+                        {deleting ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 size={12} />
+                        )}
+                        {isSelfHost
+                          ? t('settings.deleteAndKeepData', 'Delete account')
+                          : t('settings.deletePermanently', 'Permanently delete')}
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
