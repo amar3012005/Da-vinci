@@ -13,8 +13,12 @@ ENV GENERATE_SOURCEMAP=false
 # own build pipeline + dashboard env, so these defaults do not affect it.
 ARG REACT_APP_CONTROL_PLANE_URL=https://api.singulancelabs.com
 ARG REACT_APP_CORE_API_URL=https://core.singulancelabs.com
+# PRODUCT_HOST=true → single-domain product layout: / = SINGULANCE cover, /hivemind = HIVEMIND cover,
+# /hivemind/app = dashboard (all served locally). This is the self-hosted singulancelabs image.
+ARG REACT_APP_PRODUCT_HOST=true
 ENV REACT_APP_CONTROL_PLANE_URL=$REACT_APP_CONTROL_PLANE_URL
 ENV REACT_APP_CORE_API_URL=$REACT_APP_CORE_API_URL
+ENV REACT_APP_PRODUCT_HOST=$REACT_APP_PRODUCT_HOST
 RUN npm run build
 
 FROM caddy:latest

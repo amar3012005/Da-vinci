@@ -25,6 +25,14 @@ const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindA
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 
+// PRODUCT_HOST — this domain serves the WHOLE product on ONE host (singulancelabs.com):
+//   /              → SINGULANCE marketing cover (DavinciHomepage)
+//   /hivemind      → HIVEMIND product cover (CartesiaReplica via HivemindRedirect)
+//   /hivemind/app  → HIVEMIND dashboard (HiveMindApp), served locally — never redirected away
+// Default false preserves the legacy davinciai multi-subdomain split (marketing host vs the
+// dedicated hivemind.davinciai.eu subdomain), so the Vercel deploy is unaffected.
+const PRODUCT_HOST = process.env.REACT_APP_PRODUCT_HOST === 'true';
+
 /**
  * Hard-redirect any /hivemind* hit on a non-HIVEMIND host (e.g. singulancelabs.com,
  * davinciai.eu) to the canonical HIVEMIND subdomain, preserving the full path,
@@ -58,7 +66,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={isHivemindHost ? <HivemindRedirect /> : <DavinciHomepage />} />
+        <Route path="/" element={PRODUCT_HOST ? <DavinciHomepage /> : (isHivemindHost ? <HivemindRedirect /> : <DavinciHomepage />)} />
         <Route path="/about" element={<Layout><AboutPage /></Layout>} />
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
@@ -82,13 +90,18 @@ function App() {
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
         <Route path="/hivemind">
-          <Route index element={isHivemindHost
-            ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
-            : <HivemindExternalRedirect />
+          {/* /hivemind index — PRODUCT_HOST (singulancelabs) shows the HIVEMIND product cover;
+              the dedicated hivemind subdomain opens the app; marketing host redirects away. */}
+          <Route index element={PRODUCT_HOST
+            ? <HivemindRedirect />
+            : (isHivemindHost
+              ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
+              : <HivemindExternalRedirect />)
           } />
+          {/* /hivemind/app, /hivemind/login, … — served locally on PRODUCT_HOST + hivemind subdomain. */}
           <Route
             path="*"
-            element={isHivemindHost
+            element={(PRODUCT_HOST || isHivemindHost)
               ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
               : <HivemindExternalRedirect />
             }
