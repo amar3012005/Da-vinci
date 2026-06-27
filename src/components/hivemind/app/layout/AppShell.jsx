@@ -5,6 +5,8 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useAuth } from '../auth/AuthProvider';
 import OnboardingFlow from '../pages/Onboarding';
+import SelfHostSetup from '../pages/SelfHostSetup';
+import apiClient from '../shared/api-client';
 import { ChatPanel } from '../pages/Chat';
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
@@ -100,8 +102,24 @@ function TalkToHiveFAB({ onOpen, hidden }) {
  *   2. otherwise -> full dashboard (API key generated on-demand when needed)
  */
 export default function AppShell() {
-  const { needsOnboarding } = useAuth();
+  const { needsOnboarding, org } = useAuth();
   const location = useLocation();
+  // Self-host gate: a self_host org must connect its agent BEFORE the workspace opens. We poll the
+  // server-side connection state (registry + agent /health) — works even if the user closed the tab
+  // while running setup.sh on their server; on return it reflects reality. Managed orgs skip this.
+  const isSelfHost = org?.hosting_mode === 'self_host';
+  const [agentConnected, setAgentConnected] = useState(!isSelfHost ? true : null);
+  useEffect(() => {
+    if (!isSelfHost || agentConnected) return undefined;
+    let alive = true;
+    const tick = async () => {
+      try { const s = await apiClient.selfHostStatus(); if (alive && s?.reachable) setAgentConnected(true); }
+      catch { /* keep waiting */ }
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => { alive = false; clearInterval(id); };
+  }, [isSelfHost, agentConnected]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
@@ -132,6 +150,12 @@ export default function AppShell() {
 
   if (needsOnboarding) {
     return <OnboardingFlow />;
+  }
+
+  // Self-host org whose agent hasn't connected yet → show the connect-your-agent flow, not the
+  // workspace. Flips to the dashboard automatically the moment the agent registers + is reachable.
+  if (isSelfHost && !agentConnected) {
+    return <SelfHostSetup onDone={() => setAgentConnected(true)} />;
   }
 
   return (
