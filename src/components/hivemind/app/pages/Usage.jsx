@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Gauge, Brain, Search, Upload, Network, Mic, Zap, Globe, Database,
   RefreshCw, AlertTriangle, Infinity as InfinityIcon, Info,
+  Plug, Bot, UserPlus,
 } from 'lucide-react';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
@@ -28,6 +29,9 @@ const METRICS = [
   { key: 'deepResearch', label: 'Deep Research', icon: Zap,      accent: '#dc2626', sub: 'jobs' },
   { key: 'webIntel',     label: 'Web Intel',     icon: Globe,    accent: '#0d9488', sub: 'search + crawl' },
   { key: 'tara',         label: 'TARA Voice',    icon: Mic,      accent: '#db2777', sub: 'turns' },
+  { key: 'connectors',  label: 'Connectors',    icon: Plug,     accent: '#7c3aed', sub: 'active sources' },
+  { key: 'hyperRooms',  label: 'HyperAgents',   icon: Bot,      accent: '#0f766e', sub: 'rooms' },
+  { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
 
 // last N day strings (YYYY-MM-DD), oldest→newest
@@ -242,7 +246,7 @@ export default function Usage() {
 
       <div className="flex items-start gap-1.5 text-[10px] text-[#aaa] mt-5 justify-center">
         <Info size={12} className="mt-px shrink-0" />
-        <span>High-level usage. Tokens are metered at chat + TARA today ({data?.tokensScope || 'chat+tara'}); embeddings, vision &amp; ingest are not yet in the token count. Limits + guardrails are per plan.</span>
+        <span>High-level usage. Tokens are metered at chat + TARA + HyperAgents background LLM ({data?.tokensScope || 'chat+tara+hyperagents'}); embeddings, vision &amp; ingest are not yet in the token count. Limits + guardrails are per plan.</span>
       </div>
     </div>
   );
