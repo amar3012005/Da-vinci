@@ -108,7 +108,11 @@ export default function AppShell() {
   // server-side connection state (registry + agent /health) — works even if the user closed the tab
   // while running setup.sh on their server; on return it reflects reality. Managed orgs skip this.
   const isSelfHost = org?.hosting_mode === 'self_host';
-  const [agentConnected, setAgentConnected] = useState(!isSelfHost ? true : null);
+  // Start FALSE (not seeded from isSelfHost): org is null while bootstrap is in flight, so a
+  // useState initializer that read isSelfHost would freeze `true` before the org loads and the
+  // self-host gate would never fire. `isSelfHost` is re-derived each render, so once the org loads
+  // as self_host the gate engages; the poll flips this to true only when the agent is reachable.
+  const [agentConnected, setAgentConnected] = useState(false);
   useEffect(() => {
     if (!isSelfHost || agentConnected) return undefined;
     let alive = true;
