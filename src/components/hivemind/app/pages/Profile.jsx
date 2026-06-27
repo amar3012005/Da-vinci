@@ -1076,6 +1076,23 @@ function DataPrivacySection() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteProgress, setDeleteProgress] = useState(0);
   const [deleteStep, setDeleteStep] = useState('');
+  const [isSelfHost, setIsSelfHost] = useState(false);
+  const [managedReconfirm, setManagedReconfirm] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await apiClient.selfHostStatus();
+        if (!cancelled) setIsSelfHost(!!(s && s.registered));
+      } catch {
+        if (!cancelled) setIsSelfHost(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -1187,7 +1204,9 @@ function DataPrivacySection() {
             <div>
               <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-semibold">{t('profile.deleteMyAccount', 'Delete My Account')}</p>
               <p className="text-[#525252] text-xs font-['Space_Grotesk'] mt-0.5">
-                {t('profile.deleteAccountDesc', 'Permanently delete all your data. This action cannot be undone.')}
+                {isSelfHost
+                  ? t('profile.deleteSelfHostDesc', 'Removes only your Singulance identity, API keys, sessions, and the connection. Your memories, vectors, and relationship graph stay on your own server and are not touched.')
+                  : t('profile.deleteManagedDesc', 'Permanently delete all your data. This action cannot be undone.')}
               </p>
               {deleteMsg && (
                 <p className="text-[#dc2626] text-xs font-mono mt-1.5">{deleteMsg}</p>
@@ -1197,6 +1216,7 @@ function DataPrivacySection() {
               onClick={() => {
                 setDeleteConfirm('');
                 setDeleteMsg(null);
+                setManagedReconfirm(false);
                 setShowDeleteDialog(true);
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-white text-[#dc2626] text-sm font-['Space_Grotesk'] font-semibold hover:bg-red-50 transition-colors ml-4 flex-shrink-0"
@@ -1224,18 +1244,37 @@ function DataPrivacySection() {
       {showDeleteDialog && (
         <ConfirmDialog
           title={t('profile.deleteAccountTitle', 'Delete Account')}
-          message={deleteLoading ? '' : t('profile.deleteAccountConfirmMsg', 'This permanently deletes your account, session access, connectors, API keys, and user-linked memory data. Type DELETE to continue.')}
-          confirmLabel={t('profile.deleteAccountBtn', 'Delete Account')}
+          message={
+            deleteLoading
+              ? ''
+              : managedReconfirm
+              ? t('profile.deleteFinalConfirmMsg', 'Are you absolutely sure? This is your final confirmation — data cannot be recovered.')
+              : isSelfHost
+              ? t('profile.deleteSelfHostMsg', 'Your memory data stays on your server. Your memories, vectors, and relationship graph live in the .amr (and Postgres) on your own machine and are NOT touched. This removes only your Singulance identity, API keys, sessions, and the connection. Type DELETE to confirm.')
+              : t('profile.deleteManagedMsg', 'This permanently deletes your account, session access, connectors, API keys, and ALL your memory data on Singulance. This cannot be undone. Type DELETE to continue.')
+          }
+          confirmLabel={
+            managedReconfirm
+              ? t('profile.deleteFinalConfirmBtn', 'Yes, delete everything')
+              : t('profile.deleteAccountBtn', 'Delete Account')
+          }
           confirmVariant="red"
           confirmDisabled={deleteConfirm.trim().toUpperCase() !== 'DELETE' || deleteLoading}
           confirmLoading={deleteLoading}
-          onConfirm={handleDeleteConfirm}
+          onConfirm={() => {
+            if (!isSelfHost && !managedReconfirm) {
+              setManagedReconfirm(true);
+              return;
+            }
+            handleDeleteConfirm();
+          }}
           onCancel={() => {
             if (!deleteLoading) {
               setShowDeleteDialog(false);
               setDeleteMsg(null);
               setDeleteProgress(0);
               setDeleteStep('');
+              setManagedReconfirm(false);
             }
           }}
         >
