@@ -6,6 +6,15 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps --no-audit --no-fund 2>/dev/null || npm install --legacy-peer-deps --no-audit --no-fund
 COPY . .
 ENV GENERATE_SOURCEMAP=false
+# Bake the SINGULANCE control-plane + core URLs at build time. CRA inlines REACT_APP_* envs into the
+# bundle; without these, theme.js falls back to the hardcoded davinciai host and the whole OAuth flow
+# (login → redirect) routes through davinciai instead of singulancelabs. Overridable via --build-arg.
+# NOTE: this Dockerfile builds the self-hosted hm-fe image only; the Vercel davinciai deploy uses its
+# own build pipeline + dashboard env, so these defaults do not affect it.
+ARG REACT_APP_CONTROL_PLANE_URL=https://api.singulancelabs.com
+ARG REACT_APP_CORE_API_URL=https://core.singulancelabs.com
+ENV REACT_APP_CONTROL_PLANE_URL=$REACT_APP_CONTROL_PLANE_URL
+ENV REACT_APP_CORE_API_URL=$REACT_APP_CORE_API_URL
 RUN npm run build
 
 FROM caddy:latest
