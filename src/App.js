@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import UpdateBanner from './components/hivemind/UpdateBanner';
 import DavinciHomepage from './components/DavinciHomepage';
 import AboutPage from './components/AboutPage';
 import UnderProgress from './components/UnderProgress';
@@ -65,6 +66,7 @@ function App() {
 
   return (
     <Router>
+      <UpdateBanner />
       <Routes>
         <Route path="/" element={PRODUCT_HOST ? <DavinciHomepage /> : (isHivemindHost ? <HivemindRedirect /> : <DavinciHomepage />)} />
         <Route path="/about" element={<Layout><AboutPage /></Layout>} />
