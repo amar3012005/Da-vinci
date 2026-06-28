@@ -324,6 +324,11 @@ export default function MeetingNotes() {
   useEffect(() => {
     apiClient.core.get('/api/meetings/entities').then(({ data }) => setOrgEntities(data?.entities || [])).catch(() => {});
   }, []);
+  const [obligations, setObligations] = useState({ obligations: [], counts: {} }); // P6.3 obligation register
+  useEffect(() => {
+    if (tab !== 'obligations') return;
+    apiClient.core.get('/api/meetings/obligations').then(({ data }) => setObligations(data || { obligations: [], counts: {} })).catch(() => {});
+  }, [tab]);
   const [detailErr, setDetailErr] = useState(false);
 
   // Delete-meeting modal state
@@ -708,7 +713,7 @@ export default function MeetingNotes() {
 
       {/* tabs */}
       <nav className="border-b border-[#e3e0db] flex items-center gap-0.5">
-        {[['record', t('meetingnotes.tab.record', 'Record'), Mic], ['past', t('meetingnotes.tab.past', 'Past meetings'), History]].map(([key, label, Icon]) => (
+        {[['record', t('meetingnotes.tab.record', 'Record'), Mic], ['past', t('meetingnotes.tab.past', 'Past meetings'), History], ['obligations', t('meetingnotes.tab.obligations', 'Obligations'), CheckCircle2]].map(([key, label, Icon]) => (
           <button key={key} onClick={() => { setTab(key); setSelected(null); }}
             className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${tab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
             <Icon size={14} /> {label}{key === 'past' && meetings.length ? <span className="ml-0.5 text-[#a3a3a3]">{meetings.length}</span> : null}
@@ -1180,6 +1185,35 @@ export default function MeetingNotes() {
       )}
 
       {/* ───────── PAST MEETINGS TAB ───────── */}
+      {tab === 'obligations' && (
+        <div className="mt-1">
+          <div className="flex items-center gap-3 mb-3 text-[12px] font-['Space_Grotesk']">
+            <span className="font-semibold text-[#0a0a0a]">Obligation register</span>
+            <span className="text-[#dc2626]">{obligations.counts?.overdue || 0} overdue</span>
+            <span className="text-[#117dff]">{obligations.counts?.open || 0} open</span>
+            <span className="text-[#a3a3a3]">{obligations.counts?.done || 0} done</span>
+          </div>
+          {(!obligations.obligations || obligations.obligations.length === 0) ? (
+            <div className="bg-white border border-[#e3e0db] rounded-[10px] p-10 text-center">
+              <CheckCircle2 size={22} className="text-[#cbd5e1] mx-auto mb-2" />
+              <p className="text-[#a3a3a3] text-sm">No commitments captured across meetings yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {obligations.obligations.map((o, i) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-[8px] border border-[#e3e0db] bg-white">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${o.status === 'overdue' ? 'bg-[#dc2626]' : o.status === 'done' ? 'bg-[#16a34a]' : 'bg-[#117dff]'}`} title={o.status} />
+                  <span className="flex-1 text-[13px] text-[#0a0a0a] leading-snug"><EntityText text={o.task} entities={orgEntities} /></span>
+                  {o.owner && <span className="text-[11px] px-1.5 py-0.5 rounded-[4px] bg-[#faf9f4] border border-[#e3e0db] text-[#525252] shrink-0">{o.owner}</span>}
+                  {o.due && <span className={`text-[11px] font-mono shrink-0 ${o.status === 'overdue' ? 'text-[#dc2626]' : 'text-[#a3a3a3]'}`}>{o.due}</span>}
+                  <button onClick={() => { const mm = meetings.find((x) => x.id === o.source_meeting_id); setTab('past'); if (mm) setSelected(mm); }} className="text-[11px] text-[#117dff] hover:underline shrink-0">source</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === 'past' && !selected && (
         meetings.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
