@@ -1418,6 +1418,22 @@ function MemoriesTab({
   const { activeProjectId } = useTeamContext() || {};
   const isSearching = debouncedQuery.trim().length > 0;
 
+  // ─── Profile-based total count (fallback for self-host orgs where
+  //     the list endpoint pagination.total may be absent) ───────────────
+  const [profileMemoryCount, setProfileMemoryCount] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getProfile()
+      .then((data) => {
+        if (!cancelled) {
+          const count = data?.profile?.memory_count ?? data?.memory_count ?? null;
+          setProfileMemoryCount(typeof count === 'number' ? count : null);
+        }
+      })
+      .catch(() => { /* non-fatal — fallback to pagination count */ });
+    return () => { cancelled = true; };
+  }, []);
+
   // ─── Show Dreams overlay (last dream-run, opt-in) ───────────────────
   const [showDreams, setShowDreams] = useState(false);
   const [lastRunDreams, setLastRunDreams] = useState([]);
@@ -1871,11 +1887,13 @@ function MemoriesTab({
             <EmptyState hasFilters={!!hasFilters} />
           ) : (
             <>
-              {/* Count */}
+              {/* Count — prefer server pagination total; fall back to profile
+                  memory_count for self-host orgs where the list endpoint
+                  may not return a pagination block. */}
               <p className="text-[#d4d0ca] text-[11px] font-mono mb-3">
                 {isSearching
                   ? t('memories.searchResultCount', '{{count}} result{{suffix}}', { count: resolvedList.length, suffix: resolvedList.length !== 1 ? 's' : '' })
-                  : t('memories.memoryCount', '{{count}} memories', { count: totalCount != null ? totalCount : resolvedList.length })}
+                  : t('memories.memoryCount', '{{count}} memories', { count: totalCount != null ? totalCount : (profileMemoryCount != null ? profileMemoryCount : resolvedList.length) })}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 
