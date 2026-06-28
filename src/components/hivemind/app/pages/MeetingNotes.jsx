@@ -12,7 +12,7 @@ import {
   Mic, Square, Loader2, FileText, ListChecks, Lightbulb, CheckCircle2,
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
-  Volume2, MonitorSpeaker, FolderOpen, UserPlus, X, Trash2,
+  Volume2, MonitorSpeaker, FolderOpen, UserPlus, X, Trash2, Brain,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -39,7 +39,7 @@ const TAB_CAPTURE_SUPPORTED = typeof navigator !== 'undefined'
   && !!navigator.mediaDevices
   && typeof navigator.mediaDevices.getDisplayMedia === 'function';
 
-const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#8b5cf6', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
+const SPEAKER_COLORS = { SPEAKER_00: '#117dff', SPEAKER_01: '#10b981', SPEAKER_02: '#f59e0b', SPEAKER_03: '#db2777', SPEAKER_04: '#0891b2', SPEAKER_05: '#ef4444' };
 const speakerLabel = (s) => { const m = /SPEAKER_(\d+)/.exec(s || ''); return m ? `Speaker ${Number(m[1]) + 1}` : (s || 'Speaker'); };
 const fmtTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 /* real participant name when insights mapped one (from the pre-meeting context) */
@@ -264,7 +264,7 @@ function MeetingCard({ m, onOpen, onDelete }) {
       <p className="text-[11px] text-[#737373] mt-2 leading-snug line-clamp-2">{m.summary || '—'}</p>
       <div className="mt-2.5 pt-2 border-t border-[#eae7e1] flex items-center gap-3 text-[10.5px] text-[#737373]">
         <span className="inline-flex items-center gap-1"><ListChecks size={11} className="text-[#10b981]" /> {actions}</span>
-        <span className="inline-flex items-center gap-1"><Sparkles size={11} className="text-[#8b5cf6]" /> {keyPts}</span>
+        <span className="inline-flex items-center gap-1"><Sparkles size={11} className="text-[#117dff]" /> {keyPts}</span>
         <span className="inline-flex items-center gap-1"><HelpCircle size={11} className="text-[#0891b2]" /> {quests}</span>
         {m.multi_speaker ? <span className="inline-flex items-center gap-1"><Users size={11} className="text-[#f59e0b]" /> {m.speaker_count || 2}</span> : null}
       </div>
@@ -318,7 +318,7 @@ export default function MeetingNotes() {
   const [language, setLanguage] = useState(null);
   const [meetings, setMeetings] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [detailTab, setDetailTab] = useState('summary');
+  const [detailTab, setDetailTab] = useState('intelligence');
   const [detailErr, setDetailErr] = useState(false);
 
   // Delete-meeting modal state
@@ -1129,7 +1129,7 @@ export default function MeetingNotes() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {insights.decisions?.length > 0 && (<Panel icon={Lightbulb} title={t('meetingnotes.decisions', 'Decisions')} accent="#f59e0b"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></Panel>)}
-                {insights.key_points?.length > 0 && (<Panel icon={Sparkles} title={t('meetingnotes.keyPoints', 'Key Points')} accent="#8b5cf6"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.key_points.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#8b5cf6]">·</span>{k}</li>)}</ul></Panel>)}
+                {insights.key_points?.length > 0 && (<Panel icon={Sparkles} title={t('meetingnotes.keyPoints', 'Key Points')} accent="#117dff"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.key_points.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span>{k}</li>)}</ul></Panel>)}
               </div>
               {insights.questions?.length > 0 && (<Panel icon={HelpCircle} title={t('meetingnotes.openQuestions', 'Open Questions')} accent="#0891b2"><ul className="space-y-1.5 text-[12px] text-[#525252]">{insights.questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></Panel>)}
               {insights.quotes?.length > 0 && (<Panel icon={Quote} title={t('meetingnotes.quotes', 'Notable Quotes')} accent="#117dff"><ul className="space-y-2 text-[12px] text-[#525252]">{insights.quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></Panel>)}
@@ -1185,7 +1185,7 @@ export default function MeetingNotes() {
             <AtChip iso={selected.created_at} />
             {selected.language && <span className="text-[12px] font-normal text-[#a3a3a3]">· {selected.language}</span>}</h2>
           <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4">
-            {[['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
+            {[['intelligence', 'Intelligence', Brain], ['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
               <button key={key} onClick={() => setDetailTab(key)} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium border-b-2 -mb-px transition-colors ${detailTab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}><Icon size={14} /> {label}</button>
             ))}
           </nav>
@@ -1204,7 +1204,7 @@ export default function MeetingNotes() {
               <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
                 <div><H>Meeting Overview</H><p className="whitespace-pre-wrap">{selected.summary || '—'}</p></div>
                 {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><H>Action Items</H><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
-                {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#8b5cf6]">·</span>{k}</li>)}</ul></div>)}
+                {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span>{k}</li>)}</ul></div>)}
                 {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><H>Decisions</H><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></div>)}
                 {questions.length > 0 && (<div><H>Open Questions</H><ul className="space-y-1.5">{questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></div>)}
                 {quotes.length > 0 && (<div><H>Notable Quotes</H><ul className="space-y-2">{quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></div>)}
@@ -1220,7 +1220,7 @@ export default function MeetingNotes() {
               </div>
             );
           })()}
-          {detailTab === 'summary' && (
+          {detailTab === 'intelligence' && (
             <MeetingIntelligencePanel
               intelligence={selected?.intelligence}
               status={selected?.intelligence_status}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Brain, User, GitBranch, CircleDot, ArrowUpRight, Sparkles } from 'lucide-react';
+import { Brain, User, GitBranch, CircleDot, ArrowUpRight, Sparkles, Target, AlertTriangle, TrendingUp, Zap } from 'lucide-react';
 
 const REL = {
   UPDATES:   { label: 'UPDATES',   color: '#b45309', bg: '#fff3e0', bd: '#fde0b8' },
@@ -11,7 +11,7 @@ export default function MeetingIntelligencePanel({ intelligence, status, onOpenM
     return (
       <div className="bg-white border border-[#117dff]/30 rounded-[12px] p-4 flex items-center gap-2">
         <Brain size={15} className="text-[#117dff] animate-pulse" />
-        <span className="text-[12px] text-[#737373]">Cross-referencing your memory…</span>
+        <span className="text-[12px] text-[#737373]">Cross-referencing your organization's memory…</span>
       </div>
     );
   }
@@ -23,17 +23,66 @@ export default function MeetingIntelligencePanel({ intelligence, status, onOpenM
       </div>
     );
   }
-  const { entities = [], continuity = [], open_loops = [], related = [], related_count = 0 } = intelligence;
+  const { entities = [], continuity = [], open_loops = [], related = [], related_count = 0, synthesis = null } = intelligence;
   const open = (id) => id && onOpenMemory?.(id);
+  const syn = synthesis && typeof synthesis === 'object' ? synthesis : null;
+  const hasSyn = syn && (syn.headline || syn.strategic_points?.length || syn.whats_changed?.length || syn.risks_opportunities?.length || syn.recommended_focus?.length);
+
   return (
     <div className="bg-white border border-[#117dff] rounded-[12px] overflow-hidden shadow-[0_1px_3px_rgba(17,125,255,0.08)]">
-      <div className="px-4 py-3 border-b border-[#eaf2ff] bg-gradient-to-br from-[#117dff]/[0.04] to-white flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-[#eaf2ff] bg-[#117dff]/[0.04] flex items-center gap-2">
         <Brain size={16} className="text-[#117dff]" />
         <div className="min-w-0">
-          <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">What HIVEMIND already knows</div>
-          <div className="text-[11px] text-[#737373]">{related_count} related memories cross-referenced</div>
+          <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Strategic Intelligence</div>
+          <div className="text-[11px] text-[#737373]">Grounded in your organization · {related_count} related memories cross-referenced</div>
         </div>
       </div>
+
+      {/* SYNTHESIS — the high-level, org-grounded distillation (the star). */}
+      {hasSyn && (
+        <div className="px-4 py-3.5 border-b border-[#f3f1ec] bg-[#faf9f4]">
+          {syn.headline && (
+            <div className="flex items-start gap-2 mb-3">
+              <Zap size={15} className="text-[#117dff] mt-0.5 shrink-0" />
+              <div className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-snug">{syn.headline}</div>
+            </div>
+          )}
+          {syn.strategic_points?.length > 0 && (
+            <div className="mb-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-1.5">What matters</div>
+              <ul className="space-y-1.5">{syn.strategic_points.map((p, i) => (
+                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#117dff] mt-px">▸</span>{p}</li>
+              ))}</ul>
+            </div>
+          )}
+          {syn.whats_changed?.length > 0 && (
+            <div className="mb-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-1.5 flex items-center gap-1"><GitBranch size={11} /> What this changes</div>
+              <ul className="space-y-1.5">{syn.whats_changed.map((c, i) => (
+                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#b45309] mt-px">↻</span>{c}</li>
+              ))}</ul>
+            </div>
+          )}
+          {syn.risks_opportunities?.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {syn.risks_opportunities.map((r, i) => (
+                <span key={i} className={`inline-flex items-start gap-1 px-2 py-1 rounded-[6px] text-[11px] leading-snug border ${r.type === 'opportunity' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                  {r.type === 'opportunity' ? <TrendingUp size={11} className="mt-0.5 shrink-0" /> : <AlertTriangle size={11} className="mt-0.5 shrink-0" />}
+                  {r.text}
+                </span>
+              ))}
+            </div>
+          )}
+          {syn.recommended_focus?.length > 0 && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-1.5 flex items-center gap-1"><Target size={11} /> Recommended focus</div>
+              <ul className="space-y-1.5">{syn.recommended_focus.map((f, i) => (
+                <li key={i} className="flex gap-2 text-[12px] text-[#0a0a0a] leading-snug"><span className="text-[#117dff] mt-0.5 shrink-0"><ArrowUpRight size={12} /></span>{f}</li>
+              ))}</ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {entities.length > 0 && (
         <div className="px-4 py-3 border-b border-[#f3f1ec]">
