@@ -353,6 +353,7 @@ export default function MeetingNotes() {
   const SEGMENT_MS = 10 * 60 * 1000;
   const segTimerRef = useRef(null);    // rotation interval
   const segIdxRef = useRef(0);         // next segment index to assign
+  const sessionIdRef = useRef(null);   // P1: client session id — durable segment key (crash-recovery)
   const segChunksRef = useRef([]);     // chunks for the CURRENT segment
   const segPromisesRef = useRef([]);   // in-flight transcription promises
   const segTextsRef = useRef({});      // idx -> transcript text (ordered at stop)
@@ -445,6 +446,7 @@ export default function MeetingNotes() {
       insights: insights || {},
       notes: notes || null,
       participants,
+      session_id: sessionIdRef.current || undefined, // P1: link durable segments to this row
       scope,
       project_id: scope === 'project' ? scopeProjectId : null,
     }, { timeout: 60000 }); // override the 15s core default — large transcript+insights payloads
@@ -460,9 +462,18 @@ export default function MeetingNotes() {
     const promptHint = [notes, participantNames ? `Participants: ${participantNames}` : ''].filter(Boolean).join(' — ').slice(0, 800);
     const p = apiClient.core.post(`/api/meetings/transcribe?diarize=${multiSpeaker}&prompt=${encodeURIComponent(promptHint)}`, blob, { headers: { 'Content-Type': blob.type || 'audio/webm' }, timeout: 300000 })
       .then((tr) => {
-        segTextsRef.current[idx] = tr.data?.transcript || '';
+        const segText = tr.data?.transcript || '';
+        segTextsRef.current[idx] = segText;
         if (tr.data?.speakerSegments?.length) segSegsRef.current[idx] = tr.data.speakerSegments;
         if (tr.data?.language && !languageRef.current) languageRef.current = tr.data.language;
+        // P1: persist this segment server-side the instant it transcribes, so a
+        // tab crash mid-meeting doesn't lose it. Best-effort; remote orgs no-op.
+        if (sessionIdRef.current && segText.trim()) {
+          apiClient.core.post('/api/meetings/segments', {
+            session_id: sessionIdRef.current, idx, text: segText,
+            speakers: tr.data?.speakerSegments || null,
+          }).catch(() => {});
+        }
       })
       .catch(() => { if (segTextsRef.current[idx] === undefined) segTextsRef.current[idx] = ''; })
       .finally(() => setSegDone((n) => n + 1));
@@ -517,6 +528,8 @@ export default function MeetingNotes() {
     // reset segmented-capture state
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
     segTextsRef.current = {}; segSegsRef.current = {}; languageRef.current = null;
+    // P1: mint a session id so each segment is durably persisted under it.
+    sessionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
     finalizingRef.current = false; setSegDone(0); setSegTotal(0);
 
     // Best-effort invite for external participants — do not await, never block recording
