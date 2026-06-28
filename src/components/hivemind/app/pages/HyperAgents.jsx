@@ -1627,6 +1627,102 @@ function SwarmSpinningUp() {
   );
 }
 
+// Claude-style tool-activity timeline. Reshapes the turn's gather/tool/connector/web
+// events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
+// user sees exactly what fired after their message (recall, connector reads, web search).
+// Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
+function ToolTimeline({ gathers, webIntels, sealed }) {
+  const { t } = useTranslation('dashboard');
+  const [open, setOpen] = useState(true);
+
+  const recalls = (gathers || []).filter(g => !g.tool);
+  const connectorReads = (gathers || []).filter(g => g.tool);
+  const steps = [];
+  if (recalls.length) {
+    const facts = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
+    steps.push({
+      key: 'recall', ts: recalls[0].ts || 0, kind: 'recall',
+      label: t('hyperAgents.tlRecall', 'Recalled the company brain'),
+      chip: facts > 0 ? t('hyperAgents.tlFacts', '{{n}} facts', { n: facts })
+        : (recalls.length > 1 ? `${recalls.length}×` : null),
+    });
+  }
+  connectorReads.forEach((g, i) => {
+    steps.push({
+      key: `conn-${i}`, ts: g.ts || 0, kind: 'connector',
+      connector: (g.sources || [])[0] || 'connector', label: (g.sources || [])[0] || 'connector',
+      mono: g.tool, detail: g.query || null,
+    });
+  });
+  (webIntels || []).forEach((w, i) => {
+    steps.push({
+      key: `web-${i}`, ts: w.ts || 0, kind: 'web',
+      label: t('hyperAgents.webSearch', 'Web search'), detail: w.query || null,
+      sources: (w.sources || []).slice(0, 4),
+    });
+  });
+  steps.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  if (!steps.length) return null;
+
+  const iconFor = (s) => {
+    if (s.kind === 'recall') return <Brain size={12} className="text-[#117dff]" />;
+    if (s.kind === 'web') return <Globe size={12} className="text-[#117dff]" />;
+    const logo = BRAND_LOGOS[s.connector] || BRAND_LOGOS[String(s.connector || '').replace(/_/g, '-')]
+      || BRAND_LOGOS[String(s.connector || '').replace(/-/g, '_')];
+    if (logo) return <img src={logo} alt="" className="w-3 h-3" onError={e => { e.currentTarget.style.display = 'none'; }} />;
+    return <Zap size={12} className="text-[#117dff]" />;
+  };
+
+  return (
+    <div className="rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2">
+      <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 w-full text-left">
+        {sealed
+          ? <CheckCheck size={13} className="text-emerald-600 shrink-0" />
+          : <Loader2 size={13} className="text-[#117dff] animate-spin shrink-0" />}
+        <span className="text-[11px] font-medium text-[#525252]">
+          {sealed
+            ? t('hyperAgents.tlUsedTools', 'Used {{n}} tools', { n: steps.length })
+            : t('hyperAgents.tlWorking', 'Working… {{n}} tools', { n: steps.length })}
+        </span>
+        <ChevronDown size={13} className={`ml-auto text-[#a3a3a3] transition-transform ${open ? '' : '-rotate-90'}`} />
+      </button>
+      {open && (
+        <div className="mt-2">
+          {steps.map((s, i) => (
+            <div key={s.key} className="relative flex gap-2.5 pl-5 pb-2">
+              {i < steps.length - 1 && <span className="absolute left-[5.5px] top-3.5 bottom-0 w-px bg-[#e3e0db]" />}
+              <span className="absolute left-0 top-0.5 flex h-3 w-3 items-center justify-center">{iconFor(s)}</span>
+              <div className="min-w-0 text-[11px] text-[#525252] leading-snug">
+                <span className="font-medium">{s.label}</span>
+                {s.mono && <span className="font-mono text-[10px] text-[#117dff] ml-1">· {s.mono}</span>}
+                {s.chip && <span className="ml-1.5 rounded-full bg-white border border-[#e3e0db] px-1.5 py-0.5 text-[9px] text-[#737373]">{s.chip}</span>}
+                {s.detail && <span className="text-[#737373]"> · “{s.detail}”</span>}
+                {Array.isArray(s.sources) && s.sources.length > 0 && (
+                  <span className="flex flex-wrap gap-1 mt-0.5">
+                    {s.sources.map((src, j) => (
+                      <a key={j} href={src.url} target="_blank" rel="noopener noreferrer"
+                         className="rounded-[6px] bg-white border border-[#e3e0db] px-1.5 py-0.5 text-[9px] text-[#117dff] hover:bg-[#f3f1ec] truncate max-w-[180px]"
+                         title={src.url}>{src.title || src.url}</a>
+                    ))}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+          <div className="relative flex items-center gap-2.5 pl-5">
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 flex h-3 w-3 items-center justify-center">
+              {sealed ? <CheckCheck size={12} className="text-emerald-600" /> : <Loader2 size={11} className="text-[#117dff] animate-spin" />}
+            </span>
+            <span className="text-[11px] font-medium text-[#0a0a0a]">
+              {sealed ? t('hyperAgents.tlDone', 'Done') : t('hyperAgents.tlRunning', 'Running…')}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
@@ -1823,70 +1919,9 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </div>
       )}
 
-      {/* ROOM ACTIVITY — every tool call the room made, in order: brain recalls +
-          live web searches (with clickable sources). Shows the simulation working,
-          not just the final answer. */}
-      {(gathers.length > 0 || webIntels.length > 0) && (
-        <div className="rounded-lg border border-sky-100 bg-sky-50/40 px-3 py-2 space-y-1">
-          <div className="flex items-center gap-1.5">
-            <Search size={12} className="text-sky-600" />
-            <span className="text-[11px] font-medium text-sky-800">{t('hyperAgents.activity', 'Room activity')}</span>
-          </div>
-          {(() => {
-            // recall sweeps (company brain) vs live connector reads (gmail/slack/…)
-            const recalls = gathers.filter(g => !g.tool);
-            const connectorReads = gathers.filter(g => g.tool);
-            const hits = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
-            return (
-              <>
-                {recalls.length > 0 && (
-                  <div className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
-                    <span className="text-sky-600">🧠</span>
-                    <span>
-                      <span className="font-medium">{recalls.length}</span> {recalls.length > 1 ? 'recall sweeps' : 'recall sweep'} of the company brain
-                      {hits > 0 && <> · <span className="font-medium">{hits}</span> facts</>}
-                    </span>
-                  </div>
-                )}
-                {connectorReads.map((g, i) => {
-                  const cid = (g.sources || [])[0] || 'connector';
-                  const logo = BRAND_LOGOS[cid] || BRAND_LOGOS[String(cid).replace(/_/g, '-')]
-                    || BRAND_LOGOS[String(cid).replace(/-/g, '_')];
-                  return (
-                    <div key={`conn-${i}`} className="flex items-center gap-1.5 text-[10.5px] text-[#525252]">
-                      {logo
-                        ? <img src={logo} alt={cid} className="w-3 h-3 shrink-0" onError={e => { e.currentTarget.style.display = 'none'; }} />
-                        : <span className="text-sky-600">🔌</span>}
-                      <span>
-                        <span className="font-medium">{cid}</span>
-                        {' · '}<span className="font-mono text-[9.5px] text-sky-700">{g.tool}</span>
-                        {g.query ? <> · “{g.query}”</> : null}
-                      </span>
-                    </div>
-                  );
-                })}
-              </>
-            );
-          })()}
-          {webIntels.map((w, i) => (
-            <div key={`web-${i}`} className="flex items-start gap-1.5 text-[10.5px] text-[#525252]">
-              <span className="text-sky-600 mt-px">🌐</span>
-              <span className="min-w-0">
-                <span className="font-medium">{t('hyperAgents.webSearch', 'Web search')}</span>{w.query ? <> · “{w.query}”</> : null}
-                {(w.sources || []).length > 0 && (
-                  <span className="flex flex-wrap gap-1 mt-0.5">
-                    {(w.sources || []).slice(0, 5).map((s, j) => (
-                      <a key={j} href={s.url} target="_blank" rel="noopener noreferrer"
-                         className="px-1.5 py-0.5 rounded bg-white border border-sky-200 text-sky-700 hover:bg-sky-100 text-[9px] truncate max-w-[200px]"
-                         title={s.url}>{s.title || s.url}</a>
-                    ))}
-                  </span>
-                )}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
+          web search the room ran after the user's message, in order, ending in Done. */}
+      <ToolTimeline gathers={gathers} webIntels={webIntels} sealed={!!seal} />
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (
