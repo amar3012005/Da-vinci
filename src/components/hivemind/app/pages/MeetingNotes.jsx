@@ -17,6 +17,7 @@ import {
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
 import MeetingIntelligencePanel from '../components/MeetingIntelligencePanel';
+import EntityText from '../shared/EntityText';
 import { useTranslation } from 'react-i18next';
 
 // Pick a MediaRecorder MIME the browser actually supports. Chrome/Firefox do
@@ -319,6 +320,10 @@ export default function MeetingNotes() {
   const [meetings, setMeetings] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detailTab, setDetailTab] = useState('intelligence');
+  const [orgEntities, setOrgEntities] = useState([]); // P4: org global entities for WIDE highlight
+  useEffect(() => {
+    apiClient.core.get('/api/meetings/entities').then(({ data }) => setOrgEntities(data?.entities || [])).catch(() => {});
+  }, []);
   const [detailErr, setDetailErr] = useState(false);
 
   // Delete-meeting modal state
@@ -1215,10 +1220,10 @@ export default function MeetingNotes() {
             const H = ({ children }) => <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">{children}</h3>;
             return (
               <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
-                <div><H>Meeting Overview</H><p className="whitespace-pre-wrap">{selected.summary || '—'}</p></div>
+                <div><H>Meeting Overview</H><p className="whitespace-pre-wrap"><EntityText text={selected.summary || '—'} entities={orgEntities} /></p></div>
                 {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><H>Action Items</H><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
-                {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span>{k}</li>)}</ul></div>)}
-                {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><H>Decisions</H><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{d}</li>)}</ul></div>)}
+                {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span><EntityText text={k} entities={orgEntities} /></li>)}</ul></div>)}
+                {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><H>Decisions</H><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span><EntityText text={d} entities={orgEntities} /></li>)}</ul></div>)}
                 {questions.length > 0 && (<div><H>Open Questions</H><ul className="space-y-1.5">{questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></div>)}
                 {quotes.length > 0 && (<div><H>Notable Quotes</H><ul className="space-y-2">{quotes.map((q, i) => (<li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic">“{q.quote || q}”{q.speaker && <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span>}</li>))}</ul></div>)}
                 {risks.length > 0 && (<div><H>Risks & Red Flags</H><ul className="space-y-1.5">{risks.map((r, i) => <li key={i} className="flex gap-2"><AlertTriangle size={13} className="text-[#ef4444] mt-0.5 flex-shrink-0" />{r}</li>)}</ul></div>)}
