@@ -29,6 +29,34 @@ import { useTeamContext } from '../shared/team-context';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Normalize an org/entity label to a comparison key: lowercase, alphanumerics only.
+// "SINGULANCE Labs" → "singulancelabs", entity:"singulance" → "singulance".
+function normalizeOrgKey(s) {
+  if (!s || typeof s !== 'string') return '';
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// True only when the memory's company intent matches the user's org name.
+// Knowledge-base/document memories are labelled "Company Info" only in that case;
+// otherwise they read as a neutral "Knowledge Base". Signal = entity tags first
+// (cleanest), then a normalized title/content containment fallback.
+function memoryMatchesOrg(memory, orgKey) {
+  if (!orgKey || orgKey.length < 3) return false;
+  const tags = Array.isArray(memory?.tags) ? memory.tags : [];
+  const entityKeys = tags
+    .filter((t) => typeof t === 'string' && t.startsWith('entity:'))
+    .map((t) => normalizeOrgKey(t.slice(7)));
+  for (const ek of entityKeys) {
+    if (!ek) continue;
+    if (ek === orgKey || ek.includes(orgKey) || orgKey.includes(ek)) return true;
+  }
+  // Fallback: org name appears verbatim in the title (content is noisier, so
+  // only use it when title is empty).
+  const titleKey = normalizeOrgKey(memory?.title || '');
+  if (titleKey && titleKey.includes(orgKey)) return true;
+  return false;
+}
+
 const TABS = [
   { id: 'memories', label: 'Memories', icon: Brain, description: 'Canonical organizational truths' },
   { id: 'documents', label: 'Documents', icon: FileText, description: 'Uploaded files and their structure' },
@@ -301,7 +329,7 @@ const cardVariants = {
   exit: { opacity: 0, y: -8, transition: { duration: 0.2 } },
 };
 
-function MemoryCard({ memory, index, onSelect, isSelected }) {
+function MemoryCard({ memory, index, onSelect, isSelected, orgKey }) {
   const { t } = useTranslation('dashboard');
   // Cognitive-layer memories (governance synthesis / canonical / bridge / principle /
   // reflection) get a distinct warm-beige card so the cognitive loop's output is
@@ -394,7 +422,12 @@ function MemoryCard({ memory, index, onSelect, isSelected }) {
             document: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
             chat: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
           };
-          const label = SOURCE_LABEL[sp] || sp;
+          // KB/document memories read as "Company Info" ONLY when the memory's
+          // company intent matches the user's org name; otherwise neutral "Knowledge Base".
+          const isKbSource = sp === 'knowledge_base' || sp === 'document';
+          const label = isKbSource
+            ? (memoryMatchesOrg(memory, orgKey) ? 'Company Info' : 'Knowledge Base')
+            : (SOURCE_LABEL[sp] || sp);
           const c = SOURCE_COLOR[sp] || { bg: 'bg-[#faf9f4]', text: 'text-[#525252]', border: 'border-[#e3e0db]' };
           return (
             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-[0.06em] border ${c.bg} ${c.text} ${c.border}`}>
@@ -564,7 +597,7 @@ function RelationsBlock({ loading, relations }) {
   );
 }
 
-function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
+function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }) {
   const { t } = useTranslation('dashboard');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -685,10 +718,14 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence }) {
               if (!sp) return null;
               const LABEL = { gmail: 'Gmail', google_drive: 'Drive', google_calendar: 'Calendar', google_docs: 'Docs', google_sheets: 'Sheets', google_slides: 'Slides', google_contacts: 'Contacts', google_chat: 'Google Chat', google_tasks: 'Tasks', google_forms: 'Forms', slack: 'Slack', notion: 'Notion', github: 'GitHub', knowledge_base: 'Company Info', document: 'Company Info', chat: 'Talk to HIVE', 'talk-to-hive': 'Talk to HIVE' };
               const COLOR = { gmail: 'bg-red-50 text-red-700 border-red-200', google_drive: 'bg-amber-50 text-amber-700 border-amber-200', google_calendar: 'bg-blue-50 text-blue-700 border-blue-200', google_docs: 'bg-sky-50 text-sky-700 border-sky-200', google_sheets: 'bg-emerald-50 text-emerald-700 border-emerald-200', slack: 'bg-violet-50 text-violet-700 border-violet-200', knowledge_base: 'bg-indigo-50 text-indigo-700 border-indigo-200', document: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+              const isKbSource = sp === 'knowledge_base' || sp === 'document';
+              const displayLabel = isKbSource
+                ? (memoryMatchesOrg(memory, orgKey) ? 'Company Info' : 'Knowledge Base')
+                : (LABEL[sp] || sp);
               return (
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-[0.08em] border ${COLOR[sp] || 'bg-[#faf9f4] text-[#525252] border-[#e3e0db]'}`}>
                   <Monitor size={10} />
-                  {LABEL[sp] || sp}
+                  {displayLabel}
                 </span>
               );
             })()}
@@ -950,11 +987,20 @@ export default function Memories() {
   const [groupByDoc, setGroupByDoc] = useState(false);
   const [topEntities, setTopEntities] = useState([]);
   const [contradictionsCount, setContradictionsCount] = useState(0);
+  // Org name (normalized) — gates the "Company Info" label so it only shows
+  // when a KB/document memory's company intent matches the user's organisation.
+  const [orgKey, setOrgKey] = useState('');
 
   // Fetch top entities + contradiction count once
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      try {
+        const boot = await apiClient.bootstrap().catch(() => null);
+        if (!cancelled && boot?.organization?.name) {
+          setOrgKey(normalizeOrgKey(boot.organization.name));
+        }
+      } catch { /* noop */ }
       try {
         const { data } = await apiClient.controlPlane.get('/v1/proxy/admin/topic-states', { params: { limit: 30 } }).catch(() => ({ data: null }));
         if (cancelled) return;
@@ -1934,6 +1980,7 @@ function MemoriesTab({
                                 index={i}
                                 onSelect={handleSelectMemory}
                                 isSelected={selectedMemory?.id === memory.id}
+                                orgKey={orgKey}
                               />
                             ))}
                           </div>
@@ -1952,6 +1999,7 @@ function MemoriesTab({
                         index={i}
                         onSelect={handleSelectMemory}
                         isSelected={selectedMemory?.id === memory.id}
+                        orgKey={orgKey}
                       />
                     ))}
                   </AnimatePresence>
@@ -1981,6 +2029,7 @@ function MemoriesTab({
             onClose={() => setSelectedMemory(null)}
             onDelete={handleDeleteMemory}
             onViewEvidence={() => setActiveTab('evidence')}
+            orgKey={orgKey}
           />
         )}
       </AnimatePresence>
