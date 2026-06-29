@@ -1398,6 +1398,7 @@ export default function Memories() {
             setHideNoise={setHideNoise}
             tierScope={tierScope}
             tierProject={tierProject}
+            orgKey={orgKey}
           />
         )}
 
@@ -1426,6 +1427,7 @@ export default function Memories() {
 // ─── Memories Tab (existing functionality) ──────────────────────────────────
 
 function MemoriesTab({
+  orgKey,
   searchQuery,
   setSearchQuery,
   activeType,
