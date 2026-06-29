@@ -379,8 +379,8 @@ const RELATION_STYLES = Object.fromEntries(
 
 const LABEL_LIMITS = {
   hidden: 0,
-  focus: 18,
-  all: 54,
+  focus: 48,
+  all: 130,
 };
 
 const RELATION_LABEL_DISTANCE = 260;
@@ -398,9 +398,9 @@ function getGraphSizeTier(count = 0) {
 function getAdaptiveLabelLimit(mode, nodeCount) {
   const base = LABEL_LIMITS[mode] ?? 0;
   const tier = getGraphSizeTier(nodeCount);
-  if (tier === "massive") return Math.min(base, mode === "all" ? 26 : 10);
-  if (tier === "large") return Math.min(base, mode === "all" ? 36 : 14);
-  if (tier === "medium") return Math.min(base, mode === "all" ? 46 : 16);
+  if (tier === "massive") return Math.min(base, mode === "all" ? 64 : 28);
+  if (tier === "large") return Math.min(base, mode === "all" ? 90 : 40);
+  if (tier === "medium") return Math.min(base, mode === "all" ? 110 : 48);
   return base;
 }
 
@@ -780,7 +780,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   // cost; capping to the top connected nodes is the biggest single FPS win.
   const labelAllowRef = useRef(null);
   const viewStateRef = useRef({
-    distance: 1100,
+    distance: 720,
     inFrameNodeIds: new Set(),
     labelNodeIds: new Set(),
     labelMode: "hidden",
@@ -1190,7 +1190,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
 
     // After the fit animation, sanitize + clamp the resulting camera distance.
     const tier = getGraphSizeTier(nodeCount);
-    const MAX_FIT = tier === "massive" ? 2200 : tier === "large" ? 1700 : 1200;
+    const MAX_FIT = tier === "massive" ? 1450 : tier === "large" ? 1050 : 850;
     const MIN_FIT = 150;
     window.setTimeout(() => {
       const inst = fgRef.current;
@@ -1498,7 +1498,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
-          const labelMode = distance > 520 ? "hidden" : distance > 240 ? "focus" : "all";
+          const labelMode = distance > 1150 ? "hidden" : distance > 560 ? "focus" : "all";
           const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
           const relationLabelMode = distance > RELATION_LABEL_DISTANCE ? "hidden" : distance > 180 ? "focus" : "all";
           const nodeCount = graphDataRef.current.nodes?.length || 0;
