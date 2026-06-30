@@ -13,6 +13,7 @@ import {
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
   Volume2, MonitorSpeaker, FolderOpen, UserPlus, X, Trash2, Brain,
+  Minimize2, Maximize2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -141,7 +142,7 @@ function LiveWave({ stream, mode }) {
 /* Recording popup — LIGHT panel matching the operator-console theme.
    Big Notion-style "@Today 11:01 PM" heading, audio-reactive wave while
    recording, calm waving shimmer while transcribing/analyzing. */
-function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMultiSpeaker, onStop, title, stream, t }) {
+function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMultiSpeaker, onStop, onMinimize, title, stream, t }) {
   const recording = status === 'recording';
   const busy = status === 'transcribing' || status === 'analyzing';
   const [now, setNow] = useState(() => new Date());
@@ -167,10 +168,18 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
               <Sparkles size={11} /> {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] font-['Space_Grotesk'] tabular-nums">
-            <Clock size={12} className="text-[#a3a3a3]" />
-            {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-[#737373] font-['Space_Grotesk'] tabular-nums">
+              <Clock size={12} className="text-[#a3a3a3]" />
+              {now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            </span>
+            {onMinimize && (
+              <button onClick={onMinimize} title={t('meetingnotes.runInBackground', 'Run in background')}
+                className="w-7 h-7 grid place-items-center rounded-[7px] text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors">
+                <Minimize2 size={15} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* BIG Notion-style @Today heading */}
@@ -218,6 +227,40 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
           </button>
         </div>
       </motion.div>
+    </motion.div>
+  );
+}
+
+/* Minimized recorder — a small notch pinned bottom-center. Recording keeps
+   running in the background (the engine lives in MeetingNotes, not this UI);
+   this is just the collapsed control. Expand restores the full modal. */
+function RecordingNotch({ status, elapsed, onExpand, onStop, t }) {
+  const recording = status === 'recording';
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-full shadow-lg pl-3.5 pr-2 py-1.5">
+      {recording ? (
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-red-600 font-['Space_Grotesk'] tracking-wide">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> REC
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 font-['Space_Grotesk']">
+          <Sparkles size={11} /> {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
+        </span>
+      )}
+      <span className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums">{mm}:{ss}</span>
+      <button onClick={onExpand} title={t('meetingnotes.expand', 'Expand')}
+        className="w-7 h-7 grid place-items-center rounded-full text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors">
+        <Maximize2 size={14} />
+      </button>
+      <button onClick={onStop} disabled={!recording} title={t('meetingnotes.stop', 'Stop')}
+        className="w-7 h-7 grid place-items-center rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 transition-colors">
+        <Square size={11} fill="currentColor" />
+      </button>
     </motion.div>
   );
 }
@@ -301,7 +344,12 @@ export default function MeetingNotes() {
   const { t } = useTranslation('dashboard');
   const [tab, setTab] = useState('record'); // record | past
   const [status, setStatus] = useState('idle');
+  // Once a session ends (idle/done/error), reset minimize so the next recording opens expanded.
+  useEffect(() => {
+    if (status !== 'recording' && status !== 'transcribing' && status !== 'analyzing') setMinimized(false);
+  }, [status]);
   const [elapsed, setElapsed] = useState(0);
+  const [minimized, setMinimized] = useState(false); // recorder collapsed to bottom-center notch (runs in background)
   const [notes, setNotes] = useState('');
   const [transcript, setTranscript] = useState('');
   const [insights, setInsights] = useState(null);
@@ -724,9 +772,15 @@ export default function MeetingNotes() {
       {/* recording popup — tuner-device panel (opens on Start transcribing) */}
       <AnimatePresence>
         {(recording || busy) && (
-          <RecordingModal key="rec-modal" status={status} elapsed={elapsed} notes={notes} setNotes={setNotes}
-            multiSpeaker={multiSpeaker} setMultiSpeaker={setMultiSpeaker} onStop={stop}
-            title={insights?.title} stream={streamRef.current} t={t} />
+          minimized ? (
+            <RecordingNotch key="rec-notch" status={status} elapsed={elapsed}
+              onExpand={() => setMinimized(false)} onStop={stop} t={t} />
+          ) : (
+            <RecordingModal key="rec-modal" status={status} elapsed={elapsed} notes={notes} setNotes={setNotes}
+              multiSpeaker={multiSpeaker} setMultiSpeaker={setMultiSpeaker} onStop={stop}
+              onMinimize={() => setMinimized(true)}
+              title={insights?.title} stream={streamRef.current} t={t} />
+          )
         )}
       </AnimatePresence>
 
