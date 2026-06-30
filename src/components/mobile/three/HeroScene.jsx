@@ -44,12 +44,12 @@ const fragment = /* glsl */ `
       sin(uv.x * 7.0 + uTime * 0.35) * 0.5 +
       sin(uv.y * 5.0 - uTime * 0.28) * 0.5 +
       sin((uv.x + uv.y) * 9.0 + uTime * 0.2) * 0.25;
-    vec2 warp = vec2(n) * 0.0035;
+    vec2 warp = vec2(n) * 0.0016;
 
-    // mouse ripple — expanding ring that decays with distance
+    // mouse ripple — subtle, snappy reaction
     float d = distance(uv, uMouse);
     vec2 dir = normalize(uv - uMouse + 1e-5);
-    warp += dir * 0.010 * sin(d * 28.0 - uTime * 3.0) * exp(-d * 5.0);
+    warp += dir * 0.009 * sin(d * 30.0 - uTime * 4.0) * exp(-d * 4.0);
 
     vec3 col = texture2D(uTex, uv + warp).rgb;
 
@@ -76,17 +76,14 @@ function CoverPlane({ pointer }) {
     [tex]
   );
 
-  // cover-fit: preserve image aspect, fill viewport, small bleed for parallax
+  // fill-width: the wordmark is baked horizontally across the poster, so always
+  // fill the full viewport width (never crop the sides) and let the height
+  // overflow / crop top+bottom. bleed 1.0; parallax shift kept tiny so no edge.
   const scale = useMemo(() => {
     const img = tex.image;
     const imgAspect = img ? img.width / img.height : 1.6;
-    const vpAspect = viewport.width / viewport.height;
-    const bleed = 1.08;
-    if (vpAspect > imgAspect) {
-      return [viewport.width * bleed, (viewport.width / imgAspect) * bleed, 1];
-    }
-    return [viewport.height * imgAspect * bleed, viewport.height * bleed, 1];
-  }, [tex, viewport.width, viewport.height]);
+    return [viewport.width, viewport.width / imgAspect, 1];
+  }, [tex, viewport.width]);
 
   useFrame((_, delta) => {
     if (mat.current) {
@@ -94,13 +91,11 @@ function CoverPlane({ pointer }) {
       const mx = pointer.current.x * 0.5 + 0.5;
       const my = pointer.current.y * 0.5 + 0.5;
       const u = mat.current.uniforms.uMouse.value;
-      u.x = THREE.MathUtils.lerp(u.x, mx, 0.08);
-      u.y = THREE.MathUtils.lerp(u.y, my, 0.08);
+      // snappier tracking → the water reacts immediately to the cursor
+      u.x = THREE.MathUtils.lerp(u.x, mx, 0.22);
+      u.y = THREE.MathUtils.lerp(u.y, my, 0.22);
     }
-    if (mesh.current) {
-      mesh.current.position.x = THREE.MathUtils.lerp(mesh.current.position.x, pointer.current.x * -0.2, 0.05);
-      mesh.current.position.y = THREE.MathUtils.lerp(mesh.current.position.y, pointer.current.y * -0.2, 0.05);
-    }
+    // no plate parallax/tilt — the plate stays locked, only the water moves
   });
 
   return (
@@ -117,12 +112,8 @@ function CoverPlane({ pointer }) {
   );
 }
 
-function Rig({ pointer }) {
-  useFrame((state) => {
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, pointer.current.x * 0.35, 0.04);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, pointer.current.y * 0.35, 0.04);
-    state.camera.lookAt(0, 0, 0);
-  });
+function Rig() {
+  // camera tilt/parallax disabled — locked, no movement
   return null;
 }
 
@@ -144,7 +135,7 @@ export default function HeroScene() {
       >
         <React.Suspense fallback={null}>
           <CoverPlane pointer={pointer} />
-          <Rig pointer={pointer} />
+          <Rig />
         </React.Suspense>
         <EffectComposer>
           <Bloom intensity={0.55} luminanceThreshold={0.55} luminanceSmoothing={0.25} mipmapBlur />

@@ -23,23 +23,23 @@ const IcarusResearch = () => {
   const motionOk = useMotionOk();
   return (
   <NewsArticleLayout
-    badge="Research · v2"
-    title="ICARUS v2 — the whole memory database in one file"
-    date="June 26, 2026"
+    badge="Research"
+    title="Introducing ICARUS"
+    date="June 24, 2026"
     author="SINGULANCE Labs"
     heroImg={HERO_IMG}
     heroScene={motionOk ? <Suspense fallback={null}><IcarusHeroScene /></Suspense> : null}
     seo={{
-      title: 'ICARUS v2 — The Whole Agent-Memory Database in One File | SINGULANCE Research',
-      description: "ICARUS v2: the .amr format graduated from a vector-store replacement to the entire agent-memory database — semantic + entity + bi-temporal + typed graph + the full relational subgraph — in one mmap'd file per tenant. A live tenant now runs with its memory cortex entirely off Postgres, validated on a real corpus, zero servers.",
+      title: 'ICARUS — A Memory Filesystem for AI Agents | SINGULANCE Research',
+      description: "ICARUS is SINGULANCE's memory filesystem: the .amr byte layout co-locates embedding, entity bitmap, bi-temporal anchors, and graph adjacency in one fixed-stride slot. Equal recall to a live vector DB, 7.5× smaller storage, 32× compression, zero servers.",
       canonical: 'https://singulancelabs.com/research/icarus',
     }}
-    product={{ name: 'ICARUS', tag: '.amr format · v2', desc: 'The whole agent-memory database in one mmap’d file per tenant — vector, typed graph, and relational, no Postgres, no server.' }}
+    product={{ name: 'ICARUS', tag: '.amr format', desc: 'A memory filesystem for AI agents — one mmap’d file per tenant, no server.' }}
     highlights={[
-      'A live production tenant now runs its entire memory cortex off Postgres — 12 relational tables, the graph, and the vectors, all in .amr + sidecars. Zero Postgres rows for that tenant.',
-      'Validated on a real corpus (the SOLVIS engagement, 20 documents): 584 memories + 1,701 entity mentions + 879 derivations ingested with zero foreign-key, embedding, or promotion errors.',
       'Production-equivalent recall: 99.8% top-10 overlap vs a live Qdrant on real production data.',
-      '7.5× smaller storage (~600 B per memory), 32× vector compression, one file per tenant — embedded, in-process, zero servers.',
+      '7.5× smaller storage (~600 B per memory) and 32× vector compression with no recall loss.',
+      'Semantic + entity + bi-temporal + graph recall served from a single mmap read.',
+      'One file per tenant — embedded, in-process, zero servers to operate.',
     ]}
   >
     <P>General-purpose vector databases are built for document retrieval. AI-agent <em>memory</em> has a different access pattern: a single recall must fuse semantic similarity, entity filter, bi-temporal range, and graph traversal — per tenant, in milliseconds. ICARUS collapses all four indexes into one byte layout, the <code className="rounded bg-[#efeee8] px-1.5 py-0.5 font-mono text-[13px]">.amr</code> format, served from one memory-mapped file. It is to a vector database what <strong>SQLite is to Postgres</strong>: embedded, single-file, in-process.</P>
@@ -85,24 +85,8 @@ const IcarusResearch = () => {
     ]} />
     <P>Stated honestly: ICARUS’s native engine beats a vector DB <em>over REST</em> (the network hop is the cost). Against a co-located Qdrant — and through the current Node binding — it is not yet a latency win; that is a binding-overhead problem, not a format one. The durable wins are equal recall, 7.5× smaller storage, and zero servers.</P>
 
-    <H2>v2 — from vector store to the whole database</H2>
-    <P>v1 replaced exactly one component: the vector store. v2 asks the harder question — <em>why keep Postgres at all?</em> In a real agent-memory system the <code className="rounded bg-[#efeee8] px-1.5 py-0.5 font-mono text-[13px]">memory</code> row is a relational hub: a dozen tables (source provenance, versions, project links, derivations, evidence links, entity mentions, the typed-relationship graph) foreign-key to it. Moving only the vectors out leaves that hub — and its operational weight — in Postgres.</P>
-    <P>v2 moves the <strong>entire subgraph</strong> into the file. Memories and their typed-edge graph live in the <code className="rounded bg-[#efeee8] px-1.5 py-0.5 font-mono text-[13px]">.amr</code> shard; the FK-child tables become per-model sidecars in the same per-tenant bundle. A drop-in store router resolves each query by tenant and sends that one tenant’s memory traffic to the file instead of Postgres — every other tenant is byte-for-byte unchanged. Because nothing off-Postgres enforces foreign keys, the relational hub leaves the database cleanly; the typed graph it was said to <em>not</em> implement is now inline adjacency in the slot itself.</P>
-
-    <H2>Proof on a live tenant, real corpus</H2>
-    <P>v2 is not a benchmark harness — it is wired into a live production deployment, flag-gated to a single tenant, instantly reversible. That tenant’s real engagement corpus (the SOLVIS account — 20 documents: pitch decks, white papers, personas, brand manuals) was ingested through the unchanged production pipeline.</P>
-    <Table head={['Result', 'Value']} rows={[
-      ['Postgres rows for the tenant (memory + 12 child tables)', '0'],
-      ['Ingest errors (foreign-key / embedding / promotion)', '0'],
-      ['Memories generated → .amr', '584'],
-      ['Entity mentions / derivations / versions → sidecars', '1,701 / 879 / 584'],
-      ['Recall served from', '.amr (in-process, no Postgres, no Qdrant for this tenant)'],
-      ['Blast radius / rollback', 'one tenant · flip a flag'],
-    ]} />
-    <P>The whole memory cortex of a production tenant — records, versions, provenance, the derivation chain, the entity index, and the typed relationship graph — now lives in one mmap’d bundle and is served in-process. Postgres is touched zero times for that tenant.</P>
-
     <H2>What it is — and isn’t</H2>
-    <P>v1 was a vector + temporal + adjacency substrate that replaced one component. v2 is the <strong>complete agent-memory database</strong> for a tenant: vector, bi-temporal, typed graph, and the relational subgraph, in one file, with no Postgres and no server in the path. What still lives above it is cognition — synthesis, conflict resolution, the dreaming loop — by design; ICARUS is the store, not the mind. The byte layout remains frozen in an RFC — magic, every field offset, the file formats, the invariants — published before the code, so the layout stays the contract.</P>
+    <P>ICARUS is a vector + temporal + adjacency substrate, not a cognition layer. It deliberately does not implement typed graph edges, synthesis, or conflict resolution — those live above it. It replaces exactly one component: the vector store. The format is frozen in an RFC — magic, every field offset, the four file formats, the six invariants — published before the code, so the layout is the contract.</P>
   </NewsArticleLayout>
   );
 };

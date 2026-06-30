@@ -6,6 +6,7 @@ import { getMobileCopy } from './mobileCopy';
 
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { isDark, toggle, locale, setLocale } = useTheme();
   const c = t(isDark);
   const copy = getMobileCopy(locale);
@@ -14,6 +15,13 @@ const MobileNavigation = () => {
     { label: copy.nav.links.research, href: '/research' },
     { label: copy.nav.links.contact, sectionId: 'cta-section' },
   ];
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 48);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (mobileOpen) {
@@ -41,8 +49,8 @@ const MobileNavigation = () => {
 
   return (
     <>
-      <nav className="fixed top-0 inset-x-0 z-[100] bg-[#05070f]/40 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-[1200px] mx-auto border-x border-white/10">
+      <nav className={`fixed top-0 inset-x-0 z-[100] transition-colors duration-500 ${scrolled || mobileOpen ? 'bg-[#05070f]/70 backdrop-blur-md border-b border-white/10' : 'bg-transparent border-b border-transparent'}`}>
+        <div className={`max-w-[1200px] mx-auto border-x transition-colors duration-500 ${scrolled || mobileOpen ? 'border-white/10' : 'border-transparent'}`}>
           <div className="px-6 h-16 flex items-center justify-between">
             {/* Logo — SINGULANCE wordmark */}
             <button

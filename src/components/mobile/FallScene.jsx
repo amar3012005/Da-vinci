@@ -1,139 +1,91 @@
-import React, { useEffect, useRef, useState } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import React from 'react';
+import CinematicScrollScene from './CinematicScrollScene';
 
 /**
- * FallScene — scroll-scrubbed cinematic ("The Fall"), Apple-style.
- * A pinned full-screen <canvas> plays a preloaded webp frame sequence as the
- * user scrolls (scroll progress → frame index), with text "moments" fading in
- * across the scroll. Sits right below the hero. Reduced-motion / mobile → a
- * static first frame, no pin. Fully additive + reversible.
+ * FallScene — Act I "The Fall". Scroll-scrubbed cinematic of the figure falling.
+ * The Fall is about THE PAIN — and the pain is told in the visitor's own
+ * language: the narration adapts to the category they picked in the FieldPicker.
+ * No pick → the universal pain story.
  */
-const FRAME_COUNT = 193;
-const framePath = (i) => `/fall-frames/f_${String(i).padStart(3, '0')}.webp`;
 
-const MOMENTS = [
-  { at: 0.10, text: 'What if intelligence never forgot?' },
-  { at: 0.45, text: 'It falls — into memory.' },
-  { at: 0.80, text: 'SINGULANCE' },
+const FIELD_LABEL = {
+  legal: 'Legal',
+  finance: 'Finance',
+  planning: 'Planning',
+  marketing: 'Marketing',
+  public: 'Public Sector',
+  health: 'Healthcare',
+};
+
+const DEFAULT_STEPS = [
+  { at: 0.10, label: 'Intelligence that forgets isn’t intelligence.' },
+  { at: 0.30, label: 'It’s amnesia with good PR.' },
+  { at: 0.50, label: 'Every day, your org starts from zero.' },
+  { at: 0.70, label: 'Knowledge walks out the door.' },
+  { at: 0.90, label: 'The horizon isn’t a wall.', sub: '世界的に', accent: true },
 ];
 
-const FallScene = () => {
-  const wrapRef = useRef(null);
-  const pinRef = useRef(null);
-  const canvasRef = useRef(null);
-  const momentRefs = useRef([]);
-  const [reduced, setReduced] = useState(false);
+/* Per-field PAIN narratives — the fall, in their language. */
+const PAIN = {
+  legal: [
+    { at: 0.10, label: 'Every matter starts from a blank page.' },
+    { at: 0.30, label: 'Precedent buried in someone’s inbox.' },
+    { at: 0.50, label: 'The associate who knew it all just left.' },
+    { at: 0.70, label: 'Billable hours lost to re-reading.' },
+    { at: 0.90, label: 'Memory shouldn’t be this expensive.', accent: true },
+  ],
+  finance: [
+    { at: 0.10, label: 'Last quarter’s reasoning — gone.' },
+    { at: 0.30, label: 'Every model rebuilt from scratch.' },
+    { at: 0.50, label: 'Compliance asks “why” — no one remembers.' },
+    { at: 0.70, label: 'Risk hides in what you forgot.' },
+    { at: 0.90, label: 'Decisions deserve a memory.', accent: true },
+  ],
+  planning: [
+    { at: 0.10, label: 'Every plan forgets the last one.' },
+    { at: 0.30, label: 'Lessons learned, then lost.' },
+    { at: 0.50, label: 'Context resets with every cycle.' },
+    { at: 0.70, label: 'You re-solve solved problems.' },
+    { at: 0.90, label: 'Strategy needs continuity.', accent: true },
+  ],
+  marketing: [
+    { at: 0.10, label: 'Every campaign reinvents the wheel.' },
+    { at: 0.30, label: 'Brand voice drifts — no one notices.' },
+    { at: 0.50, label: 'What worked last time? Nobody knows.' },
+    { at: 0.70, label: 'Insights die in old decks.' },
+    { at: 0.90, label: 'Memory is your edge.', accent: true },
+  ],
+  public: [
+    { at: 0.10, label: 'Citizens repeat themselves at every desk.' },
+    { at: 0.30, label: 'Case history scattered across systems.' },
+    { at: 0.50, label: 'Turnover erases institutional memory.' },
+    { at: 0.70, label: 'The same question, asked forever.' },
+    { at: 0.90, label: 'The state should remember.', accent: true },
+  ],
+  health: [
+    { at: 0.10, label: 'Every handoff loses the story.' },
+    { at: 0.30, label: 'Patient history fragmented, again.' },
+    { at: 0.50, label: 'Knowledge trapped in one clinician’s head.' },
+    { at: 0.70, label: 'Care restarts at every shift.' },
+    { at: 0.90, label: 'Memory saves lives.', accent: true },
+  ],
+};
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(max-width: 767px)').matches;
-    setReduced(noMotion);
-    if (noMotion) return undefined;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const images = [];
-    let loaded = 0;
-    const state = { frame: 0 };
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw();
-    };
-    const draw = () => {
-      const img = images[Math.round(state.frame)];
-      if (!img || !img.complete) return;
-      const cw = window.innerWidth, ch = window.innerHeight;
-      const ir = img.width / img.height, cr = cw / ch;
-      let w, h, x, y;
-      if (cr > ir) { w = cw; h = cw / ir; x = 0; y = (ch - h) / 2; }
-      else { h = ch; w = ch * ir; x = (cw - w) / 2; y = 0; }
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.drawImage(img, x, y, w, h);
-    };
-
-    const makeOnLoad = (i) => () => { loaded++; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
-    for (let i = 0; i < FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = framePath(i);
-      img.onload = makeOnLoad(i);
-      images[i] = img;
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: wrapRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 0.5,
-        pin: pinRef.current,
-        invalidateOnRefresh: true,
-      },
-    });
-    tl.to(state, { frame: FRAME_COUNT - 1, ease: 'none', onUpdate: draw }, 0);
-
-    // text moments — fade each in/out around its scroll position
-    const ctxGsap = gsap.context(() => {
-      momentRefs.current.forEach((el, idx) => {
-        if (!el) return;
-        const at = MOMENTS[idx].at;
-        gsap.fromTo(el, { opacity: 0, y: 24 }, {
-          opacity: 1, y: 0, ease: 'power2.out',
-          scrollTrigger: { trigger: wrapRef.current, start: `${at * 100 - 12}% top`, end: `${at * 100}% top`, scrub: true },
-        });
-        gsap.to(el, {
-          opacity: 0, y: -24, ease: 'power2.in',
-          scrollTrigger: { trigger: wrapRef.current, start: `${at * 100 + 8}% top`, end: `${at * 100 + 22}% top`, scrub: true },
-        });
-      });
-    });
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      tl.scrollTrigger && tl.scrollTrigger.kill();
-      tl.kill();
-      ctxGsap.revert();
-    };
-  }, []);
-
-  if (reduced) {
-    return (
-      <section className="relative h-[80vh] w-full overflow-hidden bg-[#05070f]">
-        <img src={framePath(0)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-[#05070f] via-transparent to-transparent p-6">
-          <h2 className="font-['Space_Grotesk'] text-3xl font-semibold text-white">It falls — into memory.</h2>
-        </div>
-      </section>
-    );
-  }
-
+const FallScene = ({ field }) => {
+  const steps = (field && PAIN[field]) || DEFAULT_STEPS;
+  const subtitle = field && FIELD_LABEL[field] ? `The pain · ${FIELD_LABEL[field]}` : 'The pain';
   return (
-    <section ref={wrapRef} className="relative h-[360vh] w-full bg-[#05070f]">
-      <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#05070f]/30 via-transparent to-[#05070f]/70" />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          {MOMENTS.map((m, i) => (
-            <h2
-              key={i}
-              ref={(el) => (momentRefs.current[i] = el)}
-              className="font-['Space_Grotesk'] absolute max-w-4xl px-6 text-center text-4xl font-semibold leading-tight tracking-tight text-white opacity-0 [text-shadow:0_4px_40px_rgba(0,0,0,0.8)] md:text-6xl"
-            >
-              {m.text}
-            </h2>
-          ))}
-        </div>
-      </div>
-    </section>
+    <CinematicScrollScene
+      key={field || 'default'}
+      frameDir="fall-frames"
+      frameCount={193}
+      steps={steps}
+      title="THE FALL"
+      subtitle={subtitle}
+      staticFrame={150}
+      staticHeadline="It falls — into memory."
+      heightVh={440}
+    />
   );
 };
 

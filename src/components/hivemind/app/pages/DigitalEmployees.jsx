@@ -289,9 +289,13 @@ function HyperStateBadge({ hyper }) {
   );
 }
 
-function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy, onTune, selectable, selected, onToggleSelect }) {
+function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onChat, onDeploy, onTune, selectable, selected, onToggleSelect }) {
   const { t } = useTranslation('dashboard');
   const [tuning, setTuning] = useState(false);
+  // Profession (e.g. "Corporate Counsel") — set when hired from the marketplace
+  // (policy_rules.marketplace_profession). Shown in place of the technical slug so
+  // a hired agent reads as its real role. Seeded/hand-made employees have none.
+  const profession = employee.policyRules?.marketplace_profession || null;
   const isRunning = employee.status === 'running';
   const isPaused = employee.status === 'paused';
   const isDraft = employee.status === 'draft';
@@ -344,7 +348,11 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
           </div>
           <div className="min-w-0">
             <h3 className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</h3>
-            <p className="text-[10px] text-[#a3a3a3] font-mono">{employee.slug}</p>
+            {profession ? (
+              <p className="text-[10px] font-medium text-[#117dff] truncate" title={profession}>{profession}</p>
+            ) : (
+              <p className="text-[10px] text-[#a3a3a3] font-mono">{employee.slug}</p>
+            )}
           </div>
         </div>
         <StatusBadge status={employee.status} />
@@ -429,16 +437,18 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onDeploy
         </div>
       )}
 
-      {/* full-bleed 2-cell footer (carousel style): meta | model → */}
+      {/* full-bleed 2-cell footer (carousel style): meta | Talk to me → */}
       <div className="-mx-4 -mb-4 mt-3 grid grid-cols-2 border-t border-[#eae7e1] text-[10px] font-mono text-[#a3a3a3]">
         <div className="flex items-center gap-1.5 truncate border-r border-[#eae7e1] px-4 py-2.5">
           <Activity size={10} /> {msgs} msgs · {tokens} tok
         </div>
+        {/* Talk-to-me: opens a 1-on-1 chat immediately — works on ANY status (draft too);
+            the backend builds an ephemeral agent, so no Deploy is required to chat. */}
         <button
-          onClick={(e) => { e.stopPropagation(); onOpen(employee); }}
-          className="flex items-center justify-between px-4 py-2.5 text-[#737373] transition-colors hover:bg-[#faf9f4]"
+          onClick={(e) => { e.stopPropagation(); (onChat || onOpen)(employee); }}
+          className="flex items-center justify-between px-4 py-2.5 font-medium text-[#117dff] transition-colors hover:bg-[#117dff]/[0.06]"
         >
-          <span className="truncate">{(employee.model || '').split('-').slice(0, 2).join('-')}</span>
+          <span className="inline-flex items-center gap-1.5 truncate"><MessageCircle size={11} /> {t('digitalemployees.talkToMe', 'Talk to me')}</span>
           <ChevronRight size={12} className="shrink-0" />
         </button>
       </div>
@@ -1037,9 +1047,6 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
     brief: '',
     role_archetype: 'generalist',
     team_id: '',
-    age: '',
-    gender: '',
-    experience_years: 0,
   });
   const [persona, setPersona] = useState('');
   const [optimizing, setOptimizing] = useState(false);
@@ -1048,7 +1055,7 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
 
   useEffect(() => {
     if (open) {
-      setForm({ name: '', brief: '', role_archetype: 'generalist', team_id: '', age: '', gender: '', experience_years: 0 });
+      setForm({ name: '', brief: '', role_archetype: 'generalist', team_id: '' });
       setPersona('');
       setError(null);
       setSubmitting(false);
@@ -1068,9 +1075,6 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         name: form.name.trim(),
         role: form.role_archetype,
         team: teamName,
-        age: form.age || null,
-        gender: form.gender || null,
-        experience_years: Number(form.experience_years) || 0,
       });
       setPersona(p);
     } catch (e) {
@@ -1093,9 +1097,6 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
           name: form.name.trim(),
           role: form.role_archetype,
           team: teamName,
-          age: form.age || null,
-          gender: form.gender || null,
-          experience_years: Number(form.experience_years) || 0,
         });
         finalPersona = p;
       }
@@ -1107,9 +1108,6 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
         role_archetype: form.role_archetype,
         policy_rules: {
           rate_limit_per_min: 30,
-          age: form.age || null,
-          gender: form.gender || null,
-          experience_years: Number(form.experience_years) || 0,
           persona_contract: buildPersonaContractLike({
             name: form.name.trim(),
             role_archetype: form.role_archetype,
@@ -1126,7 +1124,9 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
     }
   }
 
-  const canSubmit = form.name.trim() && form.brief.trim() && form.role_archetype && form.team_id;
+  // Team is OPTIONAL — no team → personal-scope employee. Requiring it blocked
+  // creation for users/orgs without a team. Only name + brief + role matter.
+  const canSubmit = form.name.trim() && form.brief.trim() && form.role_archetype;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
@@ -1170,39 +1170,12 @@ function CreateWizard({ open, onClose, onCreate, teams }) {
               </select>
             </label>
             <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldTeam', 'Team')}</span>
+              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldTeamOptional', 'Team (optional)')}</span>
               <select value={form.team_id} onChange={e => setForm({ ...form, team_id: e.target.value })}
                 className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
-                <option value="">— select team —</option>
+                <option value="">{t('digitalemployees.teamPersonal', 'Personal (no team)')}</option>
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldAge', 'Age')}</span>
-              <input type="number" min={18} max={99} value={form.age}
-                onChange={e => setForm({ ...form, age: e.target.value })}
-                placeholder="32"
-                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
-            </label>
-            <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldGender', 'Gender')}</span>
-              <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
-                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]">
-                <option value="">—</option>
-                <option value="female">{t('digitalemployees.genderFemale', 'Female')}</option>
-                <option value="male">{t('digitalemployees.genderMale', 'Male')}</option>
-                <option value="non-binary">{t('digitalemployees.genderNonBinary', 'Non-binary')}</option>
-                <option value="unspecified">{t('digitalemployees.genderUnspecified', 'Unspecified')}</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-[11px] text-[#525252] font-medium">{t('digitalemployees.fieldExperience', 'Experience (yrs)')}</span>
-              <input type="number" min={0} max={60} value={form.experience_years}
-                onChange={e => setForm({ ...form, experience_years: e.target.value })}
-                className="w-full h-9 px-3 mt-1 text-[13px] border border-[#e3e0db] rounded-[6px]" />
             </label>
           </div>
 
@@ -2275,6 +2248,7 @@ export default function DigitalEmployees() {
                   onResume={handleResume}
                   onArchive={handleArchive}
                   onOpen={handleOpen}
+                  onChat={(e) => { setSurface('employee'); setDetailEmployee(null); setChatEmployee(e); }}
                   onDeploy={handleDeploy}
                   onTune={handleTune}
                   selectable={false}
