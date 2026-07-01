@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { COVER_LQIP } from './three/coverLqip';
+import HeroCtas from './HeroCtas';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
 const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
@@ -97,6 +98,7 @@ const DesktopHero = ({ immersive }) => (
         <span className="text-xs font-semibold uppercase tracking-[0.34em]">Enter SINGULANCE</span>
         <span className="font-mono text-base text-white/40 transition-transform duration-300 group-hover:translate-x-1">]</span>
       </motion.a>
+      <HeroCtas delay={0.9} />
       <motion.button
         onClick={scrollNext} aria-label="Scroll down"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 1, ease }}
@@ -139,6 +141,8 @@ const MobileHeroBand = ({ water }) => (
       <p className="text-xl font-semibold tracking-tight text-white">Run your institution as an AI company</p>
       <p className="mt-2 text-sm font-light leading-relaxed text-white/65">The AI workforce that runs inside your organization&apos;s memory.</p>
     </motion.div>
+
+    <HeroCtas delay={0.6} compact />
 
     {/* scroll-down cue replaces the CTA */}
     <button
