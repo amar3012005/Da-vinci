@@ -1,18 +1,19 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Sparkles, CheckCircle2, X, Users, FolderOpen, NotebookPen, ChevronRight, ChevronLeft, Minimize2 } from 'lucide-react';
+import { Mic, Square, Sparkles, CheckCircle2, X, Users, FolderOpen, NotebookPen, ChevronRight, ChevronLeft, Minimize2, ListChecks, Lightbulb, HelpCircle, Quote, AlignLeft, Save } from 'lucide-react';
 import apiClient from './api-client';
 
 /**
  * QuickRecorderProvider — app-wide "record a meeting from anywhere" engine.
  * Mounted ABOVE the router so recording + the floating chip SURVIVE navigation.
  *
- * Flow: mic click → step-by-step config wizard (Participants → Save memories to
- * → Meeting context) → Start → live card (@Today heading, timer, Stop) which
- * collapses to a compact `| @Today 11:18 PM |` chip — bottom-center on desktop,
- * TOP-RIGHT on mobile. On stop: transcribe → insights → save meeting →
- * hard-facts ingest → "see desktop → Past meetings".
+ * Flow: mic click → step wizard (Participants → Save to → Context) → record
+ * (live wave) → Stop → transcribe+analyze (shimmer wave) → meeting ROW saved
+ * (visible in desktop Past meetings) → FULL-SCREEN sectioned results popup.
+ * NO auto-ingest: the user decides via "Save to HIVEMIND memory" (top-right,
+ * left of the X). Collapse chip: | @Today 11:18 PM | — top-right on mobile
+ * (below the navbar), bottom-center on desktop.
  */
 const Ctx = createContext(null);
 export const useQuickRecorder = () => useContext(Ctx) || { status: 'idle', start: () => {}, openConfig: () => {}, supported: false };
@@ -28,22 +29,62 @@ const SUPPORTED = typeof navigator !== 'undefined' && !!navigator.mediaDevices
   && typeof navigator.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined';
 const isMobile = () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false);
 
-/* "@Today 11:18 PM" label for NOW */
 function atNow() {
   const d = new Date();
   return `@Today ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
 }
 
+/* Live wave — audio-reactive bars while recording (Web Audio analyser on the
+   live stream), calm sine shimmer while transcribing/analyzing. Compact port
+   of the MeetingNotes LiveWave. */
+function QuickWave({ stream, mode }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    let raf; let analyser = null; let actx = null; let data = null; let t = 0;
+    if (stream && mode === 'record') {
+      try {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = actx.createAnalyser(); analyser.fftSize = 128;
+        actx.createMediaStreamSource(stream).connect(analyser);
+        data = new Uint8Array(analyser.frequencyBinCount);
+      } catch { analyser = null; }
+    }
+    const draw = () => {
+      const w = canvas.width = canvas.offsetWidth * 2;
+      const h = canvas.height = canvas.offsetHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      const bars = 48; const bw = w / bars * 0.55; const gap = w / bars;
+      t += 0.05;
+      for (let i = 0; i < bars; i++) {
+        let v;
+        if (analyser && data) { analyser.getByteFrequencyData(data); v = (data[Math.floor(i / bars * data.length)] || 0) / 255; }
+        else v = 0.18 + 0.14 * Math.abs(Math.sin(t + i * 0.45));
+        const bh = Math.max(h * 0.06, v * h * 0.9);
+        ctx.fillStyle = mode === 'record' ? 'rgba(17,125,255,0.92)' : 'rgba(17,125,255,0.45)';
+        ctx.beginPath();
+        ctx.roundRect(i * gap + (gap - bw) / 2, (h - bh) / 2, bw, bh, bw / 2);
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); try { actx && actx.close(); } catch { /* noop */ } };
+  }, [stream, mode]);
+  return <canvas ref={canvasRef} className="w-full h-[54px]" />;
+}
+
 const SCOPES = [
-  { id: 'personal', label: 'Personal', icon: Users },
-  { id: 'project', label: 'Project', icon: FolderOpen },
-  { id: 'team', label: 'Team', icon: Users },
-  { id: 'organization', label: 'Org', icon: Users },
+  { id: 'personal', label: 'Personal' },
+  { id: 'project', label: 'Project' },
+  { id: 'team', label: 'Team' },
+  { id: 'organization', label: 'Org' },
 ];
 
 export function QuickRecorderProvider({ children }) {
   const [status, setStatus] = useState('idle'); // idle | config | recording | transcribing | analyzing | done | error
-  const [step, setStep] = useState(0);          // wizard step 0..2
+  const [step, setStep] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [error, setError] = useState(null);
@@ -55,6 +96,13 @@ export function QuickRecorderProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState(null);
   const [notes, setNotes] = useState('');
+  // results
+  const [insights, setInsights] = useState(null);
+  const [transcript, setTranscript] = useState('');
+  const [meetingId, setMeetingId] = useState(null);
+  const [ingesting, setIngesting] = useState(false);
+  const [ingested, setIngested] = useState(false);
+  const [, forceTick] = useState(0); // re-render for stream-attach
 
   const streamRef = useRef(null);
   const recRef = useRef(null);
@@ -107,6 +155,8 @@ export function QuickRecorderProvider({ children }) {
     rec.start(1000);
   }, [transcribeSegment]);
 
+  // Stop → stitch → analyze → save the meeting ROW (Past meetings) — NO ingest.
+  // The user decides in the results popup via "Save to HIVEMIND memory".
   const finalize = useCallback(async () => {
     setError(null); setStatus('transcribing'); setCollapsed(false);
     const cfg = cfgRef.current;
@@ -115,35 +165,36 @@ export function QuickRecorderProvider({ children }) {
       const idxs = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b);
       const text = idxs.map((i) => segTextsRef.current[i]).filter(Boolean).join('\n').trim();
       if (!text) { setStatus('error'); setError('No speech detected.'); return; }
+      setTranscript(text);
       setStatus('analyzing');
-      let insights = null;
+      let ins = null;
       try {
-        const ins = await apiClient.core.post('/api/meetings/insights', {
+        const r = await apiClient.core.post('/api/meetings/insights', {
           transcript: text, notes: cfg.notes || undefined, participants: cfg.participants,
         }, { timeout: 240000 });
-        insights = ins.data?.insights || null;
+        ins = r.data?.insights || null;
       } catch { /* insights optional */ }
+      setInsights(ins);
       const row = await apiClient.core.post('/api/meetings', {
-        title: insights?.title || `Meeting ${new Date().toLocaleString()}`,
-        transcript: text, insights: insights || {}, language: langRef.current,
+        title: ins?.title || `Meeting ${new Date().toLocaleString()}`,
+        transcript: text, insights: ins || {}, language: langRef.current,
         notes: cfg.notes || null,
         participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
         scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
         session_id: sessionIdRef.current || undefined,
       }, { timeout: 60000 });
-      const mid = row.data?.id || null;
-      if (mid) apiClient.core.post(`/api/meetings/${mid}/ingest`, {}, { timeout: 180000 }).catch(() => {});
+      setMeetingId(row.data?.id || null);
       setStatus('done');
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
   }, []);
 
-  // Open the pre-start config wizard (the mic-button entry point).
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }
-    if (status === 'recording') { setCollapsed(false); return; }
-    setStep(0); setError(null); setStatus('config');
+    if (status === 'recording' || status === 'done') { setCollapsed(false); return; }
+    setStep(0); setError(null); setIngested(false); setIngesting(false); setInsights(null); setMeetingId(null); setTranscript('');
+    setStatus('config');
     apiClient.core.get('/api/team/projects').then(({ data }) => setProjects(data?.projects || [])).catch(() => {});
   }, [status]);
 
@@ -159,7 +210,7 @@ export function QuickRecorderProvider({ children }) {
     } catch { setError('Microphone permission denied.'); setStatus('error'); return; }
     streamRef.current = mic;
     setStartedAtLabel(atNow());
-    rollSegment(); setStatus('recording');
+    rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
     segTimerRef.current = setInterval(() => {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
     }, SEGMENT_MS);
@@ -182,9 +233,21 @@ export function QuickRecorderProvider({ children }) {
     } else { cleanup(); finalize(); }
   }, [transcribeSegment, cleanup, finalize]);
 
+  const saveToHivemind = useCallback(async () => {
+    if (!meetingId || ingesting || ingested) return;
+    setIngesting(true);
+    try {
+      await apiClient.core.post(`/api/meetings/${meetingId}/ingest`, {}, { timeout: 180000 });
+      setIngested(true);
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || 'Save failed.');
+    } finally { setIngesting(false); }
+  }, [meetingId, ingesting, ingested]);
+
   const dismiss = useCallback(() => {
     setStatus('idle'); setError(null); setCollapsed(false);
     setParticipants([]); setPName(''); setScope('personal'); setProjectId(null); setNotes('');
+    setInsights(null); setMeetingId(null); setTranscript(''); setIngested(false); setIngesting(false);
   }, []);
 
   useEffect(() => () => cleanup(), [cleanup]);
@@ -202,11 +265,11 @@ export function QuickRecorderProvider({ children }) {
     setPName('');
   };
 
-  /* ── Collapsed chip: | @Today 11:18 PM | — top-right (mobile) / bottom-center (desktop) */
+  /* ── Collapsed chip — mobile: top-right BELOW the navbar; desktop: bottom-center */
   const chip = (
     <motion.button key="qr-chip" initial={{ opacity: 0, y: mob ? -16 : 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: mob ? -16 : 16 }}
       onClick={() => setCollapsed(false)}
-      className={`fixed z-[70] flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden ${mob ? 'top-3 right-3' : 'bottom-4 left-1/2 -translate-x-1/2'}`}
+      className={`fixed z-[70] flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden ${mob ? 'top-[72px] right-3' : 'bottom-4 left-1/2 -translate-x-1/2'}`}
       title="Expand recorder">
       <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : 'bg-emerald-500'}`} />
       <span className="flex items-center gap-2 px-3 py-1.5 font-['Space_Grotesk']">
@@ -221,7 +284,6 @@ export function QuickRecorderProvider({ children }) {
     </motion.button>
   );
 
-  /* ── Wizard steps ── */
   const stepDefs = [
     { key: 'participants', label: 'Participants', icon: Users },
     { key: 'saveto', label: 'Save memories to', icon: FolderOpen },
@@ -229,11 +291,11 @@ export function QuickRecorderProvider({ children }) {
   ];
   const StepIcon = stepDefs[step]?.icon || Users;
 
+  /* ── Config / recording / busy card ── */
   const card = (
     <motion.div key="qr-card" initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 10 }}
       transition={{ type: 'spring', stiffness: 340, damping: 30 }}
       className="bg-white border border-[#e3e0db] rounded-[18px] shadow-xl w-full max-w-[420px] p-5 pointer-events-auto">
-      {/* header */}
       <div className="flex items-center justify-between">
         {recording ? (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[11px] font-semibold text-red-600 font-['Space_Grotesk'] tracking-wide">
@@ -243,10 +305,6 @@ export function QuickRecorderProvider({ children }) {
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-700 font-['Space_Grotesk']">
             <Sparkles size={11} /> {status === 'transcribing' ? 'Transcribing…' : 'Analyzing…'}
           </span>
-        ) : status === 'done' ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-700 font-['Space_Grotesk']">
-            <CheckCircle2 size={11} /> Saved
-          </span>
         ) : status === 'error' ? (
           <span className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[11px] font-semibold text-red-600 font-['Space_Grotesk']">Error</span>
         ) : (
@@ -255,27 +313,24 @@ export function QuickRecorderProvider({ children }) {
           </span>
         )}
         <div className="flex items-center gap-1">
-          {(recording || busy || status === 'done') && (
+          {(recording || busy) && (
             <button onClick={() => setCollapsed(true)} title="Collapse"
               className="w-7 h-7 grid place-items-center rounded-lg text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><Minimize2 size={14} /></button>
           )}
-          {(status === 'config' || status === 'done' || status === 'error') && (
+          {(status === 'config' || status === 'error') && (
             <button onClick={dismiss} title="Close"
               className="w-7 h-7 grid place-items-center rounded-lg text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><X size={14} /></button>
           )}
         </div>
       </div>
 
-      {/* @Today heading */}
       <div className="mt-2.5 font-['Space_Grotesk'] leading-none">
-        <span className="text-[26px] font-semibold text-[#525252]">{(recording || busy || status === 'done' ? startedAtLabel : atNow()).split(' ')[0]}</span>
-        <span className="text-[26px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{(recording || busy || status === 'done' ? startedAtLabel : atNow()).split(' ').slice(1).join(' ')}</span>
+        <span className="text-[26px] font-semibold text-[#525252]">{(recording || busy ? startedAtLabel : atNow()).split(' ')[0]}</span>
+        <span className="text-[26px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{(recording || busy ? startedAtLabel : atNow()).split(' ').slice(1).join(' ')}</span>
       </div>
 
-      {/* CONFIG WIZARD — one step at a time */}
       {status === 'config' && (
         <>
-          {/* step rail */}
           <div className="flex items-center gap-1.5 mt-3">
             {stepDefs.map((s, i) => (
               <button key={s.key} onClick={() => setStep(i)}
@@ -336,7 +391,6 @@ export function QuickRecorderProvider({ children }) {
             )}
           </div>
 
-          {/* wizard nav */}
           <div className="flex items-center justify-between mt-3">
             <button onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-[8px] text-[12px] font-semibold text-[#525252] hover:bg-[#faf9f4] disabled:opacity-30">
@@ -357,36 +411,101 @@ export function QuickRecorderProvider({ children }) {
         </>
       )}
 
-      {/* LIVE / BUSY / DONE */}
-      {recording && (
+      {(recording || busy) && (
         <div className="mt-3">
-          <div className="text-[40px] font-['Space_Grotesk'] leading-none">
-            <span className="font-semibold text-[#d4d0ca]">{mm}:</span><span className="font-semibold text-[#0a0a0a] tabular-nums">{ss}</span>
+          {recording && (
+            <div className="text-[40px] font-['Space_Grotesk'] leading-none mb-3">
+              <span className="font-semibold text-[#d4d0ca]">{mm}:</span><span className="font-semibold text-[#0a0a0a] tabular-nums">{ss}</span>
+            </div>
+          )}
+          {/* live wave — reactive while recording, shimmer while analyzing */}
+          <div className="rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-2 py-1.5">
+            <QuickWave stream={recording ? streamRef.current : null} mode={recording ? 'record' : 'analyze'} />
           </div>
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-3.5">
             <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">Meeting notes</span>
-            <button onClick={stop} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600">
-              <Square size={11} fill="currentColor" /> Stop
-            </button>
+            {recording ? (
+              <button onClick={stop} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600">
+                <Square size={11} fill="currentColor" /> Stop
+              </button>
+            ) : (
+              <span className="text-[12px] text-[#525252]">You can collapse this and keep working.</span>
+            )}
           </div>
         </div>
       )}
-      {busy && (
-        <p className="mt-3 text-[12.5px] text-[#525252]">Processing your meeting — you can collapse this and keep working.</p>
-      )}
-      {status === 'done' && (
-        <p className="mt-3 text-[12.5px] text-[#525252]">Saved to HIVEMIND. <b>Open desktop → Meeting notes → Past meetings</b> to see the transcript + insights.</p>
-      )}
-      {status === 'error' && (
-        <p className="mt-3 text-[12.5px] text-[#dc2626]">{error}</p>
-      )}
+      {status === 'error' && <p className="mt-3 text-[12.5px] text-[#dc2626]">{error}</p>}
+    </motion.div>
+  );
+
+  /* ── Full-screen sectioned RESULTS popup (done) ── */
+  const ins = insights || {};
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const sections = [
+    { key: 'overview', title: 'Meeting overview', icon: AlignLeft, body: ins.summary ? <p className="whitespace-pre-wrap">{ins.summary}</p> : null },
+    { key: 'actions', title: 'Action items', icon: ListChecks, body: arr(ins.action_items).length ? (
+      <ul className="space-y-1.5">{arr(ins.action_items).map((a, i) => { const tx = typeof a === 'string' ? a : a?.task; return tx ? <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span><span>{tx}{a?.owner ? <span className="text-[#a3a3a3]"> — {a.owner}</span> : null}{a?.due ? <span className="text-[#a3a3a3]"> ({a.due})</span> : null}</span></li> : null; })}</ul>
+    ) : null },
+    { key: 'keypoints', title: 'Key points', icon: Lightbulb, body: arr(ins.key_points).length ? (
+      <ul className="space-y-1.5">{arr(ins.key_points).map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span>{String(k)}</li>)}</ul>
+    ) : null },
+    { key: 'decisions', title: 'Decisions', icon: CheckCircle2, body: arr(ins.decisions).length ? (
+      <ul className="space-y-1.5">{arr(ins.decisions).map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span>{typeof d === 'string' ? d : d?.text}</li>)}</ul>
+    ) : null },
+    { key: 'questions', title: 'Open questions', icon: HelpCircle, body: arr(ins.questions).length ? (
+      <ul className="space-y-1.5">{arr(ins.questions).map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#a3a3a3]">?</span>{typeof q === 'string' ? q : q?.text || q?.question}</li>)}</ul>
+    ) : null },
+    { key: 'quotes', title: 'Notable quotes', icon: Quote, body: arr(ins.quotes).length ? (
+      <ul className="space-y-2">{arr(ins.quotes).map((q, i) => { const tx = typeof q === 'string' ? q : q?.quote; return tx ? <li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic text-[#525252]">"{tx}"{q?.speaker ? <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span> : null}</li> : null; })}</ul>
+    ) : null },
+    { key: 'transcript', title: 'Raw transcript', icon: AlignLeft, body: transcript ? <p className="whitespace-pre-wrap text-[12.5px] text-[#525252] max-h-[300px] overflow-y-auto">{transcript}</p> : null },
+  ].filter((s) => s.body);
+
+  const results = (
+    <motion.div key="qr-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] bg-white overflow-y-auto pointer-events-auto">
+      {/* sticky header: title + actions */}
+      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-[#e3e0db] px-4 md:px-8 py-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-['Space_Grotesk'] leading-none">
+            <span className="text-[20px] font-semibold text-[#525252]">{startedAtLabel.split(' ')[0] || '@Today'}</span>
+            <span className="text-[20px] font-semibold text-[#b9b5ae] ml-2 tabular-nums">{startedAtLabel.split(' ').slice(1).join(' ')}</span>
+          </div>
+          <p className="text-[12px] text-[#a3a3a3] truncate mt-1">{ins.title || 'Meeting'} — also in desktop → Past meetings</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={saveToHivemind} disabled={ingesting || ingested || !meetingId}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] text-[12px] font-semibold transition-colors ${ingested ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-[#117dff] text-white hover:bg-[#0066e0] disabled:opacity-50'}`}>
+            {ingested ? <><CheckCircle2 size={13} /> Saved to memory</> : ingesting ? <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</> : <><Save size={13} /> Save to HIVEMIND memory</>}
+          </button>
+          <button onClick={() => setCollapsed(true)} title="Collapse"
+            className="w-9 h-9 grid place-items-center rounded-lg text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><Minimize2 size={16} /></button>
+          <button onClick={dismiss} title="Close" aria-label="Close"
+            className="w-9 h-9 grid place-items-center rounded-lg text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4]"><X size={18} /></button>
+        </div>
+      </div>
+      {/* sections — revealed one by one */}
+      <div className="max-w-[860px] mx-auto px-4 md:px-8 py-6 space-y-6">
+        {sections.map((s, i) => (
+          <motion.section key={s.key} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.12, duration: 0.3 }}
+            className="bg-white border border-[#e3e0db] rounded-[12px] p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-2.5">
+              <s.icon size={14} className="text-[#117dff]" />
+              <h3 className="text-[13px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{s.title}</h3>
+            </div>
+            <div className="text-[13.5px] text-[#0a0a0a] leading-relaxed">{s.body}</div>
+          </motion.section>
+        ))}
+        {!sections.length && <p className="text-center text-[#a3a3a3] py-16">No insights extracted — the raw transcript is saved in desktop → Past meetings.</p>}
+        {error && <p className="text-[12.5px] text-[#dc2626]">{error}</p>}
+      </div>
     </motion.div>
   );
 
   const overlay = active ? createPortal(
     <AnimatePresence mode="wait">
-      {collapsed ? chip : (
-        <div className={`fixed inset-0 z-[70] flex p-4 pointer-events-none ${mob ? 'items-start justify-center pt-10' : 'items-center justify-center'} ${status === 'config' ? 'bg-[#0a0a0a]/25 backdrop-blur-[2px] pointer-events-auto' : ''}`}>
+      {collapsed ? chip : status === 'done' ? results : (
+        <div className={`fixed inset-0 z-[70] flex p-4 pointer-events-none ${mob ? 'items-start justify-center pt-[76px]' : 'items-center justify-center'} ${status === 'config' ? 'bg-[#0a0a0a]/25 backdrop-blur-[2px] pointer-events-auto' : ''}`}>
           {card}
         </div>
       )}
