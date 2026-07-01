@@ -11,6 +11,7 @@ import { ChatPanel } from '../pages/Chat';
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
+import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -163,6 +164,7 @@ export default function AppShell() {
   }
 
   return (
+    <QuickRecorderProvider>
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
         {!graphFullscreen && <Sidebar />}
@@ -187,5 +189,6 @@ export default function AppShell() {
         <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       </div>
     </TeamProvider>
+    </QuickRecorderProvider>
   );
 }

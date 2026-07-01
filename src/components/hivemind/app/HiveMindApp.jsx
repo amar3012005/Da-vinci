@@ -5,6 +5,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './auth/LoginPage';
 import CliVerified from './auth/CliVerified';
 import AppShell from './layout/AppShell';
+import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
@@ -107,7 +108,7 @@ export default function HiveMindApp() {
           path="m/chat"
           element={
             <ProtectedRoute>
-              <PageSuspense><TalkToHiveMobile /></PageSuspense>
+              <QuickRecorderProvider><PageSuspense><TalkToHiveMobile /></PageSuspense></QuickRecorderProvider>
             </ProtectedRoute>
           }
         />

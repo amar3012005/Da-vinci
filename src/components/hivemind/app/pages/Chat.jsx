@@ -22,6 +22,7 @@ import {
 import apiClient from '../shared/api-client';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
+import { useQuickRecorder } from '../shared/QuickRecorderProvider';
 import { QRCodeSVG } from 'qrcode.react';
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
@@ -825,6 +826,7 @@ export function ChatPanel({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [composerFocused, setComposerFocused] = useState(false);
+  const qrec = useQuickRecorder(); // one-click background meeting recording
 
   // Persist on every messages change (debounced via rAF to coalesce rapid bursts).
   useEffect(() => {
@@ -1102,6 +1104,17 @@ export function ChatPanel({ isOpen, onClose }) {
 
               {/* Right: model selector + actions */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
+                {qrec.supported && (
+                  <button
+                    onClick={() => qrec.start({ title: activeProject ? `${activeProject.name} meeting` : '' })}
+                    disabled={qrec.active}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c4c1bb] hover:text-[#117dff] hover:bg-[#117dff]/10 transition-colors disabled:opacity-40"
+                    aria-label="Record a meeting"
+                    title={qrec.active ? 'Recording — see the notch at the bottom' : 'Record a meeting → results appear in desktop → Past meetings'}
+                  >
+                    <Mic size={16} />
+                  </button>
+                )}
                 <ModelSelector selectedId={selectedModel} onSelect={setSelectedModel} />
                 {messages.length > 0 && (
                   <button
