@@ -533,7 +533,7 @@ export function MeetingNotesPromo({ mobile = false }) {
     <motion.button
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
       onClick={() => qrec.openConfig()}
-      className={`fixed z-40 flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-[6px] bg-white border border-[#117dff]/35 shadow-[0_2px_12px_rgba(17,125,255,0.18)] hover:shadow-[0_2px_16px_rgba(17,125,255,0.3)] hover:border-[#117dff] transition-all ${mobile ? 'top-[60px] right-3' : 'top-[64px] right-6'}`}
+      className={`fixed z-20 flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-[6px] bg-white border border-[#117dff]/35 shadow-[0_2px_12px_rgba(17,125,255,0.18)] hover:shadow-[0_2px_16px_rgba(17,125,255,0.3)] hover:border-[#117dff] transition-all ${mobile ? 'top-[60px] right-3' : 'top-[64px] right-6'}`}
       title="Record a meeting — transcript + insights, saved to Past meetings">
       <span className="px-1.5 py-0.5 rounded-[4px] bg-[#117dff] text-white text-[9px] font-bold font-['Space_Grotesk'] tracking-wide uppercase">New</span>
       <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
