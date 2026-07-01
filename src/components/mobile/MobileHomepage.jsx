@@ -15,8 +15,9 @@ import ThesisSection from './ThesisSection';
 import ResearchTeaser from './ResearchTeaser';
 import MobileAboutSection from './MobileAboutSection';
 import SingulanceFooter from './SingulanceFooter';
-import TaraVoiceWidget from './TaraVoiceWidget';
-import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
+// HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
+// import TaraVoiceWidget from './TaraVoiceWidget';
+// import TaraVoiceWidgetIndic from './TaraVoiceWidgetIndic';
 import { useTheme, t } from './ThemeContext';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -56,15 +57,16 @@ const PageContent = () => {
         // stay on this page — the choice re-tells the Fall story for that field
     };
 
-    const [isIndicDomain, setIsIndicDomain] = React.useState(false);
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const hostname = window.location.hostname;
-            if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
-                setIsIndicDomain(true);
-            }
-        }
-    }, []);
+    // HIDDEN (re-add on singulancelabs.com): Indic-domain detection for the Tara widget.
+    // const [isIndicDomain, setIsIndicDomain] = React.useState(false);
+    // React.useEffect(() => {
+    //     if (typeof window !== 'undefined') {
+    //         const hostname = window.location.hostname;
+    //         if (hostname === 'davinciai.in' || hostname.endsWith('.davinciai.in')) {
+    //             setIsIndicDomain(true);
+    //         }
+    //     }
+    // }, []);
 
     return (
         <div className={`min-h-screen ${c.bg} ${c.text} overflow-x-hidden transition-colors duration-300`}>
@@ -79,7 +81,8 @@ const PageContent = () => {
             <ResearchTeaser />
             <MobileAboutSection />
             <SingulanceFooter />
-            {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />}
+            {/* HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
+            {isIndicDomain ? <TaraVoiceWidgetIndic /> : <TaraVoiceWidget />} */}
             <FieldPicker open={pickerOpen} onPick={pickField} onClose={() => setPickerOpen(false)} />
         </div>
     );
