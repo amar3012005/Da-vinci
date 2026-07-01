@@ -25,7 +25,7 @@ import {
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, Target,
+  ArrowLeft, ArrowRight, Target, Eye, Pencil,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
@@ -1316,6 +1316,7 @@ function RoomThread({ roomId, onArchived }) {
               flybyBusy={flybyBusy}
               onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
               approveBusy={approveBusy}
+              roomId={roomId}
             />
           ))}
           {error && (
@@ -1723,7 +1724,7 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -1830,6 +1831,8 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
 
   // Phase 4 polish — clickable evidence chips open this memory modal.
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
+  // In-app artifact preview (email draft / doc / notion) — no Google redirect.
+  const [artifactPreview, setArtifactPreview] = useState(null);
 
   return (
     <div className="space-y-2">
@@ -2359,25 +2362,45 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           {connectorLogos.map((art, i) => {
             const logo = BRAND_LOGOS[art.connector];
             return (
-              <a
-                key={art.url || i}
-                href={art.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 transition-colors"
-                title={art.title || art.label || 'Open'}
-              >
-                {logo
-                  ? <img src={logo} alt={art.connector} className="w-4 h-4" />
-                  : <ExternalLink size={14} className="text-emerald-700" />}
-                <span className="text-[11px] font-medium text-emerald-800 truncate max-w-[220px]">
-                  {art.label || art.title || t('hyperAgents.openArtifact', 'Open')}
-                </span>
-                <ExternalLink size={11} className="text-emerald-500 group-hover:text-emerald-700" />
-              </a>
+              <div key={art.url || i} className="flex items-stretch gap-0">
+                <a
+                  href={art.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`group flex items-center gap-2 px-3 py-2 border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 transition-colors ${art.body_md ? 'rounded-l-lg' : 'rounded-lg'}`}
+                  title={art.title || art.label || 'Open'}
+                >
+                  {logo
+                    ? <img src={logo} alt={art.connector} className="w-4 h-4" />
+                    : <ExternalLink size={14} className="text-emerald-700" />}
+                  <span className="text-[11px] font-medium text-emerald-800 truncate max-w-[220px]">
+                    {art.label || art.title || t('hyperAgents.openArtifact', 'Open')}
+                  </span>
+                  <ExternalLink size={11} className="text-emerald-500 group-hover:text-emerald-700" />
+                </a>
+                {art.body_md && (
+                  <button type="button"
+                    onClick={() => setArtifactPreview({
+                      kind: art.connector === 'gmail' ? 'email' : art.connector,
+                      connector: art.connector, title: art.title, subject: art.title,
+                      body_md: art.body_md, url: art.url,
+                    })}
+                    className="flex items-center gap-1 px-2.5 rounded-r-lg border border-l-0 border-emerald-200 bg-white text-[10.5px] font-medium text-emerald-700 hover:bg-emerald-100/70 transition-colors"
+                    title={t('hyperAgents.previewTitle', 'Preview the draft in-app — edit + send with one click')}>
+                    <Eye size={12} /> {t('hyperAgents.preview', 'Preview')}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
+      )}
+
+      {/* In-app preview popup — renders the artifact (email/doc/notion) as the room does;
+          email drafts: pencil-edit + one-click Send (mermaid → PNG attachments). */}
+      {artifactPreview && (
+        <ArtifactPreviewModal key={artifactPreview.approval_id || artifactPreview.url || 'p'}
+          preview={artifactPreview} roomId={roomId} onClose={() => setArtifactPreview(null)} />
       )}
 
       {/* Phase 5 — recon/verify verdict vs the done-criterion. */}
@@ -2419,6 +2442,14 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                   <Shield size={12} className="text-blue-600" />
                   <span className="text-[11px] font-medium text-blue-800">{t('hyperAgents.approvalNeeded', 'Approval needed')}</span>
                   {a.label && <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-mono">{a.label}</span>}
+                  {a.body_md && !resolved && (
+                    <button type="button"
+                      onClick={() => setArtifactPreview({ kind: 'email', connector: 'gmail', to: a.to, subject: a.subject, body_md: a.body_md, approval_id: a.approval_id })}
+                      className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded border border-blue-200 bg-white text-[10px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                      title={t('hyperAgents.previewTitle', 'Preview the draft in-app — edit + send with one click')}>
+                      <Eye size={11} /> {t('hyperAgents.preview', 'Preview')}
+                    </button>
+                  )}
                 </div>
                 {a.summary && <div className="text-[10px] text-[#525252] mb-1.5">{a.summary}</div>}
                 {resolved ? (
@@ -2732,6 +2763,164 @@ function MermaidDiagram({ code }) {
   }
   // eslint-disable-next-line react/no-danger -- svg sanitized by mermaid securityLevel:'strict'
   return <div className="mermaid-diagram my-2 overflow-x-auto rounded-md border border-[#e3e0db] bg-white p-3" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+/* ─── Mermaid → PNG (base64, no data: prefix) for email attachments ─────
+ * Client-side render (same mermaid the room uses) → SVG → canvas → PNG.
+ * Returns null on any failure — a diagram must never block a send. */
+async function mermaidPngB64(code) {
+  try {
+    const mermaid = (await import('mermaid')).default;
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral', fontFamily: 'inherit' });
+    let svg = null;
+    for (const candidate of [String(code || '').trim(), sanitizeMermaid(String(code || '').trim())]) {
+      const id = 'mmdx-' + Math.random().toString(36).slice(2, 10);
+      try { ({ svg } = await mermaid.render(id, candidate)); break; }
+      catch { [id, 'd' + id].forEach((x) => document.getElementById(x)?.remove()); }
+    }
+    if (!svg) return null;
+    const vb = svg.match(/viewBox="([\d.\s-]+)"/);
+    const p = vb ? vb[1].trim().split(/\s+/).map(Number) : [];
+    const w0 = p[2] || 900; const h0 = p[3] || 500;
+    const w = Math.min(1600, Math.max(480, Math.ceil(w0)));
+    const h = Math.max(120, Math.ceil(h0 * (w / w0)));
+    const img = new Image();
+    const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    await new Promise((ok, err) => { img.onload = ok; img.onerror = err; img.src = url; });
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2; canvas.height = h * 2;
+    const c2 = canvas.getContext('2d');
+    c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, canvas.width, canvas.height);
+    c2.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png').split(',')[1] || null;
+  } catch { return null; }
+}
+
+/* ─── In-app artifact preview popup (hivemind-popup style: sharp corners) ───
+ * Previews ANY textual artifact (email draft / doc / notion body) rendered as
+ * the room renders it — without redirecting to Google. Email drafts get a
+ * pencil edit toggle + a one-click Send (mermaid blocks are client-rendered
+ * to PNG and attached; the send itself is the human approval). */
+function ArtifactPreviewModal({ preview, roomId, onClose }) {
+  const { t } = useTranslation('dashboard');
+  const isEmail = preview?.kind === 'email';
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState(preview?.body_md || '');
+  const [to, setTo] = useState(preview?.to || '');
+  const [subject, setSubject] = useState(preview?.subject || preview?.title || '');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  if (!preview) return null;
+  const logo = BRAND_LOGOS[preview.connector] || BRAND_LOGOS.gmail;
+  const canSend = isEmail && to.trim() && subject.trim() && body.trim() && !sending && !sent;
+
+  const doSend = async () => {
+    if (!canSend) return;
+    setSending(true); setError('');
+    try {
+      // Client-render every mermaid block → PNG attachment (bounded 6, same as backend).
+      const codes = [...body.matchAll(/```mermaid\n?([\s\S]*?)```/g)].map((m) => m[1]).slice(0, 6);
+      const attachments = [];
+      for (let i = 0; i < codes.length; i++) {
+        const b64 = await mermaidPngB64(codes[i]);
+        if (b64) attachments.push({ filename: `diagram-${i + 1}.png`, mime: 'image/png', data_b64: b64 });
+      }
+      await apiClient.sendHyperRoomEmail(roomId, {
+        to: to.trim(), subject: subject.trim(), bodyMd: body,
+        attachments, approvalId: preview.approval_id || null,
+      });
+      setSent(true);
+    } catch (e) {
+      setError(e?.response?.data?.error || e.message || 'send failed');
+    } finally { setSending(false); }
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div key="apm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-[#1a1814]/45 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={onClose}>
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+          className="bg-white rounded-none w-full max-w-[880px] max-h-[88vh] flex flex-col border border-[#e3e0db] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.25)] overflow-hidden"
+          onClick={(e) => e.stopPropagation()}>
+          {/* header */}
+          <div className="px-6 py-4 flex items-center gap-3 border-b border-[#e3e0db]">
+            <div className="w-10 h-10 rounded-none flex items-center justify-center bg-[#117dff]/10 border border-[#117dff]/20 shrink-0">
+              {logo ? <img src={logo} alt="" className="w-5 h-5" /> : <FileText size={18} className="text-[#117dff]" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373]">
+                {isEmail ? t('hyperAgents.previewEmail', 'Email draft — preview') : t('hyperAgents.previewArtifact', 'Artifact — preview')}
+              </div>
+              <div className="text-[14px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate">
+                {subject || preview.title || 'Draft'}
+              </div>
+            </div>
+            {isEmail && !sent && (
+              <button type="button" onClick={() => setEditing((v) => !v)}
+                title={t('hyperAgents.previewEdit', 'Edit the draft')}
+                className={`w-9 h-9 rounded-none flex items-center justify-center border transition-colors ${editing ? 'bg-[#117dff] border-[#117dff] text-white' : 'border-[#e3e0db] text-[#737373] hover:text-[#0a0a0a] hover:bg-[#faf9f4]'}`}>
+                <Pencil size={14} />
+              </button>
+            )}
+            <button type="button" onClick={onClose}
+              className="w-9 h-9 rounded-none flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-[#faf9f4]">
+              <X size={16} />
+            </button>
+          </div>
+          {/* email meta */}
+          {isEmail && (
+            <div className="px-6 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4] grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 items-center">
+              <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373]">{t('hyperAgents.previewTo', 'To')}</span>
+              {editing
+                ? <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@company.com"
+                    className="h-8 px-2.5 text-[12.5px] bg-white border border-[#e3e0db] rounded-none focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15" />
+                : <span className={`text-[12.5px] ${to ? 'text-[#0a0a0a]' : 'text-amber-600'}`}>{to || t('hyperAgents.previewNoRecipient', 'no recipient yet — click the pencil to add one')}</span>}
+              <span className="text-[10.5px] font-mono uppercase tracking-wider text-[#737373]">{t('hyperAgents.previewSubject', 'Subject')}</span>
+              {editing
+                ? <input value={subject} onChange={(e) => setSubject(e.target.value)}
+                    className="h-8 px-2.5 text-[12.5px] bg-white border border-[#e3e0db] rounded-none focus:outline-none focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15" />
+                : <span className="text-[12.5px] text-[#0a0a0a] truncate">{subject}</span>}
+            </div>
+          )}
+          {/* body */}
+          <div className="px-6 py-4 overflow-y-auto min-h-0 flex-1">
+            {editing
+              ? <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={16}
+                  className="w-full text-[12.5px] font-mono leading-relaxed px-3 py-2.5 bg-[#faf9f4] border border-[#e3e0db] rounded-none focus:outline-none focus:bg-white focus:border-[#117dff]/40 focus:ring-2 focus:ring-[#117dff]/15 resize-y" />
+              : <div className="text-[13px] text-[#262626] leading-relaxed">{renderMarkdownLite(body)}</div>}
+          </div>
+          {/* footer */}
+          <div className="px-6 py-3.5 border-t border-[#e3e0db] flex items-center justify-between gap-3">
+            <div className="text-[11px] text-[#737373] min-w-0 truncate">
+              {error ? <span className="text-red-600">{error}</span>
+                : sent ? <span className="text-emerald-600 font-medium">{t('hyperAgents.previewSent', 'Sent ✓ — delivered via Gmail')}</span>
+                : isEmail ? t('hyperAgents.previewSendHint', 'Sending is the approval — diagrams are attached as images, the body is delivered as polished HTML.')
+                : (preview.url ? t('hyperAgents.previewOpenHint', 'Read-only preview of the produced artifact.') : '')}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {preview.url && (
+                <a href={preview.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-none border border-[#e3e0db] text-[12px] text-[#525252] hover:text-[#0a0a0a] hover:bg-[#faf9f4]">
+                  <ExternalLink size={13} /> {t('hyperAgents.previewOpen', 'Open')}
+                </a>
+              )}
+              {isEmail && (
+                <button type="button" onClick={doSend} disabled={!canSend}
+                  title={!to.trim() ? t('hyperAgents.previewNeedTo', 'Add a recipient first (pencil)') : ''}
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-none bg-[#117dff] text-white text-[12.5px] font-['Space_Grotesk'] font-semibold shadow-[0_4px_14px_rgba(17,125,255,0.32)] hover:bg-[#0066e0] active:scale-95 disabled:opacity-40 disabled:shadow-none transition-all">
+                  {sending ? <Loader2 size={14} className="animate-spin" /> : sent ? <CheckCheck size={14} /> : <Send size={14} />}
+                  {sent ? t('hyperAgents.previewSentBtn', 'Sent') : t('hyperAgents.previewSend', 'Send')}
+                </button>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
 }
 
 /* ─── Markdown-lite renderer ───────────────────────────────────────────

@@ -437,6 +437,16 @@ class HiveMindApiClient {
     return data; // { ok, approval_id, decision, result }
   }
 
+  // One-click send from the in-app draft preview (possibly edited). Sends via the
+  // core Gmail bridge with markdown→HTML polish + optional image attachments
+  // (client-rendered mermaid PNGs). Resolves the approval card when approvalId given.
+  async sendHyperRoomEmail(roomId, { to, subject, bodyMd, attachments = [], approvalId = null }) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/send-email`, {
+      to, subject, body_md: bodyMd, attachments, approval_id: approvalId || undefined,
+    });
+    return data; // { ok, sent, to, subject, result }
+  }
+
   // Mint a short-lived Cartesia agent access token (server holds the key).
   async mintCartesiaToken() {
     const { data } = await this.controlPlane.post('/v1/tara/cartesia-token', {});
