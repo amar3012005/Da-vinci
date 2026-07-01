@@ -1106,7 +1106,7 @@ export function ChatPanel({ isOpen, onClose }) {
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {qrec.supported && (
                   <button
-                    onClick={() => qrec.start({ title: activeProject ? `${activeProject.name} meeting` : '' })}
+                    onClick={() => qrec.openConfig()}
                     disabled={qrec.active}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c4c1bb] hover:text-[#117dff] hover:bg-[#117dff]/10 transition-colors disabled:opacity-40"
                     aria-label="Record a meeting"

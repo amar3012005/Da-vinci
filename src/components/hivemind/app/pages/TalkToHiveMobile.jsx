@@ -855,7 +855,7 @@ export default function TalkToHiveMobile() {
         {/* Record a meeting — one-click background recording; results in desktop → Past meetings */}
         {qrec.supported && (
           <button
-            onClick={() => qrec.start({})}
+            onClick={() => qrec.openConfig()}
             disabled={qrec.active}
             className={`w-10 h-10 flex items-center justify-center rounded-full active:bg-[#ece9e2]/60 disabled:opacity-40 ${qrec.recording ? 'text-red-600' : 'text-[#525252]'}`}
             aria-label="Record a meeting"

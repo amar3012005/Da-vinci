@@ -13,7 +13,7 @@ import {
   HelpCircle, Save, AlertTriangle, Sparkles, Users, Clock, ArrowUpRight,
   CalendarDays, History, AlignLeft, ScrollText, ArrowLeft, Quote, NotebookPen, Building2, User,
   Volume2, MonitorSpeaker, FolderOpen, UserPlus, X, Trash2, Brain,
-  Minimize2, Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import MeetingNotesIcon from '../shared/MeetingNotesIcon';
@@ -236,31 +236,37 @@ function RecordingModal({ status, elapsed, notes, setNotes, multiSpeaker, setMul
    this is just the collapsed control. Expand restores the full modal. */
 function RecordingNotch({ status, elapsed, onExpand, onStop, t }) {
   const recording = status === 'recording';
+  const busy = status === 'transcribing' || status === 'analyzing';
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');
+  // "@Today 11:18 PM" — the meeting START time (now − elapsed), Notion-style.
+  const started = new Date(Date.now() - elapsed * 1000);
+  const timeLabel = started.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white border border-[#e3e0db] rounded-full shadow-lg pl-3.5 pr-2 py-1.5">
-      {recording ? (
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-red-600 font-['Space_Grotesk'] tracking-wide">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> REC
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 font-['Space_Grotesk']">
-          <Sparkles size={11} /> {status === 'transcribing' ? t('meetingnotes.transcribing', 'Transcribing…') : t('meetingnotes.analyzing', 'Analyzing…')}
-        </span>
-      )}
-      <span className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums">{mm}:{ss}</span>
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden">
+      {/* | left bar */}
+      <span className={`w-[3px] ${recording ? 'bg-red-500' : 'bg-[#117dff]'}`} />
       <button onClick={onExpand} title={t('meetingnotes.expand', 'Expand')}
-        className="w-7 h-7 grid place-items-center rounded-full text-[#737373] hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors">
-        <Maximize2 size={14} />
+        className="flex items-center gap-2 px-3 py-1.5 font-['Space_Grotesk'] hover:bg-[#faf9f4] transition-colors">
+        {recording
+          ? <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          : <Sparkles size={11} className="text-[#117dff]" />}
+        <span className="text-[13px] font-semibold text-[#525252]">@Today</span>
+        <span className="text-[13px] font-semibold text-[#b9b5ae] tabular-nums">{timeLabel}</span>
+        {recording && <span className="text-[12px] font-semibold text-[#0a0a0a] tabular-nums ml-0.5">{mm}:{ss}</span>}
+        {busy && <span className="w-3 h-3 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />}
       </button>
-      <button onClick={onStop} disabled={!recording} title={t('meetingnotes.stop', 'Stop')}
-        className="w-7 h-7 grid place-items-center rounded-full bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 transition-colors">
-        <Square size={11} fill="currentColor" />
-      </button>
+      {recording && (
+        <button onClick={onStop} title={t('meetingnotes.stop', 'Stop')}
+          className="grid place-items-center px-2.5 text-red-500 hover:bg-red-50 transition-colors">
+          <Square size={11} fill="currentColor" />
+        </button>
+      )}
+      {/* | right bar */}
+      <span className={`w-[3px] ${recording ? 'bg-red-500' : 'bg-[#117dff]'}`} />
     </motion.div>
   );
 }
