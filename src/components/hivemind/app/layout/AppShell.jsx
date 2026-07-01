@@ -11,7 +11,7 @@ import { ChatPanel } from '../pages/Chat';
 import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
-import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
+import { QuickRecorderProvider, MeetingNotesPromo } from '../shared/QuickRecorderProvider';
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -173,6 +173,8 @@ export default function AppShell() {
           style={{ marginLeft: graphFullscreen ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
           {!graphFullscreen && <TopBar />}
+          {/* New-feature promo — top-right below the navbar; hides while recording */}
+          {!graphFullscreen && <MeetingNotesPromo />}
           <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-6 overflow-y-auto"}>
             <Outlet />
           </main>

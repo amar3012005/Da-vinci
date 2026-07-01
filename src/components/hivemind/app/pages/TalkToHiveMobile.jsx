@@ -41,7 +41,7 @@ import {
 import apiClient from '../shared/api-client';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
-import { useQuickRecorder } from '../shared/QuickRecorderProvider';
+import { MeetingNotesPromo } from '../shared/QuickRecorderProvider';
 import PwaInstall from '../shared/PwaInstall';
 
 const MAX_CHARS = 2000;
@@ -527,8 +527,6 @@ export default function TalkToHiveMobile() {
   const { t, i18n } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { activeProjectId } = useTeamContext() || {};
-  const qrec = useQuickRecorder(); // one-click background meeting recording
-
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -852,19 +850,6 @@ export default function TalkToHiveMobile() {
           )}
         </div>
 
-        {/* Record a meeting — one-click background recording; results in desktop → Past meetings */}
-        {qrec.supported && (
-          <button
-            onClick={() => qrec.openConfig()}
-            disabled={qrec.active}
-            className={`w-10 h-10 flex items-center justify-center rounded-full active:bg-[#ece9e2]/60 disabled:opacity-40 ${qrec.recording ? 'text-red-600' : 'text-[#525252]'}`}
-            aria-label="Record a meeting"
-            title={qrec.active ? 'Recording — see the notch below' : 'Record a meeting'}
-          >
-            <Mic size={18} />
-          </button>
-        )}
-
         {/* Kebab menu */}
         <div className="relative">
           <button
@@ -898,6 +883,9 @@ export default function TalkToHiveMobile() {
           )}
         </div>
       </header>
+
+      {/* New-feature promo — top-right below the header; hides while recording */}
+      <MeetingNotesPromo mobile />
 
       {/* ── Messages ───────────────────────────────── */}
       <div
