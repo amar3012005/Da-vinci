@@ -720,12 +720,12 @@ function EmptyState({ setInput, textareaRef }) {
             Scan to open Talk to HIVE on mobile — same memory, save from anywhere.
           </div>
           <div className="text-[9.5px] text-[#117dff]/70 font-mono mt-1.5 break-all">
-            hivemind.davinciai.eu/hivemind/m/chat
+            {(typeof window !== 'undefined' ? window.location.host : 'hivemind.davinciai.eu')}/hivemind/m/chat
           </div>
         </div>
         <div className="w-[88px] h-[88px] bg-white border border-[#e3e0db] rounded-lg p-1 flex items-center justify-center flex-shrink-0">
           <QRCodeSVG
-            value="https://hivemind.davinciai.eu/hivemind/m/chat?from=dashboard"
+            value={`${typeof window !== 'undefined' ? window.location.origin : 'https://hivemind.davinciai.eu'}/hivemind/m/chat?from=dashboard`}
             size={80}
             level="M"
             marginSize={0}
