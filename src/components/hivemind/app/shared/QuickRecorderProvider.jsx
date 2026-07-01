@@ -269,7 +269,7 @@ export function QuickRecorderProvider({ children }) {
   const chip = (
     <motion.button key="qr-chip" initial={{ opacity: 0, y: mob ? -16 : 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: mob ? -16 : 16 }}
       onClick={() => setCollapsed(false)}
-      className={`fixed z-[70] flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden ${mob ? 'top-[72px] right-3' : 'bottom-4 left-1/2 -translate-x-1/2'}`}
+      className={`fixed flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden ${mob ? 'top-[72px] right-3 z-20' : 'bottom-4 left-1/2 -translate-x-1/2 z-[70]'}`}
       title="Expand recorder">
       <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : 'bg-emerald-500'}`} />
       <span className="flex items-center gap-2 px-3 py-1.5 font-['Space_Grotesk']">
@@ -526,14 +526,17 @@ export function QuickRecorderProvider({ children }) {
  * Fixed top-right just below the navbar. Opens the quick-recorder wizard.
  * Hides while a recording/processing session is active (the chip lives there).
  */
-export function MeetingNotesPromo({ mobile = false }) {
+export function MeetingNotesPromo({ mobile = false, inline = false }) {
   const qrec = useQuickRecorder();
   if (!qrec.supported || qrec.active) return null;
+  // inline → a normal flex item INSIDE the navbar (can never overlap its
+  // dropdowns). mobile → fixed below the mobile header, z-10 (under any menu).
+  const pos = inline ? '' : `fixed z-10 ${mobile ? 'top-[60px] right-3' : 'top-[64px] right-6'}`;
   return (
     <motion.button
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
       onClick={() => qrec.openConfig()}
-      className={`fixed z-20 flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-[6px] bg-white border border-[#117dff]/35 shadow-[0_2px_12px_rgba(17,125,255,0.18)] hover:shadow-[0_2px_16px_rgba(17,125,255,0.3)] hover:border-[#117dff] transition-all ${mobile ? 'top-[60px] right-3' : 'top-[64px] right-6'}`}
+      className={`${pos} flex items-center gap-2 pl-2 pr-3 ${inline ? 'h-8' : 'py-1.5'} rounded-[6px] bg-white border border-[#117dff]/35 shadow-[0_2px_12px_rgba(17,125,255,0.18)] hover:shadow-[0_2px_16px_rgba(17,125,255,0.3)] hover:border-[#117dff] transition-all`}
       title="Record a meeting — transcript + insights, saved to Past meetings">
       <span className="px-1.5 py-0.5 rounded-[4px] bg-[#117dff] text-white text-[9px] font-bold font-['Space_Grotesk'] tracking-wide uppercase">New</span>
       <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
