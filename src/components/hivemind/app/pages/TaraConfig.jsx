@@ -29,7 +29,9 @@ import {
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 
-const _AAAS_WS = process.env.REACT_APP_AAAS_WS || 'wss://core.hivemind.davinciai.eu:8050/aaas/voice';
+// Same-core-host derivation as AaasVoiceWidget — residency-correct, no per-host bake.
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const _AAAS_WS = process.env.REACT_APP_AAAS_WS || `${_CORE_HTTP.replace(/^http/, 'ws')}/aaas/voice`;
 const AAAS_HTTP = _AAAS_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '');
 
 const fadeUp = {
@@ -291,7 +293,7 @@ function SkillsManager() {
 // ─── Outbound Call Panel ───────────────────────────────────────────────────
 const STATE_COLOR = { dialing: '#d97706', connected: '#16a34a', ended: '#a3a3a3', error: '#dc2626' };
 
-function OutboundPanel({ identity, onSwitchTab }) {
+function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
   const [phone, setPhone] = useState('');
   const [callState, setCallState] = useState(null); // null|'dialing'|'connected'|'ended'|'error'
   const [callLegId, setCallLegId] = useState(null);
@@ -334,7 +336,7 @@ function OutboundPanel({ identity, onSwitchTab }) {
           session_id: `out-${Date.now()}`,
           user_id: identity?.userId,
           org_id: identity?.orgId,
-          language: 'en',
+          language: (language || 'en').split('-')[0],
         }),
       });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
@@ -422,7 +424,7 @@ function OutboundPanel({ identity, onSwitchTab }) {
 
 
 export default function TaraConfig() {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
@@ -469,7 +471,7 @@ export default function TaraConfig() {
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
           The ONE Start. Voice/lang config + current-turn chat live inside. */}
       <motion.div variants={fadeUp}>
-        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language="en" />
+        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language={(i18n.language || 'en').split('-')[0]} />
       </motion.div>
 
       {/* Stat cards */}
@@ -573,7 +575,7 @@ export default function TaraConfig() {
             ))}
           </div>
         )}
-        {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} />}
+        {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} language={(i18n.language || 'en').split('-')[0]} />}
       </motion.div>
     </motion.div>
   );

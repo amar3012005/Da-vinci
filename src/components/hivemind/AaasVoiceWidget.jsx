@@ -15,12 +15,17 @@ import { Orb } from './Orb';
 import apiClient from './app/shared/api-client';
 
 const SAMPLE_RATE = 16000;
+// The AaaS voice service is served under /aaas on the SAME core host as this
+// tenant's API — so it's always residency-correct (singulance → its own core,
+// davinci → its own core) with no per-host env baking. Derive from the baked
+// core API URL; REACT_APP_AAAS_WS still overrides if a split host is ever needed.
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
 const DEFAULT_WS =
   process.env.REACT_APP_AAAS_WS ||
-  'wss://core.hivemind.davinciai.eu:8050/aaas/voice';
+  `${_CORE_HTTP.replace(/^http/, 'ws')}/aaas/voice`;
 
 const AAAS_HTTP =
-  (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || 'https://core.hivemind.davinciai.eu:8050/aaas';
+  (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || `${_CORE_HTTP}/aaas`;
 
 // What each mode means — shown as an overlay caption so the user knows on toggle.
 const MODE_DESC = {
@@ -38,7 +43,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   // Voice picker
   const [voices, setVoices] = useState([]);
   const [langs, setLangs] = useState([]);
-  const [langFilter, setLangFilter] = useState('en');
+  const [langFilter, setLangFilter] = useState((language || 'en').split('-')[0].toLowerCase());
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
   const [mode, setMode] = useState('external'); // external = full agent (clinical) | internal = direct recall
@@ -57,12 +62,16 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         setLangs(d.languages || []);
         // Robust default: exact 'en' → any 'en*' → first available (never leave empty,
         // which would make Start send no voice_id and fall back to Cartesia's default).
-        const def = list.find((v) => v.language === 'en')
-          || list.find((v) => (v.language || '').startsWith('en'))
+        // Prefer a voice in the caller's chosen language, then any en, then first.
+        const want = (language || 'en').split('-')[0].toLowerCase();
+        const def = list.find((v) => v.language === want)
+          || list.find((v) => (v.language || '').startsWith(want))
+          || list.find((v) => v.language === 'en')
           || list[0];
         if (def) setVoiceId(def.id);
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reflect the org-wide selected skill on each toggle side.
