@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -12,6 +12,7 @@ import { Brain } from 'lucide-react';
 import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
+import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -105,6 +106,32 @@ function TalkToHiveFAB({ onOpen, hidden }) {
 export default function AppShell() {
   const { needsOnboarding, org } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // ── Post-sign-in reveal sequence ─────────────────────────────────────
+  //   new user  → capability slides → activation checklist → workspace
+  //   returning → activation checklist (auth=callback) → workspace
+  // gate: null (undecided) | 'slides' | 'activation' | 'done'
+  const [gate, setGate] = useState(null);
+  useEffect(() => {
+    if (needsOnboarding || gate !== null) return; // decide once, after onboarding clears
+    let isNew = false;
+    try { isNew = sessionStorage.getItem('hm_new_user') === '1'; } catch { /* noop */ }
+    const fromCallback = new URLSearchParams(location.search).get('auth') === 'callback';
+    setGate(isNew ? 'slides' : fromCallback ? 'activation' : 'done');
+  }, [needsOnboarding, gate, location.search]);
+
+  const finishGate = () => {
+    try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
+    // Strip auth params so refresh doesn't replay the sequence.
+    const params = new URLSearchParams(location.search);
+    if (params.get('auth') === 'callback' || params.get('onboarding')) {
+      params.delete('auth'); params.delete('onboarding');
+      const qs = params.toString();
+      navigate(`${location.pathname}${qs ? `?${qs}` : ''}`, { replace: true });
+    }
+    setGate('done');
+  };
   // Self-host gate: a self_host org must connect its agent BEFORE the workspace opens. We poll the
   // server-side connection state (registry + agent /health) — works even if the user closed the tab
   // while running setup.sh on their server; on return it reflects reality. Managed orgs skip this.
@@ -161,6 +188,14 @@ export default function AppShell() {
   // workspace. Flips to the dashboard automatically the moment the agent registers + is reachable.
   if (isSelfHost && !agentConnected) {
     return <SelfHostSetup onDone={() => setAgentConnected(true)} />;
+  }
+
+  // New-user capability deck → activation checklist → workspace reveal.
+  if (gate === 'slides') {
+    return <WelcomeSlides onDone={() => setGate('activation')} />;
+  }
+  if (gate === 'activation') {
+    return <ActivationGate onDone={finishGate} />;
   }
 
   return (

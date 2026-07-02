@@ -104,6 +104,10 @@ export function AuthProvider({ children }) {
     if (options.provider === 'google') {
       // Direct Google OAuth — bypasses Zitadel
       window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+    } else if (options.provider === 'microsoft' || options.provider === 'apple') {
+      // Federated through ZITADEL — control plane maps the hint to the
+      // registered IdP (or falls back to the ZITADEL chooser).
+      window.location.href = apiClient.getLoginUrl(returnTo, options.provider);
     } else {
       // Zitadel Enterprise SSO
       window.location.href = apiClient.getLoginUrl(returnTo);
@@ -127,6 +131,9 @@ export function AuthProvider({ children }) {
     const data = await apiClient.createOrg(name);
     setOrg(data.organization || null);
     setOnboarding(prev => prev ? { ...prev, needs_org_setup: false } : null);
+    // Freshly-created org = brand-new user → AppShell shows the capability
+    // walkthrough slides + activation sequence before the workspace opens.
+    try { sessionStorage.setItem('hm_new_user', '1'); } catch { /* best effort */ }
     return data;
   }, []);
 

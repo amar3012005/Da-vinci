@@ -5,6 +5,7 @@ import { Hexagon, Zap, Brain, Shield, Loader2, WifiOff, Building2, ArrowLeft, Cl
 import { useAuth } from './AuthProvider';
 import apiClient from '../shared/api-client';
 
+/* ─── Provider icons ───────────────────────────────────────────────────── */
 function GoogleIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -15,6 +16,46 @@ function GoogleIcon({ size = 18 }) {
     </svg>
   );
 }
+
+function MicrosoftIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 23 23">
+      <rect x="1" y="1" width="10" height="10" fill="#F25022" />
+      <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
+      <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
+      <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
+    </svg>
+  );
+}
+
+function AppleIcon({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+    </svg>
+  );
+}
+
+/* ─── Blueprint background (supermemory-style dot grid on ivory) ───────── */
+function DotGrid() {
+  return (
+    <>
+      <div
+        className="absolute inset-0 opacity-[0.55]"
+        style={{
+          backgroundImage: 'radial-gradient(rgba(17,125,255,0.13) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+        }}
+      />
+      <div className="absolute -top-48 -left-48 w-[620px] h-[620px] rounded-full bg-[#117dff]/[0.05] blur-[110px]" />
+      <div className="absolute -bottom-48 -right-48 w-[620px] h-[620px] rounded-full bg-[#117dff]/[0.05] blur-[110px]" />
+    </>
+  );
+}
+
+/* input recipe — shared by both create-account forms */
+const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg-white text-[#0a0a0a] text-[13px] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all";
+const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
 
 export default function LoginPage() {
   const { isAuthenticated, isUnreachable, loading, login } = useAuth();
@@ -57,9 +98,8 @@ export default function LoginPage() {
 
   // Persist cli_return_to into sessionStorage the moment the user lands
   // here. The OAuth round-trip (Google/Zitadel) can drop URL params on
-  // some flows (e.g. when we end up at /hivemind/app/overview?auth=callback
-  // instead of the cli_return_to URL), so the AuthProvider checks
-  // sessionStorage on bootstrap completion to recover the CLI handoff.
+  // some flows, so the AuthProvider checks sessionStorage on bootstrap
+  // completion to recover the CLI handoff.
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(location.search);
@@ -126,6 +166,9 @@ export default function LoginPage() {
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo);
+    } else if (provider === 'microsoft' || provider === 'apple') {
+      // Federated registration through ZITADEL's matching IdP
+      window.location.href = apiClient.getRegisterUrl(returnTo, provider);
     } else {
       // Google OAuth auto-creates accounts
       window.location.href = apiClient.getGoogleLoginUrl(returnTo);
@@ -142,460 +185,466 @@ export default function LoginPage() {
     setHivemindName('');
   };
 
+  /* Small square provider button (Microsoft / Apple / SSO) */
+  const ProviderTile = ({ onClick, label, children }) => (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      title={label}
+      aria-label={label}
+      className="flex-1 h-11 flex items-center justify-center gap-2 rounded-[6px] border border-[#e3e0db] bg-white hover:border-[#0a0a0a] hover:shadow-sm disabled:opacity-60 transition-all text-[#0a0a0a]"
+    >
+      {children}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-[#faf9f4] relative overflow-hidden flex items-center justify-center">
-      {/* Background grid */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(17, 125, 255, 0.3) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(17, 125, 255, 0.3) 1px, transparent 1px)
-          `,
-          backgroundSize: '60px 60px',
-        }}
-      />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-[#117dff]/[0.03] blur-[120px]" />
+    <div className="min-h-screen bg-[#faf9f4] relative overflow-hidden flex flex-col items-center justify-center py-10">
+      <DotGrid />
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         className={`relative z-10 w-full mx-4 transition-[max-width] duration-300 ${showOnboarding ? 'max-w-xl md:max-w-[1000px]' : 'max-w-md md:max-w-3xl'}`}
       >
-        <div className="flex flex-col md:flex-row items-stretch bg-white border border-[#e3e0db] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
+        {/* mono eyebrow above the card — supermemory-style section tag */}
+        <div className="flex items-center justify-center gap-2 mb-4 text-[10px] font-mono uppercase tracking-[0.28em] text-[#a3a3a3]">
+          <span className="text-[#117dff]">〉</span> The sovereign memory engine
+          <span className="hidden sm:inline text-[#d4d0ca]">· EU-hosted</span>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden">
           {/* Left: Login form */}
           <div className={`p-8 transition-[width] duration-300 w-full shrink-0 ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
             {/* Logo */}
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-                <Hexagon size={22} className="text-[#117dff]" />
-              </div>
-              <div>
-                <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">
-                  HIVEMIND
-                </h1>
-                <p className="text-[#a3a3a3] text-xs font-mono">Memory Engine</p>
-              </div>
-            </div>
-
-          {/* CLI flow banner — shown when user was bounced here from
-              `hivemind` CLI's browser handshake. Tells them why they're
-              being asked to sign in mid-terminal-command. */}
-          {isCliFlow && (
-            <div className="mb-6 p-3 rounded-lg bg-[#117dff]/8 border border-[#117dff]/20">
-              <div className="flex items-start gap-2">
-                <Zap size={14} className="text-[#117dff] mt-0.5 shrink-0" />
-                <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
-                  <span className="font-semibold">Signing you in to wire HIVEMIND into your CLI.</span>
-                  <br />
-                  <span className="text-[#3b6da3]">After this you'll see a confirmation screen, then control returns to your terminal.</span>
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/25 flex items-center justify-center">
+                  <Hexagon size={22} className="text-[#117dff]" />
+                </div>
+                <div>
+                  <h1 className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tracking-tight">HIVEMIND</h1>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-[0.18em]">Memory Engine</p>
                 </div>
               </div>
+              <span className="hidden sm:inline text-[10px] font-mono text-[#d4d0ca] tabular-nums">[v2]</span>
             </div>
-          )}
 
-          <AnimatePresence mode="wait">
-            {!showOnboarding ? (
-              <motion.div
-                key="login"
-                initial={{ opacity: 0, x: 0 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
-              >
-                {/* Headline */}
-                <h2 className="text-[#0a0a0a] text-2xl font-bold font-['Space_Grotesk'] mb-2">
-                  {isCliFlow ? 'Authorize HIVEMIND CLI' : 'Sign in to HIVEMIND'}
-                </h2>
-                <p className="text-[#525252] text-sm mb-8 leading-relaxed">
-                  Access your memory workspace, manage API keys, and configure MCP connections.
-                </p>
-
-                {/* State: control_plane_unreachable — the ONLY state that shows a warning */}
-                {isUnreachable && (
-                  <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200">
-                    <WifiOff size={14} className="text-[#dc2626] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">
-                        Control plane unavailable
-                      </p>
-                      <p className="text-[#dc2626]/60 text-[11px] mt-0.5 font-['Space_Grotesk']">
-                        Unable to reach the authentication service. Please try again in a moment.
-                      </p>
-                    </div>
+            {/* CLI flow banner */}
+            {isCliFlow && (
+              <div className="mb-6 p-3 rounded-[8px] bg-[#117dff]/8 border border-[#117dff]/20">
+                <div className="flex items-start gap-2">
+                  <Zap size={14} className="text-[#117dff] mt-0.5 shrink-0" />
+                  <div className="text-[12px] leading-relaxed text-[#0a5fcc]">
+                    <span className="font-semibold">Signing you in to wire HIVEMIND into your CLI.</span>
+                    <br />
+                    <span className="text-[#3b6da3]">After this you'll see a confirmation screen, then control returns to your terminal.</span>
                   </div>
-                )}
+                </div>
+              </div>
+            )}
 
-                {/* Auth buttons — always visible, even during loading */}
-                <div className="space-y-3">
+            <AnimatePresence mode="wait">
+              {!showOnboarding ? (
+                <motion.div
+                  key="login"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {/* Headline */}
+                  <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                    <span className="text-[#a3a3a3]">〉</span> {isCliFlow ? 'CLI HANDSHAKE' : 'SIGN IN'}
+                  </div>
+                  <h2 className="text-[#0a0a0a] text-[26px] leading-tight font-medium font-['Space_Grotesk'] mb-2 tracking-tight">
+                    {isCliFlow ? 'Authorize HIVEMIND CLI' : 'Your memory is waiting'}
+                  </h2>
+                  <p className="text-[#737373] text-[13px] mb-7 leading-relaxed">
+                    One workspace that remembers everything — chat, agents, meetings, connectors.
+                  </p>
+
+                  {/* State: control_plane_unreachable */}
+                  {isUnreachable && (
+                    <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-[8px] bg-red-50 border border-red-200">
+                      <WifiOff size={14} className="text-[#dc2626] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[#dc2626] text-xs font-semibold font-['Space_Grotesk']">Control plane unavailable</p>
+                        <p className="text-[#dc2626]/60 text-[11px] mt-0.5">Unable to reach the authentication service. Please try again in a moment.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Primary: Google */}
                   <button
                     onClick={() => login({ provider: 'google', returnTo: returnToFromState || undefined })}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-60 text-white font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.075em]"
+                    className="w-full h-12 flex items-center justify-center gap-3 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-60 text-white font-semibold rounded-[6px] transition-all text-[13px] font-['Space_Grotesk'] cursor-pointer border-none uppercase tracking-[0.08em]"
                   >
-                    {loading ? (
-                      <Loader2 size={16} className="animate-spin text-white/50" />
-                    ) : (
-                      <GoogleIcon size={18} />
+                    {loading ? <Loader2 size={16} className="animate-spin text-white/60" /> : (
+                      <span className="w-6 h-6 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={14} /></span>
                     )}
                     Continue with Google
                   </button>
 
+                  {/* Provider row: Microsoft · Apple · SSO */}
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
+                      <MicrosoftIcon size={15} />
+                      <span className="text-[12px] font-medium">Microsoft</span>
+                    </ProviderTile>
+                    <ProviderTile label="Continue with Apple" onClick={() => login({ provider: 'apple', returnTo: returnToFromState || undefined })}>
+                      <AppleIcon size={16} />
+                      <span className="text-[12px] font-medium">Apple</span>
+                    </ProviderTile>
+                  </div>
+
+                  {/* EU Sovereign SSO — full-width, the compliance path */}
                   <button
                     onClick={() => login({ returnTo: returnToFromState || undefined })}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-3 bg-transparent hover:bg-[#f3f1ec] disabled:opacity-60 text-[#0a0a0a] font-medium py-3 px-6 rounded-[4px] transition-all duration-200 text-sm font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#d4d0ca] uppercase tracking-[0.075em]"
+                    className="mt-2.5 w-full h-11 flex items-center justify-center gap-2.5 bg-white hover:bg-[#faf9f4] disabled:opacity-60 text-[#0a0a0a] font-medium rounded-[6px] transition-all text-[12px] font-['Space_Grotesk'] cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] uppercase tracking-[0.075em]"
                   >
-                    {loading ? (
-                      <Loader2 size={16} className="animate-spin text-[#a3a3a3]" />
-                    ) : (
-                      <Shield size={16} className="text-[#525252]" />
-                    )}
-                    Enterprise SSO (EU Sovereign)
+                    <Shield size={14} className="text-[#117dff]" />
+                    Enterprise SSO · EU Sovereign
+                    <span className="text-[9px] font-mono normal-case tracking-normal text-[#a3a3a3]">SAML / OIDC</span>
                   </button>
-                </div>
 
-                <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 rounded-lg bg-[#f0fdf4] border border-[#bbf7d0]">
-                  <Shield size={12} className="text-[#16a34a]" />
-                  <p className="text-[#16a34a] text-[10px] font-['Space_Grotesk']">
-                    EU-hosted (Frankfurt) &middot; GDPR compliant &middot; No US data transfer
-                  </p>
-                </div>
-
-                <p className="text-[#d4d0ca] text-[11px] text-center mt-4 leading-relaxed font-['Space_Grotesk']">
-                  Google Sign-In for quick access. Enterprise SSO via ZITADEL for SAML/OIDC.<br />
-                  HIVEMIND does not store your password.
-                </p>
-
-                {/* Create New Account */}
-                <div className="text-center mt-4">
-                  <p className="text-sm text-[#525252]">
-                    Don't have an account?{' '}
-                    <button onClick={() => setShowOnboarding(true)} className="text-[#117dff] font-semibold hover:underline">
-                      Create New Account
-                    </button>
-                  </p>
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3 my-6">
-                  <div className="flex-1 h-px bg-[#e3e0db]" />
-                  <span className="text-[#d4d0ca] text-xs font-mono">or</span>
-                  <div className="flex-1 h-px bg-[#e3e0db]" />
-                </div>
-
-                <a
-                  href="/hivemind"
-                  className="block w-full text-center text-[#a3a3a3] hover:text-[#525252] text-sm py-2.5 rounded-[4px] border border-[#e3e0db] hover:border-[#d4d0ca] transition-all font-['Space_Grotesk']"
-                >
-                  Learn more about HIVEMIND
-                </a>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={`onboarding-${onboardingStep}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
-              >
-                {/* Back button */}
-                <button
-                  onClick={() => {
-                    if (onboardingStep === 1) {
-                      resetOnboarding();
-                    } else if (onboardingStep === 3) {
-                      // Enterprise setup form → back to hosting choice
-                      setOnboardingStep(2);
-                    } else {
-                      // Step 2 (personal form OR enterprise hosting) → choose path
-                      setOnboardingStep(1);
-                      setAccountType(null);
-                      setHostingChoice(null);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 text-[#525252] hover:text-[#0a0a0a] text-sm font-['Space_Grotesk'] mb-6 transition-colors"
-                >
-                  <ArrowLeft size={14} />
-                  {onboardingStep === 1 ? 'Back to sign in' : 'Back'}
-                </button>
-
-                {/* Step 1: Choose path */}
-                {onboardingStep === 1 && (
-                  <div className="space-y-5">
-                    <div>
-                      <h2 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">How will you use HIVEMIND?</h2>
-                      <p className="text-sm text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={() => { setAccountType('personal'); setOnboardingStep(2); }}
-                        className="p-5 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                          <Brain size={24} className="text-blue-500" />
-                        </div>
-                        <h3 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Personal</h3>
-                        <p className="text-sm text-[#525252] mt-1 leading-snug">Your Second Brain — connect all your platforms</p>
-                        <ul className="mt-3 space-y-1.5">
-                          {['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start'].map((f) => (
-                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
-                              <Check size={11} className="text-blue-500 shrink-0" /> {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </button>
-
-                      <button
-                        onClick={() => { setAccountType('enterprise'); setHostingChoice(null); setOnboardingStep(2); }}
-                        className="relative p-5 rounded-2xl border-2 border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col"
-                      >
-                        <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                          <Building2 size={24} className="text-purple-500" />
-                        </div>
-                        <h3 className="text-lg font-bold text-[#0a0a0a] font-['Space_Grotesk']">Enterprise</h3>
-                        <p className="text-sm text-[#525252] mt-1 leading-snug">Sovereign Memory Engine for your team</p>
-                        <ul className="mt-3 space-y-1.5">
-                          {['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty'].map((f) => (
-                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
-                              <Check size={11} className="text-purple-500 shrink-0" /> {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </button>
-                    </div>
+                  {/* trust line */}
+                  <div className="flex items-center justify-center gap-2 mt-4 px-3 py-2 rounded-[6px] bg-[#f0fdf4] border border-[#bbf7d0]">
+                    <Shield size={11} className="text-[#16a34a]" />
+                    <p className="text-[#16a34a] text-[10px] font-mono">EU-hosted (Frankfurt) · GDPR · no US data transfer</p>
                   </div>
-                )}
 
-                {/* Step 2a: Personal details */}
-                {onboardingStep === 2 && accountType === 'personal' && (
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Second Brain</h2>
-                    <div>
-                      <label className="text-sm font-medium text-[#525252] block mb-1">Your name</label>
-                      <input
-                        value={userName}
-                        onChange={e => setUserName(e.target.value)}
-                        placeholder="Amar"
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-[#525252] block mb-1">Name your HIVEMIND</label>
-                      <input
-                        value={hivemindName}
-                        onChange={e => setHivemindName(e.target.value)}
-                        placeholder={`${userName || 'your'}_secondbrain`}
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-                      />
-                      <p className="text-xs text-[#a3a3a3] mt-1">This is your memory workspace name</p>
-                    </div>
-                    <button
-                      onClick={() => handleCreateAccount('google')}
-                      disabled={!userName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
-                    >
-                      <GoogleIcon size={16} /> Continue with Google
-                    </button>
-                    <button
-                      onClick={() => handleCreateAccount('zitadel')}
-                      disabled={!userName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2 mt-2"
-                    >
-                      <Shield size={14} /> Enterprise SSO (EU Sovereign)
-                    </button>
-                  </div>
-                )}
-
-                {/* Step 2b: Enterprise hosting choice — Managed vs Self-Hosted Sovereign */}
-                {onboardingStep === 2 && accountType === 'enterprise' && (
-                  <div className="space-y-5">
-                    <div>
-                      <h2 className="text-2xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Where should your memory live?</h2>
-                      <p className="text-sm text-[#737373] mt-1.5">Your organization's memory is your most valuable asset. Choose who holds it.</p>
-                    </div>
-
-                    {/* Managed cloud — the easy default */}
-                    <button
-                      onClick={() => { setHostingChoice('managed'); setOnboardingStep(3); }}
-                      className={`w-full text-left p-5 rounded-2xl border-2 transition-all group ${
-                        hostingChoice === 'managed' ? 'border-[#117dff] bg-[#117dff]/[0.03]' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Cloud size={22} className="text-[#117dff]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-base font-bold text-[#0a0a0a] font-['Space_Grotesk']">Managed Cloud</h3>
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Included</span>
-                          </div>
-                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">We host & operate it for you on EU-sovereign infrastructure (Frankfurt). Live in seconds, zero ops.</p>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
-                            {['Instant setup', 'Auto-scaling & backups', 'GDPR · EU-only'].map((f) => (
-                              <span key={f} className="flex items-center gap-1 text-[11px] text-[#737373]"><Check size={11} className="text-[#117dff]" /> {f}</span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Self-hosted sovereign — the premium tier */}
-                    <button
-                      onClick={() => { setHostingChoice('self_hosted'); setOnboardingStep(3); }}
-                      className={`relative w-full text-left p-5 rounded-2xl transition-all group overflow-hidden ${
-                        hostingChoice === 'self_hosted' ? 'ring-2 ring-amber-400' : ''
-                      }`}
-                      style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #18181b 100%)' }}
-                    >
-                      {/* subtle gold sheen */}
-                      <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
-                      <div className="absolute top-3 right-3">
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-full">
-                          <Crown size={10} /> Sovereign
-                        </span>
-                      </div>
-                      <div className="relative flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Server size={22} className="text-amber-300" />
-                        </div>
-                        <div className="flex-1 min-w-0 pr-16">
-                          <h3 className="text-base font-bold text-white font-['Space_Grotesk']">Self-Hosted Sovereign</h3>
-                          <p className="text-[12px] text-white/60 mt-1 leading-snug">
-                            Your servers. Your keys. Your data never leaves your walls. The ultimate tier for organizations where data <span className="text-amber-300/90 font-medium">is</span> the business.
-                          </p>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
-                            {[
-                              { icon: Lock, t: 'Air-gapped / VPC deploy' },
-                              { icon: KeyRound, t: 'Customer-held encryption keys' },
-                              { icon: Shield, t: 'Full data residency control' },
-                            ].map((f) => (
-                              <span key={f.t} className="flex items-center gap-1 text-[11px] text-white/50"><f.icon size={11} className="text-amber-300/80" /> {f.t}</span>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
-                            <span className="text-[11px] font-semibold text-amber-300 font-['Space_Grotesk']">Custom pricing</span>
-                            <span className="text-[11px] text-white/40">·</span>
-                            <span className="text-[11px] text-white/50">White-glove onboarding & dedicated SLA</span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <p className="text-[11px] text-[#a3a3a3] text-center leading-relaxed">
-                      Not sure? Start on Managed Cloud — you can migrate to a sovereign self-hosted instance at any time without losing a single memory.
+                  {/* Create New Account */}
+                  <div className="text-center mt-5">
+                    <p className="text-[13px] text-[#737373]">
+                      New here?{' '}
+                      <button onClick={() => setShowOnboarding(true)} className="text-[#117dff] font-semibold hover:underline">
+                        Create your HIVEMIND
+                      </button>
                     </p>
                   </div>
-                )}
 
-                {/* Step 3: Enterprise details */}
-                {onboardingStep === 3 && accountType === 'enterprise' && (
-                  <div className="space-y-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-[#0a0a0a] font-['Space_Grotesk']">Set up your Enterprise HIVEMIND</h2>
-                      {hostingChoice === 'self_hosted' ? (
-                        <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                          <Crown size={11} /> Self-Hosted Sovereign · our team will reach out to provision
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20 px-2 py-0.5 rounded-full">
-                          <Cloud size={11} /> Managed Cloud · EU-sovereign (Frankfurt)
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-[#525252] block mb-1">Admin name</label>
-                      <input
-                        value={userName}
-                        onChange={e => setUserName(e.target.value)}
-                        placeholder="Amar"
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-[#525252] block mb-1">Enterprise name</label>
-                      <input
-                        value={enterpriseName}
-                        onChange={e => setEnterpriseName(e.target.value)}
-                        placeholder="DaVinci AI"
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-[#525252] block mb-1">Your Enterprise HIVEMIND</label>
-                      <input
-                        value={hivemindName}
-                        onChange={e => setHivemindName(e.target.value)}
-                        placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`}
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#e3e0db] bg-white text-[#0a0a0a] text-sm font-['Space_Grotesk'] focus:outline-none focus:border-[#117dff] focus:ring-1 focus:ring-[#117dff]/20 transition-all"
-                      />
-                    </div>
-                    {hostingChoice === 'self_hosted' ? (
-                      <div className="rounded-xl p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
-                        <p className="text-sm text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
-                        <p className="text-xs text-amber-600/90 mt-1">Reserve your workspace now. Our solutions team contacts you within one business day to provision your private instance, encryption keys and SLA.</p>
-                      </div>
-                    ) : (
-                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <p className="text-sm text-purple-700 font-medium">Enterprise accounts start with a 14-day Scale trial</p>
-                        <p className="text-xs text-purple-500 mt-1">Full access to all features. No credit card required.</p>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => handleCreateAccount('zitadel')}
-                      disabled={!userName.trim() || !enterpriseName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#1a1a1a] disabled:opacity-40 text-white font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
-                    >
-                      {hostingChoice === 'self_hosted'
-                        ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
-                        : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
-                    </button>
-                    <button
-                      onClick={() => handleCreateAccount('google')}
-                      disabled={!userName.trim() || !enterpriseName.trim()}
-                      className="w-full py-2.5 rounded-xl bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-semibold text-sm font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] flex items-center justify-center gap-2 mt-2"
-                    >
-                      <GoogleIcon size={16} /> Continue with Google
-                    </button>
+                  {/* Divider */}
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-[#e3e0db]" />
+                    <span className="text-[#d4d0ca] text-[10px] font-mono">or</span>
+                    <div className="flex-1 h-px bg-[#e3e0db]" />
                   </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* Right pane — poster fills its half edge-to-edge, equal size to the
-            left login card (matches reference layout: two equal halves). */}
-        <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
-          <img
-            src="/images/hivemind-login-art.webp"
-            alt="HIVEMIND memory system"
-            className="h-full w-full object-cover object-top block"
-          />
-        </div>
+                  <a
+                    href="/hivemind"
+                    className="block w-full text-center text-[#a3a3a3] hover:text-[#0a0a0a] text-[12px] py-2.5 rounded-[6px] border border-[#e3e0db] hover:border-[#d4d0ca] transition-all font-['Space_Grotesk']"
+                  >
+                    Learn more about HIVEMIND
+                  </a>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`onboarding-${onboardingStep}`}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {/* Back button */}
+                  <button
+                    onClick={() => {
+                      if (onboardingStep === 1) {
+                        resetOnboarding();
+                      } else if (onboardingStep === 3) {
+                        setOnboardingStep(2);
+                      } else {
+                        setOnboardingStep(1);
+                        setAccountType(null);
+                        setHostingChoice(null);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[#737373] hover:text-[#0a0a0a] text-[12px] font-['Space_Grotesk'] mb-6 transition-colors"
+                  >
+                    <ArrowLeft size={13} />
+                    {onboardingStep === 1 ? 'Back to sign in' : 'Back'}
+                  </button>
 
-      </div>
+                  {/* Step 1: Choose path */}
+                  {onboardingStep === 1 && (
+                    <div className="space-y-5">
+                      <div>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                          <span className="text-[#a3a3a3]">〉</span> NEW WORKSPACE <span className="text-[#d4d0ca]">· 01</span>
+                        </div>
+                        <h2 className="text-[24px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">How will you use HIVEMIND?</h2>
+                        <p className="text-[13px] text-[#737373] mt-1.5">Choose the workspace that fits you. You can grow into Enterprise anytime.</p>
+                      </div>
 
-      {/* Feature pills */}
-      <div className="flex items-center justify-center gap-4 mt-6">
-        {[
-          { icon: Brain, label: 'Persistent Memory' },
-          { icon: Zap, label: 'Sub-50ms Recall' },
-          { icon: Shield, label: 'EU Sovereign' },
-        ].map((feat) => (
-          <div
-            key={feat.label}
-            className="flex items-center gap-1.5 text-[#a3a3a3] text-xs font-['Space_Grotesk']"
-          >
-            <feat.icon size={12} />
-            <span>{feat.label}</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => { setAccountType('personal'); setOnboardingStep(2); }}
+                          className="p-4 rounded-[10px] border border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm transition-all text-left group flex flex-col bg-white"
+                        >
+                          <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
+                            <Brain size={20} className="text-[#117dff]" />
+                          </div>
+                          <h3 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Personal</h3>
+                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">Your Second Brain — connect all your platforms</p>
+                          <ul className="mt-3 space-y-1.5">
+                            {['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start'].map((f) => (
+                              <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+                                <Check size={11} className="text-[#117dff] shrink-0" /> {f}
+                              </li>
+                            ))}
+                          </ul>
+                        </button>
+
+                        <button
+                          onClick={() => { setAccountType('enterprise'); setHostingChoice(null); setOnboardingStep(2); }}
+                          className="relative p-4 rounded-[10px] border border-[#e3e0db] hover:border-[#0a0a0a] hover:shadow-sm transition-all text-left group flex flex-col bg-white"
+                        >
+                          <div className="w-10 h-10 rounded-[8px] bg-[#f3f1ec] border border-[#e3e0db] flex items-center justify-center mb-3">
+                            <Building2 size={20} className="text-[#0a0a0a]" />
+                          </div>
+                          <h3 className="text-[15px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Enterprise</h3>
+                          <p className="text-[12px] text-[#525252] mt-1 leading-snug">Sovereign Memory Engine for your team</p>
+                          <ul className="mt-3 space-y-1.5">
+                            {['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty'].map((f) => (
+                              <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+                                <Check size={11} className="text-[#0a0a0a] shrink-0" /> {f}
+                              </li>
+                            ))}
+                          </ul>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2a: Personal details */}
+                  {onboardingStep === 2 && accountType === 'personal' && (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                          <span className="text-[#a3a3a3]">〉</span> SECOND BRAIN <span className="text-[#d4d0ca]">· 02</span>
+                        </div>
+                        <h2 className="text-[20px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Set up your Second Brain</h2>
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Your name</label>
+                        <input value={userName} onChange={e => setUserName(e.target.value)} placeholder="Amar" className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Name your HIVEMIND</label>
+                        <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${userName || 'your'}_secondbrain`} className={INPUT_CLS} />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">This is your memory workspace name</p>
+                      </div>
+                      <button
+                        onClick={() => handleCreateAccount('google')}
+                        disabled={!userName.trim()}
+                        className="w-full h-11 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
+                      >
+                        <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
+                        Continue with Google
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && handleCreateAccount('microsoft')}>
+                          <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
+                        </ProviderTile>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && handleCreateAccount('apple')}>
+                          <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
+                        </ProviderTile>
+                      </div>
+                      <button
+                        onClick={() => handleCreateAccount('zitadel')}
+                        disabled={!userName.trim()}
+                        className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
+                      >
+                        <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 2b: Enterprise hosting choice */}
+                  {onboardingStep === 2 && accountType === 'enterprise' && (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                          <span className="text-[#a3a3a3]">〉</span> DATA RESIDENCY <span className="text-[#d4d0ca]">· 02</span>
+                        </div>
+                        <h2 className="text-[22px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Where should your memory live?</h2>
+                        <p className="text-[13px] text-[#737373] mt-1.5">Your organization's memory is your most valuable asset. Choose who holds it.</p>
+                      </div>
+
+                      {/* Managed cloud */}
+                      <button
+                        onClick={() => { setHostingChoice('managed'); setOnboardingStep(3); }}
+                        className={`w-full text-left p-4 rounded-[10px] border transition-all group bg-white ${
+                          hostingChoice === 'managed' ? 'border-[#117dff] bg-[#117dff]/[0.03]' : 'border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                            <Cloud size={19} className="text-[#117dff]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-[14px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">Managed Cloud</h3>
+                              <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">Included</span>
+                            </div>
+                            <p className="text-[12px] text-[#525252] mt-1 leading-snug">We host & operate it for you on EU-sovereign infrastructure (Frankfurt). Live in seconds, zero ops.</p>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                              {['Instant setup', 'Auto-scaling & backups', 'GDPR · EU-only'].map((f) => (
+                                <span key={f} className="flex items-center gap-1 text-[11px] text-[#737373]"><Check size={11} className="text-[#117dff]" /> {f}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Self-hosted sovereign */}
+                      <button
+                        onClick={() => { setHostingChoice('self_hosted'); setOnboardingStep(3); }}
+                        className={`relative w-full text-left p-4 rounded-[10px] transition-all group overflow-hidden ${
+                          hostingChoice === 'self_hosted' ? 'ring-2 ring-amber-400' : ''
+                        }`}
+                        style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #18181b 100%)' }}
+                      >
+                        <div className="absolute -top-16 -right-10 w-48 h-48 rounded-full bg-amber-400/10 blur-3xl pointer-events-none" />
+                        <div className="absolute top-3 right-3">
+                          <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-full">
+                            <Crown size={10} /> Sovereign
+                          </span>
+                        </div>
+                        <div className="relative flex items-start gap-3.5">
+                          <div className="w-10 h-10 rounded-[8px] bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+                            <Server size={19} className="text-amber-300" />
+                          </div>
+                          <div className="flex-1 min-w-0 pr-14">
+                            <h3 className="text-[14px] font-bold text-white font-['Space_Grotesk']">Self-Hosted Sovereign</h3>
+                            <p className="text-[12px] text-white/60 mt-1 leading-snug">
+                              Your servers. Your keys. Your data never leaves your walls. The ultimate tier for organizations where data <span className="text-amber-300/90 font-medium">is</span> the business.
+                            </p>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                              {[
+                                { icon: Lock, t: 'Air-gapped / VPC deploy' },
+                                { icon: KeyRound, t: 'Customer-held encryption keys' },
+                                { icon: Shield, t: 'Full data residency control' },
+                              ].map((f) => (
+                                <span key={f.t} className="flex items-center gap-1 text-[11px] text-white/50"><f.icon size={11} className="text-amber-300/80" /> {f.t}</span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
+                              <span className="text-[11px] font-semibold text-amber-300 font-['Space_Grotesk']">Custom pricing</span>
+                              <span className="text-[11px] text-white/40">·</span>
+                              <span className="text-[11px] text-white/50">White-glove onboarding & dedicated SLA</span>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+
+                      <p className="text-[11px] text-[#a3a3a3] text-center leading-relaxed">
+                        Not sure? Start on Managed Cloud — you can migrate to a sovereign self-hosted instance at any time without losing a single memory.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Step 3: Enterprise details */}
+                  {onboardingStep === 3 && accountType === 'enterprise' && (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                          <span className="text-[#a3a3a3]">〉</span> ENTERPRISE SETUP <span className="text-[#d4d0ca]">· 03</span>
+                        </div>
+                        <h2 className="text-[20px] font-medium text-[#0a0a0a] font-['Space_Grotesk'] tracking-tight">Set up your Enterprise HIVEMIND</h2>
+                        {hostingChoice === 'self_hosted' ? (
+                          <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                            <Crown size={11} /> Self-Hosted Sovereign · our team will reach out to provision
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#117dff] bg-[#117dff]/[0.06] border border-[#117dff]/20 px-2 py-0.5 rounded-full">
+                            <Cloud size={11} /> Managed Cloud · EU-sovereign (Frankfurt)
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Admin name</label>
+                        <input value={userName} onChange={e => setUserName(e.target.value)} placeholder="Amar" className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Enterprise name</label>
+                        <input value={enterpriseName} onChange={e => setEnterpriseName(e.target.value)} placeholder="DaVinci AI" className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
+                        <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
+                      </div>
+                      {hostingChoice === 'self_hosted' ? (
+                        <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+                          <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
+                          <p className="text-[11px] text-amber-600/90 mt-1">Reserve your workspace now. Our solutions team contacts you within one business day to provision your private instance, encryption keys and SLA.</p>
+                        </div>
+                      ) : (
+                        <div className="bg-[#117dff]/[0.04] border border-[#117dff]/15 rounded-[8px] p-4">
+                          <p className="text-[13px] text-[#0a5fcc] font-medium">Enterprise accounts start with a 14-day Scale trial</p>
+                          <p className="text-[11px] text-[#3b6da3] mt-1">Full access to all features. No credit card required.</p>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handleCreateAccount('zitadel')}
+                        disabled={!userName.trim() || !enterpriseName.trim()}
+                        className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
+                      >
+                        {hostingChoice === 'self_hosted'
+                          ? (<><Crown size={14} className="text-amber-300" /> Reserve Sovereign Instance</>)
+                          : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('google')}>
+                          <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
+                        </ProviderTile>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('microsoft')}>
+                          <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
+                        </ProviderTile>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('apple')}>
+                          <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
+                        </ProviderTile>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        ))}
-      </div>
-    </motion.div>
+
+          {/* Right pane — poster fills its half edge-to-edge */}
+          <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
+            <img
+              src="/images/hivemind-login-art.webp"
+              alt="HIVEMIND memory system"
+              className="h-full w-full object-cover object-top block"
+            />
+            {/* mono caption over the art, supermemory-style */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+              <span className="px-2.5 py-1 rounded-[4px] bg-black/35 backdrop-blur-sm text-white/85 text-[9px] font-mono uppercase tracking-[0.26em]">
+                memory · running inside everything
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature pills — benchmark-style mono footer */}
+        <div className="flex items-center justify-center gap-5 mt-5">
+          {[
+            { icon: Brain, label: 'Persistent Memory' },
+            { icon: Zap, label: '<50ms Recall' },
+            { icon: Shield, label: 'EU Sovereign' },
+          ].map((feat) => (
+            <div key={feat.label} className="flex items-center gap-1.5 text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider">
+              <feat.icon size={11} className="text-[#117dff]/60" />
+              <span>{feat.label}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }

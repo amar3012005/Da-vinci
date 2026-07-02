@@ -357,90 +357,76 @@ export default function Walkthrough({
               >
                 {(() => {
                   const ink = s.accent[0];
-                  const inkDeep = s.accent[1] || s.accent[0];
                   const num = String(i + 1).padStart(2, '0');
-                  const serial = `HM ${String(i + 1).padStart(10, '0')}`;
+                  // Blueprint card — white canvas, dot grid, terminal header,
+                  // mono eyebrow + big Space Grotesk copy (supermemory-style).
                   return (
-                <div className="relative rounded-[16px] overflow-hidden shadow-[0_24px_70px_-20px_rgba(11,59,134,0.30),0_8px_30px_rgba(0,0,0,0.10)]"
-                  style={{ background: 'linear-gradient(135deg,#fbfaf6 0%,#f3f1e9 100%)' }}>
-                  {/* Engraved ink work */}
-                  <GuillochePattern ink={ink} />
-                  <WorldDots ink={inkDeep} />
-                  {/* Giant ghost watermark glyph */}
-                  <StepIcon className="absolute -right-3 top-1/2 -translate-y-1/2 opacity-[0.06] pointer-events-none"
-                    size={260} strokeWidth={0.6} style={{ color: inkDeep }} aria-hidden="true" />
+                <div className="relative rounded-[10px] overflow-hidden bg-white border border-[#e3e0db] shadow-[0_24px_70px_-20px_rgba(11,59,134,0.22),0_8px_30px_rgba(0,0,0,0.08)]">
+                  {/* dot grid wash */}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.5]"
+                    style={{ backgroundImage: `radial-gradient(${ink}22 1px, transparent 1px)`, backgroundSize: '18px 18px' }} />
+                  {/* ghost watermark glyph */}
+                  <StepIcon className="absolute -right-4 top-1/2 -translate-y-1/2 opacity-[0.05] pointer-events-none"
+                    size={240} strokeWidth={0.6} style={{ color: ink }} aria-hidden="true" />
 
-                  {/* Double engraved frame */}
-                  <div className="absolute inset-[9px] rounded-[11px] pointer-events-none" style={{ border: `1.5px solid ${ink}55` }} />
-                  <div className="absolute inset-[13px] rounded-[8px] pointer-events-none" style={{ border: `0.75px solid ${ink}33` }} />
+                  {/* terminal header */}
+                  <div className="relative flex items-center gap-1.5 px-4 py-2.5 border-b border-[#e3e0db] bg-[#faf9f4]">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+                    <span className="ml-2 text-[10px] font-mono text-[#a3a3a3] lowercase">{brand.toLowerCase()} · {s.label.toLowerCase()}</span>
+                    <span className="ml-auto text-[10px] font-mono text-[#a3a3a3] tabular-nums">[{i + 1}/{total}]</span>
+                    {front && (
+                      <button type="button" onClick={close} aria-label="Skip walkthrough"
+                        className="ml-2 w-6 h-6 rounded-[4px] flex items-center justify-center text-[#a3a3a3] hover:text-[#0a0a0a] hover:bg-black/5 transition-colors">
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
 
-                  {/* Corner denomination numerals */}
-                  <span className="absolute top-3.5 right-4 text-[13px] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{num}</span>
-                  <span className="absolute bottom-3.5 left-4 text-[13px] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{num}</span>
-
-                  {/* Vertical microtext (left edge) */}
-                  <span className="absolute left-[18px] top-1/2 -translate-y-1/2 -rotate-90 origin-center whitespace-nowrap text-[7px] tracking-[0.32em] font-semibold uppercase"
-                    style={{ color: `${ink}99` }}>Sovereign Memory · Not Legal Tender</span>
-
-                  {/* Close (front only) */}
-                  {front && (
-                    <button type="button" onClick={close} aria-label="Skip walkthrough"
-                      className="absolute top-3 right-9 w-7 h-7 rounded-full flex items-center justify-center transition-colors hover:bg-black/5"
-                      style={{ color: `${ink}aa` }}>
-                      <X size={15} />
-                    </button>
-                  )}
-
-                  {/* Content */}
-                  <div className="relative flex items-stretch gap-5 px-8 pt-6 pb-4 pl-12 min-h-[150px]">
-                    {/* Denomination block */}
-                    <div className="shrink-0 w-[150px] flex flex-col justify-center">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[44px] leading-[0.85] font-bold font-['Space_Grotesk']" style={{ color: ink }}>{i + 1}</span>
-                        <span className="text-[15px] font-bold font-['Space_Grotesk'] uppercase tracking-tight" style={{ color: ink }}>{s.label}</span>
+                  {/* content */}
+                  <div className="relative flex items-stretch gap-5 px-7 pt-6 pb-5 min-h-[168px]">
+                    {/* number + icon column */}
+                    <div className="shrink-0 w-[120px] flex flex-col justify-center">
+                      <span className="text-[44px] leading-[0.85] font-medium font-['Space_Grotesk'] tabular-nums" style={{ color: ink }}>{num}</span>
+                      <div className="mt-3 w-9 h-9 rounded-[8px] flex items-center justify-center" style={{ background: `${ink}12`, border: `1px solid ${ink}30` }}>
+                        <StepIcon size={17} style={{ color: ink }} />
                       </div>
-                      <div className="mt-1.5 text-[8px] tracking-[0.28em] font-semibold uppercase" style={{ color: `${ink}cc` }}>
-                        Step {i + 1} of {total}
-                      </div>
-                      <div className="mt-4 flex items-center gap-1.5">
-                        <div className="w-7 h-7 rounded-md flex items-center justify-center" style={{ background: `${ink}1a`, border: `1px solid ${ink}33` }}>
-                          <Hexagon size={14} style={{ color: ink }} />
-                        </div>
-                        <span className="text-[11px] font-bold font-['Space_Grotesk'] tracking-tight" style={{ color: inkDeep }}>{brand}</span>
-                      </div>
-                      <div className="mt-3 text-[8.5px] font-mono tracking-[0.18em]" style={{ color: `${ink}99` }}>{serial}</div>
+                      <div className="mt-2.5 text-[9px] font-mono uppercase tracking-[0.24em] text-[#a3a3a3]">Step {i + 1} of {total}</div>
                     </div>
 
-                    {/* Engraved copy */}
-                    <div className="flex-1 min-w-0 border-l pl-5 flex flex-col justify-center" style={{ borderColor: `${ink}22` }}>
-                      <h2 className="text-[19px] leading-tight font-bold font-['Space_Grotesk'] mb-1.5" style={{ color: inkDeep }}>{s.title}</h2>
-                      <p className="text-[13px] leading-relaxed" style={{ color: '#3a4a63' }}>{s.description}</p>
+                    {/* copy */}
+                    <div className="flex-1 min-w-0 border-l border-[#eae7e1] pl-5 flex flex-col justify-center">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.22em] mb-1.5" style={{ color: ink }}>
+                        <span className="text-[#c8c4be]">〉</span> {s.label}
+                      </div>
+                      <h2 className="text-[20px] leading-tight font-medium font-['Space_Grotesk'] text-[#0a0a0a] mb-1.5 tracking-tight">{s.title}</h2>
+                      <p className="text-[13px] leading-relaxed text-[#525252]">{s.description}</p>
                     </div>
                   </div>
 
                   {/* Footer: dots + nav (front only) */}
                   {front && (
-                    <div className="relative flex items-center justify-between px-12 pb-4 pt-0">
+                    <div className="relative flex items-center justify-between px-7 pb-4 pt-0">
                       <div className="flex items-center gap-1.5">
                         {steps.map((st, j) => (
                           <button key={st.label + j} type="button"
                             onClick={() => { setDir(j > index ? 1 : -1); setIndex(j); }}
                             aria-label={`Go to step ${j + 1}`}
-                            className="h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: j === index ? 24 : 6, background: j === index ? ink : `${ink}40` }} />
+                            className="h-1 rounded-full transition-all duration-300"
+                            style={{ width: j === index ? 24 : 7, background: j === index ? ink : '#d4d0ca' }} />
                         ))}
                       </div>
                       <div className="flex items-center gap-2">
                         {index > 0 && (
                           <button type="button" onClick={goPrev} aria-label="Back"
-                            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-black/5"
-                            style={{ border: `1px solid ${ink}33`, color: ink }}>
-                            <ArrowLeft size={16} />
+                            className="h-9 w-9 rounded-[6px] flex items-center justify-center transition-colors border border-[#e3e0db] text-[#525252] hover:border-[#d4d0ca] hover:text-[#0a0a0a]">
+                            <ArrowLeft size={15} />
                           </button>
                         )}
                         <button type="button" onClick={goNext}
-                          className="h-9 px-5 rounded-full text-white text-sm font-medium font-['Space_Grotesk'] active:scale-95 transition-all"
-                          style={{ background: ink, boxShadow: `0 4px 16px ${ink}55` }}>
+                          className="h-9 px-5 rounded-[6px] text-white text-[12px] font-semibold font-['Space_Grotesk'] uppercase tracking-[0.08em] active:scale-95 transition-all"
+                          style={{ background: ink }}>
                           {isLast ? 'Get started' : 'Next'}
                         </button>
                       </div>
@@ -527,42 +513,3 @@ export function PageWalkthrough({
     </>
   );
 }
-
-/** Subtle honeycomb SVG overlay for the visual panel. */
-// Engraved guilloché — the fine wavy line-work on banknotes. Pure SVG, cheap.
-function GuillochePattern({ ink }) {
-  return (
-    <svg className="absolute inset-0 w-full h-full opacity-[0.10]" aria-hidden="true" preserveAspectRatio="none">
-      <defs>
-        <pattern id="hm-guilloche" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(8)">
-          <path d="M0 20 Q10 4 20 20 T40 20" fill="none" stroke={ink} strokeWidth="0.8" />
-          <path d="M0 28 Q10 12 20 28 T40 28" fill="none" stroke={ink} strokeWidth="0.6" />
-          <path d="M0 12 Q10 -4 20 12 T40 12" fill="none" stroke={ink} strokeWidth="0.6" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#hm-guilloche)" />
-    </svg>
-  );
-}
-
-// Faint dotted-globe watermark, echoing the banknote's world-map ink.
-function WorldDots({ ink }) {
-  return (
-    <svg className="absolute inset-0 w-full h-full opacity-[0.07]" aria-hidden="true" preserveAspectRatio="none">
-      <defs>
-        <radialGradient id="hm-globe" cx="62%" cy="50%" r="42%">
-          <stop offset="0%" stopColor={ink} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={ink} stopOpacity="0" />
-        </radialGradient>
-        <pattern id="hm-dots" width="9" height="9" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1.1" fill={ink} />
-        </pattern>
-        <mask id="hm-globe-mask">
-          <circle cx="62%" cy="50%" r="34%" fill="url(#hm-globe)" />
-        </mask>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#hm-dots)" mask="url(#hm-globe-mask)" />
-    </svg>
-  );
-}
-
