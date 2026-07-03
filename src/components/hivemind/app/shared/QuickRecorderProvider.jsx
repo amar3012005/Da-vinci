@@ -27,6 +27,53 @@ function pickMime() {
 }
 const SUPPORTED = typeof navigator !== 'undefined' && !!navigator.mediaDevices
   && typeof navigator.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined';
+
+/* ── Refresh-survival ────────────────────────────────────────────────────
+   An in-flight recording session is persisted so a reload / accidental back
+   never silently kills it: session META in localStorage, raw audio CHUNKS of
+   the current (not-yet-transcribed) segment in IndexedDB, transcribed text on
+   the server (per-segment POST). On mount we rebuild all three and either
+   auto-resume the mic or park in an explicit "interrupted" state. Recording
+   ends ONLY on the user's Stop. */
+const LS_KEY = 'hm_qrec_session_v1';
+const readSession = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; } };
+const writeSession = (s) => { try { s ? localStorage.setItem(LS_KEY, JSON.stringify(s)) : localStorage.removeItem(LS_KEY); } catch { /* noop */ } };
+
+const IDB_NAME = 'hm-qrec'; const IDB_STORE = 'chunks';
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    try {
+      const rq = indexedDB.open(IDB_NAME, 1);
+      rq.onupgradeneeded = () => {
+        const db = rq.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { autoIncrement: true }).createIndex('sid', 'sid');
+        }
+      };
+      rq.onsuccess = () => resolve(rq.result);
+      rq.onerror = () => reject(rq.error);
+    } catch (e) { reject(e); }
+  });
+}
+async function idbAddChunk(sid, seg, blob) {
+  try { const db = await idbOpen(); db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).add({ sid, seg, blob, t: Date.now() }); } catch { /* best effort */ }
+}
+async function idbTakeChunks(sid, seg = null) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve) => {
+      const st = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE);
+      const out = [];
+      st.openCursor().onsuccess = (e) => {
+        const c = e.target.result;
+        if (!c) return resolve(out);
+        if (c.value?.sid === sid && (seg === null || c.value?.seg === seg)) { out.push(c.value); c.delete(); }
+        c.continue();
+      };
+    });
+  } catch { return []; }
+}
+async function idbClear(sid) { await idbTakeChunks(sid); }
 const isMobile = () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false);
 
 function atNow() {
@@ -145,11 +192,23 @@ export function QuickRecorderProvider({ children }) {
     segChunksRef.current = [];
     const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
     recRef.current = rec;
-    rec.ondataavailable = (e) => { if (e.data.size) segChunksRef.current.push(e.data); };
+    rec.ondataavailable = (e) => {
+      if (!e.data.size) return;
+      segChunksRef.current.push(e.data);
+      // Refresh-survival: mirror every 1s chunk into IndexedDB so a reload
+      // mid-segment loses at most ~1s of audio (recovered + transcribed on mount).
+      if (sessionIdRef.current) idbAddChunk(sessionIdRef.current, segIdxRef.current, e.data);
+    };
     rec.onstop = () => {
       const idx = segIdxRef.current++;
       const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
       if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
+      // This segment is now in-memory + headed to the server — drop its cached
+      // chunks and advance the persisted resume cursor.
+      if (sessionIdRef.current) {
+        idbTakeChunks(sessionIdRef.current, idx);
+        const s = readSession(); if (s) writeSession({ ...s, segIdx: segIdxRef.current });
+      }
       if (!finalizingRef.current) rollSegment();
     };
     rec.start(1000);
@@ -160,6 +219,10 @@ export function QuickRecorderProvider({ children }) {
   const finalize = useCallback(async () => {
     setError(null); setStatus('transcribing'); setCollapsed(false);
     const cfg = cfgRef.current;
+    // Recording is over (user pressed Stop) — clear the resume state so a
+    // later reload doesn't try to revive a finished session.
+    writeSession(null);
+    if (sessionIdRef.current) idbClear(sessionIdRef.current);
     try {
       await Promise.allSettled(segPromisesRef.current);
       const idxs = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b);
@@ -209,7 +272,10 @@ export function QuickRecorderProvider({ children }) {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch { setError('Microphone permission denied.'); setStatus('error'); return; }
     streamRef.current = mic;
-    setStartedAtLabel(atNow());
+    const label = atNow();
+    setStartedAtLabel(label);
+    // Persist session meta — a reload/back must NOT kill the recording.
+    writeSession({ sessionId: sessionIdRef.current, startedAt: Date.now(), label, segIdx: 0, cfg: cfgRef.current });
     rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
     segTimerRef.current = setInterval(() => {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
@@ -233,6 +299,77 @@ export function QuickRecorderProvider({ children }) {
     } else { cleanup(); finalize(); }
   }, [transcribeSegment, cleanup, finalize]);
 
+  /* ── Resume after reload / back-navigation ──────────────────────────────
+     Rebuild the session (meta from localStorage, transcribed text from the
+     server, un-transcribed audio from IndexedDB) and re-open the mic. If the
+     browser refuses getUserMedia without a gesture, park in 'interrupted' —
+     the notch offers Resume / Stop, and Stop still processes everything
+     captured so far. Recording ONLY ends on the user's explicit Stop. */
+  const resumeMic = useCallback(async () => {
+    let mic;
+    try {
+      mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch { setError('Microphone permission needed to resume.'); return; }
+    setError(null);
+    streamRef.current = mic;
+    finalizingRef.current = false;
+    rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
+    if (!segTimerRef.current) segTimerRef.current = setInterval(() => {
+      if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
+    }, SEGMENT_MS);
+    if (!clockRef.current) clockRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
+  }, [rollSegment]);
+
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current || !SUPPORTED) return;
+    resumedRef.current = true;
+    const s = readSession();
+    if (!s || !s.sessionId) return;
+    (async () => {
+      sessionIdRef.current = s.sessionId;
+      cfgRef.current = s.cfg || cfgRef.current;
+      segIdxRef.current = s.segIdx || 0;
+      setStartedAtLabel(s.label || atNow());
+      setElapsed(Math.max(0, Math.floor((Date.now() - (s.startedAt || Date.now())) / 1000)));
+      setCollapsed(true);
+      // 1) already-transcribed segments live on the server
+      try {
+        const { data } = await apiClient.core.get(`/api/meetings/session/${s.sessionId}/segments`);
+        for (const row of data?.segments || []) {
+          segTextsRef.current[row.idx] = row.text || '';
+          segIdxRef.current = Math.max(segIdxRef.current, Number(row.idx) + 1);
+        }
+      } catch { /* keep what we have */ }
+      // 2) the interrupted segment's raw audio lives in IndexedDB — rescue it
+      try {
+        const cached = await idbTakeChunks(s.sessionId);
+        const bySeg = new Map();
+        for (const c of cached) { if (!bySeg.has(c.seg)) bySeg.set(c.seg, []); bySeg.get(c.seg).push(c.blob); }
+        for (const [seg, blobs] of bySeg) {
+          const idx = Math.max(seg, segIdxRef.current);
+          segIdxRef.current = idx + 1;
+          const blob = new Blob(blobs, { type: blobs[0]?.type || 'audio/webm' });
+          if (blob.size > 1024) transcribeSegment(idx, blob);
+        }
+      } catch { /* best effort */ }
+      // 3) re-open the mic. Chrome grants silently when permission persists;
+      //    otherwise the user resumes with one tap from the notch.
+      try {
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        streamRef.current = mic;
+        rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
+        segTimerRef.current = setInterval(() => {
+          if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
+        }, SEGMENT_MS);
+        clockRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
+      } catch {
+        setStatus('interrupted');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveToHivemind = useCallback(async () => {
     if (!meetingId || ingesting || ingested) return;
     setIngesting(true);
@@ -245,6 +382,8 @@ export function QuickRecorderProvider({ children }) {
   }, [meetingId, ingesting, ingested]);
 
   const dismiss = useCallback(() => {
+    writeSession(null);
+    if (sessionIdRef.current) idbClear(sessionIdRef.current);
     setStatus('idle'); setError(null); setCollapsed(false);
     setParticipants([]); setPName(''); setScope('personal'); setProjectId(null); setNotes('');
     setInsights(null); setMeetingId(null); setTranscript(''); setIngested(false); setIngesting(false);
@@ -271,16 +410,18 @@ export function QuickRecorderProvider({ children }) {
       onClick={() => setCollapsed(false)}
       className={`fixed flex items-stretch bg-white border border-[#e3e0db] rounded-[10px] shadow-lg overflow-hidden ${mob ? 'top-[72px] right-3 z-20' : 'bottom-4 left-1/2 -translate-x-1/2 z-[70]'}`}
       title="Expand recorder">
-      <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : 'bg-emerald-500'}`} />
+      <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : status === 'interrupted' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
       <span className="flex items-center gap-2 px-3 py-1.5 font-['Space_Grotesk']">
         {recording && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+        {status === 'interrupted' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
         <span className="text-[13px] font-semibold text-[#525252]">{startedAtLabel.split(' ')[0] || '@Today'}</span>
         <span className="text-[13px] font-semibold text-[#b9b5ae] tabular-nums">{startedAtLabel.split(' ').slice(1).join(' ')}</span>
         {recording && <span className="text-[12px] text-[#0a0a0a] font-semibold tabular-nums ml-0.5">{mm}:{ss}</span>}
+        {status === 'interrupted' && <span className="text-[11px] text-amber-600 font-semibold">resume</span>}
         {busy && <span className="w-3 h-3 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />}
         {status === 'done' && <CheckCircle2 size={13} className="text-emerald-600" />}
       </span>
-      <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : 'bg-emerald-500'}`} />
+      <span className={`w-[3px] ${recording ? 'bg-red-500' : busy ? 'bg-[#117dff]' : status === 'interrupted' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
     </motion.button>
   );
 
@@ -431,6 +572,23 @@ export function QuickRecorderProvider({ children }) {
             ) : (
               <span className="text-[12px] text-[#525252]">You can collapse this and keep working.</span>
             )}
+          </div>
+        </div>
+      )}
+      {status === 'interrupted' && (
+        <div className="mt-3">
+          <div className="rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-3">
+            <p className="text-[13px] font-semibold text-amber-800">Recording paused by a page reload</p>
+            <p className="text-[12px] text-amber-700/80 mt-0.5">Everything captured so far is safe. Resume the mic to keep going, or stop to process the meeting now.</p>
+          </div>
+          {error && <p className="mt-2 text-[12px] text-[#dc2626]">{error}</p>}
+          <div className="flex items-center justify-end gap-2 mt-3.5">
+            <button onClick={stop} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] border border-[#e3e0db] text-[#525252] text-[13px] font-semibold hover:border-[#0a0a0a] hover:text-[#0a0a0a]">
+              <Square size={11} fill="currentColor" /> Stop & process
+            </button>
+            <button onClick={resumeMic} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0]">
+              Resume recording
+            </button>
           </div>
         </div>
       )}
