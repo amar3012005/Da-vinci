@@ -9,6 +9,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import Navbar from './components/Navbar';
 import DemoPage from './components/DemoPage';
 import ResearchIndex from './components/ResearchIndex';
+import BenchmarkResearch from './components/BenchmarkResearch';
 import IcarusResearch from './components/IcarusResearch';
 import CsiResearch from './components/CsiResearch';
 import SolutionPage from './components/SolutionPage';
@@ -75,6 +76,7 @@ function App() {
         <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/research" element={<ResearchIndex />} />
+        <Route path="/benchmark" element={<BenchmarkResearch />} />
         <Route path="/research/icarus" element={<IcarusResearch />} />
         <Route path="/research/cognitive-swarm-intelligence" element={<CsiResearch />} />
         <Route path="/solutions/:field" element={<SolutionPage />} />

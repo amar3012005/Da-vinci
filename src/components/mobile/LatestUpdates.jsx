@@ -14,6 +14,7 @@ const CARD = '#13151f';
 const BORDER = 'rgba(255,255,255,0.08)';
 
 const CARDS = [
+  { cat: 'BENCHMARK', chart: true, title: 'HIVEMIND scores 87.2% on LongMemEval', desc: 'Published, reproducible recall benchmark — sub-50ms retrieval at scale, measured against the industry-standard long-context memory eval.', date: 'Jun 26, 2026', source: 'SINGULANCE Labs', href: '/benchmark' },
   { cat: 'RESEARCH', img: '/thesis-greekgod.webp', title: 'ICARUS — a memory filesystem', desc: 'The .amr byte layout fuses vector, entity, bi-temporal and graph into one mmap. Equal recall to a live vector DB, 7.5× smaller, zero servers.', date: 'Jun 24, 2026', source: 'SINGULANCE Labs', href: '/research/icarus' },
   { cat: 'PRODUCT', img: '/sp-hivemind.webp', title: 'HIVEMIND', desc: 'Sovereign memory engine — sub-50ms recall across everything your organization knows.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/hivemind' },
   { cat: 'PRODUCT', img: '/sp-tara.webp', title: 'TARA gets to work.', desc: 'The enterprise voice agent that reasons in real time — calls, qualification, scheduling, support.', date: 'Jun 22, 2026', source: 'SINGULANCE', href: '/products/tara' },
@@ -102,10 +103,22 @@ const LatestUpdates = () => {
             className="group block w-[300px] shrink-0 snap-start overflow-hidden rounded-lg no-underline sm:w-[400px]"
             style={{ background: CARD, border: `1px solid ${BORDER}` }}
           >
-            {/* image */}
+            {/* image or benchmark chart */}
             <div className="relative aspect-[16/9] overflow-hidden" style={{ background: '#05070f' }}>
-              <img src={card.img} alt="" loading="lazy" decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
+              {card.chart ? (
+                <div className="absolute inset-0 flex items-end justify-center gap-2.5 px-8 pb-6 pt-8 transition-transform duration-700 ease-out group-hover:scale-[1.04]">
+                  {[42, 68, 55, 87, 61].map((h, i) => (
+                    <div key={i} className="flex flex-1 flex-col items-center gap-2">
+                      <span className="font-mono text-[10px]" style={{ color: i === 3 ? '#ff5229' : '#5b5f6b' }}>{h}%</span>
+                      <div className="w-full rounded-t" style={{ height: `${h}%`, maxHeight: 84, background: i === 3 ? '#ff5229' : '#23262f' }} />
+                    </div>
+                  ))}
+                  <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">LongMemEval · recall accuracy</span>
+                </div>
+              ) : (
+                <img src={card.img} alt="" loading="lazy" decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
+              )}
             </div>
             {/* body */}
             <div className="px-6 pb-7 pt-5">
@@ -115,6 +128,8 @@ const LatestUpdates = () => {
                   ? { background: '#f5c24b', color: '#0a0d1a' }
                   : card.cat === 'RESEARCH'
                   ? { background: '#ff5229', color: '#0a0d1a' }
+                  : card.cat === 'BENCHMARK'
+                  ? { background: '#117dff', color: 'white' }
                   : { background: '#23262f', color: '#aeb2bd' }}
               >
                 {card.cat}

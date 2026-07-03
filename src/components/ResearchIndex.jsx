@@ -15,6 +15,13 @@ const BORDER = '#E4E3DE';
 
 const ITEMS = [
   {
+    tags: ['BENCHMARK', 'LONGMEMEVAL', 'EVALUATION'],
+    title: '87.2% on LongMemEval',
+    desc: 'Published, reproducible recall benchmark against the industry-standard long-context memory eval — sub-50ms retrieval, live regression gates, methodology public.',
+    href: '/benchmark',
+    art: 'linear-gradient(135deg, #4a9fff 0%, #117dff 50%, #0a2a5e 100%)',
+  },
+  {
     tags: ['MEMORY', '.AMR', 'INFRASTRUCTURE'],
     title: 'ICARUS',
     desc: 'A memory filesystem for AI agents — where the byte layout, not the query engine, is the innovation. Equal recall to a live vector DB, 7.5× smaller, zero servers.',
@@ -55,7 +62,7 @@ const Card = ({ item, onOpen }) => (
     </div>
     {/* art panel */}
     <button onClick={() => onOpen(item.href)} className="relative w-1/2 overflow-hidden" style={{ background: item.art }} aria-label={item.title}>
-      <img src={item.img} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />
+      {item.img && <img src={item.img} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />}
       <span className="absolute bottom-5 left-5 font-['Space_Grotesk'] text-2xl font-bold text-white/90">{item.title.split(' ')[0]}</span>
     </button>
   </article>
