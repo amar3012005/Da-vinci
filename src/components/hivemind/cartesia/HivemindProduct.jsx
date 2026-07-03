@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   motion, useInView, useScroll, useTransform, useSpring,
   useMotionValue, animate,
@@ -13,8 +13,8 @@ import Features from './Features';
 import Developers from './Developers';
 import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
-
-const GraphScene3D = lazy(() => import('./GraphScene3D'));
+import ChatDemoCard from './ChatDemoCard';
+import MinimalGraphIcon from './MinimalGraphIcon';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -135,64 +135,10 @@ const dotField = {
   backgroundSize: '14px 14px',
 };
 
-/* ───────── hero graph — living neural card ───────── */
-
-const NODES = [
-  { x: 150, y: 42 }, { x: 258, y: 84 }, { x: 282, y: 190 }, { x: 196, y: 252 },
-  { x: 82, y: 224 }, { x: 38, y: 120 }, { x: 118, y: 140 },
-];
-const CENTER = { x: 168, y: 150 };
-const EDGES = [[0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]];
-
-/* SVG fallback while the three.js scene chunk loads */
-const GraphSvgFallback = () => {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
-  return (
-    <div ref={ref} className="relative bg-white p-6">
-        <svg viewBox="0 0 320 300" className="h-auto w-full">
-          {EDGES.map(([a, b], i) => {
-            const p = NODES[a]; const q = NODES[b];
-            return (
-              <motion.line key={i} x1={p.x} y1={p.y} x2={q.x} y2={q.y}
-                stroke={BLUE} strokeWidth="1" strokeOpacity="0.45"
-                initial={{ pathLength: 0 }} animate={inView ? { pathLength: 1 } : {}}
-                transition={{ duration: 1.1, delay: 0.15 + i * 0.08, ease: 'easeOut' }} />
-            );
-          })}
-          {NODES.map((n, i) => (
-            <motion.g key={i}
-              initial={{ scale: 0, opacity: 0 }} animate={inView ? { scale: 1, opacity: 1 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 + i * 0.09, ease }}
-              style={{ transformOrigin: `${n.x}px ${n.y}px` }}>
-              {i === 6 ? (
-                <>
-                  <motion.circle cx={n.x} cy={n.y} r="16" fill={BLUE} fillOpacity="0.14"
-                    animate={{ r: [14, 20, 14] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
-                  <circle cx={n.x} cy={n.y} r="8" fill={BLUE} />
-                </>
-              ) : (
-                <circle cx={n.x} cy={n.y} r="5.5" fill="white" stroke={BLUE} strokeWidth="1.6" />
-              )}
-            </motion.g>
-          ))}
-          {inView && EDGES.slice(0, 6).map(([a], i) => (
-            <motion.circle key={`p${i}`} r="2.4" fill={BLUE}
-              initial={{ cx: NODES[a].x, cy: NODES[a].y, opacity: 0 }}
-              animate={{ cx: [NODES[a].x, CENTER.x], cy: [NODES[a].y, CENTER.y], opacity: [0, 1, 0] }}
-              transition={{ duration: 1.6, delay: 1.4 + i * 0.5, repeat: Infinity, repeatDelay: 2.6, ease: 'easeInOut' }} />
-          ))}
-        </svg>
-      </div>
-  );
-};
-
-/* hero graph card — real three.js scene, SVG while chunk loads */
+/* hero card — interactive recall terminal (typing demo, tabs, live results) */
 const GraphCard = () => (
-  <Chrome title="hivemind — memory engine · live" className="w-full">
-    <Suspense fallback={<GraphSvgFallback />}>
-      <GraphScene3D height={430} />
-    </Suspense>
+  <Chrome title="hivemind — recall · live" className="w-full">
+    <ChatDemoCard />
   </Chrome>
 );
 
@@ -228,8 +174,14 @@ const Hero = () => {
             <WordReveal text="never forgets" delay={0.34} />
           </h1>
 
+          <Reveal delay={0.46}>
+            <p className="mx-auto mt-4 max-w-lg font-mono text-[12px] uppercase tracking-[0.22em]" style={{ color: BLUE }}>
+              A Cognitive Sovereign Memory Engine
+            </p>
+          </Reveal>
+
           <Reveal delay={0.5}>
-            <p className="mx-auto mt-7 max-w-xl text-[17px] font-light leading-relaxed text-[#6b6b6b]">
+            <p className="mx-auto mt-5 max-w-xl text-[17px] font-light leading-relaxed text-[#6b6b6b]">
               HIVEMIND turns email, chat, docs, meetings and code into one persistent,
               self-organizing memory — then lets AI recall and act on it. Inside your walls.
             </p>
@@ -279,13 +231,27 @@ const Hero = () => {
 
 /* ───────── connector marquee ───────── */
 
+/* Same brand-logo CDN map as the live app's Connectors.jsx (connectors-catalog.js
+   BRAND_LOGOS) — real app logos, not generic lucide glyphs. */
 const CONNECTORS = [
-  { icon: Mail, name: 'Gmail' }, { icon: MessageSquare, name: 'Slack' },
-  { icon: FileText, name: 'Notion' }, { icon: Github, name: 'GitHub' },
-  { icon: HardDrive, name: 'Drive' }, { icon: Calendar, name: 'Calendar' },
-  { icon: Briefcase, name: 'Salesforce' }, { icon: Database, name: 'HubSpot' },
-  { icon: Layers, name: 'Linear' }, { icon: FileText, name: 'Jira' },
+  { logo: 'https://cdn.simpleicons.org/gmail', fallback: Mail, name: 'Gmail' },
+  { logo: 'https://api.iconify.design/logos/slack-icon.svg', fallback: MessageSquare, name: 'Slack' },
+  { logo: 'https://cdn.simpleicons.org/notion/000000', fallback: FileText, name: 'Notion' },
+  { logo: 'https://cdn.simpleicons.org/github/181717', fallback: Github, name: 'GitHub' },
+  { logo: 'https://cdn.simpleicons.org/googledrive', fallback: HardDrive, name: 'Drive' },
+  { logo: 'https://cdn.simpleicons.org/googlecalendar', fallback: Calendar, name: 'Calendar' },
+  { logo: 'https://api.iconify.design/logos/salesforce.svg', fallback: Briefcase, name: 'Salesforce' },
+  { logo: 'https://cdn.simpleicons.org/hubspot/ff7a59', fallback: Database, name: 'HubSpot' },
+  { logo: 'https://cdn.simpleicons.org/linear', fallback: Layers, name: 'Linear' },
+  { logo: 'https://cdn.simpleicons.org/jira', fallback: FileText, name: 'Jira' },
 ];
+
+/* connector chip icon — real brand logo <img>, lucide fallback on load error */
+const ConnectorIcon = ({ c, size = 15 }) => {
+  const [broken, setBroken] = useState(false);
+  if (broken || !c.logo) { const Fallback = c.fallback; return <Fallback size={size} style={{ color: BLUE }} />; }
+  return <img src={c.logo} alt="" width={size} height={size} loading="lazy" onError={() => setBroken(true)} />;
+};
 
 const MarqueeRow = () => (
   <section className="border-y border-[#e7e4dd] bg-white py-6">
@@ -296,7 +262,7 @@ const MarqueeRow = () => (
         animate={{ x: ['0%', '-50%'] }} transition={{ duration: 32, repeat: Infinity, ease: 'linear' }}>
         {[...CONNECTORS, ...CONNECTORS].map((c, i) => (
           <span key={i} className="flex items-center gap-2.5 font-mono text-[12px] uppercase tracking-[0.18em] text-[#8d887c]">
-            <c.icon size={15} style={{ color: BLUE }} /> {c.name}
+            <ConnectorIcon c={c} size={15} /> {c.name}
           </span>
         ))}
       </motion.div>
@@ -367,7 +333,7 @@ const ConnectorCard = () => (
           initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
           transition={{ delay: i * 0.07, duration: 0.4, ease }}
           className="flex flex-col items-center gap-2 rounded-lg border border-[#efece5] py-4">
-          <c.icon size={18} style={{ color: BLUE }} />
+          <ConnectorIcon c={c} size={18} />
           <span className="text-[11px] font-medium text-[#3d3b36]">{c.name}</span>
           <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wide text-[#0fa36b]">
             <motion.span className="h-1 w-1 rounded-full bg-[#0fa36b]"
@@ -471,26 +437,11 @@ const VoiceCard = () => (
 );
 
 const GraphAtlasCard = () => (
-  <Chrome title="hivemind — memory graph · 3d atlas">
-    <div className="relative bg-[#0d0f14] p-6">
-      <svg viewBox="0 0 320 220" className="h-auto w-full">
-        {Array.from({ length: 26 }).map((_, i) => {
-          const x = 20 + ((i * 67) % 280); const y = 18 + ((i * 41) % 184);
-          const r = 2 + (i % 3);
-          return (
-            <motion.circle key={i} cx={x} cy={y} r={r} fill={i % 4 === 0 ? BLUE : '#3b4252'}
-              animate={{ opacity: [0.35, 1, 0.35] }}
-              transition={{ duration: 2.4 + (i % 5) * 0.5, repeat: Infinity, delay: i * 0.12 }} />
-          );
-        })}
-        {Array.from({ length: 14 }).map((_, i) => {
-          const x1 = 20 + ((i * 67) % 280); const y1 = 18 + ((i * 41) % 184);
-          const x2 = 20 + (((i + 3) * 67) % 280); const y2 = 18 + (((i + 3) * 41) % 184);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#2a3140" strokeWidth="0.7" />;
-        })}
-      </svg>
+  <Chrome title="hivemind — memory graph">
+    <div className="relative bg-white p-6">
+      <MinimalGraphIcon height={280} />
       <motion.div
-        className="absolute bottom-4 left-6 rounded border border-white/15 bg-black/50 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/70 backdrop-blur"
+        className="absolute bottom-4 left-6 rounded border border-[#e7e4dd] bg-white/90 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-[#6b6b6b] backdrop-blur"
         initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.8 }}>
         temporal slider · rewind memory ⏪
       </motion.div>
