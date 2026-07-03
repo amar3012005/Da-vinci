@@ -95,11 +95,15 @@ const ChatDemoCard = () => {
             key={tab}
             whileTap={{ scale: 0.96 }}
             onClick={() => handleTabChange(tab)}
-            className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
-              activeTab === tab ? 'border border-[#e3e0db] bg-white text-[#117dff] shadow-sm' : 'text-[#6b6b6b] hover:text-[#0a0a0a]'
+            className={`relative rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              activeTab === tab ? 'text-[#117dff]' : 'text-[#6b6b6b] hover:text-[#0a0a0a]'
             }`}
           >
-            {tab}
+            {activeTab === tab && (
+              <motion.span layoutId="chat-tab-pill" className="absolute inset-0 rounded-md border border-[#e3e0db] bg-white shadow-sm"
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+            )}
+            <span className="relative">{tab}</span>
           </motion.button>
         ))}
       </div>

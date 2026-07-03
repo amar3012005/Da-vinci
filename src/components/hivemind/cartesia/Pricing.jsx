@@ -197,9 +197,13 @@ const ScopeEstimator = () => {
       <div className="mt-6 inline-flex rounded-full border border-[#e7e4dd] p-1">
         {[['managed', 'Managed'], ['self-hosted', 'Self-Hosted']].map(([id, label]) => (
           <button key={id} onClick={() => setMode(id)}
-            className="rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors"
-            style={mode === id ? { background: BLUE, color: 'white' } : { color: '#6b6b6b' }}>
-            {label}
+            className="relative rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors"
+            style={{ color: mode === id ? 'white' : '#6b6b6b' }}>
+            {mode === id && (
+              <motion.span layoutId="scope-mode-pill" className="absolute inset-0 rounded-full" style={{ background: BLUE }}
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+            )}
+            <span className="relative">{label}</span>
           </button>
         ))}
       </div>
@@ -267,10 +271,14 @@ const Pricing = () => {
               <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-[#e7e4dd] bg-white p-1">
                 {[['monthly', false], ['annual', true]].map(([label, val]) => (
                   <button key={label} onClick={() => setAnnual(val)}
-                    className="flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors"
-                    style={annual === val ? { background: BLUE, color: 'white' } : { color: '#6b6b6b' }}>
-                    {label}
-                    {val && <span className="rounded-full bg-[#0fa36b]/15 px-1.5 py-0.5 text-[9px] text-[#0fa36b]">SAVE 20%</span>}
+                    className="relative flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors"
+                    style={{ color: annual === val ? 'white' : '#6b6b6b' }}>
+                    {annual === val && (
+                      <motion.span layoutId="billing-pill" className="absolute inset-0 rounded-full" style={{ background: BLUE }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+                    )}
+                    <span className="relative">{label}</span>
+                    {val && <span className="relative rounded-full bg-[#0fa36b]/15 px-1.5 py-0.5 text-[9px] text-[#0fa36b]">SAVE 20%</span>}
                   </button>
                 ))}
               </div>
