@@ -1,13 +1,12 @@
 import React from 'react';
-import CartesiaReplica from './cartesia';
+import HivemindCover from './cartesia';
 
 /**
- * HivemindRedirect (Now hosting Cartesia Replica)
- * 
- * Replaced the redirect with the exact frontend replica.
+ * HivemindRedirect — singulancelabs.com/hivemind product page.
+ * Hosts the supermemory-grade HIVEMIND feature page (scroll-animated).
  */
 const HivemindRedirect = () => {
-  return <CartesiaReplica />;
+  return <HivemindCover />;
 };
 
 export default HivemindRedirect;

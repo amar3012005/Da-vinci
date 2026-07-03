@@ -5,6 +5,7 @@ import { ArrowRight, Brain, Shield, Zap, Globe, BookOpen, Cable, Layers, Databas
 
 // Sections
 import Navbar from './Navbar';
+import HivemindProduct from './HivemindProduct';
 import Hero from './Hero';
 import Marquee from './Marquee';
 import Features from './Features';
@@ -307,4 +308,9 @@ const CartesiaReplica = () => {
   );
 };
 
-export default CartesiaReplica;
+export default HivemindProduct;
+
+/* The main /hivemind cover is now the supermemory-grade product page.
+   The old Cartesia replica stays exported for reference. */
+export { CartesiaReplica };
+export { HivemindProduct };
