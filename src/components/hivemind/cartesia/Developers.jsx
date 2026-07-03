@@ -133,7 +133,7 @@ const Developers = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/hivemind/login')}
+                  onClick={() => navigate('/hivemind/docs')}
                   className="px-5 py-2.5 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors text-xs sm:text-sm uppercase tracking-[0.075em] cursor-pointer border-none shadow-[0_2px_8px_rgba(17,125,255,0.15)]"
                 >
                   Build with HIVEMIND
