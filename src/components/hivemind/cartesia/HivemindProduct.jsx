@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense, lazy } from 'react';
 import {
   motion, useInView, useScroll, useTransform, useSpring,
   useMotionValue, animate,
@@ -7,7 +7,13 @@ import {
   ArrowRight, Mail, MessageSquare, FileText, Github, Database, Calendar,
   HardDrive, Briefcase, Layers, Globe, ShieldCheck, Check, Search, Zap,
 } from 'lucide-react';
+import Lenis from 'lenis';
 import Navbar from './Navbar';
+import Features from './Features';
+import Developers from './Developers';
+import DownloadMacButton from './DownloadMacButton';
+
+const GraphScene3D = lazy(() => import('./GraphScene3D'));
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -137,12 +143,12 @@ const NODES = [
 const CENTER = { x: 168, y: 150 };
 const EDGES = [[0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]];
 
-const GraphCard = () => {
+/* SVG fallback while the three.js scene chunk loads */
+const GraphSvgFallback = () => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
   return (
-    <Chrome title="hivemind — memory engine" className="w-full">
-      <div ref={ref} className="relative bg-white p-6">
+    <div ref={ref} className="relative bg-white p-6">
         <svg viewBox="0 0 320 300" className="h-auto w-full">
           {EDGES.map(([a, b], i) => {
             const p = NODES[a]; const q = NODES[b];
@@ -177,9 +183,17 @@ const GraphCard = () => {
           ))}
         </svg>
       </div>
-    </Chrome>
   );
 };
+
+/* hero graph card — real three.js scene, SVG while chunk loads */
+const GraphCard = () => (
+  <Chrome title="hivemind — memory engine · live" className="w-full">
+    <Suspense fallback={<GraphSvgFallback />}>
+      <GraphScene3D height={430} />
+    </Suspense>
+  </Chrome>
+);
 
 /* ───────── hero ───────── */
 
@@ -221,13 +235,14 @@ const Hero = () => {
           </Reveal>
 
           <Reveal delay={0.6}>
-            <div className="mt-10 flex items-center justify-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <motion.a href="/hivemind/app" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }}
                 className="group inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-[13px] font-semibold text-white no-underline"
                 style={{ background: INK }}>
                 Start remembering
                 <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
               </motion.a>
+              <DownloadMacButton />
               <a href="#chapter-1" className="inline-flex items-center gap-3 text-[13px] font-semibold text-[#0a0a0a] no-underline">
                 <span className="font-mono text-[#b5b0a4]">[</span> Explore the engine <span className="font-mono text-[#b5b0a4]">]</span>
               </a>
@@ -585,12 +600,13 @@ const FinalCta = () => (
       <p className="mx-auto mt-6 max-w-md text-[15px] font-light text-[#6b6b6b]">
         Connect your first app in two minutes. Your organization starts compounding today.
       </p>
-      <div className="mt-10 flex items-center justify-center gap-5">
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
         <motion.a href="/hivemind/app" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
           className="group inline-flex items-center gap-2.5 rounded-full px-8 py-4 text-[13px] font-semibold text-white no-underline"
           style={{ background: BLUE }}>
           Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </motion.a>
+        <DownloadMacButton />
         <a href="https://hivemind.davinciai.eu/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
           see the benchmark →
         </a>
@@ -603,6 +619,17 @@ const FinalCta = () => (
 
 const HivemindProduct = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // Lenis smooth-scroll — buttery scrub for the parallax planes.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+    let raf;
+    const loop = (time) => { lenis.raf(time); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); lenis.destroy(); };
+  }, []);
   return (
     <div style={{ background: PAPER }} className="min-h-screen">
       <ProgressBar />
@@ -632,6 +659,9 @@ const HivemindProduct = () => {
         card={<ConnectorCard />} flip />
 
       <VelocityBand text="Remember everything ·" />
+
+      {/* context-savvy accuracy + solutions carousel (restored) */}
+      <Features />
 
       <Chapter n="03" id="chapter-3" eyebrow="memory graph"
         title={<>See your mind.<br />Rewind it.</>}
@@ -687,6 +717,9 @@ const HivemindProduct = () => {
 
       <Sovereign />
       <FinalCta />
+
+      {/* developer-first + API/SDK/Playground/Security + pricing + footer (restored, ends page) */}
+      <Developers />
     </div>
   );
 };
