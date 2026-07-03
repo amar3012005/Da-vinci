@@ -11,6 +11,7 @@ import Lenis from 'lenis';
 import Navbar from './Navbar';
 import Features from './Features';
 import Developers from './Developers';
+import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
 
 const GraphScene3D = lazy(() => import('./GraphScene3D'));
@@ -718,7 +719,10 @@ const HivemindProduct = () => {
       <Sovereign />
       <FinalCta />
 
-      {/* developer-first + API/SDK/Playground/Security + pricing + footer (restored, ends page) */}
+      {/* real SINGULANCE/HIVEMIND pricing — 4 tiers + sovereign scope estimator */}
+      <Pricing />
+
+      {/* developer-first + API/SDK/Playground/Security + footer (restored, ends page) */}
       <Developers />
     </div>
   );
