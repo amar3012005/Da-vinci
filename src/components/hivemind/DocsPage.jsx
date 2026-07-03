@@ -1,0 +1,310 @@
+import React, { useMemo, useState } from 'react';
+import { Hexagon, KeyRound, Server, Terminal, Shield, BookOpen, ChevronRight, Copy, Check, Zap } from 'lucide-react';
+import { MEMORY_TOOLS, WEB_TOOLS, CODING_TOOLS, TEMPORAL_TOOLS } from './app/pages/McpServer';
+
+/**
+ * /hivemind/docs — public technical documentation.
+ * Sections: API key reference · MCP server setup · full tool reference.
+ * Tool data is imported from McpServer.jsx so the docs can never drift
+ * from the in-app catalog. SINGULANCE-branded navbar.
+ */
+
+const CORE = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const MCP_URL = `${CORE}/api/mcp`;
+
+function CodeBlock({ label, children }) {
+  const [copied, setCopied] = useState(false);
+  const text = typeof children === 'string' ? children : '';
+  return (
+    <div className="rounded-[10px] border border-[#e3e0db] bg-white overflow-hidden my-3">
+      <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-[#e3e0db] bg-[#faf9f4]">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+        <span className="ml-2 text-[10px] font-mono text-[#a3a3a3]">{label}</span>
+        <button
+          onClick={() => { try { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200); } catch { /* noop */ } }}
+          className="ml-auto flex items-center gap-1 text-[10px] font-mono text-[#a3a3a3] hover:text-[#0a0a0a]">
+          {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}{copied ? 'copied' : 'copy'}
+        </button>
+      </div>
+      <pre className="p-4 text-[12px] leading-relaxed font-mono text-[#0a0a0a] overflow-x-auto whitespace-pre">{text}</pre>
+    </div>
+  );
+}
+
+function Eyebrow({ children }) {
+  return (
+    <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+      <span className="text-[#a3a3a3]">〉</span> {children}
+    </div>
+  );
+}
+
+function H2({ id, children }) {
+  return <h2 id={id} className="text-[22px] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight scroll-mt-24">{children}</h2>;
+}
+function H3({ id, children }) {
+  return <h3 id={id} className="text-[15px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] mt-8 mb-2 scroll-mt-24">{children}</h3>;
+}
+function P({ children }) {
+  return <p className="text-[13.5px] leading-relaxed text-[#525252] my-2.5">{children}</p>;
+}
+function Mono({ children }) {
+  return <code className="px-1.5 py-0.5 rounded-[4px] bg-[#f3f1ec] border border-[#e3e0db] text-[12px] font-mono text-[#0a0a0a]">{children}</code>;
+}
+
+function ToolCard({ tool }) {
+  return (
+    <div id={tool.name} className="rounded-[10px] border border-[#e3e0db] bg-white p-5 scroll-mt-24">
+      <div className="flex items-center gap-2 flex-wrap">
+        <code className="text-[13.5px] font-mono font-semibold text-[#0a0a0a]">{tool.name}</code>
+        {tool.badge && <span className={`px-1.5 py-0.5 rounded-full border text-[9px] font-semibold uppercase tracking-wider ${tool.badgeClass}`}>{tool.badge}</span>}
+        {tool.aliasOf && <span className="text-[10px] font-mono text-[#a3a3a3]">alias: {tool.aliasOf}</span>}
+      </div>
+      <p className="text-[12.5px] font-medium text-[#0a0a0a] mt-1.5">{tool.summary}</p>
+      <p className="text-[12.5px] leading-relaxed text-[#525252] mt-1">{tool.description}</p>
+      {tool.params?.length > 0 && (
+        <table className="w-full mt-3 text-[12px]">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-wider text-[#737373] border-b border-[#e3e0db]">
+              <th className="py-1.5 pr-3 font-semibold">Parameter</th>
+              <th className="py-1.5 pr-3 font-semibold w-16">Req.</th>
+              <th className="py-1.5 font-semibold">Description</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#eae7e1]">
+            {tool.params.map((p) => (
+              <tr key={p.name}>
+                <td className="py-1.5 pr-3 font-mono text-[#0a0a0a] whitespace-nowrap">{p.name}</td>
+                <td className="py-1.5 pr-3">{p.required ? <span className="text-[#117dff] font-semibold">yes</span> : <span className="text-[#a3a3a3]">no</span>}</td>
+                <td className="py-1.5 text-[#525252]">{p.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {tool.example && <CodeBlock label="example">{tool.example}</CodeBlock>}
+    </div>
+  );
+}
+
+const NAV = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'api-keys', label: 'API key reference' },
+  { id: 'auth-headers', label: '— Auth headers' },
+  { id: 'key-lifecycle', label: '— Lifecycle & scopes' },
+  { id: 'mcp-setup', label: 'MCP server setup' },
+  { id: 'mcp-claude-code', label: '— Claude Code' },
+  { id: 'mcp-claude-ai', label: '— Claude.ai / Desktop' },
+  { id: 'mcp-cursor', label: '— Cursor & JSON clients' },
+  { id: 'mcp-stdio', label: '— stdio bridge' },
+  { id: 'mcp-verify', label: '— Verify the connection' },
+  { id: 'tools-memory', label: 'Tools · Memory' },
+  { id: 'tools-web', label: 'Tools · Web intelligence' },
+  { id: 'tools-coding', label: 'Tools · Coding' },
+  { id: 'tools-temporal', label: 'Tools · Time travel' },
+  { id: 'best-practices', label: 'Best practices' },
+];
+
+export default function DocsPage() {
+  const groups = useMemo(() => ([
+    { id: 'tools-memory', title: 'Memory tools', count: MEMORY_TOOLS.length, tools: MEMORY_TOOLS, blurb: 'The core read/write surface of the memory engine. Every durable fact, decision, and conversation flows through these.' },
+    { id: 'tools-web', title: 'Web intelligence tools', count: WEB_TOOLS.length, tools: WEB_TOOLS, blurb: 'Live web search + crawl with an async job model: submit → poll → read results. Quota-metered per workspace.' },
+    { id: 'tools-coding', title: 'Coding intelligence tools', count: CODING_TOOLS.length, tools: CODING_TOOLS, blurb: 'Purpose-built for AI coding assistants: version-chained code ingestion, bug recall, decision logging, refactor tracking, test coverage, and "why does this code exist".' },
+    { id: 'tools-temporal', title: 'Time-travel tools', count: TEMPORAL_TOOLS.length, tools: TEMPORAL_TOOLS, blurb: 'Bi-temporal queries over the version ledger: point-in-time snapshots, diffs between dates, and full revision chains.' },
+  ]), []);
+
+  return (
+    <div className="min-h-screen bg-[#faf9f4]">
+      {/* ── SINGULANCE navbar ── */}
+      <header className="sticky top-0 z-30 h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-5 md:px-8">
+        <div className="flex items-center gap-3 min-w-0">
+          <a href="https://singulancelabs.com" className="text-[12px] font-bold font-['Space_Grotesk'] tracking-[0.22em] text-[#0a0a0a] no-underline">SINGULANCE</a>
+          <span className="text-[#d4d0ca]">/</span>
+          <a href="/hivemind" className="flex items-center gap-1.5 no-underline">
+            <Hexagon size={14} className="text-[#117dff]" />
+            <span className="text-[12px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">HIVEMIND</span>
+          </a>
+          <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.2em] text-[#a3a3a3]">Docs</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href="/hivemind/login" className="px-3 py-1.5 rounded-[6px] text-[12px] text-[#525252] hover:text-[#0a0a0a] no-underline">Sign in</a>
+          <a href="/hivemind/app/mcp" className="px-3 py-1.5 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] text-white text-[12px] font-semibold no-underline">Open console</a>
+        </div>
+      </header>
+
+      <div className="max-w-[1200px] mx-auto flex gap-10 px-5 md:px-8 py-10">
+        {/* ── TOC ── */}
+        <nav className="hidden lg:block w-56 shrink-0">
+          <div className="sticky top-20 space-y-0.5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-2">On this page</div>
+            {NAV.map((n) => (
+              <a key={n.id} href={`#${n.id}`}
+                className={`block px-2 py-1 rounded-[6px] text-[12px] no-underline hover:bg-[#f3f1ec] hover:text-[#0a0a0a] ${n.label.startsWith('—') ? 'text-[#a3a3a3] pl-4' : 'text-[#525252] font-medium'}`}>
+                {n.label.replace('— ', '')}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        {/* ── Content ── */}
+        <main className="flex-1 min-w-0 max-w-[760px]">
+          <Eyebrow>DEVELOPER DOCUMENTATION</Eyebrow>
+          <h1 className="text-[34px] leading-[1.08] font-medium font-['Space_Grotesk'] text-[#0a0a0a] tracking-tight">HIVEMIND API & MCP reference</h1>
+          <P>
+            HIVEMIND is a sovereign memory engine. This page documents the two integration surfaces:
+            the <strong className="text-[#0a0a0a]">API key</strong> that authenticates every request, and the{' '}
+            <strong className="text-[#0a0a0a]">hosted MCP server</strong> that exposes {MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length} tools
+            to any Model Context Protocol client (Claude Code, Claude.ai, Cursor, custom agents).
+          </P>
+
+          {/* ── Overview ── */}
+          <section id="overview" className="mt-10">
+            <Eyebrow>01 · OVERVIEW</Eyebrow>
+            <H2 id="overview">Base URLs</H2>
+            <table className="w-full mt-3 text-[12.5px]">
+              <tbody className="divide-y divide-[#eae7e1]">
+                <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Core API</td><td className="py-2 font-mono text-[#0a0a0a] break-all">{CORE}</td></tr>
+                <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">MCP endpoint</td><td className="py-2 font-mono text-[#0a0a0a] break-all">{MCP_URL}</td></tr>
+                <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Transport</td><td className="py-2 text-[#525252]">Streamable HTTP (MCP 2025-03-26) · stdio via <Mono>mcp-remote</Mono> bridge</td></tr>
+                <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Auth</td><td className="py-2 text-[#525252]">API key — <Mono>Authorization: Bearer</Mono> or <Mono>X-API-Key</Mono> header</td></tr>
+                <tr><td className="py-2 pr-4 text-[#737373] whitespace-nowrap">Residency</td><td className="py-2 text-[#525252]">EU-hosted (Frankfurt) · self-host tier keeps all data on your own servers</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          {/* ── API keys ── */}
+          <section id="api-keys" className="mt-12">
+            <Eyebrow>02 · AUTHENTICATION</Eyebrow>
+            <H2 id="api-keys">API key reference</H2>
+            <P>
+              Every request to HIVEMIND — MCP tool calls, CLI, REST — is authenticated with a workspace API key.
+              Keys are minted in the console at <Mono>Settings → API Keys</Mono> (<a className="text-[#117dff]" href="/hivemind/app/keys">/hivemind/app/keys</a>) and shown once at creation. Store them like passwords.
+            </P>
+
+            <H3 id="auth-headers">Auth headers</H3>
+            <P>Both header forms are accepted on every endpoint — use whichever your client supports:</P>
+            <CodeBlock label="http · either header works">{`Authorization: Bearer hm_live_xxxxxxxxxxxxxxxxxxxx
+# or
+X-API-Key: hm_live_xxxxxxxxxxxxxxxxxxxx`}</CodeBlock>
+            <CodeBlock label="curl · smoke-test your key (MCP tools/list)">{`curl -s ${MCP_URL} \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+# → JSON list of every tool your key can call`}</CodeBlock>
+
+            <H3 id="key-lifecycle">Lifecycle, scoping & safety</H3>
+            <ul className="space-y-2 text-[13px] text-[#525252] list-none">
+              {[
+                ['Workspace-scoped', 'A key belongs to one workspace (org). All memories it writes and reads are isolated to that tenant — there is no cross-org access.'],
+                ['Shown once', 'The plaintext key appears only at creation. Rotate by minting a new key and revoking the old one; revocation is immediate.'],
+                ['Per-key usage metering', 'Every LLM call and tool invocation is recorded against the calling key — see Usage in the console for used/remaining quota.'],
+                ['Never embed in source', 'Load from an environment variable (HIVEMIND_API_KEY) or a secret manager. Keys in committed code should be treated as leaked and revoked.'],
+                ['Transport security', 'All endpoints are TLS-only. Keys sent over plain HTTP are rejected.'],
+              ].map(([tt, dd]) => (
+                <li key={tt} className="flex gap-2.5">
+                  <Shield size={14} className="text-[#117dff] shrink-0 mt-0.5" />
+                  <span><strong className="text-[#0a0a0a]">{tt}.</strong> {dd}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* ── MCP setup ── */}
+          <section id="mcp-setup" className="mt-12">
+            <Eyebrow>03 · MCP SERVER</Eyebrow>
+            <H2 id="mcp-setup">Setting up the MCP server</H2>
+            <P>
+              The hosted MCP server turns any MCP-capable AI into a client of your memory: it can save facts,
+              recall context, search the web, and track code — all scoped to your workspace key. One endpoint,
+              no local process to run.
+            </P>
+
+            <H3 id="mcp-claude-code">Claude Code (CLI)</H3>
+            <CodeBlock label="terminal · one-liner (recommended)">{`curl -fsSL ${CORE}/install/cli.sh | bash`}</CodeBlock>
+            <P>The installer opens a browser sign-in, mints a key, and registers the server. Manual equivalent:</P>
+            <CodeBlock label="terminal · manual">{`claude mcp add --transport http hivemind ${MCP_URL} \\
+  --header "Authorization: Bearer $HIVEMIND_API_KEY"`}</CodeBlock>
+
+            <H3 id="mcp-claude-ai">Claude.ai & Claude Desktop</H3>
+            <P>
+              Settings → Connectors → <em>Add custom connector</em> → paste the MCP URL. Claude.ai runs the OAuth
+              flow against your workspace; approve it once and all tools appear in every chat.
+            </P>
+            <CodeBlock label="connector url">{MCP_URL}</CodeBlock>
+
+            <H3 id="mcp-cursor">Cursor / Windsurf / any JSON-config client</H3>
+            <CodeBlock label="mcp.json">{`{
+  "mcpServers": {
+    "hivemind": {
+      "url": "${MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer hm_live_xxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}`}</CodeBlock>
+
+            <H3 id="mcp-stdio">stdio bridge (older clients)</H3>
+            <P>Clients without native HTTP transport can bridge through <Mono>mcp-remote</Mono>:</P>
+            <CodeBlock label="mcp.json · stdio">{`{
+  "mcpServers": {
+    "hivemind": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "${MCP_URL}",
+               "--header", "Authorization: Bearer hm_live_xxxxxxxxxxxxxxxxxxxx"]
+    }
+  }
+}`}</CodeBlock>
+
+            <H3 id="mcp-verify">Verify the connection</H3>
+            <CodeBlock label="in your AI client">{`# Ask your assistant:
+"Save a memory: the HIVEMIND MCP connection works. Tag it test."
+# then
+"Recall: does the HIVEMIND MCP connection work?"
+# The second answer must cite the memory saved by the first.`}</CodeBlock>
+          </section>
+
+          {/* ── Tool reference ── */}
+          {groups.map((g, gi) => (
+            <section key={g.id} id={g.id} className="mt-12">
+              <Eyebrow>{String(4 + gi).padStart(2, '0')} · TOOL REFERENCE</Eyebrow>
+              <H2 id={g.id}>{g.title} <span className="text-[#a3a3a3] font-mono text-[14px]">[{g.count}]</span></H2>
+              <P>{g.blurb}</P>
+              <div className="space-y-4 mt-4">
+                {g.tools.map((tool) => <ToolCard key={tool.name} tool={tool} />)}
+              </div>
+            </section>
+          ))}
+
+          {/* ── Best practices ── */}
+          <section id="best-practices" className="mt-12 mb-20">
+            <Eyebrow>08 · BEST PRACTICES</Eyebrow>
+            <H2 id="best-practices">Best practices</H2>
+            <ul className="space-y-2.5 text-[13px] text-[#525252] list-none mt-3">
+              {[
+                ['Recall before you answer', 'Call hivemind_recall with the user’s question before responding — the workspace usually already knows names, decisions, and history your model doesn’t.'],
+                ['Save what will matter later', 'Facts, preferences, decisions, and plans belong in memory. One durable claim per save, 2–5 specific tags (entity:<Name>, project:<x>, decision | preference | fact).'],
+                ['Use the coding tools in order', 'recall_bugs → why_code before touching unfamiliar code; ingest_code after every meaningful edit; log_decision when you choose between options.'],
+                ['Async web tools are two-step', 'web_search / web_crawl return a job receipt — poll web_job_status every 3–5s until succeeded. Check web_usage if jobs are rejected.'],
+                ['Update, don’t duplicate', 'When a fact changes, save with relationship: "update" + related_to — the ledger keeps history and time-travel tools stay accurate.'],
+              ].map(([tt, dd]) => (
+                <li key={tt} className="flex gap-2.5">
+                  <Zap size={14} className="text-[#117dff] shrink-0 mt-0.5" />
+                  <span><strong className="text-[#0a0a0a]">{tt}.</strong> {dd}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex items-center gap-4 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+              <span className="flex items-center gap-1.5"><BookOpen size={11} className="text-[#117dff]/60" /> SINGULANCE · HIVEMIND</span>
+              <span className="flex items-center gap-1.5"><Server size={11} className="text-[#117dff]/60" /> EU Sovereign</span>
+              <span className="flex items-center gap-1.5"><Terminal size={11} className="text-[#117dff]/60" /> MCP 2025-03-26</span>
+              <span className="flex items-center gap-1.5"><KeyRound size={11} className="text-[#117dff]/60" /> <ChevronRight size={10} /> /hivemind/app/keys</span>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  );
+}

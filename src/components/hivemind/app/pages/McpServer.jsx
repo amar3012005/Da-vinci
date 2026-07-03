@@ -109,7 +109,7 @@ function ToolCard({ tool }) {
 }
 
 /* ─── Tool data ──────────────────────────────────────────────────── */
-const MEMORY_TOOLS = [
+export const MEMORY_TOOLS = [
   {
     name: 'hivemind_save_memory',
     icon: Brain,
@@ -249,7 +249,7 @@ const MEMORY_TOOLS = [
   },
 ];
 
-const WEB_TOOLS = [
+export const WEB_TOOLS = [
   {
     name: 'hivemind_web_search',
     icon: Globe,
@@ -309,7 +309,7 @@ hivemind_web_job_status({ job_id: job.job_id })
 ];
 
 /* ─── Coding Intelligence Tools (auto-granted to coding platforms) ─ */
-const CODING_TOOLS = [
+export const CODING_TOOLS = [
   {
     name: 'hivemind_ingest_code',
     icon: Code,
@@ -452,7 +452,7 @@ const CODING_TOOLS = [
  * stay registered as aliases on the MCP server for backward compat with
  * older Claude installs that hard-coded them. The ReAct agent uses the
  * new short names. See SYSTEM_PROMPT below for usage. */
-const TEMPORAL_TOOLS = [
+export const TEMPORAL_TOOLS = [
   {
     name: 'hivemind_at',
     aliasOf: 'hivemind_code_at (legacy)',

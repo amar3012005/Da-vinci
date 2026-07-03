@@ -9,6 +9,7 @@ import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
+const DocsPage = React.lazy(() => import('../DocsPage'));
 const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
@@ -102,6 +103,8 @@ export default function HiveMindApp() {
     <AuthProvider>
       <Routes>
         <Route path="login" element={<LoginPage />} />
+        {/* Public developer docs — no auth */}
+        <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />
         {/* Mobile dedicated chat — no AppShell chrome, full screen */}
         <Route
