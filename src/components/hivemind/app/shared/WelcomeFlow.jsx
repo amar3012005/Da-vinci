@@ -50,7 +50,7 @@ function BlueprintCanvas({ children }) {
 
 /* ─── Capability slides (new users, once) ──────────────────────────────── */
 
-const SLIDES = [
+export const SLIDES = [
   {
     icon: Brain,
     eyebrow: 'MEMORY ENGINE',
@@ -94,7 +94,7 @@ const SLIDES = [
 ];
 
 /** Minimal line-art visual per slide — blueprint style, no images. */
-function SlideVisual({ kind }) {
+export function SlideVisual({ kind }) {
   const ink = '#117dff';
   if (kind === 'graph' || kind === 'memory') {
     // node constellation
