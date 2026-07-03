@@ -35,6 +35,11 @@ function deriveSlug(name) {
 export default function OnboardingFlow() {
   const { t } = useTranslation('dashboard');
   const { user, createOrg } = useAuth();
+  // Two-step flow for users who signed in WITHOUT the login-page create-account
+  // path (e.g. plain "Continue with Google" as a brand-new user): step 1 asks
+  // "How will you use HIVEMIND?" exactly like the login page, step 2 collects
+  // the details. Kills the confusing bare org-form landing.
+  const [step, setStep] = useState(1);
   const [mode, setMode] = useState('personal');
   const [orgName, setOrgName] = useState('');
   const [slug, setSlug] = useState('');
@@ -79,6 +84,7 @@ export default function OnboardingFlow() {
         setMode(isEnt ? 'enterprise' : 'personal');
         setDeployment(dep);
         setOrgName(name);
+        setStep(2); // choice already made on the login page — go straight to details
         setAutoCreating(false);
       }
     })();
@@ -142,46 +148,77 @@ export default function OnboardingFlow() {
             <span className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk']">HIVEMIND</span>
           </div>
 
-          <h2 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] mb-2">
-            {t('onboarding.chooseWorkspace', 'Choose your workspace')}
-          </h2>
-          <p className="text-[#525252] text-sm mb-8 max-w-2xl">
-            {t('onboarding.welcomeMsg', 'Welcome, {{name}}. Start with a private workspace or create an enterprise org for shared memory and team connectors.', { name: user?.display_name || user?.email || t('onboarding.there', 'there') })}
-          </p>
+          {step === 1 && (
+            <>
+              <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                <span className="text-[#a3a3a3]">〉</span> {t('onboarding.newWorkspaceTag', 'NEW WORKSPACE')} <span className="text-[#d4d0ca]">· 01</span>
+              </div>
+              <h2 className="text-[#0a0a0a] text-[28px] font-medium font-['Space_Grotesk'] tracking-tight mb-2">
+                {t('onboarding.howWillYouUse', 'How will you use HIVEMIND?')}
+              </h2>
+              <p className="text-[#737373] text-sm mb-8 max-w-2xl">
+                {t('onboarding.welcomeMsg2', 'Welcome, {{name}}. Choose the workspace that fits you — you can grow into Enterprise anytime.', { name: user?.display_name || user?.email || t('onboarding.there', 'there') })}
+              </p>
 
-          <div className="grid gap-4 md:grid-cols-2 mb-8">
-            {Object.entries(ORG_MODES).map(([key, option]) => {
-              const Icon = option.icon;
-              const active = key === mode;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setMode(key)}
-                  className={`text-left rounded-2xl border p-5 transition-all ${
-                    active
-                      ? 'border-[#117dff] bg-[#117dff]/[0.04] shadow-[0_8px_30px_rgba(17,125,255,0.08)]'
-                      : 'border-[#e3e0db] hover:border-[#cfdaf0] bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-                      <Icon size={20} className="text-[#117dff]" />
-                    </div>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">
-                      {option.plan}
-                    </span>
-                  </div>
-                  <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk'] mb-2">
-                    {t(option.titleKey, option.titleDefault)}
-                  </h3>
-                  <p className="text-[#525252] text-sm leading-relaxed">
-                    {t(option.descriptionKey, option.descriptionDefault)}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                {Object.entries(ORG_MODES).map(([key, option]) => {
+                  const Icon = option.icon;
+                  const features = key === 'enterprise'
+                    ? ['Teams, projects & SSO', 'Cloud or self-hosted', 'EU data sovereignty']
+                    : ['Unified personal memory', 'Connect Gmail, Slack, Notion…', 'Free to start'];
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setMode(key); setStep(2); }}
+                      className="text-left rounded-[10px] border border-[#e3e0db] hover:border-[#117dff] hover:shadow-sm bg-white p-5 transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-11 h-11 rounded-[8px] bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
+                          <Icon size={20} className="text-[#117dff]" />
+                        </div>
+                        <span className="text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">{option.plan}</span>
+                      </div>
+                      <h3 className="text-[#0a0a0a] text-lg font-semibold font-['Space_Grotesk'] mb-1.5">
+                        {t(option.titleKey, option.titleDefault)}
+                      </h3>
+                      <p className="text-[#525252] text-[13px] leading-relaxed">
+                        {t(option.descriptionKey, option.descriptionDefault)}
+                      </p>
+                      <ul className="mt-3 space-y-1.5">
+                        {features.map((f) => (
+                          <li key={f} className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+                            <span className="w-1 h-1 rounded-full bg-[#117dff] shrink-0" /> {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <span className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#117dff] font-['Space_Grotesk'] uppercase tracking-[0.08em]">
+                        {t('onboarding.choose', 'Choose')} <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <button
+                type="button"
+                onClick={() => { setStep(1); setError(null); }}
+                className="flex items-center gap-1.5 text-[#737373] hover:text-[#0a0a0a] text-[12px] font-['Space_Grotesk'] mb-4 transition-colors"
+              >
+                ← {t('onboarding.back', 'Back')}
+              </button>
+              <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-2">
+                <span className="text-[#a3a3a3]">〉</span> {mode === 'enterprise' ? t('onboarding.enterpriseTag', 'ENTERPRISE SETUP') : t('onboarding.secondBrainTag', 'SECOND BRAIN')} <span className="text-[#d4d0ca]">· 02</span>
+              </div>
+              <h2 className="text-[#0a0a0a] text-[24px] font-medium font-['Space_Grotesk'] tracking-tight mb-6">
+                {mode === 'enterprise'
+                  ? t('onboarding.setupEnterprise', 'Set up your Enterprise HIVEMIND')
+                  : t('onboarding.setupPersonal', 'Set up your Second Brain')}
+              </h2>
 
           <form onSubmit={handleCreate} className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
             <div>
@@ -290,6 +327,8 @@ export default function OnboardingFlow() {
               </p>
             )}
           </form>
+            </>
+          )}
         </div>
       </motion.div>
     </div>
