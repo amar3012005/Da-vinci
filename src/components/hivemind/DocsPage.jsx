@@ -100,6 +100,11 @@ const NAV = [
   { id: 'mcp-cursor', label: '— Cursor & JSON clients' },
   { id: 'mcp-stdio', label: '— stdio bridge' },
   { id: 'mcp-verify', label: '— Verify the connection' },
+  { id: 'agents', label: 'Agent integrations' },
+  { id: 'agent-openclaw', label: '— OpenClaw' },
+  { id: 'agent-hermes', label: '— Hermes Agents' },
+  { id: 'agent-langchain', label: '— LangChain / custom' },
+  { id: 'agent-http', label: '— Any agent (raw HTTP)' },
   { id: 'tools-memory', label: 'Tools · Memory' },
   { id: 'tools-web', label: 'Tools · Web intelligence' },
   { id: 'tools-coding', label: 'Tools · Coding' },
@@ -266,10 +271,89 @@ X-API-Key: hm_live_xxxxxxxxxxxxxxxxxxxx`}</CodeBlock>
 # The second answer must cite the memory saved by the first.`}</CodeBlock>
           </section>
 
+          {/* ── Agent integrations ── */}
+          <section id="agents" className="mt-12">
+            <Eyebrow>04 · AGENT INTEGRATIONS</Eyebrow>
+            <H2 id="agents">Connect autonomous agents</H2>
+            <P>
+              Any agent framework that speaks MCP — or plain HTTP — can use HIVEMIND as its long-term memory.
+              The pattern is always the same: point the agent at <Mono>{MCP_URL}</Mono> with your workspace key,
+              and the {MEMORY_TOOLS.length + WEB_TOOLS.length + CODING_TOOLS.length + TEMPORAL_TOOLS.length} tools
+              below become part of its toolset. Give the agent one standing instruction — <em>recall before you act,
+              save what’s durable</em> — and it starts working for you across sessions.
+            </P>
+
+            <H3 id="agent-openclaw">OpenClaw</H3>
+            <P>OpenClaw reads MCP servers from its config file. Add HIVEMIND as a Streamable-HTTP server:</P>
+            <CodeBlock label="~/.openclaw/mcp.json">{`{
+  "mcpServers": {
+    "hivemind": {
+      "url": "${MCP_URL}",
+      "headers": { "Authorization": "Bearer hm_live_xxxxxxxxxxxxxxxxxxxx" }
+    }
+  }
+}`}</CodeBlock>
+            <P>
+              Then add a line to the agent’s system prompt so it uses the memory reflexively:
+            </P>
+            <CodeBlock label="agent system prompt">{`Before answering, call hivemind_recall with the user's request.
+After any durable fact, decision, or result, call hivemind_save_memory.
+You share one memory across every run — treat it as your own recall.`}</CodeBlock>
+
+            <H3 id="agent-hermes">Hermes Agents</H3>
+            <P>
+              Hermes agents (the per-tenant agents inside HIVEMIND) attach MCP servers per profile. In the
+              Hermes console, add an MCP server of type <Mono>http</Mono> with the URL and bearer header below,
+              then enable it on the agent’s profile — every tool becomes callable inside that agent’s runs.
+            </P>
+            <CodeBlock label="hermes · add MCP server">{`Transport:  Streamable HTTP
+URL:        ${MCP_URL}
+Header:     Authorization: Bearer hm_live_xxxxxxxxxxxxxxxxxxxx
+Scope:      enable on the agent profile that should remember`}</CodeBlock>
+            <P>
+              Because Hermes runs server-side, use a dedicated key for it so its usage is metered separately
+              from interactive sessions. Revoke that key to instantly cut the agent’s access.
+            </P>
+
+            <H3 id="agent-langchain">LangChain / LlamaIndex / custom frameworks</H3>
+            <P>Load the HIVEMIND MCP server through the framework’s MCP adapter and hand the tools to your agent:</P>
+            <CodeBlock label="python · langchain-mcp-adapters">{`from langchain_mcp_adapters.client import MultiServerMCPClient
+
+client = MultiServerMCPClient({
+    "hivemind": {
+        "transport": "streamable_http",
+        "url": "${MCP_URL}",
+        "headers": {"Authorization": f"Bearer {HIVEMIND_API_KEY}"},
+    }
+})
+tools = await client.get_tools()   # all HIVEMIND tools, ready for your agent
+# agent = create_react_agent(model, tools)`}</CodeBlock>
+
+            <H3 id="agent-http">Any agent — raw HTTP (no MCP SDK)</H3>
+            <P>
+              If your agent can’t speak MCP, call the JSON-RPC endpoint directly. Discover tools with
+              <Mono>tools/list</Mono>, then invoke one with <Mono>tools/call</Mono>:
+            </P>
+            <CodeBlock label="curl · call a tool over JSON-RPC">{`curl -s ${MCP_URL} \\
+  -H "Authorization: Bearer $HIVEMIND_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+    "params": {
+      "name": "hivemind_recall",
+      "arguments": { "query": "auth decisions", "mode": "quick", "limit": 5 }
+    }
+  }'`}</CodeBlock>
+            <P>
+              Wire that into your agent’s tool-execution loop, feed the results back into the model’s context,
+              and it now shares the same memory as every other HIVEMIND client.
+            </P>
+          </section>
+
           {/* ── Tool reference ── */}
           {groups.map((g, gi) => (
             <section key={g.id} id={g.id} className="mt-12">
-              <Eyebrow>{String(4 + gi).padStart(2, '0')} · TOOL REFERENCE</Eyebrow>
+              <Eyebrow>{String(5 + gi).padStart(2, '0')} · TOOL REFERENCE</Eyebrow>
               <H2 id={g.id}>{g.title} <span className="text-[#a3a3a3] font-mono text-[14px]">[{g.count}]</span></H2>
               <P>{g.blurb}</P>
               <div className="space-y-4 mt-4">
@@ -280,7 +364,7 @@ X-API-Key: hm_live_xxxxxxxxxxxxxxxxxxxx`}</CodeBlock>
 
           {/* ── Best practices ── */}
           <section id="best-practices" className="mt-12 mb-20">
-            <Eyebrow>08 · BEST PRACTICES</Eyebrow>
+            <Eyebrow>09 · BEST PRACTICES</Eyebrow>
             <H2 id="best-practices">Best practices</H2>
             <ul className="space-y-2.5 text-[13px] text-[#525252] list-none mt-3">
               {[
