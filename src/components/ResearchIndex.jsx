@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronRight } from 'lucide-react';
 import Seo from './Seo';
 
 /**
@@ -70,24 +70,6 @@ const Card = ({ item, onOpen }) => (
 
 const ResearchIndex = () => {
   const navigate = useNavigate();
-  const track = useRef(null);
-  const [progress, setProgress] = useState(0);
-
-  const onScroll = useCallback(() => {
-    const el = track.current; if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    setProgress(max > 0 ? el.scrollLeft / max : 0);
-  }, []);
-  useEffect(() => {
-    const el = track.current; if (!el) return;
-    el.addEventListener('scroll', onScroll, { passive: true }); onScroll();
-    return () => el.removeEventListener('scroll', onScroll);
-  }, [onScroll]);
-  const scrollBy = (dir) => {
-    const el = track.current; if (!el) return;
-    const card = el.querySelector('[data-card]');
-    el.scrollBy({ left: dir * ((card ? card.offsetWidth : 720) + 20), behavior: 'smooth' });
-  };
 
   return (
     <div style={{ background: PAPER, color: INK }} className="min-h-screen font-['Inter']">
@@ -116,25 +98,18 @@ const ResearchIndex = () => {
         </p>
       </header>
 
-      {/* controls */}
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between px-6 md:px-10">
-        <div className="flex h-9 w-32 items-center gap-2 rounded-full bg-[#ece9e0] px-3">
-          <span className="h-1.5 w-1.5 rounded-full bg-black/25" />
-          <div className="relative h-1.5 flex-1 rounded-full bg-black/10">
-            <div className="absolute top-0 h-full w-1/2 rounded-full bg-black/55" style={{ left: `${progress * 50}%` }} />
-          </div>
+      {/* conveyor belt — cards drift right→left, continuous loop, pause on hover */}
+      <style>{`
+        @keyframes research-belt { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
+        .research-belt { animation: research-belt 60s linear infinite; will-change: transform; }
+        .research-belt:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .research-belt { animation: none; } }
+      `}</style>
+      <div className="mt-7 overflow-hidden">
+        <div className="research-belt flex w-max gap-5 pb-3">
+          {/* two copies → seamless wrap at -50% */}
+          {[...ITEMS, ...ITEMS].map((it, i) => <Card key={`${it.title}-${i}`} item={it} onOpen={navigate} />)}
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => scrollBy(-1)} aria-label="Previous" className="flex h-10 w-10 items-center justify-center rounded-lg border bg-white text-[#525252] hover:text-black" style={{ borderColor: BORDER }}><ChevronLeft size={18} /></button>
-          <button onClick={() => scrollBy(1)} aria-label="Next" className="flex h-10 w-10 items-center justify-center rounded-lg border bg-white text-black" style={{ borderColor: BORDER }}><ChevronRight size={18} /></button>
-        </div>
-      </div>
-
-      {/* carousel */}
-      <div ref={track} className="mt-7 flex snap-x gap-5 overflow-x-auto pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        style={{ paddingLeft: 'max(1.5rem,calc((100vw - 1280px)/2 + 2.5rem))', paddingRight: '1.5rem' }}>
-        {ITEMS.map((it) => <Card key={it.title} item={it} onOpen={navigate} />)}
-        <div className="shrink-0 pr-6" aria-hidden />
       </div>
 
       {/* All research list */}
