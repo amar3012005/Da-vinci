@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { getCalApi } from '@calcom/embed-react';
+import WaitlistModal from './WaitlistModal';
 
 /*
  * HeroCtas — the two horizontal homepage CTAs.
@@ -11,6 +12,7 @@ import { getCalApi } from '@calcom/embed-react';
 const ease = [0.22, 1, 0.36, 1];
 
 export default function HeroCtas({ delay = 0.85, compact = false }) {
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   useEffect(() => {
     (async () => {
       try {
@@ -36,12 +38,14 @@ export default function HeroCtas({ delay = 0.85, compact = false }) {
       >
         Talk to us
       </button>
-      <a
-        href="/hivemind/login"
-        className={`${base} border border-white/35 text-white hover:border-white hover:bg-white/10 no-underline active:scale-[0.98]`}
+      <button
+        type="button"
+        onClick={() => setWaitlistOpen(true)}
+        className={`${base} border border-white/35 text-white hover:border-white hover:bg-white/10 active:scale-[0.98]`}
       >
         Waitlist
-      </a>
+      </button>
+      <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
     </motion.div>
   );
 }
