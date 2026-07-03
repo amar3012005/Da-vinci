@@ -22,7 +22,7 @@ import { bundbTestConfig, davinciTestConfig } from './components/testing/testCon
 import PortalLayout from './components/PortalLayout';
 
 // Hivemind
-import HivemindRedirect from './components/hivemind/HivemindRedirect';
+const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
@@ -69,7 +69,7 @@ function App() {
     <Router>
       <UpdateBanner />
       <Routes>
-        <Route path="/" element={PRODUCT_HOST ? <DavinciHomepage /> : (isHivemindHost ? <HivemindRedirect /> : <DavinciHomepage />)} />
+        <Route path="/" element={PRODUCT_HOST ? <DavinciHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <DavinciHomepage />)} />
         <Route path="/about" element={<Layout><AboutPage /></Layout>} />
         <Route path="/underprogress" element={<UnderProgress />} />
         <Route path="/terms" element={<Layout><Terms /></Layout>} />
@@ -97,7 +97,7 @@ function App() {
           {/* /hivemind index — PRODUCT_HOST (singulancelabs) shows the HIVEMIND product cover;
               the dedicated hivemind subdomain opens the app; marketing host redirects away. */}
           <Route index element={PRODUCT_HOST
-            ? <HivemindRedirect />
+            ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense>
             : (isHivemindHost
               ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
               : <HivemindExternalRedirect />)
