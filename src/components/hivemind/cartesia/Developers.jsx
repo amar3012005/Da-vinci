@@ -106,7 +106,7 @@ const Developers = () => {
   ];
 
   return (
-    <div id="developers" className="bg-[#faf9f4] text-[#0a0a0a]">
+    <div id="developers" className="scroll-mt-16 bg-[#faf9f4] text-[#0a0a0a]">
       {/* Container with side borders */}
       <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db]">
 

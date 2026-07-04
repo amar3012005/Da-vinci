@@ -570,7 +570,21 @@ const FinalCta = () => (
 /* ───────── page ───────── */
 
 const HivemindProduct = () => {
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  // Deep-link to a section (e.g. /hivemind#pricing). The target only exists
+  // once this lazy chunk mounts, so the browser's native hash-scroll fires
+  // too early — retry until the element shows up (bounded), else scroll top.
+  useEffect(() => {
+    const hash = window.location.hash?.slice(1);
+    if (!hash) { window.scrollTo(0, 0); return undefined; }
+    let tries = 0;
+    const tryScroll = () => {
+      const el = document.getElementById(hash);
+      if (el) { el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; }
+      if (++tries < 40) requestAnimationFrame(tryScroll);
+    };
+    requestAnimationFrame(tryScroll);
+    return undefined;
+  }, []);
 
   // Lenis smooth-scroll — buttery scrub for the parallax planes.
   useEffect(() => {

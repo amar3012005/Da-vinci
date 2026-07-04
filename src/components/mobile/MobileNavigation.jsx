@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
@@ -7,6 +8,7 @@ import { getMobileCopy } from './mobileCopy';
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
   const { isDark, toggle, locale, setLocale } = useTheme();
   const c = t(isDark);
   const copy = getMobileCopy(locale);
@@ -45,7 +47,9 @@ const MobileNavigation = () => {
   const handleNavClick = (item) => {
     setMobileOpen(false);
     if (item.href) {
-      window.location.href = item.href;
+      // SPA transition (no full reload) — HivemindProduct's own mount effect
+      // picks up the #hash and scrolls once its sections exist.
+      navigate(item.href);
     } else if (item.sectionId) {
       const el = document.getElementById(item.sectionId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });

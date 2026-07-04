@@ -254,7 +254,7 @@ const ScopeEstimator = () => {
 const Pricing = () => {
   const [annual, setAnnual] = useState(false);
   return (
-    <div id="pricing" className="bg-[#faf9f4] text-[#0a0a0a]">
+    <div id="pricing" className="scroll-mt-16 bg-[#faf9f4] text-[#0a0a0a]">
       <div className="max-w-[1200px] mx-auto border-x border-[#e3e0db]">
         <section className="relative">
           <StripedSeparator />
