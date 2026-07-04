@@ -33,6 +33,8 @@ import AaasVoiceWidget from '../../AaasVoiceWidget';
 const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
 const _AAAS_WS = process.env.REACT_APP_AAAS_WS || `${_CORE_HTTP.replace(/^http/, 'ws')}/aaas/voice`;
 const AAAS_HTTP = _AAAS_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '');
+// tara-deepgram engine (Deepgram Voice Agent + Telnyx) — routed under the same core host.
+const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -295,6 +297,8 @@ const STATE_COLOR = { dialing: '#d97706', connected: '#16a34a', ended: '#a3a3a3'
 
 function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
   const [phone, setPhone] = useState('');
+  const [engine, setEngine] = useState('deepgram'); // 'deepgram' (Voice Agent) | 'classic' (aaas)
+  const apiBase = engine === 'deepgram' ? DG_HTTP : AAAS_HTTP;
   const [callState, setCallState] = useState(null); // null|'dialing'|'connected'|'ended'|'error'
   const [callLegId, setCallLegId] = useState(null);
   const [err, setErr] = useState(null);
@@ -313,7 +317,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
     stopPoll();
     pollRef.current = setInterval(async () => {
       try {
-        const r = await fetch(`${AAAS_HTTP}/calls/outbound/${callLegId}/status`);
+        const r = await fetch(`${apiBase}/calls/outbound/${callLegId}/status`);
         if (!r.ok) return;
         const d = await r.json();
         setCallState(d.status);
@@ -321,14 +325,14 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
       } catch { /* network hiccup */ }
     }, 2000);
     return stopPoll;
-  }, [callLegId, callState, stopPoll]);
+  }, [callLegId, callState, stopPoll, apiBase]);
 
   const startCall = async () => {
     if (!phoneValid) return;
     setErr(null);
     setCallState('dialing');
     try {
-      const r = await fetch(`${AAAS_HTTP}/calls/outbound`, {
+      const r = await fetch(`${apiBase}/calls/outbound`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -350,7 +354,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
 
   const hangup = async () => {
     if (!callLegId) return;
-    try { await fetch(`${AAAS_HTTP}/calls/outbound/${callLegId}/hangup`, { method: 'POST' }); } catch { /* ignore */ }
+    try { await fetch(`${apiBase}/calls/outbound/${callLegId}/hangup`, { method: 'POST' }); } catch { /* ignore */ }
     setCallState('ended');
     stopPoll();
   };
@@ -369,6 +373,18 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
 
       {!callState && (
         <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5 space-y-4">
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Voice engine</label>
+            <div className="flex gap-2">
+              {[['deepgram', 'Deepgram Agent'], ['classic', 'Classic (AaaS)']].map(([id, label]) => (
+                <button key={id} onClick={() => setEngine(id)}
+                  className={`px-3 py-1.5 rounded-[6px] text-[12px] font-medium border transition-colors ${
+                    engine === id ? 'bg-[#117dff] text-white border-[#117dff]' : 'bg-white text-[#525252] border-[#e3e0db] hover:border-[#117dff]'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Destination (E.164)</label>
             <input
@@ -416,6 +432,158 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
               )}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── Campaign Panel — mass outbound via tara-deepgram engine ─────────────────
+function CampaignPanel({ identity, language = 'en' }) {
+  const [name, setName] = useState('');
+  const [goal, setGoal] = useState('');
+  const [contactsRaw, setContactsRaw] = useState('');
+  const [parallel, setParallel] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [detail, setDetail] = useState(null);
+  const pollRef = useRef(null);
+
+  // One contact per line: "+491701234567, Max Mustermann" (name optional)
+  const contacts = contactsRaw.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+    const [phone, ...rest] = l.split(',');
+    return { phone: phone.trim(), name: rest.join(',').trim() || null, language };
+  });
+  const valid = name.trim() && contacts.length > 0 && contacts.every((c) => /^\+[1-9]\d{7,14}$/.test(c.phone));
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch(`${DG_HTTP}/campaigns`);
+      if (r.ok) setCampaigns((await r.json()).campaigns || []);
+    } catch { /* service may be off */ }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    pollRef.current = setInterval(refresh, 4000);
+    return () => clearInterval(pollRef.current);
+  }, [refresh]);
+
+  const launch = async () => {
+    if (!valid) return;
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch(`${DG_HTTP}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(), goal: goal.trim() || null, contacts,
+          parallel: Number(parallel) || 1, language,
+          user_id: identity?.userId, org_id: identity?.orgId,
+        }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+      setName(''); setGoal(''); setContactsRaw('');
+      refresh();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const openDetail = async (id) => {
+    try {
+      const r = await fetch(`${DG_HTTP}/campaigns/${id}`);
+      if (r.ok) setDetail(await r.json());
+    } catch { /* ignore */ }
+  };
+
+  const stopCampaign = async (id) => {
+    try { await fetch(`${DG_HTTP}/campaigns/${id}/stop`, { method: 'POST' }); refresh(); } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3 flex items-start gap-2">
+        <Shield size={14} className="text-amber-600 mt-0.5 shrink-0" />
+        <p className="text-[12px] text-amber-700">
+          Every dial passes the <span className="font-mono">TELNYX_ALLOWED_NUMBERS</span> allowlist — non-listed numbers are skipped, never called.
+          AI disclosure plays at every call open. Parallelism capped server-side.
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Campaign name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Solvis feedback wave 1"
+              className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-[#117dff]" />
+          </div>
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Parallel calls</label>
+            <input type="number" min="1" max="10" value={parallel} onChange={(e) => setParallel(e.target.value)}
+              className="w-24 border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-[#117dff]" />
+          </div>
+        </div>
+        <div>
+          <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Goal (one line)</label>
+          <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Collect product feedback on the Solvis portal"
+            className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-[#117dff]" />
+        </div>
+        <div>
+          <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">
+            Contacts — one per line: +E164, name (optional)
+          </label>
+          <textarea value={contactsRaw} onChange={(e) => setContactsRaw(e.target.value)} rows={5}
+            placeholder={'+491701234567, Max Mustermann\n+491709876543'}
+            className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-[#117dff]" />
+          {contactsRaw && !valid && <p className="text-[11px] text-red-500 mt-1">Check campaign name + E.164 numbers</p>}
+        </div>
+        <button onClick={launch} disabled={!valid || busy}
+          className="flex items-center gap-2 px-4 py-2 bg-[#117dff] text-white rounded-[6px] text-[13px] font-medium disabled:opacity-40 hover:bg-[#0e6de0] transition-colors">
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <PhoneCall size={14} />} Launch campaign
+        </button>
+        {err && <p className="text-[12px] text-red-500">{err}</p>}
+      </div>
+
+      {campaigns.length > 0 && (
+        <div className="bg-white border border-[#e3e0db] rounded-[10px] divide-y divide-[#f0ede8]">
+          {campaigns.map((c) => (
+            <div key={c.id} className="flex items-center justify-between px-4 py-3">
+              <button onClick={() => openDetail(c.id)} className="text-left">
+                <p className="text-[13px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{c.name}</p>
+                <p className="text-[11px] text-[#a3a3a3] font-mono">{c.done}/{c.total} done · {c.status}</p>
+              </button>
+              {c.status === 'running' && (
+                <button onClick={() => stopCampaign(c.id)}
+                  className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-[6px] text-[12px] font-medium hover:bg-red-100">
+                  Stop
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-[#e3e0db] shadow-xl w-full max-w-[560px] max-h-[80vh] overflow-y-auto p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold font-['Space_Grotesk']">{detail.name}</h3>
+              <button onClick={() => setDetail(null)}><X size={16} className="text-[#a3a3a3]" /></button>
+            </div>
+            <div className="space-y-1.5">
+              {(detail.contacts || []).map((ct, i) => (
+                <div key={i} className="flex items-center justify-between text-[12px] border border-[#f0ede8] rounded-[6px] px-3 py-2">
+                  <span className="font-mono">{ct.phone}{ct.name ? ` · ${ct.name}` : ''}</span>
+                  <span className="font-medium" style={{ color: STATE_COLOR[ct.state] || '#a3a3a3' }}>
+                    {ct.state}{ct.skip_reason ? ` — ${ct.skip_reason.slice(0, 60)}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -500,6 +668,7 @@ export default function TaraConfig() {
             { id: 'insights', label: 'Insights', icon: Brain },
             { id: 'usage', label: 'Usage', icon: Zap },
             { id: 'outbound', label: 'Outbound', icon: PhoneCall },
+            { id: 'campaigns', label: 'Campaigns', icon: Zap },
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
@@ -576,6 +745,7 @@ export default function TaraConfig() {
           </div>
         )}
         {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} language={(i18n.language || 'en').split('-')[0]} />}
+        {activeTab === 'campaigns' && <CampaignPanel identity={identity} language={(i18n.language || 'en').split('-')[0]} />}
       </motion.div>
     </motion.div>
   );
