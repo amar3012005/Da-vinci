@@ -1658,6 +1658,105 @@ function SwarmSpinningUp() {
   );
 }
 
+// ─── Population-sim dialogue theater ────────────────────────────────────────
+// The sim's 10-100 synthetic voices used to hide behind a flat "open" button.
+// This renders them as a LIVE dialogue replay: posts land one-by-one in a feed,
+// the sentiment bar fills and the voice counter ticks as each lands — the crowd
+// visibly "happens" in the room. Real data only (the posts the backend simulated);
+// the animation is a replay of that real burst. Skippable; settles into a summary.
+function SimTheater({ simReport, onOpenFull }) {
+  const { t } = useTranslation('dashboard');
+  const posts = useMemo(() => (Array.isArray(simReport?.posts) ? simReport.posts : []), [simReport]);
+  const [shown, setShown] = useState(0);          // how many posts have landed
+  const [playing, setPlaying] = useState(true);
+  const feedRef = useRef(null);
+  const done = shown >= posts.length;
+  // Stagger so the whole replay fits ~18s regardless of crowd size.
+  const stepMs = Math.max(120, Math.min(450, Math.floor(18000 / Math.max(1, posts.length))));
+
+  useEffect(() => {
+    if (!playing || done || !posts.length) return undefined;
+    const id = setInterval(() => setShown(s => Math.min(posts.length, s + 1)), stepMs);
+    return () => clearInterval(id);
+  }, [playing, done, posts.length, stepMs]);
+  useEffect(() => {   // follow the feed as voices land
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [shown]);
+
+  if (!posts.length) return null;
+  const visible = posts.slice(0, shown);
+  const S = { positive: 0, neutral: 0, negative: 0 };
+  visible.forEach(p => { const s = (p.sentiment === 'positive' || p.sentiment === 'negative') ? p.sentiment : 'neutral'; S[s]++; });
+  const total = Math.max(1, visible.length);
+  const ring = s => s === 'positive' ? 'ring-green-400 bg-green-50 text-green-700'
+    : s === 'negative' ? 'ring-red-400 bg-red-50 text-red-700' : 'ring-[#d4d0ca] bg-[#faf9f4] text-[#737373]';
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-white overflow-hidden shadow-sm">
+      <div className="flex items-center gap-2 px-3.5 py-2 border-b border-violet-100 bg-violet-50/60">
+        <span className="relative flex h-2.5 w-2.5">
+          {!done && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />}
+          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${done ? 'bg-emerald-500' : 'bg-red-500'}`} />
+        </span>
+        <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
+          {done ? t('hyperAgents.simDone', 'Population simulation') : t('hyperAgents.simLive', 'Population simulation — replaying')}
+        </span>
+        <span className="text-[10px] text-violet-500 font-mono tabular-nums">
+          {shown}/{posts.length} {t('hyperAgents.simVoices', 'voices')}
+        </span>
+        <div className="ml-auto flex items-center gap-1">
+          {!done && (
+            <button type="button" onClick={() => setPlaying(p => !p)}
+              className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100">
+              {playing ? t('hyperAgents.simPause', 'pause') : t('hyperAgents.simPlay', 'play')}
+            </button>
+          )}
+          {!done && (
+            <button type="button" onClick={() => setShown(posts.length)}
+              className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100">
+              {t('hyperAgents.simSkip', 'skip ▸')}
+            </button>
+          )}
+          <button type="button" onClick={onOpenFull}
+            className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100">
+            {t('hyperAgents.simFull', 'full report')}
+          </button>
+        </div>
+      </div>
+      {/* live sentiment bar — fills as voices land */}
+      <div className="px-3.5 pt-2">
+        <div className="flex h-2 rounded overflow-hidden border border-[#ece9e3]">
+          <div style={{ width: `${(S.positive / total) * 100}%` }} className="bg-green-500 transition-all duration-300" />
+          <div style={{ width: `${(S.neutral / total) * 100}%` }} className="bg-[#d4d0ca] transition-all duration-300" />
+          <div style={{ width: `${(S.negative / total) * 100}%` }} className="bg-red-500 transition-all duration-300" />
+        </div>
+        <div className="flex gap-3 mt-1 text-[9px] text-[#737373] font-mono tabular-nums">
+          <span>▲ {S.positive}</span><span>— {S.neutral}</span><span>▼ {S.negative}</span>
+        </div>
+      </div>
+      {/* the dialogue feed */}
+      <div ref={feedRef} className="max-h-64 overflow-y-auto px-3.5 py-2 space-y-1.5 scroll-smooth">
+        {visible.map((p, i) => (
+          <div key={i} className="flex items-start gap-2" style={{ animation: 'simpop .25s ease-out' }}>
+            <span className={`h-5 w-5 grid place-items-center rounded-full ring-1 text-[9px] font-semibold shrink-0 mt-0.5 ${ring(p.sentiment)}`}>
+              {(p.name || '?').slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <span className="text-[10px] font-medium text-[#0a0a0a]">{p.name}</span>
+              <span className="text-[9px] text-[#a3a3a3] ml-1.5">{p.role}</span>
+              <div className="text-[11px] text-[#525252] leading-snug">{p.text}</div>
+            </div>
+          </div>
+        ))}
+        {!done && playing && (
+          <div className="text-[10px] text-violet-400 font-mono animate-pulse pl-7">…</div>
+        )}
+      </div>
+      <style>{'@keyframes simpop { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none;} }'}</style>
+    </div>
+  );
+}
+
 // Claude-style tool-activity timeline. Reshapes the turn's gather/tool/connector/web
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
@@ -2135,19 +2234,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           the raw population. Guarded: absent on normal turns, every field defensive. */}
       {simReport && (
         <>
-          <button
-            type="button" onClick={() => setShowSim(true)}
-            className="w-full flex items-center gap-2 px-3.5 py-2 rounded-xl border border-violet-200 bg-violet-50/60 hover:bg-violet-50 transition-colors text-left"
-          >
-            <Users size={13} className="text-violet-600" />
-            <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
-              {t('hyperAgents.popReport', 'Population report')}
-            </span>
-            <span className="text-[10px] text-violet-500 font-mono">
-              {(simReport.n_personas || 0)} voices · {(simReport.n_posts || 0)} posts
-            </span>
-            <span className="ml-auto text-[10px] text-violet-600 font-mono">▸ {t('hyperAgents.open', 'open')}</span>
-          </button>
+          <SimTheater simReport={simReport} onOpenFull={() => setShowSim(true)} />
           {showSim && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowSim(false)}>
               <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[86vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -2268,22 +2355,57 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         </>
       )}
 
-      {synthLine && (
-        <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/60 to-white shadow-sm overflow-hidden">
-          <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-violet-100 bg-violet-50/50">
-            <Sparkles size={13} className="text-violet-600" />
-            <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
-              {t('hyperAgents.finalOutput', 'Final — room synthesis')}
-            </span>
-            {synthLine && eventDisplayTs(synthLine) ? (
-              <span className="ml-auto text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
-            ) : null}
+      {synthLine && (() => {
+        // Report-card chrome around the deliverable: WHO wrote it (lead + the team),
+        // whether the recon pass VERIFIED it as grounded, and the turn's true cost —
+        // so the final card reads like a signed-off report, not an anonymous blob.
+        const _leadP = participants[synthLine.agent] || {};
+        const _crew = Object.values(participants || {}).filter(p => (p.slug || p.id) !== synthLine.agent);
+        const _v = verifyLine || {};
+        const _verified = _v.grounded_ok === true || _v.met === true;
+        const _durS = seal?.duration_ms ? Math.round(Number(seal.duration_ms) / 1000) : null;
+        return (
+          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/60 to-white shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-2 border-b border-violet-100 bg-violet-50/50 flex-wrap">
+              <Sparkles size={13} className="text-violet-600" />
+              <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
+                {t('hyperAgents.finalOutput', 'Final — room synthesis')}
+              </span>
+              {_verified && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-medium"
+                      title={t('hyperAgents.verifiedTitle', 'The recon pass checked this deliverable against the gathered evidence — grounded.')}>
+                  <CheckCheck size={10} /> {t('hyperAgents.verified', 'verified')}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => { try { navigator.clipboard.writeText(synthLine.content || ''); } catch { /* noop */ } }}
+                className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100"
+                title={t('hyperAgents.copySynth', 'Copy the deliverable as markdown')}
+              >{t('hyperAgents.copy', 'copy')}</button>
+              {eventDisplayTs(synthLine) ? (
+                <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
+              ) : null}
+            </div>
+            <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
+              {renderMarkdownLite(synthLine.content)}
+            </div>
+            <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
+              <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
+                {(_leadP.name || synthLine.agent || '?').slice(0, 1).toUpperCase()}
+              </span>
+              <span className="text-[10px] text-[#525252]">
+                {t('hyperAgents.synthBy', 'by')} <span className="font-medium text-[#0a0a0a]">{_leadP.name || synthLine.agent}</span>
+                {_crew.length > 0 && <> · {t('hyperAgents.synthWith', 'with')} {_crew.map(p => p.name || p.slug).filter(Boolean).join(', ')}</>}
+              </span>
+              <span className="ml-auto flex items-center gap-2 text-[9px] font-mono text-[#a3a3a3] tabular-nums">
+                {_durS != null && <span>{_durS}s</span>}
+                {seal?.cost_tokens != null && <span>{Number(seal.cost_tokens).toLocaleString()} tok</span>}
+              </span>
+            </div>
           </div>
-          <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
-            {renderMarkdownLite(synthLine.content)}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {revises.map((rev, i) => (
         <div key={`revise-${i}`} className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
