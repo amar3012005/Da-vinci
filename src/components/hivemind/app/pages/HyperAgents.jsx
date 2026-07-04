@@ -1387,7 +1387,37 @@ function RoomThread({ roomId, onArchived }) {
               >
                 <Boxes size={15} />
               </button>
-              <div className="flex-1 bg-white border border-[#e3e0db] rounded-xl px-3 py-2 focus-within:border-violet-500">
+              <div className="flex-1 relative bg-white border border-[#e3e0db] rounded-xl px-3 py-2 focus-within:border-violet-500">
+                {/* @mention picker — typing "@..." lists the room's agents; pick one to
+                    address them DIRECTLY (backend fast-path: that agent answers alone). */}
+                {(() => {
+                  const m = draft.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+                  const roster = (room?.participants || []).filter(p => {
+                    if (!m) return false;
+                    const q = m[1].toLowerCase();
+                    return !q || (p.slug || '').toLowerCase().startsWith(q)
+                      || (p.name || '').toLowerCase().startsWith(q);
+                  });
+                  if (!m || !roster.length) return null;
+                  return (
+                    <div className="absolute bottom-full left-0 mb-1 w-60 bg-white border border-[#e3e0db] rounded-[10px] shadow-sm overflow-hidden z-20">
+                      <div className="px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3] border-b border-[#eae7e1]">
+                        {t('hyperAgents.mentionHint', 'Ask one agent directly')}
+                      </div>
+                      {roster.slice(0, 5).map(p => (
+                        <button key={p.slug} type="button"
+                          onClick={() => setDraft(draft.replace(/@[a-zA-Z0-9_-]*$/, `@${p.slug} `))}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#faf9f4]">
+                          <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold shrink-0">
+                            {(p.name || p.slug || '?').slice(0, 1).toUpperCase()}
+                          </span>
+                          <span className="text-[12px] text-[#0a0a0a]">{p.name || p.slug}</span>
+                          <span className="ml-auto text-[9px] font-mono text-[#a3a3a3]">@{p.slug}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <textarea
                   value={draft}
                   onChange={e => setDraft(e.target.value)}
