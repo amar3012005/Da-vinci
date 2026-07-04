@@ -27,7 +27,7 @@ export default function HeroCtas({ delay = 0.85, compact = false }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
-      className="flex flex-row items-center justify-center gap-3"
+      className="flex flex-row items-center justify-center gap-5"
     >
       <button
         type="button"

@@ -12,7 +12,6 @@ import SubProducts from './SubProducts';
 import FieldPicker from './FieldPicker';
 import AudienceSection from './AudienceSection';
 import ThesisSection from './ThesisSection';
-import ResearchTeaser from './ResearchTeaser';
 import MobileAboutSection from './MobileAboutSection';
 import SingulanceFooter from './SingulanceFooter';
 // HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb
@@ -78,7 +77,6 @@ const PageContent = () => {
             <SubProducts />
             <AudienceSection field={field} onChange={() => setPickerOpen(true)} />
             <ThesisSection />
-            <ResearchTeaser />
             <MobileAboutSection />
             <SingulanceFooter />
             {/* HIDDEN (re-add on singulancelabs.com): Talk-to-Tara voice widget + orb

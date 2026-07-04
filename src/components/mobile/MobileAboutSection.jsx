@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mail, MapPin, ArrowRight } from 'lucide-react';
+import { Mail, Linkedin, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
-import { getMobileCopy } from './mobileCopy';
+
+const LINKEDIN_URL = 'https://www.linkedin.com/company/singulance-ai/?viewAsMember=true';
+const SUPPORT_EMAIL = 'support@singulancelabs.com';
 
 const MobileAboutSection = () => {
-    const { isDark, locale } = useTheme();
+    const { isDark } = useTheme();
     const c = t(isDark);
-    const copy = getMobileCopy(locale).about;
 
     return (
         <section id="cta-section" className={`${c.bg} border-t ${c.border} py-24 px-6 pb-36`}>
@@ -21,13 +22,13 @@ const MobileAboutSection = () => {
                     transition={{ duration: 0.5 }}
                 >
                     <div className={`text-xs font-mono ${c.textMuted} uppercase tracking-[0.3em] mb-4`}>
-                        {copy.label}
+                        Contact
                     </div>
                     <h2 className={`text-3xl font-bold ${c.text} font-['Space_Grotesk'] mb-3`}>
-                        {copy.title}
+                        Talk to us
                     </h2>
                     <p className={`text-sm ${c.textSecondary} leading-relaxed`}>
-                        {copy.body}
+                        Questions, partnership inquiries, or just want to say hello — we'd love to hear from you.
                     </p>
                 </motion.div>
 
@@ -41,34 +42,40 @@ const MobileAboutSection = () => {
                 >
                     {/* Email */}
                     <a
-                        href="mailto:admin@davincisolutions.de"
+                        href={`mailto:${SUPPORT_EMAIL}`}
                         className={`flex items-center gap-4 ${c.bg} border ${c.border} p-4 mb-4 ${c.hoverBg} transition-colors group no-underline`}
                     >
                         <div className={`w-10 h-10 ${isDark ? 'bg-[#1a1a1a]' : 'bg-black/[0.04]'} flex items-center justify-center shrink-0`}>
                             <Mail size={16} className={c.textSecondary} />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>{copy.email}</div>
-                            <div className={`text-sm ${c.text} font-medium truncate`}>admin@davincisolutions.de</div>
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>Email</div>
+                            <div className={`text-sm ${c.text} font-medium truncate`}>{SUPPORT_EMAIL}</div>
                         </div>
                         <ArrowRight size={14} className={`${c.textMuted} group-hover:translate-x-0.5 transition-all shrink-0`} />
                     </a>
 
-                    {/* Location */}
-                    <div className={`flex items-center gap-4 ${c.bg} border ${c.border} p-4`}>
+                    {/* LinkedIn */}
+                    <a
+                        href={LINKEDIN_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center gap-4 ${c.bg} border ${c.border} p-4 ${c.hoverBg} transition-colors group no-underline`}
+                    >
                         <div className={`w-10 h-10 ${isDark ? 'bg-[#1a1a1a]' : 'bg-black/[0.04]'} flex items-center justify-center shrink-0`}>
-                            <MapPin size={16} className={c.textSecondary} />
+                            <Linkedin size={16} className={c.textSecondary} />
                         </div>
                         <div className="flex-1">
-                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>{copy.locationLabel}</div>
-                            <div className={`text-sm ${c.text} font-medium`}>{copy.location}</div>
+                            <div className={`text-[10px] font-mono ${c.textMuted} uppercase tracking-widest mb-0.5`}>LinkedIn</div>
+                            <div className={`text-sm ${c.text} font-medium`}>SINGULANCE AI</div>
                         </div>
-                    </div>
+                        <ArrowRight size={14} className={`${c.textMuted} group-hover:translate-x-0.5 transition-all shrink-0`} />
+                    </a>
                 </motion.div>
 
                 {/* CTA button */}
                 <motion.a
-                    href="mailto:admin@davincisolutions.de"
+                    href={`mailto:${SUPPORT_EMAIL}`}
                     className={`w-full py-3.5 rounded-full ${c.accentBg} ${c.accentText} font-semibold text-xs uppercase tracking-[0.15em] ${c.accentHover} no-underline flex items-center justify-center gap-2 transition-colors`}
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -77,7 +84,7 @@ const MobileAboutSection = () => {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                 >
-                    {copy.cta}
+                    Write to us
                     <ArrowRight size={14} />
                 </motion.a>
 
@@ -89,7 +96,7 @@ const MobileAboutSection = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    {copy.footer}
+                    SINGULANCE / 2026
                 </motion.div>
             </div>
         </section>

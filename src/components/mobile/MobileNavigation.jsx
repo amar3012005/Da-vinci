@@ -11,10 +11,15 @@ const MobileNavigation = () => {
   const c = t(isDark);
   const copy = getMobileCopy(locale);
   const navLinks = [
+    { label: 'Platform', href: '/hivemind' },
     { label: copy.nav.links.solutions, sectionId: 'solutions' },
-    { label: copy.nav.links.research, href: '/research' },
-    { label: copy.nav.links.contact, sectionId: 'cta-section' },
+    { label: 'Developers', href: '/hivemind#developers' },
+    { label: 'Pricing', href: '/hivemind#pricing' },
+    { label: 'Docs', href: '/hivemind/app/connectors' },
+    { label: './ ' + copy.nav.links.research, href: '/research' },
+    { label: './ Benchmark', href: '/benchmark' },
   ];
+  const mobileOnlyLinks = [...navLinks, { label: copy.nav.links.contact, sectionId: 'cta-section' }];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 48);
@@ -67,12 +72,12 @@ const MobileNavigation = () => {
             </button>
 
             {/* Center Links — Desktop */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden lg:flex items-center gap-5">
               {navLinks.map((item) => (
                 <button
                   key={item.label}
                   onClick={() => handleNavClick(item)}
-                  className={`text-sm font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer tracking-wide`}
+                  className={`text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors bg-transparent border-none cursor-pointer tracking-wide`}
                 >
                   {item.label}
                 </button>
@@ -80,7 +85,7 @@ const MobileNavigation = () => {
             </div>
 
             {/* Right Buttons — Desktop */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-3">
               <div className={`inline-flex items-center rounded-full border ${c.border} p-1 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
                 {['en', 'de'].map((lang) => {
                   const active = locale === lang;
@@ -109,6 +114,12 @@ const MobileNavigation = () => {
                 {isDark ? <Sun size={16} /> : <Moon size={16} />}
               </button>
               <a
+                href="/hivemind/login"
+                className={`text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors no-underline px-3`}
+              >
+                Sign in
+              </a>
+              <a
                 href="/hivemind"
                 className={`flex items-center gap-1.5 px-5 py-2 ${c.accentBg} ${c.accentText} text-xs font-semibold rounded-full ${c.accentHover} transition-colors uppercase tracking-[0.1em] cursor-pointer border-none no-underline`}
               >
@@ -118,7 +129,7 @@ const MobileNavigation = () => {
             </div>
 
             {/* Mobile Hamburger */}
-            <div className="md:hidden flex items-center">
+            <div className="lg:hidden flex items-center">
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className={`p-2 ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} bg-transparent border-none cursor-pointer`}
@@ -139,17 +150,17 @@ const MobileNavigation = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className={`fixed inset-0 z-[99] ${isDark ? 'bg-[#080808]/95' : 'bg-[#faf9f4]/95'} backdrop-blur-xl md:hidden`}
+            className={`fixed inset-0 z-[99] ${isDark ? 'bg-[#080808]/95' : 'bg-[#faf9f4]/95'} backdrop-blur-xl lg:hidden`}
           >
             <div className="pt-24 px-8 flex flex-col gap-2">
-              {navLinks.map((item, i) => (
+              {mobileOnlyLinks.map((item, i) => (
                 <motion.button
                   key={item.label}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => handleNavClick(item)}
-                  className={`text-left text-2xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
+                  className={`text-left text-xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
                 >
                   {item.label}
                 </motion.button>
@@ -159,7 +170,7 @@ const MobileNavigation = () => {
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: navLinks.length * 0.05 }}
+                transition={{ delay: mobileOnlyLinks.length * 0.05 }}
                 onClick={toggle}
                 className={`flex items-center gap-3 text-left text-2xl font-medium ${c.text} py-3 border-b ${c.border} bg-transparent border-x-0 border-t-0 cursor-pointer`}
               >
@@ -171,10 +182,10 @@ const MobileNavigation = () => {
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: (navLinks.length + 1) * 0.05 }}
+                transition={{ delay: (mobileOnlyLinks.length + 1) * 0.05 }}
                 className={`flex items-center gap-2 py-4 border-b ${c.border}`}
               >
-                <span className={`text-sm font-medium ${c.textMuted}`}>Language:</span>
+                <span className={`text-[13px] font-medium ${c.textMuted}`}>Language:</span>
                 <div className={`inline-flex items-center rounded-full border ${c.border} p-0.5 ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
                   {['en', 'de'].map((lang) => {
                     const active = locale === lang;
