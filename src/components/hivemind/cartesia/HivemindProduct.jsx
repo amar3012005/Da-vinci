@@ -511,11 +511,22 @@ function ScrollScrubFilm({ children }) {
     if (!canScrub) return undefined;
     const v = videoRef.current, wrap = wrapRef.current;
     if (!v || !wrap) return undefined;
-    let target = 0, cur = 0, dur = 0, raf = 0, alive = true;
+    let target = 0, cur = 0, dur = 0, raf = 0, alive = true, primed = false;
     const clamp = (x) => Math.max(0, Math.min(1, x));
     const onMeta = () => { dur = v.duration || 0; };
+    // Prime the decoder: a muted play→pause forces the browser to decode + paint
+    // frames, so subsequent currentTime seeks actually render (otherwise a
+    // never-played video stays on its poster while scrubbing).
+    const prime = () => {
+      if (primed) return; primed = true;
+      const pr = v.play();
+      if (pr && pr.then) pr.then(() => { v.pause(); v.currentTime = 0; }).catch(() => {});
+      else { try { v.pause(); } catch { /* noop */ } }
+    };
     v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('loadeddata', prime);
     if (v.readyState >= 1) onMeta();
+    if (v.readyState >= 2) prime();
     const onScroll = () => {
       const r = wrap.getBoundingClientRect();
       const total = r.height - window.innerHeight;
@@ -530,7 +541,7 @@ function ScrollScrubFilm({ children }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
     onScroll(); tick();
-    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); };
+    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); v.removeEventListener('loadeddata', prime); };
   }, [canScrub]);
 
   return (
