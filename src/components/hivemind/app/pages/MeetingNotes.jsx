@@ -20,6 +20,8 @@ import MeetingNotesIcon from '../shared/MeetingNotesIcon';
 import MeetingIntelligencePanel from '../components/MeetingIntelligencePanel';
 import EntityText from '../shared/EntityText';
 import { useTranslation } from 'react-i18next';
+import UsageTracker from '../components/UsageTracker';
+import { emitUsageChanged } from '../shared/useUsage';
 
 // Pick a MediaRecorder MIME the browser actually supports. Chrome/Firefox do
 // webm/opus; Safari + iOS do NOT support webm and only offer mp4 — hardcoding
@@ -692,6 +694,7 @@ export default function MeetingNotes() {
       // request mid-ingest and the meeting never gets marked saved.
       await apiClient.core.post(`/api/meetings/${mid}/ingest`, {}, { timeout: 180000 });
       setSaved(true); loadMeetings();
+      emitUsageChanged(); // meeting notes became memories — refresh the meter
     } catch (e) { setError('Save failed: ' + (e.response?.data?.error || e.message)); }
     finally { setSaving(false); }
   }, [transcript, saving, saved, insights, speakerSegments, language, loadMeetings, persistRow, meetingId]);
@@ -753,7 +756,10 @@ export default function MeetingNotes() {
           <h1 className="text-[24px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('meetingnotes.title', 'AI Meeting Notes')}</h1>
           <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.subtitle', 'Record, transcribe and extract insights — saved straight into your memory.')}</p>
         </div>
-        <ClockChip />
+        <div className="flex items-center gap-3">
+          <UsageTracker resource="memories" />
+          <ClockChip />
+        </div>
       </div>
 
       {/* stat row */}

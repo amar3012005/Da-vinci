@@ -32,6 +32,8 @@ import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
+import UsageTracker from '../components/UsageTracker';
+import { emitUsageChanged } from '../shared/useUsage';
 
 // Compact relative-time for room last-used. Pure, no deps.
 // 3rd-party connector catalog (mirrors core/src/connectors/mcp/catalog-seed.js).
@@ -189,12 +191,15 @@ export default function HyperAgents() {
               {t('hyperAgents.emptyStateDesc', 'Build a room. Your agents talk to each other under WhatsApp-style threads, debate when their roles clash, and self-evolve from your conversations over time.')}
             </p>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="shrink-0 flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3.5 py-2 rounded-lg"
-          >
-            <Plus size={13} /> {t('hyperAgents.newRoom', 'New room')}
-          </button>
+          <div className="shrink-0 flex items-center gap-3">
+            <UsageTracker resource="hyperRooms" />
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1.5 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold px-3.5 py-2 rounded-lg"
+            >
+              <Plus size={13} /> {t('hyperAgents.newRoom', 'New room')}
+            </button>
+          </div>
         </div>
 
         {/* Existing roster (no duplication) */}
@@ -209,6 +214,7 @@ export default function HyperAgents() {
                 setRooms(prev => [room, ...prev]);
                 setActiveRoomId(room.id);
                 setViewMode('thread'); // drop straight into the new room
+                emitUsageChanged(); // refresh the Rooms usage meter
               }}
             />
           )}
@@ -236,6 +242,10 @@ export default function HyperAgents() {
             <Plus size={14} />
           </button>
         </header>
+
+        <div className="px-3 py-2 border-b border-[#e3e0db]">
+          <UsageTracker resource="hyperRooms" compact />
+        </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           {liveRooms.map(r => (
@@ -330,6 +340,7 @@ export default function HyperAgents() {
               setRooms(prev => [room, ...prev]);
               setActiveRoomId(room.id);
               setViewMode('thread'); // drop straight into the new room
+              emitUsageChanged(); // refresh the Rooms usage meter
             }}
           />
         )}

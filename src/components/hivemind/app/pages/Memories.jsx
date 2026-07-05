@@ -26,6 +26,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
+import UsageTracker from '../components/UsageTracker';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1224,6 +1225,7 @@ export default function Memories() {
             </div>
           </div>
           <div className="flex items-start gap-4">
+            <UsageTracker resource="memories" className="mt-1" />
             {hasFilters && (
               <button
                 onClick={clearFilters}

@@ -42,6 +42,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import WhatsAppQRModal from './WhatsAppQRModal';
 import { PageWalkthrough, CONNECTORS_STEPS } from '../shared/Walkthrough';
+import UsageTracker from '../components/UsageTracker';
 
 // ─── Connector Provider Definitions (Supermemory-style) ────────────────────
 
@@ -4106,6 +4107,11 @@ export default function Connectors() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Page header row — right-aligned usage meter (page has no title bar) */}
+      <div className="flex items-center justify-end">
+        <UsageTracker resource="connectors" />
+      </div>
 
       {/* API Key prompt — shown only if user has no key yet */}
       <ApiKeyPrompt feature="connecting external clients" />

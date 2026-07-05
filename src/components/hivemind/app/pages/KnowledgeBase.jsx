@@ -35,6 +35,8 @@ import { useTeamContext } from '../shared/team-context';
 import { PageIndexViewer } from '../PageIndexViewer';
 import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-store';
 import { isPlanLimitError } from '../shared/planLimit';
+import UsageTracker from '../components/UsageTracker';
+import { emitUsageChanged } from '../shared/useUsage';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -1288,6 +1290,8 @@ export default function KnowledgeBase() {
           created_at: new Date().toISOString(),
         }, ...prev]);
         queueRefetch();
+        // Refresh per-page usage meters (KB pages + memories) after a real upload.
+        emitUsageChanged();
       } catch (err) {
         if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
@@ -1542,6 +1546,7 @@ export default function KnowledgeBase() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UsageTracker resource="kbPages" />
           <div className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
             <BookOpen size={14} />
             {documents.length} document{documents.length !== 1 ? 's' : ''}
