@@ -15,6 +15,7 @@ import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
+import CinematicScrollScene from '../../mobile/CinematicScrollScene';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -495,83 +496,36 @@ const Chapter = ({ n, id, eyebrow, title, body, stats, bullets, card, flip = fal
 
 /* ───────── sovereignty band ───────── */
 
-/* ScrollScrubFilm — the "Sovereign Descent" cinematic FPV film (GPT-Image-2
- * diorama keyframes → Seedance image-to-video), scrubbed frame-for-frame by
- * scroll. Desktop = scrub; touch / reduced-motion = static poster (iOS throttles
- * video seeking). Static asset in /public/media, no runtime network. */
-function ScrollScrubFilm({ children }) {
-  const wrapRef = useRef(null);
-  const videoRef = useRef(null);
-  const [canScrub] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !window.matchMedia('(pointer: coarse)').matches
-      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
-  useEffect(() => {
-    if (!canScrub) return undefined;
-    const v = videoRef.current, wrap = wrapRef.current;
-    if (!v || !wrap) return undefined;
-    let target = 0, cur = 0, dur = 0, raf = 0, alive = true, primed = false;
-    const clamp = (x) => Math.max(0, Math.min(1, x));
-    const onMeta = () => { dur = v.duration || 0; };
-    // Prime the decoder: a muted play→pause forces the browser to decode + paint
-    // frames, so subsequent currentTime seeks actually render (otherwise a
-    // never-played video stays on its poster while scrubbing).
-    const prime = () => {
-      if (primed) return; primed = true;
-      const pr = v.play();
-      if (pr && pr.then) pr.then(() => { v.pause(); v.currentTime = 0; }).catch(() => {});
-      else { try { v.pause(); } catch { /* noop */ } }
-    };
-    v.addEventListener('loadedmetadata', onMeta);
-    v.addEventListener('loadeddata', prime);
-    if (v.readyState >= 1) onMeta();
-    if (v.readyState >= 2) prime();
-    const onScroll = () => {
-      const r = wrap.getBoundingClientRect();
-      const total = r.height - window.innerHeight;
-      target = total > 0 ? clamp(-r.top / total) : 0;
-    };
-    const tick = () => {
-      if (!alive) return;
-      cur += (target - cur) * 0.18;
-      if (dur) { const t = cur * (dur - 0.05); if (Math.abs(v.currentTime - t) > 0.02) { try { v.currentTime = t; } catch { /* seeking */ } } }
-      raf = requestAnimationFrame(tick);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    onScroll(); tick();
-    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); v.removeEventListener('loadeddata', prime); };
-  }, [canScrub]);
-
-  return (
-    <div ref={wrapRef} className="relative" style={{ height: canScrub ? '300vh' : 'auto' }}>
-      <div className={`${canScrub ? 'sticky top-0 h-screen' : 'relative min-h-[80vh]'} w-full overflow-hidden`}>
-        <video
-          ref={videoRef}
-          src="/media/sovereign-descent.mp4"
-          poster="/media/sovereign-descent-poster.jpg"
-          muted playsInline preload="auto" tabIndex={-1} aria-hidden="true"
-          autoPlay={!canScrub} loop={!canScrub}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        {/* melt the warm-white film into the paper page above + below */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(${PAPER}, rgba(251,251,248,0))` }} />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(rgba(251,251,248,0), ${PAPER})` }} />
-        {children}
-      </div>
-    </div>
-  );
-}
+const SOVEREIGN_STEPS = [
+  { at: 0.10, label: 'Memory forms from every decision.' },
+  { at: 0.28, label: 'It crosses apps, meetings, agents, and documents.' },
+  { at: 0.48, label: 'Then the boundary closes around it.' },
+  { at: 0.68, label: 'Frankfurt hosted. GDPR-native. No US transfer.' },
+  { at: 0.90, label: 'Memory stays inside your walls.', sub: 'SOVEREIGNTY', accent: true },
+];
 
 const Sovereign = () => (
-  <section id="sovereignty" className="relative" style={{ background: PAPER }}>
-    <ScrollScrubFilm>
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-        <div className="rounded-3xl bg-[#FBFBF8]/70 px-6 py-8 backdrop-blur-[2px] md:px-12">
+  <section id="sovereignty" className="relative bg-[#05070f]">
+    <CinematicScrollScene
+      frameDir="fall-frames"
+      frameCount={193}
+      steps={SOVEREIGN_STEPS}
+      title="MEMORY"
+      subtitle="Sovereignty · 08"
+      actLabel="HIVEMIND"
+      staticFrame={150}
+      staticHeadline="Memory stays inside your walls."
+      heightVh={440}
+      accentColor={BLUE}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(${PAPER}, rgba(5,7,15,0))` }} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(rgba(5,7,15,0), ${PAPER})` }} />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,125,255,0.05),rgba(5,7,15,0.48)_62%,rgba(5,7,15,0.78))]" />
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
+        <div className="max-w-4xl rounded-[32px] border border-white/18 bg-[#FBFBF8]/72 px-6 py-8 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-md md:px-12">
           <p className="font-mono text-[11px] uppercase tracking-[0.3em]" style={{ color: BLUE }}>⟩ sovereignty · 08</p>
           <h2 className="mx-auto mt-5 max-w-3xl font-['Space_Grotesk'] text-4xl font-semibold leading-tight tracking-tight md:text-6xl" style={{ color: INK }}>
-            Your memory never<br />leaves your walls
+            Memory stays<br />inside your walls
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-[#4a4a4a]">
             EU-hosted in Frankfurt. GDPR-native. No US data transfer. Or take the engine
@@ -592,11 +546,11 @@ const Sovereign = () => (
             ))}
           </div>
         </div>
-        <div className="mt-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-[#0a0a0a]/40">
-          <span className="h-px w-6 bg-[#0a0a0a]/25" /> scroll to descend <span className="h-px w-6 bg-[#0a0a0a]/25" />
+        <div className="mt-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-white/55">
+          <span className="h-px w-6 bg-white/35" /> scroll to seal memory <span className="h-px w-6 bg-white/35" />
         </div>
       </div>
-    </ScrollScrubFilm>
+    </CinematicScrollScene>
   </section>
 );
 

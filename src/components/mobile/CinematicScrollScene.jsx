@@ -27,6 +27,9 @@ const CinematicScrollScene = ({
   heightVh = 260,
   title = '',
   subtitle = '',
+  actLabel = 'Act I',
+  accentColor = '#ff7a2f',
+  children = null,
 }) => {
   const wrapRef = useRef(null);
   const pinRef = useRef(null);
@@ -128,9 +131,9 @@ const CinematicScrollScene = ({
           <img src={framePath(staticFrame)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/20 to-[#05070f]/30" />
           <div className="absolute inset-x-0 bottom-0 p-6">
-            {title && <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/50">Act I · {title}</p>}
+            {title && <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/50">{actLabel} · {title}</p>}
             <h2 className="mt-2 font-['Space_Grotesk'] text-3xl font-semibold leading-tight text-white">{staticHeadline}</h2>
-            {subtitle && <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.28em] text-[#ff7a2f]/80">{subtitle}</p>}
+            {subtitle && <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.28em]" style={{ color: `${accentColor}cc` }}>{subtitle}</p>}
           </div>
         </div>
 
@@ -138,9 +141,12 @@ const CinematicScrollScene = ({
           <ol className="relative mx-6 my-10 border-l border-white/12 pl-6">
             {steps.map((s, i) => (
               <li key={i} className="relative mb-7 last:mb-0">
-                <span className={`absolute -left-[29px] top-[7px] h-2.5 w-2.5 rounded-full ${s.accent ? 'bg-[#ff7a2f] shadow-[0_0_12px_rgba(255,122,47,0.7)]' : 'bg-white/70'}`} />
+                <span
+                  className="absolute -left-[29px] top-[7px] h-2.5 w-2.5 rounded-full"
+                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: 'rgba(255,255,255,0.7)' }}
+                />
                 <p className={`font-['Space_Grotesk'] text-[18px] font-medium leading-snug tracking-tight ${s.accent ? 'text-white' : 'text-white/90'}`}>{s.label}</p>
-                {s.sub && <p className="mt-1 font-mono text-[11px] tracking-[0.32em] text-[#ff7a2f]/80">{s.sub}</p>}
+                {s.sub && <p className="mt-1 font-mono text-[11px] tracking-[0.32em]" style={{ color: `${accentColor}cc` }}>{s.sub}</p>}
               </li>
             ))}
           </ol>
@@ -161,7 +167,7 @@ const CinematicScrollScene = ({
           <>
             <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[280px] bg-gradient-to-r from-[#05070f]/70 via-[#05070f]/20 to-transparent" />
             <div className="pointer-events-none absolute left-8 top-1/2 z-10 -translate-y-1/2 md:left-12 lg:left-16">
-              <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/45">Act I</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/45">{actLabel}</p>
               <h2
                 className="mt-3 font-['Space_Grotesk'] text-5xl font-bold uppercase leading-none tracking-tight text-white/90"
                 style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
@@ -169,7 +175,7 @@ const CinematicScrollScene = ({
                 {title}
               </h2>
               {subtitle && (
-                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.28em] text-[#ff7a2f]/80">{subtitle}</p>
+                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.28em]" style={{ color: `${accentColor}cc` }}>{subtitle}</p>
               )}
             </div>
           </>
@@ -186,9 +192,8 @@ const CinematicScrollScene = ({
                 style={{ opacity: 0.12 }}
               >
                 <span
-                  className={`absolute -left-[5px] top-[7px] h-2.5 w-2.5 rounded-full ${
-                    s.accent ? 'bg-[#ff7a2f] shadow-[0_0_12px_rgba(255,122,47,0.7)]' : 'bg-white/70'
-                  }`}
+                  className="absolute -left-[5px] top-[7px] h-2.5 w-2.5 rounded-full"
+                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: 'rgba(255,255,255,0.7)' }}
                 />
                 <p
                   className={`font-['Space_Grotesk'] text-[17px] font-medium leading-snug tracking-tight ${
@@ -198,12 +203,13 @@ const CinematicScrollScene = ({
                   {s.label}
                 </p>
                 {s.sub && (
-                  <p className="mt-1 font-mono text-[11px] tracking-[0.32em] text-[#ff7a2f]/80">{s.sub}</p>
+                  <p className="mt-1 font-mono text-[11px] tracking-[0.32em]" style={{ color: `${accentColor}cc` }}>{s.sub}</p>
                 )}
               </li>
             ))}
           </ol>
         </div>
+        {children}
       </div>
     </section>
   );

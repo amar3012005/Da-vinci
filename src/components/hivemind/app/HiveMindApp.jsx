@@ -11,6 +11,9 @@ import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
 const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
+const MobileMemories = React.lazy(() => import('./pages/MobileMemories'));
+const MobileMeetingNotes = React.lazy(() => import('./pages/MobileMeetingNotes'));
+const MobileCharacters = React.lazy(() => import('./pages/MobileCharacters'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
@@ -112,6 +115,30 @@ export default function HiveMindApp() {
           element={
             <ProtectedRoute>
               <QuickRecorderProvider><PageSuspense><TalkToHiveMobile /></PageSuspense></QuickRecorderProvider>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/memories"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileMemories /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/meeting-notes"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileMeetingNotes /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/characters"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileCharacters /></PageSuspense>
             </ProtectedRoute>
           }
         />
