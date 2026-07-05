@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_DEFAULTS } from './theme';
+import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -42,7 +43,26 @@ class HiveMindApiClient {
     this._coreBaseUrl = null;
     this._apiKeyStorageKey = 'hivemind_core_api_key';
 
+    // Global plan-limit detector: on any 402 (or 403/429) carrying the
+    // `plan_limit_exceeded` machine code, emit a window event so the single
+    // <PlanLimitModal> mounted in AppShell can surface the upgrade prompt —
+    // then re-reject so individual callers behave exactly as before.
+    this._attachPlanLimitInterceptor(this.controlPlane);
+    this._attachPlanLimitInterceptor(this.core);
+
     this.loadStoredApiKey();
+  }
+
+  _attachPlanLimitInterceptor(instance) {
+    instance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (isPlanLimitError(error)) {
+          emitPlanLimit(extractPlanLimit(error));
+        }
+        return Promise.reject(error);
+      },
+    );
   }
 
   loadStoredApiKey() {

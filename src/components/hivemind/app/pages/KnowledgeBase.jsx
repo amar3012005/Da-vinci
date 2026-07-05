@@ -34,6 +34,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useTeamContext } from '../shared/team-context';
 import { PageIndexViewer } from '../PageIndexViewer';
 import { useUploads, setUploads as setGlobalUploads } from '../shared/upload-store';
+import { isPlanLimitError } from '../shared/planLimit';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
@@ -1299,7 +1300,12 @@ export default function KnowledgeBase() {
         // auto-retry with exponential backoff so a file that merely landed mid-burst
         // doesn't show red. Real 4xx, cancel, and 409 (dedup) do NOT retry.
         const _st = err?.response?.status;
-        const isTransient = !isCancelled && !isDuplicate
+        // Plan/quota limit (e.g. monthly KB pages). The global axios interceptor
+        // already dispatches 'hm:plan-limit' → <PlanLimitModal> handles the CTA
+        // app-wide, so here we only need a clean, non-red inline note and MUST
+        // NOT auto-retry (a 402/403/429 plan-limit is terminal for this upload).
+        const isPlanLimit = isPlanLimitError(err);
+        const isTransient = !isCancelled && !isDuplicate && !isPlanLimit
           && (_st === 502 || _st === 503 || _st === 504 || _st === 429 || _st === undefined);
         const MAX_UPLOAD_ATTEMPTS = 4;
         if (isTransient && attempt < MAX_UPLOAD_ATTEMPTS) {
@@ -1317,12 +1323,14 @@ export default function KnowledgeBase() {
           u.id === uploadEntry.id
             ? {
                 ...u,
-                status: isCancelled ? 'cancelled' : isDuplicate ? 'duplicate' : 'error',
+                status: isCancelled ? 'cancelled' : isDuplicate ? 'duplicate' : isPlanLimit ? 'limited' : 'error',
                 error: isCancelled
                   ? 'Cancelled by user'
                   : isDuplicate
                     ? (err.response?.data?.message || 'This file is already in this scope.')
-                    : (err.response?.data?.error || err.message),
+                    : isPlanLimit
+                      ? 'Upgrade for more pages'
+                      : (err.response?.data?.error || err.message),
                 // Duplicate → user gets an "Upload anyway" action. Stash the
                 // existing-doc info + a force re-ingest closure (same file/scope).
                 existingTitle: isDuplicate ? (err.response?.data?.existing_title || null) : undefined,
@@ -1809,6 +1817,7 @@ export default function KnowledgeBase() {
                   u.status === 'success' ? 'bg-[#f0fdf4] border border-[#bbf7d0]' :
                   u.status === 'error' ? 'bg-[#fef2f2] border border-[#fecaca]' :
                   u.status === 'duplicate' ? 'bg-[#fffbeb] border border-[#fde68a]' :
+                  u.status === 'limited' ? 'bg-[#117dff]/[0.04] border border-[#117dff]/25' :
                   u.status === 'cancelled' ? 'bg-[#faf9f4] border border-[#e3e0db]' :
                   u.status === 'queued' ? 'bg-[#fafafa] border border-[#e3e0db]' :
                   'bg-white border border-[#117dff]/20'
@@ -1832,6 +1841,7 @@ export default function KnowledgeBase() {
                   {u.status === 'success' && <CheckCircle size={14} className="text-[#16a34a]" />}
                   {u.status === 'error' && <XCircle size={14} className="text-[#dc2626]" />}
                   {u.status === 'duplicate' && <Copy size={14} className="text-[#d97706]" />}
+                  {u.status === 'limited' && <Sparkles size={14} className="text-[#117dff]" />}
                   {u.status === 'cancelled' && <XCircle size={14} className="text-[#a3a3a3]" />}
                   <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
                   {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
@@ -1874,7 +1884,7 @@ export default function KnowledgeBase() {
                     <span className="text-[#16a34a]">{u.chunks} chunks</span>
                   )}
                   {u.error && (
-                    <span className={`truncate max-w-[220px] ${u.status === 'duplicate' ? 'text-[#d97706]' : 'text-[#dc2626]'}`}>
+                    <span className={`truncate max-w-[220px] ${u.status === 'duplicate' ? 'text-[#d97706]' : u.status === 'limited' ? 'text-[#117dff]' : 'text-[#dc2626]'}`}>
                       {u.error}{u.status === 'duplicate' && u.existingTitle ? ` (as "${u.existingTitle}")` : ''}
                     </span>
                   )}

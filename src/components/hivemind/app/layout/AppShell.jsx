@@ -13,6 +13,47 @@ import { TeamProvider } from '../shared/team-context';
 import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
+import PlanLimitModal from '../components/PlanLimitModal';
+import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
+
+/**
+ * PlanLimitGate — listens for the global 'hm:plan-limit' window event
+ * (dispatched by the axios interceptors in shared/api-client.js on any
+ * plan_limit_exceeded response) and surfaces one <PlanLimitModal> app-wide.
+ * onUpgrade routes to the billing page.
+ */
+function PlanLimitGate() {
+  const navigate = useNavigate();
+  const [state, setState] = useState(null); // null | { resource, plan, limit, current, suggestedPlan, message, upgradeUrl }
+
+  useEffect(() => {
+    const onLimit = (e) => setState(e.detail || {});
+    window.addEventListener(PLAN_LIMIT_EVENT, onLimit);
+    return () => window.removeEventListener(PLAN_LIMIT_EVENT, onLimit);
+  }, []);
+
+  const close = () => setState(null);
+  const upgrade = () => {
+    const url = state?.upgradeUrl || '/hivemind/app/billing';
+    close();
+    navigate(url);
+  };
+
+  return (
+    <PlanLimitModal
+      open={state !== null}
+      resource={state?.resource}
+      plan={state?.plan}
+      limit={state?.limit}
+      current={state?.current}
+      suggestedPlan={state?.suggestedPlan}
+      message={state?.message}
+      onUpgrade={upgrade}
+      onContinue={close}
+      onClose={close}
+    />
+  );
+}
 
 /**
  * TalkToHiveFAB — floating chat trigger.
@@ -222,6 +263,9 @@ export default function AppShell() {
 
         {/* Chat Panel */}
         <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+
+        {/* Global plan-limit upgrade prompt — reacts to 'hm:plan-limit' */}
+        <PlanLimitGate />
       </div>
     </TeamProvider>
     </QuickRecorderProvider>

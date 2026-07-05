@@ -27,17 +27,17 @@ const PLANS = [
     name: 'Free',
     price: '€0',
     period: '/month',
-    description: 'Try everything. 1,000 memories, 1M tokens, 3 Deep Research sessions.',
+    description: 'Try HIVEMIND with real documents. 100 pages/month, 1 user seat.',
     accent: false,
     features: [
       // Usage limits
+      { label: '100 pages/month', icon: HardDrive },
       { label: '1,000 memories', icon: HardDrive },
       { label: '1M LLM tokens/month', icon: Brain },
       { label: '3 Deep Research/month', icon: Zap },
       { label: '5 Web Intel/day', icon: Sparkles },
       { label: '3 connectors', icon: Cable },
       { label: '1 user', icon: Users },
-      { label: '10 KB uploads/month', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -58,26 +58,26 @@ const PLANS = [
       webIntel: 5,
       searches: 10_000,
       users: 1,
-      kbUploads: 10,
+      kbPages: 100,
     },
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: '€19',
+    price: '€79',
     period: '/month',
-    description: 'For daily use. 25K memories, 10M tokens, 20 Deep Research sessions.',
+    description: 'Teams building on institutional memory. 1,000 pages/month, 5 seats.',
     accent: true,
     popular: true,
     features: [
       // Usage limits
+      { label: '1,000 pages/month', icon: HardDrive },
       { label: '25,000 memories', icon: HardDrive },
       { label: '10M LLM tokens/month', icon: Brain },
       { label: '20 Deep Research/month', icon: Zap },
       { label: '50 Web Intel/day', icon: Sparkles },
       { label: '10 connectors', icon: Cable },
       { label: '5 users', icon: Users },
-      { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -99,25 +99,25 @@ const PLANS = [
       webIntel: 50,
       searches: 100_000,
       users: 5,
-      kbUploads: null,
+      kbPages: 1_000,
     },
   },
   {
     id: 'scale',
     name: 'Scale',
-    price: '€199',
+    price: '€239',
     period: '/month',
-    description: 'For teams. 250K memories, 100M tokens, unlimited research.',
+    description: 'Mid-size regulated organisations. 10,000 pages/month, 25 seats.',
     accent: false,
     features: [
       // Usage limits
+      { label: '10,000 pages/month', icon: HardDrive },
       { label: '250,000 memories', icon: HardDrive },
       { label: '100M LLM tokens/month', icon: Brain },
       { label: 'Unlimited Deep Research', icon: Zap },
       { label: '500 Web Intel/day', icon: Sparkles },
       { label: 'Unlimited connectors', icon: Cable },
       { label: '25 users', icon: Users },
-      { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -145,7 +145,7 @@ const PLANS = [
       webIntel: 500,
       searches: 2_000_000,
       users: 25,
-      kbUploads: null,
+      kbPages: 10_000,
     },
   },
   {
@@ -157,13 +157,13 @@ const PLANS = [
     accent: false,
     features: [
       // Usage limits
+      { label: 'Unlimited pages', icon: HardDrive },
       { label: 'Unlimited memories', icon: HardDrive },
       { label: 'Unlimited LLM tokens', icon: Brain },
       { label: 'Unlimited Deep Research', icon: Zap },
       { label: 'Unlimited Web Intel', icon: Sparkles },
       { label: 'Unlimited connectors', icon: Cable },
       { label: 'Unlimited users', icon: Users },
-      { label: 'Unlimited KB uploads', icon: HardDrive },
       // All-plan features
       { label: 'Memory Graph', icon: Check },
       { label: 'MCP Protocol', icon: Check },
@@ -194,7 +194,7 @@ const PLANS = [
       webIntel: null,
       searches: null,
       users: null,
-      kbUploads: null,
+      kbPages: null,
     },
   },
 ];
@@ -391,7 +391,7 @@ export default function Billing() {
   const deepResearchUsed = usage?.deepResearch?.used ?? 0;
   const webIntelUsed = usage?.webIntel?.used ?? 0;
   const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
-  const kbUploadsUsed = usage?.uploads?.used ?? 0;
+  const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
 
   const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
@@ -529,9 +529,9 @@ export default function Billing() {
             icon={Zap}
           />
           <UsageMeter
-            label={t('billing.kbUploads', 'KB Uploads')}
-            used={kbUploadsUsed}
-            limit={currentPlanDef?.limits.kbUploads}
+            label={t('billing.kbPages', 'KB Pages This Month')}
+            used={kbPagesUsed}
+            limit={currentPlanDef?.limits.kbPages}
             icon={HardDrive}
           />
           <UsageMeter
