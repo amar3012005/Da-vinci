@@ -1,22 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Server, FileText } from 'lucide-react';
+import { Shield, Server, FileText } from 'lucide-react';
 import { GlobeCdn } from './GlobeCdn';
 
 /**
- * ScrollScrubGlobe — the "Sovereign Descent" cinematic FPV film (Higgsfield /
- * Seedance, GPT-Image-2 keyframes), scrubbed frame-for-frame by scroll.
- *
- *   • A tall track pins the video full-bleed; scroll progress → video.currentTime
- *     with a snappy rAF lerp (fast + cinematic, not laggy).
- *   • Desktop = scrub. Touch / reduced-motion = the live cobe globe (fallback),
- *     since iOS Safari throttles video seeking.
- *   • Self-contained static asset in /public/media — no network at runtime.
+ * ScrollScrubGlobe — the "Sovereign Descent" film, scrubbed frame-for-frame on a
+ * pinned <canvas> from a preloaded high-quality webp sequence (crisper than
+ * seeking a <video>). Scroll drives the frame index via a snappy rAF lerp.
+ * The site navbar is fixed z-[100] and stays visible above this (canvas z-0).
+ * Touch / reduced-motion → the live cobe globe fallback.
  */
+const DESCENT_FRAMES = 161;
+const descentFrame = (i) => `/sovereign-descent-frames/f_${String(i + 1).padStart(3, '0')}.webp`;
+
 function ScrollScrubGlobe() {
   const wrapRef = useRef(null);
-  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const [canScrub] = useState(() => {
     if (typeof window === 'undefined') return false;
     const coarse = window.matchMedia('(pointer: coarse)').matches;
@@ -26,14 +26,41 @@ function ScrollScrubGlobe() {
 
   useEffect(() => {
     if (!canScrub) return undefined;
-    const v = videoRef.current;
+    const canvas = canvasRef.current;
     const wrap = wrapRef.current;
-    if (!v || !wrap) return undefined;
-    let target = 0, cur = 0, dur = 0, raf = 0, alive = true;
+    if (!canvas || !wrap) return undefined;
+    const ctx = canvas.getContext('2d');
+    const imgs = new Array(DESCENT_FRAMES);
+    let loaded = 0;
+    const state = { frame: 0 };
+    let target = 0, raf = 0, alive = true;
     const clamp = (x) => Math.max(0, Math.min(1, x));
-    const onMeta = () => { dur = v.duration || 0; };
-    v.addEventListener('loadedmetadata', onMeta);
-    if (v.readyState >= 1) onMeta();
+
+    const draw = () => {
+      const img = imgs[Math.round(state.frame)];
+      if (!img || !img.complete || !img.naturalWidth) return;
+      const cw = canvas.clientWidth, ch = canvas.clientHeight;
+      const ir = img.naturalWidth / img.naturalHeight, cr = cw / ch;
+      let w, h, x, y;
+      if (cr > ir) { w = cw; h = cw / ir; x = 0; y = (ch - h) / 2; }
+      else { h = ch; w = ch * ir; x = (cw - w) / 2; y = 0; }
+      ctx.clearRect(0, 0, cw, ch);
+      ctx.drawImage(img, x, y, w, h);
+    };
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = canvas.clientWidth * dpr;
+      canvas.height = canvas.clientHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    };
+    const onImgLoad = (i) => () => { loaded += 1; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
+    for (let i = 0; i < DESCENT_FRAMES; i += 1) {
+      const im = new Image();
+      im.src = descentFrame(i);
+      im.onload = onImgLoad(i);
+      imgs[i] = im;
+    }
     const onScroll = () => {
       const r = wrap.getBoundingClientRect();
       const total = r.height - window.innerHeight;
@@ -41,31 +68,23 @@ function ScrollScrubGlobe() {
     };
     const tick = () => {
       if (!alive) return;
-      cur += (target - cur) * 0.18;                 // snappy, weighted scrub
-      if (dur) { const t = cur * (dur - 0.05); if (Math.abs(v.currentTime - t) > 0.02) { try { v.currentTime = t; } catch { /* seeking */ } } }
+      state.frame += (target * (DESCENT_FRAMES - 1) - state.frame) * 0.2;  // snappy lerp
+      draw();
       raf = requestAnimationFrame(tick);
     };
+    window.addEventListener('resize', resize);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    onScroll(); tick();
-    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); };
+    resize(); onScroll(); tick();
+    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('scroll', onScroll); };
   }, [canScrub]);
 
   if (!canScrub) {
     return <GlobeCdn className="w-full max-w-[500px] sm:max-w-[620px] mx-auto" />;
   }
   return (
-    <div ref={wrapRef} style={{ height: '220vh' }} className="relative w-full">
+    <div ref={wrapRef} style={{ height: '260vh' }} className="relative w-full">
       <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">
-        <video
-          ref={videoRef}
-          src="/media/sovereign-descent.mp4"
-          poster="/media/sovereign-descent-poster.jpg"
-          muted playsInline preload="auto"
-          tabIndex={-1} aria-hidden="true"
-          className="w-full h-full object-cover"
-          style={{ maxHeight: '100vh' }}
-        />
+        <canvas ref={canvasRef} className="block h-full w-full" style={{ maxHeight: '100vh' }} />
         <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-[#0a0a0a]/40">
           <span className="w-6 h-px bg-[#0a0a0a]/25" /> scroll to descend <span className="w-6 h-px bg-[#0a0a0a]/25" />
         </div>
@@ -74,11 +93,25 @@ function ScrollScrubGlobe() {
   );
 }
 
+/* One deployment item — slides in from the side as it enters the viewport,
+   staggered so the list assembles line-by-line while you scroll. No boxes. */
+function DeployRow({ item, i, fromRight }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: fromRight ? 26 : -26 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: '-12% 0px' }}
+      transition={{ duration: 0.5, delay: i * 0.09, ease: [0.22, 1, 0.36, 1] }}
+      className="flex items-center gap-3 py-3 border-b border-[#e3e0db]/80"
+    >
+      <span className="text-lg sm:text-xl w-6 text-center shrink-0">{item.icon}</span>
+      <span className="text-xs sm:text-[13px] leading-relaxed text-[#0a0a0a]">{item.name}</span>
+    </motion.div>
+  );
+}
+
 const Languages = () => {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('Hosting');
-
-  const categories = ['Hosting', 'Compliance', 'Security'];
 
   const items = {
     'Hosting': [
@@ -107,22 +140,8 @@ const Languages = () => {
     ],
   };
 
-  const datacenters = [
-    { name: 'Frankfurt', provider: 'Hetzner', region: 'Western Europe' },
-    { name: 'Paris', provider: 'Scaleway', region: 'Western Europe' },
-    { name: 'Roubaix', provider: 'OVH', region: 'Western Europe' },
-    { name: 'Falkenstein', provider: 'Hetzner', region: 'Western Europe' },
-    { name: 'Amsterdam', provider: 'Scaleway', region: 'Western Europe' },
-    { name: 'Gravelines', provider: 'OVH', region: 'Western Europe' },
-    { name: 'Nuremberg', provider: 'Hetzner', region: 'Western Europe' },
-    { name: 'Warsaw', provider: 'Scaleway', region: 'Eastern Europe' },
-  ];
-
-  const categoryIcons = {
-    'Hosting': Server,
-    'Compliance': FileText,
-    'Security': Shield
-  };
+  const categoryIcons = { 'Hosting': Server, 'Compliance': FileText, 'Security': Shield };
+  const datacenters = ['Frankfurt', 'Falkenstein', 'Nuremberg', 'Paris', 'Amsterdam', 'Warsaw', 'Roubaix', 'Gravelines'];
 
   return (
     <section className="bg-[#faf9f4] text-[#0a0a0a] py-12 sm:py-16 lg:py-24 border-t border-[#e3e0db] relative">
@@ -161,97 +180,54 @@ const Languages = () => {
           </motion.button>
         </div>
 
-        {/* Cinematic scroll-scrubbed FPV descent (falls back to live globe on touch) */}
-        <div className="mb-8 sm:mb-12">
+        {/* Crisp scroll-scrubbed FPV descent (frame sequence; live globe on touch) */}
+        <div className="mb-10 sm:mb-16">
           <ScrollScrubGlobe />
         </div>
 
-        {/* Category tabs */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-10 border-b border-[#e3e0db] pb-4 sm:pb-6">
-          {categories.map((category) => {
+        {/* Deployment ledger — three columns, items slide in one-by-one on scroll.
+            Exact provider/compliance/security tag names + icons, no boxes. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 lg:gap-10">
+          {Object.entries(items).map(([category, rows], colIdx) => {
             const Icon = categoryIcons[category];
             return (
-              <motion.button
-                key={category}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setActiveCategory(category)}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all rounded-lg cursor-pointer ${
-                  activeCategory === category
-                    ? 'text-[#117dff] bg-[#117dff]/[0.08] border border-[#117dff]/25 shadow-[0_2px_8px_rgba(17,125,255,0.15)]'
-                    : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec] border border-transparent'
-                }`}
-              >
-                <Icon size={14} className="sm:w-[15px] sm:h-[15px]" />
-                {category}
-              </motion.button>
+              <div key={category}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon size={13} className="text-[#117dff]" />
+                  <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.18em] text-[#117dff]">
+                    〉 {category} · {String(colIdx + 1).padStart(2, '0')}
+                  </span>
+                </div>
+                <div className="h-px w-full bg-[#0a0a0a]/15 mb-1" />
+                {rows.map((item, idx) => (
+                  <DeployRow key={item.name} item={item} i={idx} fromRight={colIdx === 2} />
+                ))}
+              </div>
             );
           })}
         </div>
 
-        {/* Infrastructure grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-10">
-          {items[activeCategory]?.map((item, idx) => (
-            <motion.div
-              key={item.name}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04, duration: 0.3 }}
-              whileHover={{ scale: 1.01, x: 4 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-[#e3e0db] hover:bg-[#f3f1ec] transition-colors cursor-pointer group rounded-lg"
-            >
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <span className="text-xl sm:text-2xl">{item.icon}</span>
-                <span className="text-xs sm:text-sm font-medium text-[#0a0a0a]">{item.name}</span>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#d4d0ca] group-hover:text-[#117dff] group-hover:translate-x-0.5 transition-all" />
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Datacenters section */}
-        <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-[#e3e0db]">
-          <div className="text-center mb-6 sm:mb-8">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4 }}
-            >
-              <h3 className="text-xl sm:text-2xl font-bold mb-2 font-['Space_Grotesk']">The Sovereign Trust.</h3>
-              <p className="text-[#525252] text-sm sm:text-base">The European Edge.</p>
-            </motion.div>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-3xl mx-auto">
-            {datacenters.map((dc, idx) => (
-              <motion.div
-                key={dc.name}
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        {/* Sovereign Trust footer — datacenter names + icons, sliding in */}
+        <div className="mt-14 sm:mt-16 pt-8 sm:pt-10 border-t border-[#e3e0db] text-center">
+          <h3 className="text-xl sm:text-2xl font-bold mb-2 font-['Space_Grotesk']">The Sovereign Trust.</h3>
+          <p className="text-[#525252] text-sm sm:text-base mb-6">The European Edge.</p>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 max-w-3xl mx-auto">
+            {datacenters.map((name, i) => (
+              <motion.span
+                key={name}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: idx * 0.04, duration: 0.4 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-[#e3e0db] bg-white text-xs sm:text-sm font-medium hover:bg-[#f3f1ec] hover:border-[#d4d0ca] transition-all cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-[#0a0a0a]"
+                transition={{ delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-mono text-[#0a0a0a]"
               >
-                <span className="hidden sm:inline">{dc.name}</span>
-                <span className="sm:hidden">{dc.name.split(',')[0]}</span>
-                <span className="text-[#a3a3a3] text-[10px] sm:text-xs">({dc.provider})</span>
-              </motion.div>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#117dff]" /> {name}
+              </motion.span>
             ))}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: datacenters.length * 0.04 + 0.2, duration: 0.4 }}
-              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.08] text-xs sm:text-sm font-medium text-[#117dff] cursor-default flex items-center gap-2"
-            >
-              <span className="w-2 h-2 rounded-full bg-[#117dff] animate-pulse" />
-              <span className="hidden sm:inline">HYOK Encryption Enabled</span>
-              <span className="sm:hidden">HYOK Enabled</span>
-            </motion.div>
+          </div>
+          <div className="mt-8 inline-flex items-center gap-2 text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.18em] text-[#117dff]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#117dff] animate-pulse" />
+            HYOK Encryption Enabled — you hold the key
           </div>
         </div>
       </div>
