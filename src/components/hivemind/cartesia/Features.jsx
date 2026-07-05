@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Lock, LockKeyhole, ShieldCheck, Cpu, KeyRound, Zap } from 'lucide-react';
 
 const StripedSeparator = () => (
   <div
@@ -10,57 +10,178 @@ const StripedSeparator = () => (
   />
 );
 
+/**
+ * PostQuantum — interactive PQC section. A mode toggle (Classical ⟷ Post-Quantum)
+ * fires a "quantum attack" pulse at the vault: in Classical mode the RSA/ECC lock
+ * shatters; in Post-Quantum mode a lattice mesh (ML-KEM/ML-DSA) absorbs the pulse
+ * and the vault holds. Clicking "Run quantum attack" replays it. Blueprint day-mode.
+ */
+const PQ_SPECS = [
+  { icon: KeyRound, k: 'ML-KEM-768', v: 'key encapsulation · FIPS 203' },
+  { icon: ShieldCheck, k: 'ML-DSA-65', v: 'signatures · FIPS 204' },
+  { icon: Cpu, k: 'Hybrid X25519', v: 'classical + PQ, belt & braces' },
+  { icon: Lock, k: 'AES-256-GCM', v: 'data at rest, quantum-hard' },
+];
+
+function LatticeMesh({ armed }) {
+  // 6×5 lattice of nodes + bonds; on attack the nodes jitter then re-lock.
+  const cols = 6, rows = 5, gap = 46, ox = 34, oy = 30;
+  const nodes = [];
+  for (let r = 0; r < rows; r += 1) for (let c = 0; c < cols; c += 1) nodes.push({ c, r, x: ox + c * gap, y: oy + r * gap });
+  const bond = (a, b) => `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
+  const bonds = [];
+  nodes.forEach((n) => {
+    const right = nodes.find((m) => m.c === n.c + 1 && m.r === n.r);
+    const down = nodes.find((m) => m.c === n.c && m.r === n.r + 1);
+    if (right) bonds.push([n, right]);
+    if (down) bonds.push([n, down]);
+  });
+  return (
+    <svg viewBox="0 0 300 250" className="absolute inset-0 h-full w-full">
+      {bonds.map(([a, b], i) => (
+        <motion.path
+          key={`b-${i}`} d={bond(a, b)} stroke="#117dff" strokeWidth={0.8}
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={armed ? { pathLength: 1, opacity: 0.5 } : { pathLength: 1, opacity: 0.22 }}
+          transition={{ duration: 0.5, delay: (i % 12) * 0.03 }}
+        />
+      ))}
+      {nodes.map((n, i) => (
+        <motion.circle
+          key={`n-${i}`} cx={n.x} cy={n.y} r={1.8} fill="#117dff"
+          animate={armed ? { x: [0, (i % 3 - 1) * 5, 0], y: [0, ((i % 2) ? 1 : -1) * 5, 0], opacity: [0.9, 0.4, 0.9] } : { x: 0, y: 0, opacity: 0.7 }}
+          transition={{ duration: 0.9, ease: 'easeInOut' }}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function PostQuantum() {
+  const navigate = useNavigate();
+  const [pq, setPq] = useState(true);       // true = post-quantum, false = classical
+  const [attack, setAttack] = useState(0);  // increment replays the pulse
+  const broken = !pq && attack > 0;
+
+  const fire = () => setAttack((n) => n + 1);
+
+  return (
+    <section id="post-quantum" className="relative border-t border-[#e3e0db]">
+      <StripedSeparator />
+      <div className="px-4 sm:px-8 lg:px-16 py-12 sm:py-16 lg:py-24">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          {/* Copy */}
+          <div>
+            <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.24em] text-[#117dff] mb-4">
+              <span className="text-[#a3a3a3]">〉</span> POST-QUANTUM · 09
+            </div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.02] mb-5 font-['Space_Grotesk']"
+            >
+              Encryption that outlives<br />the quantum threat.
+            </motion.h2>
+            <p className="text-sm sm:text-base text-[#525252] leading-relaxed mb-6 max-w-lg">
+              Adversaries <span className="text-[#0a0a0a] font-medium">harvest encrypted data now to decrypt it later</span>, once a quantum computer can break RSA and elliptic curves. HIVEMIND ships NIST-standardized post-quantum cryptography today — <span className="text-[#0a0a0a] font-medium">lattice-based ML-KEM &amp; ML-DSA</span>, in a hybrid handshake — so your memory stays sealed for decades.
+            </p>
+
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 max-w-md mb-8">
+              {PQ_SPECS.map((s, i) => (
+                <motion.div key={s.k}
+                  initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  transition={{ delay: i * 0.07 }}
+                  className="flex items-start gap-2.5">
+                  <s.icon size={16} className="text-[#117dff] mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{s.k}</div>
+                    <div className="text-[11px] text-[#a3a3a3] font-mono">{s.v}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => navigate('/hivemind/docs')}
+              className="px-5 py-2.5 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-xs sm:text-sm uppercase tracking-[0.075em] shadow-[0_2px_8px_rgba(17,125,255,0.15)]"
+            >
+              Read the security model
+            </button>
+          </div>
+
+          {/* Interactive vault */}
+          <div>
+            {/* mode toggle */}
+            <div className="inline-flex items-center p-1 rounded-full border border-[#e3e0db] bg-white mb-6">
+              {[['Classical', false], ['Post-Quantum', true]].map(([label, val]) => (
+                <button key={label} onClick={() => { setPq(val); setAttack(0); }}
+                  className={`px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-[0.1em] transition-all ${pq === val ? 'bg-[#0a0a0a] text-white' : 'text-[#525252] hover:text-[#0a0a0a]'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative aspect-[6/5] w-full max-w-[440px] overflow-hidden rounded-2xl border border-[#e3e0db] bg-white shadow-[0_20px_60px_rgba(17,24,39,0.06)]">
+              {/* blueprint grid */}
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(17,125,255,0.05)_1px,transparent_1px),linear-gradient(180deg,rgba(17,125,255,0.04)_1px,transparent_1px)] bg-[size:28px_28px]" />
+
+              {/* lattice only in PQ mode */}
+              {pq && <LatticeMesh armed={attack > 0} />}
+
+              {/* quantum attack pulse */}
+              <AnimatePresence>
+                {attack > 0 && (
+                  <motion.div
+                    key={attack}
+                    initial={{ scale: 0, opacity: 0.6, x: '-50%', y: '-50%' }}
+                    animate={{ scale: 6, opacity: 0 }}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    className="absolute left-1/2 top-1/2 h-20 w-20 rounded-full"
+                    style={{ background: 'radial-gradient(circle, rgba(220,38,38,0.35), transparent 70%)' }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* the vault lock */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div
+                  animate={broken ? { rotate: [0, -6, 6, -3, 0], x: [0, -4, 4, 0] } : { rotate: 0, x: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="relative flex flex-col items-center"
+                >
+                  <div className={`flex h-20 w-20 items-center justify-center rounded-2xl border-2 transition-colors duration-500 ${broken ? 'border-[#dc2626]/40 bg-[#dc2626]/[0.06]' : 'border-[#117dff]/35 bg-[#117dff]/[0.06]'}`}>
+                    {broken
+                      ? <Lock size={34} className="text-[#dc2626]" strokeWidth={1.6} />
+                      : <LockKeyhole size={34} className="text-[#117dff]" strokeWidth={1.6} />}
+                  </div>
+                  <div className={`mt-3 font-mono text-[10px] uppercase tracking-[0.24em] ${broken ? 'text-[#dc2626]' : 'text-[#117dff]'}`}>
+                    {broken ? 'RSA-2048 broken' : pq ? 'ML-KEM sealed' : 'RSA-2048'}
+                  </div>
+                  {broken && <div className="mt-1 text-[10px] text-[#a3a3a3]">harvested payload decrypted</div>}
+                  {pq && attack > 0 && <div className="mt-1 text-[10px] text-[#16a34a]">lattice held · attack absorbed</div>}
+                </motion.div>
+              </div>
+
+              <div className="absolute left-4 top-3 font-mono text-[9px] uppercase tracking-[0.28em] text-[#a3a3a3]">hivemind · key vault</div>
+            </div>
+
+            <button onClick={fire}
+              className="mt-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#0a0a0a] hover:text-[#117dff] transition-colors bg-transparent border-none cursor-pointer">
+              <Zap size={14} className="text-[#dc2626]" /> Run quantum attack
+            </button>
+            <p className="mt-2 text-[11px] text-[#a3a3a3] font-mono">
+              {pq ? 'Post-quantum: the lattice problem stays hard even for Shor’s algorithm.' : 'Classical: Shor’s algorithm factors RSA/ECC in polynomial time.'}
+            </p>
+          </div>
+        </div>
+      </div>
+      <StripedSeparator />
+    </section>
+  );
+}
+
 const Features = () => {
   const navigate = useNavigate();
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const solutions = [
-    {
-      icon: (
-        <div className="w-32 h-32 relative">
-          <div className="absolute inset-0 bg-[#117dff]/20 rounded-full blur-xl" style={{ transform: 'translate(10px, -10px)' }} />
-          <div className="absolute inset-0 bg-[#117dff]/10 rounded-full blur-xl" style={{ transform: 'translate(-10px, 10px)' }} />
-          <div className="absolute inset-4 bg-gradient-to-br from-[#117dff] to-[#0066e0] rounded-full opacity-60" />
-        </div>
-      ),
-      title: 'Engineering',
-      desc: 'Simplify code reviews, clarify architecture decisions, and enhance developer experiences with contextual memory.',
-    },
-    {
-      icon: (
-        <div className="bg-white border border-[#e3e0db] rounded-xl w-full max-w-[200px] p-3 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#117dff] to-[#0066e0] border border-[#117dff]/20" />
-            <div>
-              <div className="text-[10px] font-semibold text-[#117dff]">AI Assistant</div>
-              <div className="text-[9px] text-[#a3a3a3]">"Find that PR"</div>
-            </div>
-          </div>
-          <div className="h-1.5 bg-[#f3f1ec] rounded-full w-3/4"></div>
-        </div>
-      ),
-      title: 'Curated Context',
-      desc: 'From junior devs to senior architects, our memory spans every persona, helping you build knowledgeable AI agents.',
-    },
-    {
-      icon: (
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-16 h-24 border border-[#e3e0db] bg-white rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-1 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <div className="w-6 h-8 bg-[#f3f1ec] rounded flex items-center justify-center text-[6px] text-[#a3a3a3]">Raw</div>
-            <div className="absolute bottom-1 text-[6px] text-[#525252] font-medium">Input</div>
-          </div>
-          <span className="text-[8px] text-[#a3a3a3]">→</span>
-          <div className="w-16 h-24 border border-[#117dff]/20 bg-white rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-1 shadow-[0_0_15px_rgba(17,125,255,0.08)]">
-            <div className="w-6 h-6 bg-[#117dff]/[0.08] border border-[#117dff]/20 rounded-full flex items-center justify-center" />
-            <div className="absolute bottom-1 text-[6px] text-[#117dff] w-full text-center font-medium">Insight</div>
-          </div>
-        </div>
-      ),
-      title: 'Knowledge Synthesis',
-      desc: 'Instantly create contextual insights in seconds—or generate deep memory graphs, fine-tuned and tailored to your business.',
-    },
-  ];
-
+  const [, setCurrentSlide] = useState(0);
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % 3);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + 3) % 3);
 
@@ -179,128 +300,8 @@ const Features = () => {
         </section>
 
 
-        {/* Section 3: Powering agents across industries */}
-        <section id="solutions" className="relative border-t border-[#e3e0db]">
-          <StripedSeparator />
-
-          <div className="px-4 sm:px-8 lg:px-16 py-12 sm:py-16">
-            <div className="text-center mb-10 sm:mb-12">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4 sm:mb-6 lg:mb-8 font-['Space_Grotesk'] px-2"
-              >
-                Powering agents across<br />
-                industries and personas
-              </motion.h2>
-              <motion.button
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/hivemind/login')}
-                className="px-5 py-2.5 rounded-[4px] bg-[#117dff] text-white font-semibold hover:bg-[#0066e0] transition-colors cursor-pointer border-none text-xs sm:text-sm uppercase tracking-[0.075em] shadow-[0_2px_8px_rgba(17,125,255,0.15)]"
-              >
-                Build with HIVEMIND
-              </motion.button>
-            </div>
-
-            {/* Three column grid - Swipeable on mobile */}
-            <div className="relative">
-              {/* Desktop/Tablet view */}
-              <div className="hidden md:grid md:grid-cols-3 border-t border-[#e3e0db] divide-y md:divide-y-0 md:divide-x divide-[#e3e0db]">
-                {solutions.map((sol, i) => (
-                  <motion.div
-                    key={sol.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-6 lg:p-8 pb-8 lg:pb-12 flex flex-col group"
-                  >
-                    <div className="h-[160px] lg:h-[200px] w-full mb-6 lg:mb-8 flex items-center justify-center relative">
-                      {sol.icon}
-                    </div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-base lg:text-lg font-semibold font-['Space_Grotesk']">{sol.title}</h3>
-                    </div>
-                    <p className="text-[#525252] text-xs sm:text-sm leading-relaxed mb-6 lg:mb-8 flex-1">
-                      {sol.desc}
-                    </p>
-                    <motion.button
-                      whileHover={{ x: 4 }}
-                      className="flex items-center text-xs sm:text-sm text-[#117dff] hover:text-[#0066e0] transition-colors group-hover:translate-x-1 duration-300 bg-transparent border-none cursor-pointer font-medium"
-                    >
-                      Learn more <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                    </motion.button>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Mobile swipeable view */}
-              <div className="md:hidden">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="border-t border-[#e3e0db] p-6"
-                >
-                  <div className="h-[180px] w-full mb-6 flex items-center justify-center">
-                    {solutions[currentSlide].icon}
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold font-['Space_Grotesk']">{solutions[currentSlide].title}</h3>
-                    <div className="flex gap-2">
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={prevSlide}
-                        className="w-8 h-8 rounded-lg border border-[#e3e0db] flex items-center justify-center hover:bg-[#f3f1ec] transition-colors bg-white"
-                      >
-                        <ArrowRight className="w-4 h-4 rotate-180 text-[#a3a3a3]" />
-                      </motion.button>
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        onClick={nextSlide}
-                        className="w-8 h-8 rounded-lg border border-[#e3e0db] flex items-center justify-center hover:bg-[#f3f1ec] transition-colors bg-white"
-                      >
-                        <ArrowRight className="w-4 h-4 text-[#a3a3a3]" />
-                      </motion.button>
-                    </div>
-                  </div>
-                  <p className="text-[#525252] text-sm leading-relaxed mb-6">
-                    {solutions[currentSlide].desc}
-                  </p>
-                  <motion.button
-                    whileHover={{ x: 4 }}
-                    className="flex items-center text-sm text-[#117dff] hover:text-[#0066e0] transition-colors bg-transparent border-none cursor-pointer font-medium"
-                  >
-                    Learn more <ArrowRight className="w-4 h-4 ml-1" />
-                  </motion.button>
-
-                  {/* Dots indicator */}
-                  <div className="flex justify-center gap-2 mt-6">
-                    {[0, 1, 2].map((i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentSlide(i)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                          i === currentSlide ? 'bg-[#117dff] w-6' : 'bg-[#d4d0ca]'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom separator */}
-          <StripedSeparator />
-        </section>
+        {/* Section 3: Post-Quantum Cryptography */}
+        <PostQuantum />
 
       </div>
     </div>
