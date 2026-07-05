@@ -37,7 +37,7 @@ import {
   Mic,
   Square,
   NotebookPen,
-  Users,
+  Cable,
   MessageCircle,
   Settings,
   ArrowUpRight,
@@ -531,7 +531,7 @@ function MobileHiveDrawer({ open, onClose, onNewChat, onInstall, onClearChat }) 
     { label: 'Talk to HIVE', sub: 'Chat with memory', to: '/hivemind/m/chat', Icon: MessageCircle, accent: '#117dff' },
     { label: 'Memories', sub: 'Search and filter rows', to: '/hivemind/m/memories', Icon: Brain, accent: '#22c55e' },
     { label: 'AI Meeting Notes', sub: 'Recordings and recaps', to: '/hivemind/m/meeting-notes', Icon: NotebookPen, accent: '#f59e0b' },
-    { label: 'Characters', sub: 'Your AI roster', to: '/hivemind/m/characters', Icon: Users, accent: '#8b5cf6' },
+    { label: 'Connectors', sub: 'Apps and data sources', to: '/hivemind/m/connectors', Icon: Cable, accent: '#117dff' },
   ];
   const go = (to) => {
     onClose();

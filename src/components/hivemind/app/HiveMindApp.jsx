@@ -13,7 +13,7 @@ const DocsPage = React.lazy(() => import('../DocsPage'));
 const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
 const MobileMemories = React.lazy(() => import('./pages/MobileMemories'));
 const MobileMeetingNotes = React.lazy(() => import('./pages/MobileMeetingNotes'));
-const MobileCharacters = React.lazy(() => import('./pages/MobileCharacters'));
+const MobileConnectors = React.lazy(() => import('./pages/MobileConnectors'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
@@ -135,13 +135,14 @@ export default function HiveMindApp() {
           }
         />
         <Route
-          path="m/characters"
+          path="m/connectors"
           element={
             <ProtectedRoute>
-              <PageSuspense><MobileCharacters /></PageSuspense>
+              <PageSuspense><MobileConnectors /></PageSuspense>
             </ProtectedRoute>
           }
         />
+        <Route path="m/characters" element={<Navigate to="m/connectors" replace />} />
         <Route
           path="join/:slug/:token"
           element={

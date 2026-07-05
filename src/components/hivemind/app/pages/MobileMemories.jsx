@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Brain, ChevronLeft, Clock, Filter, Search, Tag, X } from 'lucide-react';
+import { Brain, ChevronLeft, Clock, Filter, Link2, Lock, Monitor, Search, Tag, X } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 const TYPES = ['all', 'fact', 'decision', 'preference', 'procedure', 'experience', 'synthesis'];
@@ -19,6 +19,15 @@ function ago(iso) {
 
 function titleOf(memory) {
   return memory?.title || memory?.summary || memory?.content?.slice(0, 72) || memory?.text?.slice(0, 72) || 'Untitled memory';
+}
+
+function chipTone(value = '') {
+  const v = String(value).toLowerCase();
+  if (v.includes('fact')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (v.includes('decision')) return 'bg-blue-50 text-[#117dff] border-blue-100';
+  if (v.includes('event')) return 'bg-orange-50 text-orange-700 border-orange-100';
+  if (v.includes('project')) return 'bg-violet-50 text-violet-700 border-violet-100';
+  return 'bg-[#f3f1ec] text-[#6f6b63] border-[#ebe6dc]';
 }
 
 export default function MobileMemories() {
@@ -67,7 +76,7 @@ export default function MobileMemories() {
           <div className="text-[15px] font-bold leading-tight">Memories</div>
           <div className="text-[10.5px] text-[#737373]">{stats.count} visible rows · {stats.scopes || 1} scopes</div>
         </div>
-        <div className="w-9 h-9 rounded-[13px] bg-emerald-500/10 text-emerald-600 grid place-items-center">
+        <div className="w-9 h-9 rounded-[13px] bg-[#edf5ff] text-[#117dff] grid place-items-center border border-[#cfe2ff]">
           <Brain size={17} />
         </div>
       </header>
@@ -84,7 +93,7 @@ export default function MobileMemories() {
               key={item}
               onClick={() => setType(item)}
               className={`px-3 py-1.5 rounded-full border text-[11.5px] font-semibold capitalize whitespace-nowrap ${
-                type === item ? 'bg-[#0a0a0a] text-white border-[#0a0a0a]' : 'bg-white text-[#525252] border-[#ece9e2]'
+                type === item ? 'bg-[#edf5ff] text-[#117dff] border-[#cfe2ff]' : 'bg-white text-[#525252] border-[#ece9e2]'
               }`}
             >
               {item === 'all' ? <Filter size={12} className="inline mr-1" /> : null}{item}
@@ -105,18 +114,44 @@ export default function MobileMemories() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(index * 0.015, 0.18) }}
               onClick={() => setSelected(memory)}
-              className="w-full text-left bg-white border border-[#ece9e2] rounded-[18px] px-3 py-3 active:scale-[0.99]"
+              className="w-full text-left bg-white border border-[#e3e0db] rounded-[20px] px-3 py-3 shadow-[0_10px_28px_rgba(26,24,20,0.04)] active:scale-[0.99]"
             >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 w-2 h-10 rounded-full bg-[#117dff]" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-semibold leading-snug line-clamp-2">{titleOf(memory)}</span>
-                  <span className="block mt-1 text-[12px] text-[#737373] leading-snug line-clamp-2">{memory.content || memory.text || memory.summary || 'No preview available.'}</span>
-                  <span className="mt-2 flex items-center gap-2 text-[10.5px] text-[#a3a3a3]">
-                    <Clock size={11} /> {ago(memory.created_at || memory.updated_at)}
-                    <Tag size={11} /> {memory.memory_type || memory.type || 'memory'}
-                  </span>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[14px] font-bold leading-snug line-clamp-2">{titleOf(memory)}</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className={`rounded-md border px-1.5 py-0.5 text-[9.5px] font-mono font-bold uppercase ${chipTone(memory.memory_type || memory.type)}`}>
+                      {memory.memory_type || memory.type || 'memory'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#ebe6dc] bg-[#f8f6f1] px-1.5 py-0.5 text-[9.5px] font-mono uppercase text-[#8b857d]">
+                      <Lock size={9} /> {memory.scope || memory.visibility || 'personal'}
+                    </span>
+                    {Boolean(memory.linked_count || memory.links?.length) && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-[#cfe2ff] bg-[#edf5ff] px-1.5 py-0.5 text-[9.5px] font-mono uppercase text-[#117dff]">
+                        <Link2 size={9} /> linked {memory.linked_count || memory.links?.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronLeft size={16} className="mt-0.5 rotate-180 text-[#c6c1b8]" />
+              </div>
+              <p className="mt-2 text-[12px] text-[#5f5c55] leading-snug line-clamp-3">
+                {memory.content || memory.text || memory.summary || 'No preview available.'}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-md border border-[#ebe6dc] bg-white px-1.5 py-0.5 text-[9.5px] font-mono uppercase text-[#6f6b63]">
+                  <Monitor size={10} /> {memory.sourcePlatform || memory.source || 'AI-MEETING-NOTES'}
                 </span>
+                {(memory.tags || []).slice(0, 3).map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-[#f3f1ec] px-2 py-0.5 text-[10px] text-[#6f6b63]">
+                    <Tag size={9} /> {tag}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-[10.5px] text-[#b1aca4]">
+                <div className="h-1.5 w-16 rounded-full bg-[#ebe6dc]" />
+                <span>--</span>
+                <Clock size={11} /> {ago(memory.created_at || memory.updated_at)}
               </div>
             </motion.button>
           ))}
