@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import Nango from '@nangohq/frontend';
 import { CONNECTOR_BY_ID, CONNECTOR_MODES, BRAND_LOGOS } from '../shared/connectors-catalog';
 import {
   Cable,
@@ -3573,20 +3574,21 @@ export default function Connectors() {
   const handleNangoConnect = useCallback(async (connector) => {
     const providerKey = connector.nangoProvider;
     setConnectingProvider(connector.oauthProvider || connector.id);
+    const connectUiBase =
+      process.env.REACT_APP_NANGO_CONNECT_URL ||
+      'https://api.hivemind.davinciai.eu:8043';
+    const nangoApiUrl =
+      process.env.REACT_APP_NANGO_HOST ||
+      'https://api.hivemind.davinciai.eu:8042';
+    // Open the Connect popup SYNCHRONOUSLY inside this click gesture — otherwise
+    // the browser (and the Electron app) blocks it as an un-triggered popup.
+    // Nango is statically imported and the session token is fetched AFTER the
+    // window is open, then handed to it via setSessionToken (Nango's documented
+    // no-popup-blocker pattern).
+    const nango = new Nango();
     try {
-      const { connect_session_token } = await apiClient.getNangoConnectSession(connector.id);
-      const NangoMod = await import('@nangohq/frontend');
-      const NangoCtor = NangoMod.default || NangoMod.Nango || NangoMod;
-      const nango = new NangoCtor();
-      const connectUiBase =
-        process.env.REACT_APP_NANGO_CONNECT_URL ||
-        'https://api.hivemind.davinciai.eu:8043';
-      const nangoApiUrl =
-        process.env.REACT_APP_NANGO_HOST ||
-        'https://api.hivemind.davinciai.eu:8042';
       await new Promise((resolve, reject) => {
         const ui = nango.openConnectUI({
-          sessionToken: connect_session_token,
           baseURL: connectUiBase,
           apiURL: nangoApiUrl,
           onEvent: async (event) => {
@@ -3610,9 +3612,13 @@ export default function Connectors() {
             }
           },
         });
-        if (ui && typeof ui.setSessionToken === 'function') {
-          ui.setSessionToken(connect_session_token);
-        }
+        // Fetch the short-lived session token, then hand it to the open UI.
+        apiClient.getNangoConnectSession(connector.id)
+          .then(({ connect_session_token }) => {
+            if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+            else reject(new Error('Nango Connect UI unavailable'));
+          })
+          .catch((e) => { try { ui && ui.close && ui.close(); } catch { /* noop */ } reject(e); });
       });
     } catch (err) {
       setToastMessage({

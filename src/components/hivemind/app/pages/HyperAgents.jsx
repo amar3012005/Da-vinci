@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import Nango from '@nangohq/frontend';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -4575,15 +4576,14 @@ function RoomToolsModal({ room, onClose }) {
       // Catalog keys are hyphenated (google-docs); room ids are underscored
       // (google_docs). Send the hyphen form so the backend's nango_provider lookup
       // resolves (else connect-session 404s).
-      const { connect_session_token } = await apiClient.getNangoConnectSession(c.id.replace(/_/g, '-'));
-      const NangoMod = await import('@nangohq/frontend');
-      const NangoCtor = NangoMod.default || NangoMod.Nango || NangoMod;
-      const nango = new NangoCtor();
       const baseURL = process.env.REACT_APP_NANGO_CONNECT_URL || 'https://api.hivemind.davinciai.eu:8043';
       const apiURL = process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042';
+      // Open the popup synchronously in the click gesture (no await before it) so
+      // the browser / Electron doesn't block it; token is set once fetched.
+      const nango = new Nango();
       await new Promise((resolve, reject) => {
         const ui = nango.openConnectUI({
-          sessionToken: connect_session_token, baseURL, apiURL,
+          baseURL, apiURL,
           onEvent: async (event) => {
             try {
               if (event?.type === 'connect') {
@@ -4605,7 +4605,12 @@ function RoomToolsModal({ room, onClose }) {
             } catch (e) { reject(e); }
           },
         });
-        if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+        apiClient.getNangoConnectSession(c.id.replace(/_/g, '-'))
+          .then(({ connect_session_token }) => {
+            if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+            else reject(new Error('Nango Connect UI unavailable'));
+          })
+          .catch((e) => { try { ui && ui.close && ui.close(); } catch { /* noop */ } reject(e); });
       });
     } catch (e) {
       setErr(e?.response?.data?.error || e?.message || 'Connect failed');
