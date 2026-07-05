@@ -15,7 +15,6 @@ import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
-import CinematicScrollScene from '../../mobile/CinematicScrollScene';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -276,18 +275,18 @@ const MarqueeRow = () => (
 
 /* ───────── velocity type band ───────── */
 
-const VelocityBand = ({ text, dark = false }) => {
+const VelocityBand = ({ text }) => {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const x = useTransform(scrollYProgress, [0, 1], ['4%', '-24%']);
   return (
-    <div ref={ref} className={`overflow-hidden border-y py-8 ${dark ? 'border-white/10 bg-[#0a0a0a]' : 'border-[#e7e4dd] bg-white'}`}>
+    <div ref={ref} className="overflow-hidden border-y border-[#e7e4dd] bg-white py-8">
       <motion.p style={{ x }}
         className="whitespace-nowrap font-['Space_Grotesk'] text-6xl font-bold uppercase tracking-tight md:text-8xl">
         {Array.from({ length: 4 }).map((_, i) => (
           <span key={i}>
-            <span style={{ color: dark ? 'white' : INK }}>{text}</span>
-            <span className="mx-6" style={{ WebkitTextStroke: `1.5px ${dark ? 'rgba(255,255,255,0.35)' : '#c9c4b8'}`, color: 'transparent' }}>{text}</span>
+            <span style={{ color: INK }}>{text}</span>
+            <span className="mx-6" style={{ WebkitTextStroke: '1.5px #c9c4b8', color: 'transparent' }}>{text}</span>
           </span>
         ))}
       </motion.p>
@@ -497,64 +496,131 @@ const Chapter = ({ n, id, eyebrow, title, body, stats, bullets, card, flip = fal
 /* ───────── sovereignty band ───────── */
 
 const SOVEREIGN_STEPS = [
-  { at: 0.10, label: 'Memory forms from every decision.' },
-  { at: 0.28, label: 'It crosses apps, meetings, agents, and documents.' },
-  { at: 0.48, label: 'Then the boundary closes around it.' },
-  { at: 0.68, label: 'Frankfurt hosted. GDPR-native. No US transfer.' },
-  { at: 0.90, label: 'Memory stays inside your walls.', sub: 'SOVEREIGNTY', accent: true },
+  { at: 0.08, kicker: 'DEPLOYMENT', title: 'Choose where memory lives.', body: 'Cloud in Frankfurt or isolated inside your own infrastructure.' },
+  { at: 0.28, kicker: 'BYOK', title: 'Bring your own keys.', body: 'Your encryption boundary remains yours. HIVEMIND never owns the trust root.' },
+  { at: 0.48, kicker: 'SELF-HOST', title: 'Run the engine in your walls.', body: 'Agents, meetings, connectors, and documents resolve against the same private memory layer.' },
+  { at: 0.68, kicker: 'EU SOVEREIGN', title: 'Frankfurt hosted. GDPR-native.', body: 'No US data transfer, no silent region drift, no compliance theater.' },
+  { at: 0.88, kicker: 'RECALL', title: 'Sub-50ms memory, sealed.', body: 'Every decision becomes searchable context without leaving the boundary you set.' },
 ];
 
-const Sovereign = () => (
-  <section id="sovereignty" className="relative bg-[#05070f]">
-    <CinematicScrollScene
-      frameDir="fall-frames"
-      frameCount={193}
-      videoSrc="/media/sovereign-memory.mp4"
-      posterSrc="/media/sovereign-memory-poster.jpg"
-      steps={SOVEREIGN_STEPS}
-      title="MEMORY"
-      subtitle="Sovereignty · 08"
-      actLabel="HIVEMIND"
-      staticFrame={150}
-      staticHeadline="Memory stays inside your walls."
-      heightVh={440}
-      accentColor={BLUE}
+const Sovereign = () => {
+  const sectionRef = useRef(null);
+  const videoRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end end'],
+  });
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    video.pause();
+    video.currentTime = 0;
+    const unsubscribe = scrollYProgress.on('change', (value) => {
+      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+      if (duration) {
+        const target = Math.min(duration - 0.035, Math.max(0, value * duration));
+        if (Math.abs(video.currentTime - target) > 0.025) video.currentTime = target;
+      }
+      let idx = 0;
+      SOVEREIGN_STEPS.forEach((step, i) => {
+        if (value >= step.at) idx = i;
+      });
+      setActiveStep(idx);
+    });
+    return unsubscribe;
+  }, [scrollYProgress]);
+
+  return (
+    <section
+      id="sovereignty"
+      ref={sectionRef}
+      className="relative border-y border-[#e7e2d8] bg-[#FBFBF8]"
+      style={{ height: '420vh' }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(${PAPER}, rgba(5,7,15,0))` }} />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(rgba(5,7,15,0), ${PAPER})` }} />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,125,255,0.03),rgba(5,7,15,0.36)_58%,rgba(5,7,15,0.82))]" />
-      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
-        <div className="max-w-4xl rounded-[32px] border border-white/42 bg-[#FBFBF8]/54 px-6 py-8 shadow-[0_28px_90px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl md:px-12">
-          <p className="font-mono text-[11px] uppercase tracking-[0.3em]" style={{ color: BLUE }}>⟩ sovereignty · 08</p>
-          <h2 className="mx-auto mt-5 max-w-3xl font-['Space_Grotesk'] text-4xl font-semibold leading-tight tracking-tight md:text-6xl" style={{ color: INK }}>
-            Memory stays<br />inside your walls
-          </h2>
-          <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-[#4a4a4a]">
-            EU-hosted in Frankfurt. GDPR-native. No US data transfer. Or take the engine
-            inside your own infrastructure — full self-host, same sub-50ms recall.
-          </p>
-          <div className="mx-auto mt-8 grid max-w-2xl grid-cols-2 gap-3 md:grid-cols-4">
-            {[
-              [ShieldCheck, 'GDPR native'], [Globe, 'Frankfurt hosted'],
-              [Database, 'Self-host option'], [Zap, 'Sub-50ms recall'],
-            ].map(([Icon, label], i) => (
-              <motion.div key={label}
-                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: 0.1 + i * 0.08, duration: 0.5, ease }}
-                className="flex flex-col items-center gap-2.5 rounded-xl border border-white/50 bg-white/72 px-3 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur">
-                <Icon size={19} style={{ color: BLUE }} />
-                <span className="text-[12px] font-medium text-[#0a0a0a]/85">{label}</span>
-              </motion.div>
-            ))}
+      <div className="sticky top-0 flex min-h-screen items-center overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(17,125,255,0.035)_1px,transparent_1px),linear-gradient(180deg,rgba(17,125,255,0.026)_1px,transparent_1px)] bg-[size:42px_42px]" />
+        <div className="pointer-events-none absolute -right-20 top-10 font-['Space_Grotesk'] text-[34vw] font-bold leading-none text-[#0a0a0a]/[0.035]">08</div>
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 px-6 py-16 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12 lg:px-10 lg:py-20">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.42em]" style={{ color: BLUE }}>〉 sovereignty · 08</p>
+            <h2 className="mt-7 max-w-xl font-['Space_Grotesk'] text-4xl font-semibold leading-[0.96] tracking-[-0.055em] text-[#0a0a0a] sm:text-5xl md:text-7xl">
+              Memory stays inside your walls.
+            </h2>
+            <p className="mt-7 max-w-lg text-[17px] font-light leading-relaxed text-[#5f5c55]">
+              Scroll the deployment boundary. Every frame moves the engine from public cloud story to sovereign, private memory infrastructure.
+            </p>
+            <div className="mt-9 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                [ShieldCheck, 'GDPR native'],
+                [Globe, 'Frankfurt'],
+                [Database, 'BYOK / self-host'],
+                [Zap, '<50ms recall'],
+              ].map(([Icon, label]) => (
+                <div key={label} className="rounded-2xl border border-[#e4ded2] bg-white/82 p-4 shadow-[0_18px_42px_rgba(17,24,39,0.055)]">
+                  <Icon size={18} style={{ color: BLUE }} />
+                  <p className="mt-3 text-[12px] font-semibold text-[#272521]">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="relative overflow-hidden rounded-[28px] border border-[#ded8ce] bg-white shadow-[0_36px_100px_rgba(26,24,20,0.13)]">
+              <div className="flex h-10 items-center gap-2 border-b border-[#ebe6dc] bg-[#fffdf8] px-5">
+                <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
+                <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+                <span className="ml-4 truncate font-mono text-[10px] uppercase tracking-[0.28em] text-[#aaa49a] sm:tracking-[0.36em]">hivemind — sovereign deployment</span>
+              </div>
+              <div className="relative aspect-video overflow-hidden bg-[#f4f1ea]">
+                <video
+                  ref={videoRef}
+                  src="/media/sovereign-memory.mp4"
+                  poster="/media/sovereign-memory-poster.jpg"
+                  muted
+                  playsInline
+                  preload="auto"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-[24px] border border-[#ded8ce] bg-white/82 p-5 shadow-[0_22px_70px_rgba(26,24,20,0.08)] backdrop-blur">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[11px] uppercase tracking-[0.36em]" style={{ color: BLUE }}>
+                  {SOVEREIGN_STEPS[activeStep].kicker}
+                </span>
+                <div className="h-px flex-1 bg-[#ebe6dc]" />
+                <span className="font-mono text-[10px] text-[#aaa49a]">{String(activeStep + 1).padStart(2, '0')} / 05</span>
+              </div>
+              <h3 className="mt-4 font-['Space_Grotesk'] text-2xl font-semibold tracking-[-0.04em] text-[#0a0a0a]">
+                {SOVEREIGN_STEPS[activeStep].title}
+              </h3>
+              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6d685f]">
+                {SOVEREIGN_STEPS[activeStep].body}
+              </p>
+              <div className="mt-5 grid grid-cols-5 gap-2">
+                {SOVEREIGN_STEPS.map((step, i) => (
+                  <div key={step.kicker} className="h-1.5 overflow-hidden rounded-full bg-[#ebe6dc]">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: BLUE }}
+                      transformOrigin="left"
+                      animate={{ scaleX: i <= activeStep ? 1 : 0 }}
+                      transition={{ duration: 0.35, ease }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-        <div className="mt-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-white/55">
-          <span className="h-px w-6 bg-white/35" /> scroll to seal memory <span className="h-px w-6 bg-white/35" />
-        </div>
       </div>
-    </CinematicScrollScene>
-  </section>
-);
+    </section>
+  );
+};
 
 /* ───────── final CTA ───────── */
 
@@ -679,7 +745,7 @@ const HivemindProduct = () => {
         ]}
         card={<AgentsCard />} />
 
-      <VelocityBand text="Agents that act ·" dark />
+      <VelocityBand text="Agents that act ·" />
 
       <Chapter n="06" id="chapter-6" eyebrow="tara × hive"
         title={<>A voice that<br />knows your business</>}
