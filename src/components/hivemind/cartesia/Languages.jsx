@@ -1,8 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Server, FileText } from 'lucide-react';
 import { GlobeCdn } from '../../ui/cobe-globe-cdn';
+
+/**
+ * ScrollScrubGlobe — the "Sovereign Descent" cinematic FPV film (Higgsfield /
+ * Seedance, GPT-Image-2 keyframes), scrubbed frame-for-frame by scroll.
+ *
+ *   • A tall track pins the video full-bleed; scroll progress → video.currentTime
+ *     with a snappy rAF lerp (fast + cinematic, not laggy).
+ *   • Desktop = scrub. Touch / reduced-motion = the live cobe globe (fallback),
+ *     since iOS Safari throttles video seeking.
+ *   • Self-contained static asset in /public/media — no network at runtime.
+ */
+function ScrollScrubGlobe() {
+  const wrapRef = useRef(null);
+  const videoRef = useRef(null);
+  const [canScrub] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !coarse && !reduced;
+  });
+
+  useEffect(() => {
+    if (!canScrub) return undefined;
+    const v = videoRef.current;
+    const wrap = wrapRef.current;
+    if (!v || !wrap) return undefined;
+    let target = 0, cur = 0, dur = 0, raf = 0, alive = true;
+    const clamp = (x) => Math.max(0, Math.min(1, x));
+    const onMeta = () => { dur = v.duration || 0; };
+    v.addEventListener('loadedmetadata', onMeta);
+    if (v.readyState >= 1) onMeta();
+    const onScroll = () => {
+      const r = wrap.getBoundingClientRect();
+      const total = r.height - window.innerHeight;
+      target = total > 0 ? clamp(-r.top / total) : 0;
+    };
+    const tick = () => {
+      if (!alive) return;
+      cur += (target - cur) * 0.18;                 // snappy, weighted scrub
+      if (dur) { const t = cur * (dur - 0.05); if (Math.abs(v.currentTime - t) > 0.02) { try { v.currentTime = t; } catch { /* seeking */ } } }
+      raf = requestAnimationFrame(tick);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll(); tick();
+    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); };
+  }, [canScrub]);
+
+  if (!canScrub) {
+    return <GlobeCdn className="w-full max-w-[500px] sm:max-w-[620px] mx-auto" />;
+  }
+  return (
+    <div ref={wrapRef} style={{ height: '220vh' }} className="relative w-full">
+      <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">
+        <video
+          ref={videoRef}
+          src="/media/sovereign-descent.mp4"
+          poster="/media/sovereign-descent-poster.jpg"
+          muted playsInline preload="auto"
+          tabIndex={-1} aria-hidden="true"
+          className="w-full h-full object-cover"
+          style={{ maxHeight: '100vh' }}
+        />
+        <div className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-[#0a0a0a]/40">
+          <span className="w-6 h-px bg-[#0a0a0a]/25" /> scroll to descend <span className="w-6 h-px bg-[#0a0a0a]/25" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const Languages = () => {
   const navigate = useNavigate();
@@ -55,7 +125,7 @@ const Languages = () => {
   };
 
   return (
-    <section className="bg-[#faf9f4] text-[#0a0a0a] py-12 sm:py-16 lg:py-24 border-t border-[#e3e0db] relative overflow-hidden">
+    <section className="bg-[#faf9f4] text-[#0a0a0a] py-12 sm:py-16 lg:py-24 border-t border-[#e3e0db] relative">
       {/* Striped separator at top */}
       <div
         className="h-8 sm:h-12 w-full border-b border-[#e3e0db] absolute top-0"
@@ -91,18 +161,10 @@ const Languages = () => {
           </motion.button>
         </div>
 
-        {/* Globe visualization */}
-        <motion.div
-          className="relative mb-8 sm:mb-12 flex items-center justify-center"
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
-          <div className="relative w-full max-w-[720px] min-h-[300px] sm:min-h-[380px] flex items-center justify-center">
-            <GlobeCdn className="w-full max-w-[500px] sm:max-w-[620px] mx-auto" />
-          </div>
-        </motion.div>
+        {/* Cinematic scroll-scrubbed FPV descent (falls back to live globe on touch) */}
+        <div className="mb-8 sm:mb-12">
+          <ScrollScrubGlobe />
+        </div>
 
         {/* Category tabs */}
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-10 border-b border-[#e3e0db] pb-4 sm:pb-6">
