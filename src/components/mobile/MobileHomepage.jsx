@@ -6,6 +6,7 @@ import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
 import FallScene from './FallScene';
+import WallScene from './WallScene';
 import CinematicMode from './CinematicMode';
 import LatestUpdates from './LatestUpdates';
 import SubProducts from './SubProducts';
@@ -73,6 +74,7 @@ const PageContent = () => {
             <CinematicMode />
             <MobileHero />
             <FallScene field={field} />
+            <WallScene />
             <LatestUpdates />
             <SubProducts />
             <AudienceSection field={field} onChange={() => setPickerOpen(true)} />
