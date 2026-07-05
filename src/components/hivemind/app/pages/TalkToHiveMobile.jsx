@@ -41,12 +41,17 @@ import {
   MessageCircle,
   Settings,
   ArrowUpRight,
+  Upload,
+  FolderKanban,
+  Users,
+  Lock,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import { MeetingNotesPromo } from '../shared/QuickRecorderProvider';
 import PwaInstall from '../shared/PwaInstall';
+import { useAuth } from '../auth/AuthProvider';
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
@@ -56,6 +61,106 @@ const MODELS = [
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', tag: 'Free' },
   { id: 'gpt-oss-20b', label: 'GPT-OSS 20B', tag: 'Fast' },
 ];
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function UploadScopeModal({
+  open,
+  files,
+  org,
+  userRole,
+  projects,
+  loadingProjects,
+  projectsError,
+  onRetryProjects,
+  selectedScope,
+  onScopeChange,
+  selectedProject,
+  onProjectChange,
+  onConfirm,
+  onClose,
+}) {
+  const { t } = useTranslation('dashboard');
+  if (!open) return null;
+
+  const canUseTeamWorkspace = org?.plan === 'enterprise' || org?.plan === 'team';
+  const isOrgAdmin = userRole === 'owner' || userRole === 'admin';
+  const requiresProject = selectedScope === 'project';
+
+  return (
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-end justify-center bg-black/35 px-3 pb-3 pt-16" onClick={onClose}>
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="w-full max-w-lg rounded-[24px] border border-[#e3e0db] bg-white p-4 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-[#0a0a0a] text-[16px] font-semibold font-['Space_Grotesk']">{t('knowledgebase.scopeModalTitle', 'Save uploaded memories to')}</h3>
+              <p className="text-[#525252] text-[12px] mt-1">{t('knowledgebase.scopeModalSubtitle', 'Choose where these files should live before upload starts.')}</p>
+            </div>
+            <button type="button" onClick={onClose} className="rounded-lg p-1 text-[#a3a3a3]">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="rounded-xl border border-[#ece8de] bg-[#faf9f4] px-3 py-2.5 mb-4">
+            <p className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3] mb-2">{t('knowledgebase.uploadBatch', 'Upload batch')}</p>
+            <div className="space-y-1 max-h-28 overflow-y-auto">
+              {files.map((file) => (
+                <div key={`${file.name}-${file.size}`} className="flex items-center justify-between gap-3 text-[12px]">
+                  <span className="truncate text-[#0a0a0a]">{file.name}</span>
+                  <span className="text-[#a3a3a3] text-[10px] font-mono shrink-0">{formatBytes(file.size)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            <button type="button" onClick={() => onScopeChange('personal')} className={`w-full rounded-xl border px-3 py-2.5 text-left ${selectedScope === 'personal' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Lock size={14} className="text-[#117dff]" /></div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopePersonalLabel', 'My Space')}</p>
+                  <p className="text-[11px] text-[#525252]">{t('knowledgebase.scopePersonalDesc', 'Private memories only visible in your personal workspace.')}</p>
+                </div>
+              </div>
+            </button>
+            <div role="button" tabIndex={canUseTeamWorkspace ? 0 : -1} aria-disabled={!canUseTeamWorkspace} onClick={() => canUseTeamWorkspace && onScopeChange('project')} className={`w-full rounded-xl border px-3 py-2.5 text-left ${selectedScope === 'project' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white'} ${!canUseTeamWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><FolderKanban size={14} className="text-[#117dff]" /></div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('knowledgebase.scopeProjectLabel', 'Project')}</p>
+                  <p className="text-[11px] text-[#525252]">{t('knowledgebase.scopeProjectDesc', 'Shared with the members invited to that project.')}</p>
+                </div>
+              </div>
+              {selectedScope === 'project' && (
+                <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+                  {loadingProjects ? <p className="text-[11px] text-[#a3a3a3]">{t('knowledgebase.loadingProjects', 'Loading projects...')}</p>
+                    : projectsError ? <div className="flex items-center justify-between gap-2"><p className="text-[11px] text-[#dc2626]">{projectsError}</p><button type="button" onClick={onRetryProjects} className="rounded-md border border-[#e3e0db] px-2 py-1 text-[10px] font-semibold text-[#525252]">{t('knowledgebase.retry', 'Retry')}</button></div>
+                      : projects.length > 0 ? <select value={selectedProject} onChange={(e) => onProjectChange(e.target.value)} className="w-full rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 text-[12px] text-[#0a0a0a]"><option value="">{t('knowledgebase.pickProject', 'Select a project…')}</option>{projects.map((p) => <option key={p.id} value={p.slug}>{p.name} ({p.slug})</option>)}</select>
+                        : <p className="text-[11px] text-[#a3a3a3]">{t('knowledgebase.noAccessibleProjects', "You're not a member of any project yet. Ask an org admin to invite you, or choose another scope.")}</p>}
+                </div>
+              )}
+            </div>
+            <button type="button" disabled={!canUseTeamWorkspace || !isOrgAdmin} onClick={() => canUseTeamWorkspace && isOrgAdmin && onScopeChange('organization')} className={`w-full rounded-xl border px-3 py-2.5 text-left ${selectedScope === 'organization' ? 'border-[#117dff]/30 bg-[#117dff]/8' : 'border-[#e3e0db] bg-white'} ${(!canUseTeamWorkspace || !isOrgAdmin) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg border border-[#e3e0db] bg-white flex items-center justify-center"><Users size={14} className="text-[#117dff]" /></div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{org?.name ? t('knowledgebase.scopeOrgLabelNamed', 'Entire organization: {{name}}', { name: org.name }) : t('knowledgebase.scopeOrgLabel', 'Entire organization')}</p>
+                  <p className="text-[11px] text-[#525252]">{isOrgAdmin ? t('knowledgebase.scopeOrgDesc', 'Visible to every member of the org.') : t('knowledgebase.scopeOrgDescLocked', 'Org-wide uploads are reserved for organization admins.')}</p>
+                </div>
+              </div>
+            </button>
+          </div>
+          <div className="flex items-center justify-end gap-2 mt-4">
+            <button type="button" onClick={onClose} className="rounded-[10px] border border-[#e3e0db] px-3 py-2 text-[13px] font-semibold text-[#525252]">{t('knowledgebase.cancel', 'Cancel')}</button>
+            <button type="button" onClick={onConfirm} disabled={requiresProject && !selectedProject} className="inline-flex items-center gap-2 rounded-[10px] bg-[#117dff] px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"><Upload size={14} />{t('knowledgebase.uploadFiles', 'Upload files')}</button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 // ─── Persistence (matches desktop Chat.jsx key shape) ───────────────────────
 
@@ -616,7 +721,9 @@ function MobileHiveDrawer({ open, onClose, onNewChat, onInstall, onClearChat }) 
 
 export default function TalkToHiveMobile() {
   const { t, i18n } = useTranslation('dashboard');
-  const { activeProjectId } = useTeamContext() || {};
+  const { activeProjectId, activeTeamId } = useTeamContext() || {};
+  const { org, user } = useAuth() || {};
+  const userRole = user?.role || user?.org_role || user?.membership_role || 'member';
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -624,12 +731,44 @@ export default function TalkToHiveMobile() {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [scopeModalOpen, setScopeModalOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [selectedScope, setSelectedScope] = useState('personal');
+  const [selectedProject, setSelectedProject] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectsError, setProjectsError] = useState(null);
   // Upload pipeline state — one row per file.
   // status: 'queued' | 'uploading' | 'extracting' | 'making' | 'saving' | 'done' | 'error'
   const [uploads, setUploads] = useState([]);
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const fetchProjects = useCallback(async () => {
+    if (!org?.id) {
+      setProjects([]);
+      setProjectsError(null);
+      return;
+    }
+    setLoadingProjects(true);
+    setProjectsError(null);
+    try {
+      const data = activeTeamId
+        ? await apiClient.listTeamProjects(activeTeamId)
+        : await apiClient.listAccessibleProjects();
+      setProjects(data.projects || []);
+    } catch (err) {
+      setProjects([]);
+      setProjectsError(err?.response?.status === 401
+        ? 'Session expired — refresh the page to sign back in.'
+        : (err?.response?.data?.error || err?.message || 'Failed to load projects'));
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, [activeTeamId, org?.id]);
+
+  useEffect(() => { if (scopeModalOpen) fetchProjects(); }, [scopeModalOpen, fetchProjects]);
 
   // Push-to-talk dictation — same Groq Whisper path as AI Meeting Notes.
   // Appends transcript to the composer; user can edit before sending.
@@ -749,29 +888,14 @@ export default function TalkToHiveMobile() {
     if (fileInputRef.current) fileInputRef.current.click();
   };
 
-  const handleFiles = useCallback(async (fileList) => {
+  const queueFilesForUpload = useCallback((fileList) => {
     const files = Array.from(fileList || []).filter(Boolean);
     if (files.length === 0) return;
-
-    // Optimistic ack — every file is shown as "Sent to HIVE ✓" the
-    // moment the user picks it. Real upload + ingest run in the background.
-    // If the network call fails we flip the row to `error` w/ retry hint.
-    const rows = files.map((f, idx) => ({
-      id: `up-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
-      file: f,
-      name: f.name,
-      size: f.size,
-      status: 'received',
-      progress: 0,
-      error: null,
-      memoryId: null,
-    }));
-    setUploads((prev) => [...prev, ...rows]);
-
-    // Drive each upload in parallel — server-side ingest pipeline handles
-    // ordering. We just shepherd UI state through best-effort stages.
-    rows.forEach((row) => uploadOne(row));
-  }, [activeProjectId]); // eslint-disable-line react-hooks/exhaustive-deps
+    setPendingFiles(files);
+    setSelectedScope(org?.plan === 'enterprise' || org?.plan === 'team' ? 'project' : 'personal');
+    setSelectedProject('');
+    setScopeModalOpen(true);
+  }, [org?.plan]);
 
   const updateUpload = (id, patch) =>
     setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
@@ -779,7 +903,7 @@ export default function TalkToHiveMobile() {
   const removeUpload = (id) =>
     setUploads((prev) => prev.filter((u) => u.id !== id));
 
-  const uploadOne = async (row) => {
+  const uploadOne = useCallback(async (row) => {
     // Row is already shown as "received" (optimistic ✓). After a quick
     // beat the row shifts to a soft "processing" state — server is doing
     // the real work but we don't gate the UI on it.
@@ -794,7 +918,7 @@ export default function TalkToHiveMobile() {
       let result;
       if (isImage) {
         result = await apiClient.uploadImage(row.file, {
-          ...(activeProjectId ? { projectId: activeProjectId } : {}),
+          ...(selectedScope === 'project' && selectedProject ? { projectId: selectedProject } : {}),
           ...(row.hint ? { hint: row.hint } : {}),
           onUploadProgress: (evt) => {
             if (!evt.total) return;
@@ -803,8 +927,13 @@ export default function TalkToHiveMobile() {
           },
         });
       } else {
+        const uploadOpts = selectedScope === 'project' && selectedProject
+          ? { targetScope: 'organization', containerTag: `project:${selectedProject}` }
+          : selectedScope === 'organization'
+            ? { targetScope: 'organization' }
+            : { targetScope: 'personal' };
         result = await apiClient.uploadDocument(row.file, {
-          ...(activeProjectId ? { targetScope: 'project', containerTag: `project:${activeProjectId}` } : {}),
+          ...uploadOpts,
           onUploadProgress: (evt) => {
             if (!evt.total) return;
             const pct = Math.round((evt.loaded / evt.total) * 100);
@@ -830,7 +959,34 @@ export default function TalkToHiveMobile() {
         error: err?.response?.data?.detail || err?.message || 'Upload failed — tap to retry',
       });
     }
-  };
+  }, [selectedProject, selectedScope]);
+
+  const handleConfirmScope = useCallback(() => {
+    const files = pendingFiles;
+    setScopeModalOpen(false);
+    setPendingFiles([]);
+    if (!files.length) return;
+
+    const rows = files.map((f, idx) => ({
+      id: `up-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+      file: f,
+      name: f.name,
+      size: f.size,
+      status: 'received',
+      progress: 0,
+      error: null,
+      memoryId: null,
+    }));
+    setUploads((prev) => [...prev, ...rows]);
+    rows.forEach((row) => uploadOne(row));
+  }, [pendingFiles, uploadOne]);
+
+  const handleCloseScope = useCallback(() => {
+    setScopeModalOpen(false);
+    setPendingFiles([]);
+    setSelectedProject('');
+    setSelectedScope('personal');
+  }, []);
 
   const clearChat = () => {
     if (!messages.length) return;
@@ -1096,7 +1252,7 @@ export default function TalkToHiveMobile() {
             multiple
             className="hidden"
             onChange={(e) => {
-              handleFiles(e.target.files);
+              queueFilesForUpload(e.target.files);
               // Reset so picking the same file twice still fires onChange.
               if (e.target) e.target.value = '';
             }}
@@ -1152,6 +1308,23 @@ export default function TalkToHiveMobile() {
           <span className="text-[10px] text-[#a3a3a3]">Tap 📎 to upload · Enter to send</span>
         </div>
       </div>
+
+      <UploadScopeModal
+        open={scopeModalOpen}
+        files={pendingFiles}
+        org={org}
+        userRole={userRole}
+        projects={projects}
+        loadingProjects={loadingProjects}
+        projectsError={projectsError}
+        onRetryProjects={fetchProjects}
+        selectedScope={selectedScope}
+        onScopeChange={setSelectedScope}
+        selectedProject={selectedProject}
+        onProjectChange={setSelectedProject}
+        onConfirm={handleConfirmScope}
+        onClose={handleCloseScope}
+      />
     </div>
   );
 }

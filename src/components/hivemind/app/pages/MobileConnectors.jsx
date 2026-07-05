@@ -96,14 +96,14 @@ export default function MobileConnectors() {
         </button>
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-bold leading-tight">Connectors</div>
-          <div className="text-[10.5px] text-[#8b857d]">{connectedCount} connected · {rows.length} available</div>
+          <div className="text-[10.5px] text-[#8b857d]">Apps, browsers, and data sources for your memory engine</div>
         </div>
         <button onClick={() => navigate('/hivemind/app/connectors')} className="h-9 px-3 rounded-full bg-[#117dff] text-white text-[12px] font-semibold">
           Desktop
         </button>
       </header>
 
-      <div className="px-4 pt-3 pb-2 flex-shrink-0">
+      <div className="px-3 pt-3 pb-2 flex-shrink-0">
         <label className="flex items-center gap-2 h-11 px-3 rounded-[18px] bg-white border border-[#ece9e2] focus-within:border-[#9fc7ff]">
           <Search size={16} className="text-[#a3a3a3]" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search connectors..." className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-[#b9b5ae]" />
@@ -111,7 +111,7 @@ export default function MobileConnectors() {
       </div>
 
       <main className="flex-1 overflow-y-auto px-3 pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <section className="mb-3 rounded-[22px] bg-white border border-[#e3e0db] p-4 shadow-[0_12px_34px_rgba(26,24,20,0.045)]">
+        <section className="mb-3 rounded-[22px] bg-white border border-[#e3e0db] p-3.5 shadow-[0_12px_34px_rgba(26,24,20,0.045)]">
           <div className="flex gap-3">
             <div className="w-12 h-12 rounded-[17px] bg-[#117dff] text-white shadow-[0_12px_28px_rgba(17,125,255,0.28)] grid place-items-center flex-shrink-0">
               <Chrome size={21} />
@@ -120,9 +120,10 @@ export default function MobileConnectors() {
               <div className="flex items-center gap-2">
                 <h2 className="text-[15px] font-bold">Browser Intelligence</h2>
                 <span className="rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-mono text-emerald-700">OFFICIAL</span>
+                <span className="ml-auto rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase text-[#8b857d]">{connectedCount} live</span>
               </div>
-              <p className="mt-1 text-[12px] leading-snug text-[#6f6b63]">Save selections, pages, and AI chats directly into memory.</p>
-              <button onClick={() => navigate('/hivemind/app/connectors')} className="mt-3 h-9 rounded-xl bg-[#117dff] px-4 text-[12px] font-bold text-white">
+              <p className="mt-1 text-[11.5px] leading-snug text-[#6f6b63]">Save selections, pages, and AI chats directly into memory.</p>
+              <button onClick={() => navigate('/hivemind/app/connectors')} className="mt-3 h-8 rounded-xl bg-[#117dff] px-3.5 text-[11px] font-bold text-white">
                 Add to Chrome
               </button>
             </div>
@@ -134,11 +135,11 @@ export default function MobileConnectors() {
             { name: 'ChatGPT', sub: 'GPT Actions OAuth', Icon: Bot, tone: 'bg-[#f5f8f7]' },
             { name: 'Claude', sub: 'Remote MCP server', Icon: SparkIcon, tone: 'bg-orange-50' },
           ].map(({ name, sub, Icon, tone }) => (
-            <div key={name} className="rounded-[20px] border border-[#e3e0db] bg-white p-3 shadow-[0_10px_28px_rgba(26,24,20,0.04)]">
-              <div className={`mb-3 h-10 w-10 rounded-[14px] ${tone} grid place-items-center`}><Icon size={17} /></div>
-              <div className="text-[13px] font-bold">{name}</div>
-              <div className="mt-0.5 text-[10.5px] text-[#9a958d] line-clamp-1">{sub}</div>
-              <button onClick={() => navigate('/hivemind/app/connectors')} className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#117dff] px-3 text-[11px] font-bold text-white">
+            <div key={name} className="rounded-[18px] border border-[#e3e0db] bg-white p-3 shadow-[0_10px_28px_rgba(26,24,20,0.04)]">
+              <div className={`mb-2.5 h-9 w-9 rounded-[13px] ${tone} grid place-items-center`}><Icon size={16} /></div>
+              <div className="text-[12.5px] font-bold">{name}</div>
+              <div className="mt-0.5 text-[10px] text-[#9a958d] line-clamp-1">{sub}</div>
+              <button onClick={() => navigate('/hivemind/app/connectors')} className="mt-2.5 inline-flex h-7.5 items-center gap-1.5 rounded-lg bg-[#117dff] px-2.5 text-[10.5px] font-bold text-white">
                 <Plus size={13} /> Connect
               </button>
             </div>
@@ -161,7 +162,7 @@ export default function MobileConnectors() {
 
         {loading && <div className="py-12 text-center text-[13px] text-[#737373]">Loading connectors...</div>}
         {error && <div className="p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {filtered.slice(0, 24).map((connector, index) => {
             const Icon = iconFor(connector.id, connector.category);
             return (
@@ -171,26 +172,26 @@ export default function MobileConnectors() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.014, 0.18) }}
                 onClick={() => navigate('/hivemind/app/connectors')}
-                className="w-full rounded-[20px] border border-[#e3e0db] bg-white p-3 text-left shadow-[0_10px_28px_rgba(26,24,20,0.04)] active:scale-[0.99]"
+                className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-2.5 text-left shadow-[0_10px_22px_rgba(26,24,20,0.035)] active:scale-[0.99]"
               >
-                <div className="flex items-start gap-3">
-                  <span className={`grid h-11 w-11 flex-shrink-0 place-items-center rounded-[16px] ${connector.connected ? 'bg-emerald-50 text-emerald-600' : 'bg-[#edf5ff] text-[#117dff]'}`}>
-                    <Icon size={18} />
+                <div className="flex items-start gap-2.5">
+                  <span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-[14px] ${connector.connected ? 'bg-emerald-50 text-emerald-600' : 'bg-[#edf5ff] text-[#117dff]'}`}>
+                    <Icon size={17} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-start justify-between gap-2">
-                      <span className="text-[14px] font-bold leading-tight line-clamp-1">{connector.name}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-mono uppercase ${connector.connected ? 'bg-emerald-50 text-emerald-700' : 'bg-[#f3f1ec] text-[#9a958d]'}`}>
+                      <span className="text-[13px] font-bold leading-tight line-clamp-1">{connector.name}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[8.5px] font-mono uppercase ${connector.connected ? 'bg-emerald-50 text-emerald-700' : 'bg-[#f3f1ec] text-[#9a958d]'}`}>
                         {connector.connected ? connector.scope : 'available'}
                       </span>
                     </span>
-                    <span className="mt-1 block text-[11.5px] leading-snug text-[#8b857d] line-clamp-2">{connector.description}</span>
-                    <span className="mt-2 flex items-center gap-2">
+                    <span className="mt-0.5 block text-[10.5px] leading-snug text-[#8b857d] line-clamp-2">{connector.description}</span>
+                    <span className="mt-1.5 flex items-center gap-1.5">
                       {(connector.mode || []).slice(0, 2).map((mode) => (
-                        <span key={mode} className="rounded-md border border-[#cfe2ff] bg-[#edf5ff] px-1.5 py-0.5 text-[10px] font-mono text-[#117dff] capitalize">{mode}</span>
+                        <span key={mode} className="rounded-md border border-[#cfe2ff] bg-[#edf5ff] px-1.5 py-0.5 text-[9px] font-mono text-[#117dff] capitalize">{mode}</span>
                       ))}
-                      {connector.connected && <CheckCircle2 size={13} className="ml-auto text-emerald-500" />}
-                      {!connector.connected && <Settings size={13} className="ml-auto text-[#a3a3a3]" />}
+                      {connector.connected && <CheckCircle2 size={12} className="ml-auto text-emerald-500" />}
+                      {!connector.connected && <Settings size={12} className="ml-auto text-[#a3a3a3]" />}
                     </span>
                   </span>
                 </div>

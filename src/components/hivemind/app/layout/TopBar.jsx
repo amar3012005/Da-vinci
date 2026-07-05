@@ -5,7 +5,6 @@ import { Search, BookOpen, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import TeamSwitcher from './TeamSwitcher';
 import LangSwitcher from './LangSwitcher';
-import { MeetingNotesPromo } from '../shared/QuickRecorderProvider';
 
 const pageTitles = {
   '/hivemind/app/overview': 'Overview',
@@ -86,8 +85,6 @@ export default function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* New-feature promo — inline navbar item so it can never overlap dropdowns */}
-        <MeetingNotesPromo inline />
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}
