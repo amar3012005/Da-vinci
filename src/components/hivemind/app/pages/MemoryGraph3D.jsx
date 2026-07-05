@@ -37,18 +37,18 @@ const THEMES = {
     name: "day",
     bg: "rgba(0,0,0,0)",                // page bg shows through (warm paper)
     sceneClear: null,                    // null = use prop-supplied bg
-    label: "#0a0a0a",                    // labels: ink
-    labelDim: "#525252",
+    label: "#111111",                    // labels: ink
+    labelDim: "#686868",
     edgeLabelBg: "rgba(255,255,255,0.92)",
-    edgeLabelBorder: "rgba(0,0,0,0.10)",
-    nodeAccent: "#0a0a0a",               // hub / selected
-    nodeBase: "#3a3a3a",                 // most nodes
-    nodeMuted: "#9a958d",                // unfocused / filtered out
-    nodeShell: "#f8f5ee",                // orphan halo
-    linkBase: "#2a2a2a",                 // dark gray edges on light bg
-    linkDim: "#bcb6ac",
-    particle: "#4a4a4a",
-    haloOpacity: 0.06,
+    edgeLabelBorder: "rgba(47,131,255,0.16)",
+    nodeAccent: "#2f83ff",               // hub / selected
+    nodeBase: "#314158",                 // most nodes
+    nodeMuted: "#b7b4ad",                // unfocused / filtered out
+    nodeShell: "#eef6ff",                // orphan halo
+    linkBase: "#6e7f96",                 // soft graphite-blue edges
+    linkDim: "#d8d4cc",
+    particle: "#2f83ff",
+    haloOpacity: 0.075,
   },
   night: {
     name: "night",
@@ -383,7 +383,6 @@ const LABEL_LIMITS = {
   all: 130,
 };
 
-const RELATION_LABEL_DISTANCE = 260;
 const LABEL_VIEWPORT_MARGIN = 0.9;
 const LABEL_CELL_WIDTH = 164;
 const LABEL_CELL_HEIGHT = 48;
@@ -978,6 +977,38 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     }
   }, []);
 
+  useEffect(() => {
+    const syncAnimation = (isVisible) => {
+      const fg = fgRef.current;
+      if (!fg) return;
+      try {
+        if (isVisible && !document.hidden) fg.resumeAnimation?.();
+        else fg.pauseAnimation?.();
+      } catch (_error) {
+        // 3d-force-graph versions differ; visibility is an optimization only.
+      }
+    };
+
+    const handleDocumentVisibility = () => syncAnimation(true);
+    document.addEventListener("visibilitychange", handleDocumentVisibility);
+
+    let observer = null;
+    const el = containerRef.current;
+    if (el && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        ([entry]) => syncAnimation(entry.isIntersecting),
+        { threshold: 0.02 },
+      );
+      observer.observe(el);
+    }
+
+    syncAnimation(true);
+    return () => {
+      document.removeEventListener("visibilitychange", handleDocumentVisibility);
+      observer?.disconnect?.();
+    };
+  }, []);
+
   // Theme-aware node color. getNodeColorBase produces a greyscale ramp
   // tuned for light backgrounds. For night, invert each channel so dark
   // particles become bright stars instead of vanishing on the black sky.
@@ -1417,7 +1448,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     try {
       const renderer = fg.renderer?.();
       if (renderer?.setPixelRatio) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        const nodeCount = graphDataRef.current?.nodes?.length || 0;
+        const maxRatio = nodeCount > 1200 ? 1.05 : nodeCount > 650 ? 1.15 : 1.4;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxRatio));
       }
     } catch { /* renderer not ready — non-fatal */ }
     // Faster settle so the bounded sim reaches rest sooner (less churn).
@@ -1498,9 +1531,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
-          const labelMode = distance > 1150 ? "hidden" : distance > 560 ? "focus" : "all";
-          const linkMode = distance > 900 ? "sparse" : distance > 420 ? "focus" : "all";
-          const relationLabelMode = distance > RELATION_LABEL_DISTANCE ? "hidden" : distance > 180 ? "focus" : "all";
+          const labelMode = distance > 980 ? "hidden" : distance > 500 ? "focus" : "all";
+          const linkMode = distance > 860 ? "sparse" : distance > 400 ? "focus" : "all";
+          const relationLabelMode = distance > 420 ? "hidden" : distance > 220 ? "focus" : "all";
           const nodeCount = graphDataRef.current.nodes?.length || 0;
           const labelBudget = getAdaptiveLabelLimit(labelMode, nodeCount);
           const scoreLabelNode = (node) => {
@@ -1737,6 +1770,37 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.width(width);
     fg.height(height);
   }, [height, width]);
+
+  useEffect(() => {
+    const fg = fgRef.current;
+    const el = containerRef.current;
+    if (!fg || !el) return undefined;
+
+    let frame = 0;
+    let cancelled = false;
+    const repair = () => {
+      if (cancelled || !fgRef.current || !containerRef.current) return;
+      const current = fgRef.current;
+      const box = containerRef.current.getBoundingClientRect();
+      const nextW = Math.max(1, Math.round(box.width || width || window.innerWidth || 1));
+      const nextH = Math.max(1, Math.round(box.height || height || window.innerHeight || 1));
+      current.width(nextW);
+      current.height(nextH);
+      try {
+        current.resumeAnimation?.();
+        if (frame === 1 || frame === 4) current.d3ReheatSimulation?.();
+      } catch (_error) {
+        // Repaint repair is best-effort; the graph remains usable if unsupported.
+      }
+      frame += 1;
+      if (frame < 7) window.requestAnimationFrame(repair);
+    };
+
+    window.requestAnimationFrame(repair);
+    return () => {
+      cancelled = true;
+    };
+  }, [graphData, height, width]);
 
   useEffect(() => {
     withPausedAnimation((fg) => {

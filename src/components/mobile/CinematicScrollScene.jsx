@@ -5,7 +5,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 /**
  * CinematicScrollScene — reusable scroll-scrubbed cinematic (Apple-style).
- * A pinned full-screen <canvas> plays a preloaded webp frame sequence on scroll.
+ * A pinned full-screen <canvas> plays a preloaded webp frame sequence on scroll,
+ * or a muted video can be scrubbed by scroll via `videoSrc`.
  * A sleek right-side narration rail reveals script lines top→bottom as you scrub.
  * Reduced-motion / mobile → a single static frame with a headline.
  * Auto-applies the global "cinematic-mode" look (nav hide + letterbox) while in view.
@@ -13,6 +14,8 @@ gsap.registerPlugin(ScrollTrigger);
  * Props:
  *   frameDir      — public dir holding f_001.webp … (no leading slash)
  *   frameCount    — number of frames
+ *   videoSrc      — optional public video URL for scroll-scrubbing
+ *   posterSrc     — optional fallback poster for reduced-motion/mobile
  *   steps         — [{ at: 0..1, label, sub?, accent? }] narration beats
  *   staticFrame   — frame index shown in the reduced-motion fallback
  *   staticHeadline— headline shown in the reduced-motion fallback
@@ -21,6 +24,8 @@ gsap.registerPlugin(ScrollTrigger);
 const CinematicScrollScene = ({
   frameDir,
   frameCount,
+  videoSrc = '',
+  posterSrc = '',
   steps = [],
   staticFrame = 0,
   staticHeadline = '',
@@ -38,6 +43,7 @@ const CinematicScrollScene = ({
   const [reduced, setReduced] = useState(false);
 
   const framePath = (i) => `/${frameDir}/f_${String(i + 1).padStart(3, '0')}.webp`;
+  const hasVideo = Boolean(videoSrc);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -47,11 +53,24 @@ const CinematicScrollScene = ({
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    const video = hasVideo ? document.createElement('video') : null;
     const images = [];
     let loaded = 0;
     const state = { frame: 0 };
 
     const draw = () => {
+      if (video) {
+        const cw = window.innerWidth, ch = window.innerHeight;
+        const vw = video.videoWidth || 1920;
+        const vh = video.videoHeight || 1080;
+        const ir = vw / vh, cr = cw / ch;
+        let w, h, x, y;
+        if (cr > ir) { w = cw; h = cw / ir; x = 0; y = (ch - h) / 2; }
+        else { h = ch; w = ch * ir; x = (cw - w) / 2; y = 0; }
+        ctx.clearRect(0, 0, cw, ch);
+        try { ctx.drawImage(video, x, y, w, h); } catch { /* wait for decodable frame */ }
+        return;
+      }
       const img = images[Math.round(state.frame)];
       if (!img || !img.complete) return;
       const cw = window.innerWidth, ch = window.innerHeight;
@@ -71,12 +90,23 @@ const CinematicScrollScene = ({
       draw();
     };
 
-    const makeOnLoad = (i) => () => { loaded++; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
-    for (let i = 0; i < frameCount; i++) {
-      const img = new Image();
-      img.src = framePath(i);
-      img.onload = makeOnLoad(i);
-      images[i] = img;
+    if (video) {
+      video.src = videoSrc;
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      video.crossOrigin = 'anonymous';
+      video.addEventListener('loadedmetadata', draw, { once: true });
+      video.addEventListener('loadeddata', draw, { once: true });
+      video.load();
+    } else {
+      const makeOnLoad = (i) => () => { loaded++; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
+      for (let i = 0; i < frameCount; i++) {
+        const img = new Image();
+        img.src = framePath(i);
+        img.onload = makeOnLoad(i);
+        images[i] = img;
+      }
     }
 
     window.addEventListener('resize', resize);
@@ -100,7 +130,23 @@ const CinematicScrollScene = ({
     });
     // frame scrub spans the whole timeline (duration 1) so step reveals can be
     // positioned by their `at` fraction and all complete before the pin releases.
-    tl.to(state, { frame: frameCount - 1, duration: 1, ease: 'none', onUpdate: draw }, 0);
+    if (video) {
+      tl.to(state, {
+        frame: 1,
+        duration: 1,
+        ease: 'none',
+        onUpdate: () => {
+          const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+          if (duration) {
+            const target = Math.min(duration - 0.04, Math.max(0, state.frame * duration));
+            if (Math.abs(video.currentTime - target) > 0.035) video.currentTime = target;
+          }
+          draw();
+        },
+      }, 0);
+    } else {
+      tl.to(state, { frame: frameCount - 1, duration: 1, ease: 'none', onUpdate: draw }, 0);
+    }
 
     // narration reveals ride the SAME scrubbed timeline (fade/slide IN, then stay)
     stepRefs.current.forEach((el, idx) => {
@@ -120,7 +166,7 @@ const CinematicScrollScene = ({
       document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasVideo, videoSrc]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked
@@ -128,7 +174,11 @@ const CinematicScrollScene = ({
     return (
       <section className="relative w-full overflow-hidden bg-[#05070f]">
         <div className="relative h-[72svh] w-full overflow-hidden">
-          <img src={framePath(staticFrame)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          {hasVideo ? (
+            <video src={videoSrc} poster={posterSrc} className="absolute inset-0 h-full w-full object-cover" muted playsInline autoPlay loop preload="metadata" />
+          ) : (
+            <img src={framePath(staticFrame)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/20 to-[#05070f]/30" />
           <div className="absolute inset-x-0 bottom-0 p-6">
             {title && <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/50">{actLabel} · {title}</p>}

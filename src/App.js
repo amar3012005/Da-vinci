@@ -1,25 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import UpdateBanner from './components/hivemind/UpdateBanner';
-import DavinciHomepage from './components/DavinciHomepage';
-import AboutPage from './components/AboutPage';
-import UnderProgress from './components/UnderProgress';
-import Terms from './components/Terms';
-import PrivacyPage from './pages/PrivacyPage';
-import Navbar from './components/Navbar';
-import DemoPage from './components/DemoPage';
-import ResearchIndex from './components/ResearchIndex';
-import BenchmarkResearch from './components/BenchmarkResearch';
-import IcarusResearch from './components/IcarusResearch';
-import CsiResearch from './components/CsiResearch';
-import SolutionPage from './components/SolutionPage';
-import BenchmarkPage from './components/BenchmarkPage';
-import VoiceAgentTestPage from './components/testing/VoiceAgentTestPage';
-import TestingIndexPage from './components/testing/TestingIndexPage';
-import { bundbTestConfig, davinciTestConfig } from './components/testing/testConfigs';
-
-// Portal Component for Iframe Persistence
-import PortalLayout from './components/PortalLayout';
+import MobileHomepage from './components/mobile/MobileHomepage';
 
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
@@ -49,13 +32,21 @@ const HivemindExternalRedirect = () => {
   return <div className="min-h-screen bg-[#0a0a0a]" />;
 };
 
-const Layout = ({ children }) => (
-  <div className="min-h-screen bg-black text-white">
-    <Navbar />
-    <div className="pt-24">
-      {children}
-    </div>
-  </div>
+const MarketingHomepage = () => (
+  <>
+    <Helmet>
+      <title>SINGULANCE — AI Workforce That Runs Inside Memory</title>
+      <meta
+        name="description"
+        content="SINGULANCE — the AI operating layer for regulated Europe. Run your institution as an AI company: a sovereign, GDPR-compliant AI workforce that runs inside memory."
+      />
+      <link rel="canonical" href="https://singulancelabs.com/" />
+    </Helmet>
+    <h1 className="sr-only">
+      SINGULANCE — AI workforce that runs inside memory. The AI operating layer for regulated Europe.
+    </h1>
+    <MobileHomepage />
+  </>
 );
 
 function App() {
@@ -69,27 +60,7 @@ function App() {
     <Router>
       <UpdateBanner />
       <Routes>
-        <Route path="/" element={PRODUCT_HOST ? <DavinciHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <DavinciHomepage />)} />
-        <Route path="/about" element={<Layout><AboutPage /></Layout>} />
-        <Route path="/underprogress" element={<UnderProgress />} />
-        <Route path="/terms" element={<Layout><Terms /></Layout>} />
-        <Route path="/privacy" element={<Layout><PrivacyPage /></Layout>} />
-        <Route path="/demo" element={<DemoPage />} />
-        <Route path="/research" element={<ResearchIndex />} />
-        <Route path="/benchmark" element={<BenchmarkResearch />} />
-        <Route path="/research/icarus" element={<IcarusResearch />} />
-        <Route path="/research/cognitive-swarm-intelligence" element={<CsiResearch />} />
-        <Route path="/solutions/:field" element={<SolutionPage />} />
-        <Route path="/benchmark" element={<BenchmarkPage />} />
-        <Route path="/test" element={<TestingIndexPage />} />
-        <Route
-          path="/test/davinci"
-          element={<VoiceAgentTestPage config={davinciTestConfig.config} brand={davinciTestConfig.brand} />}
-        />
-        <Route
-          path="/test/bundb"
-          element={<VoiceAgentTestPage config={bundbTestConfig.config} brand={bundbTestConfig.brand} />}
-        />
+        <Route path="/" element={PRODUCT_HOST ? <MarketingHomepage /> : (isHivemindHost ? <React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindRedirect /></React.Suspense> : <MarketingHomepage />)} />
 
         {/* HIVEMIND — only served on the HIVEMIND subdomain; every /hivemind* hit
             on the marketing domain hard-redirects to HIVEMIND_SITE_HOST. */}
@@ -112,18 +83,8 @@ function App() {
           />
         </Route>
 
-        {/* PORTAL ROUTES */}
-        <Route
-          path="/enterprise/*"
-          element={<PortalLayout targetUrl="https://enterprise.davinciai.eu" />}
-        />
-        <Route
-          path="/prometheus/*"
-          element={<PortalLayout targetUrl="https://prometheus.davinciai.eu" />}
-        />
-
         {/* Catch all */}
-        <Route path="*" element={<DavinciHomepage />} />
+        <Route path="*" element={<MarketingHomepage />} />
       </Routes>
     </Router>
   );

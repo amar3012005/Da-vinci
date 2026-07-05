@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Server, FileText } from 'lucide-react';
-import { GlobeCdn } from '../../ui/cobe-globe-cdn';
+import { GlobeCdn } from './GlobeCdn';
 
 /**
  * ScrollScrubGlobe — the "Sovereign Descent" cinematic FPV film (Higgsfield /

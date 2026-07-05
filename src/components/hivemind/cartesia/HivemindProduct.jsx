@@ -509,6 +509,8 @@ const Sovereign = () => (
     <CinematicScrollScene
       frameDir="fall-frames"
       frameCount={193}
+      videoSrc="/media/sovereign-memory.mp4"
+      posterSrc="/media/sovereign-memory-poster.jpg"
       steps={SOVEREIGN_STEPS}
       title="MEMORY"
       subtitle="Sovereignty · 08"
@@ -520,9 +522,9 @@ const Sovereign = () => (
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(${PAPER}, rgba(5,7,15,0))` }} />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(rgba(5,7,15,0), ${PAPER})` }} />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,125,255,0.05),rgba(5,7,15,0.48)_62%,rgba(5,7,15,0.78))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(17,125,255,0.03),rgba(5,7,15,0.36)_58%,rgba(5,7,15,0.82))]" />
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6 text-center">
-        <div className="max-w-4xl rounded-[32px] border border-white/18 bg-[#FBFBF8]/72 px-6 py-8 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-md md:px-12">
+        <div className="max-w-4xl rounded-[32px] border border-white/42 bg-[#FBFBF8]/54 px-6 py-8 shadow-[0_28px_90px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl md:px-12">
           <p className="font-mono text-[11px] uppercase tracking-[0.3em]" style={{ color: BLUE }}>⟩ sovereignty · 08</p>
           <h2 className="mx-auto mt-5 max-w-3xl font-['Space_Grotesk'] text-4xl font-semibold leading-tight tracking-tight md:text-6xl" style={{ color: INK }}>
             Memory stays<br />inside your walls
@@ -539,7 +541,7 @@ const Sovereign = () => (
               <motion.div key={label}
                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                 transition={{ delay: 0.1 + i * 0.08, duration: 0.5, ease }}
-                className="flex flex-col items-center gap-2.5 rounded-xl border border-[#0a0a0a]/10 bg-white/80 px-3 py-4">
+                className="flex flex-col items-center gap-2.5 rounded-xl border border-white/50 bg-white/72 px-3 py-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur">
                 <Icon size={19} style={{ color: BLUE }} />
                 <span className="text-[12px] font-medium text-[#0a0a0a]/85">{label}</span>
               </motion.div>

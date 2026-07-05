@@ -249,17 +249,22 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
       initial={{ x: 320, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 320, opacity: 0 }}
-      className="absolute top-0 right-0 w-[340px] h-full bg-white border-l border-[#e3e0db] shadow-[-4px_0_20px_rgba(0,0,0,0.06)] z-20 overflow-y-auto"
+      className="absolute top-0 right-0 w-[min(360px,100vw)] h-full bg-white/94 backdrop-blur-xl border-l border-[#e7e4dd] shadow-[-18px_0_58px_rgba(21,20,18,0.08)] z-20 overflow-y-auto"
     >
-      <div className="sticky top-0 bg-white border-b border-[#e3e0db] px-4 py-3 flex items-center justify-between">
-        <span className="text-xs font-mono text-[#a3a3a3] uppercase tracking-wider">
-          Memory Detail
-        </span>
+      <div className="sticky top-0 bg-[#fbfaf7]/95 backdrop-blur-xl border-b border-[#e7e4dd] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]">
+            <Network size={15} />
+          </span>
+          <span className="text-xs font-mono text-[#8f8f8f] uppercase tracking-wider">
+            Memory Detail
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           {deletable && onDelete && (
             <button
               onClick={() => onDelete(node)}
-              className="p-1 rounded-lg hover:bg-red-50 text-[#a3a3a3] hover:text-red-600 transition-colors"
+              className="p-1.5 rounded-lg border border-transparent hover:border-red-100 hover:bg-red-50 text-[#a3a3a3] hover:text-red-600 transition-colors"
               title="Permanently delete this memory"
             >
               <Trash2 size={14} />
@@ -267,9 +272,9 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
           )}
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#f3f1ec] transition-colors"
+            className="p-1.5 rounded-lg border border-transparent hover:border-[#cfe2ff] hover:bg-[#e8f1ff] transition-colors"
           >
-            <X size={14} className="text-[#a3a3a3]" />
+            <X size={14} className="text-[#8f8f8f]" />
           </button>
         </div>
       </div>
@@ -284,18 +289,18 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
                   TYPE_COLORS[node.memoryType] || TYPE_COLORS.default,
               }}
             />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8f8f8f]">
               {node.memoryType || "memory"}
             </span>
           </div>
-          <h3 className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a] leading-snug">
+          <h3 className="text-[15px] font-semibold font-['Space_Grotesk'] text-[#111111] leading-snug">
             {node.title || "Untitled Memory"}
           </h3>
         </div>
 
         {/* Content */}
-        <div className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-3">
-          <p className="text-xs text-[#525252] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
+        <div className="bg-white border border-[#e7e4dd] rounded-2xl p-3 shadow-[0_10px_30px_rgba(21,20,18,0.04)]">
+          <p className="text-xs text-[#5f5f5f] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
             {node.content || "No content"}
           </p>
         </div>
@@ -306,7 +311,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
             {node.tags.map((t) => (
               <span
                 key={t}
-                className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-[#0a0a0a]/8 text-[#0a0a0a] border border-[#0a0a0a]/15"
+                className="px-2 py-1 rounded-lg text-[10px] font-mono bg-[#e8f1ff] text-[#2f83ff] border border-[#cfe2ff]"
               >
                 {t}
               </span>
@@ -323,10 +328,10 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
           ].map((s) => (
             <div
               key={s.label}
-              className="bg-[#faf9f4] border border-[#e3e0db] rounded-lg p-2 text-center"
+              className="bg-white border border-[#e7e4dd] rounded-2xl p-2 text-center shadow-[0_10px_30px_rgba(21,20,18,0.04)]"
             >
-              <p className="text-[10px] text-[#a3a3a3] font-mono">{s.label}</p>
-              <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">
+              <p className="text-[10px] text-[#8f8f8f] font-mono">{s.label}</p>
+              <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#111111]">
                 {s.value ?? "—"}
               </p>
             </div>
@@ -334,7 +339,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
         </div>
 
         {/* Temporal */}
-        <div className="flex items-center gap-2 text-[11px] text-[#a3a3a3] font-['Space_Grotesk']">
+        <div className="flex items-center gap-2 text-[11px] text-[#8f8f8f] font-['Space_Grotesk']">
           <Clock size={12} />
           <span>
             {node.daysSinceUpdate != null
@@ -349,7 +354,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
         {/* Relationships */}
         {(inbound.length > 0 || outbound.length > 0) && (
           <div>
-            <p className="text-[10px] font-mono text-[#a3a3a3] uppercase tracking-wider mb-2">
+            <p className="text-[10px] font-mono text-[#8f8f8f] uppercase tracking-wider mb-2">
               Relationships
             </p>
             <div className="space-y-1.5">
@@ -362,7 +367,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
                   <button
                     key={`out-${i}`}
                     onClick={() => onNavigate(targetId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#0a0a0a]/20 text-left transition-colors group"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white border border-[#e7e4dd] hover:border-[#cfe2ff] hover:bg-[#f4f8ff] text-left transition-colors group"
                   >
                     <GitBranch
                       size={10}
@@ -374,10 +379,10 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
                     >
                       {e.type}
                     </span>
-                    <span className="text-[9px] font-mono text-[#a3a3a3]">
+                    <span className="text-[9px] font-mono text-[#8f8f8f]">
                       ({((e.confidence || 0) * 100).toFixed(0)}%)
                     </span>
-                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#0a0a0a]">
+                    <span className="text-[11px] text-[#5f5f5f] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#2f83ff]">
                       {targetTitle}
                     </span>
                   </button>
@@ -392,7 +397,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
                   <button
                     key={`in-${i}`}
                     onClick={() => onNavigate(sourceId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#faf9f4] border border-[#e3e0db] hover:border-[#0a0a0a]/20 text-left transition-colors group"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white border border-[#e7e4dd] hover:border-[#cfe2ff] hover:bg-[#f4f8ff] text-left transition-colors group"
                   >
                     <GitBranch
                       size={10}
@@ -405,10 +410,10 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
                     >
                       ← {e.type}
                     </span>
-                    <span className="text-[9px] font-mono text-[#a3a3a3]">
+                    <span className="text-[9px] font-mono text-[#8f8f8f]">
                       ({((e.confidence || 0) * 100).toFixed(0)}%)
                     </span>
-                    <span className="text-[11px] text-[#525252] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#0a0a0a]">
+                    <span className="text-[11px] text-[#5f5f5f] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#2f83ff]">
                       {sourceTitle}
                     </span>
                   </button>
@@ -419,7 +424,7 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
         )}
 
         {/* Meta */}
-        <div className="text-[10px] text-[#a3a3a3] font-mono space-y-0.5">
+        <div className="text-[10px] text-[#8f8f8f] font-mono space-y-0.5">
           <p>ID: {node.id}</p>
           {node.sourcePlatform && <p>Source: {node.sourcePlatform}</p>}
           {node.project && <p>Project: {node.project}</p>}
@@ -518,11 +523,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     try { localStorage.setItem('hivemind:graphDim', graphDim); } catch {}
   }, [graphDim]);
   const [graphTheme, setGraphTheme] = useState(() => {
-    const stored = safeStorageGet("hm-graph-theme");
-    return stored === "day" ? "day" : "night";
+    const stored = safeStorageGet("hm-graph-theme-v2");
+    return stored === "night" ? "night" : "day";
   });
   useEffect(() => {
-    safeStorageSet("hm-graph-theme", graphTheme);
+    safeStorageSet("hm-graph-theme-v2", graphTheme);
   }, [graphTheme]);
   const { org } = useAuth();
   // Real org project names (user-scoped by the backend) for the Projects hub.
@@ -564,6 +569,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return () => { cancelled = true; };
   }, [org?.id]);
   const graphRef = useRef();
+  const graphShellRef = useRef(null);
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [rawEdges, setRawEdges] = useState([]);
   // Guards: prevent the mount fetch + the deferred warm fetch from both
@@ -574,6 +580,8 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [graphVisible, setGraphVisible] = useState(false);
+  const [graphViewState, setGraphViewState] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchInput, setSearchInput] = useState(""); // Immediate
   const [searchQuery, setSearchQuery] = useState(""); // Debounced
@@ -818,8 +826,23 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   }, [clusters, graphData.nodes.length]);
 
   useEffect(() => {
+    const el = graphShellRef.current;
+    if (typeof window === "undefined" || !el || !("IntersectionObserver" in window)) {
+      setGraphVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setGraphVisible(entry.isIntersecting),
+      { threshold: 0.04 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!graphVisible) return;
     fetchGraph();
-  }, [fetchGraph]);
+  }, [fetchGraph, graphVisible]);
 
   // Warm on entry. The 3D canvas can mount before the layout settles, which
   // historically left the graph blank until the user hit refresh manually.
@@ -829,13 +852,14 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     // Only fire the warm re-fetch if the first paint never happened (the
     // blank-canvas race this guards). If data already painted from cache or
     // the mount fetch, skip — no redundant second network round-trip.
+    if (!graphVisible) return undefined;
     const t = window.setTimeout(() => {
       if (!hasPaintedRef.current) fetchGraph();
     }, 650);
     return () => window.clearTimeout(t);
     // mount-only warm — fetchGraph identity is stable enough for this nudge
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [graphVisible]);
 
   // Render once, then DON'T re-poll or refetch while the user stays on the
   // page — no periodic interval, no refetch on tab-refocus. Rebuild+relayout on
@@ -1035,16 +1059,16 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
 
   const toolbarControlClass = graphTheme === "night"
     ? "border-[#382f2a] bg-[#0b0a09]/72 text-[#d5c8bc] shadow-[inset_0_1px_0_rgba(255,240,229,0.06)]"
-    : "border-[#ded8ce] bg-[#fffdf8]/78 text-[#525252] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]";
+    : "border-[#e6e3dc] bg-white/88 text-[#5f5f5f] shadow-[0_10px_30px_rgba(21,20,18,0.05),inset_0_1px_0_rgba(255,255,255,0.9)]";
   const toolbarActiveClass = graphTheme === "night"
     ? "bg-[#fff0e5] text-[#080808]"
-    : "bg-[#0a0a0a] text-white";
+    : "border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]";
   const toolbarMutedClass = graphTheme === "night"
     ? "text-[#8f8378] hover:text-[#fff0e5]"
-    : "text-[#737373] hover:text-[#0a0a0a]";
+    : "text-[#9a9a9a] hover:text-[#2f83ff]";
   const panelClass = graphTheme === "night"
     ? "border-[#2f2925] bg-[#080808]/82 text-[#e8dbcf] shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
-    : "border-[#e3e0db] bg-[#fffdf8]/86 text-[#2f2a24] shadow-[0_18px_58px_rgba(37,32,27,0.10)]";
+    : "border-[#e6e3dc] bg-white/90 text-[#1e1e1e] shadow-[0_18px_58px_rgba(21,20,18,0.08)]";
   const panelMutedText = graphTheme === "night" ? "text-[#9d9288]" : "text-[#8b857d]";
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
@@ -1055,46 +1079,55 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // black with coral accent; day = cream/charcoal).
   const floatingButtonClass = graphTheme === "night"
     ? "border-[#3a2e28] bg-[#0a0807]/85 text-[#fff0e5] hover:border-[#ff746d]/45 hover:bg-[#171110]/92 hover:text-[#ff8f7a] shadow-[0_18px_44px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,240,229,0.05)]"
-    : "border-[#d8d2c6] bg-[#fffdf8]/88 text-[#2a2520] hover:border-[#1a1410] hover:bg-[#0a0a0a] hover:text-white shadow-[0_18px_44px_rgba(37,32,27,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]";
+    : "border-[#d6e7ff] bg-white/90 text-[#2f83ff] hover:border-[#2f83ff]/45 hover:bg-[#e8f1ff] shadow-[0_18px_44px_rgba(47,131,255,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]";
+  const graphButtonClass = graphTheme === "night"
+    ? "border-[#2f2925] bg-[#0b0a09]/84 text-[#b9ada2] hover:text-[#fff0e5] hover:border-[#fff0e5]/20"
+    : "border-[#e6e3dc] bg-white/92 text-[#9a9a9a] hover:text-[#2f83ff] hover:border-[#cfe2ff] hover:bg-[#f4f8ff]";
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
       <PageWalkthrough pageKey="memory-graph-3d" steps={GRAPH_STEPS} />
       {/* ── Compact unified toolbar ── single row, theme-consistent ── */}
       <div
-        className={`shrink-0 border-b px-4 py-2 flex items-center gap-2 z-20 overflow-x-auto ${
+        className={`shrink-0 border-b px-3 sm:px-5 py-3 flex items-center gap-2.5 z-20 overflow-x-auto ${
           graphTheme === "night"
             ? "border-[#2f2925] bg-[linear-gradient(90deg,rgba(8,8,8,0.96),rgba(24,18,16,0.92)_48%,rgba(8,8,8,0.96))]"
-            : "border-[#e3e0db] bg-[linear-gradient(90deg,rgba(250,249,244,0.98),rgba(255,253,248,0.94)_50%,rgba(244,240,232,0.96))]"
+            : "border-[#e7e4dd] bg-[#fbfaf7]/95"
         }`}
         style={{
           backdropFilter: "blur(18px) saturate(150%)",
           boxShadow: graphTheme === "night"
             ? "0 14px 52px rgba(0,0,0,0.32), inset 0 -1px 0 rgba(255,240,229,0.03)"
-            : "0 12px 42px rgba(37,32,27,0.07), inset 0 -1px 0 rgba(255,255,255,0.75)",
+            : "0 14px 44px rgba(21,20,18,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
         }}
       >
         {/* Brand */}
-        <div className={`flex items-center gap-2 shrink-0 rounded-xl border px-2.5 py-1.5 ${toolbarControlClass}`}>
+        <div className={`flex items-center gap-3 shrink-0 rounded-2xl border px-3 py-2 ${toolbarControlClass}`}>
           <span
-            className="grid h-5 w-5 place-items-center rounded-lg"
+            className="grid h-8 w-8 place-items-center rounded-xl border"
             style={{
               background: graphTheme === "night"
                 ? "radial-gradient(circle at 35% 30%, rgba(255,240,229,0.22), rgba(255,105,97,0.18) 48%, rgba(255,105,97,0.04))"
-                : "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.92), rgba(10,10,10,0.08) 52%, rgba(10,10,10,0.03))",
+                : "linear-gradient(180deg, #eef6ff 0%, #e5f1ff 100%)",
+              borderColor: graphTheme === "night" ? "rgba(255,240,229,0.08)" : "#cfe2ff",
             }}
           >
-            <Network size={13} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#0a0a0a]"} />
+            <Network size={16} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#2f83ff]"} />
           </span>
-          <span className={`text-[13px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#0a0a0a]"}`}>
-            {t('memoryGraph.title', 'Memory Graph')}
+          <span className="flex flex-col leading-none">
+            <span className={`text-[14px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#111111]"}`}>
+              {t('memoryGraph.title', 'Memory Graph')}
+            </span>
+            <span className={`mt-1 text-[10px] font-mono uppercase tracking-[0.18em] whitespace-nowrap ${graphTheme === "night" ? "text-[#8f8378]" : "text-[#8f8f8f]"}`}>
+              3D memory atlas
+            </span>
           </span>
         </div>
 
         <div className={`h-5 w-px mx-1 shrink-0 ${graphTheme === "night" ? "bg-[#2f2925]" : "bg-[#e3e0db]"}`} />
 
         {/* Search */}
-        <div className="relative shrink-0" style={{ minWidth: 180, maxWidth: 240 }}>
+        <div className="relative shrink-0 hidden sm:block" style={{ minWidth: 210, maxWidth: 300 }}>
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
           <input
             type="text"
@@ -1104,7 +1137,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             className={`w-full pl-7 pr-2 py-1.5 border rounded-lg text-[11px] font-['Space_Grotesk'] focus:outline-none ${
               graphTheme === "night"
                 ? "border-[#2f2925] bg-[#080808] text-[#fff0e5] placeholder:text-[#746b63] focus:border-[#ff746d]/50"
-                : "border-[#e3e0db] bg-[#faf9f4] text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:border-[#0a0a0a]/35"
+                : "border-[#e6e3dc] bg-white text-[#111111] placeholder:text-[#a3a3a3] focus:border-[#2f83ff]/55 focus:ring-2 focus:ring-[#2f83ff]/10"
             }`}
           />
         </div>
@@ -1130,7 +1163,38 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           ))}
         </div>
 
-        {/* Scope moved to the vertical tier stack (top-right overlay) */}
+        <div className={`shrink-0 inline-flex items-center rounded-lg border p-0.5 ${toolbarControlClass}`}>
+          {[
+            { key: 'visible', label: 'All' },
+            { key: 'tier:organization', label: 'Org' },
+            { key: 'tier:project', label: 'Project' },
+            { key: 'tier:personal', label: 'Personal' },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setScope(option.key)}
+              className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                scope === option.key ? toolbarActiveClass : toolbarMutedClass
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {scope === 'tier:project' && (
+          <select
+            value={tierProject}
+            onChange={(e) => setTierProject(e.target.value)}
+            className={`hidden md:block shrink-0 rounded-lg border px-2 py-1.5 text-[10px] font-mono max-w-[170px] focus:outline-none ${toolbarControlClass}`}
+          >
+            <option value="">All my projects</option>
+            {(accessibleProjects || []).map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
 
         {/* Action buttons */}
 
@@ -1169,7 +1233,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   active
                     ? option.key === "night"
                       ? "bg-[#0a0a0a] text-[#fff7ed]"
-                      : "bg-[#efe9dd] text-[#0a0a0a]"
+                      : toolbarActiveClass
                     : toolbarMutedClass
                 }`}
                 title={`${option.label} graph mode`}
@@ -1194,7 +1258,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           onClick={() => setIsLiveMode((v) => !v)}
           className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono border ${
             isLiveMode
-              ? "border-[#5e7c62]/45 bg-[#5e7c62]/14 text-[#6fb879]"
+              ? toolbarActiveClass
               : toolbarControlClass
           }`}
           title={isLiveMode ? "Live updates on" : "Paused"}
@@ -1237,10 +1301,18 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             <span>· {stats.edges} edges</span>
           </div>
         )}
+        {graphDim === "3d" && graphViewState && (
+          <div className={`hidden lg:flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-mono ${toolbarControlClass}`}>
+            <span className={panelMutedText}>Labels</span>
+            <span className={graphTheme === "night" ? "text-[#fff0e5]" : "text-[#2f83ff]"}>
+              {graphViewState.labelMode}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Graph canvas */}
-      <div className="flex-1 relative">
+      <div ref={graphShellRef} className="flex-1 relative">
         <button
           type="button"
           onClick={() => {
@@ -1310,49 +1382,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           </div>
         )}
 
-        {/* Tier scope switcher — vertical stack, top right. The graph scopes
-            to ONE hierarchy tier; ALL = the merged visible set (personal +
-            org-wide + the user's accessible projects), identical to what the
-            Memories list counts. */}
-        <div className="absolute top-16 right-4 z-20 flex flex-col gap-1.5">
-          {[
-            { key: 'visible', label: 'ALL' },
-            { key: 'tier:organization', label: 'Org-level' },
-            { key: 'tier:project', label: 'Project-level' },
-            { key: 'tier:personal', label: 'Personal-level' },
-          ].map((option) => (
-            <React.Fragment key={option.key}>
-              <button
-                type="button"
-                onClick={() => setScope(option.key)}
-                className={`rounded-lg border px-3 py-1.5 text-[11px] font-mono text-left transition-colors ${
-                  scope === option.key
-                    ? 'border-[#117dff]/40 bg-[#117dff]/15 text-[#117dff]'
-                    : `${toolbarControlClass} ${toolbarMutedClass} hover:opacity-90`
-                }`}
-              >
-                {option.label}
-              </button>
-              {/* Project picker — slides in under the Project-level button.
-                  Lists only the user's role-scoped projects (admins see all,
-                  members only invited/visible ones). '' = all of them. */}
-              {option.key === 'tier:project' && scope === 'tier:project' && (
-                <select
-                  value={tierProject}
-                  onChange={(e) => setTierProject(e.target.value)}
-                  className={`rounded-lg border px-2 py-1.5 text-[11px] font-mono max-w-[180px] ${toolbarControlClass}`}
-                >
-                  <option value="">All my projects</option>
-                  {(accessibleProjects || []).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-
-        {graphData.nodes.length > 0 && graphDim === '3d' && (
+        {graphVisible && graphData.nodes.length > 0 && graphDim === '3d' && (
           <MemoryGraph3D
             ref={graphRef}
             graphData={graphData}
@@ -1373,7 +1403,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               setSelectedNode(null);
               setHoveredNode(null);
             }}
-            onViewStateChange={undefined}
+            onViewStateChange={setGraphViewState}
             backgroundColor="rgba(0,0,0,0)"
             theme={graphTheme === "night" ? "atlas" : "day"}
             width={
@@ -1382,12 +1412,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                 : 800
             }
             height={
-              typeof window !== "undefined" ? window.innerHeight - 52 : 600
+              typeof window !== "undefined" ? window.innerHeight - 66 : 600
             }
           />
         )}
 
-        {graphData.nodes.length > 0 && is2D && (
+        {graphVisible && graphData.nodes.length > 0 && is2D && (
           <div
             className="absolute inset-0"
             style={{
@@ -1417,7 +1447,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   : 800
               }
               height={
-                typeof window !== "undefined" ? window.innerHeight - 52 : 600
+                typeof window !== "undefined" ? window.innerHeight - 66 : 600
               }
             />
           </div>
@@ -1426,12 +1456,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Organic constellation view — explicit viewport sizing (mirrors the
             2D/3D canvases) so it centers correctly instead of inheriting an
             over-tall container. */}
-        {graphData.nodes.length > 0 && isMoss && (
+        {graphVisible && graphData.nodes.length > 0 && isMoss && (
           <div
             className="absolute top-0 left-0 overflow-hidden"
             style={{
               width: typeof window !== 'undefined' ? window.innerWidth - (selectedNode ? 340 : 0) : 800,
-              height: typeof window !== 'undefined' ? window.innerHeight - 52 : 600,
+              height: typeof window !== 'undefined' ? window.innerHeight - 66 : 600,
             }}
           >
             <MemoryMoss
@@ -1685,15 +1715,15 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
           {/* Cluster sidebar toggle */}
           {clusters.length > 1 && (
             <button
               onClick={() => setShowClusterPanel((v) => !v)}
-              className={`w-8 h-8 rounded-lg backdrop-blur border flex items-center justify-center transition-colors mb-1 ${
+              className={`w-9 h-9 rounded-xl backdrop-blur border flex items-center justify-center transition-colors mb-1 shadow-[0_12px_32px_rgba(21,20,18,0.07)] ${
                 showClusterPanel
-                  ? "bg-[#0a0a0a]/8 border-[#0a0a0a]/20 text-[#0a0a0a]"
-                  : "bg-white/90 border-[#e3e0db] text-[#a3a3a3] hover:text-[#525252]"
+                  ? toolbarActiveClass
+                  : graphButtonClass
               }`}
               title="Toggle mind groups panel"
             >
@@ -1717,7 +1747,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             <button
               key={i}
               onClick={action}
-              className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur border border-[#e3e0db] flex items-center justify-center text-[#a3a3a3] hover:text-[#525252] transition-colors"
+              className={`w-9 h-9 rounded-xl backdrop-blur border flex items-center justify-center transition-colors shadow-[0_12px_32px_rgba(21,20,18,0.07)] ${graphButtonClass}`}
             >
               <Icon size={14} />
             </button>
@@ -1747,13 +1777,23 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -260, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute left-3 top-14 bottom-3 w-[240px] z-40 bg-white/95 backdrop-blur border border-[#e3e0db] rounded-xl shadow-lg overflow-hidden flex flex-col"
+              className={`absolute left-3 top-16 bottom-3 w-[min(280px,calc(100vw-24px))] z-40 backdrop-blur-xl border rounded-2xl overflow-hidden flex flex-col ${panelClass}`}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-[#e3e0db]">
-                <span className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] tracking-wide uppercase">
-                  Mind Groups
-                </span>
-                <button onClick={() => setShowClusterPanel(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors">
+              <div className={`flex items-center justify-between px-3.5 py-3 border-b ${graphTheme === "night" ? "border-[#2f2925]" : "border-[#e7e4dd]"}`}>
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg border border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]">
+                    <Layers size={14} />
+                  </span>
+                  <div>
+                    <span className={`block text-xs font-semibold font-['Space_Grotesk'] tracking-wide ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#111111]"}`}>
+                      Mind Groups
+                    </span>
+                    <span className={`block text-[10px] font-mono ${panelMutedText}`}>
+                      {clusters.filter((c) => c.id !== "_orphan").length} clusters
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setShowClusterPanel(false)} className={`${toolbarMutedClass} transition-colors`}>
                   <X size={14} />
                 </button>
               </div>
@@ -1774,8 +1814,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                         key={c.id}
                         className={`rounded-lg px-2.5 py-2 cursor-pointer transition-all border ${
                           isActive
-                            ? "border-[#0a0a0a]/20 bg-[#0a0a0a]/6"
-                            : "border-transparent hover:bg-[#f5f4f0]"
+                            ? "border-[#cfe2ff] bg-[#e8f1ff]"
+                            : graphTheme === "night"
+                              ? "border-transparent hover:bg-[#151312]"
+                              : "border-transparent hover:bg-[#f6f8fb]"
                         }`}
                         onClick={() => {
                           setClusterFilter(isActive ? null : c.id);
@@ -1789,19 +1831,19 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                         <div className="flex items-center gap-2 mb-1">
                           <span
                             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: color }}
+                            style={{ backgroundColor: isActive ? "#2f83ff" : color }}
                           />
-                          <span className="text-[11px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate flex-1">
+                          <span className={`text-[11px] font-semibold font-['Space_Grotesk'] truncate flex-1 ${graphTheme === "night" ? "text-[#eaded2]" : "text-[#242424]"}`}>
                             {label}
                           </span>
-                          <span className="text-[10px] font-mono text-[#a3a3a3]">{c.size}</span>
+                          <span className={`text-[10px] font-mono ${panelMutedText}`}>{c.size}</span>
                         </div>
                         {isActive && topNodes.length > 0 && (
                           <div className="ml-4 mt-1 space-y-0.5">
                             {topNodes.map((n) => (
                               <div
                                 key={n.id}
-                                className="text-[10px] text-[#525252] truncate cursor-pointer hover:text-[#0a0a0a] transition-colors"
+                                className={`text-[10px] truncate cursor-pointer transition-colors ${graphTheme === "night" ? "text-[#9d9288] hover:text-[#fff0e5]" : "text-[#686868] hover:text-[#2f83ff]"}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNode(n);
@@ -1819,12 +1861,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                   })}
                 {/* Orphan bucket */}
                 {clusters.find((c) => c.id === "_orphan") && (
-                  <div className="rounded-lg px-2.5 py-1.5 text-[10px] text-[#a3a3a3] italic">
+                  <div className={`rounded-lg px-2.5 py-1.5 text-[10px] italic ${panelMutedText}`}>
                     + {clusters.find((c) => c.id === "_orphan")?.size || 0} unlinked nodes
                   </div>
                 )}
               </div>
-              <div className="px-3 py-2 border-t border-[#e3e0db] text-[10px] text-[#a3a3a3] font-mono">
+              <div className={`px-3 py-2 border-t text-[10px] font-mono ${panelMutedText} ${graphTheme === "night" ? "border-[#2f2925]" : "border-[#e7e4dd]"}`}>
                 {clusters.filter((c) => c.id !== "_orphan").length} clusters · {graphData.nodes.length} nodes
               </div>
             </motion.div>
@@ -1834,40 +1876,40 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {/* Node hover tooltip */}
         {hoveredNode && !selectedNode && (
           <div
-            className="absolute z-30 bg-white/95 backdrop-blur border border-[#e3e0db] rounded-lg shadow-lg px-3 py-2 pointer-events-none"
+            className={`absolute z-30 backdrop-blur-xl border rounded-2xl px-3 py-2 pointer-events-none ${panelClass}`}
             style={{
               right: 16,
               top: 84,
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="w-3 h-3 flex items-center justify-center">
-                {hoveredNode.nodeLayer === 'tara-insight' && <Star size={10} className="text-[#24221f]" />}
-                {hoveredNode.nodeLayer === 'tara' && <Hexagon size={10} className="text-[#4a4640]" />}
-                {hoveredNode.nodeLayer === 'fact' && <div className="w-2 h-2 rotate-45 bg-[#5f5b53]" />}
-                {hoveredNode.nodeLayer === 'observation' && <Square size={10} className="text-[#7a746b]" />}
-                {(!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory') && <Circle size={10} className="text-[#36332d]" />}
+              <span className="w-5 h-5 rounded-lg border border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff] flex items-center justify-center">
+                {hoveredNode.nodeLayer === 'tara-insight' && <Star size={10} />}
+                {hoveredNode.nodeLayer === 'tara' && <Hexagon size={10} />}
+                {hoveredNode.nodeLayer === 'fact' && <div className="w-2 h-2 rotate-45 bg-current" />}
+                {hoveredNode.nodeLayer === 'observation' && <Square size={10} />}
+                {(!hoveredNode.nodeLayer || hoveredNode.nodeLayer === 'memory') && <Circle size={10} />}
               </span>
-              <p className="text-xs font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate max-w-[180px]">
+              <p className={`text-xs font-semibold font-['Space_Grotesk'] truncate max-w-[180px] ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#111111]"}`}>
                 {hoveredNode.title || 'Untitled'}
               </p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider">
+              <p className={`text-[10px] font-mono uppercase tracking-wider ${panelMutedText}`}>
                 {hoveredNode.nodeLayer || hoveredNode.memoryType || 'memory'}
               </p>
               {hoveredNode.daysSinceUpdate != null && (
-                <p className="text-[10px] text-[#525252] font-['Space_Grotesk']">
+                <p className={`text-[10px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#cabdb1]" : "text-[#686868]"}`}>
                   {hoveredNode.daysSinceUpdate.toFixed(0)} days ago
                 </p>
               )}
               {hoveredNode.importanceScore != null && (
-                <p className="text-[10px] text-[#525252] font-['Space_Grotesk']">
+                <p className={`text-[10px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#cabdb1]" : "text-[#686868]"}`}>
                   Importance: {hoveredNode.importanceScore.toFixed(2)}
                 </p>
               )}
               {hoveredNode.strength != null && (
-                <p className="text-[10px] text-[#525252] font-['Space_Grotesk']">
+                <p className={`text-[10px] font-['Space_Grotesk'] ${graphTheme === "night" ? "text-[#cabdb1]" : "text-[#686868]"}`}>
                   Strength: {hoveredNode.strength.toFixed(2)}
                 </p>
               )}

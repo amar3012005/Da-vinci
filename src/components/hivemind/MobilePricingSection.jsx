@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight, MessageCircle, FileText, Brain } from 'lucide-react';
-import { RaycastAnimatedBackground } from '../ui/raycast-animated-background';
+import { RaycastAnimatedBackground } from '../mobile/ui/raycast-animated-background';
 
 /**
  * MobilePricingSection - Carousel with side arrows and constant glowing gradient
