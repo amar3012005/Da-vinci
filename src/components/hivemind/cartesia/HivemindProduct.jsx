@@ -495,46 +495,99 @@ const Chapter = ({ n, id, eyebrow, title, body, stats, bullets, card, flip = fal
 
 /* ───────── sovereignty band ───────── */
 
-const Sovereign = () => {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
-  const gridY = useTransform(scrollYProgress, [0, 1], [-60, 60]);
+/* ScrollScrubFilm — the "Sovereign Descent" cinematic FPV film (GPT-Image-2
+ * diorama keyframes → Seedance image-to-video), scrubbed frame-for-frame by
+ * scroll. Desktop = scrub; touch / reduced-motion = static poster (iOS throttles
+ * video seeking). Static asset in /public/media, no runtime network. */
+function ScrollScrubFilm({ children }) {
+  const wrapRef = useRef(null);
+  const videoRef = useRef(null);
+  const [canScrub] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !window.matchMedia('(pointer: coarse)').matches
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+  useEffect(() => {
+    if (!canScrub) return undefined;
+    const v = videoRef.current, wrap = wrapRef.current;
+    if (!v || !wrap) return undefined;
+    let target = 0, cur = 0, dur = 0, raf = 0, alive = true;
+    const clamp = (x) => Math.max(0, Math.min(1, x));
+    const onMeta = () => { dur = v.duration || 0; };
+    v.addEventListener('loadedmetadata', onMeta);
+    if (v.readyState >= 1) onMeta();
+    const onScroll = () => {
+      const r = wrap.getBoundingClientRect();
+      const total = r.height - window.innerHeight;
+      target = total > 0 ? clamp(-r.top / total) : 0;
+    };
+    const tick = () => {
+      if (!alive) return;
+      cur += (target - cur) * 0.18;
+      if (dur) { const t = cur * (dur - 0.05); if (Math.abs(v.currentTime - t) > 0.02) { try { v.currentTime = t; } catch { /* seeking */ } } }
+      raf = requestAnimationFrame(tick);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll(); tick();
+    return () => { alive = false; cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); v.removeEventListener('loadedmetadata', onMeta); };
+  }, [canScrub]);
+
   return (
-    <section ref={ref} className="relative overflow-hidden bg-[#0a0a0a] py-28">
-      <motion.div className="pointer-events-none absolute inset-[-100px] opacity-[0.14]"
-        style={{ backgroundImage: 'radial-gradient(rgba(17,125,255,0.6) 1px, transparent 1px)', backgroundSize: '18px 18px', y: gridY }} />
-      <div className="relative mx-auto max-w-[1200px] px-6 text-center">
-        <Reveal>
+    <div ref={wrapRef} className="relative" style={{ height: canScrub ? '300vh' : 'auto' }}>
+      <div className={`${canScrub ? 'sticky top-0 h-screen' : 'relative min-h-[80vh]'} w-full overflow-hidden`}>
+        <video
+          ref={videoRef}
+          src="/media/sovereign-descent.mp4"
+          poster="/media/sovereign-descent-poster.jpg"
+          muted playsInline preload="auto" tabIndex={-1} aria-hidden="true"
+          autoPlay={!canScrub} loop={!canScrub}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* melt the warm-white film into the paper page above + below */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40" style={{ background: `linear-gradient(${PAPER}, rgba(251,251,248,0))` }} />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(rgba(251,251,248,0), ${PAPER})` }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const Sovereign = () => (
+  <section id="sovereignty" className="relative" style={{ background: PAPER }}>
+    <ScrollScrubFilm>
+      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
+        <div className="rounded-3xl bg-[#FBFBF8]/70 px-6 py-8 backdrop-blur-[2px] md:px-12">
           <p className="font-mono text-[11px] uppercase tracking-[0.3em]" style={{ color: BLUE }}>⟩ sovereignty · 08</p>
-          <h2 className="mx-auto mt-6 max-w-3xl font-['Space_Grotesk'] text-4xl font-semibold leading-tight tracking-tight text-white md:text-6xl">
-            <WordReveal text="Your memory never leaves your walls" />
+          <h2 className="mx-auto mt-5 max-w-3xl font-['Space_Grotesk'] text-4xl font-semibold leading-tight tracking-tight md:text-6xl" style={{ color: INK }}>
+            Your memory never<br />leaves your walls
           </h2>
-          <p className="mx-auto mt-6 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
+          <p className="mx-auto mt-5 max-w-xl text-[15px] font-light leading-relaxed text-[#4a4a4a]">
             EU-hosted in Frankfurt. GDPR-native. No US data transfer. Or take the engine
             inside your own infrastructure — full self-host, same sub-50ms recall.
           </p>
-        </Reveal>
-        <Reveal delay={0.15}>
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="mx-auto mt-8 grid max-w-2xl grid-cols-2 gap-3 md:grid-cols-4">
             {[
               [ShieldCheck, 'GDPR native'], [Globe, 'Frankfurt hosted'],
               [Database, 'Self-host option'], [Zap, 'Sub-50ms recall'],
             ].map(([Icon, label], i) => (
               <motion.div key={label}
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: 0.2 + i * 0.1, duration: 0.5, ease }}
-                whileHover={{ y: -4, borderColor: 'rgba(17,125,255,0.5)' }}
-                className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-6">
-                <Icon size={20} style={{ color: BLUE }} />
-                <span className="text-[12.5px] font-medium text-white/85">{label}</span>
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: 0.1 + i * 0.08, duration: 0.5, ease }}
+                className="flex flex-col items-center gap-2.5 rounded-xl border border-[#0a0a0a]/10 bg-white/80 px-3 py-4">
+                <Icon size={19} style={{ color: BLUE }} />
+                <span className="text-[12px] font-medium text-[#0a0a0a]/85">{label}</span>
               </motion.div>
             ))}
           </div>
-        </Reveal>
+        </div>
+        <div className="mt-6 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.24em] text-[#0a0a0a]/40">
+          <span className="h-px w-6 bg-[#0a0a0a]/25" /> scroll to descend <span className="h-px w-6 bg-[#0a0a0a]/25" />
+        </div>
       </div>
-    </section>
-  );
-};
+    </ScrollScrubFilm>
+  </section>
+);
 
 /* ───────── final CTA ───────── */
 
