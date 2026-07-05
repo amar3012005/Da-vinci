@@ -27,13 +27,26 @@ const DEFAULT_WS =
 const AAAS_HTTP =
   (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || `${_CORE_HTTP}/aaas`;
 
+// Deepgram Voice Agent engine (tara-deepgram service) — same host, /voice2 route.
+const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
+const DG_WS = `${DG_HTTP.replace(/^http/, 'ws')}/voice`;
+
+// Per-engine endpoints: Deepgram Agent (default) vs classic AaaS (Groq+Cartesia).
+const ENGINES = {
+  deepgram: { ws: DG_WS, http: DG_HTTP, label: 'Deepgram' },
+  classic: { ws: DEFAULT_WS, http: AAAS_HTTP, label: 'Classic' },
+};
+
 // What each mode means — shown as an overlay caption so the user knows on toggle.
 const MODE_DESC = {
   external: 'Agent acts as your employee — used for client or user interaction.',
   internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
 };
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = DEFAULT_WS }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null }) {
+  const [engine, setEngine] = useState('deepgram'); // 'deepgram' (Voice Agent) | 'classic' (AaaS)
+  const engineWs = wsBase || ENGINES[engine].ws;
+  const engineHttp = ENGINES[engine].http;
   const [active, setActive] = useState(false);
   const [state, setState] = useState('idle'); // idle|connecting|listening|thinking|talking
   const [transcript, setTranscript] = useState('');   // current-turn user STT
@@ -54,7 +67,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const previewAudioRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${AAAS_HTTP}/voices`)
+    fetch(`${engineHttp}/voices`)
       .then((r) => r.json())
       .then((d) => {
         const list = d.voices || [];
@@ -72,7 +85,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [engine]);
 
   // Reflect the org-wide selected skill on each toggle side.
   useEffect(() => {
@@ -104,14 +117,14 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const preview = useCallback(() => {
     if (!voiceId) return;
     setPreviewing(true);
-    const url = `${AAAS_HTTP}/voice-preview?voice_id=${encodeURIComponent(voiceId)}&language=${langFilter || 'en'}`;
+    const url = `${engineHttp}/voice-preview?voice_id=${encodeURIComponent(voiceId)}&language=${langFilter || 'en'}`;
     if (previewAudioRef.current) { try { previewAudioRef.current.pause(); } catch { /* noop */ } }
     const a = new Audio(url);
     previewAudioRef.current = a;
     a.onended = () => setPreviewing(false);
     a.onerror = () => setPreviewing(false);
     a.play().catch(() => setPreviewing(false));
-  }, [voiceId, langFilter]);
+  }, [voiceId, langFilter, engineHttp]);
 
   const wsRef = useRef(null);
   const micCtxRef = useRef(null);
@@ -180,7 +193,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     playCtxRef.current = playCtx;
     lastPlayRef.current = playCtx.currentTime;
 
-    const url = new URL(wsBase);
+    const url = new URL(engineWs);
     url.searchParams.set('user_id', userId);
     if (orgId) url.searchParams.set('org_id', orgId);
     url.searchParams.set('session_id', `tara_${Date.now()}`);
@@ -234,7 +247,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     };
     ws.onerror = () => setError('Connection error.');
     ws.onclose = () => { if (active) stopAll('closed'); };
-  }, [userId, orgId, language, langFilter, voiceId, mode, wsBase, playPcm, active, stopAll]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, engineWs, playPcm, active, stopAll]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -267,9 +280,21 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
-              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · self-hosted AaaS</p>
+              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · {engine === 'deepgram' ? 'Deepgram Voice Agent' : 'self-hosted AaaS'}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* engine: Deepgram Voice Agent (default) vs classic Groq+Cartesia AaaS */}
+              {!active && !wsBase && (
+                <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
+                  {Object.entries(ENGINES).map(([id, e]) => (
+                    <button key={id} type="button" onClick={() => setEngine(id)}
+                      title={id === 'deepgram' ? 'Deepgram Voice Agent — native turn-taking, Aura-2 voices' : 'Classic self-hosted AaaS — Groq STT + Cartesia TTS'}
+                      className={`px-2.5 py-1 leading-tight transition-colors ${engine === id ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
               {!active && (
                 <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
