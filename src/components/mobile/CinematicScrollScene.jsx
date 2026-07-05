@@ -20,6 +20,8 @@ gsap.registerPlugin(ScrollTrigger);
  *   staticFrame   — frame index shown in the reduced-motion fallback
  *   staticHeadline— headline shown in the reduced-motion fallback
  *   heightVh      — scroll length of the section (default 260)
+ *   theme         — 'dark' (default, original look) | 'light' (day-mode paper/ink,
+ *                    no cinematic-mode nav-hide/letterbox toggle)
  */
 const CinematicScrollScene = ({
   frameDir,
@@ -34,8 +36,16 @@ const CinematicScrollScene = ({
   subtitle = '',
   actLabel = 'Act I',
   accentColor = '#ff7a2f',
+  theme = 'dark',
   children = null,
 }) => {
+  const isLight = theme === 'light';
+  const bg = isLight ? '#FBFBF8' : '#05070f';
+  const inkStrong = isLight ? 'text-[#0a0a0a]/90' : 'text-white/90';
+  const inkFull = isLight ? 'text-[#0a0a0a]' : 'text-white';
+  const inkMuted = isLight ? 'text-[#52525b]/70' : 'text-white/45';
+  const dotDefault = isLight ? 'rgba(10,10,10,0.35)' : 'rgba(255,255,255,0.7)';
+  const railBorder = isLight ? 'border-[#e0dbd0]' : 'border-white/12';
   const wrapRef = useRef(null);
   const pinRef = useRef(null);
   const canvasRef = useRef(null);
@@ -113,6 +123,7 @@ const CinematicScrollScene = ({
     resize();
 
     const cine = (onState) => () => document.documentElement.classList.toggle('cinematic-mode', onState);
+    const noop = () => {};
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -122,10 +133,10 @@ const CinematicScrollScene = ({
         scrub: 0.5,
         pin: pinRef.current,
         invalidateOnRefresh: true,
-        onEnter: cine(true),
-        onEnterBack: cine(true),
-        onLeave: cine(false),
-        onLeaveBack: cine(false),
+        onEnter: isLight ? noop : cine(true),
+        onEnterBack: isLight ? noop : cine(true),
+        onLeave: isLight ? noop : cine(false),
+        onLeaveBack: isLight ? noop : cine(false),
       },
     });
     // frame scrub spans the whole timeline (duration 1) so step reveals can be
@@ -163,39 +174,46 @@ const CinematicScrollScene = ({
       window.removeEventListener('resize', resize);
       if (tl.scrollTrigger) tl.scrollTrigger.kill();
       tl.kill();
-      document.documentElement.classList.remove('cinematic-mode');
+      if (!isLight) document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVideo, videoSrc]);
+  }, [hasVideo, videoSrc, isLight]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked
     // below, so the story (and the per-field pain) survives without scrubbing.
     return (
-      <section className="relative w-full overflow-hidden bg-[#05070f]">
+      <section className="relative w-full overflow-hidden" style={{ background: bg }}>
         <div className="relative h-[72svh] w-full overflow-hidden">
           {hasVideo ? (
             <video src={videoSrc} poster={posterSrc} className="absolute inset-0 h-full w-full object-cover" muted playsInline autoPlay loop preload="metadata" />
           ) : (
             <img src={framePath(staticFrame)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05070f] via-[#05070f]/20 to-[#05070f]/30" />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: isLight
+                ? 'linear-gradient(to top, #FBFBF8, rgba(251,251,248,0.2), rgba(251,251,248,0.3))'
+                : 'linear-gradient(to top, #05070f, rgba(5,7,15,0.2), rgba(5,7,15,0.3))',
+            }}
+          />
           <div className="absolute inset-x-0 bottom-0 p-6">
-            {title && <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/50">{actLabel} · {title}</p>}
-            <h2 className="mt-2 font-['Space_Grotesk'] text-3xl font-semibold leading-tight text-white">{staticHeadline}</h2>
+            {title && <p className={`font-mono text-[10px] uppercase tracking-[0.42em] ${inkMuted}`}>{actLabel} · {title}</p>}
+            <h2 className={`mt-2 font-['Space_Grotesk'] text-3xl font-semibold leading-tight ${inkFull}`}>{staticHeadline}</h2>
             {subtitle && <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.28em]" style={{ color: `${accentColor}cc` }}>{subtitle}</p>}
           </div>
         </div>
 
         {steps.length > 0 && (
-          <ol className="relative mx-6 my-10 border-l border-white/12 pl-6">
+          <ol className={`relative mx-6 my-10 border-l pl-6 ${railBorder}`}>
             {steps.map((s, i) => (
               <li key={i} className="relative mb-7 last:mb-0">
                 <span
                   className="absolute -left-[29px] top-[7px] h-2.5 w-2.5 rounded-full"
-                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: 'rgba(255,255,255,0.7)' }}
+                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: dotDefault }}
                 />
-                <p className={`font-['Space_Grotesk'] text-[18px] font-medium leading-snug tracking-tight ${s.accent ? 'text-white' : 'text-white/90'}`}>{s.label}</p>
+                <p className={`font-['Space_Grotesk'] text-[18px] font-medium leading-snug tracking-tight ${s.accent ? inkFull : inkStrong}`}>{s.label}</p>
                 {s.sub && <p className="mt-1 font-mono text-[11px] tracking-[0.32em]" style={{ color: `${accentColor}cc` }}>{s.sub}</p>}
               </li>
             ))}
@@ -206,20 +224,34 @@ const CinematicScrollScene = ({
   }
 
   return (
-    <section ref={wrapRef} className="relative w-full bg-[#05070f]" style={{ height: `${heightVh}vh` }}>
+    <section ref={wrapRef} className="relative w-full" style={{ height: `${heightVh}vh`, background: bg }}>
       <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
         {/* scrim on the right so the rail reads over any frame */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[440px] bg-gradient-to-l from-[#05070f]/80 via-[#05070f]/30 to-transparent" />
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-[440px]"
+          style={{
+            background: isLight
+              ? 'linear-gradient(to left, rgba(251,251,248,0.85), rgba(251,251,248,0.3), transparent)'
+              : 'linear-gradient(to left, rgba(5,7,15,0.8), rgba(5,7,15,0.3), transparent)',
+          }}
+        />
 
         {/* left act label — vertical "THE FALL" stage marker */}
         {title && (
           <>
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[280px] bg-gradient-to-r from-[#05070f]/70 via-[#05070f]/20 to-transparent" />
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[280px]"
+              style={{
+                background: isLight
+                  ? 'linear-gradient(to right, rgba(251,251,248,0.7), rgba(251,251,248,0.2), transparent)'
+                  : 'linear-gradient(to right, rgba(5,7,15,0.7), rgba(5,7,15,0.2), transparent)',
+              }}
+            />
             <div className="pointer-events-none absolute left-8 top-1/2 z-10 -translate-y-1/2 md:left-12 lg:left-16">
-              <p className="font-mono text-[10px] uppercase tracking-[0.42em] text-white/45">{actLabel}</p>
+              <p className={`font-mono text-[10px] uppercase tracking-[0.42em] ${inkMuted}`}>{actLabel}</p>
               <h2
-                className="mt-3 font-['Space_Grotesk'] text-5xl font-bold uppercase leading-none tracking-tight text-white/90"
+                className={`mt-3 font-['Space_Grotesk'] text-5xl font-bold uppercase leading-none tracking-tight ${inkStrong}`}
                 style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
               >
                 {title}
@@ -233,7 +265,7 @@ const CinematicScrollScene = ({
 
         {/* right-side narration rail — script lines reveal top→bottom */}
         <div className="pointer-events-none absolute right-8 top-1/2 z-10 w-[340px] -translate-y-1/2 md:right-12 lg:right-16">
-          <ol className="relative ml-3 border-l border-white/12">
+          <ol className={`relative ml-3 border-l ${railBorder}`}>
             {steps.map((s, i) => (
               <li
                 key={i}
@@ -243,11 +275,11 @@ const CinematicScrollScene = ({
               >
                 <span
                   className="absolute -left-[5px] top-[7px] h-2.5 w-2.5 rounded-full"
-                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: 'rgba(255,255,255,0.7)' }}
+                  style={s.accent ? { background: accentColor, boxShadow: `0 0 12px ${accentColor}b3` } : { background: dotDefault }}
                 />
                 <p
                   className={`font-['Space_Grotesk'] text-[17px] font-medium leading-snug tracking-tight ${
-                    s.accent ? 'text-white' : 'text-white/90'
+                    s.accent ? inkFull : inkStrong
                   }`}
                 >
                   {s.label}

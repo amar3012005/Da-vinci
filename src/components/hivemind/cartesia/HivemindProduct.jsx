@@ -15,6 +15,7 @@ import Pricing from './Pricing';
 import DownloadMacButton from './DownloadMacButton';
 import ChatDemoCard from './ChatDemoCard';
 import MinimalGraphIcon from './MinimalGraphIcon';
+import CinematicScrollScene from '../../mobile/CinematicScrollScene';
 
 /**
  * HIVEMIND product cover — singulancelabs.com/hivemind
@@ -503,124 +504,57 @@ const SOVEREIGN_STEPS = [
   { at: 0.88, kicker: 'RECALL', title: 'Sub-50ms memory, sealed.', body: 'Every decision becomes searchable context without leaving the boundary you set.' },
 ];
 
-const Sovereign = () => {
-  const sectionRef = useRef(null);
-  const videoRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start start', 'end end'],
-  });
-  const [activeStep, setActiveStep] = useState(0);
+const SOVEREIGN_SCENE_STEPS = SOVEREIGN_STEPS.map((step, i) => ({
+  at: step.at,
+  label: step.title,
+  sub: step.kicker,
+  accent: i === 3,
+}));
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return undefined;
-    video.pause();
-    video.currentTime = 0;
-    const unsubscribe = scrollYProgress.on('change', (value) => {
-      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
-      if (duration) {
-        const target = Math.min(duration - 0.035, Math.max(0, value * duration));
-        if (Math.abs(video.currentTime - target) > 0.025) video.currentTime = target;
-      }
-      let idx = 0;
-      SOVEREIGN_STEPS.forEach((step, i) => {
-        if (value >= step.at) idx = i;
-      });
-      setActiveStep(idx);
-    });
-    return unsubscribe;
-  }, [scrollYProgress]);
-
-  return (
-    <section
-      id="sovereignty"
-      ref={sectionRef}
-      className="relative border-y border-[#e7e2d8] bg-[#FBFBF8]"
-      style={{ height: '420vh' }}
-    >
-      <div className="sticky top-0 flex min-h-screen items-center overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(17,125,255,0.035)_1px,transparent_1px),linear-gradient(180deg,rgba(17,125,255,0.026)_1px,transparent_1px)] bg-[size:42px_42px]" />
-        <div className="pointer-events-none absolute -right-20 top-10 font-['Space_Grotesk'] text-[34vw] font-bold leading-none text-[#0a0a0a]/[0.035]">08</div>
-        <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 px-6 py-16 lg:grid-cols-[0.92fr_1.08fr] lg:gap-12 lg:px-10 lg:py-20">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.42em]" style={{ color: BLUE }}>〉 sovereignty · 08</p>
-            <h2 className="mt-7 max-w-xl font-['Space_Grotesk'] text-4xl font-semibold leading-[0.96] tracking-[-0.055em] text-[#0a0a0a] sm:text-5xl md:text-7xl">
-              Memory stays inside your walls.
-            </h2>
-            <p className="mt-7 max-w-lg text-[17px] font-light leading-relaxed text-[#5f5c55]">
-              Scroll the deployment boundary. Every frame moves the engine from public cloud story to sovereign, private memory infrastructure.
-            </p>
-            <div className="mt-9 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                [ShieldCheck, 'GDPR native'],
-                [Globe, 'Frankfurt'],
-                [Database, 'BYOK / self-host'],
-                [Zap, '<50ms recall'],
-              ].map(([Icon, label]) => (
-                <div key={label} className="rounded-2xl border border-[#e4ded2] bg-white/82 p-4 shadow-[0_18px_42px_rgba(17,24,39,0.055)]">
-                  <Icon size={18} style={{ color: BLUE }} />
-                  <p className="mt-3 text-[12px] font-semibold text-[#272521]">{label}</p>
-                </div>
-              ))}
+const Sovereign = () => (
+  <section id="sovereignty" className="relative border-y border-[#e7e2d8] bg-[#FBFBF8]">
+    <div className="relative overflow-hidden py-20">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(17,125,255,0.035)_1px,transparent_1px),linear-gradient(180deg,rgba(17,125,255,0.026)_1px,transparent_1px)] bg-[size:42px_42px]" />
+      <div className="pointer-events-none absolute -right-20 top-10 font-['Space_Grotesk'] text-[34vw] font-bold leading-none text-[#0a0a0a]/[0.035]">08</div>
+      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.42em]" style={{ color: BLUE }}>〉 sovereignty · 08</p>
+        <h2 className="mt-7 font-['Space_Grotesk'] text-4xl font-semibold leading-[0.96] tracking-[-0.055em] text-[#0a0a0a] sm:text-5xl md:text-6xl">
+          Memory stays inside your walls.
+        </h2>
+        <p className="mx-auto mt-7 max-w-lg text-[17px] font-light leading-relaxed text-[#5f5c55]">
+          Scroll the deployment boundary. Every frame moves the engine from public cloud story to sovereign, private memory infrastructure.
+        </p>
+        <div className="mx-auto mt-9 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            [ShieldCheck, 'GDPR native'],
+            [Globe, 'Frankfurt'],
+            [Database, 'BYOK / self-host'],
+            [Zap, '<50ms recall'],
+          ].map(([Icon, label]) => (
+            <div key={label} className="rounded-2xl border border-[#e4ded2] bg-white/82 p-4 shadow-[0_18px_42px_rgba(17,24,39,0.055)]">
+              <Icon size={18} style={{ color: BLUE }} />
+              <p className="mt-3 text-[12px] font-semibold text-[#272521]">{label}</p>
             </div>
-          </div>
-
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-[28px] border border-[#ded8ce] bg-white shadow-[0_36px_100px_rgba(26,24,20,0.13)]">
-              <div className="flex h-10 items-center gap-2 border-b border-[#ebe6dc] bg-[#fffdf8] px-5">
-                <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-                <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
-                <span className="h-3 w-3 rounded-full bg-[#28c840]" />
-                <span className="ml-4 truncate font-mono text-[10px] uppercase tracking-[0.28em] text-[#aaa49a] sm:tracking-[0.36em]">hivemind — sovereign deployment</span>
-              </div>
-              <div className="relative aspect-video overflow-hidden bg-[#f4f1ea]">
-                <video
-                  ref={videoRef}
-                  src="/media/sovereign-memory.mp4"
-                  poster="/media/sovereign-memory-poster.jpg"
-                  muted
-                  playsInline
-                  preload="auto"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-[24px] border border-[#ded8ce] bg-white/82 p-5 shadow-[0_22px_70px_rgba(26,24,20,0.08)] backdrop-blur">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[11px] uppercase tracking-[0.36em]" style={{ color: BLUE }}>
-                  {SOVEREIGN_STEPS[activeStep].kicker}
-                </span>
-                <div className="h-px flex-1 bg-[#ebe6dc]" />
-                <span className="font-mono text-[10px] text-[#aaa49a]">{String(activeStep + 1).padStart(2, '0')} / 05</span>
-              </div>
-              <h3 className="mt-4 font-['Space_Grotesk'] text-2xl font-semibold tracking-[-0.04em] text-[#0a0a0a]">
-                {SOVEREIGN_STEPS[activeStep].title}
-              </h3>
-              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6d685f]">
-                {SOVEREIGN_STEPS[activeStep].body}
-              </p>
-              <div className="mt-5 grid grid-cols-5 gap-2">
-                {SOVEREIGN_STEPS.map((step, i) => (
-                  <div key={step.kicker} className="h-1.5 overflow-hidden rounded-full bg-[#ebe6dc]">
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: BLUE }}
-                      transformOrigin="left"
-                      animate={{ scaleX: i <= activeStep ? 1 : 0 }}
-                      transition={{ duration: 0.35, ease }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
-    </section>
-  );
-};
+    </div>
+
+    <CinematicScrollScene
+      theme="light"
+      frameDir="sovereign-frames"
+      frameCount={121}
+      heightVh={420}
+      title="MEMORY"
+      subtitle="sovereignty · 08"
+      actLabel="HIVEMIND"
+      accentColor={BLUE}
+      steps={SOVEREIGN_SCENE_STEPS}
+      staticFrame={90}
+      staticHeadline="Memory stays inside your walls."
+    />
+  </section>
+);
 
 /* ───────── final CTA ───────── */
 
