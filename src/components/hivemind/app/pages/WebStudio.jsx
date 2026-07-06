@@ -287,7 +287,10 @@ export default function WebStudio() {
 
   // Prompt + mode
   const [prompt, setPrompt] = useState('');
-  const [forcedMode, setForcedMode] = useState(null); // null | 'research' | 'search' | 'crawl'
+  const [forcedMode, setForcedMode] = useState(() => {
+    const m = searchParams.get('mode');
+    return ['research', 'search', 'crawl'].includes(m) ? m : null;
+  }); // null | 'research' | 'search' | 'crawl'
   const [crawlDepth, setCrawlDepth] = useState(1);
   const [crawlPageLimit, setCrawlPageLimit] = useState(10);
   // Research knobs (depth-equivalent for Tavily).
@@ -295,6 +298,14 @@ export default function WebStudio() {
   const [citationFormat, setCitationFormat] = useState('numbered'); // numbered | mla | apa | chicago
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
+  // Sync forcedMode from URL ?mode= when navigating via sidebar sub-links
+  useEffect(() => {
+    const m = searchParams.get('mode');
+    if (['research', 'search', 'crawl'].includes(m)) {
+      setForcedMode(m);
+    }
+  }, [searchParams]);
 
   // Domain policy (URL paste)
   const [domainPolicy, setDomainPolicy] = useState(null);

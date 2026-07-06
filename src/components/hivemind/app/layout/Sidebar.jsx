@@ -16,7 +16,6 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Sparkles,
   Globe,
   Server,
@@ -104,9 +103,9 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: tt('groups.aiFeatures', 'AI Features'),
       items: [
         { to: '/hivemind/app/web', icon: Globe, label: tt('webIntel', 'Web Intel'), children: [
-          { to: '/hivemind/app/deep-research', icon: FileSearch, label: tt('deepResearch', 'Deep Research') },
-          { to: '/hivemind/app/web',           icon: Search,     label: tt('webSearch', 'Web Search') },
-          { to: '/hivemind/app/web?mode=crawl', icon: Globe,     label: tt('webCrawl', 'Web Crawl') },
+          { to: '/hivemind/app/web?mode=research', icon: FileSearch, label: tt('deepResearch', 'Deep Research') },
+          { to: '/hivemind/app/web?mode=search',   icon: Search,     label: tt('webSearch', 'Web Search') },
+          { to: '/hivemind/app/web?mode=crawl',    icon: Globe,      label: tt('webCrawl', 'Web Crawl') },
         ]},
       ],
     },
@@ -157,9 +156,6 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
     { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
     { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
   ];
-
-  const [expanded, setExpanded] = useState({});
-  const toggleExpand = (key) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 
@@ -221,40 +217,22 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                   location.pathname === pathOnly ||
                   (pathOnly !== '/hivemind/app/overview' && location.pathname.startsWith(pathOnly));
                 const hasChildren = item.children && item.children.length > 0;
-                const childActive = hasChildren && item.children.some((c) => {
-                  const cp = c.to.split('?')[0];
-                  return location.pathname === cp || location.pathname.startsWith(cp);
-                });
-                const isOpen = hasChildren && (expanded[item.to] !== undefined ? expanded[item.to] : (isActive || childActive));
 
                 return (
                   <div key={item.to}>
                     {hasChildren && !collapsed ? (
-                      <button
-                        onClick={() => toggleExpand(item.to)}
-                        className={`relative flex items-center w-full gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group ${
-                          isActive || childActive ? 'bg-[#f3f1ec]' : ''
-                        }`}
+                      <div
+                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] group`}
                       >
                         <item.icon
                           size={18}
                           strokeWidth={1.75}
-                          className={`transition-colors flex-shrink-0 ${
-                            isActive || childActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
-                          }`}
+                          className="text-[#a3a3a3] flex-shrink-0"
                         />
-                        <span
-                          className={`transition-colors truncate ${
-                            isActive || childActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
-                          }`}
-                        >
+                        <span className="text-[#525252] font-medium truncate">
                           {item.label}
                         </span>
-                        <ChevronDown
-                          size={14}
-                          className={`ml-auto text-[#a3a3a3] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                        />
-                      </button>
+                      </div>
                     ) : (
                       <NavLink
                         to={item.to}
@@ -287,12 +265,13 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
                         )}
                       </NavLink>
                     )}
-                    {/* Children sub-nav */}
-                    {hasChildren && isOpen && !collapsed && (
+                    {/* Always-visible children sub-nav */}
+                    {hasChildren && !collapsed && (
                       <div className="ml-4 pl-2.5 border-l border-[#e3e0db] mt-0.5 space-y-0.5">
                         {item.children.map((child) => {
                           const cp = child.to.split('?')[0];
-                          const cIsActive = location.pathname === cp && location.search === (child.to.includes('?') ? '?' + child.to.split('?')[1] : '');
+                          const qs = child.to.includes('?') ? '?' + child.to.split('?')[1] : '';
+                          const cIsActive = location.pathname === cp && (!qs || location.search === qs);
                           return (
                             <NavLink
                               key={child.to}
