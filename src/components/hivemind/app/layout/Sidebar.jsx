@@ -44,8 +44,7 @@ import apiClient from '../shared/api-client';
 function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
-    { to: '/hivemind/app/swarm',      icon: Bot,          label: tt('agentSwarm', 'Agent Swarm') },
-    { to: '/hivemind/app/engine',     icon: Cpu,          label: tt('engine', 'Engine') },
+    // Agent Swarm + Engine hidden for now (kept routable, just off the sidebar).
     { to: '/hivemind/app/mcp',        icon: Server,       label: tt('mcpServer', 'MCP Server') },
     { to: '/hivemind/app/keys',       icon: Key,          label: tt('apiKeys', 'API Keys') },
     { to: '/hivemind/app/evaluation', icon: FlaskConical, label: tt('evaluation', 'Evaluation') },
