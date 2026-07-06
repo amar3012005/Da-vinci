@@ -29,6 +29,7 @@ import {
   Target,
   TrendingUp,
   Lightbulb,
+  Database,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
@@ -417,8 +418,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
       <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3 flex items-start gap-2">
         <Shield size={14} className="text-amber-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-amber-700">
-          Requires <span className="font-mono">TARA_OUTBOUND_ENABLED=true</span> + Telnyx configured.
-          Numbers must be in <span className="font-mono">TELNYX_ALLOWED_NUMBERS</span>. AI disclosure plays automatically at call open (EU AI Act Art 50).
+          Enter any number in E.164 format (e.g. <span className="font-mono">+4915772925738</span>). AI disclosure plays automatically at call open (EU AI Act Art 50).
         </p>
       </div>
 
@@ -666,7 +666,19 @@ export default function TaraConfig() {
 
   // Identity for the self-hosted AaaS voice widget (tenant = user_id).
   const [identity, setIdentity] = useState({ userId: null, orgId: null });
-  const [activeTab, setActiveTab] = useState('skills');
+  // Initial tab from ?tab= (sidebar deep-links); default skills.
+  const _initialTab = (() => {
+    try { return new URLSearchParams(window.location.search).get('tab') || 'skills'; }
+    catch { return 'skills'; }
+  })();
+  const [activeTab, setActiveTab] = useState(_initialTab);
+  // Follow sidebar tab clicks (URL ?tab= changes without remount).
+  useEffect(() => {
+    const sync = () => { try { const tb = new URLSearchParams(window.location.search).get('tab'); if (tb) setActiveTab(tb); } catch { /* noop */ } };
+    window.addEventListener('popstate', sync);
+    const id = setInterval(sync, 400);
+    return () => { window.removeEventListener('popstate', sync); clearInterval(id); };
+  }, []);
   const [calls, setCalls] = useState([]);
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
 
@@ -747,6 +759,7 @@ export default function TaraConfig() {
             { id: 'usage', label: 'Usage', icon: Zap },
             { id: 'outbound', label: 'Outbound', icon: PhoneCall },
             { id: 'campaigns', label: 'Campaigns', icon: Zap },
+            { id: 'memory', label: 'TARA Memory', icon: Database },
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
@@ -931,6 +944,44 @@ export default function TaraConfig() {
         )}
         {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} language={(i18n.language || 'en').split('-')[0]} />}
         {activeTab === 'campaigns' && <CampaignPanel identity={identity} language={(i18n.language || 'en').split('-')[0]} />}
+        {activeTab === 'memory' && (
+          <div className="space-y-3">
+            <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-[10px] px-4 py-3 flex items-start gap-2">
+              <Database size={14} className="text-[#117dff] mt-0.5 shrink-0" />
+              <p className="text-[12px] text-[#525252]">
+                <span className="font-semibold">TARA-MEMORY</span> — every call transcript lives here in its own space, kept out of your main org memories &amp; graph. This is TARA's dedicated recall of what was said on calls.
+              </p>
+            </div>
+            <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>
+            {calls.length === 0 ? (
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+                <Database size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No call transcripts yet.
+              </div>
+            ) : calls.map((c) => (
+              <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl">
+                <button onClick={() => (callDetail?.call?.id === c.id ? setCallDetail(null) : openCall(c.id))}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#faf9f4] transition-colors text-left">
+                  <div>
+                    <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
+                    <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
+                  </div>
+                  <Database size={13} className="text-[#c8c4be]" />
+                </button>
+                {callDetail?.call?.id === c.id && (
+                  <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2.5 max-h-[420px] overflow-y-auto">
+                    {(callDetail.turns||[]).length === 0 && <p className="text-[12px] text-[#a3a3a3]">No turns recorded.</p>}
+                    {(callDetail.turns||[]).map((tn, i) => (
+                      <div key={tn.id || tn.seq || i} className="text-[12px] space-y-1">
+                        {tn.userText && <div className="flex gap-2"><span className="text-[#a3a3a3] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">You</span><span className="text-[#0a0a0a]">{tn.userText}</span></div>}
+                        {tn.agentText && <div className="flex gap-2"><span className="text-[#117dff] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">TARA</span><span className="text-[#525252]">{tn.agentText}</span></div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

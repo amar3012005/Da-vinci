@@ -30,6 +30,11 @@ import {
   Search,
   FileSearch,
   Waypoints,
+  Sliders,
+  Star,
+  Clock,
+  PhoneCall,
+  Database,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -66,7 +71,26 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
 
   if (activeSection === 'tara') {
     return [
-      { label: null, items: [{ to: '/hivemind/app/tara', icon: Mic, label: tt('tara', 'TARA × HIVE') }] },
+      {
+        label: null,
+        items: [
+          { to: '/hivemind/app/tara', icon: Mic, label: tt('tara', 'TARA × HIVE'), children: [
+            { to: '/hivemind/app/tara?tab=skills',    icon: Sliders,   label: tt('taraSkills', 'Skills') },
+            { to: '/hivemind/app/tara?tab=leads',     icon: Star,      label: tt('taraLeads', 'Leads') },
+            { to: '/hivemind/app/tara?tab=history',   icon: Clock,     label: tt('taraHistory', 'Call History') },
+            { to: '/hivemind/app/tara?tab=insights',  icon: Brain,     label: tt('taraInsights', 'Insights') },
+            { to: '/hivemind/app/tara?tab=usage',     icon: Gauge,     label: tt('taraUsage', 'Usage') },
+            { to: '/hivemind/app/tara?tab=outbound',  icon: PhoneCall, label: tt('taraOutbound', 'Outbound') },
+            { to: '/hivemind/app/tara?tab=campaigns', icon: Waypoints, label: tt('taraCampaigns', 'Campaigns') },
+          ]},
+        ],
+      },
+      {
+        label: tt('groups.taraMemory', 'TARA Memory'),
+        items: [
+          { to: '/hivemind/app/tara?tab=memory', icon: Database, label: tt('taraMemory', 'TARA-MEMORY') },
+        ],
+      },
     ];
   }
 
