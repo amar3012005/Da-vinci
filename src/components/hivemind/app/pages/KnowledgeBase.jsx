@@ -1563,6 +1563,30 @@ export default function KnowledgeBase() {
       </motion.div>
 
       <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mb-8">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.xls,.ppt,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
+            e.target.value = '';
+          }}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          // @ts-ignore — non-standard HTML5 attrs for folder picker
+          webkitdirectory=""
+          directory=""
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
+            e.target.value = '';
+          }}
+        />
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -1574,30 +1598,6 @@ export default function KnowledgeBase() {
               : 'border-[#e3e0db] bg-white hover:border-[#117dff]/40 hover:bg-[#faf9f4]'
           }`}
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.docx,.pptx,.txt,.md,.csv,.tsv,.xlsx,.xls,.ppt,.html,.htm,.png,.jpg,.jpeg,.tiff,.tif,.webp,.mp3,.wav,.m4a,.ogg,.flac"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
-              e.target.value = '';
-            }}
-          />
-          <input
-            ref={folderInputRef}
-            type="file"
-            // @ts-ignore — non-standard HTML5 attrs for folder picker
-            webkitdirectory=""
-            directory=""
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files?.length) queueFilesForUpload(Array.from(e.target.files));
-              e.target.value = '';
-            }}
-          />
           <Upload size={32} className={`mx-auto mb-3 ${dragActive ? 'text-[#117dff]' : 'text-[#d4d0ca]'}`} />
           <p className="text-[#0a0a0a] text-sm font-semibold font-['Space_Grotesk'] mb-1">
             {t('knowledgebase.dropZoneLabel', 'Drop files or folder here, or click to upload')}

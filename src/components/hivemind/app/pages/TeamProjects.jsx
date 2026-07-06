@@ -269,9 +269,9 @@ export default function TeamProjects() {
 
             <div className="flex items-center justify-between text-[10px] text-[#a3a3a3] font-mono">
               <span className="flex items-center gap-1">
-                <Users size={10} /> {p._count?.members ?? 0} {t('teamprojects.membersLabel', 'members')}
+                <Users size={10} /> {p.member_count ?? p._count?.members ?? 0} {t('teamprojects.membersLabel', 'members')}
               </span>
-              <span>{p._count?.memories ?? 0} {t('teamprojects.memoriesLabel', 'memories')}</span>
+              <span>{p.memory_count ?? p._count?.memories ?? 0} {t('teamprojects.memoriesLabel', 'memories')}</span>
             </div>
             <div className="text-[10px] text-[#a3a3a3] mt-1">
               {t('teamprojects.created', 'Created')} {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''}
