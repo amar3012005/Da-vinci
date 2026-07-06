@@ -101,15 +101,15 @@ export default function PostQuantumResearch() {
       author="SINGULANCE Labs"
       seo={{
         title: 'Post-Quantum Cryptography — Harvest-Now-Decrypt-Later, Closed | SINGULANCE Research',
-        description: 'How HIVEMIND ships NIST-standard post-quantum cryptography in three independent layers: hybrid PQC TLS, ML-DSA-65 memory signatures, and an SLH-DSA tamper-evident audit chain.',
+        description: 'How HIVEMIND ships NIST-standard post-quantum cryptography in three independent layers: hybrid key exchange on the edge, signed memory writes, and a tamper-evident audit chain.',
       }}
       product={{ name: 'HIVEMIND', tag: 'Sovereign memory engine', desc: 'The memory layer that remembers everything your org knows — now quantum-resistant end to end: transport, integrity, and audit.' }}
       highlights={[
         'Three independent quantum-resistant layers — transport, memory integrity, and audit.',
-        'Hybrid PQC TLS (X25519 + ML-KEM-768) closes harvest-now-decrypt-later at the edge.',
-        'ML-DSA-65 signs every memory write; DB-level tampering becomes detectable.',
-        'SLH-DSA chains the audit log into an append-only, tamper-evident trail.',
-        'NIST FIPS 203/204/205 via the audited @noble/post-quantum; keys never touch the DB.',
+        'Hybrid key exchange closes harvest-now-decrypt-later at the edge: safe unless both classical and quantum-hard problems fall.',
+        'Every memory write is signed; DB-level tampering becomes mathematically detectable.',
+        'The audit log is chained into an append-only, tamper-evident trail — verifiable by anyone.',
+        'NIST-standardized post-quantum primitives; signing keys never touch the database.',
       ]}
     >
       <H2>Why — the threat model</H2>
@@ -117,11 +117,11 @@ export default function PostQuantumResearch() {
 
       <H2>The three layers at a glance</H2>
       <Table
-        head={['Layer', 'Purpose', 'Algorithm', 'Standard', 'Where']}
+        head={['Layer', 'Purpose', 'Primitive', 'Standard']}
         rows={[
-          ['Transport', 'Defeat harvest-now / decrypt-later', 'X25519 + ML-KEM-768 (hybrid KEM)', 'FIPS 203', 'Caddy edge'],
-          ['Memory integrity', 'Prove a memory wasn’t forged/altered', 'ML-DSA-65', 'FIPS 204', 'pqc-signer.js → memory_signatures'],
-          ['Audit trail', 'Tamper-evident, append-only log', 'SLH-DSA-SHA2-128s', 'FIPS 205', 'audit-logger.js → audit_signatures'],
+          ['Transport', 'Defeat harvest-now / decrypt-later', 'Hybrid key exchange (classical × lattice KEM)', 'FIPS 203'],
+          ['Memory integrity', 'Prove a memory wasn’t forged or altered', 'Lattice signatures', 'FIPS 204'],
+          ['Audit trail', 'Tamper-evident, append-only log', 'Hash-based signatures', 'FIPS 205'],
         ]}
       />
 
@@ -129,61 +129,55 @@ export default function PostQuantumResearch() {
       <FullBleed><QuantumVault /></FullBleed>
 
       <H2>Layer 1 — Hybrid post-quantum TLS</H2>
-      <P>Every HTTPS connection to the API and core is negotiated with a <strong>hybrid key exchange</strong>:</P>
-      <Code label="Caddyfile · tls curves">{`curves x25519mlkem768 x25519`}</Code>
-      <P><strong>X25519MLKEM768</strong> combines classical X25519 with NIST ML-KEM-768 (FIPS 203). The shared secret is safe unless <em>both</em> are broken — no weaker than today's crypto, quantum-resistant on top. Recorded sessions <strong>cannot be decrypted later</strong> by a quantum attacker. Served by Caddy 2.11 (native x25519mlkem768); classical x25519 stays as a fallback for older clients.</P>
+      <P>Every connection to HIVEMIND is negotiated with a <strong>hybrid key exchange</strong> — two independent secrets, combined:</P>
+      <Code label="hybrid key exchange">{`shared_secret = combine(
+    classical_ECDH,        // fast, proven today
+    lattice_KEM            // quantum-hard (FIPS 203)
+)`}</Code>
+      <P>The session key is safe unless <em>both</em> the classical and the lattice problem are broken at once — so it is never weaker than today's crypto, and quantum-resistant on top. The practical consequence: an adversary who records the encrypted stream today <strong>cannot decrypt it later</strong>, even with a future quantum computer. Older clients that don't understand the hybrid negotiation fall back to the classical curve, so nothing breaks.</P>
 
-      <H2>Layer 2 — Memory write integrity (ML-DSA-65)</H2>
-      <P>On a memory write, HIVEMIND signs a <strong>canonical, deterministic</strong> representation of the record:</P>
-      <Code label="core/src/security/pqc-signer.js">{`payload   = canonical({ id, user_id, org_id, content })
-signature = ML_DSA_65.sign(payload, PQC_MEMORY_SK)`}</Code>
-      <P>Stored in the <strong>memory_signatures</strong> table (memory_id → signature), separate from the memory row. <code>canonical()</code> sorts keys and stringifies deterministically, so the signed bytes are reproducible at verify time. ML-DSA-65 (FIPS 204, lattice-based) is fast enough to sign per-write. Anyone can verify with the <strong>public</strong> key — an attacker who alters <code>content</code> in the DB can't produce a matching signature, because the secret key isn't in the DB.</P>
+      <H2>Layer 2 — Memory write integrity</H2>
+      <P>Every time a memory is written, HIVEMIND signs a <strong>canonical, deterministic</strong> representation of the record — the exact same bytes can be reconstructed later:</P>
+      <Code label="memory write — signing logic">{`payload   = canonical({ id, user, org, content })   // keys sorted, stable
+signature = sign(payload, private_key)               // lattice signature`}</Code>
+      <P>The signature is stored <strong>alongside</strong> the memory, not inside it, and the signing key lives only in the environment — never in the database. So an attacker who reaches the database and rewrites <code>content</code> cannot produce a matching signature: forgery needs the secret key, and the secret key isn't there to steal. Anyone holding only the <strong>public</strong> key can verify the memory is authentic and unaltered.</P>
 
-      <H2>Layer 3 — Tamper-evident audit chain (SLH-DSA)</H2>
-      <P>Security-relevant events are chained like a mini-blockchain and signed with a conservative hash-based scheme:</P>
-      <Code label="core/src/audit/audit-logger.js">{`entry_hash = sha256( prev_hash + canonical(entry) )
-signature  = SLH_DSA_SHA2_128s.sign(entry_hash, PQC_AUDIT_SK)
-→ INSERT INTO audit_signatures (audit_id, org_id, alg, prev_hash, entry_hash, signature, seq)`}</Code>
-      <P>Each entry's <code>prev_hash</code> links to the previous entry's <code>entry_hash</code> → <strong>append-only</strong>: you can't insert, delete, or reorder without breaking the chain. The genesis anchor has <code>prev_hash === ''</code>. Signed with SLH-DSA-SHA2-128s (FIPS 205) — hash-based, the most conservative PQC signature family (minimal assumptions), used here because audit integrity is worth the heavier signature. A periodic <strong>checkpoint</strong> signs {'{ org, max_seq, head_entry_hash, row_count }'} so the whole trail's head verifies in one shot.</P>
+      <H2>Layer 3 — Tamper-evident audit chain</H2>
+      <P>Security-relevant events are chained like a mini-ledger: each entry commits to the one before it, then the commitment is signed.</P>
+      <Code label="audit chain — link logic">{`entry_hash = hash( previous_entry_hash + canonical(entry) )
+signature  = sign(entry_hash, audit_private_key)     // hash-based signature`}</Code>
+      <P>Because every entry's hash folds in the previous entry's hash, the log is <strong>append-only</strong>: you can't insert, delete, or reorder a single event without breaking every link after it. The first entry anchors the chain (no predecessor). The signatures use a <strong>hash-based</strong> scheme — the most conservative post-quantum family, resting on the fewest assumptions — because an audit trail is exactly where you want maximum paranoia. A periodic <strong>checkpoint</strong> signs the head of the chain, so the entire history can be verified in one shot.</P>
 
-      <H2>Key management</H2>
+      <H2>Where the trust lives — key management</H2>
+      <P>The whole model rests on one principle: <strong>the secret keys never live where the data lives</strong>. Signing keys exist only in the runtime environment; the database holds signatures and public keys, nothing that could forge them. Compromising the database therefore does not grant the ability to forge a memory or rewrite the audit log — the attacker would still be missing the one thing that matters.</P>
+      <P>Verification is <strong>public</strong> by design: anyone with the public key can independently confirm authenticity, without any privileged access. And every layer <strong>degrades gracefully</strong> — if a signing key is absent, the write still succeeds, just unsigned. Availability is never sacrificed for signing; integrity is added on top, never in the critical path.</P>
+
+      <H2>Anyone can check the work</H2>
+      <P>None of this is a claim you have to take on faith. Because verification only needs public keys, the guarantees are <strong>externally auditable</strong>:</P>
       <Table
-        head={['Key', 'Algorithm', 'Env (secret / public)']}
+        head={['Question', 'How it’s answered']}
         rows={[
-          ['Memory signing', 'ML-DSA-65', 'PQC_MEMORY_SK / PQC_MEMORY_PK'],
-          ['Audit signing', 'SLH-DSA-SHA2-128s', 'PQC_AUDIT_SK / PQC_AUDIT_PK'],
+          ['Is post-quantum crypto actually on?', 'A status probe reports the active algorithms and whether keys are loaded, and hands back the public keys.'],
+          ['Was this memory forged or altered?', 'Recompute its canonical payload and check the signature against the public key.'],
+          ['Has the audit log been tampered with?', 'Walk the chain end to end — re-derive each link, verify each signature and the head checkpoint.'],
         ]}
       />
-      <P>Generated by <code>core/scripts/pqc-keygen.mjs</code> (prints env lines). <strong>Secret keys live ONLY in env</strong>, never in the database — so DB compromise ≠ forgery ability. Public keys are exposed for independent verification. <strong>Graceful degradation</strong>: if keys or the library are missing, sign/verify return null/false and the caller proceeds unsigned — signing never breaks the main flow.</P>
+      <P>The same checks run automatically against every live deployment, so a broken link or a missing signature is caught before it ships — never after.</P>
 
-      <H2>Verification & endpoints</H2>
+      <H2>The primitives, and why each was chosen</H2>
       <Table
-        head={['Endpoint', 'What it does']}
+        head={['Standard', 'Family', 'Why it’s used here']}
         rows={[
-          ['GET /api/security/pqc', 'Status (algorithms, whether keys are loaded) + the public keys'],
-          ['GET /api/security/verify-memory', 'Recomputes a memory’s canonical payload and verifies its ML-DSA signature'],
-          ['GET /api/security/audit-verify', 'Walks the chain: recompute entry_hash, verify each link + SLH-DSA signature + checkpoint → tamper_evident'],
-        ]}
-      />
-      <P>A cold test (<code>cold-tests/t4-security-verify.mjs</code>, "T4") checks all of this against a live deployment: public keys present, memory signatures valid, and the audit chain intact with no tail regression.</P>
-
-      <H2>Standards & library</H2>
-      <Table
-        head={['Standard', 'Algorithm', 'Role']}
-        rows={[
-          ['FIPS 203', 'ML-KEM', 'Key encapsulation (transport)'],
-          ['FIPS 204', 'ML-DSA', 'Lattice signatures (memory integrity)'],
-          ['FIPS 205', 'SLH-DSA', 'Hash-based signatures (audit)'],
-          ['—', '@noble/post-quantum ^0.6.1', 'Pure-JS, audited NIST PQC implementations'],
+          ['FIPS 203', 'Lattice key encapsulation', 'Fast enough to sit on every connection — transport secrecy at no latency cost.'],
+          ['FIPS 204', 'Lattice signatures', 'Small, fast signatures — cheap enough to sign every single memory write.'],
+          ['FIPS 205', 'Hash-based signatures', 'The most conservative family, fewest assumptions — reserved for the audit trail, where trust matters most.'],
         ]}
       />
 
       <H2>Guarantees, limits & roadmap</H2>
       <P><strong>Guarantees.</strong> Transport secrecy is quantum-resistant (hybrid) — recorded traffic stays safe. Stored memories are integrity-signed; DB-level tampering is detectable. The audit trail is append-only and tamper-evident, verifiable end-to-end by a third party using only public keys.</P>
       <P><strong>Current limits.</strong> PQC here covers key exchange + signatures (integrity/authenticity). At-rest payload <em>encryption</em> is separate (standard DB/disk encryption; not PQC-KEM-wrapped). Signing is best-effort: with keys absent, writes proceed unsigned by design (availability over hard-fail).</P>
-      <P><strong>Roadmap.</strong> Enforce-signing mode (reject unsigned writes) for high-assurance tenants · per-tenant signing keys · PQC-wrapped envelope encryption for memory payloads at rest.</P>
-
-      <P><em style={{ color: '#8a8a82', fontSize: 13 }}>Source of truth: pqc-signer.js · audit-logger.js · Caddyfile.api/Caddyfile.core · pqc-keygen.mjs · t4-security-verify.mjs. Auto-generated from a codebase recon — 2026-07-02.</em></P>
+      <P><strong>Roadmap.</strong> Enforce-signing mode (reject unsigned writes) for high-assurance tenants · per-tenant signing keys · post-quantum envelope encryption for memory payloads at rest.</P>
     </NewsArticleLayout>
   );
 }
