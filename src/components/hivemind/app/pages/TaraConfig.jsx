@@ -703,7 +703,7 @@ export default function TaraConfig() {
     .sort((a, b) => (Number(b.lead.priority_stars) || 0) - (Number(a.lead.priority_stars) || 0));
   useEffect(() => {
     apiClient.bootstrap()
-      .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null }))
+      .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null, role: d?.user?.role || null }))
       .catch(() => {});
   }, []);
 
@@ -759,7 +759,8 @@ export default function TaraConfig() {
             { id: 'usage', label: 'Usage', icon: Zap },
             { id: 'outbound', label: 'Outbound', icon: PhoneCall },
             { id: 'campaigns', label: 'Campaigns', icon: Zap },
-            { id: 'memory', label: 'TARA Memory', icon: Database },
+            // TARA Memory is admin-only.
+            ...(['admin', 'owner'].includes(identity.role) ? [{ id: 'memory', label: 'TARA Memory', icon: Database }] : []),
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
@@ -944,7 +945,12 @@ export default function TaraConfig() {
         )}
         {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} language={(i18n.language || 'en').split('-')[0]} />}
         {activeTab === 'campaigns' && <CampaignPanel identity={identity} language={(i18n.language || 'en').split('-')[0]} />}
-        {activeTab === 'memory' && (
+        {activeTab === 'memory' && !['admin', 'owner'].includes(identity.role) && (
+          <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+            <Lock size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> TARA-MEMORY is admin-only.
+          </div>
+        )}
+        {activeTab === 'memory' && ['admin', 'owner'].includes(identity.role) && (
           <div className="space-y-3">
             <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-[10px] px-4 py-3 flex items-start gap-2">
               <Database size={14} className="text-[#117dff] mt-0.5 shrink-0" />
