@@ -91,11 +91,11 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: tt('groups.workspaceAdmin', 'Workspace Admin'),
       items: [
         { to: '/hivemind/app/workspace',      icon: Building2,    label: tt('workspaceAdmin', 'Workspace Admin'), children: [
-          { to: '/hivemind/app/workspace?tab=members',  icon: Users,        label: tt('orgMembers', 'Org Members') },
-          { to: '/hivemind/app/team/members',           icon: User,         label: tt('teamMembers', 'Team Members') },
-          { to: '/hivemind/app/team/projects',          icon: FolderKanban, label: tt('projects', 'Projects') },
-          { to: '/hivemind/app/workspace?tab=invites',  icon: UserPlus,     label: tt('invites', 'Invites') },
-          { to: '/hivemind/app/workspace?tab=cognition', icon: Waypoints,   label: tt('cognitiveLayer', 'Cognitive Layer') },
+          { to: '/hivemind/app/workspace?tab=members',   icon: Users,        label: tt('orgMembers', 'Org Members') },
+          { to: '/hivemind/app/workspace?tab=teams',     icon: User,         label: tt('teamMembers', 'Team Members') },
+          { to: '/hivemind/app/workspace?tab=projects',  icon: FolderKanban, label: tt('projects', 'Projects') },
+          { to: '/hivemind/app/workspace?tab=invites',   icon: UserPlus,     label: tt('invites', 'Invites') },
+          { to: '/hivemind/app/workspace?tab=cognition', icon: Waypoints,    label: tt('cognitiveLayer', 'Cognitive Layer') },
         ]},
       ],
     },
