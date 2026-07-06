@@ -106,6 +106,9 @@ export default function Settings() {
   const [copiedField, setCopiedField] = useState(null);
   const [revoking, setRevoking] = useState(false);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [showClearMemConfirm, setShowClearMemConfirm] = useState(false);
+  const [clearingMem, setClearingMem] = useState(false);
+  const [clearedCount, setClearedCount] = useState(null);
   const [projectPolicy, setProjectPolicy] = useState('private');
   const [memoryPolicy, setMemoryPolicy] = useState('private');
   const [policyLoading, setPolicyLoading] = useState(false);
@@ -181,6 +184,24 @@ export default function Settings() {
   const handleSignOutAll = useCallback(async () => {
     await logout();
   }, [logout]);
+
+  // Hard-delete every memory in the org (count → 0). Does NOT touch LLM token
+  // usage or any billing counter — those live in separate tables the clear
+  // never references. Irreversible.
+  const handleClearAllMemories = useCallback(async () => {
+    setClearingMem(true);
+    setClearedCount(null);
+    try {
+      const { data } = await apiClient.core.delete('/api/memories/delete-all');
+      setClearedCount(typeof data?.deleted === 'number' ? data.deleted : 0);
+      setShowClearMemConfirm(false);
+      window.dispatchEvent(new CustomEvent('hivemind:memories-cleared'));
+    } catch {
+      // stays on page; user can retry
+    } finally {
+      setClearingMem(false);
+    }
+  }, []);
 
   const createdDate = org?.created_at
     ? new Date(org.created_at).toLocaleDateString('en-US', {
@@ -419,6 +440,50 @@ export default function Settings() {
           </div>
 
           <div className="space-y-4">
+            {/* Clear All Memories — hard delete, count → 0, keeps usage/tokens */}
+            <div className="flex items-center justify-between bg-white border border-red-200 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">
+                  {t('settings.clearAllMemories', 'Clear All Memories')}
+                </p>
+                <p className="text-[#a3a3a3] text-xs mt-0.5">
+                  {clearedCount !== null
+                    ? t('settings.clearAllMemDone', 'Cleared {{n}} memories — your memory count is now 0. Usage & tokens untouched.', { n: clearedCount })
+                    : t('settings.clearAllMemDesc', 'Permanently deletes every memory (count drops to 0). LLM token usage & billing are NOT affected.')}
+                </p>
+              </div>
+              {showClearMemConfirm ? (
+                <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                  <button
+                    onClick={() => setShowClearMemConfirm(false)}
+                    className="text-[#525252] hover:text-[#525252] text-xs font-mono px-3 py-2 transition-colors"
+                  >
+                    {t('settings.cancel', 'Cancel')}
+                  </button>
+                  <button
+                    onClick={handleClearAllMemories}
+                    disabled={clearingMem}
+                    className="flex items-center gap-1.5 text-white bg-red-600 hover:bg-red-500 disabled:opacity-50 text-xs font-mono rounded-lg px-3 py-2 transition-colors"
+                  >
+                    {clearingMem ? (
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={12} />
+                    )}
+                    {t('settings.confirmClearMem', 'Delete everything')}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setShowClearMemConfirm(true); setClearedCount(null); }}
+                  className="flex items-center gap-1.5 text-[#dc2626] hover:text-[#dc2626] text-xs font-mono bg-red-500/10 hover:bg-red-50 border border-red-200 rounded-lg px-3 py-2 transition-colors flex-shrink-0 ml-4"
+                >
+                  <Trash2 size={12} />
+                  {t('settings.clearAll', 'Clear All')}
+                </button>
+              )}
+            </div>
+
             {/* Sign Out All Sessions */}
             <div className="flex items-center justify-between bg-white border border-red-200 rounded-xl px-4 py-3">
               <div>
