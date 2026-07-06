@@ -760,20 +760,36 @@ export default function TaraConfig() {
         {activeTab === 'leads' && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-[12px] text-[#a3a3a3]">{allLeads.length} lead{allLeads.length === 1 ? '' : 's'} found across {calls.length} call{calls.length === 1 ? '' : 's'} · sorted by priority</p>
+              <p className="text-[12px] text-[#a3a3a3]">{allLeads.length} lead{allLeads.length === 1 ? '' : 's'} across {calls.length} call{calls.length === 1 ? '' : 's'} · per conversation</p>
               <button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button>
             </div>
-            {allLeads.length === 0 ? (
+            {calls.length === 0 ? (
               <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-                <Star size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No leads yet. Run outbound calls with a goal — qualified leads land here automatically.
+                <Star size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No calls yet. Run outbound calls with a goal — qualified leads land here automatically.
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {allLeads.map(({ lead, call }, i) => (
-                  <LeadCard key={i} lead={lead} call={call} onOpen={(c) => { setActiveTab('history'); openCall(c.id); }} />
-                ))}
-              </div>
-            )}
+            ) : calls.map((c) => {
+              const leads = c.insight?.leads || [];
+              return (
+                <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
+                      <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.mode} · {c.turnCount} turns</span>
+                    </div>
+                    {leads.length > 0
+                      ? <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">{leads.length} lead{leads.length === 1 ? '' : 's'}</span>
+                      : <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#a3a3a3]">{c.insight ? 'no lead' : 'not analyzed'}</span>}
+                  </div>
+                  {leads.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {leads.map((l, i) => (
+                        <LeadCard key={i} lead={l} call={c} onOpen={(cc) => { setActiveTab('history'); openCall(cc.id); }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         {activeTab === 'history' && (
@@ -794,12 +810,17 @@ export default function TaraConfig() {
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${c.status==='completed'?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'}`}>{c.status}</span>
                 </button>
                 {callDetail?.call?.id === c.id && (
-                  <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2 max-h-[320px] overflow-y-auto">
-                    {callDetail.insight?.summary && <p className="text-[12px] text-[#525252] italic mb-2">{callDetail.insight.summary}</p>}
-                    {(callDetail.turns||[]).map((tn) => (
-                      <div key={tn.id} className="text-[12px]">
-                        {tn.userText && <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">You </span>{tn.userText}</div>}
-                        {tn.agentText && <div><span className="text-[#117dff] font-mono text-[10px] uppercase">TARA </span>{tn.agentText}</div>}
+                  <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2.5 max-h-[420px] overflow-y-auto">
+                    <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Exact transcript · {(callDetail.turns||[]).length} turns</p>
+                    {(callDetail.turns||[]).length === 0 && <p className="text-[12px] text-[#a3a3a3]">No turns recorded.</p>}
+                    {(callDetail.turns||[]).map((tn, i) => (
+                      <div key={tn.id || tn.seq || i} className="text-[12px] space-y-1">
+                        {tn.userText && (
+                          <div className="flex gap-2"><span className="text-[#a3a3a3] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">You</span><span className="text-[#0a0a0a]">{tn.userText}</span></div>
+                        )}
+                        {tn.agentText && (
+                          <div className="flex gap-2"><span className="text-[#117dff] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">TARA</span><span className="text-[#525252]">{tn.agentText}</span></div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -809,46 +830,70 @@ export default function TaraConfig() {
           </div>
         )}
         {activeTab === 'insights' && (() => {
-          const ins = callDetail?.insight?.data || null;
-          if (!ins) return (
+          const GO = { achieved: ['#16a34a', 'Goal achieved'], partial: ['#d97706', 'Goal partial'], missed: ['#dc2626', 'Goal missed'], 'n/a': ['#6b7280', 'No goal'] };
+          if (calls.length === 0) return (
             <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-              <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Open a call in Call History to see its full analysis.
+              <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No calls yet.
             </div>
           );
-          const GO = { achieved: ['#16a34a', 'Goal achieved'], partial: ['#d97706', 'Goal partial'], missed: ['#dc2626', 'Goal missed'], 'n/a': ['#6b7280', 'No goal'] };
-          const go = GO[ins.goal_outcome] || GO['n/a'];
           return (
             <div className="space-y-3">
-              <div className="bg-white border border-[#e3e0db] rounded-xl p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full" style={{ color: go[0], background: `${go[0]}14` }}>{go[1]}</span>
-                  {ins.sentiment && <span className="text-[11px] text-[#a3a3a3]">sentiment: {ins.sentiment}</span>}
-                </div>
-                <p className="text-[13px] text-[#0a0a0a]">{ins.summary || callDetail.insight.summary}</p>
-                {(ins.key_points||[]).length>0 && (
-                  <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Key points</p>
-                    <ul className="list-disc pl-5 text-[12px] text-[#525252]">{ins.key_points.map((k,i)=><li key={i}>{k}</li>)}</ul></div>
-                )}
-                {(ins.action_items||[]).length>0 && (
-                  <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Action items</p>
-                    <ul className="list-disc pl-5 text-[12px] text-[#525252]">{ins.action_items.map((a,i)=><li key={i}>{a.task}{a.owner?` · @${a.owner}`:''}{a.due?` · ${a.due}`:''}</li>)}</ul></div>
-                )}
-                {(ins.topics||[]).length>0 && (
-                  <div className="flex flex-wrap gap-1.5">{ins.topics.map((tp,i)=><span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{tp}</span>)}</div>
-                )}
-              </div>
-              {(ins.tara_learnings||[]).length>0 && (
-                <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-xl p-5">
-                  <p className="text-[11px] font-mono uppercase text-[#117dff] mb-2 flex items-center gap-1.5"><Lightbulb size={13} /> TARA learnings</p>
-                  <ul className="list-disc pl-5 text-[12px] text-[#525252] space-y-1">{ins.tara_learnings.map((l,i)=><li key={i}>{l}</li>)}</ul>
-                </div>
-              )}
-              {(ins.leads||[]).length>0 && (
-                <div>
-                  <p className="text-[11px] font-mono uppercase text-[#a3a3a3] mb-2 flex items-center gap-1.5"><Target size={13} /> Leads from this call</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{ins.leads.map((l,i)=><LeadCard key={i} lead={l} />)}</div>
-                </div>
-              )}
+              <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>
+              {calls.map((c) => {
+                const ins = c.insight;                                  // list-level analysis (per call)
+                const full = callDetail?.call?.id === c.id ? (callDetail.insight?.data || null) : null;
+                const go = GO[ins?.goal_outcome] || GO['n/a'];
+                return (
+                  <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
+                        <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.mode} · {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {ins && <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full" style={{ color: go[0], background: `${go[0]}14` }}>{go[1]}</span>}
+                        {ins?.sentiment && <span className="text-[11px] text-[#a3a3a3]">{ins.sentiment}</span>}
+                      </div>
+                    </div>
+                    {!ins ? (
+                      <p className="text-[12px] text-[#a3a3a3]">Analysis pending — refresh in a few seconds.</p>
+                    ) : (
+                      <>
+                        <p className="text-[13px] text-[#0a0a0a]">{ins.summary}</p>
+                        {(ins.tara_learnings||[]).length>0 && (
+                          <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-[10px] p-3.5">
+                            <p className="text-[10px] font-mono uppercase text-[#117dff] mb-1.5 flex items-center gap-1.5"><Lightbulb size={12} /> TARA learnings</p>
+                            <ul className="list-disc pl-5 text-[12px] text-[#525252] space-y-0.5">{ins.tara_learnings.map((l,i)=><li key={i}>{l}</li>)}</ul>
+                          </div>
+                        )}
+                        {(ins.leads||[]).length>0 && (
+                          <div>
+                            <p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1.5 flex items-center gap-1.5"><Target size={12} /> Leads from this call</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{ins.leads.map((l,i)=><LeadCard key={i} lead={l} />)}</div>
+                          </div>
+                        )}
+                        {full ? (
+                          <>
+                            {(full.key_points||[]).length>0 && (
+                              <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Key points</p>
+                                <ul className="list-disc pl-5 text-[12px] text-[#525252]">{full.key_points.map((k,i)=><li key={i}>{k}</li>)}</ul></div>
+                            )}
+                            {(full.action_items||[]).length>0 && (
+                              <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Action items</p>
+                                <ul className="list-disc pl-5 text-[12px] text-[#525252]">{full.action_items.map((a,i)=><li key={i}>{a.task}{a.owner?` · @${a.owner}`:''}{a.due?` · ${a.due}`:''}</li>)}</ul></div>
+                            )}
+                            {(full.topics||[]).length>0 && (
+                              <div className="flex flex-wrap gap-1.5">{full.topics.map((tp,i)=><span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{tp}</span>)}</div>
+                            )}
+                          </>
+                        ) : (
+                          <button onClick={() => openCall(c.id)} className="text-[11px] text-[#117dff] hover:underline">Show key points, action items & topics →</button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
