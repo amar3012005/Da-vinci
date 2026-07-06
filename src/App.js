@@ -13,6 +13,7 @@ const ResearchIndex = React.lazy(() => import('./components/ResearchIndex'));
 const BenchmarkResearch = React.lazy(() => import('./components/BenchmarkResearch'));
 const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
 const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
+const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 
@@ -93,6 +94,7 @@ function App() {
         <Route path="/research" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><ResearchIndex /></React.Suspense>} />
         <Route path="/research/icarus" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><IcarusResearch /></React.Suspense>} />
         <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><CsiResearch /></React.Suspense>} />
+        <Route path="/research/post-quantum-cryptography" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PostQuantumResearch /></React.Suspense>} />
         <Route path="/benchmark" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><BenchmarkResearch /></React.Suspense>} />
 
         {/* Catch all */}

@@ -37,6 +37,13 @@ const ITEMS = [
     art: 'linear-gradient(135deg, #2a6f7a 0%, #16335e 55%, #0a0d18 100%)',
     img: '/sp-hyperagents.webp',
   },
+  {
+    tags: ['SECURITY', 'POST-QUANTUM', 'FIPS 203/204/205'],
+    title: 'Post-Quantum Cryptography',
+    desc: 'Three quantum-resistant layers — hybrid PQC TLS on the edge, ML-DSA-65 signatures on every memory write, and an SLH-DSA tamper-evident audit chain. Harvest-now-decrypt-later, closed.',
+    href: '/research/post-quantum-cryptography',
+    art: 'linear-gradient(135deg, #117dff 0%, #0a2a5e 55%, #05070f 100%)',
+  },
 ];
 
 const Card = ({ item, onOpen }) => (
