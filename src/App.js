@@ -8,6 +8,12 @@ import MobileHomepage from './components/mobile/MobileHomepage';
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
 
+// Research pages (three.js hero scenes → lazy)
+const ResearchIndex = React.lazy(() => import('./components/ResearchIndex'));
+const BenchmarkResearch = React.lazy(() => import('./components/BenchmarkResearch'));
+const IcarusResearch = React.lazy(() => import('./components/IcarusResearch'));
+const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
+
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
 
 // PRODUCT_HOST — this domain serves the WHOLE product on ONE host (singulancelabs.com):
@@ -82,6 +88,12 @@ function App() {
             }
           />
         </Route>
+
+        {/* Research pages */}
+        <Route path="/research" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><ResearchIndex /></React.Suspense>} />
+        <Route path="/research/icarus" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><IcarusResearch /></React.Suspense>} />
+        <Route path="/research/cognitive-swarm-intelligence" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><CsiResearch /></React.Suspense>} />
+        <Route path="/benchmark" element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><BenchmarkResearch /></React.Suspense>} />
 
         {/* Catch all */}
         <Route path="*" element={<MarketingHomepage />} />
