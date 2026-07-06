@@ -15,8 +15,8 @@ import {
   Filter,
   RefreshCw,
   Maximize2,
-  GitBranch,
   Clock,
+  Monitor,
   // eslint-disable-next-line no-unused-vars
   ChevronDown,
   ZoomIn,
@@ -243,20 +243,27 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
   const outbound = edges.filter(
     (e) => e.source === node.id || e.source?.id === node.id,
   );
+  const niceTags = (node.tags || []).filter(Boolean).slice(0, 18);
+  const groupedRelations = [
+    { key: "out", label: "Outgoing", rows: outbound },
+    { key: "in", label: "Incoming", rows: inbound },
+  ].filter((group) => group.rows.length > 0);
+  const createdLabel = node.createdAt ? new Date(node.createdAt).toLocaleString() : null;
+  const updatedLabel = node.updatedAt ? new Date(node.updatedAt).toLocaleString() : null;
 
   return (
     <motion.div
       initial={{ x: 320, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 320, opacity: 0 }}
-      className="absolute top-0 right-0 w-[min(360px,100vw)] h-full bg-white/94 backdrop-blur-xl border-l border-[#e7e4dd] shadow-[-18px_0_58px_rgba(21,20,18,0.08)] z-20 overflow-y-auto"
+      className="absolute top-0 right-0 w-[min(420px,100vw)] h-full bg-[#fffdfa]/96 backdrop-blur-xl border-l border-[#ece9e2] shadow-[-18px_0_58px_rgba(21,20,18,0.08)] z-20 overflow-y-auto"
     >
-      <div className="sticky top-0 bg-[#fbfaf7]/95 backdrop-blur-xl border-b border-[#e7e4dd] px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 bg-[#fffdfa]/96 backdrop-blur-xl border-b border-[#ece9e2] px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]">
-            <Network size={15} />
+          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#cfe2ff] bg-[#edf5ff] text-[#2f83ff]">
+            <Network size={14} />
           </span>
-          <span className="text-xs font-mono text-[#8f8f8f] uppercase tracking-wider">
+          <span className="text-[11px] font-mono text-[#8f8f8f] uppercase tracking-[0.16em]">
             Memory Detail
           </span>
         </div>
@@ -278,48 +285,58 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
           </button>
         </div>
       </div>
-      <div className="p-4 space-y-4">
-        {/* Title & type */}
+      <div className="p-5 space-y-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{
-                backgroundColor:
-                  TYPE_COLORS[node.memoryType] || TYPE_COLORS.default,
-              }}
-            />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#8f8f8f]">
+          <h3 className="text-[20px] font-semibold font-['Space_Grotesk'] text-[#111111] leading-snug">
+            {node.title || node.label || "Untitled Memory"}
+          </h3>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-[#eaf9ea] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#44a44a]">
               {node.memoryType || "memory"}
             </span>
+            {node.sourcePlatform && (
+              <span className="inline-flex items-center gap-1 rounded-xl border border-[#cfe2ff] bg-[#edf5ff] px-3 py-1 text-[10.5px] font-mono uppercase tracking-[0.14em] text-[#4d59dd]">
+                <Monitor size={11} /> {node.sourcePlatform}
+              </span>
+            )}
+            {(node.daysSinceUpdate != null || createdLabel) && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#b3ada5] font-mono">
+                <Clock size={11} />
+                {node.daysSinceUpdate != null ? `${Math.round(node.daysSinceUpdate)}d ago` : createdLabel}
+              </span>
+            )}
           </div>
-          <h3 className="text-[15px] font-semibold font-['Space_Grotesk'] text-[#111111] leading-snug">
-            {node.title || "Untitled Memory"}
-          </h3>
         </div>
 
-        {/* Content */}
-        <div className="bg-white border border-[#e7e4dd] rounded-2xl p-3 shadow-[0_10px_30px_rgba(21,20,18,0.04)]">
-          <p className="text-xs text-[#5f5f5f] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
+            Content
+          </p>
+          <div className="bg-white border border-[#ece9e2] rounded-[22px] p-5 shadow-[0_10px_30px_rgba(21,20,18,0.04)]">
+          <p className="text-[13px] text-[#5f5f5f] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
             {node.content || "No content"}
           </p>
         </div>
+        </div>
 
-        {/* Tags */}
-        {node.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {node.tags.map((t) => (
+        {niceTags.length > 0 && (
+          <div>
+            <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
+              Tags
+            </p>
+            <div className="flex flex-wrap gap-2">
+            {niceTags.map((t) => (
               <span
                 key={t}
-                className="px-2 py-1 rounded-lg text-[10px] font-mono bg-[#e8f1ff] text-[#2f83ff] border border-[#cfe2ff]"
+                className="px-3 py-1.5 rounded-full text-[10.5px] font-mono bg-[#f7f5f1] text-[#5f5f5f] border border-[#efebe4]"
               >
                 {t}
               </span>
             ))}
           </div>
+          </div>
         )}
 
-        {/* Scores */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Importance", value: node.importanceScore?.toFixed(2) },
@@ -338,7 +355,6 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
           ))}
         </div>
 
-        {/* Temporal */}
         <div className="flex items-center gap-2 text-[11px] text-[#8f8f8f] font-['Space_Grotesk']">
           <Clock size={12} />
           <span>
@@ -351,86 +367,80 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
           </span>
         </div>
 
-        {/* Relationships */}
-        {(inbound.length > 0 || outbound.length > 0) && (
+        {groupedRelations.length > 0 && (
           <div>
-            <p className="text-[10px] font-mono text-[#8f8f8f] uppercase tracking-wider mb-2">
-              Relationships
+            <p className="text-[11px] font-mono text-[#8f8f8f] uppercase tracking-[0.16em] mb-2">
+              Relations · {inbound.length + outbound.length}
             </p>
-            <div className="space-y-1.5">
-              {outbound.map((e, i) => {
+            <div className="space-y-3">
+              {groupedRelations.map((group) => (
+                <div key={group.key}>
+                  <div className="inline-flex items-center rounded-lg border border-[#ddd5ff] bg-[#f5f1ff] px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[#6d58db]">
+                    {group.label} · {group.rows.length}
+                  </div>
+                  <div className="mt-2 space-y-2">
+                  {group.rows.map((e, i) => {
                 const targetId =
                   typeof e.target === "object" ? e.target.id : e.target;
-                const targetNode = nodeMap[targetId];
-                const targetTitle = targetNode?.title || truncate(targetId, 20);
-                return (
-                  <button
-                    key={`out-${i}`}
-                    onClick={() => onNavigate(targetId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white border border-[#e7e4dd] hover:border-[#cfe2ff] hover:bg-[#f4f8ff] text-left transition-colors group"
-                  >
-                    <GitBranch
-                      size={10}
-                      style={{ color: EDGE_COLORS[e.type] || "#a3a3a3" }}
-                    />
-                    <span
-                      className="text-[10px] font-mono"
-                      style={{ color: EDGE_COLORS[e.type] }}
-                    >
-                      {e.type}
-                    </span>
-                    <span className="text-[9px] font-mono text-[#8f8f8f]">
-                      ({((e.confidence || 0) * 100).toFixed(0)}%)
-                    </span>
-                    <span className="text-[11px] text-[#5f5f5f] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#2f83ff]">
-                      {targetTitle}
-                    </span>
-                  </button>
-                );
-              })}
-              {inbound.map((e, i) => {
                 const sourceId =
                   typeof e.source === "object" ? e.source.id : e.source;
-                const sourceNode = nodeMap[sourceId];
-                const sourceTitle = sourceNode?.title || truncate(sourceId, 20);
+                const peerId = group.key === "out" ? targetId : sourceId;
+                const peerNode = nodeMap[peerId];
+                const peerTitle = peerNode?.title || peerNode?.label || truncate(peerId, 34);
+                const confidenceLabel = `${((e.confidence || 0) * 100).toFixed(0)}%`;
+                const edgeLabel = String(e.type || "related").replace(/[_-]+/g, " ");
                 return (
                   <button
-                    key={`in-${i}`}
-                    onClick={() => onNavigate(sourceId)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white border border-[#e7e4dd] hover:border-[#cfe2ff] hover:bg-[#f4f8ff] text-left transition-colors group"
+                    key={`${group.key}-${i}`}
+                    onClick={() => onNavigate(peerId)}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-[18px] bg-white border border-[#ece9e2] hover:border-[#cfe2ff] hover:bg-[#f9fbff] text-left transition-colors group"
                   >
-                    <GitBranch
-                      size={10}
-                      className="rotate-180"
-                      style={{ color: EDGE_COLORS[e.type] || "#a3a3a3" }}
-                    />
-                    <span
-                      className="text-[10px] font-mono opacity-50"
-                      style={{ color: EDGE_COLORS[e.type] }}
-                    >
-                      ← {e.type}
-                    </span>
-                    <span className="text-[9px] font-mono text-[#8f8f8f]">
-                      ({((e.confidence || 0) * 100).toFixed(0)}%)
-                    </span>
-                    <span className="text-[11px] text-[#5f5f5f] font-['Space_Grotesk'] truncate flex-1 group-hover:text-[#2f83ff]">
-                      {sourceTitle}
+                    <span className="text-[#6d58db]">→</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] text-[#2d2b28] font-semibold font-['Space_Grotesk'] truncate">
+                        {peerTitle}
+                      </span>
+                      <span className="mt-1 inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.12em] text-[#9a958d]">
+                        <span className="text-[#6d58db]">{edgeLabel}</span>
+                        <span>{confidenceLabel}</span>
+                      </span>
                     </span>
                   </button>
                 );
               })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Meta */}
-        <div className="text-[10px] text-[#8f8f8f] font-mono space-y-0.5">
-          <p>ID: {node.id}</p>
-          {node.sourcePlatform && <p>Source: {node.sourcePlatform}</p>}
-          {node.project && <p>Project: {node.project}</p>}
-          {node.createdAt && (
-            <p>Created: {new Date(node.createdAt).toLocaleString()}</p>
-          )}
+        <div>
+          <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
+            Metadata
+          </p>
+          <div className="rounded-[22px] border border-[#ece9e2] bg-white px-5 py-4 text-[11px] text-[#8f8f8f] font-mono space-y-2">
+            <div className="flex items-start justify-between gap-4">
+              <span>ID</span>
+              <span className="text-right text-[#5f5f5f] break-all">{node.id}</span>
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <span>Scope</span>
+              <span className="text-right text-[#5f5f5f] uppercase">{node.scope || "organization"}</span>
+            </div>
+            {createdLabel && (
+              <div className="flex items-start justify-between gap-4">
+                <span>Created</span>
+                <span className="text-right text-[#5f5f5f]">{createdLabel}</span>
+              </div>
+            )}
+            {updatedLabel && (
+              <div className="flex items-start justify-between gap-4">
+                <span>Updated</span>
+                <span className="text-right text-[#5f5f5f]">{updatedLabel}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -583,6 +593,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const [graphVisible, setGraphVisible] = useState(false);
   const [graphViewState, setGraphViewState] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const autoSelectedLatestRef = useRef(null);
   const [searchInput, setSearchInput] = useState(""); // Immediate
   const [searchQuery, setSearchQuery] = useState(""); // Debounced
   const [highlightNodes, setHighlightNodes] = useState(new Set());
@@ -1019,6 +1030,26 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     return newIds;
   }, [temporalMode, temporalCutoff, diffWindowMs, graphData.nodes]);
 
+  useEffect(() => {
+    const candidate = graphData.nodes
+      .filter((node) => node && node.kind !== "document" && node.kind !== "entity")
+      .map((node) => ({ node, ts: getNodeTimestamp(node) || 0 }))
+      .sort((a, b) => b.ts - a.ts)[0]?.node || null;
+
+    if (!candidate) return;
+
+    const selectedStillExists = selectedNode && graphData.nodes.some((node) => node.id === selectedNode.id);
+    const shouldReplace =
+      !selectedNode ||
+      !selectedStillExists ||
+      autoSelectedLatestRef.current === selectedNode.id;
+
+    if (shouldReplace && selectedNode?.id !== candidate.id) {
+      autoSelectedLatestRef.current = candidate.id;
+      setSelectedNode(candidate);
+    }
+  }, [graphData.nodes, selectedNode]);
+
   // Auto-play: advance temporalProgress on a rAF loop while playing.
   // Total animation duration scales w/ speed: base 12s, /speed.
   useEffect(() => {
@@ -1073,6 +1104,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   const panelSoftButton = graphTheme === "night"
     ? "border-[#2f2925] bg-[#151312]/90 text-[#cfc2b7] hover:text-[#fff0e5]"
     : "border-[#e3e0db] bg-[#faf9f4] text-[#525252] hover:text-[#0a0a0a]";
+  const detailPanelWidth = selectedNode ? 420 : 0;
 
   // Floating back button — themed pill that floats just below the toolbar
   // at the top-left of the canvas area. Matches graphTheme (night = warm
@@ -1408,7 +1440,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             theme={graphTheme === "night" ? "atlas" : "day"}
             width={
               typeof window !== "undefined"
-                ? window.innerWidth - (selectedNode ? 340 : 0)
+                ? window.innerWidth - detailPanelWidth
                 : 800
             }
             height={
@@ -1443,7 +1475,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               backgroundColor="rgba(0,0,0,0)"
               width={
                 typeof window !== "undefined"
-                  ? window.innerWidth - (selectedNode ? 340 : 0)
+                  ? window.innerWidth - detailPanelWidth
                   : 800
               }
               height={
@@ -1460,7 +1492,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
           <div
             className="absolute top-0 left-0 overflow-hidden"
             style={{
-              width: typeof window !== 'undefined' ? window.innerWidth - (selectedNode ? 340 : 0) : 800,
+              width: typeof window !== 'undefined' ? window.innerWidth - detailPanelWidth : 800,
               height: typeof window !== 'undefined' ? window.innerHeight - 66 : 600,
             }}
           >

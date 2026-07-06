@@ -379,8 +379,8 @@ const RELATION_STYLES = Object.fromEntries(
 
 const LABEL_LIMITS = {
   hidden: 0,
-  focus: 48,
-  all: 130,
+  focus: 82,
+  all: 220,
 };
 
 const LABEL_VIEWPORT_MARGIN = 0.9;
@@ -569,7 +569,7 @@ function hexToRgb(hex) {
 // Above this link count, skip per-link on-edge label sprites (hidden clutter
 // on dense graphs; hover tooltip still shows the relation). Small graphs keep
 // the exact same persistent labels.
-const LINK_LABEL_SPRITE_CAP = 400;
+const LINK_LABEL_SPRITE_CAP = 2400;
 const _geoCache = new Map();
 const _rb = (r) => Math.round(r * 4) / 4;
 function cachedGeo(key, make) {
@@ -1066,7 +1066,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (tier === "large") return 0.1;
       return Math.max(0.1, style.width * 0.72);
     }
-    return style.width;
+    return Math.max(style.width, themeRef.current.name === "night" ? 0.2 : 0.28);
   }, []);
 
   const getLinkParticles = useCallback((link) => {
@@ -1091,8 +1091,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const t = themeRef.current;
     const style = getRelationStyle(link);
     if (highlightedLinksRef.current.has(link)) return t.name === "atlas" ? 0.72 : 0.82;
-    if (t.name === "atlas") return Math.max(0.045, style.opacity * 0.62);
-    return style.opacity;
+    if (t.name === "atlas") return Math.max(0.07, style.opacity * 0.72);
+    if (t.name === "night") return Math.max(0.12, style.opacity * 1.18);
+    return Math.max(0.14, style.opacity * 1.45);
   }, []);
 
   const updateNodeObjectAppearance = useCallback((node, object3d) => {
@@ -1531,9 +1532,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           });
 
           const distance = cameraNow.position.distanceTo(targetNow);
-          const labelMode = distance > 980 ? "hidden" : distance > 500 ? "focus" : "all";
-          const linkMode = distance > 860 ? "sparse" : distance > 400 ? "focus" : "all";
-          const relationLabelMode = distance > 420 ? "hidden" : distance > 220 ? "focus" : "all";
+          const labelMode = distance > 1450 ? "hidden" : distance > 760 ? "focus" : "all";
+          const linkMode = distance > 1180 ? "sparse" : distance > 560 ? "focus" : "all";
+          const relationLabelMode = distance > 920 ? "hidden" : distance > 420 ? "focus" : "all";
           const nodeCount = graphDataRef.current.nodes?.length || 0;
           const labelBudget = getAdaptiveLabelLimit(labelMode, nodeCount);
           const scoreLabelNode = (node) => {
@@ -1595,8 +1596,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
             else if (labelMode === 'hidden') opacity = 0;
-            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.72 : 0.55) : 0;
-            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.92 : themeName === 'night' ? 0.9 : 0.85) : 0;
+            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.8 : 0.68) : 0;
+            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
             if (isSelected) variant = "selected";
             else if (isNeighbor || isHighlighted) variant = "focus";
             setNodeLabelSpriteVariant(sprite, variant, themeName);
