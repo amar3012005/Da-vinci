@@ -201,6 +201,8 @@ export default function AppShell() {
   const handleSectionChange = (s) => {
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
+    const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees', tara: '/hivemind/app/tara' };
+    if (landing[s]) navigate(landing[s]);
   };
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // Overview embeds the HIVE chat as the page centerpiece — the floating
