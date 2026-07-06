@@ -48,16 +48,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
     { to: '/hivemind/app/hermes',    icon: Cpu,      label: tt('hermesAgents', 'Hermes Agents') },
   ];
 
-  const accountSection = {
-    label: tt('groups.account', 'Account'),
-    items: [
-      { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
-      { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
-      { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
-      { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
-    ],
-  };
-
   if (activeSection === 'hyperagents') {
     return [
       { label: null, items: [{ to: '/hivemind/app/employees', icon: Bot, label: tt('hyperAgents', 'Hyper Agents') }] },
@@ -65,14 +55,12 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
         label: tt('groups.workspaceAdmin', 'Workspace Admin'),
         items: adminItems,
       },
-      accountSection,
     ];
   }
 
   if (activeSection === 'tara') {
     return [
       { label: null, items: [{ to: '/hivemind/app/tara', icon: Mic, label: tt('tara', 'TARA × HIVE') }] },
-      accountSection,
     ];
   }
 
@@ -103,7 +91,6 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       label: tt('groups.advanced', 'Advanced'),
       items: advancedItems,
     },
-    accountSection,
   ];
 }
 
@@ -139,6 +126,14 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
+  const isPaid = org?.plan && ['pro', 'enterprise', 'team', 'business'].includes(org.plan);
+  const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
+  const accountItems = [
+    { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
+    { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
+    { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
+    { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
+  ];
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 
@@ -243,56 +238,116 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
         ))}
       </nav>
 
-      {/* Upgrade Banner */}
-      {!collapsed && (
-        <div className="mx-2.5 mb-2">
-          <div className="bg-[#117dff]/[0.04] border border-[#117dff]/10 rounded-xl p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles size={14} className="text-[#117dff]" />
-              <span className="text-[#0a0a0a] text-xs font-semibold">
-                Upgrade to Pro
+      {/* Fixed bottom: Account nav + upgrade banner + user/logout */}
+      <div className="flex-shrink-0 border-t border-[#e3e0db]">
+        {/* Account section */}
+        <div className="px-2.5 pt-2.5 pb-1">
+          {!collapsed && (
+            <div className="px-2.5 mb-1.5">
+              <span className="text-[#a3a3a3] text-[10px] font-medium uppercase tracking-[0.08em]">
+                {tt('groups.account', 'Account')}
               </span>
             </div>
-            <p className="text-[#a3a3a3] text-[10px] leading-relaxed mb-2.5">
-              Unlock unlimited memories, priority support, and advanced connectors.
-            </p>
-            <NavLink
-              to="/hivemind/app/billing"
-              className="block text-center text-[11px] font-semibold uppercase tracking-[0.075em] bg-[#117dff] text-white rounded-[4px] py-1.5 hover:bg-[#0066e0] transition-colors"
-            >
-              View Plans
-            </NavLink>
+          )}
+          {collapsed && <div className="h-px bg-[#e3e0db] mx-2 mb-2" />}
+          <div className="space-y-0.5">
+            {accountItems.map((item) => {
+              const isActive =
+                location.pathname === item.to ||
+                location.pathname.startsWith(item.to);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  data-tour-id={item.to}
+                  className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active-account"
+                      className="absolute inset-0 bg-[#f3f1ec] rounded-lg"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <item.icon
+                    size={18}
+                    strokeWidth={1.75}
+                    className={`relative z-10 transition-colors flex-shrink-0 ${
+                      isActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
+                    }`}
+                  />
+                  {!collapsed && (
+                    <span
+                      className={`relative z-10 transition-colors truncate ${
+                        isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+                  {!collapsed && item.label === 'Billing' && (
+                    <span className="relative z-10 ml-auto text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
+                      PRO
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* User + Logout */}
-      <div className="p-2.5 border-t border-[#e3e0db]">
-        {!collapsed && user && (
-          <div className="flex items-center gap-2.5 px-2 py-1.5 mb-1">
-            <div className="w-7 h-7 rounded-full bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-[#117dff] text-[10px] font-bold font-mono">
-                {(user.display_name || user.email || 'U')[0].toUpperCase()}
-              </span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[#0a0a0a] text-xs truncate">
-                {user.display_name || user.email || 'User'}
+        {/* Upgrade Banner — hidden for paid plans */}
+        {!collapsed && !isPaid && (
+          <div className="mx-2.5 mb-2">
+            <div className="bg-[#117dff]/[0.04] border border-[#117dff]/10 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles size={14} className="text-[#117dff]" />
+                <span className="text-[#0a0a0a] text-xs font-semibold">
+                  Upgrade to Pro
+                </span>
+              </div>
+              <p className="text-[#a3a3a3] text-[10px] leading-relaxed mb-2.5">
+                Unlock unlimited memories, priority support, and advanced connectors.
               </p>
-              <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
-                {planLabel}
-              </p>
+              <NavLink
+                to="/hivemind/app/billing"
+                className="block text-center text-[11px] font-semibold uppercase tracking-[0.075em] bg-[#117dff] text-white rounded-[4px] py-1.5 hover:bg-[#0066e0] transition-colors"
+              >
+                View Plans
+              </NavLink>
             </div>
           </div>
         )}
-        <button
-          onClick={logout}
-          className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[#a3a3a3] hover:text-[#dc2626] hover:bg-[#dc2626]/5 transition-all`}
-          title={collapsed ? 'Sign Out' : undefined}
-        >
-          <LogOut size={16} />
-          {!collapsed && <span>{t('sidebar.signOut', 'Sign Out')}</span>}
-        </button>
+
+        {/* User + Logout */}
+        <div className="p-2.5 border-t border-[#e3e0db]">
+          {!collapsed && user && (
+            <div className="flex items-center gap-2.5 px-2 py-1.5 mb-1">
+              <div className="w-7 h-7 rounded-full bg-[#117dff]/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-[#117dff] text-[10px] font-bold font-mono">
+                  {(user.display_name || user.email || 'U')[0].toUpperCase()}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[#0a0a0a] text-xs truncate">
+                  {user.display_name || user.email || 'User'}
+                </p>
+                <p className="text-[#a3a3a3] text-[10px] font-mono truncate">
+                  {planLabel}
+                </p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={logout}
+            className={`flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[#a3a3a3] hover:text-[#dc2626] hover:bg-[#dc2626]/5 transition-all`}
+            title={collapsed ? 'Sign Out' : undefined}
+          >
+            <LogOut size={16} />
+            {!collapsed && <span>{t('sidebar.signOut', 'Sign Out')}</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );
