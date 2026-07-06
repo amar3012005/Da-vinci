@@ -295,9 +295,16 @@ function SkillsManager() {
 // ─── Outbound Call Panel ───────────────────────────────────────────────────
 const STATE_COLOR = { dialing: '#d97706', connected: '#16a34a', ended: '#a3a3a3', error: '#dc2626' };
 
+const OUTBOUND_LANGS = [
+  ['en', 'English'], ['de', 'German'], ['es', 'Spanish'],
+  ['fr', 'French'], ['it', 'Italian'], ['ja', 'Japanese'], ['nl', 'Dutch'],
+];
+
 function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
   const [phone, setPhone] = useState('');
   const [engine, setEngine] = useState('deepgram'); // 'deepgram' (Voice Agent) | 'classic' (aaas)
+  const [callLang, setCallLang] = useState((language || 'en').split('-')[0]); // per-call language
+  const [goal, setGoal] = useState('');
   const apiBase = engine === 'deepgram' ? DG_HTTP : AAAS_HTTP;
   const [callState, setCallState] = useState(null); // null|'dialing'|'connected'|'ended'|'error'
   const [callLegId, setCallLegId] = useState(null);
@@ -340,7 +347,8 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
           session_id: `out-${Date.now()}`,
           user_id: identity?.userId,
           org_id: identity?.orgId,
-          language: (language || 'en').split('-')[0],
+          language: callLang,
+          goal: goal.trim() || undefined,
         }),
       });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
@@ -385,14 +393,33 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
               ))}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Destination (E.164)</label>
+              <input
+                type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                placeholder="+49123456789"
+                className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[14px] font-mono focus:outline-none focus:border-[#117dff] transition-colors"
+              />
+              {phone && !phoneValid && <p className="text-[11px] text-red-500 mt-1">Use E.164 format: +country_code + number</p>}
+            </div>
+            <div>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Language</label>
+              <select
+                value={callLang} onChange={(e) => setCallLang(e.target.value)}
+                className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[14px] bg-white focus:outline-none focus:border-[#117dff] transition-colors"
+              >
+                {OUTBOUND_LANGS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              </select>
+            </div>
+          </div>
           <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Destination (E.164)</label>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Goal (optional)</label>
             <input
-              type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder="+49123456789"
-              className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[14px] font-mono focus:outline-none focus:border-[#117dff] transition-colors"
+              type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
+              placeholder="e.g. collect feedback on the Solvis portal"
+              className="w-full border border-[#e3e0db] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none focus:border-[#117dff] transition-colors"
             />
-            {phone && !phoneValid && <p className="text-[11px] text-red-500 mt-1">Use E.164 format: +country_code + number</p>}
           </div>
           <button
             onClick={startCall} disabled={!phoneValid}
