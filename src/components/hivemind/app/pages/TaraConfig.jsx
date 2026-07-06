@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Lightbulb,
   Database,
+  Folder,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
@@ -672,6 +673,7 @@ export default function TaraConfig() {
     catch { return 'skills'; }
   })();
   const [activeTab, setActiveTab] = useState(_initialTab);
+  const [memOpen, setMemOpen] = useState(false); // TARA-MEMORY folder open/closed
   // Follow sidebar tab clicks (URL ?tab= changes without remount).
   useEffect(() => {
     const sync = () => { try { const tb = new URLSearchParams(window.location.search).get('tab'); if (tb) setActiveTab(tb); } catch { /* noop */ } };
@@ -952,40 +954,68 @@ export default function TaraConfig() {
         )}
         {activeTab === 'memory' && ['admin', 'owner'].includes(identity.role) && (
           <div className="space-y-3">
-            <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-[10px] px-4 py-3 flex items-start gap-2">
-              <Database size={14} className="text-[#117dff] mt-0.5 shrink-0" />
-              <p className="text-[12px] text-[#525252]">
-                <span className="font-semibold">TARA-MEMORY</span> — every call transcript lives here in its own space, kept out of your main org memories &amp; graph. This is TARA's dedicated recall of what was said on calls.
-              </p>
-            </div>
-            <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>
-            {calls.length === 0 ? (
-              <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-                <Database size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No call transcripts yet.
-              </div>
-            ) : calls.map((c) => (
-              <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl">
-                <button onClick={() => (callDetail?.call?.id === c.id ? setCallDetail(null) : openCall(c.id))}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#faf9f4] transition-colors text-left">
-                  <div>
-                    <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
-                    <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
+            {!memOpen ? (
+              // Folder card — the TARA-MEMORY project (same look as Workspace projects).
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div
+                  onClick={() => setMemOpen(true)}
+                  className="bg-white border border-[#e3e0db] rounded-[8px] p-4 hover:border-[#d4d0ca] transition-colors cursor-pointer"
+                  title="Open TARA-MEMORY">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Folder size={16} className="text-[#117dff]" />
+                      <h3 className="text-[14px] font-semibold text-[#0a0a0a]">TARA-MEMORY</h3>
+                    </div>
                   </div>
-                  <Database size={13} className="text-[#c8c4be]" />
-                </button>
-                {callDetail?.call?.id === c.id && (
-                  <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2.5 max-h-[420px] overflow-y-auto">
-                    {(callDetail.turns||[]).length === 0 && <p className="text-[12px] text-[#a3a3a3]">No turns recorded.</p>}
-                    {(callDetail.turns||[]).map((tn, i) => (
-                      <div key={tn.id || tn.seq || i} className="text-[12px] space-y-1">
-                        {tn.userText && <div className="flex gap-2"><span className="text-[#a3a3a3] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">You</span><span className="text-[#0a0a0a]">{tn.userText}</span></div>}
-                        {tn.agentText && <div className="flex gap-2"><span className="text-[#117dff] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">TARA</span><span className="text-[#525252]">{tn.agentText}</span></div>}
+                  <p className="text-[12px] text-[#525252] mb-3 line-clamp-2">TARA call transcripts — system-managed, admin-only.</p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lock size={11} className="text-amber-600" />
+                    <span className="text-[10px] font-medium text-amber-600">Admin-only</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-[#a3a3a3] font-mono">
+                    <span className="flex items-center gap-1"><Database size={10} /> {calls.length} transcript{calls.length === 1 ? '' : 's'}</span>
+                    <span>{Math.round(totalMinutes)} min total</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setMemOpen(false)} className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0a0a0a]">
+                    <Folder size={15} className="text-[#117dff]" /> TARA-MEMORY
+                    <span className="text-[11px] font-normal text-[#a3a3a3] ml-1">· {calls.length} transcripts</span>
+                  </button>
+                  <button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button>
+                </div>
+                {calls.length === 0 ? (
+                  <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+                    <Database size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No call transcripts yet.
+                  </div>
+                ) : calls.map((c) => (
+                  <div key={c.id} className="bg-white border border-[#e3e0db] rounded-xl">
+                    <button onClick={() => (callDetail?.call?.id === c.id ? setCallDetail(null) : openCall(c.id))}
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#faf9f4] transition-colors text-left">
+                      <div>
+                        <span className="text-[13px] font-['Space_Grotesk'] font-semibold text-[#0a0a0a]">{_validTs(c.startedAt) === null ? '—' : new Date(c.startedAt).toLocaleString()}</span>
+                        <span className="text-[11px] text-[#a3a3a3] ml-2">· {c.turnCount} turns · {Math.round((c.durationMs||0)/1000)}s</span>
                       </div>
-                    ))}
+                      <Database size={13} className="text-[#c8c4be]" />
+                    </button>
+                    {callDetail?.call?.id === c.id && (
+                      <div className="border-t border-[#f3f1ec] px-4 py-3 space-y-2.5 max-h-[420px] overflow-y-auto">
+                        {(callDetail.turns||[]).length === 0 && <p className="text-[12px] text-[#a3a3a3]">No turns recorded.</p>}
+                        {(callDetail.turns||[]).map((tn, i) => (
+                          <div key={tn.id || tn.seq || i} className="text-[12px] space-y-1">
+                            {tn.userText && <div className="flex gap-2"><span className="text-[#a3a3a3] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">You</span><span className="text-[#0a0a0a]">{tn.userText}</span></div>}
+                            {tn.agentText && <div className="flex gap-2"><span className="text-[#117dff] font-mono text-[10px] uppercase shrink-0 w-9 pt-0.5">TARA</span><span className="text-[#525252]">{tn.agentText}</span></div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
         )}
       </motion.div>
