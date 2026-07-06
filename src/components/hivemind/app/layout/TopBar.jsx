@@ -52,7 +52,13 @@ const pageDescriptions = {
   '/hivemind/app/hermes': 'Hermes Agents — per-tenant task agents with run history and approval flows',
 };
 
-export default function TopBar() {
+const SECTIONS = [
+  { key: 'hivemind', label: 'HIVEMIND' },
+  { key: 'hyperagents', label: 'HYPERAGENTS' },
+  { key: 'tara', label: 'TARA' },
+];
+
+export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
@@ -81,6 +87,23 @@ export default function TopBar() {
           )}
         </div>
         <TeamSwitcher />
+      </div>
+
+      {/* Section Toggle */}
+      <div className="flex items-center h-8 bg-[#f3f1ec] rounded-lg border border-[#e3e0db] p-0.5">
+        {SECTIONS.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => onSectionChange?.(s.key)}
+            className={`relative px-3.5 py-1 rounded-md text-[11px] font-semibold tracking-[0.04em] transition-all duration-150 font-['Space_Grotesk'] ${
+              activeSection === s.key
+                ? 'bg-white text-[#0a0a0a] shadow-sm'
+                : 'text-[#a3a3a3] hover:text-[#525252]'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
       {/* Right: Actions */}

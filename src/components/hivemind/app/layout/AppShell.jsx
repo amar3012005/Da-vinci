@@ -195,6 +195,13 @@ export default function AppShell() {
   }, [isSelfHost, agentConnected]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeSection, setActiveSection] = useState(() => {
+    try { return localStorage.getItem('hm_active_section') || 'hivemind'; } catch { return 'hivemind'; }
+  });
+  const handleSectionChange = (s) => {
+    setActiveSection(s);
+    try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
+  };
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
@@ -243,12 +250,12 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        {!graphFullscreen && <Sidebar />}
+        {!graphFullscreen && <Sidebar activeSection={activeSection} />}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen ? 'sidebar-content-expanded' : ''}`}
           style={{ marginLeft: graphFullscreen ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
-          {!graphFullscreen && <TopBar />}
+          {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
           <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-6 overflow-y-auto"}>
             <Outlet />
           </main>

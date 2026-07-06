@@ -29,8 +29,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import apiClient from '../shared/api-client';
 
-/** Build nav sections, conditionally including admin items. */
-function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
+/** Build nav sections, conditionally including admin items. Filtered by activeSection. */
+function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection = 'hivemind' }) {
   const tt = (k, def) => t(`sidebar.${k}`, { defaultValue: def });
   const advancedItems = [
     { to: '/hivemind/app/swarm',      icon: Bot,          label: tt('agentSwarm', 'Agent Swarm') },
@@ -48,11 +48,36 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
     { to: '/hivemind/app/hermes',    icon: Cpu,      label: tt('hermesAgents', 'Hermes Agents') },
   ];
 
-  // Order is skill-graded: no-code-friendly groups first (Your Brain →
-  // Workspace/Agents → AI Features), technical groups (Advanced) near the
-  // bottom, Account last. Workspace Admin sits just below Your Brain so the
-  // agents people actually run are reachable in one glance.
-  const sections = [
+  const accountSection = {
+    label: tt('groups.account', 'Account'),
+    items: [
+      { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
+      { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
+      { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
+      { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
+    ],
+  };
+
+  if (activeSection === 'hyperagents') {
+    return [
+      { label: null, items: [{ to: '/hivemind/app/employees', icon: Bot, label: tt('hyperAgents', 'Hyper Agents') }] },
+      {
+        label: tt('groups.workspaceAdmin', 'Workspace Admin'),
+        items: adminItems,
+      },
+      accountSection,
+    ];
+  }
+
+  if (activeSection === 'tara') {
+    return [
+      { label: null, items: [{ to: '/hivemind/app/tara', icon: Mic, label: tt('tara', 'TARA × HIVE') }] },
+      accountSection,
+    ];
+  }
+
+  // Default: hivemind
+  return [
     {
       label: null,
       items: [
@@ -69,35 +94,20 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t }) {
       ],
     },
     {
-      label: tt('groups.workspaceAdmin', 'Workspace Admin'),
-      items: adminItems,
-    },
-    {
       label: tt('groups.aiFeatures', 'AI Features'),
       items: [
         { to: '/hivemind/app/web',  icon: Globe, label: tt('webIntel', 'Web Intel') },
-        { to: '/hivemind/app/tara', icon: Mic,   label: tt('tara',     'TARA × HIVE') },
       ],
     },
     {
       label: tt('groups.advanced', 'Advanced'),
       items: advancedItems,
     },
-    {
-      label: tt('groups.account', 'Account'),
-      items: [
-        { to: '/hivemind/app/profile',  icon: User,       label: tt('profile',  'Profile') },
-        { to: '/hivemind/app/usage',    icon: Gauge,      label: tt('usage',    'Usage') },
-        { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
-        { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
-      ],
-    },
+    accountSection,
   ];
-
-  return sections;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ activeSection = 'hivemind' }) {
   const { t } = useTranslation('dashboard');
   const { logout, org, user } = useAuth();
   const location = useLocation();
@@ -125,7 +135,7 @@ export default function Sidebar() {
     };
   }, []);
 
-  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t });
+  const navSections = buildNavSections({ showWebAdmin, showEnterpriseTeam: org?.plan === 'enterprise', t, activeSection });
   const planLabel = org?.plan
     ? t(`sidebar.planLabel.${org.plan}`, { defaultValue: `${org.plan[0].toUpperCase()}${org.plan.slice(1)} Plan` })
     : t('sidebar.planLabel.free', { defaultValue: 'Free Plan' });
@@ -151,7 +161,7 @@ export default function Sidebar() {
               className="flex flex-col overflow-hidden"
             >
               <span className="text-[#0a0a0a] text-[13px] font-semibold tracking-wide font-['Space_Grotesk'] whitespace-nowrap">
-                HIVEMIND
+                {activeSection === 'hyperagents' ? 'HYPERAGENTS' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'}
               </span>
               {org && (
                 <span className="text-[#a3a3a3] text-[10px] font-mono truncate max-w-[140px]">
