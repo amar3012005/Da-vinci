@@ -7,6 +7,8 @@ import {
   Key,
   Cable,
   User,
+  Users,
+  UserPlus,
   FlaskConical,
   Settings,
   LogOut,
@@ -14,6 +16,7 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Globe,
   Server,
@@ -24,6 +27,10 @@ import {
   Mic,
   Building2,
   Gauge,
+  FolderKanban,
+  Search,
+  FileSearch,
+  Waypoints,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
@@ -82,9 +89,25 @@ function buildNavSections({ showWebAdmin, showEnterpriseTeam, t, activeSection =
       ],
     },
     {
+      label: tt('groups.workspaceAdmin', 'Workspace Admin'),
+      items: [
+        { to: '/hivemind/app/workspace',      icon: Building2,    label: tt('workspaceAdmin', 'Workspace Admin'), children: [
+          { to: '/hivemind/app/workspace?tab=members',  icon: Users,        label: tt('orgMembers', 'Org Members') },
+          { to: '/hivemind/app/team/members',           icon: User,         label: tt('teamMembers', 'Team Members') },
+          { to: '/hivemind/app/team/projects',          icon: FolderKanban, label: tt('projects', 'Projects') },
+          { to: '/hivemind/app/workspace?tab=invites',  icon: UserPlus,     label: tt('invites', 'Invites') },
+          { to: '/hivemind/app/workspace?tab=cognition', icon: Waypoints,   label: tt('cognitiveLayer', 'Cognitive Layer') },
+        ]},
+      ],
+    },
+    {
       label: tt('groups.aiFeatures', 'AI Features'),
       items: [
-        { to: '/hivemind/app/web',  icon: Globe, label: tt('webIntel', 'Web Intel') },
+        { to: '/hivemind/app/web', icon: Globe, label: tt('webIntel', 'Web Intel'), children: [
+          { to: '/hivemind/app/deep-research', icon: FileSearch, label: tt('deepResearch', 'Deep Research') },
+          { to: '/hivemind/app/web',           icon: Search,     label: tt('webSearch', 'Web Search') },
+          { to: '/hivemind/app/web?mode=crawl', icon: Globe,     label: tt('webCrawl', 'Web Crawl') },
+        ]},
       ],
     },
     {
@@ -134,6 +157,9 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
     { to: '/hivemind/app/billing',  icon: CreditCard, label: tt('billing',  'Billing') },
     { to: '/hivemind/app/settings', icon: Settings,   label: tt('settings', 'Settings') },
   ];
+
+  const [expanded, setExpanded] = useState({});
+  const toggleExpand = (key) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const sidebarWidth = collapsed ? 'w-[68px]' : 'w-[260px]';
 
@@ -190,47 +216,103 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
             )}
             <div className="space-y-0.5">
               {section.items.map((item) => {
+                const pathOnly = item.to.split('?')[0];
                 const isActive =
-                  location.pathname === item.to ||
-                  (item.to !== '/hivemind/app/overview' && location.pathname.startsWith(item.to));
+                  location.pathname === pathOnly ||
+                  (pathOnly !== '/hivemind/app/overview' && location.pathname.startsWith(pathOnly));
+                const hasChildren = item.children && item.children.length > 0;
+                const childActive = hasChildren && item.children.some((c) => {
+                  const cp = c.to.split('?')[0];
+                  return location.pathname === cp || location.pathname.startsWith(cp);
+                });
+                const isOpen = hasChildren && (expanded[item.to] !== undefined ? expanded[item.to] : (isActive || childActive));
 
                 return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    data-tour-id={item.to}
-                    className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="sidebar-active"
-                        className="absolute inset-0 bg-[#f3f1ec] rounded-lg"
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <item.icon
-                      size={18}
-                      strokeWidth={1.75}
-                      className={`relative z-10 transition-colors flex-shrink-0 ${
-                        isActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
-                      }`}
-                    />
-                    {!collapsed && (
-                      <span
-                        className={`relative z-10 transition-colors truncate ${
-                          isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                  <div key={item.to}>
+                    {hasChildren && !collapsed ? (
+                      <button
+                        onClick={() => toggleExpand(item.to)}
+                        className={`relative flex items-center w-full gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group ${
+                          isActive || childActive ? 'bg-[#f3f1ec]' : ''
                         }`}
                       >
-                        {item.label}
-                      </span>
+                        <item.icon
+                          size={18}
+                          strokeWidth={1.75}
+                          className={`transition-colors flex-shrink-0 ${
+                            isActive || childActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
+                          }`}
+                        />
+                        <span
+                          className={`transition-colors truncate ${
+                            isActive || childActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`ml-auto text-[#a3a3a3] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    ) : (
+                      <NavLink
+                        to={item.to}
+                        data-tour-id={item.to}
+                        className={`relative flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-2.5 py-2 rounded-lg text-[13px] transition-all duration-150 group`}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="sidebar-active"
+                            className="absolute inset-0 bg-[#f3f1ec] rounded-lg"
+                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                          />
+                        )}
+                        <item.icon
+                          size={18}
+                          strokeWidth={1.75}
+                          className={`relative z-10 transition-colors flex-shrink-0 ${
+                            isActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'
+                          }`}
+                        />
+                        {!collapsed && (
+                          <span
+                            className={`relative z-10 transition-colors truncate ${
+                              isActive ? 'text-[#0a0a0a] font-medium' : 'text-[#525252] group-hover:text-[#0a0a0a]'
+                            }`}
+                          >
+                            {item.label}
+                          </span>
+                        )}
+                      </NavLink>
                     )}
-                    {!collapsed && item.label === 'Billing' && (
-                      <span className="relative z-10 ml-auto text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
-                        PRO
-                      </span>
+                    {/* Children sub-nav */}
+                    {hasChildren && isOpen && !collapsed && (
+                      <div className="ml-4 pl-2.5 border-l border-[#e3e0db] mt-0.5 space-y-0.5">
+                        {item.children.map((child) => {
+                          const cp = child.to.split('?')[0];
+                          const cIsActive = location.pathname === cp && location.search === (child.to.includes('?') ? '?' + child.to.split('?')[1] : '');
+                          return (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-[12px] transition-all duration-150 group ${
+                                cIsActive ? 'bg-[#f3f1ec] text-[#0a0a0a] font-medium' : 'text-[#525252] hover:text-[#0a0a0a] hover:bg-[#f3f1ec]/50'
+                              }`}
+                            >
+                              <child.icon
+                                size={14}
+                                strokeWidth={1.75}
+                                className={`flex-shrink-0 ${cIsActive ? 'text-[#0a0a0a]' : 'text-[#a3a3a3] group-hover:text-[#525252]'}`}
+                              />
+                              <span className="truncate">{child.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
                     )}
-                  </NavLink>
+                  </div>
                 );
               })}
             </div>
