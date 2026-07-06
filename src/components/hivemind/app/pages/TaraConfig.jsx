@@ -347,6 +347,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
           session_id: `out-${Date.now()}`,
           user_id: identity?.userId,
           org_id: identity?.orgId,
+          company: identity?.orgName || undefined,
           language: callLang,
           goal: goal.trim() || undefined,
         }),
@@ -641,7 +642,7 @@ export default function TaraConfig() {
   const lastCall = (calls[0] && _validTs(calls[0].startedAt) !== null) ? new Date(calls[0].startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
   useEffect(() => {
     apiClient.bootstrap()
-      .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null }))
+      .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null }))
       .catch(() => {});
   }, []);
 
