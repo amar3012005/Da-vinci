@@ -6,7 +6,7 @@ import {
   Save,
   Play,
   Clock,
-  MessageSquare,
+
   Zap,
   Brain,
   CheckCircle,
@@ -25,6 +25,10 @@ import {
   Phone,
   PhoneOff,
   PhoneCall,
+  Star,
+  Target,
+  TrendingUp,
+  Lightbulb,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
@@ -294,6 +298,44 @@ function SkillsManager() {
 
 // ─── Outbound Call Panel ───────────────────────────────────────────────────
 const STATE_COLOR = { dialing: '#d97706', connected: '#16a34a', ended: '#a3a3a3', error: '#dc2626' };
+
+// Priority stars (1-5) for a lead.
+function Stars({ n = 0 }) {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star key={i} size={12} className={i <= n ? 'text-amber-400' : 'text-[#e3e0db]'}
+          fill={i <= n ? '#fbbf24' : 'none'} />
+      ))}
+    </span>
+  );
+}
+
+const INTEREST_COLOR = { hot: '#dc2626', warm: '#d97706', cold: '#6b7280' };
+
+// One lead card for the Leads dashboard.
+function LeadCard({ lead, call, onOpen }) {
+  return (
+    <div className="bg-white border border-[#e3e0db] rounded-[10px] p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[14px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] truncate">{lead.name || lead.company || 'Unnamed lead'}</span>
+          <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-full" style={{ color: INTEREST_COLOR[lead.interest] || '#6b7280', background: `${INTEREST_COLOR[lead.interest] || '#6b7280'}14` }}>{lead.interest || '—'}</span>
+        </div>
+        <Stars n={Number(lead.priority_stars) || 0} />
+      </div>
+      {(lead.company && lead.name) && <p className="text-[11px] text-[#a3a3a3]">{lead.company}</p>}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#525252]">
+        {lead.contact && <span>📞 {lead.contact}</span>}
+        {lead.budget && <span>💰 {lead.budget}</span>}
+        {lead.timeline && <span>🗓 {lead.timeline}</span>}
+      </div>
+      {lead.notes && <p className="text-[12px] text-[#525252]">{lead.notes}</p>}
+      {lead.next_step && <p className="text-[12px] text-[#117dff]">→ {lead.next_step}</p>}
+      {call && <button onClick={() => onOpen(call)} className="text-[11px] text-[#a3a3a3] hover:text-[#117dff]">from call · {new Date(call.startedAt).toLocaleDateString()} →</button>}
+    </div>
+  );
+}
 
 const OUTBOUND_LANGS = [
   ['en', 'English'], ['de', 'German'], ['es', 'Spanish'],
@@ -634,12 +676,19 @@ export default function TaraConfig() {
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
 
   // Aggregates for stat cards + usage tab
-  const now = Date.now();
   const _validTs = (d) => { const ts = new Date(d).getTime(); return Number.isNaN(ts) ? null : ts; };
-  const weekCount = calls.filter((c) => { const ts = _validTs(c.startedAt); return ts !== null && now - ts < 7 * 864e5; }).length;
-  const totalTurns = calls.reduce((a, c) => a + (c.turnCount || 0), 0);
-  const totalTokens = calls.reduce((a, c) => a + (c.promptTokens || 0) + (c.completionTokens || 0), 0);
-  const lastCall = (calls[0] && _validTs(calls[0].startedAt) !== null) ? new Date(calls[0].startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+  const totalPromptTok = calls.reduce((a, c) => a + (c.promptTokens || 0), 0);
+  const totalComplTok = calls.reduce((a, c) => a + (c.completionTokens || 0), 0);
+  const totalTokens = totalPromptTok + totalComplTok;
+  const totalSeconds = calls.reduce((a, c) => a + Math.round((c.durationMs || 0) / 1000), 0);
+  const totalMinutes = (totalSeconds / 60);
+  // Goal-success rate ("accuracy"): calls whose insight goal_outcome achieved/partial.
+  const analyzed = calls.filter((c) => c.insight?.goal_outcome);
+  const goalHits = analyzed.filter((c) => ['achieved', 'partial'].includes(c.insight.goal_outcome)).length;
+  const accuracy = analyzed.length ? Math.round((goalHits / analyzed.length) * 100) : null;
+  // All leads across calls, priority-sorted — the lead-tracking board.
+  const allLeads = calls.flatMap((c) => (c.insight?.leads || []).map((l) => ({ lead: l, call: c })))
+    .sort((a, b) => (Number(b.lead.priority_stars) || 0) - (Number(a.lead.priority_stars) || 0));
   useEffect(() => {
     apiClient.bootstrap()
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null }))
@@ -674,10 +723,10 @@ export default function TaraConfig() {
       <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { icon: Play, label: 'Total Calls', value: String(calls.length), color: '#117dff' },
-          { icon: Clock, label: 'This Week', value: String(weekCount), color: '#117dff' },
-          { icon: MessageSquare, label: 'Turns', value: String(totalTurns), color: '#16a34a' },
+          { icon: Clock, label: 'Minutes', value: totalMinutes.toFixed(1), color: '#117dff' },
+          { icon: Star, label: 'Leads', value: String(allLeads.length), color: '#f59e0b' },
           { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#117dff' },
-          { icon: Clock, label: 'Last Call', value: lastCall, color: '#a3a3a3' },
+          { icon: TrendingUp, label: 'Goal Rate', value: accuracy === null ? '—' : `${accuracy}%`, color: '#16a34a' },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <s.icon size={15} style={{ color: s.color }} />
@@ -692,6 +741,7 @@ export default function TaraConfig() {
         <div className="flex items-center gap-1 border-b border-[#e3e0db] mb-4">
           {[
             { id: 'skills', label: 'Skills', icon: Sliders },
+            { id: 'leads', label: 'Leads', icon: Star },
             { id: 'history', label: 'Call History', icon: Clock },
             { id: 'insights', label: 'Insights', icon: Brain },
             { id: 'usage', label: 'Usage', icon: Zap },
@@ -707,6 +757,25 @@ export default function TaraConfig() {
         </div>
 
         {activeTab === 'skills' && <SkillsManager />}
+        {activeTab === 'leads' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] text-[#a3a3a3]">{allLeads.length} lead{allLeads.length === 1 ? '' : 's'} found across {calls.length} call{calls.length === 1 ? '' : 's'} · sorted by priority</p>
+              <button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button>
+            </div>
+            {allLeads.length === 0 ? (
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
+                <Star size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> No leads yet. Run outbound calls with a goal — qualified leads land here automatically.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {allLeads.map(({ lead, call }, i) => (
+                  <LeadCard key={i} lead={lead} call={call} onOpen={(c) => { setActiveTab('history'); openCall(c.id); }} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {activeTab === 'history' && (
           <div className="space-y-3">
             <div className="flex justify-end"><button onClick={refreshCalls} className="text-[11px] text-[#117dff] hover:underline">Refresh</button></div>
@@ -739,37 +808,80 @@ export default function TaraConfig() {
             ))}
           </div>
         )}
-        {activeTab === 'insights' && (
-          calls.find((c) => c.id) && callDetail?.insight ? (
-            <div className="bg-white border border-[#e3e0db] rounded-xl p-5 space-y-3">
-              <p className="text-[13px] text-[#0a0a0a]">{callDetail.insight.summary}</p>
-              {(callDetail.insight.data?.action_items||[]).length>0 && (
-                <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Action Items</p>
-                  <ul className="list-disc pl-5 text-[12px] text-[#525252]">{callDetail.insight.data.action_items.map((a,i)=><li key={i}>{a.task}{a.owner?` · @${a.owner}`:''}</li>)}</ul></div>
-              )}
-              {(callDetail.insight.data?.topics||[]).length>0 && (
-                <div className="flex flex-wrap gap-1.5">{callDetail.insight.data.topics.map((tp,i)=><span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{tp}</span>)}</div>
-              )}
-            </div>
-          ) : (
+        {activeTab === 'insights' && (() => {
+          const ins = callDetail?.insight?.data || null;
+          if (!ins) return (
             <div className="bg-white border border-[#e3e0db] rounded-xl p-8 text-center text-[13px] text-[#a3a3a3]">
-              <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Open a call in Call History to see its insights.
+              <Brain size={20} className="mx-auto mb-2 text-[#d4d0ca]" /> Open a call in Call History to see its full analysis.
             </div>
-          )
-        )}
-        {activeTab === 'usage' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: 'Total Calls', value: String(calls.length) },
-              { label: 'Total Turns', value: String(totalTurns) },
-              { label: 'Total Tokens', value: totalTokens.toLocaleString() },
-              { label: 'Avg Turns/Call', value: calls.length ? (totalTurns/calls.length).toFixed(1) : '0' },
-            ].map((u) => (
-              <div key={u.label} className="bg-white border border-[#e3e0db] rounded-xl p-4">
-                <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums">{u.value}</p>
-                <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{u.label}</p>
+          );
+          const GO = { achieved: ['#16a34a', 'Goal achieved'], partial: ['#d97706', 'Goal partial'], missed: ['#dc2626', 'Goal missed'], 'n/a': ['#6b7280', 'No goal'] };
+          const go = GO[ins.goal_outcome] || GO['n/a'];
+          return (
+            <div className="space-y-3">
+              <div className="bg-white border border-[#e3e0db] rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full" style={{ color: go[0], background: `${go[0]}14` }}>{go[1]}</span>
+                  {ins.sentiment && <span className="text-[11px] text-[#a3a3a3]">sentiment: {ins.sentiment}</span>}
+                </div>
+                <p className="text-[13px] text-[#0a0a0a]">{ins.summary || callDetail.insight.summary}</p>
+                {(ins.key_points||[]).length>0 && (
+                  <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Key points</p>
+                    <ul className="list-disc pl-5 text-[12px] text-[#525252]">{ins.key_points.map((k,i)=><li key={i}>{k}</li>)}</ul></div>
+                )}
+                {(ins.action_items||[]).length>0 && (
+                  <div><p className="text-[10px] font-mono uppercase text-[#a3a3a3] mb-1">Action items</p>
+                    <ul className="list-disc pl-5 text-[12px] text-[#525252]">{ins.action_items.map((a,i)=><li key={i}>{a.task}{a.owner?` · @${a.owner}`:''}{a.due?` · ${a.due}`:''}</li>)}</ul></div>
+                )}
+                {(ins.topics||[]).length>0 && (
+                  <div className="flex flex-wrap gap-1.5">{ins.topics.map((tp,i)=><span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-[#f3f1ec] text-[#525252]">{tp}</span>)}</div>
+                )}
               </div>
-            ))}
+              {(ins.tara_learnings||[]).length>0 && (
+                <div className="bg-[#fbfcff] border border-[#dbeafe] rounded-xl p-5">
+                  <p className="text-[11px] font-mono uppercase text-[#117dff] mb-2 flex items-center gap-1.5"><Lightbulb size={13} /> TARA learnings</p>
+                  <ul className="list-disc pl-5 text-[12px] text-[#525252] space-y-1">{ins.tara_learnings.map((l,i)=><li key={i}>{l}</li>)}</ul>
+                </div>
+              )}
+              {(ins.leads||[]).length>0 && (
+                <div>
+                  <p className="text-[11px] font-mono uppercase text-[#a3a3a3] mb-2 flex items-center gap-1.5"><Target size={13} /> Leads from this call</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{ins.leads.map((l,i)=><LeadCard key={i} lead={l} />)}</div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        {activeTab === 'usage' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Minutes', value: totalMinutes.toFixed(1) },
+                { label: 'Prompt Tokens', value: totalPromptTok.toLocaleString() },
+                { label: 'Completion Tokens', value: totalComplTok.toLocaleString() },
+                { label: 'Goal Rate', value: accuracy === null ? '—' : `${accuracy}%` },
+              ].map((u) => (
+                <div key={u.label} className="bg-white border border-[#e3e0db] rounded-xl p-4">
+                  <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums">{u.value}</p>
+                  <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{u.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white border border-[#e3e0db] rounded-xl overflow-hidden">
+              <div className="grid grid-cols-5 gap-2 px-4 py-2 border-b border-[#f0ede8] text-[10px] font-mono uppercase text-[#a3a3a3]">
+                <span className="col-span-2">Call</span><span className="text-right">Duration</span><span className="text-right">Prompt tok</span><span className="text-right">Compl tok</span>
+              </div>
+              {calls.length === 0 ? (
+                <p className="px-4 py-6 text-center text-[13px] text-[#a3a3a3]">No calls yet.</p>
+              ) : calls.map((c) => (
+                <div key={c.id} className="grid grid-cols-5 gap-2 px-4 py-2 border-b border-[#f7f5f1] text-[12px] items-center">
+                  <span className="col-span-2 text-[#525252] truncate">{_validTs(c.startedAt)===null?'—':new Date(c.startedAt).toLocaleString()}</span>
+                  <span className="text-right tabular-nums text-[#525252]">{Math.round((c.durationMs||0)/1000)}s</span>
+                  <span className="text-right tabular-nums text-[#525252]">{(c.promptTokens||0).toLocaleString()}</span>
+                  <span className="text-right tabular-nums text-[#525252]">{(c.completionTokens||0).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {activeTab === 'outbound' && <OutboundPanel identity={identity} onSwitchTab={setActiveTab} language={(i18n.language || 'en').split('-')[0]} />}
