@@ -110,7 +110,16 @@ export default function LoginPage() {
     } catch (e) {}
   }, [location.search]);
 
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  // ?create=1 — a signed-in but org-less new user was sent here by Onboarding.
+  // The create-account UX lives in ONE place (this page), so open the
+  // create-account view directly and suppress the signed-in redirect below —
+  // otherwise we'd bounce them straight back to /app in a loop.
+  const wantsCreate = useMemo(
+    () => new URLSearchParams(location.search).get('create') === '1',
+    [location.search]
+  );
+
+  const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
   const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
@@ -121,6 +130,7 @@ export default function LoginPage() {
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
     if (isAuthenticated) {
+      if (wantsCreate) return; // org-less new user finishing create-account — stay here
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
@@ -135,7 +145,7 @@ export default function LoginPage() {
         : '/hivemind/app/overview';
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search]);
+  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {

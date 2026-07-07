@@ -47,12 +47,12 @@ export default function OnboardingFlow() {
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
   const [showSelfHost, setShowSelfHost] = useState(false);
-  // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage before
-  // OAuth). Consume it here and create the org silently — never re-ask. Only show the form below as a
-  // fallback when there's no saved choice (e.g. a direct visit to onboarding).
-  const [autoCreating, setAutoCreating] = useState(() => {
-    try { return !!localStorage.getItem('hivemind_onboarding'); } catch { return false; }
-  });
+  // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
+  // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
+  // the effect below redirects to /hivemind/login?create=1 (the single create-account UX), so start
+  // TRUE either way: the spinner covers both auto-create and the redirect (no flash of the old
+  // duplicate choice form). Only the error-retry path flips this off to show the details form.
+  const [autoCreating, setAutoCreating] = useState(true);
   const autoRan = useRef(false);
 
   useEffect(() => {
@@ -60,7 +60,15 @@ export default function OnboardingFlow() {
     autoRan.current = true;
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* ignore */ }
-    if (!saved) { setAutoCreating(false); return; }
+    if (!saved) {
+      // No saved signup choice (plain "Continue with Google" as a brand-new
+      // user). The create-account UX lives in ONE place — the login page —
+      // so send them there instead of duplicating the choice UI here.
+      // ?create=1 makes LoginPage open the create-account view and skip its
+      // signed-in redirect.
+      window.location.replace('/hivemind/login?create=1');
+      return;
+    }
     const isEnt = saved.type === 'enterprise';
     const name = isEnt
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')

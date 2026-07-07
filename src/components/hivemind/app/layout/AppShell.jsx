@@ -173,26 +173,35 @@ export default function AppShell() {
     }
     setGate('done');
   };
-  // Self-host gate: a self_host org must connect its agent BEFORE the workspace opens. We poll the
-  // server-side connection state (registry + agent /health) — works even if the user closed the tab
-  // while running setup.sh on their server; on return it reflects reality. Managed orgs skip this.
+  // Self-host gate: only an org whose agent was NEVER registered gets the
+  // connect-your-agent setup screen (it mints + reveals the self-host key, so
+  // it must not reappear on every visit). An org that completed setup before
+  // (registered in the agent registry) goes straight to the dashboard even if
+  // the agent is momentarily unreachable — data calls surface their own errors.
+  //   'checking' → first /v1/selfhost/status in flight (sub-second + 2.5s ping budget)
+  //   'setup'    → never registered → show SelfHostSetup
+  //   'ok'       → registered → workspace
   const isSelfHost = org?.hosting_mode === 'self_host';
-  // Start FALSE (not seeded from isSelfHost): org is null while bootstrap is in flight, so a
-  // useState initializer that read isSelfHost would freeze `true` before the org loads and the
-  // self-host gate would never fire. `isSelfHost` is re-derived each render, so once the org loads
-  // as self_host the gate engages; the poll flips this to true only when the agent is reachable.
-  const [agentConnected, setAgentConnected] = useState(false);
+  const [shGate, setShGate] = useState('checking');
   useEffect(() => {
-    if (!isSelfHost || agentConnected) return undefined;
+    if (!isSelfHost || shGate === 'ok') return undefined;
     let alive = true;
     const tick = async () => {
-      try { const s = await apiClient.selfHostStatus(); if (alive && s?.reachable) setAgentConnected(true); }
-      catch { /* keep waiting */ }
+      try {
+        const s = await apiClient.selfHostStatus();
+        if (!alive) return;
+        if (s?.registered) setShGate('ok');
+        else setShGate('setup');
+      } catch {
+        // Transient status failure: only fall to the setup screen from the
+        // initial check — never yank an already-open workspace away.
+        if (alive) setShGate((g) => (g === 'checking' ? 'setup' : g));
+      }
     };
     tick();
     const id = setInterval(tick, 5000);
     return () => { alive = false; clearInterval(id); };
-  }, [isSelfHost, agentConnected]);
+  }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState(() => {
@@ -234,10 +243,17 @@ export default function AppShell() {
     return <OnboardingFlow />;
   }
 
-  // Self-host org whose agent hasn't connected yet → show the connect-your-agent flow, not the
-  // workspace. Flips to the dashboard automatically the moment the agent registers + is reachable.
-  if (isSelfHost && !agentConnected) {
-    return <SelfHostSetup onDone={() => setAgentConnected(true)} />;
+  // Self-host org: brief status check, then either the workspace (agent was
+  // registered before — even if currently offline) or the one-time setup flow.
+  if (isSelfHost && shGate === 'checking') {
+    return (
+      <div className="min-h-screen bg-[#faf9f4] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (isSelfHost && shGate === 'setup') {
+    return <SelfHostSetup onDone={() => setShGate('ok')} />;
   }
 
   // New-user capability deck → activation checklist → workspace reveal.
