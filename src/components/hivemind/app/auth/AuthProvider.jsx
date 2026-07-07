@@ -26,7 +26,17 @@ export function AuthProvider({ children }) {
     setAuthState('loading');
 
     try {
-      const data = await apiClient.bootstrap();
+      // Hard timeout so a hung bootstrap never traps the user on the
+      // "Loading HIVEMIND..." spinner forever. If the control-plane request
+      // stalls (e.g. a poisoned browser connection, network wedge), we fall
+      // through to the catch below and land on signed_out → login, which is
+      // recoverable, instead of an infinite spinner.
+      const data = await Promise.race([
+        apiClient.bootstrap(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('bootstrap_timeout')), 12000)
+        ),
+      ]);
       setConnectivity(data.connectivity || null);
       setClientSupport(data.client_support || []);
 
@@ -42,7 +52,10 @@ export function AuthProvider({ children }) {
         setAuthState('signed_in');
       }
     } catch (err) {
-      if (err.response?.status === 401) {
+      // A 401 (unauthenticated) or a client-side bootstrap timeout both
+      // resolve to signed_out → login, which is recoverable. Only a genuine
+      // network/server failure falls through to control_plane_unreachable.
+      if (err.response?.status === 401 || err.message === 'bootstrap_timeout') {
         setUser(null);
         setOrg(null);
         setOnboarding(null);

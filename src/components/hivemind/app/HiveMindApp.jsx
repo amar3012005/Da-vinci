@@ -197,6 +197,9 @@ export default function HiveMindApp() {
           <Route path="hermes" element={<PageSuspense><HermesAgents /></PageSuspense>} />
           <Route path="connect/claude-code/callback" element={<PageSuspense><ClaudeCodeConnectCallback /></PageSuspense>} />
           <Route path="connect/mcp/callback" element={<PageSuspense><McpConnectCallback /></PageSuspense>} />
+          {/* Unknown /hivemind/app/* child (stray OAuth redirect_uri like
+              /app/callback, typos) → overview instead of a blank Outlet. */}
+          <Route path="*" element={<Navigate to="overview" replace />} />
         </Route>
 
         {/* Fallback */}
