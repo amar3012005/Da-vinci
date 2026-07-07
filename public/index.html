@@ -7,8 +7,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#05070f" />
 
-  <!-- Preload the SINGULANCE hero cover (WebP) so it paints immediately -->
-  <link rel="preload" as="image" href="%PUBLIC_URL%/singulance-cover.webp" fetchpriority="high" />
+  <!-- NB: no global hero-image preload here — index.html is shared by ALL
+       routes (incl. /hivemind/app) and a preload that most routes never use
+       wastes bandwidth + logs a "preloaded but not used" warning. The landing
+       hero fetches the cover itself with fetchpriority=high. -->
   <meta name="description" content="SINGULANCE — the AI operating layer for regulated Europe. Run your institution as an AI company with a sovereign, GDPR-native AI workforce that runs inside your organization's memory: TARA (voice), HIVEMIND (sovereign memory), and HYPERAGENTS (agent swarm)." />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
 
