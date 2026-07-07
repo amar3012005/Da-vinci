@@ -11,60 +11,75 @@ import * as THREE from "three";
 
 const DEFAULT_BG = "rgba(0,0,0,0)";
 
-// ─── Monochromatic theme system ────────────────────────────────────────────
-// Two palettes — strict greyscale, no chroma. Day = ink-on-paper. Night =
-// cosmic monochrome (deep black scene, near-white nodes, soft grey edges).
-// Switching themes only restyles the graph canvas, not the surrounding UI.
+// ─── Memory atlas theme system ─────────────────────────────────────────────
+// One visual language in both modes: coral edges/nodes, cream secondary
+// particles, black relationship tags, and amber "board" labels for documents.
+// Day keeps the same network language on warm paper instead of switching blue.
 const THEMES = {
   atlas: {
     name: "atlas",
-    bg: "#181715",
-    sceneClear: "#181715",
+    bg: "#15120f",
+    sceneClear: "#15120f",
     label: "#f6eee5",
     labelDim: "#9f978f",
-    edgeLabelBg: "rgba(5,5,5,0.92)",
-    edgeLabelBorder: "rgba(255,237,222,0.16)",
-    nodeAccent: "#ff5b58",
-    nodeBase: "#d8cdc2",
+    edgeLabelBg: "rgba(4,4,4,0.94)",
+    edgeLabelBorder: "rgba(255,118,104,0.32)",
+    nodeAccent: "#ff514c",
+    nodeBase: "#ead8ca",
     nodeMuted: "#403b36",
     nodeShell: "#332a27",
-    linkBase: "#d9c9bd",
+    linkBase: "#e9b1a4",
     linkDim: "#4a4741",
-    particle: "#ff736f",
+    particle: "#ff675f",
+    boardBg: "#d99a1a",
+    boardFg: "#17100a",
+    tagBg: "rgba(4,4,4,0.94)",
+    tagFg: "#fff0e4",
+    tagBorder: "rgba(255,239,224,0.16)",
     haloOpacity: 0.11,
   },
   day: {
     name: "day",
-    bg: "rgba(0,0,0,0)",                // page bg shows through (warm paper)
-    sceneClear: null,                    // null = use prop-supplied bg
-    label: "#111111",                    // labels: ink
-    labelDim: "#686868",
-    edgeLabelBg: "rgba(255,255,255,0.92)",
-    edgeLabelBorder: "rgba(47,131,255,0.16)",
-    nodeAccent: "#2f83ff",               // hub / selected
-    nodeBase: "#314158",                 // most nodes
-    nodeMuted: "#b7b4ad",                // unfocused / filtered out
-    nodeShell: "#eef6ff",                // orphan halo
-    linkBase: "#6e7f96",                 // soft graphite-blue edges
-    linkDim: "#d8d4cc",
-    particle: "#2f83ff",
+    bg: "#efe7da",
+    sceneClear: "#efe7da",
+    label: "#fff3e7",
+    labelDim: "#b9aa9b",
+    edgeLabelBg: "rgba(5,5,5,0.9)",
+    edgeLabelBorder: "rgba(204,75,68,0.28)",
+    nodeAccent: "#e94f48",
+    nodeBase: "#3f352f",
+    nodeMuted: "#a69a8d",
+    nodeShell: "#f5d5c8",
+    linkBase: "#cf625a",
+    linkDim: "#d9cfc2",
+    particle: "#ef574e",
+    boardBg: "#d99a1a",
+    boardFg: "#17100a",
+    tagBg: "rgba(8,7,6,0.9)",
+    tagFg: "#fff2e4",
+    tagBorder: "rgba(210,82,75,0.24)",
     haloOpacity: 0.075,
   },
   night: {
     name: "night",
-    bg: "#06070a",                       // deep cosmic
-    sceneClear: "#06070a",
+    bg: "#15120f",
+    sceneClear: "#15120f",
     label: "#f4f1ea",
     labelDim: "#9a958d",
-    edgeLabelBg: "rgba(8,9,12,0.86)",
-    edgeLabelBorder: "rgba(255,255,255,0.14)",
-    nodeAccent: "#ffffff",
-    nodeBase: "#c8c4bc",
+    edgeLabelBg: "rgba(4,4,4,0.94)",
+    edgeLabelBorder: "rgba(255,118,104,0.32)",
+    nodeAccent: "#ff514c",
+    nodeBase: "#ead8ca",
     nodeMuted: "#4a4640",
     nodeShell: "#1a1c20",
-    linkBase: "#9a958d",                 // near-white edges on black
+    linkBase: "#e9b1a4",
     linkDim: "#3a3a3a",
-    particle: "#e8e2d4",
+    particle: "#ff675f",
+    boardBg: "#d99a1a",
+    boardFg: "#17100a",
+    tagBg: "rgba(4,4,4,0.94)",
+    tagFg: "#fff0e4",
+    tagBorder: "rgba(255,239,224,0.16)",
     haloOpacity: 0.10,
   },
 };
@@ -121,29 +136,23 @@ function getLabelTexture(type, confidence, themeName) {
   const totalW = typeW + (confidence ? gap + confW : 0);
   canvas.width = Math.ceil(totalW + padX * 2);
   canvas.height = Math.ceil(fontSize + padY * 2);
-  const r = canvas.height / 2;
-  // Pill background — type-colored when known (red Contradicts, purple Derives...)
+  const r = 2 * dpr;
   const typeColor = (() => {
     const lc = String(type).toLowerCase();
-    if (themeName === "atlas") {
-      if (lc === 'contradicts') return '#ff5754';
-      if (lc === 'updates') return '#ff6b63';
-      if (lc === 'derived_from' || lc === 'derives') return '#ead5c8';
-      if (lc === 'extends' || lc === 'supports' || lc === 'mentions') return '#c8c0b7';
-      if (lc === 'needs_revision') return '#d08a2e';
-      if (lc === 'peer_review') return '#8f8a82';
-      return '#bdb4aa';
-    }
-    if (lc === 'contradicts') return '#ef4444';
-    if (lc === 'derived_from' || lc === 'derives') return '#a78bfa';
-    if (lc === 'supports' || lc === 'mentions') return '#10b981';
-    if (lc === 'updates') return '#3b82f6';
-    if (lc === 'extends') return '#8b5cf6';
-    if (lc === 'needs_revision') return '#f59e0b';
-    if (lc === 'peer_review') return '#64748b';
-    return null;
+    if (lc === 'contradicts') return '#ff514c';
+    if (lc === 'updates') return '#ff675f';
+    if (lc === 'derived_from' || lc === 'derives') return '#f0d6c8';
+    if (lc === 'extends') return '#f5c6ad';
+    if (lc === 'supports') return '#f3dfcf';
+    if (lc === 'mentions') return '#c6bbb0';
+    if (lc === 'needs_revision') return t.boardBg;
+    if (lc === 'peer_review') return '#9d9288';
+    return '#e6d3c4';
   })();
-  ctx.fillStyle = themeName === "atlas" ? t.edgeLabelBg : (typeColor ? typeColor + '22' : t.edgeLabelBg);
+  ctx.shadowColor = themeName === "day" ? "rgba(78,50,34,0.18)" : "rgba(0,0,0,0.44)";
+  ctx.shadowBlur = 14 * dpr;
+  ctx.shadowOffsetY = 4 * dpr;
+  ctx.fillStyle = t.edgeLabelBg;
   ctx.beginPath();
   ctx.moveTo(r, 0);
   ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, r);
@@ -152,18 +161,19 @@ function getLabelTexture(type, confidence, themeName) {
   ctx.arcTo(0, 0, canvas.width, 0, r);
   ctx.closePath();
   ctx.fill();
+  ctx.shadowColor = "transparent";
   ctx.lineWidth = dpr;
-  ctx.strokeStyle = themeName === "atlas" ? t.edgeLabelBorder : (typeColor || t.edgeLabelBorder);
+  ctx.strokeStyle = t.edgeLabelBorder;
   ctx.stroke();
-  // Type label (colored when known type)
+  ctx.fillStyle = typeColor;
+  ctx.fillRect(0, 0, Math.max(3 * dpr, Math.min(5 * dpr, canvas.width * 0.08)), canvas.height);
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
-  ctx.fillStyle = themeName === "atlas" ? t.label : (typeColor || t.label);
+  ctx.fillStyle = t.label;
   ctx.textBaseline = "middle";
   ctx.fillText(type, padX, canvas.height / 2);
-  // Confidence pill — muted mono
   if (confidence) {
     ctx.font = `500 ${confFontSize}px "JetBrains Mono", monospace`;
-    ctx.fillStyle = themeName === "atlas" ? t.labelDim : (typeColor ? typeColor + 'cc' : t.label + 'cc');
+    ctx.fillStyle = typeColor;
     ctx.fillText(confidence, padX + typeW + gap, canvas.height / 2);
   }
   const tex = new THREE.CanvasTexture(canvas);
@@ -224,6 +234,20 @@ function getNodeDisplayLabel(node) {
   );
 }
 
+function isBoardNode(node) {
+  if (!node) return false;
+  const type = getNodeType(node);
+  const meta = node.metadata || node.source_metadata || {};
+  const source = String(node.sourcePlatform || node.source_platform || meta.platform || meta.source || "").toLowerCase();
+  return (
+    node.kind === "document" ||
+    type === "document" ||
+    type === "summary" ||
+    source.includes("knowledge") ||
+    source.includes("document")
+  );
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -237,33 +261,39 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   const key = `${themeName}:${variant}:${text}`;
   if (nodeTagTextureCache.has(key)) return nodeTagTextureCache.get(key);
   const t = (() => {
+    if (variant.startsWith("board")) {
+      if (variant === "boardSelected") return { bg: "#ffc44d", border: "rgba(255,236,172,0.78)", fg: "#160f07", shadow: "rgba(217,154,26,0.36)" };
+      if (variant === "boardFocus") return { bg: "rgba(217,154,26,0.94)", border: "rgba(255,226,139,0.58)", fg: "#160f07", shadow: "rgba(217,154,26,0.28)" };
+      return { bg: "rgba(210,145,22,0.92)", border: "rgba(255,220,120,0.38)", fg: "#160f07", shadow: "rgba(156,94,8,0.24)" };
+    }
     if (themeName === "atlas") {
       if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
       if (variant === "focus") return { bg: "rgba(4,4,4,0.94)", border: "rgba(255,115,105,0.34)", fg: "#fff2e8", shadow: "rgba(255,84,80,0.18)" };
-      return { bg: "rgba(3,3,3,0.86)", border: "rgba(255,238,222,0.13)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
+      return { bg: "rgba(3,3,3,0.9)", border: "rgba(255,238,222,0.14)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
     }
     if (themeName === "night") {
-      if (variant === "selected") return { bg: "rgba(244,241,234,0.94)", border: "rgba(255,255,255,0.36)", fg: "#090909", shadow: "rgba(255,255,255,0.16)" };
-      if (variant === "focus") return { bg: "rgba(18,18,20,0.92)", border: "rgba(244,241,234,0.34)", fg: "#f4f1ea", shadow: "rgba(0,0,0,0.28)" };
-      return { bg: "rgba(18,18,20,0.74)", border: "rgba(244,241,234,0.18)", fg: "#e5e0d8", shadow: "rgba(0,0,0,0.22)" };
+      if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
+      if (variant === "focus") return { bg: "rgba(4,4,4,0.94)", border: "rgba(255,115,105,0.34)", fg: "#fff2e8", shadow: "rgba(255,84,80,0.18)" };
+      return { bg: "rgba(3,3,3,0.9)", border: "rgba(255,238,222,0.14)", fg: "#eee4d8", shadow: "rgba(0,0,0,0.38)" };
     }
-    if (variant === "selected") return { bg: "rgba(16,15,13,0.94)", border: "rgba(16,15,13,0.64)", fg: "#fffaf2", shadow: "rgba(35,31,25,0.18)" };
-    if (variant === "focus") return { bg: "rgba(255,253,247,0.96)", border: "rgba(28,26,22,0.34)", fg: "#12110f", shadow: "rgba(35,31,25,0.14)" };
-    return { bg: "rgba(255,253,247,0.84)", border: "rgba(38,35,30,0.20)", fg: "#23211d", shadow: "rgba(35,31,25,0.10)" };
+    if (variant === "selected") return { bg: "rgba(232,79,72,0.96)", border: "rgba(68,42,34,0.36)", fg: "#140c09", shadow: "rgba(156,59,48,0.24)" };
+    if (variant === "focus") return { bg: "rgba(7,6,5,0.92)", border: "rgba(232,79,72,0.32)", fg: "#fff2e4", shadow: "rgba(68,42,34,0.16)" };
+    return { bg: "rgba(8,7,6,0.86)", border: "rgba(232,79,72,0.18)", fg: "#fff2e4", shadow: "rgba(68,42,34,0.12)" };
   })();
   const dpr = typeof window !== "undefined" ? Math.max(1, Math.min(2.5, window.devicePixelRatio || 1)) : 1;
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const fontSize = (variant === "selected" ? 17 : 15) * dpr;
+  const isBoard = variant.startsWith("board");
+  const fontSize = (variant === "selected" || variant === "boardSelected" ? 17 : isBoard ? 14 : 15) * dpr;
   const lineHeight = fontSize * 1.18;
-  const padX = 11 * dpr;
-  const padY = 7 * dpr;
-  const lines = splitLabelLines(text);
-  ctx.font = `${variant === "selected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  const padX = (isBoard ? 13 : 11) * dpr;
+  const padY = (isBoard ? 8 : 7) * dpr;
+  const lines = splitLabelLines(text, isBoard ? 26 : 32, isBoard ? 2 : 2);
+  ctx.font = `${variant === "selected" || variant === "boardSelected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   const textW = Math.max(...lines.map((line) => ctx.measureText(line).width));
-  canvas.width = Math.ceil(Math.min(Math.max(textW + padX * 2, 96 * dpr), 270 * dpr));
+  canvas.width = Math.ceil(Math.min(Math.max(textW + padX * 2, (isBoard ? 118 : 96) * dpr), (isBoard ? 238 : 270) * dpr));
   canvas.height = Math.ceil(lines.length * lineHeight + padY * 2);
-  const r = 9 * dpr;
+  const r = (isBoard ? 2 : 3) * dpr;
   ctx.shadowColor = t.shadow;
   ctx.shadowBlur = 18 * dpr;
   ctx.shadowOffsetY = 6 * dpr;
@@ -280,7 +310,11 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   ctx.lineWidth = dpr;
   ctx.strokeStyle = t.border;
   ctx.stroke();
-  ctx.font = `${variant === "selected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
+  if (isBoard) {
+    ctx.fillStyle = "rgba(20,13,7,0.3)";
+    ctx.fillRect(0, 0, 5 * dpr, canvas.height);
+  }
+  ctx.font = `${variant === "selected" || variant === "boardSelected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.fillStyle = t.fg;
   ctx.textBaseline = "middle";
   lines.forEach((line, index) => {
@@ -317,7 +351,13 @@ function setNodeLabelSpriteVariant(sprite, variant, themeName) {
   const { texture, w, h } = getNodeTagTexture(sprite.userData.nodeTag, themeName, variant);
   sprite.material.map = texture;
   sprite.material.needsUpdate = true;
-  const scale = variant === "selected" ? 0.158 : variant === "focus" ? 0.148 : 0.14;
+  const scale = variant === "selected" || variant === "boardSelected"
+    ? 0.158
+    : variant === "focus" || variant === "boardFocus"
+      ? 0.148
+      : variant === "board"
+        ? 0.152
+        : 0.14;
   sprite.scale.set(w * scale, h * scale, 1);
   sprite.userData.labelVariant = variant;
 }
@@ -450,8 +490,8 @@ function getNodeType(node) {
 // Color overrides for non-memory node kinds
 function getKindColor(node) {
   // Atlas mode resolves kind colors in getAtlasNodeColor().
-  if (node?.kind === 'document') return '#f59e0b';  // amber — like the image
-  if (node?.kind === 'entity') return '#10b981';     // emerald
+  if (node?.kind === 'document') return '#d99a1a';
+  if (node?.kind === 'entity') return '#ead8ca';
   return null;
 }
 
@@ -460,7 +500,7 @@ function getKindColor(node) {
 // type reads the same color across 2D / 3D / detail views.
 function getEdgeColorByType(type, themeName = "day") {
   const t = String(type || '').toLowerCase();
-  if (themeName === "atlas") {
+  if (themeName === "atlas" || themeName === "night" || themeName === "day") {
     if (t === 'updates') return '#ff6560';
     if (t === 'extends') return '#c4bdb4';
     if (t === 'derives' || t === 'derived_from') return '#f1dfd1';
@@ -548,7 +588,13 @@ function getNodeColorBase(node) {
 }
 
 function getThemeBackground(theme, fallback) {
-  return theme.name === "night" || theme.name === "atlas" ? theme.bg : fallback;
+  return theme.bg || fallback;
+}
+
+function getThemeFog(theme) {
+  if (theme.name === "day") return new THREE.FogExp2("#efe7da", 0.00062);
+  if (theme.name === "atlas" || theme.name === "night") return new THREE.FogExp2("#15120f", 0.00078);
+  return null;
 }
 
 function hexToRgb(hex) {
@@ -735,7 +781,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     fg.backgroundColor(getThemeBackground(theme, backgroundColor));
     const scene = fg.scene?.();
     if (scene) {
-      scene.fog = theme.name === "atlas" ? new THREE.FogExp2("#181715", 0.00085) : null;
+      scene.fog = getThemeFog(theme);
     }
     if (refreshHighlightRef.current) refreshHighlightRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -887,24 +933,23 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       if (labelMode === "focus" && !isImportant && node.clusterRole !== "hub") return "";
       if (!viewStateRef.current.labelNodeIds.has(node.id) && !isImportant) return "";
       const selected = selectedNodeRef.current?.id === node.id;
-      const t = themeRef.current;
-      const atlas = t.name === "atlas";
+      const board = isBoardNode(node);
       return `
         <div style="
-          max-width:${atlas ? "260px" : "240px"};
+          max-width:${board ? "230px" : "260px"};
           padding:${selected ? "7px 10px" : "5px 8px"};
-          border:${atlas ? "1px solid rgba(255,235,220,0.14)" : (selected ? "1px solid rgba(17,17,17,0.72)" : "1px solid rgba(84,80,72,0.18)")};
-          border-radius:${atlas ? "2px" : "8px"};
-          background:${atlas ? (selected ? "rgba(255,84,80,0.92)" : "rgba(3,3,3,0.9)") : (selected ? "rgba(17,17,17,0.9)" : "rgba(255,252,245,0.88)")};
-          color:${atlas ? (selected ? "#140b0a" : "#fff0e5") : (selected ? "#fffaf2" : "#25231f")};
-          box-shadow:${atlas ? "0 10px 26px rgba(0,0,0,0.42)" : (selected ? "0 12px 28px rgba(0,0,0,0.16)" : "0 8px 22px rgba(38,35,30,0.08)")};
+          border:${board ? "1px solid rgba(255,224,130,0.55)" : "1px solid rgba(255,235,220,0.14)"};
+          border-radius:${board ? "2px" : "3px"};
+          background:${board ? "rgba(217,154,26,0.94)" : (selected ? "rgba(255,84,80,0.92)" : "rgba(3,3,3,0.9)")};
+          color:${board || selected ? "#140b0a" : "#fff0e5"};
+          box-shadow:${board ? "0 12px 28px rgba(116,69,9,0.26)" : "0 10px 26px rgba(0,0,0,0.42)"};
           font-family:'Space Grotesk',sans-serif;
           font-size:${selected ? "12px" : "10.5px"};
           font-weight:${selected ? "720" : "620"};
           line-height:1.25;
           white-space:normal;
-          letter-spacing:${atlas ? "0.03em" : "0"};
-          text-transform:${atlas ? "uppercase" : "none"};
+          letter-spacing:0.03em;
+          text-transform:uppercase;
         ">${escapeHtml(getNodeDisplayLabel(node))}</div>
       `;
     },
@@ -1060,11 +1105,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const nodeCount = graphDataRef.current?.nodes?.length || 0;
     const tier = getGraphSizeTier(nodeCount);
     const style = getRelationStyle(link);
-    if (highlightedLinksRef.current.has(link)) return themeRef.current.name === "atlas" ? 1.08 : 1.22;
-    if (themeRef.current.name === "atlas") {
+    if (highlightedLinksRef.current.has(link)) return 1.12;
+    if (themeRef.current.name === "atlas" || themeRef.current.name === "night" || themeRef.current.name === "day") {
       if (tier === "massive") return 0.08;
-      if (tier === "large") return 0.1;
-      return Math.max(0.1, style.width * 0.72);
+      if (tier === "large") return 0.12;
+      return Math.max(0.13, style.width * 0.86);
     }
     return Math.max(style.width, themeRef.current.name === "night" ? 0.2 : 0.28);
   }, []);
@@ -1090,8 +1135,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getLinkOpacity = useCallback((link) => {
     const t = themeRef.current;
     const style = getRelationStyle(link);
-    if (highlightedLinksRef.current.has(link)) return t.name === "atlas" ? 0.72 : 0.82;
-    if (t.name === "atlas") return Math.max(0.07, style.opacity * 0.72);
+    if (highlightedLinksRef.current.has(link)) return 0.82;
+    if (t.name === "atlas" || t.name === "night") return Math.max(0.1, style.opacity * 0.88);
+    if (t.name === "day") return Math.max(0.16, style.opacity * 1.35);
     if (t.name === "night") return Math.max(0.12, style.opacity * 1.18);
     return Math.max(0.14, style.opacity * 1.45);
   }, []);
@@ -1316,7 +1362,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           ? null
           : getNodeDisplayLabel(node);
         if (tag) {
-          const sprite = makeNodeTagSprite(tag, themeRef.current.name);
+          const sprite = makeNodeTagSprite(tag, themeRef.current.name, isBoardNode(node) ? "board" : "normal");
           const radius = getNodeRadius(node);
           // Offset above the node so it doesn't overlap the shape.
           sprite.position.set(0, radius * 2.05 + 1.6, 0);
@@ -1463,9 +1509,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const scene = fg.scene?.();
     if (scene) {
       scene.background = null;
-      scene.fog = themeRef.current.name === "atlas"
-        ? new THREE.FogExp2("#181715", 0.00085)
-        : null;
+      scene.fog = getThemeFog(themeRef.current);
     }
 
     const camera = fg.camera?.();
@@ -1591,15 +1635,17 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             const isHighlighted = highlightNodesRef.current.has(nid) || highlightedNodesRef.current.has(nid);
             const isLabeled = labelNodeIds.has(nid);
             let opacity = 0;
-            let variant = "normal";
+            const node = nodeMapRef.current.get(nid);
+            const board = isBoardNode(node);
+            let variant = board ? "board" : "normal";
             if (isSelected) opacity = 1;
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
             else if (labelMode === 'hidden') opacity = 0;
             else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.8 : 0.68) : 0;
             else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
-            if (isSelected) variant = "selected";
-            else if (isNeighbor || isHighlighted) variant = "focus";
+            if (isSelected) variant = board ? "boardSelected" : "selected";
+            else if (isNeighbor || isHighlighted) variant = board ? "boardFocus" : "focus";
             setNodeLabelSpriteVariant(sprite, variant, themeName);
             sprite.material.opacity = opacity;
             sprite.visible = opacity > 0.01;
@@ -1628,10 +1674,10 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
       emitViewState();
     }
 
-    const ambientLight = new THREE.AmbientLight("#fff2e7", themeRef.current.name === "atlas" ? 1.38 : 1.2);
-    const keyLight = new THREE.DirectionalLight("#ffd6cc", themeRef.current.name === "atlas" ? 0.75 : 0.55);
+    const ambientLight = new THREE.AmbientLight("#fff2e7", themeRef.current.name === "day" ? 1.18 : 1.34);
+    const keyLight = new THREE.DirectionalLight("#ffd6cc", themeRef.current.name === "day" ? 0.62 : 0.78);
     keyLight.position.set(0, 120, 180);
-    const rimLight = new THREE.DirectionalLight("#ff615a", themeRef.current.name === "atlas" ? 0.36 : 0);
+    const rimLight = new THREE.DirectionalLight("#ff615a", themeRef.current.name === "day" ? 0.18 : 0.38);
     rimLight.position.set(-180, 70, -120);
     scene?.add?.(ambientLight);
     scene?.add?.(keyLight);
@@ -1727,7 +1773,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           ? null
           : getNodeDisplayLabel(node);
         if (tag) {
-          const sprite = makeNodeTagSprite(tag, themeRef.current.name);
+          const sprite = makeNodeTagSprite(tag, themeRef.current.name, isBoardNode(node) ? "board" : "normal");
           const radius = getNodeRadius(node);
           sprite.position.set(0, radius * 2.05 + 1.6, 0);
           object3d.add(sprite);

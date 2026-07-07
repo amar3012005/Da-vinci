@@ -803,14 +803,23 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   }, [clusters]);
 
   const atmosphereStyle = useMemo(() => {
+    if (graphTheme === "night") {
+      return {
+        background:
+          `radial-gradient(circle at 22% 18%, rgba(255,91,82,0.10) 0%, rgba(21,18,15,0) 34%),` +
+          `radial-gradient(circle at 78% 30%, rgba(245,216,195,0.06) 0%, rgba(21,18,15,0) 30%),` +
+          `radial-gradient(circle at 58% 84%, rgba(255,82,76,0.08) 0%, rgba(21,18,15,0) 38%),` +
+          `linear-gradient(180deg, #15120f 0%, #0c0a08 100%)`,
+      };
+    }
     return {
       background:
-        `radial-gradient(circle at 18% 22%, rgba(10,10,10,0.04) 0%, rgba(255,255,255,0) 32%),` +
-        `radial-gradient(circle at 80% 24%, rgba(10,10,10,0.03) 0%, rgba(255,255,255,0) 30%),` +
-        `radial-gradient(circle at 56% 78%, rgba(10,10,10,0.05) 0%, rgba(255,255,255,0) 38%),` +
-        `linear-gradient(180deg, rgba(252,251,247,1) 0%, rgba(244,241,234,1) 100%)`,
+        `radial-gradient(circle at 20% 20%, rgba(232,79,72,0.08) 0%, rgba(239,231,218,0) 32%),` +
+        `radial-gradient(circle at 80% 24%, rgba(217,154,26,0.08) 0%, rgba(239,231,218,0) 28%),` +
+        `radial-gradient(circle at 56% 78%, rgba(80,55,38,0.08) 0%, rgba(239,231,218,0) 38%),` +
+        `linear-gradient(180deg, #f2eadf 0%, #e9dfd0 100%)`,
     };
-  }, []);
+  }, [graphTheme]);
 
   // Per-cluster centroid layout — arrange cluster anchors on a circle so
   // forceCluster pulls each node toward its group. Radius scales with the
@@ -1093,10 +1102,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
     : "border-[#e6e3dc] bg-white/88 text-[#5f5f5f] shadow-[0_10px_30px_rgba(21,20,18,0.05),inset_0_1px_0_rgba(255,255,255,0.9)]";
   const toolbarActiveClass = graphTheme === "night"
     ? "bg-[#fff0e5] text-[#080808]"
-    : "border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]";
+    : "border-[#e4a099] bg-[#ffe7df] text-[#d54d45]";
   const toolbarMutedClass = graphTheme === "night"
     ? "text-[#8f8378] hover:text-[#fff0e5]"
-    : "text-[#9a9a9a] hover:text-[#2f83ff]";
+    : "text-[#8f8378] hover:text-[#d54d45]";
   const panelClass = graphTheme === "night"
     ? "border-[#2f2925] bg-[#080808]/82 text-[#e8dbcf] shadow-[0_24px_80px_rgba(0,0,0,0.38)]"
     : "border-[#e6e3dc] bg-white/90 text-[#1e1e1e] shadow-[0_18px_58px_rgba(21,20,18,0.08)]";
@@ -1111,10 +1120,10 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
   // black with coral accent; day = cream/charcoal).
   const floatingButtonClass = graphTheme === "night"
     ? "border-[#3a2e28] bg-[#0a0807]/85 text-[#fff0e5] hover:border-[#ff746d]/45 hover:bg-[#171110]/92 hover:text-[#ff8f7a] shadow-[0_18px_44px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,240,229,0.05)]"
-    : "border-[#d6e7ff] bg-white/90 text-[#2f83ff] hover:border-[#2f83ff]/45 hover:bg-[#e8f1ff] shadow-[0_18px_44px_rgba(47,131,255,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]";
+    : "border-[#e8b9a9] bg-[#fff7ee]/90 text-[#d54d45] hover:border-[#d54d45]/45 hover:bg-[#ffe7df] shadow-[0_18px_44px_rgba(121,73,45,0.12),inset_0_1px_0_rgba(255,255,255,0.95)]";
   const graphButtonClass = graphTheme === "night"
     ? "border-[#2f2925] bg-[#0b0a09]/84 text-[#b9ada2] hover:text-[#fff0e5] hover:border-[#fff0e5]/20"
-    : "border-[#e6e3dc] bg-white/92 text-[#9a9a9a] hover:text-[#2f83ff] hover:border-[#cfe2ff] hover:bg-[#f4f8ff]";
+    : "border-[#e6dfd3] bg-[#fff7ee]/92 text-[#9a8b7a] hover:text-[#d54d45] hover:border-[#e8b9a9] hover:bg-[#fff0e8]";
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={atmosphereStyle}>
@@ -1140,11 +1149,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             style={{
               background: graphTheme === "night"
                 ? "radial-gradient(circle at 35% 30%, rgba(255,240,229,0.22), rgba(255,105,97,0.18) 48%, rgba(255,105,97,0.04))"
-                : "linear-gradient(180deg, #eef6ff 0%, #e5f1ff 100%)",
-              borderColor: graphTheme === "night" ? "rgba(255,240,229,0.08)" : "#cfe2ff",
+                : "linear-gradient(180deg, #fff0e8 0%, #ffe2d8 100%)",
+              borderColor: graphTheme === "night" ? "rgba(255,240,229,0.08)" : "#e8b9a9",
             }}
           >
-            <Network size={16} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#2f83ff]"} />
+            <Network size={16} className={graphTheme === "night" ? "text-[#ff746d]" : "text-[#d54d45]"} />
           </span>
           <span className="flex flex-col leading-none">
             <span className={`text-[14px] font-bold font-['Space_Grotesk'] whitespace-nowrap ${graphTheme === "night" ? "text-[#fff0e5]" : "text-[#111111]"}`}>
@@ -1169,7 +1178,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             className={`w-full pl-7 pr-2 py-1.5 border rounded-lg text-[11px] font-['Space_Grotesk'] focus:outline-none ${
               graphTheme === "night"
                 ? "border-[#2f2925] bg-[#080808] text-[#fff0e5] placeholder:text-[#746b63] focus:border-[#ff746d]/50"
-                : "border-[#e6e3dc] bg-white text-[#111111] placeholder:text-[#a3a3a3] focus:border-[#2f83ff]/55 focus:ring-2 focus:ring-[#2f83ff]/10"
+                : "border-[#e6dfd3] bg-[#fffaf4] text-[#111111] placeholder:text-[#a99b8d] focus:border-[#d54d45]/55 focus:ring-2 focus:ring-[#d54d45]/10"
             }`}
           />
         </div>
@@ -1336,7 +1345,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
         {graphDim === "3d" && graphViewState && (
           <div className={`hidden lg:flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[10px] font-mono ${toolbarControlClass}`}>
             <span className={panelMutedText}>Labels</span>
-            <span className={graphTheme === "night" ? "text-[#fff0e5]" : "text-[#2f83ff]"}>
+            <span className={graphTheme === "night" ? "text-[#fff0e5]" : "text-[#d54d45]"}>
               {graphViewState.labelMode}
             </span>
           </div>
@@ -1813,7 +1822,11 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
             >
               <div className={`flex items-center justify-between px-3.5 py-3 border-b ${graphTheme === "night" ? "border-[#2f2925]" : "border-[#e7e4dd]"}`}>
                 <div className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg border border-[#cfe2ff] bg-[#e8f1ff] text-[#2f83ff]">
+                  <span className={`grid h-7 w-7 place-items-center rounded-lg border ${
+                    graphTheme === "night"
+                      ? "border-[#3a2e28] bg-[#171110] text-[#ff746d]"
+                      : "border-[#e8b9a9] bg-[#fff0e8] text-[#d54d45]"
+                  }`}>
                     <Layers size={14} />
                   </span>
                   <div>
@@ -1846,10 +1859,12 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                         key={c.id}
                         className={`rounded-lg px-2.5 py-2 cursor-pointer transition-all border ${
                           isActive
-                            ? "border-[#cfe2ff] bg-[#e8f1ff]"
+                            ? graphTheme === "night"
+                              ? "border-[#ff746d]/35 bg-[#1b1110]"
+                              : "border-[#e8b9a9] bg-[#fff0e8]"
                             : graphTheme === "night"
                               ? "border-transparent hover:bg-[#151312]"
-                              : "border-transparent hover:bg-[#f6f8fb]"
+                              : "border-transparent hover:bg-[#fff7ee]"
                         }`}
                         onClick={() => {
                           setClusterFilter(isActive ? null : c.id);
@@ -1863,7 +1878,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                         <div className="flex items-center gap-2 mb-1">
                           <span
                             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: isActive ? "#2f83ff" : color }}
+                            style={{ backgroundColor: isActive ? "#d54d45" : color }}
                           />
                           <span className={`text-[11px] font-semibold font-['Space_Grotesk'] truncate flex-1 ${graphTheme === "night" ? "text-[#eaded2]" : "text-[#242424]"}`}>
                             {label}
@@ -1875,7 +1890,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
                             {topNodes.map((n) => (
                               <div
                                 key={n.id}
-                                className={`text-[10px] truncate cursor-pointer transition-colors ${graphTheme === "night" ? "text-[#9d9288] hover:text-[#fff0e5]" : "text-[#686868] hover:text-[#2f83ff]"}`}
+                                className={`text-[10px] truncate cursor-pointer transition-colors ${graphTheme === "night" ? "text-[#9d9288] hover:text-[#fff0e5]" : "text-[#686868] hover:text-[#d54d45]"}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedNode(n);
