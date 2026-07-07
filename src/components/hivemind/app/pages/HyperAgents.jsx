@@ -27,7 +27,7 @@ import {
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, Target, Eye, Pencil,
-  User, Gauge, CreditCard, Settings,
+  User, Gauge, CreditCard, Settings, Building2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -217,7 +217,9 @@ export default function HyperAgents() {
   }
 
   // ── Empty state: render existing DigitalEmployees roster + CTA ─────
-  if (!loading && liveRooms.length === 0) {
+  // Only when the org has never onboarded — an onboarded org with no rooms
+  // still lands on the company hero (full rail layout below).
+  if (!loading && liveRooms.length === 0 && !onboardDone) {
     return (
       <div className="max-w-[1200px] mx-auto">
         <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
@@ -289,12 +291,26 @@ export default function HyperAgents() {
           <UsageTracker resource="hyperRooms" compact />
         </div>
 
+        {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}
+        <div className="px-2 pt-2">
+          <button
+            onClick={() => { setActiveRoomId(null); setViewMode('hero'); }}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'hero' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+          >
+            <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
+            {t('hyperAgents.yourCompany', 'Your Company')}
+          </button>
+        </div>
+
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
+          <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+            {t('hyperAgents.rooms', 'Rooms')}
+          </div>
           {liveRooms.map(r => (
             <RoomRow
               key={r.id}
               room={r}
-              active={r.id === activeRoomId}
+              active={r.id === activeRoomId && viewMode === 'thread'}
               onClick={() => { setActiveRoomId(r.id); setViewMode('thread'); }}
               onDelete={handleDeleteRoom}
             />

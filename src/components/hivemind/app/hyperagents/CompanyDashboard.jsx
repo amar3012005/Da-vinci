@@ -6,6 +6,16 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
+import { API_DEFAULTS } from '../shared/theme';
+
+// Screenshot is served by the control-plane (relative path in state) or, for
+// legacy runs, may be an inline data: URL. Resolve to an absolute src that
+// carries the session cookie (same-site img request to the api host).
+function screenshotSrc(v) {
+  if (!v) return null;
+  if (v.startsWith('data:') || v.startsWith('http')) return v;
+  return `${API_DEFAULTS.controlPlaneBase.replace(/\/$/, '')}${v}`;
+}
 
 /**
  * CompanyDashboard — the HyperAgents HERO page (Polsia-style operating view).
@@ -157,7 +167,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
               <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
               <a href={c.website} target="_blank" rel="noreferrer" className="block group">
                 <img
-                  src={c.screenshot}
+                  src={screenshotSrc(c.screenshot)}
                   alt={`${c.company} homepage`}
                   className="w-full rounded-xl border border-[#e3e0db] group-hover:border-[#0a0a0a] transition-colors"
                   loading="lazy"
