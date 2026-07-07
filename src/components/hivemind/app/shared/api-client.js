@@ -198,6 +198,17 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** HyperAgents onboarding — Polsia-style company genesis. */
+  async startHyperOnboarding(payload) {
+    const { data } = await this.controlPlane.post('/v1/hyper/onboarding/start', payload);
+    return data;
+  }
+
+  async hyperOnboardingStatus() {
+    const { data } = await this.controlPlane.get('/v1/hyper/onboarding/status');
+    return data;
+  }
+
   async logout() {
     await this.controlPlane.post('/auth/logout');
   }

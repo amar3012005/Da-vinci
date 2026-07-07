@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
+import { HyperOnboarding } from '../hyperagents';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import UsageTracker from '../components/UsageTracker';
@@ -173,6 +174,29 @@ export default function HyperAgents() {
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
+
+  // ── First-run gate: Polsia-style company onboarding ────────────────
+  // A brand-new org (no rooms yet, never onboarded/skipped) gets the
+  // website→company-genesis flow instead of the bare playground. The
+  // orchestrator grounds a profile+mission in HIVEMIND memory, hires a
+  // starting team and provisions the HQ room.
+  const [onboardDone, setOnboardDone] = useState(() => {
+    try { return localStorage.getItem('hm_hyper_onboarded') === '1'; } catch { return true; }
+  });
+  const finishOnboarding = useCallback((result) => {
+    try { localStorage.setItem('hm_hyper_onboarded', '1'); } catch { /* noop */ }
+    setOnboardDone(true);
+    if (result?.room_id) { setActiveRoomId(result.room_id); setViewMode('thread'); }
+    fetchRooms();
+    emitUsageChanged();
+  }, [fetchRooms]);
+  if (!loading && liveRooms.length === 0 && !onboardDone) {
+    return (
+      <div className="max-w-[1200px] mx-auto">
+        <HyperOnboarding onComplete={finishOnboarding} onSkip={() => finishOnboarding(null)} />
+      </div>
+    );
+  }
 
   // ── Empty state: render existing DigitalEmployees roster + CTA ─────
   if (!loading && liveRooms.length === 0) {
