@@ -198,7 +198,11 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             <ul className="space-y-1.5">
               {(result?.tasks || []).map((task, i) => (
                 <li key={i} className="text-[12px] text-[#0a0a0a] flex gap-2">
-                  <span className="text-[#a3a3a3] font-mono text-[10px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>{task}
+                  <span className="text-[#a3a3a3] font-mono text-[10px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
+                  <span>
+                    {typeof task === 'string' ? task : task.title}
+                    {typeof task === 'object' && task.detail ? <span className="text-[#525252]"> — {task.detail}</span> : null}
+                  </span>
                 </li>
               ))}
             </ul>
