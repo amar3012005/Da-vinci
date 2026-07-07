@@ -208,7 +208,11 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
                 {task.detail ? <p className="text-[11.5px] text-[#525252] mt-1 leading-relaxed">{task.detail}</p> : null}
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.tag}</span>
-                  {task.room_id ? <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-[#16a34a]/10 text-[#16a34a]">{t('hyperDash.inRoom', 'ROOM OPEN')}</span> : null}
+                  {task.status === 'done'
+                    ? <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-[#16a34a] text-white">✓ {t('hyperDash.done', 'DONE')}</span>
+                    : task.room_id
+                      ? <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-700">{t('hyperDash.running', 'RUNNING')}</span>
+                      : null}
                 </div>
               </motion.button>
             ))}
@@ -229,6 +233,25 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
             ))}
           </div>
           <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — agents recall these before acting.')}</p>
+
+          {(c.deliverables || []).length > 0 && (
+            <div className="mt-6">
+              <SectionTitle>{t('hyperDash.deliverables', 'Deliverables')}</SectionTitle>
+              <div className="space-y-1.5">
+                {(c.deliverables || []).map((d) => (
+                  <button key={d.room_id}
+                    onClick={() => onOpenRoom?.({ id: d.room_id, name: d.title })}
+                    className="w-full flex items-center gap-2 text-[12px] text-[#0a0a0a] hover:text-[#117dff] text-left group">
+                    <MessageSquare size={12} className="text-[#16a34a] shrink-0" />
+                    <span className="group-hover:underline line-clamp-1">{d.title}</span>
+                    <span className="text-[9.5px] font-mono text-[#a3a3a3] ml-auto shrink-0">
+                      {d.sealed_at ? new Date(d.sealed_at).toLocaleDateString() : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {(c.research || []).length > 0 && (
             <div className="mt-6">
