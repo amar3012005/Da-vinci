@@ -40,8 +40,8 @@ const THEMES = {
   },
   day: {
     name: "day",
-    bg: "#efe7da",
-    sceneClear: "#efe7da",
+    bg: "#e8dece",
+    sceneClear: "#e8dece",
     label: "#fff3e7",
     labelDim: "#b9aa9b",
     edgeLabelBg: "rgba(5,5,5,0.9)",
@@ -50,8 +50,8 @@ const THEMES = {
     nodeBase: "#3f352f",
     nodeMuted: "#a69a8d",
     nodeShell: "#f5d5c8",
-    linkBase: "#cf625a",
-    linkDim: "#d9cfc2",
+    linkBase: "#c83f3a",
+    linkDim: "#b8aa9c",
     particle: "#ef574e",
     boardBg: "#d99a1a",
     boardFg: "#17100a",
@@ -263,8 +263,8 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   const t = (() => {
     if (variant.startsWith("board")) {
       if (variant === "boardSelected") return { bg: "#ffc44d", border: "rgba(255,236,172,0.78)", fg: "#160f07", shadow: "rgba(217,154,26,0.36)" };
-      if (variant === "boardFocus") return { bg: "rgba(217,154,26,0.94)", border: "rgba(255,226,139,0.58)", fg: "#160f07", shadow: "rgba(217,154,26,0.28)" };
-      return { bg: "rgba(210,145,22,0.92)", border: "rgba(255,220,120,0.38)", fg: "#160f07", shadow: "rgba(156,94,8,0.24)" };
+      if (variant === "boardFocus") return { bg: "rgba(230,163,24,0.98)", border: "rgba(255,226,139,0.62)", fg: "#160f07", shadow: "rgba(217,154,26,0.3)" };
+      return { bg: "rgba(219,151,19,0.98)", border: "rgba(255,220,120,0.52)", fg: "#160f07", shadow: "rgba(156,94,8,0.28)" };
     }
     if (themeName === "atlas") {
       if (variant === "selected") return { bg: "rgba(255,84,80,0.96)", border: "rgba(255,211,202,0.38)", fg: "#120c0b", shadow: "rgba(255,84,80,0.26)" };
@@ -284,14 +284,14 @@ function getNodeTagTexture(text, themeName, variant = "normal") {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const isBoard = variant.startsWith("board");
-  const fontSize = (variant === "selected" || variant === "boardSelected" ? 17 : isBoard ? 14 : 15) * dpr;
+  const fontSize = (variant === "selected" || variant === "boardSelected" ? 17 : isBoard ? 16 : 15) * dpr;
   const lineHeight = fontSize * 1.18;
   const padX = (isBoard ? 13 : 11) * dpr;
   const padY = (isBoard ? 8 : 7) * dpr;
-  const lines = splitLabelLines(text, isBoard ? 26 : 32, isBoard ? 2 : 2);
+  const lines = splitLabelLines(text, isBoard ? 30 : 32, isBoard ? 2 : 2);
   ctx.font = `${variant === "selected" || variant === "boardSelected" ? "700" : "620"} ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   const textW = Math.max(...lines.map((line) => ctx.measureText(line).width));
-  canvas.width = Math.ceil(Math.min(Math.max(textW + padX * 2, (isBoard ? 118 : 96) * dpr), (isBoard ? 238 : 270) * dpr));
+  canvas.width = Math.ceil(Math.min(Math.max(textW + padX * 2, (isBoard ? 132 : 96) * dpr), (isBoard ? 300 : 270) * dpr));
   canvas.height = Math.ceil(lines.length * lineHeight + padY * 2);
   const r = (isBoard ? 2 : 3) * dpr;
   ctx.shadowColor = t.shadow;
@@ -339,7 +339,8 @@ function makeNodeTagSprite(text, themeName, variant = "normal") {
     depthWrite: false,
   });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(w * 0.14, h * 0.14, 1);
+  const scale = variant.startsWith("board") ? 0.2 : 0.14;
+  sprite.scale.set(w * scale, h * scale, 1);
   sprite.renderOrder = 998;
   sprite.userData.nodeTag = text;
   sprite.userData.labelVariant = variant;
@@ -356,7 +357,7 @@ function setNodeLabelSpriteVariant(sprite, variant, themeName) {
     : variant === "focus" || variant === "boardFocus"
       ? 0.148
       : variant === "board"
-        ? 0.152
+        ? 0.2
         : 0.14;
   sprite.scale.set(w * scale, h * scale, 1);
   sprite.userData.labelVariant = variant;
@@ -449,19 +450,19 @@ function getAtlasNodeColor(node) {
   const factVariant = getFactVariant(node);
 
   if (node?.kind === "document") return "#d99a1a";
-  if (node?.kind === "entity") return mixHex("#f2dfd3", "#f35a52", Math.min(0.55, weight * 0.42));
+  if (node?.kind === "entity") return mixHex("#f2dfd3", "#f35a52", Math.min(0.68, 0.12 + weight * 0.5));
   if (type === "decision") return mixHex("#8f2927", "#ff5b54", Math.min(1, 0.28 + weight * 0.68));
   if (type === "event") return mixHex("#b4473e", "#f4d8c8", Math.min(1, 0.22 + weight * 0.48));
   if (type === "fact") {
     return factVariant === "extracted"
       ? mixHex("#b73431", "#ff6a61", Math.min(1, 0.3 + weight * 0.55))
-      : mixHex("#e0cabd", "#fff0e5", Math.min(1, 0.18 + weight * 0.45));
+      : mixHex("#d34f47", "#f1d5c7", Math.min(1, 0.12 + weight * 0.42));
   }
   if (type === "relationship") return "#ead9cf";
   if (type === "goal") return mixHex("#9f312d", "#f0645d", Math.min(1, 0.22 + weight * 0.58));
   if (type === "preference") return mixHex("#d1b4a4", "#f2ded0", Math.min(1, 0.18 + weight * 0.46));
   if (type === "lesson") return mixHex("#d9c9bd", "#fff0e5", Math.min(1, 0.14 + weight * 0.42));
-  return mixHex("#d15a51", "#f4dfd2", Math.min(1, 0.18 + weight * 0.62));
+  return mixHex("#c83f3a", "#f0d5c7", Math.min(1, 0.14 + weight * 0.54));
 }
 
 function getNodeRadius(node) {
@@ -480,7 +481,7 @@ function getNodeRadius(node) {
   if (node.nodeLayer === "tara-insight") radius *= 1.04;
   if (isBoardNode(node)) radius = Math.max(radius, 3.8 + importance * 2.4 + recall * 1.2);
 
-  return Math.min(9.8, radius * (0.84 + weight * 0.5 + recall * 0.18));
+  return Math.min(10.6, Math.max(2.6, radius * (0.92 + weight * 0.54 + recall * 0.2)));
 }
 
 function getNodeType(node) {
@@ -604,7 +605,7 @@ function getThemeBackground(theme, fallback) {
 }
 
 function getThemeFog(theme) {
-  if (theme.name === "day") return new THREE.FogExp2("#efe7da", 0.00062);
+  if (theme.name === "day") return new THREE.FogExp2("#e8dece", 0.00018);
   if (theme.name === "atlas" || theme.name === "night") return new THREE.FogExp2("#15120f", 0.00078);
   return null;
 }
@@ -1120,6 +1121,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const style = getRelationStyle(link);
     if (highlightedLinksRef.current.has(link)) return 1.12;
     if (themeRef.current.name === "atlas" || themeRef.current.name === "night" || themeRef.current.name === "day") {
+      if (themeRef.current.name === "day") {
+        if (tier === "massive") return 0.14;
+        if (tier === "large") return 0.18;
+        return Math.max(0.2, style.width * 1.2);
+      }
       if (tier === "massive") return 0.08;
       if (tier === "large") return 0.12;
       return Math.max(0.13, style.width * 0.86);
@@ -1150,7 +1156,7 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     const style = getRelationStyle(link);
     if (highlightedLinksRef.current.has(link)) return 0.82;
     if (t.name === "atlas" || t.name === "night") return Math.max(0.1, style.opacity * 0.88);
-    if (t.name === "day") return Math.max(0.16, style.opacity * 1.35);
+    if (t.name === "day") return Math.max(0.28, style.opacity * 2.1);
     return Math.max(0.14, style.opacity * 1.45);
   }, []);
 
@@ -1630,6 +1636,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const labelNodeIds = new Set(
             labelBudget > 0 ? readableVisibleLabels.slice(0, labelBudget).map(({ node }) => node.id) : [],
           );
+          const boardLabelBudget = labelMode === "hidden" ? 28 : labelMode === "focus" ? 44 : 72;
+          rankedVisibleNodes
+            .filter(({ node }) => isBoardNode(node))
+            .slice(0, boardLabelBudget)
+            .forEach(({ node }) => labelNodeIds.add(node.id));
           if (selectedNodeRef.current?.id) labelNodeIds.add(selectedNodeRef.current.id);
           highlightNodesRef.current.forEach((id) => labelNodeIds.add(id));
 
@@ -1663,8 +1674,8 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (isSelected) opacity = 1;
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
-            else if (labelMode === 'hidden') opacity = board && isLabeled && inFrameNodeIds.has(nid) ? 0.72 : 0;
-            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.92 : themeName === 'atlas' ? 0.8 : 0.68) : 0;
+            else if (labelMode === 'hidden') opacity = board && isLabeled && inFrameNodeIds.has(nid) ? 0.92 : 0;
+            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.98 : themeName === 'atlas' ? 0.8 : 0.68) : 0;
             else opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.98 : themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
             if (isSelected) variant = board ? "boardSelected" : "selected";
             else if (isNeighbor || isHighlighted) variant = board ? "boardFocus" : "focus";
