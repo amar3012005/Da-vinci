@@ -180,19 +180,32 @@ export default function HyperAgents() {
   // website→company-genesis flow instead of the bare playground. The
   // orchestrator grounds a profile+mission in HIVEMIND memory, hires a
   // starting team and provisions the HQ room.
+  // ?onboard=1 forces the flow even when rooms exist (re-run for a new
+  // company / demo) — non-destructive; existing rooms are untouched.
+  const forceOnboard = useMemo(() => {
+    try { return new URLSearchParams(window.location.search).get('onboard') === '1'; } catch { return false; }
+  }, []);
   const [onboardDone, setOnboardDone] = useState(() => {
     try { return localStorage.getItem('hm_hyper_onboarded') === '1'; } catch { return true; }
   });
+  const [onboardDismissed, setOnboardDismissed] = useState(false);
   const finishOnboarding = useCallback((result) => {
     try { localStorage.setItem('hm_hyper_onboarded', '1'); } catch { /* noop */ }
     setOnboardDone(true);
+    setOnboardDismissed(true);
+    // Strip ?onboard=1 so a refresh doesn't re-trigger the flow.
+    try {
+      const u = new URL(window.location.href);
+      if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
+    } catch { /* noop */ }
     if (result?.room_id) { setActiveRoomId(result.room_id); setViewMode('thread'); }
     fetchRooms();
     emitUsageChanged();
   }, [fetchRooms]);
-  if (!loading && liveRooms.length === 0 && !onboardDone) {
+  const showOnboarding = !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
+  if (showOnboarding) {
     return (
-      <div className="max-w-[1200px] mx-auto">
+      <div className="max-w-[1280px] mx-auto">
         <HyperOnboarding onComplete={finishOnboarding} onSkip={() => finishOnboarding(null)} />
       </div>
     );
