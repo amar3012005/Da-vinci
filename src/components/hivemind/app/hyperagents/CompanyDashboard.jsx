@@ -151,6 +151,20 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
               ))}
             </div>
           </div>
+
+          {c.screenshot ? (
+            <div className="mt-5">
+              <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
+              <a href={c.website} target="_blank" rel="noreferrer" className="block group">
+                <img
+                  src={c.screenshot}
+                  alt={`${c.company} homepage`}
+                  className="w-full rounded-xl border border-[#e3e0db] group-hover:border-[#0a0a0a] transition-colors"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          ) : null}
         </div>
 
         {/* ── Col 2 · Tasks (click → room) ── */}
