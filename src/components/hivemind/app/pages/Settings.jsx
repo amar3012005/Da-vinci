@@ -109,6 +109,7 @@ export default function Settings() {
   const [showClearMemConfirm, setShowClearMemConfirm] = useState(false);
   const [clearingMem, setClearingMem] = useState(false);
   const [clearedCount, setClearedCount] = useState(null);
+  const [clearMemError, setClearMemError] = useState(null);
   const [projectPolicy, setProjectPolicy] = useState('private');
   const [memoryPolicy, setMemoryPolicy] = useState('private');
   const [policyLoading, setPolicyLoading] = useState(false);
@@ -195,9 +196,14 @@ export default function Settings() {
       const { data } = await apiClient.core.delete('/api/memories/delete-all');
       setClearedCount(typeof data?.deleted === 'number' ? data.deleted : 0);
       setShowClearMemConfirm(false);
+      setClearMemError(null);
       window.dispatchEvent(new CustomEvent('hivemind:memories-cleared'));
-    } catch {
-      // stays on page; user can retry
+    } catch (err) {
+      // Surface the failure — a silent catch here made a dead backend look
+      // like a dead button (user clicks, nothing happens, no feedback).
+      const msg = err?.response?.data?.message || err?.response?.data?.error
+        || (err?.response?.status ? `Request failed (${err.response.status})` : 'Network error — memory service unreachable');
+      setClearMemError(msg);
     } finally {
       setClearingMem(false);
     }
@@ -451,6 +457,11 @@ export default function Settings() {
                     ? t('settings.clearAllMemDone', 'Cleared {{n}} memories — your memory count is now 0. Usage & tokens untouched.', { n: clearedCount })
                     : t('settings.clearAllMemDesc', 'Permanently deletes every memory (count drops to 0). LLM token usage & billing are NOT affected.')}
                 </p>
+                {clearMemError && (
+                  <p className="text-[#dc2626] text-xs mt-1 font-mono">
+                    {t('settings.clearAllMemFailed', 'Failed: {{msg}}', { msg: clearMemError })}
+                  </p>
+                )}
               </div>
               {showClearMemConfirm ? (
                 <div className="flex items-center gap-2 flex-shrink-0 ml-4">
@@ -475,7 +486,7 @@ export default function Settings() {
                 </div>
               ) : (
                 <button
-                  onClick={() => { setShowClearMemConfirm(true); setClearedCount(null); }}
+                  onClick={() => { setShowClearMemConfirm(true); setClearedCount(null); setClearMemError(null); }}
                   className="flex items-center gap-1.5 text-[#dc2626] hover:text-[#dc2626] text-xs font-mono bg-red-500/10 hover:bg-red-50 border border-red-200 rounded-lg px-3 py-2 transition-colors flex-shrink-0 ml-4"
                 >
                   <Trash2 size={12} />
