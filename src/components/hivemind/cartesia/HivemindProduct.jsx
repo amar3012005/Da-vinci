@@ -169,7 +169,13 @@ const Hero = () => {
             </span>
           </Reveal>
 
-          <h1 className="mx-auto mt-8 max-w-4xl font-['Space_Grotesk'] text-6xl font-semibold leading-[0.98] tracking-tight text-[#0a0a0a] md:text-8xl">
+          <Reveal delay={0.06}>
+            <div className="mx-auto mt-10 font-['Space_Grotesk'] text-5xl font-bold tracking-[-0.04em] text-[#0a0a0a] md:text-7xl">
+              HIVEMIND
+            </div>
+          </Reveal>
+
+          <h1 className="mx-auto mt-6 max-w-4xl font-['Space_Grotesk'] text-6xl font-semibold leading-[0.98] tracking-tight text-[#0a0a0a] md:text-8xl">
             <WordReveal text="A brain that" delay={0.1} />
             <br />
             <WordReveal text="never forgets" delay={0.34} />
