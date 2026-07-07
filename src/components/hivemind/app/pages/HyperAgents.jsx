@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import DigitalEmployees from './DigitalEmployees';
-import { HyperOnboarding } from '../hyperagents';
+import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import UsageTracker from '../components/UsageTracker';
@@ -138,10 +138,10 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  // viewMode: 'thread' (room open) | 'roster' (agent grid). Land on the roster
-  // dashboard, NOT straight into a room — user opens a room explicitly from the
-  // left rail. (activeRoomId may still pre-select for rail highlight.)
-  const [viewMode, setViewMode] = useState('roster');
+  // viewMode: 'hero' (company operating dashboard — the Polsia-style landing)
+  // | 'thread' (room open, chat) | 'roster' (agent grid). Land on the hero;
+  // rooms open explicitly from the left rail or by clicking a dashboard task.
+  const [viewMode, setViewMode] = useState('hero');
 
   const fetchRooms = useCallback(async () => {
     setError(null);
@@ -321,9 +321,9 @@ export default function HyperAgents() {
         {viewMode === 'thread' && (
           <div className="border-t border-[#e3e0db] p-2 shrink-0">
             <button
-              onClick={() => setViewMode('roster')}
+              onClick={() => setViewMode('hero')}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-mono uppercase tracking-wider text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors"
-              title={t('hyperAgents.exitRoom', 'Out of room — go to the agent roster')}
+              title={t('hyperAgents.exitRoom', 'Out of room — back to the company dashboard')}
             >
               <LogOut size={13} /> {t('hyperAgents.outOfRoom', 'Out of Room')}
             </button>
@@ -331,14 +331,25 @@ export default function HyperAgents() {
         )}
       </aside>
 
-      {/* Middle: thread or roster */}
+      {/* Middle: hero dashboard, thread or roster */}
       <main className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {viewMode === 'roster' ? (
+        {viewMode === 'hero' ? (
+          <CompanyDashboard
+            onOpenRoom={(room) => {
+              fetchRooms();
+              setActiveRoomId(room.id);
+              setViewMode('thread');
+            }}
+            onShowRoster={() => setViewMode('roster')}
+          />
+        ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
               <LayoutGrid size={14} className="text-violet-500" />
               <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('hyperAgents.agentRoster', 'Agent roster')}</span>
-              <span className="text-[10px] text-[#a3a3a3] ml-auto">{t('hyperAgents.browseEditHires', 'Browse + edit your hires')}</span>
+              <button onClick={() => setViewMode('hero')} className="text-[10px] text-[#117dff] hover:underline ml-auto">
+                {t('hyperAgents.backToDashboard', '← Company dashboard')}
+              </button>
             </div>
             <div className="p-4">
               <DigitalEmployees />
@@ -354,10 +365,10 @@ export default function HyperAgents() {
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
             <span>{t('hyperAgents.pickRoom', 'Pick a room from the left.')}</span>
             <button
-              onClick={() => setViewMode('roster')}
+              onClick={() => setViewMode('hero')}
               className="text-[11px] text-[#117dff] hover:underline"
             >
-              {t('hyperAgents.browseRoster', 'Or browse the agent roster →')}
+              {t('hyperAgents.backToDashboard2', 'Back to the company dashboard →')}
             </button>
           </div>
         )}

@@ -209,6 +209,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
+  async hyperCompany() {
+    const { data } = await this.controlPlane.get('/v1/hyper/company');
+    return data;
+  }
+
+  /** Open (or create) the workroom for a dashboard task. */
+  async openHyperTask(taskId) {
+    const { data } = await this.controlPlane.post('/v1/hyper/tasks/open', { task_id: taskId });
+    return data;
+  }
+
   async logout() {
     await this.controlPlane.post('/auth/logout');
   }

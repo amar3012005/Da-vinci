@@ -146,8 +146,20 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const companyName = result?.company || (websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Your company').toUpperCase();
 
   return (
-    <div className="flex gap-5 h-[calc(100vh-6rem)] min-h-[560px]">
-      {/* ── Dashboard (left + center) ── */}
+    <div className="flex flex-col gap-4 h-[calc(100vh-6rem)] min-h-[560px]">
+      {/* ── Top build-log strip (Polsia position, day-mode styling) ── */}
+      <div className="shrink-0">
+        <div className="flex items-center gap-2 mb-1.5 px-0.5">
+          <Sparkles size={12} className="text-violet-500" />
+          <span className="text-[11px] font-semibold text-[#525252] font-['Space_Grotesk']">{t('hyperOnboarding.buildLog', 'Build log')}</span>
+          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{lines.length} steps</span>
+        </div>
+        <div className={done ? 'h-[96px]' : 'h-[168px]'}>
+          <OnboardingTerminal lines={lines} done={done} error={error} />
+        </div>
+      </div>
+
+      {/* ── Dashboard ── */}
       <div className="flex-1 min-w-0 overflow-y-auto pr-1">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -222,17 +234,6 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         )}
       </div>
 
-      {/* ── Right vertical terminal ── */}
-      <div className="w-[300px] min-w-[300px] flex flex-col">
-        <div className="flex items-center gap-2 mb-2 px-1">
-          <Sparkles size={12} className="text-violet-500" />
-          <span className="text-[11px] font-semibold text-[#525252] font-['Space_Grotesk']">{t('hyperOnboarding.buildLog', 'Build log')}</span>
-          <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{lines.length}</span>
-        </div>
-        <div className="flex-1 min-h-0">
-          <OnboardingTerminal lines={lines} done={done} error={error} />
-        </div>
-      </div>
     </div>
   );
 }
