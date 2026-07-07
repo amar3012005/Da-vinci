@@ -448,25 +448,27 @@ function getAtlasNodeColor(node) {
   const weight = getNodeWeight(node);
   const factVariant = getFactVariant(node);
 
-  if (node?.kind === "document") return "#d08a2e";
-  if (node?.kind === "entity") return mixHex("#f5e3d5", "#ff6b63", Math.min(0.4, weight * 0.35));
-  if (type === "decision") return mixHex("#bf3836", "#ff6763", Math.min(1, 0.35 + weight * 0.55));
-  if (type === "event") return mixHex("#b08971", "#ead9ca", Math.min(1, 0.25 + weight * 0.45));
+  if (node?.kind === "document") return "#d99a1a";
+  if (node?.kind === "entity") return mixHex("#f2dfd3", "#f35a52", Math.min(0.55, weight * 0.42));
+  if (type === "decision") return mixHex("#8f2927", "#ff5b54", Math.min(1, 0.28 + weight * 0.68));
+  if (type === "event") return mixHex("#b4473e", "#f4d8c8", Math.min(1, 0.22 + weight * 0.48));
   if (type === "fact") {
     return factVariant === "extracted"
-      ? mixHex("#d9504d", "#ffd0c8", Math.min(1, 0.25 + weight * 0.45))
-      : mixHex("#d6c9bd", "#fff2e8", Math.min(1, 0.2 + weight * 0.55));
+      ? mixHex("#b73431", "#ff6a61", Math.min(1, 0.3 + weight * 0.55))
+      : mixHex("#e0cabd", "#fff0e5", Math.min(1, 0.18 + weight * 0.45));
   }
-  if (type === "relationship") return "#e7ddd2";
-  if (type === "goal") return mixHex("#b94a45", "#f0cabd", Math.min(1, 0.2 + weight * 0.45));
-  if (type === "preference") return mixHex("#b28d75", "#ead4c2", Math.min(1, 0.2 + weight * 0.45));
-  if (type === "lesson") return mixHex("#bfb3a8", "#f2e7dc", Math.min(1, 0.15 + weight * 0.45));
-  return mixHex("#8f8980", "#f2e6da", Math.min(1, 0.15 + weight * 0.65));
+  if (type === "relationship") return "#ead9cf";
+  if (type === "goal") return mixHex("#9f312d", "#f0645d", Math.min(1, 0.22 + weight * 0.58));
+  if (type === "preference") return mixHex("#d1b4a4", "#f2ded0", Math.min(1, 0.18 + weight * 0.46));
+  if (type === "lesson") return mixHex("#d9c9bd", "#fff0e5", Math.min(1, 0.14 + weight * 0.42));
+  return mixHex("#d15a51", "#f4dfd2", Math.min(1, 0.18 + weight * 0.62));
 }
 
 function getNodeRadius(node) {
   let radius = Math.min(5.8, Math.sqrt(node.val || 4) * 0.98);
   const weight = getNodeWeight(node);
+  const importance = Number.isFinite(node?.importanceScore) ? Math.max(0, Math.min(1, node.importanceScore)) : 0;
+  const recall = Number.isFinite(node?.recallCount) ? Math.min(node.recallCount / 18, 1) : 0;
 
   if (node.clusterId === "_orphan") radius = Math.max(radius * 0.48, 1);
   else if (node.clusterRole === "hub") radius = Math.min(7.2, radius * 1.18);
@@ -476,8 +478,9 @@ function getNodeRadius(node) {
   if (node.nodeLayer === "promoted") radius = Math.min(6.1, radius * 1.02);
   if (node.nodeLayer === "tara") radius = Math.min(6.1, radius * 1.02);
   if (node.nodeLayer === "tara-insight") radius *= 1.04;
+  if (isBoardNode(node)) radius = Math.max(radius, 3.8 + importance * 2.4 + recall * 1.2);
 
-  return Math.min(8.2, radius * (0.88 + weight * 0.38));
+  return Math.min(9.8, radius * (0.84 + weight * 0.5 + recall * 0.18));
 }
 
 function getNodeType(node) {
@@ -562,6 +565,15 @@ function getNodeWeight(node) {
   return Math.max(0, Math.min(1, importance * 0.42 + hub * 0.28 + recall * 0.16 + val * 0.18 + roleBoost));
 }
 
+function getBoardLabelPriority(node, degree = 0) {
+  if (!isBoardNode(node)) return 0;
+  const importance = Number.isFinite(node?.importanceScore) ? Math.max(0, Math.min(1, node.importanceScore)) : 0;
+  const recall = Number.isFinite(node?.recallCount) ? Math.min(node.recallCount / 18, 1) : 0;
+  const hub = Number.isFinite(node?.hubScore) ? Math.max(0, Math.min(1, node.hubScore)) : 0;
+  const roleBoost = node?.clusterRole === "hub" ? 55 : node?.clusterRole === "bridge" ? 26 : 0;
+  return 90 + degree * 2.3 + importance * 70 + recall * 48 + hub * 42 + roleBoost;
+}
+
 function greyFromWeight(weight, min = 38, max = 132) {
   const channel = Math.round(max - weight * (max - min));
   const hex = channel.toString(16).padStart(2, "0");
@@ -629,10 +641,10 @@ function makeMaterial(color, opacity = 0.96) {
     color,
     transparent: opacity < 1,
     opacity,
-    roughness: 0.38,
-    metalness: 0.06,
+    roughness: 0.78,
+    metalness: 0.015,
     emissive: color,
-    emissiveIntensity: 0.025,
+    emissiveIntensity: 0.018,
   });
 }
 
@@ -1060,10 +1072,11 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
   const getNodeColor = useCallback((node) => {
       const t = themeRef.current;
       const highlightedNodes = highlightedNodesRef.current;
-      let baseColor = t.name === "atlas" ? getAtlasNodeColor(node) : getNodeColorBase(node);
+      let baseColor = (t.name === "atlas" || t.name === "day" || t.name === "night")
+        ? getAtlasNodeColor(node)
+        : getNodeColorBase(node);
       if (t.name === "night") {
-        const rgb = hexToRgb(baseColor);
-        baseColor = `rgb(${255 - rgb.r},${255 - rgb.g},${255 - rgb.b})`;
+        baseColor = getAtlasNodeColor(node);
       }
       if (highlightedNodes.has(node.id)) {
         if (selectedNodeRef.current?.id === node.id) return t.nodeAccent;
@@ -1138,7 +1151,6 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
     if (highlightedLinksRef.current.has(link)) return 0.82;
     if (t.name === "atlas" || t.name === "night") return Math.max(0.1, style.opacity * 0.88);
     if (t.name === "day") return Math.max(0.16, style.opacity * 1.35);
-    if (t.name === "night") return Math.max(0.12, style.opacity * 1.18);
     return Math.max(0.14, style.opacity * 1.45);
   }, []);
 
@@ -1181,6 +1193,13 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
         }
         const K = tier === "massive" ? 120 : 250;
         const top = [...deg.entries()].sort((a, b) => b[1] - a[1]).slice(0, K).map((e) => e[0]);
+        const boardAnchors = nodes
+          .filter((node) => isBoardNode(node))
+          .map((node) => ({ id: node.id, score: getBoardLabelPriority(node, deg.get(node.id) || 0) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, tier === "massive" ? 72 : 120)
+          .map((entry) => entry.id);
+        boardAnchors.forEach((id) => top.push(id));
         labelAllowRef.current = new Set(top);
       } else {
         labelAllowRef.current = null; // small/medium → label everything
@@ -1583,6 +1602,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
           const labelBudget = getAdaptiveLabelLimit(labelMode, nodeCount);
           const scoreLabelNode = (node) => {
             let value = (node.importanceScore || 0) * 10 + (node.val || 0) + (node.hubScore || 0) * 4;
+            if (isBoardNode(node)) {
+              value += getBoardLabelPriority(node, neighborMapRef.current.get(node.id)?.size || 0);
+            }
             if (selectedNodeRef.current?.id === node.id) value += 1000;
             if (highlightNodesRef.current.has(node.id)) value += 500;
             if (highlightedNodesRef.current.has(node.id)) value += 250;
@@ -1641,9 +1663,9 @@ const MemoryGraph3D = forwardRef(function MemoryGraph3D(
             if (isSelected) opacity = 1;
             else if (isNeighbor) opacity = 0.95;
             else if (isHighlighted) opacity = 0.92;
-            else if (labelMode === 'hidden') opacity = 0;
-            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.8 : 0.68) : 0;
-            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
+            else if (labelMode === 'hidden') opacity = board && isLabeled && inFrameNodeIds.has(nid) ? 0.72 : 0;
+            else if (labelMode === 'focus') opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.92 : themeName === 'atlas' ? 0.8 : 0.68) : 0;
+            else opacity = isLabeled && inFrameNodeIds.has(nid) ? (board ? 0.98 : themeName === 'atlas' ? 0.94 : themeName === 'night' ? 0.92 : 0.9) : 0;
             if (isSelected) variant = board ? "boardSelected" : "selected";
             else if (isNeighbor || isHighlighted) variant = board ? "boardFocus" : "focus";
             setNodeLabelSpriteVariant(sprite, variant, themeName);
