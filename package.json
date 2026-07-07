@@ -39,6 +39,7 @@
     "mysql2": "^3.12.0",
     "nodemailer": "^6.9.16",
     "papaparse": "^5.5.0",
+    "posthog-js": "^1.398.0",
     "postprocessing": "^6.39.1",
     "qrcode.react": "^4.2.0",
     "react": "^18.2.0",

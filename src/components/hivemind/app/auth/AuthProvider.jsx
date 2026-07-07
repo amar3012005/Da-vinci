@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
+import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
 
 const AuthContext = createContext(undefined);
 
@@ -50,6 +51,17 @@ export function AuthProvider({ children }) {
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
         setAuthState('signed_in');
+        // PostHog: attribute sessions to the user + org (no-op if PH disabled).
+        try {
+          if (posthog && isPostHogEnabled() && data.user?.id) {
+            posthog.identify(data.user.id, {
+              email: data.user.email,
+              name: data.user.display_name || data.user.name,
+              org_id: data.organization?.id,
+            });
+            if (data.organization?.id) posthog.group('organization', data.organization.id, { name: data.organization.name });
+          }
+        } catch { /* analytics never blocks auth */ }
       }
     } catch (err) {
       // A 401 (unauthenticated) or a client-side bootstrap timeout both
@@ -137,6 +149,7 @@ export function AuthProvider({ children }) {
     setOrg(null);
     setOnboarding(null);
     setAuthState('signed_out');
+    try { if (posthog && isPostHogEnabled()) posthog.reset(); } catch { /* noop */ }
     window.location.href = '/hivemind';
   }, []);
 

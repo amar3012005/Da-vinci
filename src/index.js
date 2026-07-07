@@ -5,6 +5,10 @@ import './index.css';
 import './i18n';
 import { TProvider } from './components/i18n/T';
 import App from './App';
+import { initPostHog } from './analytics/posthog';
+
+// Product analytics + session replay (no-op until REACT_APP_POSTHOG_KEY is set).
+initPostHog();
 
 const rootEl = document.getElementById('root');
 const tree = (

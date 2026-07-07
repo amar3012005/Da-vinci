@@ -16,9 +16,15 @@ ARG REACT_APP_CORE_API_URL=https://core.singulancelabs.com
 # PRODUCT_HOST=true → single-domain product layout: / = SINGULANCE cover, /hivemind = HIVEMIND cover,
 # /hivemind/app = dashboard (all served locally). This is the self-hosted singulancelabs image.
 ARG REACT_APP_PRODUCT_HOST=true
+# PostHog product analytics + session replay (public project key phc_…, EU host).
+# Empty key → SDK is a no-op, so the build is safe before the key is provided.
+ARG REACT_APP_POSTHOG_KEY=
+ARG REACT_APP_POSTHOG_HOST=https://eu.i.posthog.com
 ENV REACT_APP_CONTROL_PLANE_URL=$REACT_APP_CONTROL_PLANE_URL
 ENV REACT_APP_CORE_API_URL=$REACT_APP_CORE_API_URL
 ENV REACT_APP_PRODUCT_HOST=$REACT_APP_PRODUCT_HOST
+ENV REACT_APP_POSTHOG_KEY=$REACT_APP_POSTHOG_KEY
+ENV REACT_APP_POSTHOG_HOST=$REACT_APP_POSTHOG_HOST
 RUN npm run build
 
 FROM caddy:latest
