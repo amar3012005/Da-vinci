@@ -224,7 +224,7 @@ function LegendShape({ shape, color }) {
 }
 
 /* ─── Node Detail Sidecar ────────────────────────────────────────── */
-function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
+function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete, theme = "day" }) {
   const deletable = node && node.id && node.kind !== 'document' && node.kind !== 'entity';
   // Create node lookup for resolving IDs to titles
   const nodeMap = useMemo(() => {
@@ -250,198 +250,233 @@ function NodeDetail({ node, edges, nodes, onClose, onNavigate, onDelete }) {
   ].filter((group) => group.rows.length > 0);
   const createdLabel = node.createdAt ? new Date(node.createdAt).toLocaleString() : null;
   const updatedLabel = node.updatedAt ? new Date(node.updatedAt).toLocaleString() : null;
+  const dark = theme === "night";
+  const ui = {
+    shell: dark
+      ? "bg-[#0d0b09] border-[#2f2925] text-[#fff0e5]"
+      : "bg-[#faf9f4] border-[#e3e0db] text-[#0a0a0a]",
+    header: dark ? "border-[#2f2925]" : "border-[#e3e0db]",
+    icon: dark
+      ? "text-[#ff746d]"
+      : "text-[#117dff]",
+    title: dark ? "text-[#fff0e5]" : "text-[#0a0a0a]",
+    text: dark ? "text-[#cfc2b7]" : "text-[#525252]",
+    muted: dark ? "text-[#8f8378]" : "text-[#a3a3a3]",
+    faint: dark ? "text-[#695f56]" : "text-[#d4d0ca]",
+    card: dark
+      ? "bg-[#151312] border-[#2f2925]"
+      : "bg-[#faf9f4] border-[#e3e0db]",
+    cardRaised: dark
+      ? "bg-[#151312] border-[#2f2925] shadow-[0_18px_52px_rgba(0,0,0,0.25)]"
+      : "bg-[#faf9f4] border-[#e3e0db]",
+    tag: dark
+      ? "bg-[#1d1916] text-[#cfc2b7] border-[#332c27]"
+      : "bg-white text-[#525252] border-[#e3e0db]",
+    relation: dark
+      ? "bg-[#151312] border-[#2f2925] hover:border-[#ff746d]/35 hover:bg-[#1b1512]"
+      : "bg-[#faf9f4] border-[#e3e0db] hover:border-[#cfe2ff] hover:bg-white",
+    close: dark
+      ? "hover:bg-[#151312] text-[#9d9288] hover:text-[#fff0e5]"
+      : "hover:bg-[#f3f1ec] text-[#525252] hover:text-[#525252]",
+    footer: dark ? "border-[#2f2925]" : "border-[#e3e0db]",
+  };
 
   return (
     <motion.div
-      initial={{ x: 320, opacity: 0 }}
+      initial={{ opacity: 0, x: 40 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 320, opacity: 0 }}
-      className="absolute top-0 right-0 w-[min(420px,100vw)] h-full bg-[#fffdfa]/96 backdrop-blur-xl border-l border-[#ece9e2] shadow-[-18px_0_58px_rgba(21,20,18,0.08)] z-20 overflow-y-auto"
+      exit={{ opacity: 0, x: 40 }}
+      transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="fixed inset-y-0 right-0 w-full max-w-lg z-50 flex flex-col"
     >
-      <div className="sticky top-0 bg-[#fffdfa]/96 backdrop-blur-xl border-b border-[#ece9e2] px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-xl border border-[#cfe2ff] bg-[#edf5ff] text-[#2f83ff]">
-            <Network size={14} />
-          </span>
-          <span className="text-[11px] font-mono text-[#8f8f8f] uppercase tracking-[0.16em]">
-            Memory Detail
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          {deletable && onDelete && (
-            <button
-              onClick={() => onDelete(node)}
-              className="p-1.5 rounded-lg border border-transparent hover:border-red-100 hover:bg-red-50 text-[#a3a3a3] hover:text-red-600 transition-colors"
-              title="Permanently delete this memory"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm -z-10 lg:hidden" onClick={onClose} />
+
+      <div className={`h-full border-l flex flex-col overflow-hidden shadow-2xl ${ui.shell}`}>
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${ui.header}`}>
+          <div className="flex items-center gap-2">
+            <Network size={16} className={ui.icon} />
+            <span className={`text-sm font-bold font-['Space_Grotesk'] ${ui.title}`}>Memory Detail</span>
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-transparent hover:border-[#cfe2ff] hover:bg-[#e8f1ff] transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${ui.close}`}
           >
-            <X size={14} className="text-[#8f8f8f]" />
+            <X size={16} />
           </button>
         </div>
-      </div>
-      <div className="p-5 space-y-6">
-        <div>
-          <h3 className="text-[20px] font-semibold font-['Space_Grotesk'] text-[#111111] leading-snug">
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <h2 className={`text-lg font-bold font-['Space_Grotesk'] leading-snug ${ui.title}`}>
             {node.title || node.label || "Untitled Memory"}
-          </h3>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          </h2>
+
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center rounded-full bg-[#eaf9ea] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#44a44a]">
               {node.memoryType || "memory"}
             </span>
             {node.sourcePlatform && (
-              <span className="inline-flex items-center gap-1 rounded-xl border border-[#cfe2ff] bg-[#edf5ff] px-3 py-1 text-[10.5px] font-mono uppercase tracking-[0.14em] text-[#4d59dd]">
+              <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                dark
+                  ? "border-[#3a2e28] bg-[#1b1512] text-[#ffb1a8]"
+                  : "border-[#cfe2ff] bg-[#edf5ff] text-[#4d59dd]"
+              }`}>
                 <Monitor size={11} /> {node.sourcePlatform}
               </span>
             )}
             {(node.daysSinceUpdate != null || createdLabel) && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#b3ada5] font-mono">
+              <span className={`inline-flex items-center gap-1 text-xs font-mono ${ui.faint}`}>
                 <Clock size={11} />
                 {node.daysSinceUpdate != null ? `${Math.round(node.daysSinceUpdate)}d ago` : createdLabel}
               </span>
             )}
           </div>
-        </div>
 
-        <div>
-          <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
-            Content
-          </p>
-          <div className="bg-white border border-[#ece9e2] rounded-[22px] p-5 shadow-[0_10px_30px_rgba(21,20,18,0.04)]">
-          <p className="text-[13px] text-[#5f5f5f] font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap">
-            {node.content || "No content"}
-          </p>
-        </div>
-        </div>
-
-        {niceTags.length > 0 && (
           <div>
-            <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
-              Tags
-            </p>
-            <div className="flex flex-wrap gap-2">
-            {niceTags.map((t) => (
-              <span
-                key={t}
-                className="px-3 py-1.5 rounded-full text-[10.5px] font-mono bg-[#f7f5f1] text-[#5f5f5f] border border-[#efebe4]"
-              >
-                {t}
-              </span>
+            <label className={`block text-[10px] font-mono uppercase tracking-wider mb-1.5 ${ui.muted}`}>
+            Content
+            </label>
+            <div className={`border rounded-xl p-4 text-sm font-['Space_Grotesk'] leading-relaxed whitespace-pre-wrap ${ui.card} ${ui.text}`}>
+              {node.content || "No content"}
+            </div>
+          </div>
+
+          {niceTags.length > 0 && (
+            <div>
+              <label className={`block text-[10px] font-mono uppercase tracking-wider mb-1.5 ${ui.muted}`}>
+                Tags
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {niceTags.map((t) => (
+                  <span key={t} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono border ${ui.tag}`}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Importance", value: node.importanceScore?.toFixed(2) },
+              { label: "Strength", value: node.strength?.toFixed(2) },
+              { label: "Recalls", value: node.recallCount },
+            ].map((s) => (
+              <div key={s.label} className={`border rounded-xl p-3 text-center ${ui.card}`}>
+                <p className={`text-[10px] font-mono ${ui.muted}`}>{s.label}</p>
+                <p className={`text-sm font-semibold font-['Space_Grotesk'] ${ui.title}`}>
+                  {s.value ?? "—"}
+                </p>
+              </div>
             ))}
           </div>
+
+          <div className={`flex items-center gap-2 text-[11px] font-['Space_Grotesk'] ${ui.muted}`}>
+            <Clock size={12} />
+            <span>
+              {node.daysSinceUpdate != null
+                ? `${node.daysSinceUpdate.toFixed(1)} days ago`
+                : "—"}
+            </span>
+            <span className="ml-auto">
+              Glow: {((node.temporalWeight || 0) * 100).toFixed(0)}%
+            </span>
           </div>
-        )}
 
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "Importance", value: node.importanceScore?.toFixed(2) },
-            { label: "Strength", value: node.strength?.toFixed(2) },
-            { label: "Recalls", value: node.recallCount },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="bg-white border border-[#e7e4dd] rounded-2xl p-2 text-center shadow-[0_10px_30px_rgba(21,20,18,0.04)]"
-            >
-              <p className="text-[10px] text-[#8f8f8f] font-mono">{s.label}</p>
-              <p className="text-sm font-semibold font-['Space_Grotesk'] text-[#111111]">
-                {s.value ?? "—"}
-              </p>
+          {groupedRelations.length > 0 && (
+            <div>
+              <label className={`block text-[10px] font-mono uppercase tracking-wider mb-1.5 ${ui.muted}`}>
+                Relations · {inbound.length + outbound.length}
+              </label>
+              <div className="space-y-3">
+                {groupedRelations.map((group) => (
+                  <div key={group.key}>
+                    <div className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.08em] ${
+                      dark
+                        ? "border-[#3b302b] bg-[#1b1512] text-[#ffb1a8]"
+                        : "border-[#ddd5ff] bg-[#f5f1ff] text-[#6d58db]"
+                    }`}>
+                      {group.label} · {group.rows.length}
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {group.rows.map((e, i) => {
+                        const targetId = typeof e.target === "object" ? e.target.id : e.target;
+                        const sourceId = typeof e.source === "object" ? e.source.id : e.source;
+                        const peerId = group.key === "out" ? targetId : sourceId;
+                        const peerNode = nodeMap[peerId];
+                        const peerTitle = peerNode?.title || peerNode?.label || truncate(peerId, 34);
+                        const confidenceLabel = `${((e.confidence || 0) * 100).toFixed(0)}%`;
+                        const edgeLabel = String(e.type || "related").replace(/[_-]+/g, " ");
+                        return (
+                          <button
+                            key={`${group.key}-${i}`}
+                            onClick={() => onNavigate(peerId)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors group ${ui.relation}`}
+                          >
+                            <span className={dark ? "text-[#ff746d]" : "text-[#6d58db]"}>→</span>
+                            <span className="min-w-0 flex-1">
+                              <span className={`block text-[13px] font-semibold font-['Space_Grotesk'] truncate ${ui.title}`}>
+                                {peerTitle}
+                              </span>
+                              <span className={`mt-1 inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.12em] ${ui.muted}`}>
+                                <span className={dark ? "text-[#ffb1a8]" : "text-[#6d58db]"}>{edgeLabel}</span>
+                                <span>{confidenceLabel}</span>
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          )}
 
-        <div className="flex items-center gap-2 text-[11px] text-[#8f8f8f] font-['Space_Grotesk']">
-          <Clock size={12} />
-          <span>
-            {node.daysSinceUpdate != null
-              ? `${node.daysSinceUpdate.toFixed(1)} days ago`
-              : "—"}
-          </span>
-          <span className="ml-auto">
-            Glow: {((node.temporalWeight || 0) * 100).toFixed(0)}%
-          </span>
-        </div>
-
-        {groupedRelations.length > 0 && (
           <div>
-            <p className="text-[11px] font-mono text-[#8f8f8f] uppercase tracking-[0.16em] mb-2">
-              Relations · {inbound.length + outbound.length}
-            </p>
-            <div className="space-y-3">
-              {groupedRelations.map((group) => (
-                <div key={group.key}>
-                  <div className="inline-flex items-center rounded-lg border border-[#ddd5ff] bg-[#f5f1ff] px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[#6d58db]">
-                    {group.label} · {group.rows.length}
-                  </div>
-                  <div className="mt-2 space-y-2">
-                  {group.rows.map((e, i) => {
-                const targetId =
-                  typeof e.target === "object" ? e.target.id : e.target;
-                const sourceId =
-                  typeof e.source === "object" ? e.source.id : e.source;
-                const peerId = group.key === "out" ? targetId : sourceId;
-                const peerNode = nodeMap[peerId];
-                const peerTitle = peerNode?.title || peerNode?.label || truncate(peerId, 34);
-                const confidenceLabel = `${((e.confidence || 0) * 100).toFixed(0)}%`;
-                const edgeLabel = String(e.type || "related").replace(/[_-]+/g, " ");
-                return (
-                  <button
-                    key={`${group.key}-${i}`}
-                    onClick={() => onNavigate(peerId)}
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-[18px] bg-white border border-[#ece9e2] hover:border-[#cfe2ff] hover:bg-[#f9fbff] text-left transition-colors group"
-                  >
-                    <span className="text-[#6d58db]">→</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] text-[#2d2b28] font-semibold font-['Space_Grotesk'] truncate">
-                        {peerTitle}
-                      </span>
-                      <span className="mt-1 inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.12em] text-[#9a958d]">
-                        <span className="text-[#6d58db]">{edgeLabel}</span>
-                        <span>{confidenceLabel}</span>
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-                  </div>
+            <label className={`block text-[10px] font-mono uppercase tracking-wider mb-1.5 ${ui.muted}`}>
+              Metadata
+            </label>
+            <div className={`border rounded-xl p-3 space-y-1.5 text-[11px] font-mono ${ui.card}`}>
+              <div className="flex justify-between gap-4">
+                <span className={ui.faint}>ID</span>
+                <span className={`text-right truncate ml-4 max-w-[260px] ${ui.text}`}>{node.id}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className={ui.faint}>Scope</span>
+                <span className={`text-right uppercase ${ui.text}`}>{node.scope || "organization"}</span>
+              </div>
+              {createdLabel && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className={ui.faint}>Created</span>
+                  <span className={`text-right ${ui.text}`}>{createdLabel}</span>
                 </div>
-              ))}
+              )}
+              {updatedLabel && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className={ui.faint}>Updated</span>
+                  <span className={`text-right ${ui.text}`}>{updatedLabel}</span>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        <div>
-          <p className="text-[11px] font-mono uppercase tracking-[0.16em] text-[#9a958d] mb-2">
-            Metadata
-          </p>
-          <div className="rounded-[22px] border border-[#ece9e2] bg-white px-5 py-4 text-[11px] text-[#8f8f8f] font-mono space-y-2">
-            <div className="flex items-start justify-between gap-4">
-              <span>ID</span>
-              <span className="text-right text-[#5f5f5f] break-all">{node.id}</span>
-            </div>
-            <div className="flex items-start justify-between gap-4">
-              <span>Scope</span>
-              <span className="text-right text-[#5f5f5f] uppercase">{node.scope || "organization"}</span>
-            </div>
-            {createdLabel && (
-              <div className="flex items-start justify-between gap-4">
-                <span>Created</span>
-                <span className="text-right text-[#5f5f5f]">{createdLabel}</span>
-              </div>
-            )}
-            {updatedLabel && (
-              <div className="flex items-start justify-between gap-4">
-                <span>Updated</span>
-                <span className="text-right text-[#5f5f5f]">{updatedLabel}</span>
-              </div>
-            )}
           </div>
         </div>
+
+        {deletable && onDelete && (
+          <div className={`px-6 py-4 border-t ${ui.footer}`}>
+            <button
+              onClick={() => onDelete(node)}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold font-['Space_Grotesk'] transition-all ${
+                dark
+                  ? "bg-[#151312] text-[#cfc2b7] border border-[#2f2925] hover:text-[#ff746d] hover:border-[#ff746d]/25 hover:bg-[#1b1512]"
+                  : "bg-[#f3f1ec] text-[#525252] border border-[#e3e0db] hover:text-[#dc2626] hover:border-red-500/20 hover:bg-red-50"
+              }`}
+              title="Permanently delete this memory"
+            >
+              <Trash2 size={14} />
+              Delete Memory
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -1806,6 +1841,7 @@ export default function MemoryGraph({ dimension = '3d' } = {}) {
               onClose={() => setSelectedNode(null)}
               onNavigate={handleNavigate}
               onDelete={handleDeleteMemory}
+              theme={graphTheme}
             />
           )}
         </AnimatePresence>
