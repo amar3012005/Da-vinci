@@ -50,6 +50,15 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
   const [openingTask, setOpeningTask] = useState(null);
+  const [confirmRerun, setConfirmRerun] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const doRerun = async () => {
+    if (resetting) return;
+    setResetting(true);
+    try { await apiClient.resetHyperOnboarding(); } catch { /* proceed anyway */ }
+    window.location.href = '/hivemind/app/employees?onboard=1';
+  };
 
   const load = useCallback(async () => {
     try {
@@ -256,10 +265,35 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
           <div className="mt-6 flex items-center gap-2 text-[10.5px] font-mono text-[#a3a3a3]">
             <Building2 size={11} />
             {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}
-            <a href="/hivemind/app/employees?onboard=1" className="ml-auto text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</a>
+            <button onClick={() => setConfirmRerun(true)} className="ml-auto text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>
           </div>
         </div>
       </div>
+
+      {confirmRerun && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !resetting && setConfirmRerun(false)}>
+          <div className="bg-white border border-[#e3e0db] rounded-2xl max-w-[440px] w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[17px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{t('hyperDash.rerunTitle', 'Start fresh?')}</h3>
+            <p className="text-[13px] text-[#525252] mt-2 leading-relaxed">
+              {t('hyperDash.rerunBody', 'Re-running onboarding clears your current company profile, mission, tasks, research and homepage capture, and lets you set it up from scratch.')}
+            </p>
+            <p className="text-[12.5px] text-[#0a0a0a] mt-2 leading-relaxed">
+              {t('hyperDash.rerunRooms', 'Your existing rooms stay — including any task rooms. Delete each one manually from the rooms rail if you want a clean slate.')}
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button onClick={() => setConfirmRerun(false)} disabled={resetting}
+                className="text-[12.5px] font-semibold text-[#525252] hover:text-[#0a0a0a] px-3.5 py-2 rounded-lg">
+                {t('hyperDash.cancel', 'Cancel')}
+              </button>
+              <button onClick={doRerun} disabled={resetting}
+                className="flex items-center gap-2 text-[12.5px] font-semibold text-white bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 px-3.5 py-2 rounded-lg">
+                {resetting ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                {t('hyperDash.rerunConfirm', 'Clear & start fresh')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

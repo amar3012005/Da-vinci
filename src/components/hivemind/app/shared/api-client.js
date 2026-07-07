@@ -221,6 +221,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Clear onboarding artifacts (company/mission/tasks/screenshot) — rooms kept. */
+  async resetHyperOnboarding() {
+    const { data } = await this.controlPlane.post('/v1/hyper/onboarding/reset', {});
+    return data;
+  }
+
   async logout() {
     await this.controlPlane.post('/auth/logout');
   }
