@@ -27,8 +27,11 @@ import {
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, Target, Eye, Pencil,
+  User, Gauge, CreditCard, Settings,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
+import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
@@ -125,6 +128,8 @@ const ROOM_FORMATS = [
 
 export default function HyperAgents() {
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
+  const { user, org, logout } = useAuth();
 
   // Collapse the sidebar to a rail in the Hyper Agents room (more canvas for
   // the live swarm). Sidebar's ChevronRight re-opens it. Restore on leave.
@@ -329,6 +334,45 @@ export default function HyperAgents() {
             </button>
           </div>
         )}
+
+        {/* Account — the app sidebar is hidden on this page, so the rooms
+            rail carries the account section (profile/usage/billing/settings,
+            user card, sign out) at its bottom. */}
+        <div className="border-t border-[#e3e0db] px-2 pt-2.5 pb-2 shrink-0 bg-[#faf9f4]">
+          <div className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] px-2 mb-1">
+            {t('hyperAgents.account', 'Account')}
+          </div>
+          {[
+            { icon: User, label: t('hyperAgents.profile', 'Profile'), to: '/hivemind/app/profile' },
+            { icon: Gauge, label: t('hyperAgents.usage', 'Usage'), to: '/hivemind/app/usage' },
+            { icon: CreditCard, label: t('hyperAgents.billing', 'Billing'), to: '/hivemind/app/billing', badge: 'PRO' },
+            { icon: Settings, label: t('hyperAgents.settings', 'Settings'), to: '/hivemind/app/settings' },
+          ].map(({ icon: Icon, label, to, badge }) => (
+            <button
+              key={to}
+              onClick={() => navigate(to)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[#525252] hover:text-[#0a0a0a] hover:bg-white transition-colors"
+            >
+              <Icon size={13} /> {label}
+              {badge ? <span className="ml-auto text-[8.5px] font-mono px-1.5 py-0.5 rounded bg-[#117dff]/10 text-[#117dff]">{badge}</span> : null}
+            </button>
+          ))}
+          <div className="flex items-center gap-2 px-2 py-2 mt-1 border-t border-[#e3e0db]">
+            <span className="w-7 h-7 rounded-lg bg-[#117dff]/10 text-[#117dff] flex items-center justify-center text-[11px] font-bold shrink-0">
+              {(user?.display_name || user?.email || '?')[0].toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[11.5px] font-semibold text-[#0a0a0a] truncate">{user?.display_name || user?.email}</div>
+              <div className="text-[9.5px] font-mono text-[#a3a3a3] capitalize">{(org?.plan || 'free')} {t('hyperAgents.plan', 'Plan')}</div>
+            </div>
+          </div>
+          <button
+            onClick={async () => { try { await logout(); } catch { /* noop */ } navigate('/hivemind/login'); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[#525252] hover:text-[#dc2626] transition-colors"
+          >
+            <LogOut size={13} /> {t('hyperAgents.signOut', 'Sign Out')}
+          </button>
+        </div>
       </aside>
 
       {/* Middle: hero dashboard, thread or roster */}

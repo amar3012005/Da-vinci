@@ -55,6 +55,17 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
     setOpeningTask(task.id);
     try {
       const d = await apiClient.openHyperTask(task.id);
+      // Freshly provisioned room (201 returns kickoff_message): fire the
+      // optimized kickoff as the first turn so the swarm starts executing the
+      // task immediately — the thread opens with agents already working.
+      if (d?.room?.id && d?.kickoff_message) {
+        try {
+          await apiClient.postHyperTurn(d.room.id, {
+            user_message: d.kickoff_message,
+            idempotency_key: `task-kickoff-${task.id}-${d.room.id}`,
+          });
+        } catch { /* room still opens; user can send manually */ }
+      }
       if (d?.room?.id) onOpenRoom?.(d.room);
       load(); // refresh task→room links
     } catch { /* stays on dashboard */ }
