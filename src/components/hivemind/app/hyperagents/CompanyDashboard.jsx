@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import { API_DEFAULTS } from '../shared/theme';
+import HyperOnboarding from './HyperOnboarding';
 
 // Screenshot is served by the control-plane (relative path in state) or, for
 // legacy runs, may be an inline data: URL. Resolve to an absolute src that
@@ -99,12 +100,20 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
     );
   }
   if (!state?.onboarded || !state?.company) {
+    // No company state (fresh org, or the HQ room carrying it was deleted) →
+    // "Your Company" IS the onboarding page. Render the full genesis flow
+    // inline instead of a dead placeholder.
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[12px] text-[#a3a3a3]">
-        <span>{t('hyperDash.notOnboarded', 'No company yet — run onboarding to generate your operating dashboard.')}</span>
-        <a href="/hivemind/app/employees?onboard=1" className="text-[#117dff] hover:underline text-[12px] font-semibold">
-          {t('hyperDash.runOnboarding', 'Run onboarding →')}
-        </a>
+      <div className="flex-1 min-h-0 overflow-y-auto bg-white px-6 py-4">
+        <div className="max-w-[1280px] mx-auto">
+          <HyperOnboarding
+            onComplete={(result) => {
+              if (result?.room_id) onOpenRoom?.({ id: result.room_id, name: result.room_name });
+              load();
+            }}
+            onSkip={() => load()}
+          />
+        </div>
       </div>
     );
   }
