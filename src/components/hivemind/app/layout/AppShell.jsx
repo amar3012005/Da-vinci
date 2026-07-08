@@ -164,13 +164,10 @@ export default function AppShell() {
 
   const finishGate = () => {
     try { sessionStorage.removeItem('hm_new_user'); } catch { /* noop */ }
-    // Strip auth params so refresh doesn't replay the sequence.
-    const params = new URLSearchParams(location.search);
-    if (params.get('auth') === 'callback' || params.get('onboarding')) {
-      params.delete('auth'); params.delete('onboarding');
-      const qs = params.toString();
-      navigate(`${location.pathname}${qs ? `?${qs}` : ''}`, { replace: true });
-    }
+    // Post-checklist landing: the HyperAgents company dashboard (mycompany) —
+    // the operating view of the workspace, not the generic overview. Also
+    // strips auth params so refresh doesn't replay the sequence.
+    navigate('/hivemind/app/employees/mycompany', { replace: true });
     setGate('done');
   };
   // Self-host gate: only an org whose agent was NEVER registered gets the
@@ -224,13 +221,13 @@ export default function AppShell() {
   const handleSectionChange = (s) => {
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
-    const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees', tara: '/hivemind/app/tara' };
+    const landing = { hivemind: '/hivemind/app/overview', hyperagents: '/hivemind/app/employees/mycompany', tara: '/hivemind/app/tara' };
     if (landing[s]) navigate(landing[s]);
   };
   const graphFullscreen = location.pathname === '/hivemind/app/graph' || location.pathname === '/hivemind/app/graph-2d';
   // HyperAgents runs its own left rail (rooms + account) — the app sidebar is
   // hidden entirely there so the workspace reads as one dedicated surface.
-  const hyperFullscreen = location.pathname === '/hivemind/app/employees';
+  const hyperFullscreen = location.pathname.startsWith('/hivemind/app/employees');
   // Overview embeds the HIVE chat as the page centerpiece — the floating
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.

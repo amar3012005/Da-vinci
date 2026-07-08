@@ -141,12 +141,39 @@ export default function HyperAgents() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeRoomId, setActiveRoomId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  // viewMode: 'hero' (company operating dashboard — the Polsia-style landing)
-  // | 'thread' (room open, chat) | 'roster' (agent grid). Land on the hero;
-  // rooms open explicitly from the left rail or by clicking a dashboard task.
-  const [viewMode, setViewMode] = useState('hero');
+  // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
+  // | 'thread' (room chat — /employees/rooms/:id) | 'roster' (/employees/agents).
+  // The URL is the source of truth on mount/deep-link; goMode() keeps it in
+  // sync on every in-app switch so each feature has its own address.
+  const _parsePath = () => {
+    try {
+      const p = window.location.pathname;
+      const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
+      if (m) return { mode: 'thread', roomId: m[1] };
+      if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
+      return { mode: 'hero', roomId: null };
+    } catch { return { mode: 'hero', roomId: null }; }
+  };
+  const _init = _parsePath();
+  const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
+  const [viewMode, setViewMode] = useState(_init.mode);
+  const goMode = useCallback((mode, roomId) => {
+    setViewMode(mode);
+    if (roomId !== undefined) setActiveRoomId(roomId);
+    const base = '/hivemind/app/employees';
+    const url = mode === 'hero' ? `${base}/mycompany`
+      : mode === 'roster' ? `${base}/agents`
+        : (roomId ? `${base}/rooms/${roomId}` : base);
+    navigate(url, { replace: true });
+  }, [navigate]);
+  // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
+  useEffect(() => {
+    if (/\/employees\/?$/.test(window.location.pathname)) {
+      navigate(`/hivemind/app/employees/mycompany${window.location.search}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchRooms = useCallback(async () => {
     setError(null);
@@ -182,7 +209,7 @@ export default function HyperAgents() {
           await apiClient.deleteHyperRoom(room.id, { force: true });
           setRooms(prev => prev.filter(r => r.id !== room.id));
           setActiveRoomId(prev => (prev === room.id ? null : prev));
-          setViewMode('hero'); // hero now renders the onboarding flow (no company)
+          goMode('hero', null); // hero now renders the onboarding flow (no company)
         } catch (e2) {
           setError(e2.response?.data?.error || e2.message);
         }
@@ -190,7 +217,7 @@ export default function HyperAgents() {
       }
       setError(err.response?.data?.error || err.message);
     }
-  }, [t]);
+  }, [t, goMode]);
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
@@ -218,10 +245,10 @@ export default function HyperAgents() {
       const u = new URL(window.location.href);
       if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
     } catch { /* noop */ }
-    if (result?.room_id) { setActiveRoomId(result.room_id); setViewMode('thread'); }
+    goMode('hero', null); // Enter your workspace → the mycompany dashboard
     fetchRooms();
     emitUsageChanged();
-  }, [fetchRooms]);
+  }, [fetchRooms, goMode]);
   const showOnboarding = !loading && !onboardDismissed && ((liveRooms.length === 0 && !onboardDone) || forceOnboard);
   if (showOnboarding) {
     return (
@@ -271,8 +298,7 @@ export default function HyperAgents() {
               onCreated={(room) => {
                 setShowCreate(false);
                 setRooms(prev => [room, ...prev]);
-                setActiveRoomId(room.id);
-                setViewMode('thread'); // drop straight into the new room
+                goMode('thread', room.id); // drop straight into the new room
                 emitUsageChanged(); // refresh the Rooms usage meter
               }}
             />
@@ -309,7 +335,7 @@ export default function HyperAgents() {
         {/* YOUR COMPANY — always-present entry to the company/onboarding hero. */}
         <div className="px-2 pt-2">
           <button
-            onClick={() => { setActiveRoomId(null); setViewMode('hero'); }}
+            onClick={() => goMode('hero', null)}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'hero' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
           >
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
@@ -326,7 +352,7 @@ export default function HyperAgents() {
               key={r.id}
               room={r}
               active={r.id === activeRoomId && viewMode === 'thread'}
-              onClick={() => { setActiveRoomId(r.id); setViewMode('thread'); }}
+              onClick={() => goMode('thread', r.id)}
               onDelete={handleDeleteRoom}
             />
           ))}
@@ -341,7 +367,7 @@ export default function HyperAgents() {
                     key={r.id}
                     room={r}
                     active={r.id === activeRoomId}
-                    onClick={() => { setActiveRoomId(r.id); setViewMode('thread'); }}
+                    onClick={() => goMode('thread', r.id)}
                     onDelete={handleDeleteRoom}
                     archived
                   />
@@ -357,7 +383,7 @@ export default function HyperAgents() {
         {viewMode === 'thread' && (
           <div className="border-t border-[#e3e0db] p-2 shrink-0">
             <button
-              onClick={() => setViewMode('hero')}
+              onClick={() => goMode('hero')}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-mono uppercase tracking-wider text-[#525252] border border-[#e3e0db] bg-white hover:bg-[#faf9f4] hover:text-[#0a0a0a] transition-colors"
               title={t('hyperAgents.exitRoom', 'Out of room — back to the company dashboard')}
             >
@@ -412,17 +438,16 @@ export default function HyperAgents() {
           <CompanyDashboard
             onOpenRoom={(room) => {
               fetchRooms();
-              setActiveRoomId(room.id);
-              setViewMode('thread');
+              goMode('thread', room.id);
             }}
-            onShowRoster={() => setViewMode('roster')}
+            onShowRoster={() => goMode('roster')}
           />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
               <LayoutGrid size={14} className="text-violet-500" />
               <span className="text-[13px] font-semibold text-[#0a0a0a]">{t('hyperAgents.agentRoster', 'Agent roster')}</span>
-              <button onClick={() => setViewMode('hero')} className="text-[10px] text-[#117dff] hover:underline ml-auto">
+              <button onClick={() => goMode('hero')} className="text-[10px] text-[#117dff] hover:underline ml-auto">
                 {t('hyperAgents.backToDashboard', '← Company dashboard')}
               </button>
             </div>
@@ -440,7 +465,7 @@ export default function HyperAgents() {
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
             <span>{t('hyperAgents.pickRoom', 'Pick a room from the left.')}</span>
             <button
-              onClick={() => setViewMode('hero')}
+              onClick={() => goMode('hero')}
               className="text-[11px] text-[#117dff] hover:underline"
             >
               {t('hyperAgents.backToDashboard2', 'Back to the company dashboard →')}
@@ -461,8 +486,7 @@ export default function HyperAgents() {
             onCreated={(room) => {
               setShowCreate(false);
               setRooms(prev => [room, ...prev]);
-              setActiveRoomId(room.id);
-              setViewMode('thread'); // drop straight into the new room
+              goMode('thread', room.id); // drop straight into the new room
               emitUsageChanged(); // refresh the Rooms usage meter
             }}
           />

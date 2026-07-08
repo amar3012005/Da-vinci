@@ -191,7 +191,10 @@ export default function HiveMindApp() {
           <Route path="team/projects" element={<PageSuspense><TeamProjects /></PageSuspense>} />
           <Route path="admin/users" element={<PageSuspense><AdminUsers /></PageSuspense>} />
           <Route path="admin/sso" element={<PageSuspense><AdminSso /></PageSuspense>} />
-          <Route path="employees" element={<PageSuspense><HyperAgents /></PageSuspense>} />
+          {/* HyperAgents owns a URL subtree (one route, no remounts):
+              /employees/mycompany (hero) · /employees/agents (roster) ·
+              /employees/rooms/:id (thread) · /employees (redirect→mycompany) */}
+          <Route path="employees/*" element={<PageSuspense><HyperAgents /></PageSuspense>} />
           {/* Legacy direct roster path — kept for back-compat */}
           <Route path="employees/roster" element={<PageSuspense><DigitalEmployees /></PageSuspense>} />
           <Route path="hermes" element={<PageSuspense><HermesAgents /></PageSuspense>} />
