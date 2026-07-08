@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
@@ -183,6 +183,12 @@ export default function AppShell() {
   //   'ok'       → registered → workspace
   const isSelfHost = org?.hosting_mode === 'self_host';
   const [shGate, setShGate] = useState('checking');
+  // Count consecutive status-call failures so a single blip never walls a
+  // registered org. The 401 that fires on the first load right after a
+  // cross-domain connector OAuth redirect (api.singulancelabs.com → the
+  // app domain, before the session cookie is readable) was dropping a fully
+  // registered+reachable self-host org straight into the setup wall.
+  const shFailsRef = useRef(0);
   useEffect(() => {
     if (!isSelfHost || shGate === 'ok') return undefined;
     let alive = true;
@@ -190,12 +196,20 @@ export default function AppShell() {
       try {
         const s = await apiClient.selfHostStatus();
         if (!alive) return;
+        shFailsRef.current = 0;
+        // Only an EXPLICIT not-registered answer opens the setup flow.
         if (s?.registered) setShGate('ok');
         else setShGate('setup');
       } catch {
-        // Transient status failure: only fall to the setup screen from the
-        // initial check — never yank an already-open workspace away.
-        if (alive) setShGate((g) => (g === 'checking' ? 'setup' : g));
+        if (!alive) return;
+        // Transient status failure: keep showing the spinner and retry.
+        // Fall to the setup screen only after several consecutive failures
+        // (control-plane genuinely unreachable), and never yank an
+        // already-open workspace away.
+        shFailsRef.current += 1;
+        if (shFailsRef.current >= 3) {
+          setShGate((g) => (g === 'checking' ? 'setup' : g));
+        }
       }
     };
     tick();
