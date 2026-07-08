@@ -510,8 +510,8 @@ class HiveMindApiClient {
   }
 
   // Permanent delete — removes the room and cascades its turns + activity.
-  async deleteHyperRoom(roomId) {
-    const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}?hard=true`);
+  async deleteHyperRoom(roomId, { force = false } = {}) {
+    const { data } = await this.controlPlane.delete(`/v1/hyper-rooms/${roomId}?hard=true${force ? '&force=true' : ''}`);
     return data;
   }
 

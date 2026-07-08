@@ -173,6 +173,21 @@ export default function HyperAgents() {
       setRooms(prev => prev.filter(r => r.id !== room.id));
       setActiveRoomId(prev => (prev === room.id ? null : prev));
     } catch (err) {
+      // HQ room: carries the company dashboard state — needs an explicit
+      // second confirm; a forced delete drops the org back to onboarding.
+      if (err.response?.status === 409 && err.response?.data?.code === 'HQ_ROOM') {
+        const msg = err.response.data.error || 'This is your company HQ. Deleting it clears your company dashboard and you will need to onboard again.';
+        if (!window.confirm(`${msg}\n\n${t('hyperAgents.confirmHqDelete', 'Delete anyway and start fresh?')}`)) return;
+        try {
+          await apiClient.deleteHyperRoom(room.id, { force: true });
+          setRooms(prev => prev.filter(r => r.id !== room.id));
+          setActiveRoomId(prev => (prev === room.id ? null : prev));
+          setViewMode('hero'); // hero now renders the onboarding flow (no company)
+        } catch (e2) {
+          setError(e2.response?.data?.error || e2.message);
+        }
+        return;
+      }
       setError(err.response?.data?.error || err.message);
     }
   }, [t]);
