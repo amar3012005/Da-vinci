@@ -56,6 +56,15 @@ const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif']);
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac']);
 
+// Billing and capacity are based on content units, not upload rows: a PDF
+// page, a PPTX slide, and a standalone image each count as one KB page.
+function pageEquivalentCount(doc, documentStats = {}) {
+  const metadata = doc?.metadata || {};
+  const value = metadata.pages ?? metadata.page_count ?? doc?.pageCount ?? documentStats[docFilename(doc)]?.pages;
+  const pages = Number(value);
+  return Number.isFinite(pages) && pages > 0 ? Math.ceil(pages) : 1;
+}
+
 // File-based imports — typed entry cards below the upload dropzone. Each card
 // opens a file picker scoped to one document family, then feeds the SAME
 // queueFilesForUpload pipeline as the dropzone (scope modal → smart-extract →
@@ -866,7 +875,12 @@ export default function KnowledgeBase() {
         const map = {};
         for (const d of (resp?.documents || [])) {
           const baseName = (d.title || '').split('#')[0];
-          map[baseName] = { segments: d.segmentCount || 0, evidence: d.promotedCount || 0, documentId: d.id };
+          map[baseName] = {
+            segments: d.segmentCount || 0,
+            evidence: d.promotedCount || 0,
+            pages: d.pageCount || 1,
+            documentId: d.id,
+          };
         }
         setPhase1Stats(map);
       } catch { /* noop */ }
@@ -910,6 +924,11 @@ export default function KnowledgeBase() {
       return docType === typeFilter || tagType === typeFilter;
     });
   }, [documents, typeFilter]);
+
+  const totalKnowledgePages = useMemo(
+    () => documents.reduce((total, doc) => total + pageEquivalentCount(doc, phase1Stats), 0),
+    [documents, phase1Stats],
+  );
 
   // Clear just-uploaded docs once they appear in fetched results.
   // Match either by id OR by doc-hash so deduped uploads also resolve.
@@ -1549,7 +1568,7 @@ export default function KnowledgeBase() {
           <UsageTracker resource="kbPages" />
           <div className="flex items-center gap-2 text-[#a3a3a3] text-xs font-mono">
             <BookOpen size={14} />
-            {documents.length} document{documents.length !== 1 ? 's' : ''}
+            {totalKnowledgePages} page{totalKnowledgePages !== 1 ? 's' : ''}
           </div>
           <button
             onClick={() => setPageIndexModalOpen(true)}

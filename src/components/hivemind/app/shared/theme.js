@@ -73,7 +73,7 @@ export const shadows = {
 export const API_DEFAULTS = {
   controlPlaneBase:
     process.env.REACT_APP_CONTROL_PLANE_URL ||
-    'https://api.hivemind.davinciai.eu:8040',
+    'https://api.singulancelabs.com',
   coreApiBase:
-    process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050',
+    process.env.REACT_APP_CORE_API_URL || 'https://core.singulancelabs.com',
 };

@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v1';
+const CACHE = 'hive-shell-v2';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -40,7 +40,15 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
           return resp;
         })
-        .catch(() => caches.match('/index.html').then((r) => r || caches.match('/')))
+        .catch(async () => {
+          const cached = await caches.match('/index.html') || await caches.match('/');
+          // respondWith must always receive a Response. A first offline visit
+          // has no shell cached yet, so return a small valid offline response.
+          return cached || new Response('Offline - reconnect and try again.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          });
+        })
     );
     return;
   }
