@@ -126,6 +126,7 @@ export default function LoginPage() {
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
   const [hivemindName, setHivemindName] = useState('');
+  const [referralCode, setReferralCode] = useState('');
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -164,6 +165,7 @@ export default function LoginPage() {
         name: userName,
         hivemind_name: hivemindName,
         enterprise: enterpriseName || null,
+        referral_code: referralCode.trim() || null,
         deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       }));
     } catch (e) {}
@@ -193,6 +195,7 @@ export default function LoginPage() {
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
+    setReferralCode('');
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -587,6 +590,11 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
+                      <div>
+                        <label className={LABEL_CLS}>Partner referral code <span className="normal-case tracking-normal text-[#a3a3a3]">optional</span></label>
+                        <input value={referralCode} onChange={e => setReferralCode(e.target.value.toUpperCase())} placeholder="e.g. GTM2026" className={INPUT_CLS} autoCapitalize="characters" />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">Your signed-in workspace will show the exact onboarding allowance before it is created.</p>
+                      </div>
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
                           <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
@@ -594,8 +602,8 @@ export default function LoginPage() {
                         </div>
                       ) : (
                         <div className="bg-[#117dff]/[0.04] border border-[#117dff]/15 rounded-[8px] p-4">
-                          <p className="text-[13px] text-[#0a5fcc] font-medium">Enterprise accounts start with a 14-day Scale trial</p>
-                          <p className="text-[11px] text-[#3b6da3] mt-1">Full access to all features. No credit card required.</p>
+                          <p className="text-[13px] text-[#0a5fcc] font-medium">Partner onboarding terms are applied server-side</p>
+                          <p className="text-[11px] text-[#3b6da3] mt-1">Enter your referral code to review its seats, projects, document and token allowance after sign-in.</p>
                         </div>
                       )}
                       <button

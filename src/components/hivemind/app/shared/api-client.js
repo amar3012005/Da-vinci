@@ -247,6 +247,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async previewReferral(code) {
+    const { data } = await this.controlPlane.get('/v1/referrals/preview', { params: { code } });
+    return data;
+  }
+
   async listMembers(orgId) {
     const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/members`);
     return data;

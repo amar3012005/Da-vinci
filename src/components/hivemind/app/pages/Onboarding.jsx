@@ -4,6 +4,7 @@ import { ArrowRight, Building2, Hexagon, Lock, Users, Cloud, Server } from 'luci
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import SelfHostSetup from './SelfHostSetup';
+import apiClient from '../shared/api-client';
 
 const ORG_MODES = {
   personal: {
@@ -47,6 +48,9 @@ export default function OnboardingFlow() {
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
   const [showSelfHost, setShowSelfHost] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralOffer, setReferralOffer] = useState(null);
+  const [referralError, setReferralError] = useState(null);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
   // the effect below redirects to /hivemind/login?create=1 (the single create-account UX), so start
@@ -74,6 +78,18 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
+    const referral = String(saved.referral_code || '').trim().toUpperCase();
+    // A partner must see the server-defined offer before creating the org.
+    if (referral) {
+      setMode(isEnt ? 'enterprise' : 'personal');
+      setDeployment(dep);
+      setOrgName(name);
+      setSlug(isEnt ? deriveSlug(saved.hivemind_name || name) : '');
+      setReferralCode(referral);
+      setStep(2);
+      setAutoCreating(false);
+      return;
+    }
     (async () => {
       try {
         await createOrg({
@@ -98,6 +114,21 @@ export default function OnboardingFlow() {
     })();
   }, [createOrg]);
 
+  useEffect(() => {
+    const code = referralCode.trim();
+    if (!code) { setReferralOffer(null); setReferralError(null); return; }
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await apiClient.previewReferral(code);
+        if (active) { setReferralOffer(data.campaign || null); setReferralError(null); }
+      } catch (err) {
+        if (active) { setReferralOffer(null); setReferralError(err.response?.data?.error || 'Code is invalid or unavailable.'); }
+      }
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [referralCode]);
+
   const selectedMode = ORG_MODES[mode];
   const derivedSlug = useMemo(() => deriveSlug(orgName), [orgName]);
   const effectiveSlug = mode === 'enterprise' ? deriveSlug(slug || derivedSlug) : '';
@@ -115,7 +146,9 @@ export default function OnboardingFlow() {
         slug: mode === 'enterprise' ? effectiveSlug : undefined,
         plan: selectedMode.plan,
         deployment, // 'managed' | 'selfhost'
+        referralCode: referralCode.trim() || undefined,
       });
+      try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }
     } catch (err) {
@@ -293,6 +326,23 @@ export default function OnboardingFlow() {
               </div>
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-[#525252] text-xs font-mono mb-2 uppercase tracking-wider">Partner referral code <span className="normal-case tracking-normal text-[#a3a3a3]">optional</span></label>
+              <input
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="GTM2026"
+                autoCapitalize="characters"
+                className="w-full bg-transparent border border-[#e3e0db] rounded-[8px] py-3 px-4 text-[#0a0a0a] text-sm font-mono placeholder:text-[#d4d0ca] focus:outline-none focus:border-[#117dff]/40 transition-colors"
+              />
+              {referralOffer && (
+                <div className="mt-3 rounded-[8px] border border-[#117dff]/20 bg-[#117dff]/[0.04] px-4 py-3 text-[12px] text-[#0a5fcc]">
+                  <strong>{referralOffer.name}</strong> gives {referralOffer.onboarding_days} days of {referralOffer.onboarding_plan} onboarding: {referralOffer.onboarding_limits?.maxUsers ?? 'custom'} seats, {referralOffer.onboarding_limits?.maxProjects ?? 'custom'} projects, {Number(referralOffer.onboarding_limits?.llmTokensPerMonth || 0).toLocaleString()} tokens/month, and {Number(referralOffer.onboarding_limits?.knowledgeBasePagesPerMonth || 0).toLocaleString()} document pages.
+                </div>
+              )}
+              {referralError && <p className="mt-2 text-xs text-[#dc2626]">{referralError}</p>}
+            </div>
+
             {/* Summary + create */}
             <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">
               <div className="min-w-0">
@@ -315,7 +365,7 @@ export default function OnboardingFlow() {
 
               <button
                 type="submit"
-                disabled={!orgName.trim() || creating || (mode === 'enterprise' && !effectiveSlug)}
+                disabled={!orgName.trim() || creating || (mode === 'enterprise' && !effectiveSlug) || (referralCode.trim() && !referralOffer)}
                 className="shrink-0 min-w-[220px] flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-[8px] transition-all text-sm font-['Space_Grotesk'] group uppercase tracking-[0.075em]"
               >
                 {creating ? (
