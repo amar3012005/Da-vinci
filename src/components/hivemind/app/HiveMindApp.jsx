@@ -46,6 +46,7 @@ const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
 const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
+const PlatformAdmin = React.lazy(() => import('./pages/PlatformAdmin'));
 
 // Catches render/chunk-load errors in any lazy page so a single broken page
 // (a throwing component, a missing api-client method, a stale lazy chunk after
@@ -109,6 +110,7 @@ export default function HiveMindApp() {
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />
+        <Route path="platform-admin" element={<PageSuspense><PlatformAdmin /></PageSuspense>} />
         {/* Mobile dedicated chat — no AppShell chrome, full screen */}
         <Route
           path="m/chat"

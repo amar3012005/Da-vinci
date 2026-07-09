@@ -855,6 +855,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async unlockPlatformAdmin(passkey) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey });
+    return data;
+  }
+
+  async listPlatformUsers({ q = '', limit = 200 } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/users', { params: { q, limit } });
+    return data;
+  }
+
   // ─── Control Plane: Client Descriptors ───────────────────────
 
   /**
