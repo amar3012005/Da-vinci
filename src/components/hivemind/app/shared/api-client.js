@@ -870,6 +870,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getPlatformMetrics() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/metrics');
+    return data;
+  }
+
   // ─── Control Plane: Client Descriptors ───────────────────────
 
   /**
