@@ -208,7 +208,7 @@ export default function HiveMindApp() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="app/overview" replace />} />
+        <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
       </Routes>
     </AuthProvider>
   );
