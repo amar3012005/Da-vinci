@@ -865,6 +865,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listPlatformLogs() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/logs');
+    return data;
+  }
+
   // ─── Control Plane: Client Descriptors ───────────────────────
 
   /**
