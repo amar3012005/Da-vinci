@@ -4,6 +4,7 @@ import { ArrowRight, Building2, Hexagon, Lock, Users, Cloud, Server } from 'luci
 import { useAuth } from '../auth/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import SelfHostSetup from './SelfHostSetup';
+import apiClient from '../shared/api-client';
 
 const ORG_MODES = {
   personal: {
@@ -47,7 +48,11 @@ export default function OnboardingFlow() {
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
   const [enterpriseAccessCode, setEnterpriseAccessCode] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showSelfHost, setShowSelfHost] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralOffer, setReferralOffer] = useState(null);
+  const [referralError, setReferralError] = useState(null);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
   // the effect below redirects to /hivemind/login?create=1 (the single create-account UX), so start
@@ -82,6 +87,7 @@ export default function OnboardingFlow() {
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
     const accessCode = `${saved.enterprise_access_code || ''}`.trim();
     setEnterpriseAccessCode(accessCode);
+    setReferralCode(String(saved.referral_code || '').trim().toUpperCase());
     if (isEnt && !accessCode) {
       // Account setup belongs on the login surface, never inside /app.
       window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
@@ -109,6 +115,21 @@ export default function OnboardingFlow() {
     })();
   }, [createOrg]);
 
+  useEffect(() => {
+    const code = referralCode.trim();
+    if (!code) { setReferralOffer(null); setReferralError(null); return; }
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const data = await apiClient.previewReferral(code);
+        if (active) { setReferralOffer(data.campaign || null); setReferralError(null); }
+      } catch (err) {
+        if (active) { setReferralOffer(null); setReferralError(err.response?.data?.error || 'Code is invalid or unavailable.'); }
+      }
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [referralCode]);
+
   const selectedMode = ORG_MODES[mode];
   const derivedSlug = useMemo(() => deriveSlug(orgName), [orgName]);
   const effectiveSlug = mode === 'enterprise' ? deriveSlug(slug || derivedSlug) : '';
@@ -131,7 +152,9 @@ export default function OnboardingFlow() {
         plan: selectedMode.plan,
         deployment, // 'managed' | 'selfhost'
         enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
+        referralCode: (referralCode || '').trim() || undefined,
       });
+      try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }
@@ -347,7 +370,7 @@ export default function OnboardingFlow() {
 
               <button
                 type="submit"
-                disabled={!orgName.trim() || creating || (mode === 'enterprise' && !effectiveSlug)}
+                disabled={!orgName.trim() || creating || (mode === 'enterprise' && !effectiveSlug) || (referralCode.trim() && !referralOffer)}
                 className="shrink-0 min-w-[220px] flex items-center justify-center gap-2 bg-[#117dff] hover:bg-[#0e6fe0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-[8px] transition-all text-sm font-['Space_Grotesk'] group uppercase tracking-[0.075em]"
               >
                 {creating ? (

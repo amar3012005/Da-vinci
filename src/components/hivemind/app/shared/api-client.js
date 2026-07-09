@@ -262,6 +262,8 @@ class HiveMindApiClient {
     const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/profile`, {
       company_profile: companyProfile,
     });
+  async previewReferral(code) {
+    const { data } = await this.controlPlane.get('/v1/referrals/preview', { params: { code } });
     return data;
   }
 

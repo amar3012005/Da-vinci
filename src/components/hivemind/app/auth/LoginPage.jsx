@@ -130,6 +130,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
+  const [referralCode, setReferralCode] = useState('');
   const onboardingError = useMemo(
     () => new URLSearchParams(location.search).get('onboarding_error'),
     [location.search]
@@ -192,6 +193,7 @@ export default function LoginPage() {
       enterprise: enterpriseName || null,
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       enterprise_access_code: enterpriseAccessCode.trim(),
+      referral_code: referralCode.trim() || null,
     };
     // Save onboarding data for post-auth pickup
     try {
@@ -228,6 +230,7 @@ export default function LoginPage() {
     setEnterpriseName('');
     setHivemindName('');
     setEnterpriseAccessCode('');
+    setReferralCode('');
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -643,6 +646,18 @@ export default function LoginPage() {
                         />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">This applies the agreed onboarding and runway terms for your workspace.</p>
                       </div>
+                      <div>
+                        <label className={LABEL_CLS}>Partner referral code <span className="normal-case tracking-normal text-[#a3a3a3]">optional</span></label>
+                        <input
+                          value={referralCode}
+                          onChange={e => setReferralCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. GTM2026"
+                          maxLength={32}
+                          autoComplete="off"
+                          className={`${INPUT_CLS} font-mono uppercase`}
+                        />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">Partner campaign code — applies the partner's offer to your workspace.</p>
+                      </div>
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
                           <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
@@ -650,8 +665,8 @@ export default function LoginPage() {
                         </div>
                       ) : (
                         <div className="bg-[#117dff]/[0.04] border border-[#117dff]/15 rounded-[8px] p-4">
-                          <p className="text-[13px] text-[#0a5fcc] font-medium">Enterprise accounts start with a 14-day Scale trial</p>
-                          <p className="text-[11px] text-[#3b6da3] mt-1">Full access to all features. No credit card required.</p>
+                          <p className="text-[13px] text-[#0a5fcc] font-medium">Partner onboarding terms are applied server-side</p>
+                          <p className="text-[11px] text-[#3b6da3] mt-1">Enter your referral code to review its seats, projects, document and token allowance after sign-in.</p>
                         </div>
                       )}
                       <button
