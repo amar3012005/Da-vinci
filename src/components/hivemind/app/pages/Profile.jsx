@@ -307,6 +307,12 @@ function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) 
               </span>
             )}
             <PlanBadge plan={plan} />
+            {org?.memory_storage_label && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]">
+                <Brain size={11} />
+                {org.plan === 'free' ? 'Personal' : 'Enterprise'} · {org.memory_storage_label}
+              </span>
+            )}
             {user?.role && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
                 <Shield size={11} />
