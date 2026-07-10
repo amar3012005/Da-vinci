@@ -26,6 +26,7 @@ const METRICS = [
   { key: 'searches',     label: 'Recall / Chat', icon: Search,   accent: '#9333ea', sub: 'agent queries' },
   { key: 'graphQueries', label: 'Graph Queries', icon: Network,  accent: '#0891b2', sub: 'graph loads' },
   { key: 'uploads',      label: 'KB Uploads',    icon: Upload,   accent: '#d97706', sub: 'documents' },
+  { key: 'kbPages',      label: 'KB Pages',      icon: Database, accent: '#ca8a04', sub: 'pages + slides + images' },
   { key: 'deepResearch', label: 'Deep Research', icon: Zap,      accent: '#dc2626', sub: 'jobs' },
   { key: 'webIntel',     label: 'Web Intel',     icon: Globe,    accent: '#0d9488', sub: 'search + crawl' },
   { key: 'tara',         label: 'TARA Voice',    icon: Mic,      accent: '#db2777', sub: 'turns' },
@@ -33,6 +34,10 @@ const METRICS = [
   { key: 'hyperRooms',  label: 'HyperAgents',   icon: Bot,      accent: '#0f766e', sub: 'rooms' },
   { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
+
+const DAILY_METRICS = METRICS.filter((metric) =>
+  ['tokens', 'searches', 'uploads', 'kbPages', 'deepResearch', 'webIntel'].includes(metric.key),
+);
 
 // last N day strings (YYYY-MM-DD), oldest→newest
 function lastNDays(n) {
@@ -165,6 +170,26 @@ function MetricCard({ metric, data, spark, active, onClick }) {
   );
 }
 
+function DailyBudget({ metric, data }) {
+  const Icon = metric.icon;
+  const used = Number(data?.used) || 0;
+  const limit = data?.limit;
+  const unlimited = isUnlimited(limit);
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
+  const color = pct >= 100 ? '#dc2626' : pct >= 80 ? '#d97706' : metric.accent;
+  return (
+    <div className="rounded-xl border border-[#e3e0db] bg-white px-3 py-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#525252]"><Icon size={13} style={{ color }} />{metric.label}</span>
+        <span className="text-[10px] text-[#888]">{fmt(used)} / {unlimited ? '∞' : fmt(limit)}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-[#eceae4] overflow-hidden">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+    </div>
+  );
+}
+
 export default function Usage() {
   const [metricKey, setMetricKey] = useState('tokens');
   const [days, setDays] = useState(30);
@@ -174,6 +199,7 @@ export default function Usage() {
 
   const planName = data?.planName || data?.plan || '—';
   const month = data?.period?.month || '';
+  const reminders = Array.isArray(data?.reminders) ? data.reminders : [];
 
   // date-fill the series against a continuous last-N-day axis
   const axis = useMemo(() => lastNDays(days), [days]);
@@ -213,6 +239,27 @@ export default function Usage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e3e0db] text-xs font-medium text-[#525252] hover:bg-[#faf9f4]">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
+        </div>
+      </div>
+
+      {reminders.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
+          {reminders.map((reminder) => (
+            <div key={`${reminder.resource}-${reminder.period}`} className="flex items-start gap-2 text-xs text-amber-900">
+              <AlertTriangle size={14} className="mt-px shrink-0" />
+              <span>{reminder.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Today’s plan limits</h2>
+          <span className="text-[10px] text-[#999]">Resets daily · {data?.period?.day || 'UTC'}</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+          {DAILY_METRICS.map((metric) => <DailyBudget key={metric.key} metric={metric} data={data?.daily?.[metric.key]} />)}
         </div>
       </div>
 

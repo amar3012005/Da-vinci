@@ -199,6 +199,32 @@ const PLANS = [
   },
 ];
 
+function planFromBackend(raw) {
+  const fallback = PLANS.find((plan) => plan.id === raw?.id) || {};
+  const limits = raw?.limits || {};
+  return {
+    ...fallback,
+    ...raw,
+    price: raw?.price == null ? 'Custom' : `€${raw.price}`,
+    period: raw?.price == null ? '' : '/month',
+    features: fallback.features || [],
+    limits: {
+      tokens: limits.llmTokensPerMonth ?? null,
+      tokensDaily: limits.llmTokensPerDay ?? null,
+      memories: limits.maxMemories ?? null,
+      connections: limits.maxConnectors ?? null,
+      deepResearch: limits.deepResearchPerMonth ?? null,
+      deepResearchDaily: limits.deepResearchPerDay ?? null,
+      webIntel: limits.webIntelPerDay ?? null,
+      searches: limits.searchQueriesPerMonth ?? null,
+      searchesDaily: limits.searchQueriesPerDay ?? null,
+      users: limits.maxUsers ?? null,
+      kbPages: limits.knowledgeBasePagesPerMonth ?? null,
+      kbPagesDaily: limits.knowledgeBasePagesPerDay ?? null,
+    },
+  };
+}
+
 // ─── Usage Meter ─────────────────────────────────────────────────────────────
 
 function UsageMeter({ label, used, limit, icon: Icon }) {
@@ -335,12 +361,10 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 export default function Billing() {
   const { t } = useTranslation('dashboard');
   const { org } = useAuth();
-  const [billingCycle, setBillingCycle] = useState('monthly');
   const [upgradeModal, setUpgradeModal] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
-  const [upgraded, setUpgraded] = useState(false);
 
-  const { data: profile, refetch: refetchProfile } = useApiQuery(
+  const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
     [],
   );
@@ -352,7 +376,7 @@ export default function Billing() {
 
   // Pulls from control-plane /v1/billing/plan — single source of truth for
   // plan + usage + Stripe subscription state.
-  const { data: billing, refetch: refetchBilling } = useApiQuery(
+  const { data: billing } = useApiQuery(
     () => apiClient.getBillingPlan().catch(() => null),
     [],
   );
@@ -361,9 +385,7 @@ export default function Billing() {
     [],
   );
 
-  // Legacy /api/billing/usage shim kept so the meter sub-component (which
-  // still reads from `usage`) renders without a rewrite below.
-  const usage = billing
+  const usage = billing?.usage_summary || (billing
     ? {
         plan: billing.plan?.id,
         tokens:        { used: billing.usage?.tokensProcessed || 0 },
@@ -374,12 +396,15 @@ export default function Billing() {
         uploads:       { used: billing.usage?.knowledgeBaseUploads || 0 },
         graphQueries:  { used: billing.usage?.graphQueries || 0 },
       }
-    : null;
+    : null);
 
   const subscription = billing?.subscription || {};
   const stripeEnabled = Boolean(billing?.stripe_enabled);
 
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
+    ? billing.all_plans.map(planFromBackend)
+    : PLANS;
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
@@ -394,7 +419,9 @@ export default function Billing() {
   const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
 
-  const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
+  const currentPlanDef = billing?.plan
+    ? planFromBackend(billing.plan)
+    : planOptions.find((p) => p.id === currentPlan);
 
   const handleUpgrade = async (planId) => {
     setUpgrading(true);
@@ -408,12 +435,7 @@ export default function Billing() {
           return;
         }
       }
-      // Legacy fallback: direct plan flip on deployments without Stripe.
-      await apiClient.core.post('/api/billing/upgrade', { plan: planId });
-      setUpgraded(true);
-      setUpgradeModal(null);
-      await refetchProfile();
-      await refetchBilling();
+      throw new Error('Self-serve checkout is not available for this plan. Contact support to change plans.');
     } catch (e) {
       console.error('Upgrade failed:', e);
       const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
@@ -502,6 +524,12 @@ export default function Billing() {
             label={t('billing.tokensThisMonth', 'Tokens This Month')}
             used={tokensUsed}
             limit={currentPlanDef?.limits.tokens}
+            icon={Brain}
+          />
+          <UsageMeter
+            label={t('billing.tokensToday', 'Tokens Today')}
+            used={usage?.daily?.tokens?.used || 0}
+            limit={usage?.daily?.tokens?.limit}
             icon={Brain}
           />
           <UsageMeter
@@ -612,44 +640,12 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex items-center justify-center gap-1 bg-white border border-[#e3e0db] rounded-lg p-1 w-fit mx-auto">
-        <button
-          onClick={() => setBillingCycle('monthly')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all ${
-            billingCycle === 'monthly'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
-        >
-          {t('billing.monthly', 'Monthly')}
-        </button>
-        <button
-          onClick={() => setBillingCycle('annual')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all flex items-center gap-1.5 ${
-            billingCycle === 'annual'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
-        >
-          {t('billing.annual', 'Annual')}
-          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
-            -20%
-          </span>
-        </button>
-      </div>
-
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {PLANS.map((plan, i) => (
+        {planOptions.map((plan) => (
           <PlanCard
             key={plan.id}
-            plan={{
-              ...plan,
-              price: billingCycle === 'annual' && plan.price !== '€0' && plan.price !== 'Custom'
-                ? `€${Math.round(parseInt(plan.price.replace('€', '')) * 0.8)}`
-                : plan.price,
-            }}
+            plan={plan}
             currentPlan={currentPlan}
             onSelect={(id) => setUpgradeModal(id)}
           />
@@ -704,10 +700,10 @@ export default function Billing() {
                 <Zap size={20} className="text-[#117dff]" />
               </div>
               <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-1">
-                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: PLANS.find(p => p.id === upgradeModal)?.name })}
+                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: planOptions.find(p => p.id === upgradeModal)?.name })}
               </h3>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-                {PLANS.find(p => p.id === upgradeModal)?.price}{PLANS.find(p => p.id === upgradeModal)?.period}
+                {planOptions.find(p => p.id === upgradeModal)?.price}{planOptions.find(p => p.id === upgradeModal)?.period}
               </p>
             </div>
             <div className="flex gap-3">
@@ -737,18 +733,6 @@ export default function Billing() {
         </div>
       )}
 
-      {upgraded && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 font-['Space_Grotesk'] text-sm font-semibold"
-          >
-            <Check size={16} />
-            {t('billing.upgradeSuccess', 'Plan upgraded successfully!')}
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }
