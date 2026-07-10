@@ -58,7 +58,7 @@ const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg
 const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
 
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -130,7 +130,10 @@ export default function LoginPage() {
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
     if (isAuthenticated) {
-      if (wantsCreate) return; // org-less new user finishing create-account — stay here
+      if (wantsCreate && needsOnboarding) return; // org-less new user finishing create-account — stay here
+      if (org?.id) {
+        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+      }
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
@@ -145,7 +148,7 @@ export default function LoginPage() {
         : '/hivemind/app/overview';
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate]);
+  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate, needsOnboarding, org?.id]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {

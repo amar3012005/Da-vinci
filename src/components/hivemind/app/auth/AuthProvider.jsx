@@ -51,6 +51,9 @@ export function AuthProvider({ children }) {
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
         setAuthState('signed_in');
+        if (data.organization?.id) {
+          try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+        }
         // PostHog: attribute sessions to the user + org (no-op if PH disabled).
         try {
           if (posthog && isPostHogEnabled() && data.user?.id) {
