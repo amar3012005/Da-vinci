@@ -60,6 +60,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
   const [mode, setMode] = useState('external'); // external = full agent (clinical) | internal = direct recall
+  const [goal, setGoal] = useState(''); // session goal — drives the strategist (phase/confidence engine)
   // Active skill name per mode (org-wide selection from the Skills tab) — the
   // toggle reflects whichever skill is selected for each side.
   const [skillNames, setSkillNames] = useState({ external: null, internal: null });
@@ -200,6 +201,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     url.searchParams.set('language', langFilter || language);
     url.searchParams.set('mode', mode);
     if (voiceId) url.searchParams.set('voice_id', voiceId);
+    if (goal.trim()) url.searchParams.set('goal', goal.trim().slice(0, 200));
 
     const ws = new WebSocket(url.toString());
     ws.binaryType = 'arraybuffer';
@@ -247,7 +249,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     };
     ws.onerror = () => setError('Connection error.');
     ws.onclose = () => { if (active) stopAll('closed'); };
-  }, [userId, orgId, language, langFilter, voiceId, mode, engineWs, playPcm, active, stopAll]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, active, stopAll]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -352,6 +354,13 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
                   {previewing ? <Loader2 size={13} className="animate-spin" /> : <Volume2 size={13} />} Hear
                 </button>
               </div>
+              {/* Session goal — drives the strategist (phase + confidence) like outbound */}
+              <input
+                type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
+                placeholder="Goal (optional) — e.g. qualify interest and book a demo"
+                maxLength={200}
+                className="w-full h-9 px-2 text-[12px] bg-[#faf9f4] border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#117dff]/40"
+              />
             </div>
           )}
 
