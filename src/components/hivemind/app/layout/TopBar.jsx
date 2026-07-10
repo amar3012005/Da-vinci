@@ -58,12 +58,18 @@ const SECTIONS = [
   { key: 'tara', label: 'VOICE' },
 ];
 
+const SECTION_TITLES = {
+  hivemind: 'HIVEMIND',
+  hyperagents: 'HyperAgents',
+  tara: 'TARA',
+};
+
 export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
   const location = useLocation();
   const navigate = useNavigate();
   const healthy = useHealthStatus();
 
-  const title = pageTitles[location.pathname] || 'HIVEMIND';
+  const title = pageTitles[location.pathname] || SECTION_TITLES[activeSection] || 'HIVEMIND';
   const description = pageDescriptions[location.pathname] || '';
 
   const { t } = useTranslation('dashboard');

@@ -139,6 +139,12 @@ function TalkToHiveFAB({ onOpen, hidden }) {
   );
 }
 
+function sectionForPath(pathname) {
+  if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
+  if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
+  return 'hivemind';
+}
+
 /**
  * AppShell — layout:
  *   1. needs_org_setup -> show org creation
@@ -215,9 +221,12 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState(() => {
-    try { return localStorage.getItem('hm_active_section') || 'hivemind'; } catch { return 'hivemind'; }
-  });
+  const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
+  useEffect(() => {
+    const section = sectionForPath(location.pathname);
+    setActiveSection(section);
+    try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
+  }, [location.pathname]);
   const handleSectionChange = (s) => {
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }
