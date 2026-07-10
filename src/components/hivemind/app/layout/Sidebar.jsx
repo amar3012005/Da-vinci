@@ -202,7 +202,7 @@ export default function Sidebar({ activeSection = 'hivemind' }) {
               className="flex flex-col overflow-hidden"
             >
               <span className="text-[#0a0a0a] text-[13px] font-semibold tracking-wide font-['Space_Grotesk'] whitespace-nowrap">
-                {activeSection === 'hyperagents' ? 'Operating System' : activeSection === 'tara' ? 'VOICE' : 'BRAIN'}
+                {activeSection === 'hyperagents' ? 'HyperAgents' : activeSection === 'tara' ? 'TARA' : 'HIVEMIND'}
               </span>
               {org && (
                 <span className="text-[#a3a3a3] text-[10px] font-mono truncate max-w-[140px]">
