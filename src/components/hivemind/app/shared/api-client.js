@@ -247,6 +247,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getOrganizationProfile(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/profile`);
+    return data;
+  }
+
+  async updateOrganizationProfile(orgId, companyProfile) {
+    const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/profile`, {
+      company_profile: companyProfile,
+    });
+    return data;
+  }
+
   async listMembers(orgId) {
     const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/members`);
     return data;

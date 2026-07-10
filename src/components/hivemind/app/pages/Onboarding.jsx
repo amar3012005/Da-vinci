@@ -46,6 +46,7 @@ export default function OnboardingFlow() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
+  const [companyProfile, setCompanyProfile] = useState({ website: '', industry: '', description: '' });
   const [showSelfHost, setShowSelfHost] = useState(false);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
@@ -81,6 +82,7 @@ export default function OnboardingFlow() {
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
+          company_profile: isEnt ? { website: saved.website || '', industry: saved.industry || '', description: saved.company_description || '' } : undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
@@ -115,6 +117,7 @@ export default function OnboardingFlow() {
         slug: mode === 'enterprise' ? effectiveSlug : undefined,
         plan: selectedMode.plan,
         deployment, // 'managed' | 'selfhost'
+        company_profile: mode === 'enterprise' ? companyProfile : undefined,
       });
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }
@@ -292,6 +295,44 @@ export default function OnboardingFlow() {
                 ))}
               </div>
             </div>
+
+            {mode === 'enterprise' && (
+              <div className="md:col-span-2 grid gap-4 rounded-2xl border border-[#e3e0db] bg-[#faf9f4] p-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <p className="text-[11px] font-medium text-[#737373] uppercase tracking-[0.08em] font-mono">Company context</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[#737373]">Optional now, editable later in Profile. This grounds your workspace and AI team in the right company context.</p>
+                </div>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-medium text-[#525252]">Website</span>
+                  <input
+                    value={companyProfile.website}
+                    onChange={(e) => setCompanyProfile((current) => ({ ...current, website: e.target.value }))}
+                    placeholder="https://company.com"
+                    inputMode="url"
+                    className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-medium text-[#525252]">Industry</span>
+                  <input
+                    value={companyProfile.industry}
+                    onChange={(e) => setCompanyProfile((current) => ({ ...current, industry: e.target.value }))}
+                    placeholder="e.g. Climate technology"
+                    className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="mb-2 block text-xs font-medium text-[#525252]">What should your workspace understand about the company?</span>
+                  <textarea
+                    value={companyProfile.description}
+                    onChange={(e) => setCompanyProfile((current) => ({ ...current, description: e.target.value }))}
+                    rows={3}
+                    placeholder="What you do, who you serve, and the outcomes you are working toward."
+                    className="w-full resize-y rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                  />
+                </label>
+              </div>
+            )}
 
             {/* Summary + create */}
             <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">
