@@ -277,7 +277,6 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
 function PlanCard({ plan, currentPlan, onSelect }) {
   const { t } = useTranslation('dashboard');
   const isCurrent = currentPlan === plan.id;
-  const isEnterprise = plan.id === 'enterprise';
 
   return (
     <motion.div
@@ -338,11 +337,6 @@ function PlanCard({ plan, currentPlan, onSelect }) {
         <div className="text-center py-2.5 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold font-['Space_Grotesk']">
           {t('billing.currentPlan', 'Current Plan')}
         </div>
-      ) : isEnterprise ? (
-        <button onClick={() => onSelect(plan.id)} className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
-          {t('billing.contactSales', 'Contact Sales / Offer Code')}
-          <ArrowRight size={13} />
-        </button>
       ) : (
         <button
           onClick={() => onSelect(plan.id)}
@@ -407,10 +401,12 @@ export default function Billing() {
 
   const subscription = billing?.subscription || {};
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const enterpriseEngagement = billing?.enterprise_engagement || null;
   const dummyCheckoutId = searchParams.get('dummy_checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
-    : PLANS;
+    : PLANS.filter((plan) => plan.id !== 'enterprise');
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
@@ -432,6 +428,7 @@ export default function Billing() {
     : planOptions.find((p) => p.id === currentPlan);
 
   const handleUpgrade = async (planId) => {
+    if (isEnterpriseWorkspace) return;
     setUpgrading(true);
     try {
       const res = await apiClient.createBillingCheckout(planId, referralCode.trim());
@@ -538,7 +535,7 @@ export default function Billing() {
                 </div>
               )}
             </div>
-            {subscription?.stripe_customer_id && (
+            {!isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
                 onClick={handleManageSubscription}
                 className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
@@ -684,17 +681,41 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {planOptions.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            currentPlan={currentPlan}
-            onSelect={(id) => setUpgradeModal(id)}
-          />
-        ))}
-      </div>
+      {isEnterpriseWorkspace ? (
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.04] p-6"
+        >
+          <div className="flex items-start gap-3">
+            <Shield size={20} className="mt-0.5 text-[#117dff]" />
+            <div>
+              <h3 className="font-['Space_Grotesk'] text-base font-semibold text-[#0a0a0a]">
+                Enterprise {enterpriseEngagement?.phase === 'onboarding' ? 'onboarding' : 'runway'}
+              </h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#525252] font-['Space_Grotesk']">
+                Your {enterpriseEngagement?.hosting_mode === 'self_host' ? 'self-hosted' : 'managed'} enterprise agreement is administered outside self-serve billing. Usage remains visible above; plan, seats, and commercial changes are handled through your account team.
+              </p>
+              {enterpriseEngagement?.phase === 'onboarding' && enterpriseEngagement?.onboarding_ends_at && (
+                <p className="mt-3 text-[12px] font-medium text-[#117dff] font-['Space_Grotesk']">
+                  Onboarding access ends {new Date(enterpriseEngagement.onboarding_ends_at).toLocaleDateString()}.
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.section>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {planOptions.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              currentPlan={currentPlan}
+              onSelect={(id) => setUpgradeModal(id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* FAQ Section */}
       <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -732,7 +753,7 @@ export default function Billing() {
         </div>
       </div>
 
-      {upgradeModal && (
+      {!isEnterpriseWorkspace && upgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
