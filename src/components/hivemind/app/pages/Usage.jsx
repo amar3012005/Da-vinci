@@ -26,6 +26,7 @@ const METRICS = [
   { key: 'searches',     label: 'Recall / Chat', icon: Search,   accent: '#9333ea', sub: 'agent queries' },
   { key: 'graphQueries', label: 'Graph Queries', icon: Network,  accent: '#0891b2', sub: 'graph loads' },
   { key: 'uploads',      label: 'KB Uploads',    icon: Upload,   accent: '#d97706', sub: 'documents' },
+  { key: 'kbPages',      label: 'KB Pages',      icon: Upload,   accent: '#b45309', sub: 'pages + slides + images' },
   { key: 'deepResearch', label: 'Deep Research', icon: Zap,      accent: '#dc2626', sub: 'jobs' },
   { key: 'webIntel',     label: 'Web Intel',     icon: Globe,    accent: '#0d9488', sub: 'search + crawl' },
   { key: 'tara',         label: 'TARA Voice',    icon: Mic,      accent: '#db2777', sub: 'turns' },

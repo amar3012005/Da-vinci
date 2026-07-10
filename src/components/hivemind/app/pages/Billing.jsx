@@ -199,6 +199,27 @@ const PLANS = [
   },
 ];
 
+const limitLabel = (value, label) => value == null || value === -1
+  ? `Unlimited ${label}`
+  : `${Number(value).toLocaleString()} ${label}`;
+
+const cardFromServerPlan = (plan) => ({
+  id: plan.id,
+  name: plan.name,
+  price: plan.price == null ? 'Custom' : `${plan.currency === 'EUR' ? '€' : `${plan.currency} `}${plan.price}`,
+  period: plan.price == null ? '' : '/month',
+  description: `${limitLabel(plan.limits?.knowledgeBasePagesPerMonth, 'pages/month')} · ${limitLabel(plan.limits?.maxUsers, 'seats')}`,
+  accent: plan.id === 'pro',
+  features: [
+    { label: limitLabel(plan.limits?.llmTokensPerMonth, 'LLM tokens/month') },
+    { label: limitLabel(plan.limits?.maxMemories, 'memories') },
+    { label: limitLabel(plan.limits?.deepResearchPerMonth, 'deep research jobs/month') },
+    { label: limitLabel(plan.limits?.webIntelPerDay, 'web intel/day') },
+    { label: limitLabel(plan.limits?.maxConnectors, 'connectors') },
+  ],
+  limits: plan.limits,
+});
+
 // ─── Usage Meter ─────────────────────────────────────────────────────────────
 
 function UsageMeter({ label, used, limit, icon: Icon }) {
@@ -335,7 +356,6 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 export default function Billing() {
   const { t } = useTranslation('dashboard');
   const { org } = useAuth();
-  const [billingCycle, setBillingCycle] = useState('monthly');
   const [upgradeModal, setUpgradeModal] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
   const [upgraded, setUpgraded] = useState(false);
@@ -372,6 +392,7 @@ export default function Billing() {
         webIntel:      { used: billing.usage?.webIntelJobs || 0 },
         searches:      { used: billing.usage?.searchQueries || 0 },
         uploads:       { used: billing.usage?.knowledgeBaseUploads || 0 },
+        kbPages:       { used: billing.usage?.knowledgeBasePages || 0 },
         graphQueries:  { used: billing.usage?.graphQueries || 0 },
       }
     : null;
@@ -394,7 +415,13 @@ export default function Billing() {
   const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
 
-  const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
+  const currentPlanDef = billing?.plan
+    ? cardFromServerPlan(billing.plan)
+    : PLANS.find((p) => p.id === currentPlan);
+  const isBusinessWorkspace = billing?.organization?.plan === 'enterprise'
+    || billing?.organization?.hosting_mode === 'self_host';
+  const planCards = (billing?.all_plans || []).map(cardFromServerPlan);
+  const limits = billing?.plan?.limits || {};
 
   const handleUpgrade = async (planId) => {
     setUpgrading(true);
@@ -501,49 +528,49 @@ export default function Billing() {
           <UsageMeter
             label={t('billing.tokensThisMonth', 'Tokens This Month')}
             used={tokensUsed}
-            limit={currentPlanDef?.limits.tokens}
+            limit={limits.llmTokensPerMonth}
             icon={Brain}
           />
           <UsageMeter
             label={t('billing.memories', 'Memories')}
             used={memoriesUsed}
-            limit={currentPlanDef?.limits.memories}
+            limit={limits.maxMemories}
             icon={HardDrive}
           />
           <UsageMeter
             label={t('billing.deepResearch', 'Deep Research')}
             used={deepResearchUsed}
-            limit={currentPlanDef?.limits.deepResearch}
+            limit={limits.deepResearchPerMonth}
             icon={Zap}
           />
           <UsageMeter
             label={t('billing.webIntelDaily', 'Web Intel (Daily)')}
             used={webIntelUsed}
-            limit={currentPlanDef?.limits.webIntel}
+            limit={limits.webIntelPerDay}
             icon={Sparkles}
           />
           <UsageMeter
             label={t('billing.searchesThisMonth', 'Searches This Month')}
             used={searchesUsed}
-            limit={currentPlanDef?.limits.searches}
+            limit={limits.searchQueriesPerMonth}
             icon={Zap}
           />
           <UsageMeter
             label={t('billing.kbPages', 'KB Pages This Month')}
             used={kbPagesUsed}
-            limit={currentPlanDef?.limits.kbPages}
+            limit={limits.knowledgeBasePagesPerMonth}
             icon={HardDrive}
           />
           <UsageMeter
             label={t('billing.graphQueries', 'Graph Queries')}
             used={graphQueriesUsed}
-            limit={currentPlanDef?.limits.searches}
+            limit={limits.searchQueriesPerMonth}
             icon={Brain}
           />
           <UsageMeter
             label={t('billing.connections', 'Connections')}
             used={activeConnections}
-            limit={currentPlanDef?.limits.connections}
+            limit={limits.maxConnectors}
             icon={Cable}
           />
         </div>
@@ -612,49 +639,22 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex items-center justify-center gap-1 bg-white border border-[#e3e0db] rounded-lg p-1 w-fit mx-auto">
-        <button
-          onClick={() => setBillingCycle('monthly')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all ${
-            billingCycle === 'monthly'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
-        >
-          {t('billing.monthly', 'Monthly')}
-        </button>
-        <button
-          onClick={() => setBillingCycle('annual')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all flex items-center gap-1.5 ${
-            billingCycle === 'annual'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
-        >
-          {t('billing.annual', 'Annual')}
-          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
-            -20%
-          </span>
-        </button>
-      </div>
-
-      {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {PLANS.map((plan, i) => (
+      {isBusinessWorkspace ? (
+        <div className="bg-white border border-[#e3e0db] rounded-xl p-6 text-sm text-[#525252] font-['Space_Grotesk']">
+          Your enterprise plan, limits, support, and renewal terms are managed by your contract. Contact your workspace owner or SINGULANCE support to change them.
+        </div>
+      ) : planCards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {planCards.map((plan) => (
           <PlanCard
             key={plan.id}
-            plan={{
-              ...plan,
-              price: billingCycle === 'annual' && plan.price !== '€0' && plan.price !== 'Custom'
-                ? `€${Math.round(parseInt(plan.price.replace('€', '')) * 0.8)}`
-                : plan.price,
-            }}
+            plan={plan}
             currentPlan={currentPlan}
             onSelect={(id) => setUpgradeModal(id)}
           />
         ))}
-      </div>
+        </div>
+      )}
 
       {/* FAQ Section */}
       <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -704,10 +704,10 @@ export default function Billing() {
                 <Zap size={20} className="text-[#117dff]" />
               </div>
               <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-1">
-                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: PLANS.find(p => p.id === upgradeModal)?.name })}
+                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: planCards.find(p => p.id === upgradeModal)?.name })}
               </h3>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-                {PLANS.find(p => p.id === upgradeModal)?.price}{PLANS.find(p => p.id === upgradeModal)?.period}
+                {planCards.find(p => p.id === upgradeModal)?.price}{planCards.find(p => p.id === upgradeModal)?.period}
               </p>
             </div>
             <div className="flex gap-3">
