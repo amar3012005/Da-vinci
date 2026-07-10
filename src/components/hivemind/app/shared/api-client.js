@@ -792,8 +792,16 @@ class HiveMindApiClient {
    *   { checkout_url, session_id }
    * Caller redirects window.location to checkout_url.
    */
-  async createBillingCheckout(planId) {
-    const { data } = await this.controlPlane.post('/v1/billing/checkout', { plan: planId });
+  async createBillingCheckout(planId, referralCode = '') {
+    const { data } = await this.controlPlane.post('/v1/billing/checkout', {
+      plan: planId,
+      ...(referralCode ? { referral_code: referralCode } : {}),
+    });
+    return data;
+  }
+
+  async confirmDummyBillingCheckout(checkoutId) {
+    const { data } = await this.controlPlane.post('/v1/billing/dummy/confirm', { checkout_id: checkoutId });
     return data;
   }
 

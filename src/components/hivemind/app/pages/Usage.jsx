@@ -29,14 +29,15 @@ const METRICS = [
   { key: 'kbPages',      label: 'KB Pages',      icon: Database, accent: '#ca8a04', sub: 'pages + slides + images' },
   { key: 'deepResearch', label: 'Deep Research', icon: Zap,      accent: '#dc2626', sub: 'jobs' },
   { key: 'webIntel',     label: 'Web Intel',     icon: Globe,    accent: '#0d9488', sub: 'search + crawl' },
-  { key: 'tara',         label: 'TARA Voice',    icon: Mic,      accent: '#db2777', sub: 'turns' },
+  { key: 'taraSeconds',  label: 'TARA Talk Time', icon: Mic,     accent: '#db2777', sub: 'seconds' },
+  { key: 'hyperAgentRuns', label: 'HyperAgents Runs', icon: Bot, accent: '#0f766e', sub: 'runs' },
   { key: 'connectors',  label: 'Connectors',    icon: Plug,     accent: '#7c3aed', sub: 'active sources' },
   { key: 'hyperRooms',  label: 'HyperAgents',   icon: Bot,      accent: '#0f766e', sub: 'rooms' },
   { key: 'users',       label: 'Seats',         icon: UserPlus, accent: '#b45309', sub: 'org members' },
 ];
 
 const DAILY_METRICS = METRICS.filter((metric) =>
-  ['tokens', 'searches', 'uploads', 'kbPages', 'deepResearch', 'webIntel'].includes(metric.key),
+  ['tokens', 'searches', 'uploads', 'kbPages', 'deepResearch', 'webIntel', 'taraSeconds', 'hyperAgentRuns'].includes(metric.key),
 );
 
 // last N day strings (YYYY-MM-DD), oldest→newest

@@ -13,8 +13,10 @@ import {
   Clock,
   HardDrive,
   Headphones,
+  Mic,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
@@ -221,6 +223,8 @@ function planFromBackend(raw) {
       users: limits.maxUsers ?? null,
       kbPages: limits.knowledgeBasePagesPerMonth ?? null,
       kbPagesDaily: limits.knowledgeBasePagesPerDay ?? null,
+      taraSeconds: limits.taraTalkSecondsPerMonth ?? null,
+      hyperAgentRuns: limits.hyperAgentRunsPerMonth ?? null,
     },
   };
 }
@@ -229,7 +233,7 @@ function planFromBackend(raw) {
 
 function UsageMeter({ label, used, limit, icon: Icon }) {
   const { t } = useTranslation('dashboard');
-  const isUnlimited = !limit;
+  const isUnlimited = limit == null || limit === -1;
   const pct = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
   const isNearLimit = pct > 80;
 
@@ -335,8 +339,8 @@ function PlanCard({ plan, currentPlan, onSelect }) {
           {t('billing.currentPlan', 'Current Plan')}
         </div>
       ) : isEnterprise ? (
-        <button className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
-          {t('billing.contactSales', 'Contact Sales')}
+        <button onClick={() => onSelect(plan.id)} className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
+          {t('billing.contactSales', 'Contact Sales / Offer Code')}
           <ArrowRight size={13} />
         </button>
       ) : (
@@ -361,8 +365,11 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 export default function Billing() {
   const { t } = useTranslation('dashboard');
   const { org } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [upgradeModal, setUpgradeModal] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [dummyConfirming, setDummyConfirming] = useState(false);
 
   const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
@@ -376,7 +383,7 @@ export default function Billing() {
 
   // Pulls from control-plane /v1/billing/plan — single source of truth for
   // plan + usage + Stripe subscription state.
-  const { data: billing } = useApiQuery(
+  const { data: billing, refetch: refetchBilling } = useApiQuery(
     () => apiClient.getBillingPlan().catch(() => null),
     [],
   );
@@ -399,9 +406,8 @@ export default function Billing() {
     : null);
 
   const subscription = billing?.subscription || {};
-  const stripeEnabled = Boolean(billing?.stripe_enabled);
-
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const dummyCheckoutId = searchParams.get('dummy_checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
     : PLANS;
@@ -418,6 +424,8 @@ export default function Billing() {
   const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
   const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
+  const taraSecondsUsed = usage?.taraSeconds?.used ?? 0;
+  const hyperAgentRunsUsed = usage?.hyperAgentRuns?.used ?? 0;
 
   const currentPlanDef = billing?.plan
     ? planFromBackend(billing.plan)
@@ -426,14 +434,10 @@ export default function Billing() {
   const handleUpgrade = async (planId) => {
     setUpgrading(true);
     try {
-      // Self-serve checkout — opens Stripe-hosted checkout in same tab.
-      // Stripe webhook flips plan + subscription_status on success.
-      if (stripeEnabled) {
-        const res = await apiClient.createBillingCheckout(planId);
-        if (res?.checkout_url) {
-          window.location.href = res.checkout_url;
-          return;
-        }
+      const res = await apiClient.createBillingCheckout(planId, referralCode.trim());
+      if (res?.checkout_url) {
+        window.location.href = res.checkout_url;
+        return;
       }
       throw new Error('Self-serve checkout is not available for this plan. Contact support to change plans.');
     } catch (e) {
@@ -442,6 +446,19 @@ export default function Billing() {
       alert(`Upgrade failed: ${msg}`);
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const confirmDummyCheckout = async () => {
+    setDummyConfirming(true);
+    try {
+      await apiClient.confirmDummyBillingCheckout(dummyCheckoutId);
+      setSearchParams({}, { replace: true });
+      await refetchBilling();
+    } catch (e) {
+      alert(e?.response?.data?.error || e.message || 'Checkout confirmation failed.');
+    } finally {
+      setDummyConfirming(false);
     }
   };
 
@@ -457,6 +474,21 @@ export default function Billing() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {dummyCheckoutId && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-amber-950">Test payment awaiting confirmation</p>
+            <p className="text-xs text-amber-800">This only works for organizations allow-listed by the backend.</p>
+          </div>
+          <button
+            onClick={confirmDummyCheckout}
+            disabled={dummyConfirming}
+            className="rounded-lg bg-amber-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {dummyConfirming ? 'Confirming…' : 'Confirm test payment'}
+          </button>
+        </div>
+      )}
       {/* Current Plan Overview */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -573,6 +605,18 @@ export default function Billing() {
             used={activeConnections}
             limit={currentPlanDef?.limits.connections}
             icon={Cable}
+          />
+          <UsageMeter
+            label="TARA Talk Time (seconds)"
+            used={taraSecondsUsed}
+            limit={currentPlanDef?.limits.taraSeconds}
+            icon={Mic}
+          />
+          <UsageMeter
+            label="HyperAgents Runs"
+            used={hyperAgentRunsUsed}
+            limit={currentPlanDef?.limits.hyperAgentRuns}
+            icon={Zap}
           />
         </div>
       </motion.div>
@@ -706,6 +750,17 @@ export default function Billing() {
                 {planOptions.find(p => p.id === upgradeModal)?.price}{planOptions.find(p => p.id === upgradeModal)?.period}
               </p>
             </div>
+            <label className="mb-5 block text-left">
+              <span className="mb-1.5 block text-xs font-medium text-[#525252]">Referral code (optional)</span>
+              <input
+                value={referralCode}
+                onChange={(event) => setReferralCode(event.target.value.toUpperCase())}
+                maxLength={64}
+                autoComplete="off"
+                placeholder="GTM2026"
+                className="w-full rounded-lg border border-[#d4d0ca] px-3 py-2 text-sm uppercase outline-none focus:border-[#117dff]"
+              />
+            </label>
             <div className="flex gap-3">
               <button
                 onClick={() => setUpgradeModal(null)}
