@@ -53,9 +53,9 @@ const pageDescriptions = {
 };
 
 const SECTIONS = [
-  { key: 'hivemind', label: 'HIVEMIND' },
-  { key: 'hyperagents', label: 'HYPERAGENTS' },
-  { key: 'tara', label: 'TARA' },
+  { key: 'hivemind', label: 'BRAIN' },
+  { key: 'hyperagents', label: 'Operating System' },
+  { key: 'tara', label: 'VOICE' },
 ];
 
 export default function TopBar({ activeSection = 'hivemind', onSectionChange }) {
