@@ -800,6 +800,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Reconcile a completed hosted Checkout with Stripe before webhooks arrive. */
+  async reconcileBillingCheckout() {
+    const { data } = await this.controlPlane.post('/v1/billing/reconcile', {});
+    return data;
+  }
+
   async confirmDummyBillingCheckout(checkoutId) {
     const { data } = await this.controlPlane.post('/v1/billing/dummy/confirm', { checkout_id: checkoutId });
     return data;

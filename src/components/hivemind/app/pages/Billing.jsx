@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
@@ -364,6 +364,7 @@ export default function Billing() {
   const [upgrading, setUpgrading] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [dummyConfirming, setDummyConfirming] = useState(false);
+  const [checkoutNotice, setCheckoutNotice] = useState('');
 
   const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
@@ -381,12 +382,16 @@ export default function Billing() {
     () => apiClient.getBillingPlan().catch(() => null),
     [],
   );
-  const { data: invoiceList } = useApiQuery(
+  const { data: usageSummary, refetch: refetchUsage } = useApiQuery(
+    () => apiClient.getUsage().catch(() => null),
+    [],
+  );
+  const { data: invoiceList, refetch: refetchInvoices } = useApiQuery(
     () => apiClient.listInvoices().catch(() => null),
     [],
   );
 
-  const usage = billing?.usage_summary || (billing
+  const usage = usageSummary || billing?.usage_summary || (billing
     ? {
         plan: billing.plan?.id,
         tokens:        { used: billing.usage?.tokensProcessed || 0 },
@@ -404,6 +409,7 @@ export default function Billing() {
   const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
   const enterpriseEngagement = billing?.enterprise_engagement || null;
   const dummyCheckoutId = searchParams.get('dummy_checkout');
+  const checkoutState = searchParams.get('checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
     : PLANS.filter((plan) => plan.id !== 'enterprise');
@@ -426,6 +432,27 @@ export default function Billing() {
   const currentPlanDef = billing?.plan
     ? planFromBackend(billing.plan)
     : planOptions.find((p) => p.id === currentPlan);
+
+  useEffect(() => {
+    if (checkoutState !== 'success') return undefined;
+    let cancelled = false;
+    const reconcile = async () => {
+      try {
+        const result = await apiClient.reconcileBillingCheckout();
+        if (cancelled) return;
+        await Promise.all([refetchBilling(), refetchUsage(), refetchInvoices()]);
+        setCheckoutNotice(result?.reconciled
+          ? `Payment confirmed. Your ${String(result.plan || '').toUpperCase()} plan is active.`
+          : 'Payment received. Your subscription is still being confirmed.');
+      } catch (error) {
+        if (!cancelled) setCheckoutNotice('Payment received. Refresh in a moment while we confirm your subscription.');
+      } finally {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      }
+    };
+    reconcile();
+    return () => { cancelled = true; };
+  }, [checkoutState, refetchBilling, refetchInvoices, refetchUsage, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
     if (isEnterpriseWorkspace) return;
@@ -484,6 +511,11 @@ export default function Billing() {
           >
             {dummyConfirming ? 'Confirming…' : 'Confirm test payment'}
           </button>
+        </div>
+      )}
+      {checkoutNotice && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
+          {checkoutNotice}
         </div>
       )}
       {/* Current Plan Overview */}
