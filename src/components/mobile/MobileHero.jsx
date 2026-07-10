@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { COVER_LQIP } from './three/coverLqip';
 import HeroCtas from './HeroCtas';
+import { HIVEMIND_URL } from './hivemindLinks';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
 const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
@@ -90,7 +91,7 @@ const DesktopHero = ({ immersive }) => (
         <p className="mt-2 text-base font-light leading-relaxed text-white/65">The AI workforce that runs inside your organization&apos;s memory.</p>
       </motion.div>
       <motion.a
-        href="/hivemind"
+        href={HIVEMIND_URL}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.75, ease }}
         className="group inline-flex items-center gap-4 text-white no-underline"
       >

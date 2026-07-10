@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { Link } from 'react-router-dom';
 import { getMobileCopy } from './mobileCopy';
+import { hivemindHref } from './hivemindLinks';
 
 const ease = [0.16, 1, 0.3, 1];
 const fade = (delay) => ({
@@ -257,13 +258,13 @@ const SolutionHivemind = () => {
 
               {/* CTA row */}
               <motion.div className="flex items-center gap-6 mt-10" {...fade(0.25)}>
-                <Link
-                  to="/hivemind/login"
+                <a
+                  href={hivemindHref('/login')}
                   className={`flex items-center gap-3 ${c.accentBg} ${c.accentText} font-semibold rounded-full ${c.accentHover} uppercase tracking-[0.1em] pl-7 pr-5 py-3.5 text-xs transition-colors no-underline`}
                 >
                   {copy.primaryCta}
                   <ArrowRight size={14} />
-                </Link>
+                </a>
                 <Link
                   to="/benchmark"
                   className={`${c.text} font-medium text-sm transition-colors no-underline border-b ${c.border} pb-0.5 ${isDark ? 'hover:text-white/60' : 'hover:text-[#525252]'}`}

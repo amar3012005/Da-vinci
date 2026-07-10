@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import ProductCard from './ProductCard';
+import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 
 const NebulaBackdrop = lazy(() => import('./three/NebulaBackdrop'));
 
@@ -17,21 +18,21 @@ const PRODUCTS = [
     eyebrow: 'Voice · Sentinel',
     name: 'TARA',
     desc: 'The voice of your institution — an agent that reasons in real time, not a script that retrieves.',
-    href: '/hivemind',
+    href: HIVEMIND_URL,
   },
   {
     img: '/sp-hivemind.webp',
     eyebrow: 'Sovereign Memory',
     name: 'HIVEMIND',
     desc: 'Sub-50ms recall across everything your organization knows. The mind that never forgets.',
-    href: '/hivemind',
+    href: HIVEMIND_URL,
   },
   {
     img: '/sp-hyperagents.webp',
     eyebrow: 'Agent Swarm',
     name: 'HYPERAGENTS',
     desc: 'Many minds that act as one — digital employees that watch, decide, and move on your behalf.',
-    href: '/hivemind/app/employees',
+    href: hivemindHref('/app/employees'),
     objectPosition: 'center bottom',
   },
 ];

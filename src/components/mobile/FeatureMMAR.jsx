@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { Layers, Globe, Search, Database, Cpu, MessageSquare, ExternalLink } from 'lucide-react';
 import GlassCard from './ui/GlassCard';
 import FeatureIcon from './ui/FeatureIcon';
+import { HIVEMIND_URL } from './hivemindLinks';
 
-const HIVEMIND_SITE_URL = process.env.REACT_APP_HIVEMIND_SITE_URL || 'https://hivemind.davinciai.eu';
+const HIVEMIND_SITE_URL = HIVEMIND_URL;
 
 /**
  * FeatureMMAR - Showcase of M M A R architecture

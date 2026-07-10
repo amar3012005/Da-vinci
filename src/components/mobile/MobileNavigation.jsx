@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTheme, t } from './ThemeContext';
 import { getMobileCopy } from './mobileCopy';
+import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 
 const MobileNavigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,11 +14,11 @@ const MobileNavigation = () => {
   const c = t(isDark);
   const copy = getMobileCopy(locale);
   const navLinks = [
-    { label: 'Platform', href: '/hivemind' },
+    { label: 'Platform', href: HIVEMIND_URL },
     { label: copy.nav.links.solutions, sectionId: 'solutions' },
-    { label: 'Developers', href: '/hivemind#developers' },
-    { label: 'Pricing', href: '/hivemind#pricing' },
-    { label: 'Docs', href: '/hivemind/app/connectors' },
+    { label: 'Developers', href: hivemindHref('#developers') },
+    { label: 'Pricing', href: hivemindHref('#pricing') },
+    { label: 'Docs', href: hivemindHref('/app/connectors') },
     { label: './ ' + copy.nav.links.research, href: '/research' },
     { label: './ Benchmark', href: '/benchmark' },
   ];
@@ -47,9 +48,8 @@ const MobileNavigation = () => {
   const handleNavClick = (item) => {
     setMobileOpen(false);
     if (item.href) {
-      // SPA transition (no full reload) — HivemindProduct's own mount effect
-      // picks up the #hash and scrolls once its sections exist.
-      navigate(item.href);
+      if (item.href.startsWith('http')) window.location.assign(item.href);
+      else navigate(item.href);
     } else if (item.sectionId) {
       const el = document.getElementById(item.sectionId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -118,13 +118,13 @@ const MobileNavigation = () => {
                 {isDark ? <Sun size={16} /> : <Moon size={16} />}
               </button>
               <a
-                href="/hivemind/login"
+                href={hivemindHref('/login')}
                 className={`text-[13px] font-medium ${c.textMuted} ${isDark ? 'hover:text-white' : 'hover:text-[#0a0a0a]'} transition-colors no-underline px-3`}
               >
                 Sign in
               </a>
               <a
-                href="/hivemind"
+                href={HIVEMIND_URL}
                 className={`flex items-center gap-1.5 px-5 py-2 ${c.accentBg} ${c.accentText} text-xs font-semibold rounded-full ${c.accentHover} transition-colors uppercase tracking-[0.1em] cursor-pointer border-none no-underline`}
               >
                 HIVEMIND
@@ -213,7 +213,7 @@ const MobileNavigation = () => {
 
               <div className="flex flex-col gap-3 mt-8">
                 <a
-                  href="/hivemind"
+                  href={HIVEMIND_URL}
                   onClick={() => setMobileOpen(false)}
                   className={`w-full py-3.5 rounded-full ${c.accentBg} ${c.accentText} ${c.accentHover} font-semibold text-xs uppercase tracking-[0.1em] no-underline flex items-center justify-center gap-2 transition-colors`}
                 >

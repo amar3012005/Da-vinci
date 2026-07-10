@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { HIVEMIND_URL } from './hivemindLinks';
 
-const HIVEMIND_SITE_URL = '/hivemind';
+const HIVEMIND_SITE_URL = HIVEMIND_URL;
 
 // -----------------------------------------------
 // Corner Crosshair Component
