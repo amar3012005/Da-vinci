@@ -16,7 +16,7 @@ const SECURITY_CONTROLS = [
   ['in_progress', 'Cost controls', 'Validate each feature’s quota check and post-success meter as one pair.'],
   ['in_progress', 'Backup and restore', 'Local encrypted PostgreSQL/Qdrant jobs and a PostgreSQL restore drill are verified; off-host replication remains open.'],
   ['open', 'Host capacity', 'Disk is at 85%; retire canaries only after route, rollback, and volume verification.'],
-  ['open', 'Secrets rotation', 'Document and exercise API key, Stripe webhook, BYOD token, and PQC key rotation.'],
+  ['in_progress', 'Secrets rotation', 'Master key rotation is verified; Stripe webhook, BYOD agent token, and PQC key rotation drills remain.'],
   ['open', 'Audit coverage', 'Prove enrollment, rotation, deletion, auth, and admin operations are append-only and redacted.'],
 ];
 
