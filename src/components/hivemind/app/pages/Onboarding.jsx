@@ -88,8 +88,8 @@ export default function OnboardingFlow() {
           enterprise_access_code: isEnt ? saved.enterprise_access_code : undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
-        if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
+        if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
         // Creation failed → drop to the manual form so the user can retry / adjust.
@@ -128,8 +128,8 @@ export default function OnboardingFlow() {
         enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
       });
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
-      if (deployment === 'selfhost') { setShowSelfHost(true); return; }
       if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
+      if (deployment === 'selfhost') { setShowSelfHost(true); return; }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {

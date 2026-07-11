@@ -126,6 +126,11 @@ export default function LoginPage() {
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
   const [hivemindName, setHivemindName] = useState('');
+  const [enterpriseAccessCode, setEnterpriseAccessCode] = useState(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
+  });
+  const [companyProfile, setCompanyProfile] = useState({ website: '', industry: '', description: '' });
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -168,10 +173,12 @@ export default function LoginPage() {
         hivemind_name: hivemindName,
         enterprise: enterpriseName || null,
         deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
+        website: companyProfile.website,
+        industry: companyProfile.industry,
+        company_description: companyProfile.description,
         // Keep the client-specific capability in the URL fragment so it is not
         // sent to proxies or OAuth providers. Query support is retained for old links.
-        enterprise_access_code: new URLSearchParams(window.location.hash.slice(1)).get('enterprise_code')
-          || new URLSearchParams(window.location.search).get('enterprise_code') || '',
+        enterprise_access_code: enterpriseAccessCode.trim(),
       }));
     } catch (e) {}
 
@@ -200,6 +207,8 @@ export default function LoginPage() {
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
+    setEnterpriseAccessCode('');
+    setCompanyProfile({ website: '', industry: '', description: '' });
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -594,6 +603,32 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
+                      <div>
+                        <label className={LABEL_CLS}>Enterprise access code</label>
+                        <input
+                          value={enterpriseAccessCode}
+                          onChange={e => setEnterpriseAccessCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                          placeholder="Provided in your onboarding invitation"
+                          maxLength={64}
+                          autoComplete="off"
+                          className={`${INPUT_CLS} font-mono uppercase`}
+                        />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">This applies the agreed onboarding and runway terms for your workspace.</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={LABEL_CLS}>Company website <span className="normal-case tracking-normal">(optional)</span></label>
+                          <input value={companyProfile.website} onChange={e => setCompanyProfile((value) => ({ ...value, website: e.target.value }))} placeholder="https://company.com" className={INPUT_CLS} />
+                        </div>
+                        <div>
+                          <label className={LABEL_CLS}>Industry <span className="normal-case tracking-normal">(optional)</span></label>
+                          <input value={companyProfile.industry} onChange={e => setCompanyProfile((value) => ({ ...value, industry: e.target.value }))} placeholder="e.g. Fintech" className={INPUT_CLS} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Company context <span className="normal-case tracking-normal">(optional)</span></label>
+                        <textarea value={companyProfile.description} onChange={e => setCompanyProfile((value) => ({ ...value, description: e.target.value }))} placeholder="What you do, who you serve, and the outcomes you are working toward." rows={3} className={`${INPUT_CLS} resize-y`} />
+                      </div>
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
                           <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
@@ -607,7 +642,7 @@ export default function LoginPage() {
                       )}
                       <button
                         onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !enterpriseName.trim()}
+                        disabled={!userName.trim() || !enterpriseName.trim() || !enterpriseAccessCode.trim()}
                         className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
                         {hostingChoice === 'self_hosted'
@@ -615,13 +650,13 @@ export default function LoginPage() {
                           : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('google')}>
+                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('google')}>
                           <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('microsoft')}>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('microsoft')}>
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('apple')}>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('apple')}>
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
                         </ProviderTile>
                       </div>
