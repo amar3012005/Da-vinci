@@ -700,7 +700,13 @@ function RoomThread({ roomId, onArchived }) {
     try {
       const resp = await apiClient.getHyperRoom(roomId);
       setRoom(resp.room);
-      setTurns(resp.turns || []);
+      const nextTurns = resp.turns || [];
+      setTurns(nextTurns);
+      // Task rooms may already be running because the control plane starts
+      // them before navigation. Adopt that turn so SSE and the DB fallback
+      // poll begin immediately instead of waiting for a reload.
+      const liveTurn = [...nextTurns].reverse().find((turn) => turn?.status === 'live');
+      setActiveTurnId(liveTurn?.id || null);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
