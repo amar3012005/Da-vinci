@@ -901,6 +901,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listPlatformPromotions() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/promotions');
+    return data;
+  }
+
+  async createPlatformPromotion(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/promotions', payload);
+    return data;
+  }
+
+  async revokePlatformPromotion(id) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/promotions/${id}/revoke`);
+    return data;
+  }
+
+  async createEnterpriseCheckout() {
+    const { data } = await this.controlPlane.post('/v1/billing/enterprise-checkout');
+    return data;
+  }
+
   // ─── Control Plane: Client Descriptors ───────────────────────
 
   /**

@@ -473,6 +473,18 @@ export default function Billing() {
     }
   };
 
+  const handleEnterpriseCheckout = async () => {
+    setUpgrading(true);
+    try {
+      const res = await apiClient.createEnterpriseCheckout();
+      if (!res?.checkout_url) throw new Error('Enterprise checkout is unavailable.');
+      window.location.href = res.checkout_url;
+    } catch (error) {
+      alert(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
+      setUpgrading(false);
+    }
+  };
+
   const confirmDummyCheckout = async () => {
     setDummyConfirming(true);
     try {
@@ -733,6 +745,14 @@ export default function Billing() {
                   Onboarding access ends {new Date(enterpriseEngagement.onboarding_ends_at).toLocaleDateString()}.
                 </p>
               )}
+              {enterpriseEngagement?.commercial_terms && <p className="mt-2 text-sm text-[#313131]">
+                {enterpriseEngagement.phase === 'onboarding'
+                  ? `Onboarding: €${(enterpriseEngagement.commercial_terms.onboarding_price_cents / 100).toLocaleString()}`
+                  : `Runway: €${(enterpriseEngagement.commercial_terms.runway_monthly_cents / 100).toLocaleString()}/month`}
+              </p>}
+              {enterpriseEngagement?.billing_action && <button disabled={upgrading} onClick={handleEnterpriseCheckout} className="mt-4 rounded-lg bg-[#117dff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {upgrading ? 'Opening checkout…' : enterpriseEngagement.phase === 'onboarding' ? 'Pay onboarding' : 'Start runway subscription'}
+              </button>}
             </div>
           </div>
         </motion.section>

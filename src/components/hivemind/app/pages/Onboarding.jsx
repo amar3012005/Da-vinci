@@ -79,7 +79,7 @@ export default function OnboardingFlow() {
     setEnterpriseAccessCode(saved.enterprise_access_code || '');
     (async () => {
       try {
-        await createOrg({
+        const created = await createOrg({
           name,
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: isEnt ? 'enterprise' : 'free',
@@ -89,6 +89,7 @@ export default function OnboardingFlow() {
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
+        if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
         // Creation failed → drop to the manual form so the user can retry / adjust.
@@ -114,7 +115,7 @@ export default function OnboardingFlow() {
     setCreating(true);
     setError(null);
     try {
-      await createOrg({
+      const created = await createOrg({
         name: orgName.trim(),
         slug: mode === 'enterprise' ? effectiveSlug : undefined,
         plan: selectedMode.plan,
@@ -124,6 +125,7 @@ export default function OnboardingFlow() {
       });
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }
+      if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {

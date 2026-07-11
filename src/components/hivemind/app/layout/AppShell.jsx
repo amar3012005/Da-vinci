@@ -155,6 +155,12 @@ export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (org?.billing_action_required && location.pathname !== '/hivemind/app/billing') {
+      navigate(`/hivemind/app/billing?phase=${org.billing_phase || 'runway'}`, { replace: true });
+    }
+  }, [org?.billing_action_required, org?.billing_phase, location.pathname, navigate]);
+
   // ── Post-sign-in reveal sequence ─────────────────────────────────────
   //   new user  → capability slides → activation checklist → workspace
   //   returning → activation checklist (auth=callback) → workspace
