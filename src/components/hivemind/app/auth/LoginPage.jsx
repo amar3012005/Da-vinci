@@ -168,7 +168,10 @@ export default function LoginPage() {
         hivemind_name: hivemindName,
         enterprise: enterpriseName || null,
         deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
-        enterprise_access_code: new URLSearchParams(window.location.search).get('enterprise_code') || '',
+        // Keep the client-specific capability in the URL fragment so it is not
+        // sent to proxies or OAuth providers. Query support is retained for old links.
+        enterprise_access_code: new URLSearchParams(window.location.hash.slice(1)).get('enterprise_code')
+          || new URLSearchParams(window.location.search).get('enterprise_code') || '',
       }));
     } catch (e) {}
 
