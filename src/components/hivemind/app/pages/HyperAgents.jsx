@@ -2022,6 +2022,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   }, [turn.lines, liveLines]);
 
   const router = lines.find(l => l.t === 'router') || lines.find(l => l.t === 'router_bootstrap');
+  const visibleUserMessage = (() => {
+    const message = turn.userMessage || turn.user_message || '';
+    const task = message.match(/^You are the .*? team\. Execute this task now\.\s*TASK \[[^\]]+\]:\s*([^\n]+)/s);
+    return task ? `Start task: ${task[1].trim()}.` : message;
+  })();
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
   const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
   const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
@@ -2127,7 +2132,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {/* User bubble */}
       <div className="flex flex-col items-end">
         <div className="max-w-[80%] bg-violet-500 text-white text-[13px] rounded-2xl rounded-tr-md px-3 py-2 shadow-sm">
-          {turn.userMessage || turn.user_message}
+          {visibleUserMessage}
         </div>
         {(() => {
           const uts = turn.createdAt ? new Date(turn.createdAt).getTime() : (lines[0]?.ts || 0);
