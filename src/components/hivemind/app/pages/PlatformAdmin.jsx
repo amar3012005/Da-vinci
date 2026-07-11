@@ -14,7 +14,7 @@ const SECURITY_CONTROLS = [
   ['verified', 'BYOD request containment', 'Agent/broker body limits, rate limits, registry permissions, and container limits are committed.'],
   ['in_progress', 'BYOD transport PQC', 'External Box transport and local PQC envelope signing still require rollout.'],
   ['in_progress', 'Cost controls', 'Validate each feature’s quota check and post-success meter as one pair.'],
-  ['open', 'Backup and restore', 'Encrypted off-host PostgreSQL and Qdrant backups need a scheduled, tested restore drill.'],
+  ['in_progress', 'Backup and restore', 'Local encrypted PostgreSQL/Qdrant jobs and a PostgreSQL restore drill are verified; off-host replication remains open.'],
   ['open', 'Host capacity', 'Disk is at 85%; retire canaries only after route, rollback, and volume verification.'],
   ['open', 'Secrets rotation', 'Document and exercise API key, Stripe webhook, BYOD token, and PQC key rotation.'],
   ['open', 'Audit coverage', 'Prove enrollment, rotation, deletion, auth, and admin operations are append-only and redacted.'],
