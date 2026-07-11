@@ -111,6 +111,10 @@ export default function OnboardingFlow() {
     e.preventDefault();
     if (!orgName.trim()) return;
     if (mode === 'enterprise' && !effectiveSlug) return;
+    if (mode === 'enterprise' && !enterpriseAccessCode.trim()) {
+      setError('Enter the Enterprise access code supplied with your onboarding invitation.');
+      return;
+    }
 
     setCreating(true);
     setError(null);
@@ -300,6 +304,21 @@ export default function OnboardingFlow() {
                 ))}
               </div>
             </div>
+
+            {mode === 'enterprise' && (
+              <label className="md:col-span-2 block">
+                <span className="mb-2 block text-xs font-medium text-[#525252]">Enterprise access code</span>
+                <input
+                  value={enterpriseAccessCode}
+                  onChange={(e) => setEnterpriseAccessCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                  maxLength={64}
+                  autoComplete="off"
+                  placeholder="Provided in your onboarding invitation"
+                  className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 font-mono text-sm uppercase text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                />
+                <p className="mt-2 text-xs text-[#737373]">This code applies the agreed onboarding and runway terms for this workspace.</p>
+              </label>
+            )}
 
             {mode === 'enterprise' && (
               <div className="md:col-span-2 grid gap-4 rounded-2xl border border-[#e3e0db] bg-[#faf9f4] p-4 sm:grid-cols-2">
