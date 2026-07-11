@@ -27,7 +27,7 @@ import {
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, Target, Eye, Pencil,
-  User, Gauge, CreditCard, Settings, Building2,
+  User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -123,6 +123,61 @@ const ROOM_FORMATS = [
     labelKey: 'hyperAgents.tmplStandupLabel',   label: 'Standup',
     descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
 ];
+
+const SYNTHESIS_PRESENTATIONS = {
+  RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
+  OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
+  MARKETING: { label: 'Campaign board', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Positioning, assets, channels, and experiments' },
+  STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
+  FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
+  GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+};
+
+function splitSynthesisSections(content) {
+  const lines = String(content || '').replace(/\r/g, '').split('\n');
+  const sections = [];
+  let current = { title: 'Executive summary', body: [] };
+  for (const line of lines) {
+    const heading = line.match(/^#{1,3}\s+(.+?)\s*$/);
+    if (heading) {
+      if (current.body.length || current.title !== 'Executive summary') sections.push(current);
+      current = { title: heading[1], body: [] };
+    } else current.body.push(line);
+  }
+  if (current.body.length || !sections.length) sections.push(current);
+  return sections.filter((section) => section.body.join('').trim());
+}
+
+function TaskSynthesisRenderer({ taskTag, content }) {
+  const key = String(taskTag || 'GENERAL').toUpperCase();
+  const spec = SYNTHESIS_PRESENTATIONS[key] || SYNTHESIS_PRESENTATIONS.GENERAL;
+  const Icon = spec.icon;
+  const sections = splitSynthesisSections(content);
+  return (
+    <div className="overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: `${spec.accent}33` }}>
+      <div className="px-4 py-3" style={{ background: `linear-gradient(110deg, ${spec.soft}, white)` }}>
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>{spec.label}</div>
+            <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-px bg-[#e9e6e0] sm:grid-cols-2">
+        {sections.map((section, index) => (
+          <section key={`${section.title}-${index}`} className={`bg-white px-4 py-3 ${index === 0 ? 'sm:col-span-2' : ''}`}>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
+            </div>
+            <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(section.body.join('\n').trim())}</div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
@@ -1482,6 +1537,7 @@ function RoomThread({ roomId, onArchived }) {
               onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
               approveBusy={approveBusy}
               roomId={roomId}
+              taskTag={room?.taskTag || 'GENERAL'}
             />
           ))}
           {error && (
@@ -2018,7 +2074,7 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -2557,8 +2613,8 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                 <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
               ) : null}
             </div>
-            <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
-              {renderMarkdownLite(synthLine.content)}
+            <div className="px-4 py-3">
+              <TaskSynthesisRenderer taskTag={taskTag} content={synthLine.content} />
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
               <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
