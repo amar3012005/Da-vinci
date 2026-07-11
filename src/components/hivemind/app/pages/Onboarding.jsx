@@ -47,6 +47,7 @@ export default function OnboardingFlow() {
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
   const [companyProfile, setCompanyProfile] = useState({ website: '', industry: '', description: '' });
+  const [enterpriseAccessCode, setEnterpriseAccessCode] = useState('');
   const [showSelfHost, setShowSelfHost] = useState(false);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
@@ -75,6 +76,7 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
+    setEnterpriseAccessCode(saved.enterprise_access_code || '');
     (async () => {
       try {
         await createOrg({
@@ -83,13 +85,13 @@ export default function OnboardingFlow() {
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
           company_profile: isEnt ? { website: saved.website || '', industry: saved.industry || '', description: saved.company_description || '' } : undefined,
+          enterprise_access_code: isEnt ? saved.enterprise_access_code : undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
         // Creation failed → drop to the manual form so the user can retry / adjust.
-        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         setError(err?.response?.data?.error || err?.message || 'Could not create your workspace — please choose below.');
         setMode(isEnt ? 'enterprise' : 'personal');
         setDeployment(dep);
@@ -118,6 +120,7 @@ export default function OnboardingFlow() {
         plan: selectedMode.plan,
         deployment, // 'managed' | 'selfhost'
         company_profile: mode === 'enterprise' ? companyProfile : undefined,
+        enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
       });
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }

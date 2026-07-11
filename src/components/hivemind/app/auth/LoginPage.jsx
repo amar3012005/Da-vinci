@@ -168,6 +168,7 @@ export default function LoginPage() {
         hivemind_name: hivemindName,
         enterprise: enterpriseName || null,
         deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
+        enterprise_access_code: new URLSearchParams(window.location.search).get('enterprise_code') || '',
       }));
     } catch (e) {}
 
