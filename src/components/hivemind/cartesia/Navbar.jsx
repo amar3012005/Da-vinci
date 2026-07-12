@@ -65,13 +65,7 @@ const Navbar = () => {
               onClick={() => handleNavClick('/hivemind')}
               className="flex items-center gap-2 sm:gap-2.5 bg-transparent border-none cursor-pointer group"
             >
-              <img
-                src="/images/davinci-logo.svg"
-                alt="Da Vinci"
-                className="h-7 sm:h-8 transition-opacity group-hover:opacity-80"
-              />
-              <span className="text-[#0a0a0a]/30 text-base sm:text-lg font-light">|</span>
-              <span className="text-base sm:text-lg font-bold tracking-tight text-[#0a0a0a] font-['Space_Grotesk']">Hivemind</span>
+              <span className="font-['Space_Grotesk'] text-base font-bold tracking-[-0.04em] text-[#0a0a0a] sm:text-lg">HIVEMIND</span>
             </motion.button>
 
             {/* Center Links — Desktop */}
