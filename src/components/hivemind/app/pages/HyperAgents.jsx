@@ -164,9 +164,9 @@ function TaskSynthesisRenderer({ taskTag, content }) {
           </div>
         </div>
       </div>
-      <div className="grid gap-px bg-[#e9e6e0] sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-px bg-[#e9e6e0]">
         {sections.map((section, index) => (
-          <section key={`${section.title}-${index}`} className={`bg-white px-4 py-3 ${index === 0 ? 'sm:col-span-2' : ''}`}>
+          <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
             <div className="mb-2 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>

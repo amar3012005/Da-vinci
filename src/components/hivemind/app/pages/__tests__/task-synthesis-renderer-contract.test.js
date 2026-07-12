@@ -9,5 +9,7 @@ describe('task synthesis renderer', () => {
     });
     expect(source).toContain('<TaskSynthesisRenderer taskTag={taskTag} content={synthLine.content} />');
     expect(source).toContain("taskTag={room?.taskTag || 'GENERAL'}");
+    expect(source).toContain('grid grid-cols-1 gap-px');
+    expect(source).not.toContain('sm:grid-cols-2');
   });
 });
