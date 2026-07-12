@@ -7,7 +7,7 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v2';
+const CACHE = 'hive-shell-v3';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -45,19 +45,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets → stale-while-revalidate.
+  // Static assets are network-first so a release can never keep an old entry
+  // bundle alive. The cache remains an offline fallback.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === 'basic') {
-            const copy = resp.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-          }
-          return resp;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+        }
+        return resp;
+      })
+      .catch(() => caches.match(request))
   );
 });
