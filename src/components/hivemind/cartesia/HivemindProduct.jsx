@@ -168,7 +168,7 @@ const Hero = () => {
       <div className="pointer-events-none absolute inset-0"
         style={{ background: 'radial-gradient(90% 65% at 50% 42%, rgba(251,251,248,0) 40%, #FBFBF8 92%)' }} />
 
-      <div className="relative mx-auto max-w-[1200px] px-6 pb-24 pt-36 text-center md:pt-44">
+      <div className="relative mx-auto max-w-[1200px] px-6 pb-12 pt-[5.5rem] text-center md:min-h-[min(760px,100svh)] md:pb-8 md:pt-[clamp(5.5rem,9vh,7rem)]">
         <motion.div style={{ y: headY }}>
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-[#e7e4dd] bg-white px-4 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[#6b6b6b]">
@@ -179,21 +179,21 @@ const Hero = () => {
           </Reveal>
 
           <Reveal delay={0.06}>
-          <h1 className="mx-auto mt-9 max-w-5xl font-['Space_Grotesk'] text-[clamp(3.3rem,7.8vw,7.5rem)] font-semibold leading-[0.9] tracking-[-0.065em] text-[#0a0a0a]">
-            <WordReveal text="Run your institution" delay={0.1} />
+          <h1 className="mx-auto mt-5 max-w-5xl font-['Space_Grotesk'] text-[clamp(2.8rem,5.8vw,5.8rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-[#0a0a0a]">
+            Run your institution
             <br />
-            <span className="text-[#117dff]"><WordReveal text="as an AI company" delay={0.28} /></span>
+            <span className="text-[#117dff]">as an AI company</span>
           </h1>
           </Reveal>
 
           <Reveal delay={0.46}>
-            <p className="mx-auto mt-7 max-w-2xl text-balance text-[18px] font-normal leading-relaxed text-[#575757] md:text-[21px]">
+            <p className="mx-auto mt-4 max-w-2xl text-balance text-[17px] font-normal leading-relaxed text-[#575757] md:text-[19px]">
               The AI workforce that runs inside your organization&apos;s memory.
             </p>
           </Reveal>
 
           <Reveal delay={0.5}>
-            <div className="mx-auto mt-10 max-w-[700px]">
+            <div className="mx-auto mt-7 max-w-[700px]">
               <motion.a href="/hivemind/login" whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
                 className="group flex min-h-[68px] w-full items-center justify-between rounded-[10px] bg-[#117dff] px-5 text-white no-underline transition-colors hover:bg-[#006fe8] sm:px-7">
                 <span className="flex items-center gap-4">
@@ -212,12 +212,12 @@ const Hero = () => {
           </Reveal>
         </motion.div>
 
-        <motion.div style={{ y: cardY, scale: cardScale }} className="mx-auto mt-16 max-w-3xl">
+        <motion.div style={{ y: cardY, scale: cardScale }} className="mx-auto mt-9 max-w-3xl md:mt-10">
           <Reveal delay={0.3}><GraphCard /></Reveal>
         </motion.div>
 
         <Reveal delay={0.35}>
-          <div className="mx-auto mt-14 flex max-w-md items-center justify-center gap-12">
+          <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-12">
             <div>
               <p className="font-['Space_Grotesk'] text-2xl font-semibold tracking-tight text-[#0a0a0a]">
                 &lt;<Counter to={50} suffix="ms" />
