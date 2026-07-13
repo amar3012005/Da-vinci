@@ -80,7 +80,19 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
-    setEnterpriseAccessCode(saved.enterprise_access_code || '');
+    const accessCode = `${saved.enterprise_access_code || ''}`.trim();
+    setEnterpriseAccessCode(accessCode);
+    if (isEnt && !accessCode) {
+      // Do not generate a guaranteed 403 during the OAuth callback. Keep the
+      // server-side enterprise gate intact and let the user supply the code.
+      setError('Enter the Enterprise access code supplied with your onboarding invitation.');
+      setMode('enterprise');
+      setDeployment(dep);
+      setOrgName(name);
+      setStep(2);
+      setAutoCreating(false);
+      return;
+    }
     (async () => {
       try {
         const created = await createOrg({
@@ -88,7 +100,7 @@ export default function OnboardingFlow() {
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
-          enterprise_access_code: isEnt ? saved.enterprise_access_code : undefined,
+          enterprise_access_code: isEnt ? accessCode : undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }

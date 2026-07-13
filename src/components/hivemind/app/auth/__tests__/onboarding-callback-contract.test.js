@@ -8,7 +8,8 @@ test('enterprise onboarding survives blocked browser storage without duplicating
 
   expect(login).toContain('#onboarding=${intentFragment}');
   expect(onboarding).toContain("new URLSearchParams(window.location.hash.slice(1)).get('onboarding')");
-  expect(onboarding).toContain('enterprise_access_code: isEnt ? saved.enterprise_access_code : undefined');
+  expect(onboarding).toContain('if (isEnt && !accessCode)');
+  expect(onboarding).toContain('enterprise_access_code: isEnt ? accessCode : undefined');
 
   expect(login).not.toContain('Company website');
   expect(login).not.toContain('Company context');
