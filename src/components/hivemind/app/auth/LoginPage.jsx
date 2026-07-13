@@ -130,6 +130,27 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
+  const onboardingError = useMemo(
+    () => new URLSearchParams(location.search).get('onboarding_error'),
+    [location.search]
+  );
+
+  // Restore an interrupted OAuth signup on the login surface. This keeps
+  // enterprise setup out of /app while avoiding a second round of questions.
+  useEffect(() => {
+    if (!wantsCreate) return;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* noop */ }
+    if (!saved?.type) return;
+    setShowOnboarding(true);
+    setAccountType(saved.type);
+    setUserName(saved.name || '');
+    setEnterpriseName(saved.enterprise || '');
+    setHivemindName(saved.hivemind_name || '');
+    setHostingChoice(saved.deployment === 'selfhost' ? 'self_hosted' : (saved.deployment || 'managed'));
+    setEnterpriseAccessCode(saved.enterprise_access_code || '');
+    setOnboardingStep(saved.type === 'enterprise' ? 3 : 2);
+  }, [wantsCreate]);
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -311,7 +332,6 @@ export default function LoginPage() {
                     )}
                     Continue with Google
                   </button>
-
                   {/* Provider row: Microsoft · Apple · SSO */}
                   <div className="flex items-center gap-2 mt-2.5">
                     <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
@@ -391,6 +411,16 @@ export default function LoginPage() {
                     <ArrowLeft size={13} />
                     {onboardingStep === 1 ? 'Back to sign in' : 'Back'}
                   </button>
+
+                  {onboardingError && (
+                    <div className="mb-4 rounded-[7px] border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">
+                      {onboardingError === 'invalid_enterprise_code'
+                        ? 'That Enterprise access code is invalid or no longer active. Check the code and try again.'
+                        : onboardingError === 'missing_enterprise_code'
+                          ? 'Enter the Enterprise access code supplied with your onboarding invitation.'
+                          : 'Workspace creation did not complete. Review the details and try again.'}
+                    </div>
+                  )}
 
                   {/* Step 1: Choose path */}
                   {onboardingStep === 1 && (

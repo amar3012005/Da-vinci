@@ -83,14 +83,8 @@ export default function OnboardingFlow() {
     const accessCode = `${saved.enterprise_access_code || ''}`.trim();
     setEnterpriseAccessCode(accessCode);
     if (isEnt && !accessCode) {
-      // Do not generate a guaranteed 403 during the OAuth callback. Keep the
-      // server-side enterprise gate intact and let the user supply the code.
-      setError('Enter the Enterprise access code supplied with your onboarding invitation.');
-      setMode('enterprise');
-      setDeployment(dep);
-      setOrgName(name);
-      setStep(2);
-      setAutoCreating(false);
+      // Account setup belongs on the login surface, never inside /app.
+      window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
       return;
     }
     (async () => {
@@ -107,13 +101,10 @@ export default function OnboardingFlow() {
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
-        // Creation failed → drop to the manual form so the user can retry / adjust.
-        setError(err?.response?.data?.error || err?.message || 'Could not create your workspace — please choose below.');
-        setMode(isEnt ? 'enterprise' : 'personal');
-        setDeployment(dep);
-        setOrgName(name);
-        setStep(2); // choice already made on the login page — go straight to details
-        setAutoCreating(false);
+        // Keep retries on the login/create-account surface. The saved intent
+        // remains in localStorage so the form can restore every entered field.
+        const reason = err?.response?.status === 403 ? 'invalid_enterprise_code' : 'workspace_creation_failed';
+        window.location.replace(`/hivemind/login?create=1&onboarding_error=${reason}`);
       }
     })();
   }, [createOrg]);
