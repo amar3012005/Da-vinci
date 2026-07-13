@@ -6,6 +6,35 @@ const REL = {
   CONFLICTS: { label: 'CONFLICTS', color: '#dc2626', bg: '#fef2f2', bd: '#fecaca' },
 };
 
+// A strategic point + its provenance chips. Tolerates a legacy plain string.
+// Each chip names the source memory/meeting the dot was connected from, and
+// (when it has a real id) clicks through to that memory.
+function SynPoint({ p, onOpen }) {
+  const text = typeof p === 'string' ? p : (p?.text || '');
+  const sources = (p && Array.isArray(p.sources)) ? p.sources : [];
+  return (
+    <div className="flex-1">
+      <div>{text}</div>
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {sources.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => s.id && onOpen?.(s.id)}
+              title={s.when ? `${s.title} · ${s.when}` : s.title}
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#faf9f4] border border-[#e3e0db] text-[9px] text-[#737373] max-w-[180px] truncate ${s.id ? 'hover:border-[#117dff]/50 hover:text-[#117dff] cursor-pointer' : 'cursor-default'}`}
+            >
+              <CircleDot size={8} className="flex-shrink-0" />
+              <span className="truncate">{s.title}{s.when ? ` · ${s.when}` : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MeetingIntelligencePanel({ intelligence, status, onOpenMemory }) {
   if (status === 'pending' || status === 'none') {
     return (
@@ -50,16 +79,16 @@ export default function MeetingIntelligencePanel({ intelligence, status, onOpenM
           {syn.strategic_points?.length > 0 && (
             <div className="mb-3">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-1.5">What matters</div>
-              <ul className="space-y-1.5">{syn.strategic_points.map((p, i) => (
-                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#117dff] mt-px">▸</span>{p}</li>
+              <ul className="space-y-2">{syn.strategic_points.map((p, i) => (
+                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#117dff] mt-px">▸</span><SynPoint p={p} onOpen={open} /></li>
               ))}</ul>
             </div>
           )}
           {syn.whats_changed?.length > 0 && (
             <div className="mb-3">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[#737373] mb-1.5 flex items-center gap-1"><GitBranch size={11} /> What this changes</div>
-              <ul className="space-y-1.5">{syn.whats_changed.map((c, i) => (
-                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#b45309] mt-px">↻</span>{c}</li>
+              <ul className="space-y-2">{syn.whats_changed.map((c, i) => (
+                <li key={i} className="flex gap-2 text-[12px] text-[#525252] leading-snug"><span className="text-[#b45309] mt-px">↻</span><SynPoint p={c} onOpen={open} /></li>
               ))}</ul>
             </div>
           )}
