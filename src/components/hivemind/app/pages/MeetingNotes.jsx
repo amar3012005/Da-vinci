@@ -1318,10 +1318,23 @@ export default function MeetingNotes() {
             const ents = (insx.entities && typeof insx.entities === 'object') ? insx.entities : {};
             const entChips = [...(ents.people || []).map((e) => [User, e]), ...(ents.organizations || []).map((e) => [Building2, e]), ...(ents.dates || []).map((e) => [CalendarDays, e])];
             const H = ({ children }) => <h3 className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2">{children}</h3>;
+            const sections = Array.isArray(insx.sections) ? insx.sections.filter((s) => s && s.heading && Array.isArray(s.bullets) && s.bullets.length) : [];
+            // Render **bold** spans from the model's markdown-flavored bullets.
+            const Bold = ({ text }) => {
+              const parts = String(text || '').split(/(\*\*[^*]+\*\*)/g);
+              return <>{parts.map((p, i) => /^\*\*[^*]+\*\*$/.test(p) ? <strong key={i} className="font-semibold text-[#0a0a0a]">{p.slice(2, -2)}</strong> : <span key={i}>{p}</span>)}</>;
+            };
             return (
               <div className="space-y-5 text-[13px] text-[#525252] leading-relaxed">
-                <div><H>Meeting Overview</H><p className="whitespace-pre-wrap"><EntityText text={selected.summary || '—'} entities={orgEntities} /></p></div>
                 {Array.isArray(selected.action_items) && selected.action_items.length > 0 && (<div><H>Action Items</H><ul className="space-y-2">{selected.action_items.map((a, i) => (<li key={i} className="flex items-start gap-2.5 text-[#0a0a0a]"><span className="mt-0.5 w-4 h-4 rounded-[5px] border border-[#cbd5e1] flex-shrink-0" /><span>{a.task || a}{a.owner && <span className="text-[#a3a3a3]"> · @{a.owner}</span>}{a.due && <span className="text-[#a3a3a3]"> · {a.due}</span>}</span></li>))}</ul></div>)}
+                <div><H>Meeting Overview</H><p className="whitespace-pre-wrap"><EntityText text={selected.summary || '—'} entities={orgEntities} /></p></div>
+                {/* Auto-derived Notion-style topic sections — the primary structured breakdown. */}
+                {sections.map((sec, si) => (
+                  <div key={si}>
+                    <h3 className="text-[13px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] mb-2">{sec.heading}</h3>
+                    <ul className="space-y-1.5">{sec.bullets.map((b, bi) => <li key={bi} className="flex gap-2"><span className="text-[#117dff]">·</span><span><Bold text={b} /></span></li>)}</ul>
+                  </div>
+                ))}
                 {keyPoints.length > 0 && (<div><H>Key Points</H><ul className="space-y-1.5">{keyPoints.map((k, i) => <li key={i} className="flex gap-2"><span className="text-[#117dff]">·</span><EntityText text={k} entities={orgEntities} /></li>)}</ul></div>)}
                 {Array.isArray(selected.decisions) && selected.decisions.length > 0 && (<div><H>Decisions</H><ul className="space-y-1.5">{selected.decisions.map((d, i) => <li key={i} className="flex gap-2"><span className="text-[#f59e0b]">·</span><EntityText text={d} entities={orgEntities} /></li>)}</ul></div>)}
                 {questions.length > 0 && (<div><H>Open Questions</H><ul className="space-y-1.5">{questions.map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#0891b2]">?</span>{q}</li>)}</ul></div>)}
