@@ -17,8 +17,8 @@ import {
   Search,
   Settings,
 } from 'lucide-react';
-import apiClient from '../shared/api-client';
-import { CONNECTOR_CATALOG } from '../shared/connectors-catalog';
+import apiClient from '../../shared/api-client';
+import { CONNECTOR_CATALOG } from '../../shared/connectors-catalog';
 
 const CATEGORIES = [
   { key: 'all', label: 'All' },

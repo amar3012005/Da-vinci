@@ -46,12 +46,12 @@ import {
   Users,
   Lock,
 } from 'lucide-react';
-import apiClient from '../shared/api-client';
-import useDictation from '../shared/useDictation';
-import { useTeamContext } from '../shared/team-context';
-import { MeetingNotesPromo } from '../shared/QuickRecorderProvider';
-import PwaInstall from '../shared/PwaInstall';
-import { useAuth } from '../auth/AuthProvider';
+import apiClient from '../../shared/api-client';
+import useDictation from '../../shared/useDictation';
+import { useTeamContext } from '../../shared/team-context';
+import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
+import PwaInstall from '../../shared/PwaInstall';
+import { useAuth } from '../../auth/AuthProvider';
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;

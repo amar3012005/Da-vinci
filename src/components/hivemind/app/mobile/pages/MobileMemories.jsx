@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ChevronLeft, Clock, Filter, Link2, Lock, Monitor, Search, Tag, X } from 'lucide-react';
-import apiClient from '../shared/api-client';
+import apiClient from '../../shared/api-client';
 
 const TYPES = ['all', 'fact', 'decision', 'preference', 'procedure', 'experience', 'synthesis'];
 
