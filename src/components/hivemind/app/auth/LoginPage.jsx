@@ -130,7 +130,6 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
-  const [companyProfile, setCompanyProfile] = useState({ website: '', industry: '', description: '' });
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
@@ -165,28 +164,28 @@ export default function LoginPage() {
   }, [userName, enterpriseName, accountType]);
 
   const handleCreateAccount = (provider = 'google') => {
+    const onboardingIntent = {
+      type: accountType,
+      name: userName,
+      hivemind_name: hivemindName,
+      enterprise: enterpriseName || null,
+      deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
+      enterprise_access_code: enterpriseAccessCode.trim(),
+    };
     // Save onboarding data for post-auth pickup
     try {
-      localStorage.setItem('hivemind_onboarding', JSON.stringify({
-        type: accountType,
-        name: userName,
-        hivemind_name: hivemindName,
-        enterprise: enterpriseName || null,
-        deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
-        website: companyProfile.website,
-        industry: companyProfile.industry,
-        company_description: companyProfile.description,
-        // Keep the client-specific capability in the URL fragment so it is not
-        // sent to proxies or OAuth providers. Query support is retained for old links.
-        enterprise_access_code: enterpriseAccessCode.trim(),
-      }));
+      localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
     } catch (e) {}
 
     // If the user came via an invite link, send them back there after OAuth so
     // they land on the invite-acceptance screen instead of the personal-org
     // Onboarding flow.
+    // The fragment is not sent to the API, OAuth provider, proxies, or server
+    // logs. It gives the callback a storage-independent fallback for browsers
+    // that block localStorage in the OAuth return context.
+    const intentFragment = encodeURIComponent(JSON.stringify(onboardingIntent));
     const returnTo = returnToFromState
-      || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
+      || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true#onboarding=${intentFragment}`;
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo);
@@ -208,7 +207,6 @@ export default function LoginPage() {
     setEnterpriseName('');
     setHivemindName('');
     setEnterpriseAccessCode('');
-    setCompanyProfile({ website: '', industry: '', description: '' });
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -614,20 +612,6 @@ export default function LoginPage() {
                           className={`${INPUT_CLS} font-mono uppercase`}
                         />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">This applies the agreed onboarding and runway terms for your workspace.</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={LABEL_CLS}>Company website <span className="normal-case tracking-normal">(optional)</span></label>
-                          <input value={companyProfile.website} onChange={e => setCompanyProfile((value) => ({ ...value, website: e.target.value }))} placeholder="https://company.com" className={INPUT_CLS} />
-                        </div>
-                        <div>
-                          <label className={LABEL_CLS}>Industry <span className="normal-case tracking-normal">(optional)</span></label>
-                          <input value={companyProfile.industry} onChange={e => setCompanyProfile((value) => ({ ...value, industry: e.target.value }))} placeholder="e.g. Fintech" className={INPUT_CLS} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className={LABEL_CLS}>Company context <span className="normal-case tracking-normal">(optional)</span></label>
-                        <textarea value={companyProfile.description} onChange={e => setCompanyProfile((value) => ({ ...value, description: e.target.value }))} placeholder="What you do, who you serve, and the outcomes you are working toward." rows={3} className={`${INPUT_CLS} resize-y`} />
                       </div>
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">

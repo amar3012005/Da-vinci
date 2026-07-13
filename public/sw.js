@@ -7,8 +7,16 @@
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v3';
+const CACHE = 'hive-shell-v4';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
+
+function offlineResponse() {
+  return new Response('HIVEMIND is temporarily offline.', {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));
@@ -40,7 +48,9 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
           return resp;
         })
-        .catch(() => caches.match('/index.html').then((r) => r || caches.match('/')))
+        .catch(() => caches.match('/index.html')
+          .then((r) => r || caches.match('/'))
+          .then((r) => r || offlineResponse()))
     );
     return;
   }
@@ -56,6 +66,6 @@ self.addEventListener('fetch', (event) => {
         }
         return resp;
       })
-      .catch(() => caches.match(request))
+      .catch(() => caches.match(request).then((r) => r || offlineResponse()))
   );
 });
