@@ -112,6 +112,54 @@ function TypingBubble() {
   );
 }
 
+const AGENT_TOOL_LABELS = {
+  hivemind_recall: 'Memory and evidence',
+  hivemind_traverse_graph: 'Relationship graph',
+  hivemind_at: 'Timeline context',
+  hivemind_diff: 'Version comparison',
+  hivemind_web_search: 'Web research',
+  hivemind_web_crawl: 'Web research',
+  reset_equipped_tools: 'Connected tools',
+};
+
+function sourceLabel(source) {
+  return String(source?.title || source?.document_title || source?.filename || source?.name || 'Workspace source');
+}
+
+function AgentContext({ sources, steps, confidence, gaps }) {
+  const sourceItems = Array.isArray(sources) ? sources.slice(0, 4) : [];
+  const toolItems = Array.isArray(steps)
+    ? [...new Set(steps.map((step) => AGENT_TOOL_LABELS[step?.tool]).filter(Boolean))]
+    : [];
+  const hasConfidence = Number.isFinite(Number(confidence));
+
+  if (!sourceItems.length && !toolItems.length && !hasConfidence && !gaps?.length) return null;
+
+  return (
+    <div className="mt-3 pt-2.5 border-t border-[#efede8] text-[10px] text-[#737373]">
+      {(sourceItems.length > 0 || hasConfidence) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {sourceItems.map((source, index) => (
+            <span key={source?.id || `${sourceLabel(source)}-${index}`} className="max-w-full inline-flex items-center gap-1 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-1 font-medium text-[#525252]">
+              <FileText size={10} className="shrink-0 text-[#117dff]" />
+              <span className="max-w-[180px] truncate">{sourceLabel(source)}</span>
+            </span>
+          ))}
+          {hasConfidence && <span className="font-mono text-[#a3a3a3]">{Math.round(Number(confidence) * 100)}% grounded</span>}
+        </div>
+      )}
+      {(toolItems.length > 0 || gaps?.length > 0) && (
+        <details className="mt-2 group">
+          <summary className="cursor-pointer select-none font-medium text-[#737373] marker:text-[#a3a3a3] hover:text-[#0a0a0a]">
+            {toolItems.length ? `${toolItems.join(' · ')} used` : 'Coverage details'}
+          </summary>
+          {gaps?.length > 0 && <p className="mt-1 text-[#a16207]">{gaps[0]}</p>}
+        </details>
+      )}
+    </div>
+  );
+}
+
 function ChatBubble({ msg }) {
   if (msg.role === 'user') {
     return (
@@ -128,6 +176,7 @@ function ChatBubble({ msg }) {
         msg.error ? 'border-[#f59e0b]/50 text-[#92400e] whitespace-pre-wrap' : 'border-[#e3e0db] text-[#262626]'
       }`}>
         {msg.error ? msg.content : <MarkdownMessage>{msg.content}</MarkdownMessage>}
+        {!msg.error && <AgentContext {...msg} />}
       </div>
     </div>
   );
@@ -769,6 +818,9 @@ function OverviewChat({ inputRef }) {
         model: CHAT_MODEL,
         history: fullHistory,
         language: lang2,
+        // The V2 router selects bounded recall and authorized tools per turn.
+        // The endpoint and its response contract remain unchanged.
+        router: 'tool',
         ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
       });
       const chatData = chatRes.data || {};
@@ -780,7 +832,15 @@ function OverviewChat({ inputRef }) {
         const names = pcProjects.map((p) => p.name || p.slug || p.id).filter(Boolean);
         if (names.length) content += `\n\n${t('overview.chat.projects', 'Projects')}: ${names.join(' · ')}`;
       }
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', content }]);
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content,
+        sources: Array.isArray(chatData.sources) ? chatData.sources : [],
+        steps: Array.isArray(chatData.steps) ? chatData.steps : [],
+        confidence: chatData.confidence,
+        gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
+      }]);
     } catch (err) {
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
