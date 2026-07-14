@@ -6,7 +6,7 @@
  *   • recv → binary frame = raw PCM s16le @16k → Web Audio playback (scheduled)
  *   • recv → text frame   = JSON control {type: ready|transcript|speech_start|turn_done|error}
  *
- * WSS endpoint: wss://core.hivemind.davinciai.eu:8050/aaas/voice
+ * WSS endpoint: wss://core.singulancelabs.com/voice2/voice
  *   ?user_id=&org_id=&session_id=&language=   (tenant = user_id; auth hardening = Phase 2)
  */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -15,27 +15,9 @@ import { Orb } from './Orb';
 import apiClient from './app/shared/api-client';
 
 const SAMPLE_RATE = 16000;
-// The AaaS voice service is served under /aaas on the SAME core host as this
-// tenant's API — so it's always residency-correct (singulance → its own core,
-// davinci → its own core) with no per-host env baking. Derive from the baked
-// core API URL; REACT_APP_AAAS_WS still overrides if a split host is ever needed.
 const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
-const DEFAULT_WS =
-  process.env.REACT_APP_AAAS_WS ||
-  `${_CORE_HTTP.replace(/^http/, 'ws')}/aaas/voice`;
-
-const AAAS_HTTP =
-  (DEFAULT_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '')) || `${_CORE_HTTP}/aaas`;
-
-// Deepgram Voice Agent engine (tara-deepgram service) — same host, /voice2 route.
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 const DG_WS = `${DG_HTTP.replace(/^http/, 'ws')}/voice`;
-
-// Per-engine endpoints: Deepgram Agent (default) vs classic AaaS (Groq+Cartesia).
-const ENGINES = {
-  deepgram: { ws: DG_WS, http: DG_HTTP, label: 'Deepgram' },
-  classic: { ws: DEFAULT_WS, http: AAAS_HTTP, label: 'Classic' },
-};
 
 // What each mode means — shown as an overlay caption so the user knows on toggle.
 const MODE_DESC = {
@@ -44,9 +26,8 @@ const MODE_DESC = {
 };
 
 export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null }) {
-  const [engine, setEngine] = useState('deepgram'); // 'deepgram' (Voice Agent) | 'classic' (AaaS)
-  const engineWs = wsBase || ENGINES[engine].ws;
-  const engineHttp = ENGINES[engine].http;
+  const engineWs = wsBase || DG_WS;
+  const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
   const [state, setState] = useState('idle'); // idle|connecting|listening|thinking|talking
   const [transcript, setTranscript] = useState('');   // current-turn user STT
@@ -85,8 +66,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         if (def) setVoiceId(def.id);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine]);
+  }, [engineHttp, language]);
 
   // Reflect the org-wide selected skill on each toggle side.
   useEffect(() => {
@@ -282,21 +262,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
-              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · {engine === 'deepgram' ? 'Deepgram Voice Agent' : 'self-hosted AaaS'}</p>
+              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · Deepgram Voice Agent</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {/* engine: Deepgram Voice Agent (default) vs classic Groq+Cartesia AaaS */}
-              {!active && !wsBase && (
-                <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">
-                  {Object.entries(ENGINES).map(([id, e]) => (
-                    <button key={id} type="button" onClick={() => setEngine(id)}
-                      title={id === 'deepgram' ? 'Deepgram Voice Agent — native turn-taking, Aura-2 voices' : 'Classic self-hosted AaaS — Groq STT + Cartesia TTS'}
-                      className={`px-2.5 py-1 leading-tight transition-colors ${engine === id ? 'bg-[#0a0a0a] text-white' : 'bg-white text-[#525252] hover:bg-[#faf9f4]'}`}>
-                      {e.label}
-                    </button>
-                  ))}
-                </div>
-              )}
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}
               {!active && (
                 <div className="flex rounded-lg border border-[#e3e0db] overflow-hidden text-[11px] font-medium">

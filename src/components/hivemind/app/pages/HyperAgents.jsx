@@ -26,7 +26,7 @@ import {
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, Target, Eye, Pencil,
+  ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -690,6 +690,10 @@ function RoomThread({ roomId, onArchived }) {
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(null); // approval_id being resolved
+  const [callOpen, setCallOpen] = useState(false);
+  const [callNumber, setCallNumber] = useState('');
+  const [callBusy, setCallBusy] = useState(false);
+  const [callStatus, setCallStatus] = useState(null);
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -715,6 +719,22 @@ function RoomThread({ roomId, onArchived }) {
   useEffect(() => {
     setGoalDraft(room?.goal || '');
   }, [room?.id, room?.goal]);
+
+  const handleRoomCall = useCallback(async () => {
+    const to = callNumber.trim();
+    if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
+    setCallBusy(true);
+    setCallStatus(null);
+    try {
+      const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
+      setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+      setCallNumber('');
+    } catch (err) {
+      setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
+    } finally {
+      setCallBusy(false);
+    }
+  }, [callBusy, callNumber, room?.goal, roomId, t]);
 
   // Change room scope after creation: null = org-wide, <id> = project HIVEMIND.
   const handleSetScope = useCallback(async (newProjectId) => {
@@ -1488,6 +1508,16 @@ function RoomThread({ roomId, onArchived }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!archived && (
+              <button
+                type="button"
+                onClick={() => { setCallStatus(null); setCallOpen(true); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0a0a0a] hover:border-[#117dff]/50 hover:text-[#117dff]"
+                title={t('hyperAgents.callWithTaraHint', 'Place an approved outbound call through TARA')}
+              >
+                <PhoneCall size={12} /> {t('hyperAgents.callWithTara', 'Call with TARA')}
+              </button>
+            )}
             <span
               className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-[10px] font-mono font-semibold"
               title={t('hyperAgents.totalLlmTokens', 'Total LLM tokens used in this room')}
@@ -1514,6 +1544,48 @@ function RoomThread({ roomId, onArchived }) {
             )}
           </div>
         </header>
+
+        {callOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !callBusy && setCallOpen(false)}>
+            <div className="w-full max-w-md rounded-xl border border-[#e3e0db] bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
+              <div className="flex items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-[#117dff]"><PhoneCall size={16} /></div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{t('hyperAgents.callTitle', 'Call with TARA')}</h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-[#737373]">{t('hyperAgents.callDescription', 'The destination must be allowlisted. TARA uses this room goal and records the outcome for your workspace.')}</p>
+                </div>
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] disabled:opacity-50"><X size={16} /></button>
+              </div>
+              <label className="mt-4 block text-[10px] font-mono uppercase tracking-wider text-[#737373]">{t('hyperAgents.destination', 'Destination (E.164)')}</label>
+              <input
+                autoFocus
+                type="tel"
+                value={callNumber}
+                onChange={event => setCallNumber(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter') handleRoomCall(); }}
+                placeholder="+49123456789"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#e3e0db] px-3 font-mono text-[13px] outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/10"
+              />
+              {callStatus && (
+                <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${callStatus.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>
+                  {callStatus.message}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="h-9 px-3 text-[11px] font-medium text-[#737373] disabled:opacity-50">{t('common.cancel', 'Cancel')}</button>
+                <button
+                  type="button"
+                  onClick={handleRoomCall}
+                  disabled={callBusy || !/^\+[1-9]\d{7,14}$/.test(callNumber.trim())}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0a0a0a] px-3 text-[11px] font-semibold text-white disabled:opacity-50"
+                >
+                  {callBusy ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
+                  {callBusy ? t('hyperAgents.dialing', 'Dialing…') : t('hyperAgents.startCall', 'Start call')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">

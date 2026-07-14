@@ -516,6 +516,14 @@ class HiveMindApiClient {
     return data; // { ok, sent, to, subject, result }
   }
 
+  async callHyperRoom(roomId, { to, goal = '' }) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/call`, {
+      to,
+      goal: goal || undefined,
+    });
+    return data; // { ok, dialing, session_id, call_leg_id }
+  }
+
   // Mint a short-lived Cartesia agent access token (server holds the key).
   async mintCartesiaToken() {
     const { data } = await this.controlPlane.post('/v1/tara/cartesia-token', {});

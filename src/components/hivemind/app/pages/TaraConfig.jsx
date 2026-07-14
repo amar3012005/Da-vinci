@@ -37,8 +37,6 @@ import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 // Same-core-host derivation as AaasVoiceWidget — residency-correct, no per-host bake.
 const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
-const _AAAS_WS = process.env.REACT_APP_AAAS_WS || `${_CORE_HTTP.replace(/^http/, 'ws')}/aaas/voice`;
-const AAAS_HTTP = _AAAS_WS.replace(/^wss?:\/\//, 'https://').replace(/\/voice$/, '');
 // tara-deepgram engine (Deepgram Voice Agent + Telnyx) — routed under the same core host.
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 
@@ -346,10 +344,9 @@ const OUTBOUND_LANGS = [
 
 function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
   const [phone, setPhone] = useState('');
-  const [engine, setEngine] = useState('deepgram'); // 'deepgram' (Voice Agent) | 'classic' (aaas)
   const [callLang, setCallLang] = useState((language || 'en').split('-')[0]); // per-call language
   const [goal, setGoal] = useState('');
-  const apiBase = engine === 'deepgram' ? DG_HTTP : AAAS_HTTP;
+  const apiBase = DG_HTTP;
   const [callState, setCallState] = useState(null); // null|'dialing'|'connected'|'ended'|'error'
   const [callLegId, setCallLegId] = useState(null);
   const [err, setErr] = useState(null);
@@ -419,24 +416,13 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
       <div className="bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3 flex items-start gap-2">
         <Shield size={14} className="text-amber-600 mt-0.5 shrink-0" />
         <p className="text-[12px] text-amber-700">
-          Enter any number in E.164 format (e.g. <span className="font-mono">+4915772925738</span>). AI disclosure plays automatically at call open (EU AI Act Art 50).
+          Enter an allowlisted number in E.164 format (e.g. <span className="font-mono">+4915772925738</span>). AI disclosure plays automatically at call open (EU AI Act Art 50).
         </p>
       </div>
 
       {!callState && (
         <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5 space-y-4">
-          <div>
-            <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Voice engine</label>
-            <div className="flex gap-2">
-              {[['deepgram', 'Deepgram Agent'], ['classic', 'Classic (AaaS)']].map(([id, label]) => (
-                <button key={id} onClick={() => setEngine(id)}
-                  className={`px-3 py-1.5 rounded-[6px] text-[12px] font-medium border transition-colors ${
-                    engine === id ? 'bg-[#117dff] text-white border-[#117dff]' : 'bg-white text-[#525252] border-[#e3e0db] hover:border-[#117dff]'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="text-[11px] font-mono uppercase tracking-wider text-[#117dff]">Deepgram Voice Agent</div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5">Destination (E.164)</label>
