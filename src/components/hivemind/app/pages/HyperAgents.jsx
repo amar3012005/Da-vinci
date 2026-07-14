@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
+import { EmailComposeCard, CallRingingCard } from '../hyperagents/LiveActionCards';
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
@@ -725,17 +726,23 @@ function RoomThread({ roomId, onArchived }) {
     setGoalDraft(room?.goal || '');
   }, [room?.id, room?.goal]);
 
+  // Ringing overlay: the call visibly "happens" (pulse rings while Telnyx
+  // dials, then in-progress). {number, status: dialing|ok|error} | null.
+  const [callOverlay, setCallOverlay] = useState(null);
   const handleRoomCall = useCallback(async () => {
     const to = callNumber.trim();
     if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
     setCallBusy(true);
     setCallStatus(null);
+    setCallOverlay({ number: to, status: 'dialing' });
     try {
       const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
       setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+      setCallOverlay({ number: to, status: 'ok' });
       setCallNumber('');
     } catch (err) {
       setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
+      setCallOverlay({ number: to, status: 'error' });
     } finally {
       setCallBusy(false);
     }
@@ -1595,6 +1602,10 @@ function RoomThread({ roomId, onArchived }) {
                   {callStatus.message}
                 </div>
               )}
+              {callOverlay && (
+                <CallRingingCard number={callOverlay.number} status={callOverlay.status}
+                  onClose={() => setCallOverlay(null)} />
+              )}
               <div className="mt-4 flex justify-end gap-2">
                 <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="h-9 px-3 text-[11px] font-medium text-[#737373] disabled:opacity-50">{t('common.cancel', 'Cancel')}</button>
                 <button
@@ -2182,6 +2193,18 @@ function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
 }
 
 function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag }) {
+  // Per-room send automation for outbound email approvals ("automate from next
+  // turn"). Client-side latch on the existing HITL gate: the approve call is
+  // identical, only the click is automated. Persisted per room.
+  const autoSendKey = `hm_auto_send_${roomId || 'room'}`;
+  const [autoSendOn, setAutoSendOn] = useState(() => {
+    try { return window.localStorage.getItem(autoSendKey) === '1'; } catch { return false; }
+  });
+  const toggleAutoSend = () => setAutoSendOn((p) => {
+    const v = !p; try { window.localStorage.setItem(autoSendKey, v ? '1' : '0'); } catch { /* ignore */ }
+    return v;
+  });
+  const roomAgentName = (participants && participants[0] && (participants[0].name || participants[0].slug)) || 'HIVEMIND agent';
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -2922,6 +2945,23 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             const resolved = resolutionById[a.approval_id];
             const busyHere = approveBusy === a.approval_id;
             const artifactUrl = resolved?.result?.result?.url || resolved?.result?.url;
+            // Outbound email → the cinematic Gmail-style compose card: the agent
+            // visibly types the draft, the user sends with one click (or the
+            // room's auto-send automation fires once typing completes).
+            if (a.body_md && !archived) {
+              return (
+                <EmailComposeCard key={a.approval_id || i}
+                  approval={a}
+                  fromName={roomAgentName}
+                  resolved={resolved}
+                  busy={busyHere}
+                  autoSend={autoSendOn}
+                  onToggleAutoSend={toggleAutoSend}
+                  onSend={() => onApprove && onApprove(a.approval_id, 'approve')}
+                  onDeny={() => onApprove && onApprove(a.approval_id, 'deny')}
+                />
+              );
+            }
             return (
               <div key={a.approval_id || i} className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
