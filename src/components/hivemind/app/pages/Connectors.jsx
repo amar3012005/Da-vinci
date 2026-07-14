@@ -4022,6 +4022,21 @@ export default function Connectors() {
           window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
           return;
         }
+        // Google Workspace connects use the GOOGLE-NATIVE path (same OAuth
+        // client + redirect as login, branded singulancelabs.com) — NOT the
+        // central Nango client, whose consent screen still says davinciai.eu.
+        // google-gemini stays on Nango (API-key style integration, not
+        // workspace OAuth).
+        const _gNative = connector.oauthProvider
+          && connector.oauthProvider !== 'google-gemini'
+          && (connector.oauthProvider === 'gmail' || connector.oauthProvider.startsWith('google-'));
+        if (_gNative) {
+          handleOAuthConnect(connector.oauthProvider, {
+            services: connector.googleService,
+            isMaster: connector.isMaster,
+          });
+          return;
+        }
         if (connector.nangoProvider) {
           handleNangoConnect(connector);
           return;
