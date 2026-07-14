@@ -1,3 +1,4 @@
+import { API_DEFAULTS } from '../shared/theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -992,7 +993,7 @@ this conversation is gone.`;
 function InstallCommandCard() {
   const { t } = useTranslation('dashboard');
   const [copied, setCopied] = useState(false);
-  const command = 'curl -fsSL https://core.hivemind.davinciai.eu:8050/install/cli.sh | bash';
+  const command = `curl -fsSL ${API_DEFAULTS.coreApiBase}/install/cli.sh | bash`;
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(command);
@@ -1044,7 +1045,7 @@ function UniversalSchemaCard() {
   "mcpServers": {
     "hivemind": {
       "type": "http",
-      "url": "https://core.hivemind.davinciai.eu:8050/api/mcp",
+      "url": "${API_DEFAULTS.coreApiBase}/api/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -1062,7 +1063,7 @@ function UniversalSchemaCard() {
       "args": [
         "-y",
         "mcp-remote",
-        "https://core.hivemind.davinciai.eu:8050/api/mcp",
+        "${API_DEFAULTS.coreApiBase}/api/mcp",
         "--header",
         "Authorization: Bearer YOUR_API_KEY"
       ]
@@ -1339,15 +1340,15 @@ export default function McpServer() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">OpenAPI spec</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/v1/chatgpt/openapi.yaml</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/v1/chatgpt/openapi.yaml`}</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Authorization URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/oauth/authorize</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/oauth/authorize`}</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Token URL</div>
-                  <code className="text-[11px] text-[#0a0a0a] break-all">https://hivemind.davinciai.eu/oauth/token</code>
+                  <code className="text-[11px] text-[#0a0a0a] break-all">{`${API_DEFAULTS.coreApiBase}/oauth/token`}</code>
                 </div>
                 <div className="rounded-xl border border-[#e3e0db] bg-white p-3">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-1">Scopes</div>
@@ -1365,7 +1366,7 @@ export default function McpServer() {
                 </ol>
               </div>
               <a
-                href="https://hivemind.davinciai.eu/v1/chatgpt/openapi.yaml"
+                href={`${API_DEFAULTS.coreApiBase}/v1/chatgpt/openapi.yaml`}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0] transition-colors"
