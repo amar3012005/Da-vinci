@@ -50,7 +50,6 @@ export default function OnboardingFlow() {
   const [enterpriseAccessCode, setEnterpriseAccessCode] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [showSelfHost, setShowSelfHost] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
   const [referralOffer, setReferralOffer] = useState(null);
   const [referralError, setReferralError] = useState(null);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
