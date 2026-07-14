@@ -215,6 +215,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Closed-loop outcome counters (emails sent / replies / calls / bookings, 7d+30d). */
+  async hyperOutcomes() {
+    const { data } = await this.controlPlane.get('/v1/hyper/outcomes');
+    return data;
+  }
+
   /** Open (or create) the workroom for a dashboard task. */
   async openHyperTask(taskId) {
     const { data } = await this.controlPlane.post('/v1/hyper/tasks/open', { task_id: taskId });
