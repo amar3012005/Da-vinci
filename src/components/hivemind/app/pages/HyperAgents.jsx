@@ -644,18 +644,23 @@ function hyperEventKey(event, index) {
 }
 
 function mergeHyperEvents(base, overlay) {
-  const merged = Array.isArray(base) ? [...base] : [];
+  // Returns the SAME array reference when nothing new arrived — the 250ms
+  // fallback poll calls this constantly, and a fresh identity every tick made
+  // React re-render the whole thread 4×/sec (visible jank on long turns).
+  const current = Array.isArray(base) ? base : [];
   const incoming = Array.isArray(overlay) ? overlay : [];
-  if (!incoming.length) return merged;
-  const seen = new Set(merged.map(hyperEventKey));
+  if (!incoming.length) return current;
+  const seen = new Set(current.map(hyperEventKey));
+  let merged = null;
   incoming.forEach((event, index) => {
     const key = hyperEventKey(event, index);
     if (!seen.has(key)) {
       seen.add(key);
+      if (!merged) merged = [...current];
       merged.push(event);
     }
   });
-  return merged;
+  return merged || current;
 }
 
 function RoomThread({ roomId, onArchived }) {
@@ -769,9 +774,12 @@ function RoomThread({ roomId, onArchived }) {
   }, []);
 
   // Load room + history
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
     setError(null);
-    setLoading(true);
+    // quiet = refresh in place (turn seal, background refetch). The full-screen
+    // spinner is ONLY for the first mount — flipping it on seal made the whole
+    // thread blink to a loader and back right after the synthesis landed.
+    if (!opts.quiet) setLoading(true);
     try {
       const resp = await apiClient.getHyperRoom(roomId);
       setRoom(resp.room);
@@ -799,9 +807,14 @@ function RoomThread({ roomId, onArchived }) {
     if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
   }, [turns, liveLines]);
 
+  // One-shot seal latch per live turn: SSE and the fallback poll BOTH detect the
+  // seal (they race) — without the latch load() fired twice back-to-back.
+  const sealedRef = useRef(false);
+
   // SSE subscription while a turn is live
   useEffect(() => {
     if (!activeTurnId) return;
+    sealedRef.current = false;
     const url = apiClient.hyperTurnStreamUrl(roomId, activeTurnId);
     let es;
     try {
@@ -825,10 +838,15 @@ function RoomThread({ roomId, onArchived }) {
         setLiveLines(prev => mergeLiveEvents(prev, [{ ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]));
         if (e.type === 'seal' || data.t === 'seal') {
           es.close();
-          setActiveTurnId(null);
-          setSubmitting(false);
-          // Refetch the sealed turn for cached DB read
-          load();
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            // Quiet refetch FIRST so the sealed turn is in `turns` before the
+            // live lines are released — no spinner, no content gap, no blink.
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
         }
       } catch {
         // ignore
@@ -884,9 +902,13 @@ function RoomThread({ roomId, onArchived }) {
           stopped = true;
           clearInterval(poll);
           try { es.close(); } catch { /* ignore */ }
-          setActiveTurnId(null);
-          setSubmitting(false);
-          load();
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
         }
       } catch { /* ignore — SSE may still deliver */ }
     };
