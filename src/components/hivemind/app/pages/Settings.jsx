@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
-  Building2,
   Globe,
   Copy,
   Check,
@@ -209,14 +208,6 @@ export default function Settings() {
     }
   }, []);
 
-  const createdDate = org?.created_at
-    ? new Date(org.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : '—';
-
   const projectPolicyOptions = [
     {
       value: 'private',
@@ -272,44 +263,28 @@ export default function Settings() {
         animate="visible"
         className="space-y-6 max-w-3xl"
       >
-        {/* ── Workspace Info ──────────────────────────────────────── */}
+        {/* ── Settings scope ───────────────────────────────────────── */}
         <SectionCard>
           <SectionHeader
-            icon={Building2}
-            title={t('settings.workspaceInfo', 'Workspace Info')}
-            description={t('settings.workspaceInfoDesc', 'Your organization and workspace details')}
+            icon={SettingsIcon}
+            title="What belongs in Settings"
+            description="Operational controls for this workspace. Identity, plan, hosting, and company context are managed in Profile; people and roles are managed in Team."
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                {t('settings.labelOrganization', 'Organization')}
+                Profile
               </label>
               <p className="text-[#0a0a0a] text-sm font-['Space_Grotesk'] font-medium">
-                {org?.name || '—'}
+                Account identity, organization context, plan and hosting
               </p>
             </div>
             <div>
               <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                {t('settings.labelCreated', 'Created')}
+                Team
               </label>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-                {createdDate}
-              </p>
-            </div>
-            <div>
-              <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                {t('settings.labelYourRole', 'Your Role')}
-              </label>
-              <span className="inline-block text-[#117dff] text-xs font-mono bg-[#117dff]/10 border border-[#117dff]/20 rounded-md px-2 py-1">
-                {user?.role || 'owner'}
-              </span>
-            </div>
-            <div>
-              <label className="block text-[#525252] text-[11px] font-mono uppercase tracking-wider mb-1.5">
-                {t('settings.labelCoreApiUrl', 'Core API URL')}
-              </label>
-              <p className="text-[#525252] text-sm font-mono truncate" title={coreApiUrl}>
-                {coreApiUrl || '—'}
+                Members, invitations, roles, projects and access
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
@@ -277,7 +277,6 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
 function PlanCard({ plan, currentPlan, onSelect }) {
   const { t } = useTranslation('dashboard');
   const isCurrent = currentPlan === plan.id;
-  const isEnterprise = plan.id === 'enterprise';
 
   return (
     <motion.div
@@ -338,11 +337,6 @@ function PlanCard({ plan, currentPlan, onSelect }) {
         <div className="text-center py-2.5 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold font-['Space_Grotesk']">
           {t('billing.currentPlan', 'Current Plan')}
         </div>
-      ) : isEnterprise ? (
-        <button onClick={() => onSelect(plan.id)} className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
-          {t('billing.contactSales', 'Contact Sales / Offer Code')}
-          <ArrowRight size={13} />
-        </button>
       ) : (
         <button
           onClick={() => onSelect(plan.id)}
@@ -370,6 +364,7 @@ export default function Billing() {
   const [upgrading, setUpgrading] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [dummyConfirming, setDummyConfirming] = useState(false);
+  const [checkoutNotice, setCheckoutNotice] = useState('');
 
   const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
@@ -387,12 +382,16 @@ export default function Billing() {
     () => apiClient.getBillingPlan().catch(() => null),
     [],
   );
-  const { data: invoiceList } = useApiQuery(
+  const { data: usageSummary, refetch: refetchUsage } = useApiQuery(
+    () => apiClient.getUsage().catch(() => null),
+    [],
+  );
+  const { data: invoiceList, refetch: refetchInvoices } = useApiQuery(
     () => apiClient.listInvoices().catch(() => null),
     [],
   );
 
-  const usage = billing?.usage_summary || (billing
+  const usage = usageSummary || billing?.usage_summary || (billing
     ? {
         plan: billing.plan?.id,
         tokens:        { used: billing.usage?.tokensProcessed || 0 },
@@ -407,10 +406,13 @@ export default function Billing() {
 
   const subscription = billing?.subscription || {};
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const enterpriseEngagement = billing?.enterprise_engagement || null;
   const dummyCheckoutId = searchParams.get('dummy_checkout');
+  const checkoutState = searchParams.get('checkout');
   const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
     ? billing.all_plans.map(planFromBackend)
-    : PLANS;
+    : PLANS.filter((plan) => plan.id !== 'enterprise');
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
@@ -431,7 +433,29 @@ export default function Billing() {
     ? planFromBackend(billing.plan)
     : planOptions.find((p) => p.id === currentPlan);
 
+  useEffect(() => {
+    if (checkoutState !== 'success') return undefined;
+    let cancelled = false;
+    const reconcile = async () => {
+      try {
+        const result = await apiClient.reconcileBillingCheckout();
+        if (cancelled) return;
+        await Promise.all([refetchBilling(), refetchUsage(), refetchInvoices()]);
+        setCheckoutNotice(result?.reconciled
+          ? `Payment confirmed. Your ${String(result.plan || '').toUpperCase()} plan is active.`
+          : 'Payment received. Your subscription is still being confirmed.');
+      } catch (error) {
+        if (!cancelled) setCheckoutNotice('Payment received. Refresh in a moment while we confirm your subscription.');
+      } finally {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      }
+    };
+    reconcile();
+    return () => { cancelled = true; };
+  }, [checkoutState, refetchBilling, refetchInvoices, refetchUsage, setSearchParams]);
+
   const handleUpgrade = async (planId) => {
+    if (isEnterpriseWorkspace) return;
     setUpgrading(true);
     try {
       const res = await apiClient.createBillingCheckout(planId, referralCode.trim());
@@ -445,6 +469,18 @@ export default function Billing() {
       const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
       alert(`Upgrade failed: ${msg}`);
     } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleEnterpriseCheckout = async () => {
+    setUpgrading(true);
+    try {
+      const res = await apiClient.createEnterpriseCheckout();
+      if (!res?.checkout_url) throw new Error('Enterprise checkout is unavailable.');
+      window.location.href = res.checkout_url;
+    } catch (error) {
+      alert(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
       setUpgrading(false);
     }
   };
@@ -487,6 +523,11 @@ export default function Billing() {
           >
             {dummyConfirming ? 'Confirming…' : 'Confirm test payment'}
           </button>
+        </div>
+      )}
+      {checkoutNotice && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
+          {checkoutNotice}
         </div>
       )}
       {/* Current Plan Overview */}
@@ -538,7 +579,7 @@ export default function Billing() {
                 </div>
               )}
             </div>
-            {subscription?.stripe_customer_id && (
+            {!isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
                 onClick={handleManageSubscription}
                 className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
@@ -684,17 +725,49 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {planOptions.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            currentPlan={currentPlan}
-            onSelect={(id) => setUpgradeModal(id)}
-          />
-        ))}
-      </div>
+      {isEnterpriseWorkspace ? (
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.04] p-6"
+        >
+          <div className="flex items-start gap-3">
+            <Shield size={20} className="mt-0.5 text-[#117dff]" />
+            <div>
+              <h3 className="font-['Space_Grotesk'] text-base font-semibold text-[#0a0a0a]">
+                Enterprise {enterpriseEngagement?.phase === 'onboarding' ? 'onboarding' : 'runway'}
+              </h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#525252] font-['Space_Grotesk']">
+                Your {enterpriseEngagement?.hosting_mode === 'self_host' ? 'self-hosted' : 'managed'} enterprise agreement is administered outside self-serve billing. Usage remains visible above; plan, seats, and commercial changes are handled through your account team.
+              </p>
+              {enterpriseEngagement?.phase === 'onboarding' && enterpriseEngagement?.onboarding_ends_at && (
+                <p className="mt-3 text-[12px] font-medium text-[#117dff] font-['Space_Grotesk']">
+                  Onboarding access ends {new Date(enterpriseEngagement.onboarding_ends_at).toLocaleDateString()}.
+                </p>
+              )}
+              {enterpriseEngagement?.commercial_terms && <p className="mt-2 text-sm text-[#313131]">
+                {enterpriseEngagement.phase === 'onboarding'
+                  ? `Onboarding: €${(enterpriseEngagement.commercial_terms.onboarding_price_cents / 100).toLocaleString()}`
+                  : `Runway: €${(enterpriseEngagement.commercial_terms.runway_monthly_cents / 100).toLocaleString()}/month`}
+              </p>}
+              {enterpriseEngagement?.billing_action && <button disabled={upgrading} onClick={handleEnterpriseCheckout} className="mt-4 rounded-lg bg-[#117dff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {upgrading ? 'Opening checkout…' : enterpriseEngagement.phase === 'onboarding' ? 'Pay onboarding' : 'Start runway subscription'}
+              </button>}
+            </div>
+          </div>
+        </motion.section>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {planOptions.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              currentPlan={currentPlan}
+              onSelect={(id) => setUpgradeModal(id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* FAQ Section */}
       <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -732,7 +805,7 @@ export default function Billing() {
         </div>
       </div>
 
-      {upgradeModal && (
+      {!isEnterpriseWorkspace && upgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

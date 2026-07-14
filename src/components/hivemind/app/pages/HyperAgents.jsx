@@ -26,8 +26,8 @@ import {
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, Target, Eye, Pencil,
-  User, Gauge, CreditCard, Settings, Building2,
+  ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
+  User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -123,6 +123,61 @@ const ROOM_FORMATS = [
     labelKey: 'hyperAgents.tmplStandupLabel',   label: 'Standup',
     descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
 ];
+
+const SYNTHESIS_PRESENTATIONS = {
+  RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
+  OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
+  MARKETING: { label: 'Campaign board', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Positioning, assets, channels, and experiments' },
+  STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
+  FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
+  GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+};
+
+function splitSynthesisSections(content) {
+  const lines = String(content || '').replace(/\r/g, '').split('\n');
+  const sections = [];
+  let current = { title: 'Executive summary', body: [] };
+  for (const line of lines) {
+    const heading = line.match(/^#{1,3}\s+(.+?)\s*$/);
+    if (heading) {
+      if (current.body.length || current.title !== 'Executive summary') sections.push(current);
+      current = { title: heading[1], body: [] };
+    } else current.body.push(line);
+  }
+  if (current.body.length || !sections.length) sections.push(current);
+  return sections.filter((section) => section.body.join('').trim());
+}
+
+function TaskSynthesisRenderer({ taskTag, content }) {
+  const key = String(taskTag || 'GENERAL').toUpperCase();
+  const spec = SYNTHESIS_PRESENTATIONS[key] || SYNTHESIS_PRESENTATIONS.GENERAL;
+  const Icon = spec.icon;
+  const sections = splitSynthesisSections(content);
+  return (
+    <div className="overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: `${spec.accent}33` }}>
+      <div className="px-4 py-3" style={{ background: `linear-gradient(110deg, ${spec.soft}, white)` }}>
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>{spec.label}</div>
+            <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-px bg-[#e9e6e0]">
+        {sections.map((section, index) => (
+          <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
+            </div>
+            <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(section.body.join('\n').trim())}</div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
@@ -635,6 +690,10 @@ function RoomThread({ roomId, onArchived }) {
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(null); // approval_id being resolved
+  const [callOpen, setCallOpen] = useState(false);
+  const [callNumber, setCallNumber] = useState('');
+  const [callBusy, setCallBusy] = useState(false);
+  const [callStatus, setCallStatus] = useState(null);
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -660,6 +719,22 @@ function RoomThread({ roomId, onArchived }) {
   useEffect(() => {
     setGoalDraft(room?.goal || '');
   }, [room?.id, room?.goal]);
+
+  const handleRoomCall = useCallback(async () => {
+    const to = callNumber.trim();
+    if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
+    setCallBusy(true);
+    setCallStatus(null);
+    try {
+      const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
+      setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+      setCallNumber('');
+    } catch (err) {
+      setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
+    } finally {
+      setCallBusy(false);
+    }
+  }, [callBusy, callNumber, room?.goal, roomId, t]);
 
   // Change room scope after creation: null = org-wide, <id> = project HIVEMIND.
   const handleSetScope = useCallback(async (newProjectId) => {
@@ -700,7 +775,13 @@ function RoomThread({ roomId, onArchived }) {
     try {
       const resp = await apiClient.getHyperRoom(roomId);
       setRoom(resp.room);
-      setTurns(resp.turns || []);
+      const nextTurns = resp.turns || [];
+      setTurns(nextTurns);
+      // Task rooms may already be running because the control plane starts
+      // them before navigation. Adopt that turn so SSE and the DB fallback
+      // poll begin immediately instead of waiting for a reload.
+      const liveTurn = [...nextTurns].reverse().find((turn) => turn?.status === 'live');
+      setActiveTurnId(liveTurn?.id || null);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -1429,6 +1510,16 @@ function RoomThread({ roomId, onArchived }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!archived && (
+              <button
+                type="button"
+                onClick={() => { setCallStatus(null); setCallOpen(true); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0a0a0a] hover:border-[#117dff]/50 hover:text-[#117dff]"
+                title={t('hyperAgents.callWithTaraHint', 'Place an approved outbound call through TARA')}
+              >
+                <PhoneCall size={12} /> {t('hyperAgents.callWithTara', 'Call with TARA')}
+              </button>
+            )}
             <span
               className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-[10px] font-mono font-semibold"
               title={t('hyperAgents.totalLlmTokens', 'Total LLM tokens used in this room')}
@@ -1456,6 +1547,48 @@ function RoomThread({ roomId, onArchived }) {
           </div>
         </header>
 
+        {callOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !callBusy && setCallOpen(false)}>
+            <div className="w-full max-w-md rounded-xl border border-[#e3e0db] bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
+              <div className="flex items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-[#117dff]"><PhoneCall size={16} /></div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{t('hyperAgents.callTitle', 'Call with TARA')}</h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-[#737373]">{t('hyperAgents.callDescription', 'The destination must be allowlisted. TARA uses this room goal and records the outcome for your workspace.')}</p>
+                </div>
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] disabled:opacity-50"><X size={16} /></button>
+              </div>
+              <label className="mt-4 block text-[10px] font-mono uppercase tracking-wider text-[#737373]">{t('hyperAgents.destination', 'Destination (E.164)')}</label>
+              <input
+                autoFocus
+                type="tel"
+                value={callNumber}
+                onChange={event => setCallNumber(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter') handleRoomCall(); }}
+                placeholder="+49123456789"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#e3e0db] px-3 font-mono text-[13px] outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/10"
+              />
+              {callStatus && (
+                <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${callStatus.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>
+                  {callStatus.message}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="h-9 px-3 text-[11px] font-medium text-[#737373] disabled:opacity-50">{t('common.cancel', 'Cancel')}</button>
+                <button
+                  type="button"
+                  onClick={handleRoomCall}
+                  disabled={callBusy || !/^\+[1-9]\d{7,14}$/.test(callNumber.trim())}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0a0a0a] px-3 text-[11px] font-semibold text-white disabled:opacity-50"
+                >
+                  {callBusy ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
+                  {callBusy ? t('hyperAgents.dialing', 'Dialing…') : t('hyperAgents.startCall', 'Start call')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {turns.length === 0 && (
@@ -1478,6 +1611,7 @@ function RoomThread({ roomId, onArchived }) {
               onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
               approveBusy={approveBusy}
               roomId={roomId}
+              taskTag={room?.taskTag || 'GENERAL'}
             />
           ))}
           {error && (
@@ -2025,7 +2159,7 @@ function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag }) {
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -2035,6 +2169,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   }, [turn.lines, liveLines]);
 
   const router = lines.find(l => l.t === 'router') || lines.find(l => l.t === 'router_bootstrap');
+  const visibleUserMessage = (() => {
+    const message = turn.userMessage || turn.user_message || '';
+    const task = message.match(/^You are the .*? team\. Execute this task now\.\s*TASK \[[^\]]+\]:\s*([^\n]+)/s);
+    return task ? `Start task: ${task[1].trim()}.` : message;
+  })();
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
   const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
   const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
@@ -2141,7 +2280,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {/* User bubble */}
       <div className="flex flex-col items-end">
         <div className="max-w-[80%] bg-violet-500 text-white text-[13px] rounded-2xl rounded-tr-md px-3 py-2 shadow-sm">
-          {turn.userMessage || turn.user_message}
+          {visibleUserMessage}
         </div>
         {(() => {
           const uts = turn.createdAt ? new Date(turn.createdAt).getTime() : (lines[0]?.ts || 0);
@@ -2560,8 +2699,8 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                 <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
               ) : null}
             </div>
-            <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
-              {renderMarkdownLite(synthLine.content)}
+            <div className="px-4 py-3">
+              <TaskSynthesisRenderer taskTag={taskTag} content={synthLine.content} />
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
               <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">

@@ -45,13 +45,15 @@ import {
   FolderKanban,
   Users,
   Lock,
+  AudioLines,
+  Hexagon,
 } from 'lucide-react';
-import apiClient from '../shared/api-client';
-import useDictation from '../shared/useDictation';
-import { useTeamContext } from '../shared/team-context';
-import { MeetingNotesPromo } from '../shared/QuickRecorderProvider';
-import PwaInstall from '../shared/PwaInstall';
-import { useAuth } from '../auth/AuthProvider';
+import apiClient from '../../shared/api-client';
+import useDictation from '../../shared/useDictation';
+import { useTeamContext } from '../../shared/team-context';
+import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
+import PwaInstall from '../../shared/PwaInstall';
+import { useAuth } from '../../auth/AuthProvider';
 
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
@@ -833,6 +835,8 @@ export default function TalkToHiveMobile() {
         model: selectedModel,
         history: fullHistory,
         language: lang2,
+        // Keep mobile on the same grounded tool-routing path as desktop chat.
+        router: 'tool',
         ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
       });
       const data = chatRes.data;
@@ -1117,12 +1121,13 @@ export default function TalkToHiveMobile() {
       >
         <div className="flex flex-col gap-4 px-4 py-5">
           {messages.length === 0 && !loading && (
-            <div className="flex flex-col gap-3.5 mt-8">
-              <div className="text-[24px] font-bold tracking-tight">{t('overview.askMe', 'Ask Me Anything')}</div>
-              <div className="text-[14px] text-[#525252] leading-relaxed">
-                {t('overview.welcomeSub', "Your second brain — always on, always remembering. Recalls context across tabs, sessions, and tools, then answers like you've known each other for years.")}
+            <div className="flex flex-col items-center justify-center text-center gap-4 min-h-[46vh]">
+              {/* Claude-style centered greeting: accent mark + large serif name line */}
+              <Hexagon size={34} className="text-[#117dff]" strokeWidth={1.6} />
+              <div className="text-[32px] leading-tight text-[#1a1a17]" style={{ fontFamily: 'Georgia, \'Times New Roman\', serif' }}>
+                {(() => { const h = new Date().getHours(); const g = h < 12 ? t('overview.morning', 'Good morning') : h < 18 ? t('overview.afternoon', 'Good afternoon') : t('overview.evening', 'Good evening'); const n = (user?.name || user?.email || '').split(/[\s@]/)[0]; return n ? `${g}, ${n.charAt(0).toUpperCase()}${n.slice(1)}` : g; })()}
               </div>
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-4 w-full">
                 {[
                   t('overview.examples.recent', 'What have I been working on lately?'),
                   t('overview.examples.decisions', 'Summarize my recent decisions'),
@@ -1131,7 +1136,7 @@ export default function TalkToHiveMobile() {
                   <button
                     key={p}
                     onClick={() => { setInput(p); requestAnimationFrame(() => inputRef.current?.focus()); }}
-                    className="text-left px-4 py-3 bg-white border border-[#ece9e2] rounded-[14px] text-[14px] text-[#0a0a0a] active:bg-[#f3f1ec]"
+                    className="text-left px-4 py-2.5 rounded-full border border-[#ece9e2] text-[13px] text-[#525252] active:bg-[#f1eee7] bg-transparent"
                   >
                     {p}
                   </button>
@@ -1236,16 +1241,9 @@ export default function TalkToHiveMobile() {
       <PwaInstall />
 
       {/* ── Composer ───────────────────────────────── */}
-      <div className="flex-shrink-0 px-3 pt-2.5 pb-3 bg-[#faf9f4] border-t border-[#ece9e2]">
-        <div className="flex items-end gap-2 bg-white border border-[#ece9e2] rounded-[26px] pl-2 pr-1.5 py-1.5 focus-within:border-[#c0d8ff]">
-          {/* Attach */}
-          <button
-            onClick={handlePickFiles}
-            className="w-10 h-10 rounded-full text-[#525252] flex items-center justify-center flex-shrink-0 active:bg-[#ece9e2]/60"
-            aria-label="Attach files"
-          >
-            <Paperclip size={18} />
-          </button>
+      <div className="flex-shrink-0 px-3 pt-2 bg-[#faf9f4]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
+        {/* Claude-style floating input card: text row on top, action row below */}
+        <div className="bg-white border border-[#e8e5de] rounded-[28px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-4 pt-3 pb-2.5 focus-within:border-[#d5d1c8]">
           <input
             ref={fileInputRef}
             type="file"
@@ -1270,10 +1268,23 @@ export default function TalkToHiveMobile() {
               }
             }}
             rows={1}
-            placeholder={t('overview.askPlaceholder', 'Ask HIVE anything…')}
-            className="flex-1 resize-none border-none outline-none bg-transparent text-[15px] py-2 placeholder:text-[#c0bcb4] max-h-[120px] leading-snug"
+            placeholder={t('overview.chatWith', 'Chat with HIVE…')}
+            className="w-full resize-none border-none outline-none bg-transparent text-[16px] py-0.5 placeholder:text-[#a8a49c] max-h-[120px] leading-snug"
             style={{ fontFamily: 'inherit' }}
           />
+          {/* Action row: + · scope chip · spacer · mic · black voice/send */}
+          <div className="flex items-center gap-2 mt-2">
+          <button
+            onClick={handlePickFiles}
+            className="w-9 h-9 rounded-full border border-[#e8e5de] text-[#3d3d3a] flex items-center justify-center flex-shrink-0 active:bg-[#f1eee7]"
+            aria-label="Attach files"
+          >
+            <Plus size={18} strokeWidth={2} />
+          </button>
+          <span className="inline-flex items-center h-9 px-3 rounded-full bg-[#f1eee7] text-[12.5px] font-medium text-[#3d3d3a] max-w-[150px] truncate">
+            {activeProjectId ? (projects.find((pr) => pr.id === activeProjectId)?.name || t('overview.project', 'Project')) : (org?.name || t('overview.personal', 'Personal'))}
+          </span>
+          <span className="flex-1" />
           {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
           <button
             onClick={dictation.toggle}
@@ -1294,18 +1305,13 @@ export default function TalkToHiveMobile() {
           </button>
           <button
             onClick={send}
-            disabled={!input.trim() || loading}
-            className="w-10 h-10 rounded-full bg-[#117dff] text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 active:scale-95 transition-transform"
-            aria-label="Send"
+            disabled={(!input.trim() && !loading) || loading}
+            className="w-10 h-10 rounded-full bg-[#1a1a17] text-white flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform disabled:opacity-100"
+            aria-label={input.trim() ? 'Send' : 'Voice'}
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : input.trim() ? <Send size={16} /> : <AudioLines size={17} />}
           </button>
-        </div>
-        <div className="flex items-center justify-between mt-1.5 px-2">
-          <span className="text-[10px] text-[#a3a3a3] font-mono">
-            {input.length}/{MAX_CHARS}
-          </span>
-          <span className="text-[10px] text-[#a3a3a3]">Tap 📎 to upload · Enter to send</span>
+          </div>
         </div>
       </div>
 

@@ -13,8 +13,8 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import apiClient from '../shared/api-client';
-import { useQuickRecorder } from '../shared/QuickRecorderProvider';
+import apiClient from '../../shared/api-client';
+import { useQuickRecorder } from '../../shared/QuickRecorderProvider';
 
 function when(iso) {
   if (!iso) return 'Recent';

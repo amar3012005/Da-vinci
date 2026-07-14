@@ -46,6 +46,7 @@ export default function OnboardingFlow() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState(null);
   const [deployment, setDeployment] = useState('managed'); // 'managed' (we host) | 'selfhost' (their box)
+  const [enterpriseAccessCode, setEnterpriseAccessCode] = useState('');
   const [showSelfHost, setShowSelfHost] = useState(false);
   // The hosting + workspace choice was already made ONCE on the login page (saved to localStorage
   // before OAuth). Consume it here and create the org silently — never re-ask. With no saved choice
@@ -59,7 +60,12 @@ export default function OnboardingFlow() {
     if (autoRan.current) return;
     autoRan.current = true;
     let saved = null;
-    try { saved = JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* ignore */ }
+    try {
+      const encoded = new URLSearchParams(window.location.hash.slice(1)).get('onboarding');
+      saved = encoded ? JSON.parse(encoded) : null;
+      if (saved) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    } catch { /* ignore malformed callback state */ }
+    try { saved ||= JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* ignore */ }
     if (!saved) {
       // No saved signup choice (plain "Continue with Google" as a brand-new
       // user). The create-account UX lives in ONE place — the login page —
@@ -74,26 +80,31 @@ export default function OnboardingFlow() {
       ? (saved.enterprise || saved.hivemind_name || 'My Organization')
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
+    const accessCode = `${saved.enterprise_access_code || ''}`.trim();
+    setEnterpriseAccessCode(accessCode);
+    if (isEnt && !accessCode) {
+      // Account setup belongs on the login surface, never inside /app.
+      window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
+      return;
+    }
     (async () => {
       try {
-        await createOrg({
+        const created = await createOrg({
           name,
           slug: isEnt ? deriveSlug(saved.hivemind_name || name) : undefined,
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
+          enterprise_access_code: isEnt ? accessCode : undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+        if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
         if (dep === 'selfhost') { setShowSelfHost(true); setAutoCreating(false); return; }
         window.location.href = '/hivemind/app/overview'; // managed → straight to the dashboard (no re-ask)
       } catch (err) {
-        // Creation failed → drop to the manual form so the user can retry / adjust.
-        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
-        setError(err?.response?.data?.error || err?.message || 'Could not create your workspace — please choose below.');
-        setMode(isEnt ? 'enterprise' : 'personal');
-        setDeployment(dep);
-        setOrgName(name);
-        setStep(2); // choice already made on the login page — go straight to details
-        setAutoCreating(false);
+        // Keep retries on the login/create-account surface. The saved intent
+        // remains in localStorage so the form can restore every entered field.
+        const reason = err?.response?.status === 403 ? 'invalid_enterprise_code' : 'workspace_creation_failed';
+        window.location.replace(`/hivemind/login?create=1&onboarding_error=${reason}`);
       }
     })();
   }, [createOrg]);
@@ -106,17 +117,23 @@ export default function OnboardingFlow() {
     e.preventDefault();
     if (!orgName.trim()) return;
     if (mode === 'enterprise' && !effectiveSlug) return;
+    if (mode === 'enterprise' && !enterpriseAccessCode.trim()) {
+      setError('Enter the Enterprise access code supplied with your onboarding invitation.');
+      return;
+    }
 
     setCreating(true);
     setError(null);
     try {
-      await createOrg({
+      const created = await createOrg({
         name: orgName.trim(),
         slug: mode === 'enterprise' ? effectiveSlug : undefined,
         plan: selectedMode.plan,
         deployment, // 'managed' | 'selfhost'
+        enterprise_access_code: mode === 'enterprise' ? enterpriseAccessCode : undefined,
       });
       // Self-host → show the 2-step setup (clone+run, mint key) instead of going straight to dashboard.
+      if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }
       if (deployment === 'selfhost') { setShowSelfHost(true); return; }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -292,6 +309,21 @@ export default function OnboardingFlow() {
                 ))}
               </div>
             </div>
+
+            {mode === 'enterprise' && (
+              <label className="md:col-span-2 block">
+                <span className="mb-2 block text-xs font-medium text-[#525252]">Enterprise access code</span>
+                <input
+                  value={enterpriseAccessCode}
+                  onChange={(e) => setEnterpriseAccessCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                  maxLength={64}
+                  autoComplete="off"
+                  placeholder="Provided in your onboarding invitation"
+                  className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 font-mono text-sm uppercase text-[#0a0a0a] outline-none focus:border-[#117dff]"
+                />
+                <p className="mt-2 text-xs text-[#737373]">This code applies the agreed onboarding and runway terms for this workspace.</p>
+              </label>
+            )}
 
             {/* Summary + create */}
             <div className="md:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-[#ece8de] rounded-2xl px-4 py-4 bg-[#fcfbf7]">

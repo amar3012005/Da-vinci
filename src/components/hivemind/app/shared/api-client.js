@@ -215,6 +215,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Closed-loop outcome counters (emails sent / replies / calls / bookings, 7d+30d). */
+  async hyperOutcomes() {
+    const { data } = await this.controlPlane.get('/v1/hyper/outcomes');
+    return data;
+  }
+
   /** Open (or create) the workroom for a dashboard task. */
   async openHyperTask(taskId) {
     const { data } = await this.controlPlane.post('/v1/hyper/tasks/open', { task_id: taskId });
@@ -244,6 +250,18 @@ class HiveMindApiClient {
   async createOrg(payload) {
     const request = typeof payload === 'string' ? { name: payload } : payload;
     const { data } = await this.controlPlane.post('/v1/orgs', request);
+    return data;
+  }
+
+  async getOrganizationProfile(orgId) {
+    const { data } = await this.controlPlane.get(`/v1/orgs/${orgId}/profile`);
+    return data;
+  }
+
+  async updateOrganizationProfile(orgId, companyProfile) {
+    const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/profile`, {
+      company_profile: companyProfile,
+    });
     return data;
   }
 
@@ -496,6 +514,14 @@ class HiveMindApiClient {
       to, subject, body_md: bodyMd, attachments, approval_id: approvalId || undefined,
     });
     return data; // { ok, sent, to, subject, result }
+  }
+
+  async callHyperRoom(roomId, { to, goal = '' }) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/call`, {
+      to,
+      goal: goal || undefined,
+    });
+    return data; // { ok, dialing, session_id, call_leg_id }
   }
 
   // Mint a short-lived Cartesia agent access token (server holds the key).
@@ -800,6 +826,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Reconcile a completed hosted Checkout with Stripe before webhooks arrive. */
+  async reconcileBillingCheckout() {
+    const { data } = await this.controlPlane.post('/v1/billing/reconcile', {});
+    return data;
+  }
+
   async confirmDummyBillingCheckout(checkoutId) {
     const { data } = await this.controlPlane.post('/v1/billing/dummy/confirm', { checkout_id: checkoutId });
     return data;
@@ -880,6 +912,26 @@ class HiveMindApiClient {
 
   async getPlatformMetrics() {
     const { data } = await this.controlPlane.get('/admin/api/platform/metrics');
+    return data;
+  }
+
+  async listPlatformPromotions() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/promotions');
+    return data;
+  }
+
+  async createPlatformPromotion(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/promotions', payload);
+    return data;
+  }
+
+  async revokePlatformPromotion(id) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/promotions/${id}/revoke`);
+    return data;
+  }
+
+  async createEnterpriseCheckout() {
+    const { data } = await this.controlPlane.post('/v1/billing/enterprise-checkout');
     return data;
   }
 

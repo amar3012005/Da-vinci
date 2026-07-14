@@ -139,6 +139,12 @@ function TalkToHiveFAB({ onOpen, hidden }) {
   );
 }
 
+function sectionForPath(pathname) {
+  if (pathname.startsWith('/hivemind/app/employees')) return 'hyperagents';
+  if (pathname.startsWith('/hivemind/app/tara')) return 'tara';
+  return 'hivemind';
+}
+
 /**
  * AppShell — layout:
  *   1. needs_org_setup -> show org creation
@@ -148,6 +154,12 @@ export default function AppShell() {
   const { needsOnboarding, org } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (org?.billing_action_required && location.pathname !== '/hivemind/app/billing') {
+      navigate(`/hivemind/app/billing?phase=${org.billing_phase || 'runway'}`, { replace: true });
+    }
+  }, [org?.billing_action_required, org?.billing_phase, location.pathname, navigate]);
 
   // ── Post-sign-in reveal sequence ─────────────────────────────────────
   //   new user  → capability slides → activation checklist → workspace
@@ -215,9 +227,12 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState(() => {
-    try { return localStorage.getItem('hm_active_section') || 'hivemind'; } catch { return 'hivemind'; }
-  });
+  const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
+  useEffect(() => {
+    const section = sectionForPath(location.pathname);
+    setActiveSection(section);
+    try { localStorage.setItem('hm_active_section', section); } catch { /* noop */ }
+  }, [location.pathname]);
   const handleSectionChange = (s) => {
     setActiveSection(s);
     try { localStorage.setItem('hm_active_section', s); } catch { /* noop */ }

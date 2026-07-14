@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
+  Mail, PhoneCall, Reply, CalendarCheck,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -75,17 +76,8 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
     setOpeningTask(task.id);
     try {
       const d = await apiClient.openHyperTask(task.id);
-      // Freshly provisioned room (201 returns kickoff_message): fire the
-      // optimized kickoff as the first turn so the swarm starts executing the
-      // task immediately — the thread opens with agents already working.
-      if (d?.room?.id && d?.kickoff_message) {
-        try {
-          await apiClient.postHyperTurn(d.room.id, {
-            user_message: d.kickoff_message,
-            idempotency_key: `task-kickoff-${task.id}-${d.room.id}`,
-          });
-        } catch { /* room still opens; user can send manually */ }
-      }
+      // The control plane creates and dispatches the first turn atomically.
+      // Navigation cannot lose the kickoff if this component unmounts.
       if (d?.room?.id) onOpenRoom?.(d.room);
       load(); // refresh task→room links
     } catch { /* stays on dashboard */ }
@@ -148,6 +140,34 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
           </button>
         </div>
       </div>
+
+      {/* Outcomes strip — closed-loop value counters (7d). What actually LEFT
+          the platform and what came back. Zero-state renders muted, never hides:
+          the row is the promise of the product. */}
+      {(() => {
+        const o = state.outcomes || {};
+        const tiles = [
+          { icon: Mail, label: t('hyperDash.emailsSent', 'Emails sent'), v: o.emails_sent || 0 },
+          { icon: Reply, label: t('hyperDash.replies', 'Replies'), v: o.replies || 0 },
+          { icon: PhoneCall, label: t('hyperDash.calls', 'Calls'), v: o.calls || 0 },
+          { icon: CalendarCheck, label: t('hyperDash.bookings', 'Meetings booked'), v: o.bookings || 0 },
+        ];
+        return (
+          <div className="px-6 pt-4 max-w-[1280px]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {tiles.map(({ icon: Icon, label, v }) => (
+                <div key={label} className="border border-[#e3e0db] rounded-lg px-3.5 py-2.5 bg-white flex items-center gap-3">
+                  <Icon size={15} className={v > 0 ? 'text-[#117dff]' : 'text-[#c9c5be]'} />
+                  <div>
+                    <div className={`text-[18px] leading-none font-semibold font-['Space_Grotesk'] ${v > 0 ? 'text-[#0a0a0a]' : 'text-[#a3a3a3]'}`}>{v}</div>
+                    <div className="text-[10.5px] font-mono uppercase text-[#a3a3a3] mt-1">{label} · 7d</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Three-column Polsia grid */}
       <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-[1280px]">
