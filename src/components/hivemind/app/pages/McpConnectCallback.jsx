@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { API_DEFAULTS } from '../shared/theme';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +19,7 @@ import { Check, Copy, Terminal, AlertTriangle, ArrowLeft, Sparkles, FileText } f
  */
 
 const MCP_BRIDGE = (userId) =>
-  `https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}`;
+  `${API_DEFAULTS.coreApiBase}/api/mcp/servers/${userId}`;
 
 const PLATFORMS = {
   'claude-code': {
@@ -120,7 +121,7 @@ const PLATFORMS = {
     ],
     http: ({ apiKey, userId }) =>
       [
-        `Endpoint: POST https://core.hivemind.davinciai.eu:8050/api/mcp/rpc`,
+        `Endpoint: POST ${API_DEFAULTS.coreApiBase}/api/mcp/rpc`,
         `Headers:`,
         `  Authorization: Bearer ${apiKey}`,
         `  X-User-Id: ${userId}`,

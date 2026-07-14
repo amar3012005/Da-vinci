@@ -585,7 +585,7 @@ const FinalCta = () => (
           Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </motion.a>
         <DownloadMacButton />
-        <a href="https://hivemind.davinciai.eu/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
+        <a href="https://singulancelabs.com/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
           see the benchmark →
         </a>
       </div>
