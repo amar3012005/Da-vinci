@@ -835,6 +835,8 @@ export default function TalkToHiveMobile() {
         model: selectedModel,
         history: fullHistory,
         language: lang2,
+        // Keep mobile on the same grounded tool-routing path as desktop chat.
+        router: 'tool',
         ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
       });
       const data = chatRes.data;
