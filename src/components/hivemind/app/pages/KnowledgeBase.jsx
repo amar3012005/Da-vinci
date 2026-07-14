@@ -1283,12 +1283,14 @@ export default function KnowledgeBase() {
             : u
         ));
         setJustUploadedDocs((prev) => [{
-          id: result.upload_id || `pending-${uploadEntry.id}`,
+          // Prefer the durable document id. Queue ids are transient and would
+          // otherwise leave a second optimistic card beside the real document.
+          id: result.documentId || result.upload_id || `pending-${uploadEntry.id}`,
           title: result.filename || file.name,
           docHash: clientHash || null, // for converge-detection in useEffect
           metadata: {
             document_title: result.filename || file.name,
-            total_chunks: result.chunks || 1,
+            total_chunks: result.segmentCount ?? result.chunks ?? 0,
             filename: result.filename || file.name,
             upload_id: result.upload_id,
           },
@@ -2018,7 +2020,7 @@ export default function KnowledgeBase() {
                           </span>
                         );
                       })()}
-                      {meta.total_chunks && (
+                      {!phase1Stats[documentIdFrom(doc)] && meta.total_chunks > 0 && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
                       )}
                       {docProject(doc) && (
