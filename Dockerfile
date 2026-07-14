@@ -29,5 +29,5 @@ RUN npm run build
 
 FROM caddy:latest
 COPY --from=build /app/build /srv
-RUN printf ':80 {\n  root * /srv\n  encode gzip\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
+RUN printf ':80 {\n  root * /srv\n  encode gzip\n  @service_worker path /sw.js\n  header @service_worker Cache-Control "no-cache, no-store, must-revalidate"\n  try_files {path} /index.html\n  file_server\n}\n' > /etc/caddy/Caddyfile
 EXPOSE 80
