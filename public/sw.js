@@ -3,11 +3,13 @@
  * and give the installed app an offline launch shell. We deliberately keep it
  * dumb and safe:
  *   • navigations  → network-first, fall back to cached shell when offline
- *   • static assets → stale-while-revalidate
+ *   • static assets → network-first, cached only as an offline fallback
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v2';
+// Bump this when the worker contract changes so previously cached app shells
+// cannot keep an old release alive after a deployment.
+const CACHE = 'hive-shell-v3';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -45,19 +47,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets → stale-while-revalidate.
+  // Never prefer an old bundle when the network is available. Hashes normally
+  // protect build assets, but cache-first still lets a stale worker mask a
+  // release during route or chunk transitions.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === 'basic') {
-            const copy = resp.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-          }
-          return resp;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+        }
+        return resp;
+      })
+      .catch(() => caches.match(request))
   );
 });
