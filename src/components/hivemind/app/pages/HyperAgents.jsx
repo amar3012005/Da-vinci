@@ -887,6 +887,8 @@ function RoomThread({ roomId, onArchived }) {
       'self_evolve',
       // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
       'skill_used',
+      // Post-seal follow-up suggestions (clickable, one-click auto-run):
+      'next_tasks',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1186,6 +1188,31 @@ function RoomThread({ roomId, onArchived }) {
       const resp = await apiClient.postHyperTurn(roomId, { user_message: msg, idempotency_key: idempo, turn_id: tempId,
         // self-evolve signal: a rerun = the prior answer was rejected → the employees learn from it
         user_signal: 'the user reran this turn — the previous answer was rejected as wrong or stale' });
+      setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      setActiveTurnId(resp.turn_id);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+      setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      setActiveTurnId(null);
+      setSubmitting(false);
+    }
+  }
+
+  // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
+  // this room (keeps the journal/context; no dashboard round-trip).
+  async function runNextTask(taskLine) {
+    if (submitting || activeTurnId) return;
+    const msg = `${taskLine.title}${taskLine.detail ? ` — ${taskLine.detail}` : ''}`;
+    setSubmitting(true);
+    const tempId = (window.crypto?.randomUUID?.() || `pending-${Date.now()}`);
+    setTurns(prev => [
+      ...prev,
+      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
+    ]);
+    setActiveTurnId(tempId);
+    try {
+      const resp = await apiClient.postHyperTurn(roomId, {
+        user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       setActiveTurnId(resp.turn_id);
     } catch (err) {
@@ -1639,6 +1666,7 @@ function RoomThread({ roomId, onArchived }) {
               busy={submitting}
               onClear={() => handleClearTurn(turn)}
               onRerun={() => handleRerunTurn(turn)}
+              onRunNextTask={runNextTask}
               onFlybyDecision={(decision, spec) => handleFlybyDecision(turn, decision, spec)}
               flybyBusy={flybyBusy}
               onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
@@ -2192,7 +2220,7 @@ function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Per-room send automation for outbound email approvals ("automate from next
   // turn"). Client-side latch on the existing HITL gate: the approve call is
   // identical, only the click is automated. Persisted per room.
@@ -3035,6 +3063,29 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           {deadEndLine.content}
         </div>
       )}
+      {seal && (() => {
+        const nt = lines.filter(l => l && l.t === 'next_tasks').flatMap(l => l.tasks || []);
+        if (!nt.length || archived) return null;
+        return (
+          <div className="mt-2 space-y-1.5">
+            <div className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">Suggested next moves — one click runs it</div>
+            <div className="flex flex-wrap gap-1.5">
+              {nt.map((task, i) => (
+                <button key={i} type="button" disabled={busy} onClick={() => onRunNextTask && onRunNextTask(task)}
+                  title={task.detail || ''}
+                  className="group text-left rounded-lg border border-[#117dff]/30 bg-[#117dff]/5 hover:bg-[#117dff]/10 px-3 py-2 max-w-[260px] transition-colors">
+                  <div className="text-[11px] font-medium text-[#0a0a0a] flex items-center gap-1.5">
+                    <span className="px-1 py-0.5 rounded bg-[#117dff]/10 text-[#117dff] text-[8px] font-mono">{task.tag || 'NEXT'}</span>
+                    {task.title}
+                  </div>
+                  {task.detail && <div className="text-[10px] text-[#525252] mt-0.5 line-clamp-2">{task.detail}</div>}
+                  <div className="text-[9px] font-mono text-[#117dff] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">▶ run now</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {seal && (
         <div className="space-y-1 py-1">
           <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${
