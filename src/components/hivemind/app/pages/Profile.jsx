@@ -1236,7 +1236,7 @@ function DataPrivacySection() {
         {/* Privacy policy link */}
         <div className="mt-4 pt-4 border-t border-[#f3f1ec]">
           <a
-            href="https://hivemind.davinciai.eu/privacy"
+            href="https://singulancelabs.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a3a3a3] hover:text-[#117dff] transition-colors"
