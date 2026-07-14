@@ -779,6 +779,8 @@ function RoomThread({ roomId, onArchived }) {
       'connector_logo', 'gather', 'recon_pre', 'execute',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
+      'skill_used',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -1920,13 +1922,23 @@ function SimTheater({ simReport, onOpenFull }) {
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
 // Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
-function ToolTimeline({ gathers, webIntels, sealed }) {
+function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
   const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(true);
 
   const recalls = (gathers || []).filter(g => !g.tool);
   const connectorReads = (gathers || []).filter(g => g.tool);
   const steps = [];
+  // Room METHOD skills the turn loaded (progressive disclosure) — credibility
+  // chips: "the team worked under competitor-teardown", not background magic.
+  (skillUses || []).forEach((s, i) => {
+    if (!s.skill) return;
+    steps.push({
+      key: `skill-${i}`, ts: s.ts || 0, kind: 'skill',
+      label: t('hyperAgents.tlSkill', 'Method: {{name}}', { name: s.skill }),
+      chip: s.room_kind || null,
+    });
+  });
   if (recalls.length) {
     const facts = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
     steps.push({
@@ -1956,6 +1968,7 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
   const iconFor = (s) => {
     if (s.kind === 'recall') return <Brain size={12} className="text-[#117dff]" />;
     if (s.kind === 'web') return <Globe size={12} className="text-[#117dff]" />;
+    if (s.kind === 'skill') return <Sparkles size={12} className="text-[#117dff]" />;
     const logo = BRAND_LOGOS[s.connector] || BRAND_LOGOS[String(s.connector || '').replace(/_/g, '-')]
       || BRAND_LOGOS[String(s.connector || '').replace(/-/g, '_')];
     if (logo) return <img src={logo} alt="" className="w-3 h-3" onError={e => { e.currentTarget.style.display = 'none'; }} />;
@@ -2101,6 +2114,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
   const webIntels = lines.filter(l => l.t === 'web_intel');
+  const skillUses = lines.filter(l => l.t === 'skill_used');
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -2212,7 +2226,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} sealed={!!seal} />
+      <ToolTimeline gathers={gathers} webIntels={webIntels} skillUses={skillUses} sealed={!!seal} />
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (
