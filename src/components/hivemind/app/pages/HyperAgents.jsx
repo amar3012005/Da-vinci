@@ -28,6 +28,7 @@ import {
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
+  MapPin, Mail,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -858,8 +859,12 @@ function RoomThread({ roomId, onArchived }) {
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
+      // Outreach: Places prospect discovery (stacked cards + verified-email badges).
+      'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
+      'skill_used',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -2050,17 +2055,110 @@ function SimTheater({ simReport, onOpenFull }) {
   );
 }
 
+// Outreach prospect stack. Renders every firm the room found via Google Places as a
+// stacked card with all its info (phone / website / address). Firms we resolved a real
+// email for (Impressum scrape) get a green "email verified" badge — ONLY those are the
+// ones the room will actually email. Pure render over the `prospects` event.
+function ProspectStack({ ev }) {
+  const [open, setOpen] = useState(true);
+  const rows = Array.isArray(ev?.prospects) ? ev.prospects : [];
+  if (!rows.length) return null;
+  const verified = rows.filter(r => r.email);
+  // Verified (emailable) first — they're the actionable ones.
+  const ordered = [...rows].sort((a, b) => (b.email ? 1 : 0) - (a.email ? 1 : 0));
+  return (
+    <div className="pl-2">
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] transition-colors">
+        <MapPin size={12} className="text-[#117dff]" />
+        <span>{rows.length} prospects</span>
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 normal-case tracking-normal">
+          <CheckCheck size={10} /> {verified.length} email verified
+        </span>
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {ev?.query && (
+        <div className="mt-0.5 text-[10px] text-[#a3a3a3] font-mono truncate">“{ev.query}”</div>
+      )}
+      {open && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {ordered.map((r, i) => {
+            const has = !!r.email;
+            return (
+              <div key={i}
+                className={`rounded-lg border px-3 py-2 ${has ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#e3e0db] bg-white'}`}>
+                <div className="flex items-center gap-2">
+                  <Building2 size={13} className="text-[#525252] shrink-0" />
+                  <span className="text-[12px] font-semibold text-[#0a0a0a] truncate">{r.company}</span>
+                  {has ? (
+                    <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-emerald-100 text-emerald-700 shrink-0"
+                      title="Email found via the firm's Impressum — this prospect is outreach-ready and will be emailed.">
+                      <CheckCheck size={10} /> email verified
+                    </span>
+                  ) : (
+                    <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-[#f4f2ec] text-[#a3a3a3] shrink-0"
+                      title="No public email found — not emailed (call/website only).">
+                      no email
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-[#525252]">
+                  {has && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={11} className="text-emerald-600 shrink-0" />
+                      <span className="font-mono text-emerald-700 truncate">{r.email}</span>
+                    </div>
+                  )}
+                  {r.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <PhoneCall size={11} className="text-[#a3a3a3] shrink-0" />
+                      <span className="font-mono truncate">{r.phone}</span>
+                    </div>
+                  )}
+                  {r.website && (
+                    <div className="flex items-center gap-1.5">
+                      <Globe size={11} className="text-[#a3a3a3] shrink-0" />
+                      <a href={r.website} target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-[#117dff] hover:underline truncate">{r.website.replace(/^https?:\/\//, '')}</a>
+                    </div>
+                  )}
+                  {r.address && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={11} className="text-[#a3a3a3] shrink-0" />
+                      <span className="truncate">{r.address}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Claude-style tool-activity timeline. Reshapes the turn's gather/tool/connector/web
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
 // Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
-function ToolTimeline({ gathers, webIntels, sealed }) {
+function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
   const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(true);
 
   const recalls = (gathers || []).filter(g => !g.tool);
   const connectorReads = (gathers || []).filter(g => g.tool);
   const steps = [];
+  // Room METHOD skills the turn loaded (progressive disclosure) — credibility
+  // chips: "the team worked under competitor-teardown", not background magic.
+  (skillUses || []).forEach((s, i) => {
+    if (!s.skill) return;
+    steps.push({
+      key: `skill-${i}`, ts: s.ts || 0, kind: 'skill',
+      label: t('hyperAgents.tlSkill', 'Method: {{name}}', { name: s.skill }),
+      chip: s.room_kind || null,
+    });
+  });
   if (recalls.length) {
     const facts = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
     steps.push({
@@ -2090,6 +2188,7 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
   const iconFor = (s) => {
     if (s.kind === 'recall') return <Brain size={12} className="text-[#117dff]" />;
     if (s.kind === 'web') return <Globe size={12} className="text-[#117dff]" />;
+    if (s.kind === 'skill') return <Sparkles size={12} className="text-[#117dff]" />;
     const logo = BRAND_LOGOS[s.connector] || BRAND_LOGOS[String(s.connector || '').replace(/_/g, '-')]
       || BRAND_LOGOS[String(s.connector || '').replace(/-/g, '_')];
     if (logo) return <img src={logo} alt="" className="w-3 h-3" onError={e => { e.currentTarget.style.display = 'none'; }} />;
@@ -2240,6 +2339,16 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
   const webIntels = lines.filter(l => l.t === 'web_intel');
+  const skillUses = lines.filter(l => l.t === 'skill_used');
+  // Outreach — Places prospect discovery. Take the LATEST prospects event per
+  // query so a re-run replaces (not stacks) the same search. Firms with an email
+  // get a green "email verified" badge — only those are outreach-triggerable.
+  const prospectEvents = (() => {
+    const byQuery = {};
+    lines.filter(l => l.t === 'prospects' && Array.isArray(l.prospects))
+      .forEach(l => { byQuery[l.query || '_'] = l; });
+    return Object.values(byQuery);
+  })();
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -2351,7 +2460,12 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} sealed={!!seal} />
+      <ToolTimeline gathers={gathers} webIntels={webIntels} skillUses={skillUses} sealed={!!seal} />
+
+      {/* OUTREACH PROSPECTS — every firm found via Google Places, stacked, with all
+          info. Firms we found an email for get a green "email verified" badge and are
+          the ones the room will actually email. */}
+      {prospectEvents.map((pe, i) => <ProspectStack key={`ps-${i}`} ev={pe} />)}
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (
