@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
-import { EmailComposeCard, CallRingingCard } from '../hyperagents/LiveActionCards';
+import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, GmailConnectGate } from '../hyperagents/elements';
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
@@ -204,7 +204,16 @@ function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
               })()}
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
             </div>
-            <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(section.body.join('\n').trim())}</div>
+            {(() => {
+              const bodyMd = section.body.join('\n').trim();
+              // An outreach section that IS an email renders as a real email
+              // artifact (envelope + letter body), never raw markdown prose.
+              const email = parseEmailMarkdown(bodyMd);
+              if (email) {
+                return <EmailBlock subject={email.subject} envelope={email.envelope} body={email.body} renderMarkdown={renderMarkdownLite} />;
+              }
+              return <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(bodyMd)}</div>;
+            })()}
           </section>
         ))}
       </div>
@@ -718,6 +727,13 @@ function RoomThread({ roomId, onArchived }) {
   const [evoFlash, setEvoFlash] = useState(null);
   const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
+  // Gmail connect gate — the outreach-powers nudge. Opens once per room when a
+  // task room loads and no Google connector is connected; also opened when Send
+  // is pressed with no connection. `null` = unknown (still checking).
+  const [gmailConnected, setGmailConnected] = useState(null);
+  const [gmailGateOpen, setGmailGateOpen] = useState(false);
+  const gmailGateShownRef = useRef(false);
+  const navigate = useNavigate();
   // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
   const [showSwarm, setShowSwarm] = useState(false);
   const [swarmDraft, setSwarmDraft] = useState('');
@@ -837,6 +853,33 @@ function RoomThread({ roomId, onArchived }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Probe Gmail connection so outreach rooms can nudge (and gate Send).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const st = await apiClient.getConnectorConnectionStatus();
+        const on = (st?.connectors || []).some(c => c?.connection
+          && (String(c.id || '').toLowerCase() === 'gmail' || String(c.id || '').toLowerCase().startsWith('google')));
+        if (alive) setGmailConnected(!!on);
+      } catch { if (alive) setGmailConnected(false); }
+    })();
+    return () => { alive = false; };
+  }, [roomId]);
+
+  // Auto-open the gate ONCE for an outreach-shaped room with no Gmail.
+  useEffect(() => {
+    if (gmailConnected === false && !gmailGateShownRef.current && room) {
+      const outreachy = /outreach|cold[- ]?email|email (campaign|sequence|messaging)|messaging|prospect/i
+        .test(`${room.name || ''} ${room.goal || ''}`);
+      if (outreachy) { gmailGateShownRef.current = true; setGmailGateOpen(true); }
+    }
+  }, [gmailConnected, room]);
+
+  const connectGmail = useCallback(() => {
+    navigate('/hivemind/app/connectors?connect=gmail');
+  }, [navigate]);
 
   // Auto-scroll on new content — ONLY when pinned to the bottom, and INSTANTLY (no 'smooth', which
   // fights itself when live SSE events fire in rapid succession). Scrolls just the thread container,
@@ -1323,6 +1366,8 @@ function RoomThread({ roomId, onArchived }) {
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
+      <GmailConnectGate open={gmailGateOpen} onClose={() => setGmailGateOpen(false)}
+        onConnect={connectGmail} connecting={false} />
       <section className="flex-1 min-w-0 min-h-0 flex flex-col">
         {/* Header */}
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">

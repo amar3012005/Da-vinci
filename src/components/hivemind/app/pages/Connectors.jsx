@@ -35,6 +35,7 @@ import {
   Filter,
   Chrome,
   Settings as SettingsIcon,
+  MapPin,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -370,6 +371,17 @@ const CONNECTORS = [
     priority: 3,
     oauthProvider: 'github',
     nangoProvider: 'github',
+  },
+  {
+    id: 'google-maps',
+    name: 'Google Maps',
+    description: 'Find local businesses by area — phones + sites for prospecting',
+    icon: MapPin,
+    category: 'geo',
+    status: 'available',
+    color: '#34a853',
+    priority: 2,
+    nangoProvider: 'google-maps',
   },
   {
     id: 'linear',
