@@ -62,7 +62,6 @@ export default function MobileUsage() {
             <UsageCard title="Tokens" used={t.used} limit={t.limit} caption={`${planName} · ${period}`} />
             <div className="text-[13px] text-[#737373] mt-4 mb-2 px-1">This period</div>
             <UsageCard title="Searches" used={usage.searches?.used ?? usage.searches} limit={usage.searches?.limit} caption={usage.searches?.limit ? undefined : 'queries run'} />
-            <UsageCard title="Uploads" used={usage.uploads?.used ?? usage.uploads} limit={usage.uploads?.limit} caption={usage.uploads?.limit ? undefined : 'documents ingested'} />
             <UsageCard title="Memories" used={usage.memories?.used ?? usage.memories} limit={usage.memories?.limit} caption={usage.memories?.limit ? undefined : 'stored'} />
             {(usage.deepResearch != null || usage.deepResearch?.used != null) && (
               <UsageCard title="Deep research" used={usage.deepResearch?.used ?? usage.deepResearch} limit={usage.deepResearch?.limit} caption={usage.deepResearch?.limit ? undefined : 'jobs'} />

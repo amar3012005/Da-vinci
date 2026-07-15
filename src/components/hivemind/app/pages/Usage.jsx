@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Gauge, Brain, Search, Upload, Network, Mic, Zap, Globe, Database,
+  Gauge, Brain, Search, Network, Mic, Zap, Globe, Database,
   RefreshCw, AlertTriangle, Infinity as InfinityIcon, Info,
   Plug, Bot, UserPlus,
 } from 'lucide-react';
@@ -25,7 +25,6 @@ const METRICS = [
   { key: 'memories',     label: 'Memories',      icon: Database, accent: '#16a34a', sub: 'ingested' },
   { key: 'searches',     label: 'Recall / Chat', icon: Search,   accent: '#9333ea', sub: 'agent queries' },
   { key: 'graphQueries', label: 'Graph Queries', icon: Network,  accent: '#0891b2', sub: 'graph loads' },
-  { key: 'uploads',      label: 'KB Uploads',    icon: Upload,   accent: '#d97706', sub: 'documents' },
   { key: 'kbPages',      label: 'KB Pages',      icon: Database, accent: '#ca8a04', sub: 'pages + slides + images' },
   { key: 'deepResearch', label: 'Deep Research', icon: Zap,      accent: '#dc2626', sub: 'jobs' },
   { key: 'webIntel',     label: 'Web Intel',     icon: Globe,    accent: '#0d9488', sub: 'search + crawl' },
@@ -37,7 +36,7 @@ const METRICS = [
 ];
 
 const DAILY_METRICS = METRICS.filter((metric) =>
-  ['tokens', 'searches', 'uploads', 'kbPages', 'deepResearch', 'webIntel', 'taraSeconds', 'hyperAgentRuns'].includes(metric.key),
+  ['tokens', 'searches', 'kbPages', 'deepResearch', 'webIntel', 'taraSeconds', 'hyperAgentRuns'].includes(metric.key),
 );
 
 // last N day strings (YYYY-MM-DD), oldest→newest

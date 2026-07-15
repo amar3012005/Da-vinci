@@ -399,7 +399,6 @@ export default function Billing() {
         deepResearch:  { used: billing.usage?.deepResearchJobs || 0 },
         webIntel:      { used: billing.usage?.webIntelJobs || 0 },
         searches:      { used: billing.usage?.searchQueries || 0 },
-        uploads:       { used: billing.usage?.knowledgeBaseUploads || 0 },
         graphQueries:  { used: billing.usage?.graphQueries || 0 },
       }
     : null);
@@ -424,7 +423,7 @@ export default function Billing() {
   const deepResearchUsed = usage?.deepResearch?.used ?? 0;
   const webIntelUsed = usage?.webIntel?.used ?? 0;
   const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
-  const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
+  const kbPagesUsed = usage?.kbPages?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
   const taraSecondsUsed = usage?.taraSeconds?.used ?? 0;
   const hyperAgentRunsUsed = usage?.hyperAgentRuns?.used ?? 0;
