@@ -132,7 +132,29 @@ const SYNTHESIS_PRESENTATIONS = {
   STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
   FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
   GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+  // Room-KIND desks (preferred key — derived from skill_used.room_kind; the
+  // upper-case task tags above remain as aliases for old turns):
+  market:   { label: 'Competitive desk', accent: '#0f766e', soft: '#ecfdf5', icon: Layers,   note: 'Landscape, asymmetries, threats, and the next moves' },
+  content:  { label: 'Editorial desk',   accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Pillars, calendar, hooks, and distribution' },
+  outreach: { label: 'Outreach desk',    accent: '#be185d', soft: '#fdf2f8', icon: Send,     note: 'ICP, ranked prospects, sequence, and signals' },
+  business: { label: 'Operating desk',   accent: '#0369a1', soft: '#f0f9ff', icon: Gauge,    note: 'Unit economics, pricing, risks, and the fatal metric' },
+  strategy: { label: 'Decision memo',    accent: '#4338ca', soft: '#eef2ff', icon: Gavel,    note: 'Options scored, decision taken, tripwire set' },
+  general:  { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
 };
+
+// Per-section icons matched by heading keyword — the row-cards read like a
+// specialist's dossier, not uniform bullets. Fallback = accent dot (existing).
+const SECTION_ICONS = {
+  market:   [[/landscape/i, Layers], [/win/i, Crown], [/threat|gap/i, AlertTriangle], [/move|recommend/i, Rocket]],
+  content:  [[/pillar/i, Boxes], [/calendar/i, Clock], [/hook|angle/i, Lightbulb], [/distribution/i, Network]],
+  outreach: [[/profile|icp/i, Target], [/prospect/i, Users], [/sequence/i, ListChecks], [/metric|signal/i, Gauge]],
+  business: [[/economic/i, Gauge], [/pricing|positioning/i, Tag], [/risk/i, AlertTriangle], [/kills/i, Swords]],
+  strategy: [[/decision/i, Gavel], [/option/i, Scale], [/rationale/i, Brain], [/tripwire/i, AlertTriangle]],
+};
+function sectionIconFor(kind, title) {
+  for (const [re, Icon] of (SECTION_ICONS[kind] || [])) if (re.test(title || '')) return Icon;
+  return null;
+}
 
 function splitSynthesisSections(content) {
   const lines = String(content || '').replace(/\r/g, '').split('\n');
@@ -149,9 +171,12 @@ function splitSynthesisSections(content) {
   return sections.filter((section) => section.body.join('').trim());
 }
 
-function TaskSynthesisRenderer({ taskTag, content }) {
-  const key = String(taskTag || 'GENERAL').toUpperCase();
-  const spec = SYNTHESIS_PRESENTATIONS[key] || SYNTHESIS_PRESENTATIONS.GENERAL;
+function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
+  // room_kind (from skill_used events) wins; task tag stays as the legacy alias.
+  const kind = String(roomKind || '').toLowerCase();
+  const spec = SYNTHESIS_PRESENTATIONS[kind]
+    || SYNTHESIS_PRESENTATIONS[String(taskTag || 'GENERAL').toUpperCase()]
+    || SYNTHESIS_PRESENTATIONS.GENERAL;
   const Icon = spec.icon;
   const sections = splitSynthesisSections(content);
   return (
@@ -160,7 +185,9 @@ function TaskSynthesisRenderer({ taskTag, content }) {
         <div className="flex items-start gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
           <div className="min-w-0">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>{spec.label}</div>
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>
+              {kind && SYNTHESIS_PRESENTATIONS[kind] ? `${kind.toUpperCase()} · ${spec.label}` : spec.label}
+            </div>
             <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
           </div>
         </div>
@@ -169,7 +196,12 @@ function TaskSynthesisRenderer({ taskTag, content }) {
         {sections.map((section, index) => (
           <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
             <div className="mb-2 flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />
+              {(() => {
+                const SIcon = sectionIconFor(kind, section.title);
+                return SIcon
+                  ? <SIcon size={12} style={{ color: spec.accent }} />
+                  : <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />;
+              })()}
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
             </div>
             <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(section.body.join('\n').trim())}</div>
@@ -2327,6 +2359,9 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   const gathers = lines.filter(l => l.t === 'gather');
   const webIntels = lines.filter(l => l.t === 'web_intel');
   const skillUses = lines.filter(l => l.t === 'skill_used');
+  // Room kind for the sealed report's desk identity — already emitted on every
+  // skill_used event; old turns without it fall back to the task-tag alias.
+  const roomKind = (skillUses.find(sk => sk.room_kind) || {}).room_kind || '';
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -2773,7 +2808,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
               ) : null}
             </div>
             <div className="px-4 py-3">
-              <TaskSynthesisRenderer taskTag={taskTag} content={synthLine.content} />
+              <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
               <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
