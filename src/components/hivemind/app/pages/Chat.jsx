@@ -929,6 +929,9 @@ export function ChatPanel({ isOpen, onClose }) {
           model: selectedModel,
           history: fullHistory,
           language: lang2,
+          // Match Overview: use the bounded tool router for grounded recall,
+          // workspace inventory requests, and authorized connector actions.
+          router: 'tool',
           ...(activeProjectId
             ? { project_id: activeProjectId, project_ids: [activeProjectId] }
             : {}),

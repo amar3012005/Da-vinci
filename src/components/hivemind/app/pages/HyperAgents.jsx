@@ -26,11 +26,13 @@ import {
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, Target, Eye, Pencil,
-  User, Gauge, CreditCard, Settings, Building2,
+  ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
+  User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
+  MapPin, Mail,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
+import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, GmailConnectGate } from '../hyperagents/elements';
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
@@ -123,6 +125,102 @@ const ROOM_FORMATS = [
     labelKey: 'hyperAgents.tmplStandupLabel',   label: 'Standup',
     descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
 ];
+
+const SYNTHESIS_PRESENTATIONS = {
+  RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
+  OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
+  MARKETING: { label: 'Campaign board', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Positioning, assets, channels, and experiments' },
+  STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
+  FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
+  GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+  // Room-KIND desks (preferred key — derived from skill_used.room_kind; the
+  // upper-case task tags above remain as aliases for old turns):
+  market:   { label: 'Competitive desk', accent: '#0f766e', soft: '#ecfdf5', icon: Layers,   note: 'Landscape, asymmetries, threats, and the next moves' },
+  content:  { label: 'Editorial desk',   accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Pillars, calendar, hooks, and distribution' },
+  outreach: { label: 'Outreach desk',    accent: '#be185d', soft: '#fdf2f8', icon: Send,     note: 'ICP, ranked prospects, sequence, and signals' },
+  business: { label: 'Operating desk',   accent: '#0369a1', soft: '#f0f9ff', icon: Gauge,    note: 'Unit economics, pricing, risks, and the fatal metric' },
+  strategy: { label: 'Decision memo',    accent: '#4338ca', soft: '#eef2ff', icon: Gavel,    note: 'Options scored, decision taken, tripwire set' },
+  general:  { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+};
+
+// Per-section icons matched by heading keyword — the row-cards read like a
+// specialist's dossier, not uniform bullets. Fallback = accent dot (existing).
+const SECTION_ICONS = {
+  market:   [[/landscape/i, Layers], [/win/i, Crown], [/threat|gap/i, AlertTriangle], [/move|recommend/i, Rocket]],
+  content:  [[/pillar/i, Boxes], [/calendar/i, Clock], [/hook|angle/i, Lightbulb], [/distribution/i, Network]],
+  outreach: [[/profile|icp/i, Target], [/prospect/i, Users], [/sequence/i, ListChecks], [/metric|signal/i, Gauge]],
+  business: [[/economic/i, Gauge], [/pricing|positioning/i, Tag], [/risk/i, AlertTriangle], [/kills/i, Swords]],
+  strategy: [[/decision/i, Gavel], [/option/i, Scale], [/rationale/i, Brain], [/tripwire/i, AlertTriangle]],
+};
+function sectionIconFor(kind, title) {
+  for (const [re, Icon] of (SECTION_ICONS[kind] || [])) if (re.test(title || '')) return Icon;
+  return null;
+}
+
+function splitSynthesisSections(content) {
+  const lines = String(content || '').replace(/\r/g, '').split('\n');
+  const sections = [];
+  let current = { title: 'Executive summary', body: [] };
+  for (const line of lines) {
+    const heading = line.match(/^#{1,3}\s+(.+?)\s*$/);
+    if (heading) {
+      if (current.body.length || current.title !== 'Executive summary') sections.push(current);
+      current = { title: heading[1], body: [] };
+    } else current.body.push(line);
+  }
+  if (current.body.length || !sections.length) sections.push(current);
+  return sections.filter((section) => section.body.join('').trim());
+}
+
+function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
+  // room_kind (from skill_used events) wins; task tag stays as the legacy alias.
+  const kind = String(roomKind || '').toLowerCase();
+  const spec = SYNTHESIS_PRESENTATIONS[kind]
+    || SYNTHESIS_PRESENTATIONS[String(taskTag || 'GENERAL').toUpperCase()]
+    || SYNTHESIS_PRESENTATIONS.GENERAL;
+  const Icon = spec.icon;
+  const sections = splitSynthesisSections(content);
+  return (
+    <div className="overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: `${spec.accent}33` }}>
+      <div className="px-4 py-3" style={{ background: `linear-gradient(110deg, ${spec.soft}, white)` }}>
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>
+              {kind && SYNTHESIS_PRESENTATIONS[kind] ? `${kind.toUpperCase()} · ${spec.label}` : spec.label}
+            </div>
+            <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-px bg-[#e9e6e0]">
+        {sections.map((section, index) => (
+          <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
+            <div className="mb-2 flex items-center gap-2">
+              {(() => {
+                const SIcon = sectionIconFor(kind, section.title);
+                return SIcon
+                  ? <SIcon size={12} style={{ color: spec.accent }} />
+                  : <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />;
+              })()}
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
+            </div>
+            {(() => {
+              const bodyMd = section.body.join('\n').trim();
+              // An outreach section that IS an email renders as a real email
+              // artifact (envelope + letter body), never raw markdown prose.
+              const email = parseEmailMarkdown(bodyMd);
+              if (email) {
+                return <EmailBlock subject={email.subject} envelope={email.envelope} body={email.body} renderMarkdown={renderMarkdownLite} />;
+              }
+              return <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(bodyMd)}</div>;
+            })()}
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
@@ -589,18 +687,23 @@ function hyperEventKey(event, index) {
 }
 
 function mergeHyperEvents(base, overlay) {
-  const merged = Array.isArray(base) ? [...base] : [];
+  // Returns the SAME array reference when nothing new arrived — the 250ms
+  // fallback poll calls this constantly, and a fresh identity every tick made
+  // React re-render the whole thread 4×/sec (visible jank on long turns).
+  const current = Array.isArray(base) ? base : [];
   const incoming = Array.isArray(overlay) ? overlay : [];
-  if (!incoming.length) return merged;
-  const seen = new Set(merged.map(hyperEventKey));
+  if (!incoming.length) return current;
+  const seen = new Set(current.map(hyperEventKey));
+  let merged = null;
   incoming.forEach((event, index) => {
     const key = hyperEventKey(event, index);
     if (!seen.has(key)) {
       seen.add(key);
+      if (!merged) merged = [...current];
       merged.push(event);
     }
   });
-  return merged;
+  return merged || current;
 }
 
 function RoomThread({ roomId, onArchived }) {
@@ -625,6 +728,13 @@ function RoomThread({ roomId, onArchived }) {
   const [evoFlash, setEvoFlash] = useState(null);
   const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
+  // Gmail connect gate — the outreach-powers nudge. Opens once per room when a
+  // task room loads and no Google connector is connected; also opened when Send
+  // is pressed with no connection. `null` = unknown (still checking).
+  const [gmailConnected, setGmailConnected] = useState(null);
+  const [gmailGateOpen, setGmailGateOpen] = useState(false);
+  const gmailGateShownRef = useRef(false);
+  const navigate = useNavigate();
   // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
   const [showSwarm, setShowSwarm] = useState(false);
   const [swarmDraft, setSwarmDraft] = useState('');
@@ -635,6 +745,10 @@ function RoomThread({ roomId, onArchived }) {
   const [dmAgent, setDmAgent] = useState(null);
   const [flybyBusy, setFlybyBusy] = useState(false);
   const [approveBusy, setApproveBusy] = useState(null); // approval_id being resolved
+  const [callOpen, setCallOpen] = useState(false);
+  const [callNumber, setCallNumber] = useState('');
+  const [callBusy, setCallBusy] = useState(false);
+  const [callStatus, setCallStatus] = useState(null);
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -660,6 +774,28 @@ function RoomThread({ roomId, onArchived }) {
   useEffect(() => {
     setGoalDraft(room?.goal || '');
   }, [room?.id, room?.goal]);
+
+  // Ringing overlay: the call visibly "happens" (pulse rings while Telnyx
+  // dials, then in-progress). {number, status: dialing|ok|error} | null.
+  const [callOverlay, setCallOverlay] = useState(null);
+  const handleRoomCall = useCallback(async () => {
+    const to = callNumber.trim();
+    if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
+    setCallBusy(true);
+    setCallStatus(null);
+    setCallOverlay({ number: to, status: 'dialing' });
+    try {
+      const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
+      setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+      setCallOverlay({ number: to, status: 'ok' });
+      setCallNumber('');
+    } catch (err) {
+      setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
+      setCallOverlay({ number: to, status: 'error' });
+    } finally {
+      setCallBusy(false);
+    }
+  }, [callBusy, callNumber, room?.goal, roomId, t]);
 
   // Change room scope after creation: null = org-wide, <id> = project HIVEMIND.
   const handleSetScope = useCallback(async (newProjectId) => {
@@ -694,13 +830,22 @@ function RoomThread({ roomId, onArchived }) {
   }, []);
 
   // Load room + history
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts = {}) => {
     setError(null);
-    setLoading(true);
+    // quiet = refresh in place (turn seal, background refetch). The full-screen
+    // spinner is ONLY for the first mount — flipping it on seal made the whole
+    // thread blink to a loader and back right after the synthesis landed.
+    if (!opts.quiet) setLoading(true);
     try {
       const resp = await apiClient.getHyperRoom(roomId);
       setRoom(resp.room);
-      setTurns(resp.turns || []);
+      const nextTurns = resp.turns || [];
+      setTurns(nextTurns);
+      // Task rooms may already be running because the control plane starts
+      // them before navigation. Adopt that turn so SSE and the DB fallback
+      // poll begin immediately instead of waiting for a reload.
+      const liveTurn = [...nextTurns].reverse().find((turn) => turn?.status === 'live');
+      setActiveTurnId(liveTurn?.id || null);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -710,6 +855,33 @@ function RoomThread({ roomId, onArchived }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Probe Gmail connection so outreach rooms can nudge (and gate Send).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const st = await apiClient.getConnectorConnectionStatus();
+        const on = (st?.connectors || []).some(c => c?.connection
+          && (String(c.id || '').toLowerCase() === 'gmail' || String(c.id || '').toLowerCase().startsWith('google')));
+        if (alive) setGmailConnected(!!on);
+      } catch { if (alive) setGmailConnected(false); }
+    })();
+    return () => { alive = false; };
+  }, [roomId]);
+
+  // Auto-open the gate ONCE for an outreach-shaped room with no Gmail.
+  useEffect(() => {
+    if (gmailConnected === false && !gmailGateShownRef.current && room) {
+      const outreachy = /outreach|cold[- ]?email|email (campaign|sequence|messaging)|messaging|prospect/i
+        .test(`${room.name || ''} ${room.goal || ''}`);
+      if (outreachy) { gmailGateShownRef.current = true; setGmailGateOpen(true); }
+    }
+  }, [gmailConnected, room]);
+
+  const connectGmail = useCallback(() => {
+    navigate('/hivemind/app/connectors?connect=gmail');
+  }, [navigate]);
+
   // Auto-scroll on new content — ONLY when pinned to the bottom, and INSTANTLY (no 'smooth', which
   // fights itself when live SSE events fire in rapid succession). Scrolls just the thread container,
   // never the page. This removes the jank + the scroll-up-yank-back glitch.
@@ -718,9 +890,14 @@ function RoomThread({ roomId, onArchived }) {
     if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
   }, [turns, liveLines]);
 
+  // One-shot seal latch per live turn: SSE and the fallback poll BOTH detect the
+  // seal (they race) — without the latch load() fired twice back-to-back.
+  const sealedRef = useRef(false);
+
   // SSE subscription while a turn is live
   useEffect(() => {
     if (!activeTurnId) return;
+    sealedRef.current = false;
     const url = apiClient.hyperTurnStreamUrl(roomId, activeTurnId);
     let es;
     try {
@@ -744,10 +921,15 @@ function RoomThread({ roomId, onArchived }) {
         setLiveLines(prev => mergeLiveEvents(prev, [{ ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]));
         if (e.type === 'seal' || data.t === 'seal') {
           es.close();
-          setActiveTurnId(null);
-          setSubmitting(false);
-          // Refetch the sealed turn for cached DB read
-          load();
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            // Quiet refetch FIRST so the sealed turn is in `turns` before the
+            // live lines are released — no spinner, no content gap, no blink.
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
         }
       } catch {
         // ignore
@@ -777,8 +959,14 @@ function RoomThread({ roomId, onArchived }) {
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
+      // Places prospect discovery — 'using Maps' chip.
+      'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
+      'skill_used',
+      // Post-seal follow-up suggestions (clickable, one-click auto-run):
+      'next_tasks',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it
@@ -801,9 +989,13 @@ function RoomThread({ roomId, onArchived }) {
           stopped = true;
           clearInterval(poll);
           try { es.close(); } catch { /* ignore */ }
-          setActiveTurnId(null);
-          setSubmitting(false);
-          load();
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
         }
       } catch { /* ignore — SSE may still deliver */ }
     };
@@ -1084,6 +1276,31 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
+  // this room (keeps the journal/context; no dashboard round-trip).
+  async function runNextTask(taskLine) {
+    if (submitting || activeTurnId) return;
+    const msg = `${taskLine.title}${taskLine.detail ? ` — ${taskLine.detail}` : ''}`;
+    setSubmitting(true);
+    const tempId = (window.crypto?.randomUUID?.() || `pending-${Date.now()}`);
+    setTurns(prev => [
+      ...prev,
+      { id: tempId, seq: (prev[prev.length - 1]?.seq || 0) + 1, userMessage: msg, status: 'live', lines: [], createdAt: new Date().toISOString() },
+    ]);
+    setActiveTurnId(tempId);
+    try {
+      const resp = await apiClient.postHyperTurn(roomId, {
+        user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId });
+      setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
+      setActiveTurnId(resp.turn_id);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+      setTurns(prev => prev.filter(trn => trn.id !== tempId));
+      setActiveTurnId(null);
+      setSubmitting(false);
+    }
+  }
+
   async function handleFlybyDecision(turn, decision, spec) {
     if (!turn?.id || String(turn.id).startsWith('pending-') || flybyBusy) return;
     setFlybyBusy(true);
@@ -1152,6 +1369,8 @@ function RoomThread({ roomId, onArchived }) {
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
+      <GmailConnectGate open={gmailGateOpen} onClose={() => setGmailGateOpen(false)}
+        onConnect={connectGmail} connecting={false} />
       <section className="flex-1 min-w-0 min-h-0 flex flex-col">
         {/* Header */}
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
@@ -1427,6 +1646,16 @@ function RoomThread({ roomId, onArchived }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!archived && (
+              <button
+                type="button"
+                onClick={() => { setCallStatus(null); setCallOpen(true); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e0db] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0a0a0a] hover:border-[#117dff]/50 hover:text-[#117dff]"
+                title={t('hyperAgents.callWithTaraHint', 'Place an approved outbound call through TARA')}
+              >
+                <PhoneCall size={12} /> {t('hyperAgents.callWithTara', 'Call with TARA')}
+              </button>
+            )}
             <span
               className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700 text-[10px] font-mono font-semibold"
               title={t('hyperAgents.totalLlmTokens', 'Total LLM tokens used in this room')}
@@ -1454,6 +1683,52 @@ function RoomThread({ roomId, onArchived }) {
           </div>
         </header>
 
+        {callOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !callBusy && setCallOpen(false)}>
+            <div className="w-full max-w-md rounded-xl border border-[#e3e0db] bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
+              <div className="flex items-start gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-[#117dff]"><PhoneCall size={16} /></div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[14px] font-semibold text-[#0a0a0a]">{t('hyperAgents.callTitle', 'Call with TARA')}</h3>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-[#737373]">{t('hyperAgents.callDescription', 'The destination must be allowlisted. TARA uses this room goal and records the outcome for your workspace.')}</p>
+                </div>
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="text-[#a3a3a3] hover:text-[#0a0a0a] disabled:opacity-50"><X size={16} /></button>
+              </div>
+              <label className="mt-4 block text-[10px] font-mono uppercase tracking-wider text-[#737373]">{t('hyperAgents.destination', 'Destination (E.164)')}</label>
+              <input
+                autoFocus
+                type="tel"
+                value={callNumber}
+                onChange={event => setCallNumber(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter') handleRoomCall(); }}
+                placeholder="+49123456789"
+                className="mt-1.5 h-10 w-full rounded-lg border border-[#e3e0db] px-3 font-mono text-[13px] outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/10"
+              />
+              {callStatus && (
+                <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${callStatus.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>
+                  {callStatus.message}
+                </div>
+              )}
+              {callOverlay && (
+                <CallRingingCard number={callOverlay.number} status={callOverlay.status}
+                  onClose={() => setCallOverlay(null)} />
+              )}
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" disabled={callBusy} onClick={() => setCallOpen(false)} className="h-9 px-3 text-[11px] font-medium text-[#737373] disabled:opacity-50">{t('common.cancel', 'Cancel')}</button>
+                <button
+                  type="button"
+                  onClick={handleRoomCall}
+                  disabled={callBusy || !/^\+[1-9]\d{7,14}$/.test(callNumber.trim())}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0a0a0a] px-3 text-[11px] font-semibold text-white disabled:opacity-50"
+                >
+                  {callBusy ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
+                  {callBusy ? t('hyperAgents.dialing', 'Dialing…') : t('hyperAgents.startCall', 'Start call')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
           {turns.length === 0 && (
@@ -1471,11 +1746,13 @@ function RoomThread({ roomId, onArchived }) {
               busy={submitting}
               onClear={() => handleClearTurn(turn)}
               onRerun={() => handleRerunTurn(turn)}
+              onRunNextTask={runNextTask}
               onFlybyDecision={(decision, spec) => handleFlybyDecision(turn, decision, spec)}
               flybyBusy={flybyBusy}
               onApprove={(approvalId, decision) => handleApprove(turn, approvalId, decision)}
               approveBusy={approveBusy}
               roomId={roomId}
+              taskTag={room?.taskTag || 'GENERAL'}
             />
           ))}
           {error && (
@@ -1916,17 +2193,109 @@ function SimTheater({ simReport, onOpenFull }) {
   );
 }
 
+// Outreach prospect stack. Renders every firm the room found via Google Places as a
+// stacked card with all its info (phone / website / address). Firms we resolved a real
+// email for (Impressum scrape) get a green "email verified" badge and sort first — ONLY
+// those are the ones the room will actually email. Pure render over the `prospects` event.
+function ProspectStack({ ev }) {
+  const [open, setOpen] = useState(true);
+  const rows = Array.isArray(ev?.prospects) ? ev.prospects : [];
+  if (!rows.length) return null;
+  const verified = rows.filter(r => r.email);
+  const ordered = [...rows].sort((a, b) => (b.email ? 1 : 0) - (a.email ? 1 : 0));
+  return (
+    <div className="pl-2">
+      <button onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#525252] hover:text-[#0a0a0a] transition-colors">
+        <MapPin size={12} className="text-[#117dff]" />
+        <span>{rows.length} prospects</span>
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 normal-case tracking-normal">
+          <CheckCheck size={10} /> {verified.length} email verified
+        </span>
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {ev?.query && (
+        <div className="mt-0.5 text-[10px] text-[#a3a3a3] font-mono truncate">“{ev.query}”</div>
+      )}
+      {open && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {ordered.map((r, i) => {
+            const has = !!r.email;
+            return (
+              <div key={i}
+                className={`rounded-lg border px-3 py-2 ${has ? 'border-emerald-200 bg-emerald-50/40' : 'border-[#e3e0db] bg-white'}`}>
+                <div className="flex items-center gap-2">
+                  <Building2 size={13} className="text-[#525252] shrink-0" />
+                  <span className="text-[12px] font-semibold text-[#0a0a0a] truncate">{r.company}</span>
+                  {has ? (
+                    <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-emerald-100 text-emerald-700 shrink-0"
+                      title="Email found via the firm's Impressum — this prospect is outreach-ready and will be emailed.">
+                      <CheckCheck size={10} /> email verified
+                    </span>
+                  ) : (
+                    <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-[#f4f2ec] text-[#a3a3a3] shrink-0"
+                      title="No public email found — not emailed (call/website only).">
+                      no email
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1.5 flex flex-col gap-0.5 text-[11px] text-[#525252]">
+                  {has && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={11} className="text-emerald-600 shrink-0" />
+                      <span className="font-mono text-emerald-700 truncate">{r.email}</span>
+                    </div>
+                  )}
+                  {r.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <PhoneCall size={11} className="text-[#a3a3a3] shrink-0" />
+                      <span className="font-mono truncate">{r.phone}</span>
+                    </div>
+                  )}
+                  {r.website && (
+                    <div className="flex items-center gap-1.5">
+                      <Globe size={11} className="text-[#a3a3a3] shrink-0" />
+                      <a href={r.website} target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-[#117dff] hover:underline truncate">{r.website.replace(/^https?:\/\//, '')}</a>
+                    </div>
+                  )}
+                  {r.address && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={11} className="text-[#a3a3a3] shrink-0" />
+                      <span className="truncate">{r.address}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Claude-style tool-activity timeline. Reshapes the turn's gather/tool/connector/web
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
 // Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
-function ToolTimeline({ gathers, webIntels, sealed }) {
+function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sealed }) {
   const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(true);
 
   const recalls = (gathers || []).filter(g => !g.tool);
   const connectorReads = (gathers || []).filter(g => g.tool);
   const steps = [];
+  // Room METHOD skills the turn loaded (progressive disclosure) — credibility
+  // chips: "the team worked under competitor-teardown", not background magic.
+  (skillUses || []).forEach((s, i) => {
+    if (!s.skill) return;
+    steps.push({
+      key: `skill-${i}`, ts: s.ts || 0, kind: 'skill',
+      label: t('hyperAgents.tlSkill', 'Method: {{name}}', { name: s.skill }),
+      chip: s.room_kind || null,
+    });
+  });
   if (recalls.length) {
     const facts = recalls.reduce((n, g) => n + (g.memory_hits || 0), 0);
     steps.push({
@@ -1950,12 +2319,21 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
       sources: (w.sources || []).slice(0, 4),
     });
   });
+  (prospectHunts || []).forEach((p, i) => {
+    steps.push({
+      key: `places-${i}`, ts: p.ts || 0, kind: 'places',
+      label: t('hyperAgents.tlPlaces', 'Using Maps'), detail: p.query || null,
+      chip: (p.count != null) ? t('hyperAgents.tlFirms', '{{n}} firms', { n: p.count }) : null,
+    });
+  });
   steps.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   if (!steps.length) return null;
 
   const iconFor = (s) => {
     if (s.kind === 'recall') return <Brain size={12} className="text-[#117dff]" />;
     if (s.kind === 'web') return <Globe size={12} className="text-[#117dff]" />;
+    if (s.kind === 'places') return <MapPin size={12} className="text-[#34a853]" />;
+    if (s.kind === 'skill') return <Sparkles size={12} className="text-[#117dff]" />;
     const logo = BRAND_LOGOS[s.connector] || BRAND_LOGOS[String(s.connector || '').replace(/_/g, '-')]
       || BRAND_LOGOS[String(s.connector || '').replace(/-/g, '_')];
     if (logo) return <img src={logo} alt="" className="w-3 h-3" onError={e => { e.currentTarget.style.display = 'none'; }} />;
@@ -2012,7 +2390,19 @@ function ToolTimeline({ gathers, webIntels, sealed }) {
   );
 }
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId }) {
+function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
+  // Per-room send automation for outbound email approvals ("automate from next
+  // turn"). Client-side latch on the existing HITL gate: the approve call is
+  // identical, only the click is automated. Persisted per room.
+  const autoSendKey = `hm_auto_send_${roomId || 'room'}`;
+  const [autoSendOn, setAutoSendOn] = useState(() => {
+    try { return window.localStorage.getItem(autoSendKey) === '1'; } catch { return false; }
+  });
+  const toggleAutoSend = () => setAutoSendOn((p) => {
+    const v = !p; try { window.localStorage.setItem(autoSendKey, v ? '1' : '0'); } catch { /* ignore */ }
+    return v;
+  });
+  const roomAgentName = (participants && participants[0] && (participants[0].name || participants[0].slug)) || 'HIVEMIND agent';
   const { t } = useTranslation('dashboard');
   // Merge sealed lines with any in-flight overlay
   const lines = useMemo(() => {
@@ -2022,6 +2412,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   }, [turn.lines, liveLines]);
 
   const router = lines.find(l => l.t === 'router') || lines.find(l => l.t === 'router_bootstrap');
+  const visibleUserMessage = (() => {
+    const message = turn.userMessage || turn.user_message || '';
+    const task = message.match(/^You are the .*? team\. Execute this task now\.\s*TASK \[[^\]]+\]:\s*([^\n]+)/s);
+    return task ? `Start task: ${task[1].trim()}.` : message;
+  })();
   const leadLine = lines.find(l => l.t === 'line' && l.kind === 'lead');
   const synthLine = lines.find(l => l.t === 'line' && l.kind === 'synthesis');
   const rescueLine = lines.find(l => l.t === 'line' && l.kind === 'rescue');
@@ -2101,6 +2496,19 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
   const webIntels = lines.filter(l => l.t === 'web_intel');
+  const prospectHunts = lines.filter(l => l.t === 'prospects');
+  // Latest prospects event per query (a re-run replaces, not stacks, the same search)
+  // — rendered as the full stacked-card view with email-verified badges below.
+  const prospectStacks = (() => {
+    const byQuery = {};
+    prospectHunts.filter(l => Array.isArray(l.prospects) && l.prospects.length)
+      .forEach(l => { byQuery[l.query || '_'] = l; });
+    return Object.values(byQuery);
+  })();
+  const skillUses = lines.filter(l => l.t === 'skill_used');
+  // Room kind for the sealed report's desk identity — already emitted on every
+  // skill_used event; old turns without it fall back to the task-tag alias.
+  const roomKind = (skillUses.find(sk => sk.room_kind) || {}).room_kind || '';
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -2127,7 +2535,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {/* User bubble */}
       <div className="flex flex-col items-end">
         <div className="max-w-[80%] bg-violet-500 text-white text-[13px] rounded-2xl rounded-tr-md px-3 py-2 shadow-sm">
-          {turn.userMessage || turn.user_message}
+          {visibleUserMessage}
         </div>
         {(() => {
           const uts = turn.createdAt ? new Date(turn.createdAt).getTime() : (lines[0]?.ts || 0);
@@ -2212,7 +2620,11 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} sealed={!!seal} />
+      <ToolTimeline gathers={gathers} webIntels={webIntels} prospectHunts={prospectHunts} skillUses={skillUses} sealed={!!seal} />
+
+      {/* OUTREACH PROSPECTS — full stacked cards with all firm info; green "email
+          verified" badge on the ones we found an email for (the ones that get emailed). */}
+      {prospectStacks.map((pe, i) => <ProspectStack key={`ps-${i}`} ev={pe} />)}
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (
@@ -2546,8 +2958,8 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                 <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
               ) : null}
             </div>
-            <div className="px-4 py-3 text-[13px] text-[#0a0a0a] leading-relaxed break-words space-y-1">
-              {renderMarkdownLite(synthLine.content)}
+            <div className="px-4 py-3">
+              <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
               <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
@@ -2747,6 +3159,23 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             const resolved = resolutionById[a.approval_id];
             const busyHere = approveBusy === a.approval_id;
             const artifactUrl = resolved?.result?.result?.url || resolved?.result?.url;
+            // Outbound email → the cinematic Gmail-style compose card: the agent
+            // visibly types the draft, the user sends with one click (or the
+            // room's auto-send automation fires once typing completes).
+            if (a.body_md && !archived) {
+              return (
+                <EmailComposeCard key={a.approval_id || i}
+                  approval={a}
+                  fromName={roomAgentName}
+                  resolved={resolved}
+                  busy={busyHere}
+                  autoSend={autoSendOn}
+                  onToggleAutoSend={toggleAutoSend}
+                  onSend={() => onApprove && onApprove(a.approval_id, 'approve')}
+                  onDeny={() => onApprove && onApprove(a.approval_id, 'deny')}
+                />
+              );
+            }
             return (
               <div key={a.approval_id || i} className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -2820,6 +3249,29 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
           {deadEndLine.content}
         </div>
       )}
+      {seal && (() => {
+        const nt = lines.filter(l => l && l.t === 'next_tasks').flatMap(l => l.tasks || []);
+        if (!nt.length || archived) return null;
+        return (
+          <div className="mt-2 space-y-1.5">
+            <div className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">Suggested next moves — one click runs it</div>
+            <div className="flex flex-wrap gap-1.5">
+              {nt.map((task, i) => (
+                <button key={i} type="button" disabled={busy} onClick={() => onRunNextTask && onRunNextTask(task)}
+                  title={task.detail || ''}
+                  className="group text-left rounded-lg border border-[#117dff]/30 bg-[#117dff]/5 hover:bg-[#117dff]/10 px-3 py-2 max-w-[260px] transition-colors">
+                  <div className="text-[11px] font-medium text-[#0a0a0a] flex items-center gap-1.5">
+                    <span className="px-1 py-0.5 rounded bg-[#117dff]/10 text-[#117dff] text-[8px] font-mono">{task.tag || 'NEXT'}</span>
+                    {task.title}
+                  </div>
+                  {task.detail && <div className="text-[10px] text-[#525252] mt-0.5 line-clamp-2">{task.detail}</div>}
+                  <div className="text-[9px] font-mono text-[#117dff] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">▶ run now</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {seal && (
         <div className="space-y-1 py-1">
           <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${

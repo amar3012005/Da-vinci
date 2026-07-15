@@ -10,10 +10,12 @@ import { QuickRecorderProvider } from './shared/QuickRecorderProvider';
 // Pages (lazy loaded for code splitting)
 const Overview = React.lazy(() => import('./pages/Overview'));
 const DocsPage = React.lazy(() => import('../DocsPage'));
-const TalkToHiveMobile = React.lazy(() => import('./pages/TalkToHiveMobile'));
-const MobileMemories = React.lazy(() => import('./pages/MobileMemories'));
-const MobileMeetingNotes = React.lazy(() => import('./pages/MobileMeetingNotes'));
-const MobileConnectors = React.lazy(() => import('./pages/MobileConnectors'));
+const TalkToHiveMobile = React.lazy(() => import('./mobile/pages/TalkToHiveMobile'));
+const MobileMemories = React.lazy(() => import('./mobile/pages/MobileMemories'));
+const MobileMeetingNotes = React.lazy(() => import('./mobile/pages/MobileMeetingNotes'));
+const MobileConnectors = React.lazy(() => import('./mobile/pages/MobileConnectors'));
+const MobileProjects = React.lazy(() => import('./mobile/pages/MobileProjects'));
+const MobileUsage = React.lazy(() => import('./mobile/pages/MobileUsage'));
 const Memories = React.lazy(() => import('./pages/Memories'));
 const MeetingNotes = React.lazy(() => import('./pages/MeetingNotes'));
 const ApiKeys = React.lazy(() => import('./pages/ApiKeys'));
@@ -46,6 +48,7 @@ const DigitalEmployees = React.lazy(() => import('./pages/DigitalEmployees'));
 const HyperAgents = React.lazy(() => import('./pages/HyperAgents'));
 const HermesAgents = React.lazy(() => import('./pages/HermesAgents'));
 const WorkspaceAdmin = React.lazy(() => import('./pages/WorkspaceAdmin'));
+const PlatformAdmin = React.lazy(() => import('./pages/PlatformAdmin'));
 
 // Catches render/chunk-load errors in any lazy page so a single broken page
 // (a throwing component, a missing api-client method, a stale lazy chunk after
@@ -109,6 +112,7 @@ export default function HiveMindApp() {
         {/* Public developer docs — no auth */}
         <Route path="docs" element={<PageSuspense><DocsPage /></PageSuspense>} />
         <Route path="cli-verified" element={<CliVerified />} />
+        <Route path="platform-admin" element={<PageSuspense><PlatformAdmin /></PageSuspense>} />
         {/* Mobile dedicated chat — no AppShell chrome, full screen */}
         <Route
           path="m/chat"
@@ -139,6 +143,22 @@ export default function HiveMindApp() {
           element={
             <ProtectedRoute>
               <PageSuspense><MobileConnectors /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/projects"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileProjects /></PageSuspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="m/usage"
+          element={
+            <ProtectedRoute>
+              <PageSuspense><MobileUsage /></PageSuspense>
             </ProtectedRoute>
           }
         />
@@ -206,7 +226,7 @@ export default function HiveMindApp() {
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="app/overview" replace />} />
+        <Route path="*" element={<Navigate to="/hivemind/app/overview" replace />} />
       </Routes>
     </AuthProvider>
   );

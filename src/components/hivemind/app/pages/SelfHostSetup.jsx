@@ -5,9 +5,15 @@ import { useCopyToClipboard } from '../shared/hooks';
 
 const REPO = 'https://github.com/amar3012005/HIVEMIND.git';
 const DEFAULT_SCOPES = ['read', 'write'];
-// One command: clone the byod bundle, run setup.sh with the key prefilled (setup.sh reads HIVEMIND_API_KEY).
+const CONTROL_PLANE_URL = (process.env.REACT_APP_CONTROL_PLANE_URL || 'https://api.singulancelabs.com').replace(/\/$/, '');
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+// Keep the agent enrollment on the same control-plane pool as the dashboard.
 const installCmd = (key) =>
-  `git clone --branch byod --single-branch ${REPO} hivemind-byod && cd hivemind-byod && HIVEMIND_API_KEY=${key || '<your-key>'} ./setup.sh`;
+  `git clone --branch byod --single-branch ${REPO} hivemind-byod && cd hivemind-byod && HIVEMIND_API_KEY=${shellQuote(key || '<your-key>')} HIVEMIND_CENTRAL_URL=${shellQuote(CONTROL_PLANE_URL)} ./setup.sh`;
 
 // Self-host onboarding. Key is auto-minted on mount (no hunting in Settings). One command stands up
 // Postgres + the .amr agent on the customer box; a live poll confirms the agent connected.

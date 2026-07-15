@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   CreditCard,
@@ -13,8 +13,10 @@ import {
   Clock,
   HardDrive,
   Headphones,
+  Mic,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
@@ -199,11 +201,39 @@ const PLANS = [
   },
 ];
 
+function planFromBackend(raw) {
+  const fallback = PLANS.find((plan) => plan.id === raw?.id) || {};
+  const limits = raw?.limits || {};
+  return {
+    ...fallback,
+    ...raw,
+    price: raw?.price == null ? 'Custom' : `€${raw.price}`,
+    period: raw?.price == null ? '' : '/month',
+    features: fallback.features || [],
+    limits: {
+      tokens: limits.llmTokensPerMonth ?? null,
+      tokensDaily: limits.llmTokensPerDay ?? null,
+      memories: limits.maxMemories ?? null,
+      connections: limits.maxConnectors ?? null,
+      deepResearch: limits.deepResearchPerMonth ?? null,
+      deepResearchDaily: limits.deepResearchPerDay ?? null,
+      webIntel: limits.webIntelPerDay ?? null,
+      searches: limits.searchQueriesPerMonth ?? null,
+      searchesDaily: limits.searchQueriesPerDay ?? null,
+      users: limits.maxUsers ?? null,
+      kbPages: limits.knowledgeBasePagesPerMonth ?? null,
+      kbPagesDaily: limits.knowledgeBasePagesPerDay ?? null,
+      taraSeconds: limits.taraTalkSecondsPerMonth ?? null,
+      hyperAgentRuns: limits.hyperAgentRunsPerMonth ?? null,
+    },
+  };
+}
+
 // ─── Usage Meter ─────────────────────────────────────────────────────────────
 
 function UsageMeter({ label, used, limit, icon: Icon }) {
   const { t } = useTranslation('dashboard');
-  const isUnlimited = !limit;
+  const isUnlimited = limit == null || limit === -1;
   const pct = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
   const isNearLimit = pct > 80;
 
@@ -247,7 +277,6 @@ function UsageMeter({ label, used, limit, icon: Icon }) {
 function PlanCard({ plan, currentPlan, onSelect }) {
   const { t } = useTranslation('dashboard');
   const isCurrent = currentPlan === plan.id;
-  const isEnterprise = plan.id === 'enterprise';
 
   return (
     <motion.div
@@ -308,11 +337,6 @@ function PlanCard({ plan, currentPlan, onSelect }) {
         <div className="text-center py-2.5 rounded-lg bg-[#f3f1ec] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold font-['Space_Grotesk']">
           {t('billing.currentPlan', 'Current Plan')}
         </div>
-      ) : isEnterprise ? (
-        <button className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#f3f1ec] border border-[#d4d0ca] text-[#0a0a0a] text-[12px] font-semibold font-['Space_Grotesk'] hover:bg-[#eae7e1] transition-all">
-          {t('billing.contactSales', 'Contact Sales')}
-          <ArrowRight size={13} />
-        </button>
       ) : (
         <button
           onClick={() => onSelect(plan.id)}
@@ -335,12 +359,14 @@ function PlanCard({ plan, currentPlan, onSelect }) {
 export default function Billing() {
   const { t } = useTranslation('dashboard');
   const { org } = useAuth();
-  const [billingCycle, setBillingCycle] = useState('monthly');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [upgradeModal, setUpgradeModal] = useState(null);
   const [upgrading, setUpgrading] = useState(false);
-  const [upgraded, setUpgraded] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [dummyConfirming, setDummyConfirming] = useState(false);
+  const [checkoutNotice, setCheckoutNotice] = useState('');
 
-  const { data: profile, refetch: refetchProfile } = useApiQuery(
+  const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
     [],
   );
@@ -356,14 +382,16 @@ export default function Billing() {
     () => apiClient.getBillingPlan().catch(() => null),
     [],
   );
-  const { data: invoiceList } = useApiQuery(
+  const { data: usageSummary, refetch: refetchUsage } = useApiQuery(
+    () => apiClient.getUsage().catch(() => null),
+    [],
+  );
+  const { data: invoiceList, refetch: refetchInvoices } = useApiQuery(
     () => apiClient.listInvoices().catch(() => null),
     [],
   );
 
-  // Legacy /api/billing/usage shim kept so the meter sub-component (which
-  // still reads from `usage`) renders without a rewrite below.
-  const usage = billing
+  const usage = usageSummary || billing?.usage_summary || (billing
     ? {
         plan: billing.plan?.id,
         tokens:        { used: billing.usage?.tokensProcessed || 0 },
@@ -371,15 +399,19 @@ export default function Billing() {
         deepResearch:  { used: billing.usage?.deepResearchJobs || 0 },
         webIntel:      { used: billing.usage?.webIntelJobs || 0 },
         searches:      { used: billing.usage?.searchQueries || 0 },
-        uploads:       { used: billing.usage?.knowledgeBaseUploads || 0 },
         graphQueries:  { used: billing.usage?.graphQueries || 0 },
       }
-    : null;
+    : null);
 
   const subscription = billing?.subscription || {};
-  const stripeEnabled = Boolean(billing?.stripe_enabled);
-
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
+  const enterpriseEngagement = billing?.enterprise_engagement || null;
+  const dummyCheckoutId = searchParams.get('dummy_checkout');
+  const checkoutState = searchParams.get('checkout');
+  const planOptions = Array.isArray(billing?.all_plans) && billing.all_plans.length
+    ? billing.all_plans.map(planFromBackend)
+    : PLANS.filter((plan) => plan.id !== 'enterprise');
 
   const activeConnections = Array.isArray(connectors?.connectors)
     ? connectors.connectors.filter(c => c.status === 'connected' || c.status === 'healthy').length
@@ -391,35 +423,77 @@ export default function Billing() {
   const deepResearchUsed = usage?.deepResearch?.used ?? 0;
   const webIntelUsed = usage?.webIntel?.used ?? 0;
   const searchesUsed = usage?.searches?.used ?? profile?.searches_this_month ?? 0;
-  const kbPagesUsed = usage?.kbPages?.used ?? usage?.uploads?.used ?? 0;
+  const kbPagesUsed = usage?.kbPages?.used ?? 0;
   const graphQueriesUsed = usage?.graphQueries?.used ?? 0;
+  const taraSecondsUsed = usage?.taraSeconds?.used ?? 0;
+  const hyperAgentRunsUsed = usage?.hyperAgentRuns?.used ?? 0;
 
-  const currentPlanDef = PLANS.find((p) => p.id === currentPlan);
+  const currentPlanDef = billing?.plan
+    ? planFromBackend(billing.plan)
+    : planOptions.find((p) => p.id === currentPlan);
+
+  useEffect(() => {
+    if (checkoutState !== 'success') return undefined;
+    let cancelled = false;
+    const reconcile = async () => {
+      try {
+        const result = await apiClient.reconcileBillingCheckout();
+        if (cancelled) return;
+        await Promise.all([refetchBilling(), refetchUsage(), refetchInvoices()]);
+        setCheckoutNotice(result?.reconciled
+          ? `Payment confirmed. Your ${String(result.plan || '').toUpperCase()} plan is active.`
+          : 'Payment received. Your subscription is still being confirmed.');
+      } catch (error) {
+        if (!cancelled) setCheckoutNotice('Payment received. Refresh in a moment while we confirm your subscription.');
+      } finally {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      }
+    };
+    reconcile();
+    return () => { cancelled = true; };
+  }, [checkoutState, refetchBilling, refetchInvoices, refetchUsage, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
+    if (isEnterpriseWorkspace) return;
     setUpgrading(true);
     try {
-      // Self-serve checkout — opens Stripe-hosted checkout in same tab.
-      // Stripe webhook flips plan + subscription_status on success.
-      if (stripeEnabled) {
-        const res = await apiClient.createBillingCheckout(planId);
-        if (res?.checkout_url) {
-          window.location.href = res.checkout_url;
-          return;
-        }
+      const res = await apiClient.createBillingCheckout(planId, referralCode.trim());
+      if (res?.checkout_url) {
+        window.location.href = res.checkout_url;
+        return;
       }
-      // Legacy fallback: direct plan flip on deployments without Stripe.
-      await apiClient.core.post('/api/billing/upgrade', { plan: planId });
-      setUpgraded(true);
-      setUpgradeModal(null);
-      await refetchProfile();
-      await refetchBilling();
+      throw new Error('Self-serve checkout is not available for this plan. Contact support to change plans.');
     } catch (e) {
       console.error('Upgrade failed:', e);
       const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
       alert(`Upgrade failed: ${msg}`);
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleEnterpriseCheckout = async () => {
+    setUpgrading(true);
+    try {
+      const res = await apiClient.createEnterpriseCheckout();
+      if (!res?.checkout_url) throw new Error('Enterprise checkout is unavailable.');
+      window.location.href = res.checkout_url;
+    } catch (error) {
+      alert(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
+      setUpgrading(false);
+    }
+  };
+
+  const confirmDummyCheckout = async () => {
+    setDummyConfirming(true);
+    try {
+      await apiClient.confirmDummyBillingCheckout(dummyCheckoutId);
+      setSearchParams({}, { replace: true });
+      await refetchBilling();
+    } catch (e) {
+      alert(e?.response?.data?.error || e.message || 'Checkout confirmation failed.');
+    } finally {
+      setDummyConfirming(false);
     }
   };
 
@@ -435,6 +509,26 @@ export default function Billing() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {dummyCheckoutId && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-amber-950">Test payment awaiting confirmation</p>
+            <p className="text-xs text-amber-800">This only works for organizations allow-listed by the backend.</p>
+          </div>
+          <button
+            onClick={confirmDummyCheckout}
+            disabled={dummyConfirming}
+            className="rounded-lg bg-amber-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {dummyConfirming ? 'Confirming…' : 'Confirm test payment'}
+          </button>
+        </div>
+      )}
+      {checkoutNotice && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
+          {checkoutNotice}
+        </div>
+      )}
       {/* Current Plan Overview */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -484,7 +578,7 @@ export default function Billing() {
                 </div>
               )}
             </div>
-            {subscription?.stripe_customer_id && (
+            {!isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
                 onClick={handleManageSubscription}
                 className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
@@ -502,6 +596,12 @@ export default function Billing() {
             label={t('billing.tokensThisMonth', 'Tokens This Month')}
             used={tokensUsed}
             limit={currentPlanDef?.limits.tokens}
+            icon={Brain}
+          />
+          <UsageMeter
+            label={t('billing.tokensToday', 'Tokens Today')}
+            used={usage?.daily?.tokens?.used || 0}
+            limit={usage?.daily?.tokens?.limit}
             icon={Brain}
           />
           <UsageMeter
@@ -545,6 +645,18 @@ export default function Billing() {
             used={activeConnections}
             limit={currentPlanDef?.limits.connections}
             icon={Cable}
+          />
+          <UsageMeter
+            label="TARA Talk Time (seconds)"
+            used={taraSecondsUsed}
+            limit={currentPlanDef?.limits.taraSeconds}
+            icon={Mic}
+          />
+          <UsageMeter
+            label="HyperAgents Runs"
+            used={hyperAgentRunsUsed}
+            limit={currentPlanDef?.limits.hyperAgentRuns}
+            icon={Zap}
           />
         </div>
       </motion.div>
@@ -612,49 +724,49 @@ export default function Billing() {
         </motion.div>
       )}
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex items-center justify-center gap-1 bg-white border border-[#e3e0db] rounded-lg p-1 w-fit mx-auto">
-        <button
-          onClick={() => setBillingCycle('monthly')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all ${
-            billingCycle === 'monthly'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
+      {isEnterpriseWorkspace ? (
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-[#117dff]/20 bg-[#117dff]/[0.04] p-6"
         >
-          {t('billing.monthly', 'Monthly')}
-        </button>
-        <button
-          onClick={() => setBillingCycle('annual')}
-          className={`px-4 py-1.5 rounded-md text-[12px] font-medium font-['Space_Grotesk'] transition-all flex items-center gap-1.5 ${
-            billingCycle === 'annual'
-              ? 'bg-[#f3f1ec] text-[#0a0a0a]'
-              : 'text-[#525252] hover:text-[#525252]'
-          }`}
-        >
-          {t('billing.annual', 'Annual')}
-          <span className="text-[9px] font-mono bg-[#117dff]/10 text-[#117dff] px-1.5 py-0.5 rounded">
-            -20%
-          </span>
-        </button>
-      </div>
-
-      {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {PLANS.map((plan, i) => (
-          <PlanCard
-            key={plan.id}
-            plan={{
-              ...plan,
-              price: billingCycle === 'annual' && plan.price !== '€0' && plan.price !== 'Custom'
-                ? `€${Math.round(parseInt(plan.price.replace('€', '')) * 0.8)}`
-                : plan.price,
-            }}
-            currentPlan={currentPlan}
-            onSelect={(id) => setUpgradeModal(id)}
-          />
-        ))}
-      </div>
+          <div className="flex items-start gap-3">
+            <Shield size={20} className="mt-0.5 text-[#117dff]" />
+            <div>
+              <h3 className="font-['Space_Grotesk'] text-base font-semibold text-[#0a0a0a]">
+                Enterprise {enterpriseEngagement?.phase === 'onboarding' ? 'onboarding' : 'runway'}
+              </h3>
+              <p className="mt-1 text-[13px] leading-relaxed text-[#525252] font-['Space_Grotesk']">
+                Your {enterpriseEngagement?.hosting_mode === 'self_host' ? 'self-hosted' : 'managed'} enterprise agreement is administered outside self-serve billing. Usage remains visible above; plan, seats, and commercial changes are handled through your account team.
+              </p>
+              {enterpriseEngagement?.phase === 'onboarding' && enterpriseEngagement?.onboarding_ends_at && (
+                <p className="mt-3 text-[12px] font-medium text-[#117dff] font-['Space_Grotesk']">
+                  Onboarding access ends {new Date(enterpriseEngagement.onboarding_ends_at).toLocaleDateString()}.
+                </p>
+              )}
+              {enterpriseEngagement?.commercial_terms && <p className="mt-2 text-sm text-[#313131]">
+                {enterpriseEngagement.phase === 'onboarding'
+                  ? `Onboarding: €${(enterpriseEngagement.commercial_terms.onboarding_price_cents / 100).toLocaleString()}`
+                  : `Runway: €${(enterpriseEngagement.commercial_terms.runway_monthly_cents / 100).toLocaleString()}/month`}
+              </p>}
+              {enterpriseEngagement?.billing_action && <button disabled={upgrading} onClick={handleEnterpriseCheckout} className="mt-4 rounded-lg bg-[#117dff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {upgrading ? 'Opening checkout…' : enterpriseEngagement.phase === 'onboarding' ? 'Pay onboarding' : 'Start runway subscription'}
+              </button>}
+            </div>
+          </div>
+        </motion.section>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {planOptions.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              currentPlan={currentPlan}
+              onSelect={(id) => setUpgradeModal(id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* FAQ Section */}
       <div className="bg-white border border-[#e3e0db] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -692,7 +804,7 @@ export default function Billing() {
         </div>
       </div>
 
-      {upgradeModal && (
+      {!isEnterpriseWorkspace && upgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -704,12 +816,23 @@ export default function Billing() {
                 <Zap size={20} className="text-[#117dff]" />
               </div>
               <h3 className="text-[#0a0a0a] text-lg font-bold font-['Space_Grotesk'] mb-1">
-                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: PLANS.find(p => p.id === upgradeModal)?.name })}
+                {t('billing.upgradeModalTitle', 'Upgrade to {{name}}', { name: planOptions.find(p => p.id === upgradeModal)?.name })}
               </h3>
               <p className="text-[#525252] text-sm font-['Space_Grotesk']">
-                {PLANS.find(p => p.id === upgradeModal)?.price}{PLANS.find(p => p.id === upgradeModal)?.period}
+                {planOptions.find(p => p.id === upgradeModal)?.price}{planOptions.find(p => p.id === upgradeModal)?.period}
               </p>
             </div>
+            <label className="mb-5 block text-left">
+              <span className="mb-1.5 block text-xs font-medium text-[#525252]">Referral code (optional)</span>
+              <input
+                value={referralCode}
+                onChange={(event) => setReferralCode(event.target.value.toUpperCase())}
+                maxLength={64}
+                autoComplete="off"
+                placeholder="GTM2026"
+                className="w-full rounded-lg border border-[#d4d0ca] px-3 py-2 text-sm uppercase outline-none focus:border-[#117dff]"
+              />
+            </label>
             <div className="flex gap-3">
               <button
                 onClick={() => setUpgradeModal(null)}
@@ -737,18 +860,6 @@ export default function Billing() {
         </div>
       )}
 
-      {upgraded && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 font-['Space_Grotesk'] text-sm font-semibold"
-          >
-            <Check size={16} />
-            {t('billing.upgradeSuccess', 'Plan upgraded successfully!')}
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

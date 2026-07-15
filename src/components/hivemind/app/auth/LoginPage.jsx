@@ -58,7 +58,7 @@ const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-[6px] border border-[#e3e0db] bg
 const LABEL_CLS = "text-[11px] font-mono uppercase tracking-wider text-[#a3a3a3] block mb-1.5";
 
 export default function LoginPage() {
-  const { isAuthenticated, isUnreachable, loading, login } = useAuth();
+  const { isAuthenticated, isUnreachable, loading, login, org, needsOnboarding } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -126,11 +126,40 @@ export default function LoginPage() {
   const [userName, setUserName] = useState('');
   const [enterpriseName, setEnterpriseName] = useState('');
   const [hivemindName, setHivemindName] = useState('');
+  const [enterpriseAccessCode, setEnterpriseAccessCode] = useState(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
+  });
+  const [referralCode, setReferralCode] = useState('');
+  const onboardingError = useMemo(
+    () => new URLSearchParams(location.search).get('onboarding_error'),
+    [location.search]
+  );
+
+  // Restore an interrupted OAuth signup on the login surface. This keeps
+  // enterprise setup out of /app while avoiding a second round of questions.
+  useEffect(() => {
+    if (!wantsCreate) return;
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('hivemind_onboarding') || 'null'); } catch { /* noop */ }
+    if (!saved?.type) return;
+    setShowOnboarding(true);
+    setAccountType(saved.type);
+    setUserName(saved.name || '');
+    setEnterpriseName(saved.enterprise || '');
+    setHivemindName(saved.hivemind_name || '');
+    setHostingChoice(saved.deployment === 'selfhost' ? 'self_hosted' : (saved.deployment || 'managed'));
+    setEnterpriseAccessCode(saved.enterprise_access_code || '');
+    setOnboardingStep(saved.type === 'enterprise' ? 3 : 2);
+  }, [wantsCreate]);
 
   // Already signed in → go to dashboard (or original deep link, e.g. invite path)
   useEffect(() => {
     if (isAuthenticated) {
-      if (wantsCreate) return; // org-less new user finishing create-account — stay here
+      if (wantsCreate && needsOnboarding) return; // org-less new user finishing create-account — stay here
+      if (org?.id) {
+        try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
+      }
       // CLI flow: jump to the cross-origin control-plane URL so it can
       // mint the API key and 302 to the verified page.
       const urlParams = new URLSearchParams(location.search);
@@ -145,7 +174,7 @@ export default function LoginPage() {
         : '/hivemind/app/overview';
       navigate(dest, { replace: true });
     }
-  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate]);
+  }, [isAuthenticated, navigate, location.state, location.search, wantsCreate, needsOnboarding, org?.id]);
 
   // Auto-update hivemindName based on account type
   useEffect(() => {
@@ -157,22 +186,29 @@ export default function LoginPage() {
   }, [userName, enterpriseName, accountType]);
 
   const handleCreateAccount = (provider = 'google') => {
+    const onboardingIntent = {
+      type: accountType,
+      name: userName,
+      hivemind_name: hivemindName,
+      enterprise: enterpriseName || null,
+      deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
+      enterprise_access_code: enterpriseAccessCode.trim(),
+      referral_code: referralCode.trim() || null,
+    };
     // Save onboarding data for post-auth pickup
     try {
-      localStorage.setItem('hivemind_onboarding', JSON.stringify({
-        type: accountType,
-        name: userName,
-        hivemind_name: hivemindName,
-        enterprise: enterpriseName || null,
-        deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
-      }));
+      localStorage.setItem('hivemind_onboarding', JSON.stringify(onboardingIntent));
     } catch (e) {}
 
     // If the user came via an invite link, send them back there after OAuth so
     // they land on the invite-acceptance screen instead of the personal-org
     // Onboarding flow.
+    // The fragment is not sent to the API, OAuth provider, proxies, or server
+    // logs. It gives the callback a storage-independent fallback for browsers
+    // that block localStorage in the OAuth return context.
+    const intentFragment = encodeURIComponent(JSON.stringify(onboardingIntent));
     const returnTo = returnToFromState
-      || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true`;
+      || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true#onboarding=${intentFragment}`;
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
       window.location.href = apiClient.getRegisterUrl(returnTo);
@@ -193,6 +229,8 @@ export default function LoginPage() {
     setUserName('');
     setEnterpriseName('');
     setHivemindName('');
+    setEnterpriseAccessCode('');
+    setReferralCode('');
   };
 
   /* Small square provider button (Microsoft / Apple / SSO) */
@@ -297,7 +335,6 @@ export default function LoginPage() {
                     )}
                     Continue with Google
                   </button>
-
                   {/* Provider row: Microsoft · Apple · SSO */}
                   <div className="flex items-center gap-2 mt-2.5">
                     <ProviderTile label="Continue with Microsoft" onClick={() => login({ provider: 'microsoft', returnTo: returnToFromState || undefined })}>
@@ -377,6 +414,16 @@ export default function LoginPage() {
                     <ArrowLeft size={13} />
                     {onboardingStep === 1 ? 'Back to sign in' : 'Back'}
                   </button>
+
+                  {onboardingError && (
+                    <div className="mb-4 rounded-[7px] border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">
+                      {onboardingError === 'invalid_enterprise_code'
+                        ? 'That Enterprise access code is invalid or no longer active. Check the code and try again.'
+                        : onboardingError === 'missing_enterprise_code'
+                          ? 'Enter the Enterprise access code supplied with your onboarding invitation.'
+                          : 'Workspace creation did not complete. Review the details and try again.'}
+                    </div>
+                  )}
 
                   {/* Step 1: Choose path */}
                   {onboardingStep === 1 && (
@@ -587,6 +634,30 @@ export default function LoginPage() {
                         <label className={LABEL_CLS}>Your Enterprise HIVEMIND</label>
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${(enterpriseName || 'company').toLowerCase().replace(/\s+/g, '')}_hivemind`} className={INPUT_CLS} />
                       </div>
+                      <div>
+                        <label className={LABEL_CLS}>Enterprise access code</label>
+                        <input
+                          value={enterpriseAccessCode}
+                          onChange={e => setEnterpriseAccessCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                          placeholder="Provided in your onboarding invitation"
+                          maxLength={64}
+                          autoComplete="off"
+                          className={`${INPUT_CLS} font-mono uppercase`}
+                        />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">This applies the agreed onboarding and runway terms for your workspace.</p>
+                      </div>
+                      <div>
+                        <label className={LABEL_CLS}>Partner referral code <span className="normal-case tracking-normal text-[#a3a3a3]">optional</span></label>
+                        <input
+                          value={referralCode}
+                          onChange={e => setReferralCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. GTM2026"
+                          maxLength={32}
+                          autoComplete="off"
+                          className={`${INPUT_CLS} font-mono uppercase`}
+                        />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">Partner campaign code — applies the partner's offer to your workspace.</p>
+                      </div>
                       {hostingChoice === 'self_hosted' ? (
                         <div className="rounded-[8px] p-4 border border-amber-200 bg-gradient-to-br from-amber-50 to-white">
                           <p className="text-[13px] text-amber-800 font-semibold flex items-center gap-1.5"><Crown size={14} className="text-amber-500" /> Sovereign deployment — concierge setup</p>
@@ -594,13 +665,13 @@ export default function LoginPage() {
                         </div>
                       ) : (
                         <div className="bg-[#117dff]/[0.04] border border-[#117dff]/15 rounded-[8px] p-4">
-                          <p className="text-[13px] text-[#0a5fcc] font-medium">Enterprise accounts start with a 14-day Scale trial</p>
-                          <p className="text-[11px] text-[#3b6da3] mt-1">Full access to all features. No credit card required.</p>
+                          <p className="text-[13px] text-[#0a5fcc] font-medium">Partner onboarding terms are applied server-side</p>
+                          <p className="text-[11px] text-[#3b6da3] mt-1">Enter your referral code to review its seats, projects, document and token allowance after sign-in.</p>
                         </div>
                       )}
                       <button
                         onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim() || !enterpriseName.trim()}
+                        disabled={!userName.trim() || !enterpriseName.trim() || !enterpriseAccessCode.trim()}
                         className="w-full h-11 rounded-[6px] bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
                         {hostingChoice === 'self_hosted'
@@ -608,13 +679,13 @@ export default function LoginPage() {
                           : (<><Shield size={14} /> Create with Enterprise SSO (EU)</>)}
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('google')}>
+                        <ProviderTile label="Create with Google" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('google')}>
                           <GoogleIcon size={14} /><span className="text-[12px] font-medium">Google</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('microsoft')}>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('microsoft')}>
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && handleCreateAccount('apple')}>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && enterpriseName.trim() && enterpriseAccessCode.trim() && handleCreateAccount('apple')}>
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
                         </ProviderTile>
                       </div>

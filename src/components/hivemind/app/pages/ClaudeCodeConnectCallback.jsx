@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { API_DEFAULTS } from '../shared/theme';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Check, Copy, Terminal, AlertTriangle, ArrowLeft, Sparkles } from 'lucide-react';
@@ -33,7 +34,7 @@ export default function ClaudeCodeConnectCallback() {
       `  -e HIVEMIND_USER_ID="${userId}"`,
       orgId ? `  -e HIVEMIND_ORG_ID="${orgId}"` : null,
       `  --`,
-      `  npx -y @amar_528/mcp-bridge hosted --url "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}"`,
+      `  npx -y @amar_528/mcp-bridge hosted --url "${API_DEFAULTS.coreApiBase}/api/mcp/servers/${userId}"`,
     ]
       .filter(Boolean)
       .join(' \\\n');
@@ -41,7 +42,7 @@ export default function ClaudeCodeConnectCallback() {
 
   const oneLinerInstall = useMemo(() => {
     if (!apiKey || !userId) return '';
-    return `claude mcp add hivemind --scope user -e HIVEMIND_API_KEY="${apiKey}" -e HIVEMIND_USER_ID="${userId}"${orgId ? ` -e HIVEMIND_ORG_ID="${orgId}"` : ''} -- npx -y @amar_528/mcp-bridge hosted --url "https://core.hivemind.davinciai.eu:8050/api/mcp/servers/${userId}"`;
+    return `claude mcp add hivemind --scope user -e HIVEMIND_API_KEY="${apiKey}" -e HIVEMIND_USER_ID="${userId}"${orgId ? ` -e HIVEMIND_ORG_ID="${orgId}"` : ''} -- npx -y @amar_528/mcp-bridge hosted --url "${API_DEFAULTS.coreApiBase}/api/mcp/servers/${userId}"`;
   }, [apiKey, userId, orgId]);
 
   const handleCopy = (text) => {

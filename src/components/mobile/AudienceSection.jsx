@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, RefreshCw } from 'lucide-react';
+import { HIVEMIND_URL } from './hivemindLinks';
 
 /**
  * AudienceSection — the adaptive narration. Content swaps based on the field the
@@ -124,7 +125,7 @@ const AudienceSection = ({ field, onChange }) => {
           ))}
         </div>
 
-        <a href="/hivemind" className="group mt-12 inline-flex items-center gap-3 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white no-underline backdrop-blur-md transition-colors hover:bg-white/20">
+        <a href={HIVEMIND_URL} className="group mt-12 inline-flex items-center gap-3 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white no-underline backdrop-blur-md transition-colors hover:bg-white/20">
           Enter SINGULANCE <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </a>
       </div>

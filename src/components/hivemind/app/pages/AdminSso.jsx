@@ -202,7 +202,7 @@ export default function AdminSso() {
   }
 
   const acsUrl = form.subdomain
-    ? `https://${form.subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '')}.hivemind.davinciai.eu/saml/acs`
+    ? `https://${form.subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '')}.singulancelabs.com/saml/acs`
     : config?.acs_url || null;
 
   if (loading) {
@@ -299,7 +299,7 @@ export default function AdminSso() {
 
           <Field
             label={t('adminsso.subdomainLabel', 'Subdomain')}
-            hint={t('adminsso.subdomainHint', 'Customers access HIVEMIND at <subdomain>.hivemind.davinciai.eu')}
+            hint={t('adminsso.subdomainHint', 'Customers access HIVEMIND at <subdomain>.singulancelabs.com')}
           >
             <div className="flex items-center gap-2">
               <Input
@@ -308,7 +308,7 @@ export default function AdminSso() {
                 placeholder="acme"
                 className="flex-1"
               />
-              <span className="text-[12px] text-[#a3a3a3] whitespace-nowrap">.hivemind.davinciai.eu</span>
+              <span className="text-[12px] text-[#a3a3a3] whitespace-nowrap">.singulancelabs.com</span>
             </div>
           </Field>
 

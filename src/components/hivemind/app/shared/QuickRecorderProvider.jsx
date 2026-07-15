@@ -157,6 +157,7 @@ export function QuickRecorderProvider({ children }) {
   const segIdxRef = useRef(0);
   const segTextsRef = useRef({});
   const segPromisesRef = useRef([]);
+  const pendingSegRef = useRef(new Map()); // idx → text, windows not yet confirmed server-side
   const sessionIdRef = useRef(null);
   const langRef = useRef(null);
   const finalizingRef = useRef(false);
@@ -170,6 +171,31 @@ export function QuickRecorderProvider({ children }) {
     if (streamRef.current) { streamRef.current.getTracks().forEach((tr) => tr.stop()); streamRef.current = null; }
   }, []);
 
+  // Durable segment persistence: POST each transcribed window to the server so
+  // a tab crash / connection loss never loses more than the current 10-min
+  // window. The server upsert is idempotent on (session_id, idx), so retrying —
+  // and re-flushing a still-pending window later — can never duplicate a row.
+  const persistSegment = useCallback(async (idx, text, attempt = 0) => {
+    const sid = sessionIdRef.current;
+    if (!sid || !text || !text.trim()) return;
+    try {
+      await apiClient.core.post('/api/meetings/segments', { session_id: sid, idx, text });
+      pendingSegRef.current.delete(idx);
+    } catch {
+      // Keep the window queued and retry with backoff; also flushed on the next
+      // segment tick and once more before finalize. Bounded so it can't spin.
+      pendingSegRef.current.set(idx, text);
+      if (attempt < 4) {
+        setTimeout(() => persistSegment(idx, text, attempt + 1), Math.min(2000 * 2 ** attempt, 30000));
+      }
+    }
+  }, []);
+
+  // Re-attempt any windows whose server write hasn't confirmed yet.
+  const flushPendingSegments = useCallback(() => {
+    for (const [idx, text] of pendingSegRef.current) persistSegment(idx, text, 0);
+  }, [persistSegment]);
+
   const transcribeSegment = useCallback((idx, blob) => {
     const names = cfgRef.current.participants.join(', ');
     const hint = [cfgRef.current.notes, names ? `Participants: ${names}` : ''].filter(Boolean).join(' — ').slice(0, 800);
@@ -179,12 +205,13 @@ export function QuickRecorderProvider({ children }) {
       const txt = tr.data?.transcript || '';
       segTextsRef.current[idx] = txt;
       if (tr.data?.language && !langRef.current) langRef.current = tr.data.language;
-      if (sessionIdRef.current && txt.trim()) {
-        apiClient.core.post('/api/meetings/segments', { session_id: sessionIdRef.current, idx, text: txt }).catch(() => {});
-      }
+      // Persist THIS window (retrying on failure) and re-flush any earlier
+      // window still unconfirmed — so the server transcript stays complete.
+      if (txt.trim()) { pendingSegRef.current.set(idx, txt); persistSegment(idx, txt, 0); }
+      flushPendingSegments();
     }).catch(() => { if (segTextsRef.current[idx] === undefined) segTextsRef.current[idx] = ''; });
     segPromisesRef.current.push(p);
-  }, []);
+  }, [persistSegment, flushPendingSegments]);
 
   const rollSegment = useCallback(() => {
     const stream = streamRef.current; if (!stream) return;
@@ -225,6 +252,9 @@ export function QuickRecorderProvider({ children }) {
     if (sessionIdRef.current) idbClear(sessionIdRef.current);
     try {
       await Promise.allSettled(segPromisesRef.current);
+      // Last-chance flush of any window whose durable write never confirmed —
+      // idempotent upsert makes this safe even if it already landed.
+      flushPendingSegments();
       const idxs = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b);
       const text = idxs.map((i) => segTextsRef.current[i]).filter(Boolean).join('\n').trim();
       if (!text) { setStatus('error'); setError('No speech detected.'); return; }
@@ -251,7 +281,7 @@ export function QuickRecorderProvider({ children }) {
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
-  }, []);
+  }, [flushPendingSegments]);
 
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }

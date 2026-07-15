@@ -194,6 +194,14 @@ function getDocHashTag(doc) {
   return hit ? hit.split(':')[1] : null;
 }
 
+// The evidence API is keyed by a UUID. Filenames are not identities: users can
+// upload the same name again with new content or into a different scope.
+function documentIdFrom(doc) {
+  const tags = doc?.tags || [];
+  const hit = tags.find((t) => typeof t === 'string' && t.startsWith('doc-id:'));
+  return hit ? hit.slice('doc-id:'.length) : (doc?.metadata?.document_id || null);
+}
+
 // Filename for a doc — from a `filename:` tag, else the title. Used to dedup
 // the past-docs list (segments/re-uploads of the same file collapse to one).
 function docFilename(doc) {
@@ -855,7 +863,8 @@ export default function KnowledgeBase() {
     return () => { cancelled = true; };
   }, [kbMemories]);
 
-  // Phase 1 evidence-backed stats per filename (segments + memory_evidence_links)
+  // Phase 1 stats must join on the immutable document id. Joining by filename
+  // made a re-upload inherit another document's segment/fact totals.
   const [phase1Stats, setPhase1Stats] = useState({});
   useEffect(() => {
     let cancelled = false;
@@ -865,8 +874,8 @@ export default function KnowledgeBase() {
         if (cancelled) return;
         const map = {};
         for (const d of (resp?.documents || [])) {
-          const baseName = (d.title || '').split('#')[0];
-          map[baseName] = { segments: d.segmentCount || 0, evidence: d.promotedCount || 0, documentId: d.id };
+          if (!d?.id) continue;
+          map[d.id] = { segments: d.segmentCount || 0, memories: d.promotedCount || 0 };
         }
         setPhase1Stats(map);
       } catch { /* noop */ }
@@ -1274,12 +1283,14 @@ export default function KnowledgeBase() {
             : u
         ));
         setJustUploadedDocs((prev) => [{
-          id: result.upload_id || `pending-${uploadEntry.id}`,
+          // Prefer the durable document id. Queue ids are transient and would
+          // otherwise leave a second optimistic card beside the real document.
+          id: result.documentId || result.upload_id || `pending-${uploadEntry.id}`,
           title: result.filename || file.name,
           docHash: clientHash || null, // for converge-detection in useEffect
           metadata: {
             document_title: result.filename || file.name,
-            total_chunks: result.chunks || 1,
+            total_chunks: result.segmentCount ?? result.chunks ?? 0,
             filename: result.filename || file.name,
             upload_id: result.upload_id,
           },
@@ -1996,21 +2007,20 @@ export default function KnowledgeBase() {
                         || 'Untitled'}
                     </p>
                     <div className="flex items-center gap-3 mt-0.5">
-                      {/* Phase 1 evidence-backed stats (segments + memory_evidence_links) */}
+                      {/* Phase 1 evidence-backed stats for this exact document. */}
                       {(() => {
-                        const fname = meta.filename || srcMeta.filename || meta.document_title || doc.title;
-                        const p1 = fname ? phase1Stats[fname] : null;
+                        const p1 = phase1Stats[documentIdFrom(doc)];
                         if (!p1) return null;
                         return (
                           <span
                             className="text-[#16a34a] text-[10px] font-mono bg-[#16a34a]/8 border border-[#16a34a]/20 rounded px-1.5 py-0.5"
-                            title={`Evidence-backed: ${p1.segments} segments → ${p1.evidence} memory_evidence_links`}
+                            title={`Evidence-backed: ${p1.segments} segments and ${p1.memories} live memories for this document`}
                           >
-                            {p1.segments} seg · {p1.evidence} mem
+                            {p1.segments} seg · {p1.memories} mem
                           </span>
                         );
                       })()}
-                      {meta.total_chunks && (
+                      {!phase1Stats[documentIdFrom(doc)] && meta.total_chunks > 0 && (
                         <span className="text-[#a3a3a3] text-[10px] font-mono">{meta.total_chunks} chunks</span>
                       )}
                       {docProject(doc) && (

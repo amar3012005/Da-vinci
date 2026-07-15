@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Nango from '@nangohq/frontend';
 import { CONNECTOR_BY_ID, CONNECTOR_MODES, BRAND_LOGOS } from '../shared/connectors-catalog';
+import { API_DEFAULTS } from '../shared/theme';
 import {
   Cable,
   Copy,
@@ -34,6 +35,7 @@ import {
   Filter,
   Chrome,
   Settings as SettingsIcon,
+  MapPin,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -371,6 +373,17 @@ const CONNECTORS = [
     nangoProvider: 'github',
   },
   {
+    id: 'google-maps',
+    name: 'Google Maps',
+    description: 'Find local businesses by area — phones + sites for prospecting',
+    icon: MapPin,
+    category: 'geo',
+    status: 'available',
+    color: '#34a853',
+    priority: 2,
+    nangoProvider: 'google-maps',
+  },
+  {
     id: 'linear',
     name: 'Linear',
     description: 'Sync issues, projects, and roadmaps',
@@ -383,7 +396,7 @@ const CONNECTORS = [
   },
 ];
 
-const DIRECT_MCP_ENDPOINT = 'https://core.hivemind.davinciai.eu:8050/api/mcp';
+const DIRECT_MCP_ENDPOINT = `${API_DEFAULTS.coreApiBase}/api/mcp`;
 
 const CLAUDE_TERMINAL_OS = {
   macos: {
@@ -1970,7 +1983,7 @@ function McpSetupModal({ connector, onClose, user, apiKeys, onVerified, existing
   const [modalMode, setModalMode] = useState('install');
 
   // Map connector.id → install script slug served from /install/<slug>.sh
-  const INSTALLER_BASE_URL = 'https://hivemind.davinciai.eu/install';
+  const INSTALLER_BASE_URL = `${window.location.origin}/install`;
   const installerSlugMap = {
     'cursor':         'cursor',
     'antigravity':    'antigravity',
@@ -2399,7 +2412,7 @@ function ChatGPTConnectorCard() {
   // Port-less origin so OpenAI GPT Actions validator accepts the server
   // URL. Vercel rewrites /v1/chatgpt/*, /oauth/*, /.well-known/oauth-*
   // to core on :8050 — see vercel.json.
-  const PUBLIC_ORIGIN = 'https://hivemind.davinciai.eu';
+  const PUBLIC_ORIGIN = window.location.origin;
   const SPEC_URL = PUBLIC_ORIGIN + '/v1/chatgpt/openapi.yaml';
   // Published HIVEMIND GPT URL. Platform team registers ONE OAuth client +
   // one GPT in OpenAI's editor; end users just open the GPT and click
@@ -2933,7 +2946,7 @@ function GeminiPasteModal({ onClose, onSuccess }) {
 
 function ChatGptSetupModal({ onClose }) {
   const { t } = useTranslation('dashboard');
-  const PUBLIC_ORIGIN = 'https://hivemind.davinciai.eu';
+  const PUBLIC_ORIGIN = window.location.origin;
   const SPEC_URL = PUBLIC_ORIGIN + '/v1/chatgpt/openapi.yaml';
   const CLIENT_ID = 'hmc_b8a3740e48be648d82633115';
   const AUTH_URL = `${PUBLIC_ORIGIN}/oauth/authorize`;
@@ -3078,7 +3091,7 @@ function ChatGptSetupModal({ onClose }) {
 function ClaudeWebSetupModal({ onClose }) {
   const { t } = useTranslation('dashboard');
   const NAME = 'HIVEMIND';
-  const MCP_URL = 'https://hivemind.davinciai.eu/api/mcp';
+  const MCP_URL = `${API_DEFAULTS.coreApiBase}/api/mcp`;
   const CLAUDE_CONNECTORS_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector';
   const [copied, setCopied] = useState(null);
   const [step, setStep] = useState(1);
@@ -3806,7 +3819,7 @@ export default function Connectors() {
 
   // eslint-disable-next-line no-unused-vars
   // eslint-disable-next-line no-unused-vars
-  const npxCommand = 'claude mcp add --transport http --scope user hivemind "https://core.hivemind.davinciai.eu:8050/api/mcp" --header "Authorization: Bearer YOUR_API_KEY"';
+  const npxCommand = `claude mcp add --transport http --scope user hivemind "${API_DEFAULTS.coreApiBase}/api/mcp" --header "Authorization: Bearer YOUR_API_KEY"`;
 
   // Required scopes per provider — when a connected token is missing any of
   // these, surface as needs_reauth so the user can reconnect to unlock the
@@ -4014,13 +4027,26 @@ export default function Connectors() {
           setWhatsappQRConnector(true);
           return;
         }
-        const controlPlane =
-          process.env.REACT_APP_CONTROL_PLANE_URL ||
-          'https://api.hivemind.davinciai.eu:8040';
+        const controlPlane = API_DEFAULTS.controlPlaneBase;
         if (connector.isOauthConnect) {
           const callback = `${window.location.origin}/hivemind/app/connect/mcp/callback`;
           const clientId = connector.oauthClientId || connector.id;
           window.location.href = `${controlPlane}/auth/cli?callback=${encodeURIComponent(callback)}&client=${encodeURIComponent(clientId)}`;
+          return;
+        }
+        // Google Workspace connects use the GOOGLE-NATIVE path (same OAuth
+        // client + redirect as login, branded singulancelabs.com) — NOT the
+        // central Nango client, whose consent screen still says davinciai.eu.
+        // google-gemini stays on Nango (API-key style integration, not
+        // workspace OAuth).
+        const _gNative = connector.oauthProvider
+          && connector.oauthProvider !== 'google-gemini'
+          && (connector.oauthProvider === 'gmail' || connector.oauthProvider.startsWith('google-'));
+        if (_gNative) {
+          handleOAuthConnect(connector.oauthProvider, {
+            services: connector.googleService,
+            isMaster: connector.isMaster,
+          });
           return;
         }
         if (connector.nangoProvider) {

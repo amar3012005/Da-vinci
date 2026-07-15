@@ -3,12 +3,20 @@
  * and give the installed app an offline launch shell. We deliberately keep it
  * dumb and safe:
  *   • navigations  → network-first, fall back to cached shell when offline
- *   • static assets → stale-while-revalidate
+ *   • static assets → network-first, cached only as an offline fallback
  *   • API calls (/api, /v1) → ALWAYS network, never cached (avoids serving
  *     stale memory/recall data)
  */
-const CACHE = 'hive-shell-v1';
+const CACHE = 'hive-shell-v5';
 const SHELL = ['/', '/index.html', '/hivemind-manifest.json', '/hive-icon-192.png', '/hive-icon-512.png'];
+
+function offlineResponse() {
+  return new Response('HIVEMIND is temporarily offline.', {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));
@@ -40,24 +48,24 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put('/index.html', copy)).catch(() => {});
           return resp;
         })
-        .catch(() => caches.match('/index.html').then((r) => r || caches.match('/')))
+        .catch(() => caches.match('/index.html')
+          .then((r) => r || caches.match('/'))
+          .then((r) => r || offlineResponse()))
     );
     return;
   }
 
-  // Static assets → stale-while-revalidate.
+  // Static assets are network-first so a release can never keep an old entry
+  // bundle alive. The cache remains an offline fallback.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === 'basic') {
-            const copy = resp.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-          }
-          return resp;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((resp) => {
+        if (resp && resp.status === 200 && resp.type === 'basic') {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+        }
+        return resp;
+      })
+      .catch(() => caches.match(request).then((r) => r || offlineResponse()))
   );
 });

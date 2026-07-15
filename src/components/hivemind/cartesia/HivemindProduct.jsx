@@ -136,6 +136,15 @@ const dotField = {
   backgroundSize: '14px 14px',
 };
 
+const GoogleMark = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#4285F4" d="M21.35 12.24c0-.71-.06-1.39-.18-2.04H12v3.86h5.24a4.48 4.48 0 0 1-1.94 2.94v2.51h3.14c1.84-1.69 2.91-4.19 2.91-7.27Z" />
+    <path fill="#34A853" d="M12 21.75c2.62 0 4.82-.87 6.44-2.24l-3.14-2.51c-.87.58-1.98.92-3.3.92-2.53 0-4.67-1.71-5.44-4.01H3.32v2.59A9.74 9.74 0 0 0 12 21.75Z" />
+    <path fill="#FBBC05" d="M6.56 13.91A5.86 5.86 0 0 1 6.25 12c0-.66.11-1.29.31-1.91V7.5H3.32A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.06 1.07 4.5l3.24-2.59Z" />
+    <path fill="#EA4335" d="M12 6.08c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3.17 14.62 2.25 12 2.25A9.74 9.74 0 0 0 3.32 7.5l3.24 2.59C7.33 7.79 9.47 6.08 12 6.08Z" />
+  </svg>
+);
+
 /* hero card — interactive recall terminal (typing demo, tabs, live results) */
 const GraphCard = () => (
   <Chrome title="hivemind — recall · live" className="w-full">
@@ -159,7 +168,7 @@ const Hero = () => {
       <div className="pointer-events-none absolute inset-0"
         style={{ background: 'radial-gradient(90% 65% at 50% 42%, rgba(251,251,248,0) 40%, #FBFBF8 92%)' }} />
 
-      <div className="relative mx-auto max-w-[1200px] px-6 pb-28 pt-40 text-center md:pt-48">
+      <div className="relative mx-auto max-w-[1200px] px-6 pb-10 pt-[4.75rem] text-center md:min-h-[calc(100svh-72px)] md:pb-6 md:pt-[clamp(2rem,5vh,4rem)]">
         <motion.div style={{ y: headY }}>
           <Reveal>
             <span className="inline-flex items-center gap-2 rounded-full border border-[#e7e4dd] bg-white px-4 py-1.5 font-mono text-[11px] tracking-[0.18em] text-[#6b6b6b]">
@@ -169,53 +178,44 @@ const Hero = () => {
             </span>
           </Reveal>
 
-          <Reveal delay={0.06}>
-            <div className="mx-auto mt-10 font-['Space_Grotesk'] text-5xl font-bold tracking-[-0.04em] text-[#0a0a0a] md:text-7xl">
-              HIVEMIND
-            </div>
-          </Reveal>
-
-          <h1 className="mx-auto mt-6 max-w-4xl font-['Space_Grotesk'] text-6xl font-semibold leading-[0.98] tracking-tight text-[#0a0a0a] md:text-8xl">
-            <WordReveal text="A brain that" delay={0.1} />
+          <h1 className="mx-auto mt-[clamp(1rem,2.5vh,1.5rem)] max-w-5xl font-['Space_Grotesk'] text-[clamp(2.8rem,5.5vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-[#0a0a0a]">
+            Run your institution
             <br />
-            <WordReveal text="never forgets" delay={0.34} />
+            <span className="text-[#117dff]">as an AI company</span>
           </h1>
 
           <Reveal delay={0.46}>
-            <p className="mx-auto mt-4 max-w-lg font-mono text-[12px] uppercase tracking-[0.22em]" style={{ color: BLUE }}>
-              A Cognitive Sovereign Memory Engine
+            <p className="mx-auto mt-[clamp(0.75rem,2vh,1rem)] max-w-2xl text-balance text-[17px] font-normal leading-relaxed text-[#575757] md:text-[19px]">
+              The AI workforce that runs inside your organization&apos;s memory.
             </p>
           </Reveal>
 
           <Reveal delay={0.5}>
-            <p className="mx-auto mt-5 max-w-xl text-[17px] font-light leading-relaxed text-[#6b6b6b]">
-              HIVEMIND turns email, chat, docs, meetings and code into one persistent,
-              self-organizing memory — then lets AI recall and act on it. Inside your walls.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.6}>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <motion.a href="/hivemind/app" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }}
-                className="group inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-[13px] font-semibold text-white no-underline"
-                style={{ background: INK }}>
-                Start remembering
-                <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+            <div className="mx-auto mt-[clamp(1rem,3vh,1.75rem)] max-w-[700px]">
+              <motion.a href="/hivemind/login" whileHover={{ y: -2, boxShadow: '0 16px 36px rgba(17,125,255,0.24)' }} whileTap={{ scale: 0.99 }}
+                className="group flex min-h-[68px] w-full items-center justify-between rounded-[10px] bg-[#117dff] px-5 text-white no-underline transition-colors hover:bg-[#006fe8] sm:px-7">
+                <span className="flex items-center gap-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-[6px] bg-white"><GoogleMark /></span>
+                  <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] sm:text-[16px]">Get started</span>
+                </span>
+                <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
               </motion.a>
-              <DownloadMacButton />
-              <a href="#chapter-1" className="inline-flex items-center gap-3 text-[13px] font-semibold text-[#0a0a0a] no-underline">
-                <span className="font-mono text-[#b5b0a4]">[</span> Explore the engine <span className="font-mono text-[#b5b0a4]">]</span>
-              </a>
+              <div className="mt-4 flex items-center justify-between gap-4 text-left">
+                <a href="/research" className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.17em] text-[#626262] no-underline transition-colors hover:text-[#117dff] sm:text-[11px]">
+                  <span className="text-[#117dff]">/</span> Explore research
+                </a>
+                <DownloadMacButton className="!rounded-[7px] !px-3.5 !py-2.5 !text-[11px] sm:!px-4" />
+              </div>
             </div>
           </Reveal>
         </motion.div>
 
-        <motion.div style={{ y: cardY, scale: cardScale }} className="mx-auto mt-20 max-w-3xl">
+        <motion.div style={{ y: cardY, scale: cardScale }} className="mx-auto mt-8 max-w-3xl md:mt-[clamp(1.5rem,4vh,2.5rem)]">
           <Reveal delay={0.3}><GraphCard /></Reveal>
         </motion.div>
 
         <Reveal delay={0.35}>
-          <div className="mx-auto mt-14 flex max-w-md items-center justify-center gap-12">
+          <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-12">
             <div>
               <p className="font-['Space_Grotesk'] text-2xl font-semibold tracking-tight text-[#0a0a0a]">
                 &lt;<Counter to={50} suffix="ms" />
@@ -585,7 +585,7 @@ const FinalCta = () => (
           Get HIVEMIND <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
         </motion.a>
         <DownloadMacButton />
-        <a href="https://hivemind.davinciai.eu/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
+        <a href="https://singulancelabs.com/benchmark" className="font-mono text-[12px] uppercase tracking-[0.18em] text-[#6b6b6b] no-underline hover:text-[#0a0a0a]">
           see the benchmark →
         </a>
       </div>

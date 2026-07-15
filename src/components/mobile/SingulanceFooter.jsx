@@ -1,5 +1,6 @@
 import React from 'react';
 import { Linkedin, Twitter, Youtube, Github, MessageCircle, Apple, Play } from 'lucide-react';
+import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 
 /**
  * SINGULANCE footer — Mistral footer layout, pixel-faithful, in the dark skin.
@@ -11,10 +12,10 @@ const COLS = [
   {
     title: 'Products',
     links: [
-      ['HIVEMIND', '/hivemind'],
+      ['HIVEMIND', HIVEMIND_URL],
       ['TARA', '/products/tara'],
-      ['HYPERAGENTS', '/hivemind/app/employees'],
-      ['Memory Graph', '/hivemind'],
+      ['HYPERAGENTS', hivemindHref('/app/employees')],
+      ['Memory Graph', HIVEMIND_URL],
       ['Pricing', '/pricing'],
     ],
   },
@@ -64,7 +65,7 @@ const SOCIALS = [
 
 const StoreBadge = ({ icon: Icon, top, big }) => (
   <a
-    href="/hivemind"
+    href={HIVEMIND_URL}
     className="flex items-center gap-2.5 rounded-lg bg-black px-4 py-2 no-underline ring-1 ring-white/15 transition-colors hover:ring-white/30"
   >
     <Icon size={22} className="text-white" />

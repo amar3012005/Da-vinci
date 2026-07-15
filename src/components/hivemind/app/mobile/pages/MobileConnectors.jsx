@@ -17,8 +17,8 @@ import {
   Search,
   Settings,
 } from 'lucide-react';
-import apiClient from '../shared/api-client';
-import { CONNECTOR_CATALOG } from '../shared/connectors-catalog';
+import apiClient from '../../shared/api-client';
+import { CONNECTOR_CATALOG } from '../../shared/connectors-catalog';
 
 const CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -87,6 +87,30 @@ export default function MobileConnectors() {
   }, [category, query, rows]);
 
   const connectedCount = rows.filter((r) => r.connected).length;
+  const [busyId, setBusyId] = useState(null);
+  const [actionErr, setActionErr] = useState('');
+
+  // In-page OAuth: start the connector flow and redirect THIS window to the
+  // provider's auth URL — never bounce to the desktop connectors page.
+  const connect = async (provider) => {
+    if (!provider) return;
+    setActionErr(''); setBusyId(provider);
+    try {
+      const res = await apiClient.startConnectorOAuth(provider, '/hivemind/m/connectors', { target_scope: 'personal' });
+      const url = res?.url || res?.redirect_url || res?.authorization_url;
+      if (url) { window.location.href = url; return; }
+      setActionErr('Could not start the connection.');
+    } catch (e) {
+      setActionErr(e?.response?.data?.detail || e?.message || 'Could not start the connection.');
+    } finally { setBusyId(null); }
+  };
+  const disconnect = async (provider) => {
+    if (!provider) return;
+    setActionErr(''); setBusyId(provider);
+    try { await apiClient.disconnectConnector(provider); window.location.reload(); }
+    catch (e) { setActionErr(e?.response?.data?.detail || e?.message || 'Could not disconnect.'); }
+    finally { setBusyId(null); }
+  };
 
   return (
     <div className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] overflow-hidden flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
@@ -98,9 +122,7 @@ export default function MobileConnectors() {
           <div className="text-[15px] font-bold leading-tight">Connectors</div>
           <div className="text-[10.5px] text-[#8b857d]">Apps, browsers, and data sources for your memory engine</div>
         </div>
-        <button onClick={() => navigate('/hivemind/app/connectors')} className="h-9 px-3 rounded-full bg-[#117dff] text-white text-[12px] font-semibold">
-          Desktop
-        </button>
+        <span className="text-[11px] text-[#a8a49c]">{connectedCount} live</span>
       </header>
 
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
@@ -139,7 +161,7 @@ export default function MobileConnectors() {
               <div className={`mb-2.5 h-9 w-9 rounded-[13px] ${tone} grid place-items-center`}><Icon size={16} /></div>
               <div className="text-[12.5px] font-bold">{name}</div>
               <div className="mt-0.5 text-[10px] text-[#9a958d] line-clamp-1">{sub}</div>
-              <button onClick={() => navigate('/hivemind/app/connectors')} className="mt-2.5 inline-flex h-7.5 items-center gap-1.5 rounded-lg bg-[#117dff] px-2.5 text-[10.5px] font-bold text-white">
+              <button onClick={() => connect(name.toLowerCase())} disabled={busyId === name.toLowerCase()} className="mt-2.5 inline-flex h-7.5 items-center gap-1.5 rounded-lg bg-[#1a1a17] px-2.5 text-[10.5px] font-bold text-white disabled:opacity-50">
                 <Plus size={13} /> Connect
               </button>
             </div>
@@ -162,6 +184,7 @@ export default function MobileConnectors() {
 
         {loading && <div className="py-12 text-center text-[13px] text-[#737373]">Loading connectors...</div>}
         {error && <div className="p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{error}</div>}
+        {actionErr && <div className="mb-2 p-3 rounded-[16px] bg-red-50 border border-red-100 text-[13px] text-red-700">{actionErr}</div>}
         <div className="space-y-1.5">
           {filtered.slice(0, 24).map((connector, index) => {
             const Icon = iconFor(connector.id, connector.category);
@@ -171,8 +194,9 @@ export default function MobileConnectors() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.014, 0.18) }}
-                onClick={() => navigate('/hivemind/app/connectors')}
-                className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-2.5 text-left shadow-[0_10px_22px_rgba(26,24,20,0.035)] active:scale-[0.99]"
+                onClick={() => (connector.connected ? disconnect(connector.id) : connect(connector.id))}
+                disabled={busyId === connector.id}
+                className="w-full rounded-[18px] border border-[#e3e0db] bg-white p-2.5 text-left shadow-[0_10px_22px_rgba(26,24,20,0.035)] active:scale-[0.99] disabled:opacity-60"
               >
                 <div className="flex items-start gap-2.5">
                   <span className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-[14px] ${connector.connected ? 'bg-emerald-50 text-emerald-600' : 'bg-[#edf5ff] text-[#117dff]'}`}>

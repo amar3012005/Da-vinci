@@ -29,7 +29,7 @@ const MetricBars = () => {
     <div className="my-10">
       <div className="mb-3 flex items-baseline justify-between">
         <span className="font-mono text-[11px] uppercase tracking-wider text-[#8a8a82]">retrieval quality — click a metric</span>
-        <span className="font-mono text-[11px] text-[#a3a3a3]">hivemind.davinciai.eu/benchmark</span>
+        <span className="font-mono text-[11px] text-[#a3a3a3]">singulancelabs.com/benchmark</span>
       </div>
       <div className="flex items-end gap-3 rounded-lg border p-6" style={{ borderColor: BORDER, background: '#fff' }}>
         {METRICS.map((met) => {
@@ -150,8 +150,8 @@ const BenchmarkResearch = () => (
     <H2>Run it yourself</H2>
     <P>
       The published run lives at{' '}
-      <a href="https://hivemind.davinciai.eu/benchmark" className="font-medium" style={{ color: BLUE }}>
-        hivemind.davinciai.eu/benchmark
+      <a href="https://singulancelabs.com/benchmark" className="font-medium" style={{ color: BLUE }}>
+        singulancelabs.com/benchmark
       </a>
       . Every HIVEMIND workspace — personal, managed, or self-hosted — ships the same Evaluation
       surface: health overview, an interactive search tester with confidence and relevance scoring, and

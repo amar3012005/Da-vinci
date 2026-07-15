@@ -31,6 +31,9 @@ import {
   Mail,
   Briefcase,
   Network,
+  Cloud,
+  Server,
+  Save,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -307,6 +310,12 @@ function AccountHeaderCard({ user, org, plan, stats, profileFacts, onSignOut }) 
               </span>
             )}
             <PlanBadge plan={plan} />
+            {org?.memory_storage_label && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]">
+                <Brain size={11} />
+                {org.plan === 'free' ? 'Personal' : 'Enterprise'} · {org.memory_storage_label}
+              </span>
+            )}
             {user?.role && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-[#117dff]/10 text-[#117dff] border border-[#117dff]/20">
                 <Shield size={11} />
@@ -1230,7 +1239,7 @@ function DataPrivacySection() {
         {/* Privacy policy link */}
         <div className="mt-4 pt-4 border-t border-[#f3f1ec]">
           <a
-            href="https://hivemind.davinciai.eu/privacy"
+            href="https://singulancelabs.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-mono text-[#a3a3a3] hover:text-[#117dff] transition-colors"
@@ -1322,6 +1331,119 @@ function DataPrivacySection() {
 
 // ─── Main Profile Page ───────────────────────────────────────────────────────
 
+function OrganizationContextCard({ org, user }) {
+  const [draft, setDraft] = useState({ website: '', industry: '', description: '', audience: '', mission: '' });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const profileQuery = useApiQuery(
+    () => org?.id ? apiClient.getOrganizationProfile(org.id).catch(() => null) : Promise.resolve(null),
+    [org?.id],
+  );
+  const context = profileQuery.data?.organization;
+  const canEdit = profileQuery.data?.can_edit === true;
+  const company = context?.company_profile || org?.company_profile || {};
+  const plan = context?.plan || org?.plan || 'free';
+  const hostingMode = context?.hosting_mode || org?.hosting_mode || 'managed';
+  const userType = plan === 'enterprise' ? 'Enterprise' : 'Personal';
+
+  useEffect(() => {
+    setDraft({
+      website: company.website || '',
+      industry: company.industry || '',
+      description: company.description || '',
+      audience: company.audience || '',
+      mission: company.mission || '',
+    });
+  }, [company.website, company.industry, company.description, company.audience, company.mission]);
+
+  const save = async () => {
+    if (!org?.id || !canEdit) return;
+    setSaving(true);
+    setSaved(false);
+    try {
+      await apiClient.updateOrganizationProfile(org.id, draft);
+      await profileQuery.refetch();
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <div className="flex flex-col gap-4 border-b border-[#f3f1ec] pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#117dff]/20 bg-[#117dff]/10">
+            <Building2 size={18} className="text-[#117dff]" />
+          </div>
+          <div>
+            <SectionHeading>Workspace identity</SectionHeading>
+            <p className="mt-1 text-sm leading-relaxed text-[#525252]">Profile owns who you are and what this workspace represents. Settings controls how it operates; Team controls who can access it.</p>
+          </div>
+        </div>
+        <span className="w-fit rounded-full border border-[#117dff]/20 bg-[#117dff]/10 px-2.5 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.08em] text-[#117dff]">{userType}</span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ['Organization ID', context?.id || org?.id || '—'],
+          ['Plan', plan],
+          ['Hosting', hostingMode === 'self_host' ? 'Self-hosted' : 'Managed'],
+          ['Your role', user?.role || 'member'],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-[#e3e0db] bg-[#faf9f4] p-3">
+            <p className="text-[10px] font-mono uppercase tracking-[0.08em] text-[#a3a3a3]">{label}</p>
+            <p className="mt-1 flex items-center gap-1.5 break-all text-sm font-semibold text-[#0a0a0a]">
+              {label === 'Hosting' && (hostingMode === 'self_host' ? <Server size={13} className="text-[#117dff]" /> : <Cloud size={13} className="text-[#117dff]" />)}
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-[#0a0a0a]">Company overview</p>
+            <p className="mt-0.5 text-xs text-[#737373]">The canonical context available to your organization and AI workspace.</p>
+          </div>
+          {!canEdit && <span className="text-xs text-[#737373]">Only an owner or admin can edit</span>}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-[#525252]">Website</span>
+            <input value={draft.website} onChange={(event) => setDraft((current) => ({ ...current, website: event.target.value }))} disabled={!canEdit} placeholder="https://company.com" className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#117dff] disabled:cursor-not-allowed disabled:bg-[#faf9f4]" />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-[#525252]">Industry</span>
+            <input value={draft.industry} onChange={(event) => setDraft((current) => ({ ...current, industry: event.target.value }))} disabled={!canEdit} placeholder="e.g. Climate technology" className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#117dff] disabled:cursor-not-allowed disabled:bg-[#faf9f4]" />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="mb-1.5 block text-xs font-medium text-[#525252]">What the company does</span>
+            <textarea value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} disabled={!canEdit} rows={3} placeholder="Describe the product, services, and operating context." className="w-full resize-y rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#117dff] disabled:cursor-not-allowed disabled:bg-[#faf9f4]" />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-[#525252]">Audience</span>
+            <input value={draft.audience} onChange={(event) => setDraft((current) => ({ ...current, audience: event.target.value }))} disabled={!canEdit} placeholder="Who you serve" className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#117dff] disabled:cursor-not-allowed disabled:bg-[#faf9f4]" />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-medium text-[#525252]">Mission</span>
+            <input value={draft.mission} onChange={(event) => setDraft((current) => ({ ...current, mission: event.target.value }))} disabled={!canEdit} placeholder="What the team is working toward" className="w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#117dff] disabled:cursor-not-allowed disabled:bg-[#faf9f4]" />
+          </label>
+        </div>
+        {canEdit && (
+          <div className="mt-4 flex items-center gap-3">
+            <button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#117dff] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0066e0] disabled:opacity-50">
+              <Save size={14} /> {saving ? 'Saving…' : 'Save company overview'}
+            </button>
+            {saved && <span className="text-sm font-medium text-emerald-700">Saved to the organization context.</span>}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export default function Profile() {
   const { t } = useTranslation('dashboard');
   const { user, org, logout } = useAuth();
@@ -1382,6 +1504,8 @@ export default function Profile() {
           profileFacts={facts}
           onSignOut={logout}
         />
+
+        <OrganizationContextCard org={org} user={user} />
 
         {/* Section 2: Knowledge Identity Card */}
         <KnowledgeIdentityCard
