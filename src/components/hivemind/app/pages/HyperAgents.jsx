@@ -28,6 +28,7 @@ import {
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
+  MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -958,6 +959,8 @@ function RoomThread({ roomId, onArchived }) {
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
+      // Places prospect discovery — 'using Maps' chip.
+      'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
       // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
@@ -2194,7 +2197,7 @@ function SimTheater({ simReport, onOpenFull }) {
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
 // Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
-function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
+function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sealed }) {
   const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(true);
 
@@ -2234,12 +2237,20 @@ function ToolTimeline({ gathers, webIntels, skillUses, sealed }) {
       sources: (w.sources || []).slice(0, 4),
     });
   });
+  (prospectHunts || []).forEach((p, i) => {
+    steps.push({
+      key: `places-${i}`, ts: p.ts || 0, kind: 'places',
+      label: t('hyperAgents.tlPlaces', 'Using Maps'), detail: p.query || null,
+      chip: (p.count != null) ? t('hyperAgents.tlFirms', '{{n}} firms', { n: p.count }) : null,
+    });
+  });
   steps.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   if (!steps.length) return null;
 
   const iconFor = (s) => {
     if (s.kind === 'recall') return <Brain size={12} className="text-[#117dff]" />;
     if (s.kind === 'web') return <Globe size={12} className="text-[#117dff]" />;
+    if (s.kind === 'places') return <MapPin size={12} className="text-[#34a853]" />;
     if (s.kind === 'skill') return <Sparkles size={12} className="text-[#117dff]" />;
     const logo = BRAND_LOGOS[s.connector] || BRAND_LOGOS[String(s.connector || '').replace(/_/g, '-')]
       || BRAND_LOGOS[String(s.connector || '').replace(/-/g, '_')];
@@ -2403,6 +2414,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
   const webIntels = lines.filter(l => l.t === 'web_intel');
+  const prospectHunts = lines.filter(l => l.t === 'prospects');
   const skillUses = lines.filter(l => l.t === 'skill_used');
   // Room kind for the sealed report's desk identity — already emitted on every
   // skill_used event; old turns without it fall back to the task-tag alias.
@@ -2518,7 +2530,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} skillUses={skillUses} sealed={!!seal} />
+      <ToolTimeline gathers={gathers} webIntels={webIntels} prospectHunts={prospectHunts} skillUses={skillUses} sealed={!!seal} />
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (
