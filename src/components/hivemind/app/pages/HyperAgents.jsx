@@ -36,6 +36,7 @@ import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, Gmai
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
+import CampaignPanel from '../hyperagents/CampaignPanel';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import UsageTracker from '../components/UsageTracker';
@@ -2394,6 +2395,9 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
   // Per-room send automation for outbound email approvals ("automate from next
   // turn"). Client-side latch on the existing HITL gate: the approve call is
   // identical, only the click is automated. Persisted per room.
+  // Outreach campaign runner — which channel's panel is open for this turn
+  // (null = closed). Buttons appear under the prospect stack once sealed.
+  const [campaignChannel, setCampaignChannel] = useState(null);
   const autoSendKey = `hm_auto_send_${roomId || 'room'}`;
   const [autoSendOn, setAutoSendOn] = useState(() => {
     try { return window.localStorage.getItem(autoSendKey) === '1'; } catch { return false; }
@@ -2625,6 +2629,43 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {/* OUTREACH PROSPECTS — full stacked cards with all firm info; green "email
           verified" badge on the ones we found an email for (the ones that get emailed). */}
       {prospectStacks.map((pe, i) => <ProspectStack key={`ps-${i}`} ev={pe} />)}
+
+      {/* OUTREACH EXECUTION — after the report seals, run the prospects as a
+          one-by-one campaign: emails to the verified ones, TARA calls to the
+          ones with phones. Progress bar + stop/deselect; drain worker finishes
+          the run if the tab dies. */}
+      {seal && prospectStacks.length > 0 && !campaignChannel && (() => {
+        const allP = prospectStacks.flatMap(ev => ev.prospects || []);
+        const nEmail = allP.filter(p => p.email && /^[\w.+-]+@[\w.-]+\.\w+$/.test(p.email)).length;
+        const nCall = allP.filter(p => p.phone && /^\+[1-9]\d{6,14}$/.test(String(p.phone).replace(/[\s()/-]/g, ''))).length;
+        if (!nEmail && !nCall) return null;
+        return (
+          <div className="pl-2 flex items-center gap-2 flex-wrap">
+            {nEmail > 0 && (
+              <button onClick={() => setCampaignChannel('email')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider bg-[#117dff] text-white hover:bg-[#0e6be0]">
+                <Send size={11} /> {t('hyperAgents.sendOutreachEmails', 'Send outreach emails ({{n}})', { n: nEmail })}
+              </button>
+            )}
+            {nCall > 0 && (
+              <button onClick={() => setCampaignChannel('call')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono uppercase tracking-wider border border-[#117dff] text-[#117dff] hover:bg-blue-50">
+                <PhoneCall size={11} /> {t('hyperAgents.startOutreachCalls', 'Start outreach calls ({{n}})', { n: nCall })}
+              </button>
+            )}
+          </div>
+        );
+      })()}
+      {campaignChannel && (
+        <CampaignPanel
+          roomId={roomId}
+          turnId={turn.id}
+          channel={campaignChannel}
+          eligibleCount={prospectStacks.flatMap(ev => ev.prospects || [])
+            .filter(p => (campaignChannel === 'email' ? p.email : p.phone)).length}
+          onClose={() => setCampaignChannel(null)}
+        />
+      )}
 
       {/* RECON-PRE — evidence-sufficiency check before the team writes the output. */}
       {reconPreLine && (

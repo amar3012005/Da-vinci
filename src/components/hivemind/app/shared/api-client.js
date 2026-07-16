@@ -503,6 +503,45 @@ class HiveMindApiClient {
   }
 
   // Resolve a queued connector write (Phase 7 approval card). decision = "approve"|"deny".
+  // ── Outreach campaign runner (batch email/call over a turn's prospects) ──
+  async createOutreachCampaign(roomId, channel, turnId) {
+    const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/outreach-campaigns`, {
+      channel, turn_id: turnId,
+    });
+    return data; // { campaign: {…, targets: […]} }
+  }
+
+  async getOutreachCampaign(campaignId) {
+    const { data } = await this.controlPlane.get(`/v1/outreach-campaigns/${campaignId}`);
+    return data;
+  }
+
+  async controlOutreachCampaign(campaignId, action /* 'start' | 'stop' */) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/${action}`);
+    return data;
+  }
+
+  async patchOutreachTarget(campaignId, targetId, patch /* {selected?, payload?} */) {
+    const { data } = await this.controlPlane.patch(
+      `/v1/outreach-campaigns/${campaignId}/targets/${targetId}`, patch,
+    );
+    return data;
+  }
+
+  async generateOutreachTarget(campaignId, targetId) {
+    const { data } = await this.controlPlane.post(
+      `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/generate`,
+    );
+    return data;
+  }
+
+  async executeOutreachTarget(campaignId, targetId) {
+    const { data } = await this.controlPlane.post(
+      `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/execute`,
+    );
+    return data;
+  }
+
   async approveHyperRoomWrite(roomId, approvalId, decision) {
     const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/approve`, {
       approval_id: approvalId,
