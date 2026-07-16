@@ -1766,23 +1766,8 @@ function RoomThread({ roomId, onArchived }) {
                 {t('hyperAgents.controlRoom', 'Control room · reports from your rooms')}
               </div>
               {hqActivity.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => a.source_room_id && navigate(`/hivemind/app/employees/rooms/${a.source_room_id}`)}
-                  className="w-full text-left flex items-start gap-2.5 border border-[#e3e0db] rounded-xl px-3.5 py-2.5 bg-[#faf9f4] hover:border-violet-300 hover:bg-white transition-colors group"
-                >
-                  <span className="w-7 h-7 rounded-lg bg-violet-500/10 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">
-                    {(a.agent_name || a.source_room_name || '?')[0].toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[12px] text-[#0a0a0a] leading-snug">{a.headline}</div>
-                    {a.summary && <div className="text-[11px] text-[#525252] mt-0.5">{a.summary}</div>}
-                    <div className="text-[9.5px] font-mono text-[#a3a3a3] mt-1">
-                      {a.created_at ? new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                    </div>
-                  </div>
-                  <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-violet-600 shrink-0 mt-1" />
-                </button>
+                <HqReportBubble key={a.id} report={a}
+                  onOpenRoom={() => a.source_room_id && navigate(`/hivemind/app/employees/rooms/${a.source_room_id}`)} />
               ))}
             </div>
           )}
@@ -2244,6 +2229,74 @@ function SimTheater({ simReport, onOpenFull }) {
         )}
       </div>
       <style>{'@keyframes simpop { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none;} }'}</style>
+    </div>
+  );
+}
+
+// HQ control-room report bubble — a room-run reported to HQ as a BIG chat
+// bubble, as if the lead agent walked into HQ and briefed the owner: agent
+// heading (avatar + name + role), source room + time, the outcome digest, and
+// the FULL run report (collapsed to a preview, expandable). summary format from
+// the backend: "<digest line>\n\n<full report body>".
+function HqReportBubble({ report: a, onOpenRoom }) {
+  const [open, setOpen] = useState(false);
+  const raw = String(a.summary || '');
+  const cut = raw.indexOf('\n\n');
+  const digest = (cut > 0 ? raw.slice(0, cut) : raw).trim();
+  const body = (cut > 0 ? raw.slice(cut + 2) : '').trim();
+  const who = a.agent_name || `${a.source_room_name || 'Team'}`;
+  const ts = a.created_at
+    ? new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+  return (
+    <div className="flex items-start gap-3">
+      {/* Agent avatar — big, like a real chat participant */}
+      <span className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-700 flex items-center justify-center text-[15px] font-bold shrink-0 mt-1 font-['Space_Grotesk']">
+        {(who || '?')[0].toUpperCase()}
+      </span>
+      {/* The bubble */}
+      <div className="min-w-0 flex-1 max-w-[720px] rounded-2xl rounded-tl-md border border-[#e3e0db] bg-white shadow-sm overflow-hidden">
+        {/* Agent heading */}
+        <div className="px-4 pt-3 flex items-baseline gap-2 flex-wrap">
+          <span className="text-[13.5px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{who}</span>
+          {a.agent_role && <span className="text-[10.5px] font-mono uppercase tracking-wider text-violet-600">{a.agent_role}</span>}
+          <button onClick={onOpenRoom}
+            className="text-[10.5px] font-mono text-[#a3a3a3] hover:text-violet-600 hover:underline flex items-center gap-1">
+            <Hash size={10} /> {a.source_room_name || 'room'}
+          </button>
+          <span className="ml-auto text-[9.5px] font-mono text-[#a3a3a3]">{ts}</span>
+        </div>
+        {/* Headline — what the run accomplished */}
+        <div className="px-4 pt-1.5 text-[13px] text-[#0a0a0a] leading-snug">{a.headline}</div>
+        {/* Outcome digest chips */}
+        {digest && (
+          <div className="px-4 pt-2 flex items-center gap-1.5 flex-wrap">
+            {digest.split(' · ').map((bit, i) => (
+              <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#f4f2ec] text-[#525252]">
+                {bit}
+              </span>
+            ))}
+          </div>
+        )}
+        {/* Full run report — everything that happened, expandable */}
+        {body && (
+          <div className="px-4 pt-2 pb-1">
+            <div className={`text-[12px] text-[#3f3d39] leading-relaxed whitespace-pre-wrap ${open ? '' : 'line-clamp-4'}`}>
+              {body}
+            </div>
+            <button onClick={() => setOpen(o => !o)}
+              className="mt-1 mb-1 flex items-center gap-1 text-[10.5px] font-mono uppercase tracking-wider text-violet-600 hover:underline">
+              <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+              {open ? 'Collapse report' : 'Read full run report'}
+            </button>
+          </div>
+        )}
+        {/* Footer — jump to the source room */}
+        <button onClick={onOpenRoom}
+          className="w-full px-4 py-2 border-t border-[#f0ede7] flex items-center gap-1.5 text-[10.5px] font-mono uppercase tracking-wider text-[#a3a3a3] hover:text-violet-600 hover:bg-[#faf9f4] transition-colors">
+          <ArrowUpRight size={11} /> Open room run
+        </button>
+      </div>
     </div>
   );
 }
