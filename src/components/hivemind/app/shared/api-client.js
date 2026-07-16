@@ -503,6 +503,12 @@ class HiveMindApiClient {
   }
 
   // Resolve a queued connector write (Phase 7 approval card). decision = "approve"|"deny".
+  // "Your Leads" board — one row per prospect with outreach state + outcomes.
+  async getLeads() {
+    const { data } = await this.controlPlane.get('/v1/hyper/leads');
+    return data; // { leads: [...], summary: {...} }
+  }
+
   // ── Outreach campaign runner (batch email/call over a turn's prospects) ──
   async createOutreachCampaign(roomId, channel, turnId) {
     const { data } = await this.controlPlane.post(`/v1/hyper-rooms/${roomId}/outreach-campaigns`, {

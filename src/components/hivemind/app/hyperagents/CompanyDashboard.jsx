@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  Mail, PhoneCall, Reply, CalendarCheck,
+  Mail, PhoneCall, Reply, CalendarCheck, ListChecks,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -47,7 +47,7 @@ function SectionTitle({ children }) {
   );
 }
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -115,9 +115,9 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const employees = state.employees || [];
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-white">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
       {/* Header — Polsia's name bar */}
-      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between sticky top-0 bg-white z-10">
+      <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-white z-10 shrink-0">
         <div>
           <h1 className="text-[26px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{c.company}</h1>
           <div className="flex items-center gap-2 mt-1 text-[11.5px] text-[#525252]">
@@ -141,36 +141,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
         </div>
       </div>
 
-      {/* Outcomes strip — closed-loop value counters (7d). What actually LEFT
-          the platform and what came back. Zero-state renders muted, never hides:
-          the row is the promise of the product. */}
-      {(() => {
-        const o = state.outcomes || {};
-        const tiles = [
-          { icon: Mail, label: t('hyperDash.emailsSent', 'Emails sent'), v: o.emails_sent || 0 },
-          { icon: Reply, label: t('hyperDash.replies', 'Replies'), v: o.replies || 0 },
-          { icon: PhoneCall, label: t('hyperDash.calls', 'Calls'), v: o.calls || 0 },
-          { icon: CalendarCheck, label: t('hyperDash.bookings', 'Meetings booked'), v: o.bookings || 0 },
-        ];
-        return (
-          <div className="px-6 pt-4 max-w-[1280px]">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {tiles.map(({ icon: Icon, label, v }) => (
-                <div key={label} className="border border-[#e3e0db] rounded-lg px-3.5 py-2.5 bg-white flex items-center gap-3">
-                  <Icon size={15} className={v > 0 ? 'text-[#117dff]' : 'text-[#c9c5be]'} />
-                  <div>
-                    <div className={`text-[18px] leading-none font-semibold font-['Space_Grotesk'] ${v > 0 ? 'text-[#0a0a0a]' : 'text-[#a3a3a3]'}`}>{v}</div>
-                    <div className="text-[10.5px] font-mono uppercase text-[#a3a3a3] mt-1">{label} · 7d</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Three-column Polsia grid */}
-      <div className="px-6 py-5 grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-[1280px]">
+      {/* Body: scrollable company columns on the left, a fixed outcomes rail on
+          the right so the value counters (emails/replies/meetings/calls) are
+          always visible without scrolling the whole page. */}
+      <div className="flex-1 min-h-0 flex">
+      {/* Three-column Polsia grid — scrolls internally, keeping the rail fixed */}
+      <div className="flex-1 min-w-0 overflow-y-auto px-6 py-5 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* ── Col 1 · Company ── */}
         <div>
           <SectionTitle>{t('hyperDash.company', 'Company')}</SectionTitle>
@@ -320,6 +296,39 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
             <button onClick={() => setConfirmRerun(true)} className="ml-auto text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>
           </div>
         </div>
+      </div>
+      {/* ── Right rail · outreach outcomes, stacked row by row (always visible) ── */}
+      {(() => {
+          const o = state.outcomes || {};
+          const tiles = [
+            { icon: Mail, label: t('hyperDash.emailsSent', 'Emails sent'), v: o.emails_sent || 0 },
+            { icon: Reply, label: t('hyperDash.replies', 'Replies'), v: o.replies || 0 },
+            { icon: CalendarCheck, label: t('hyperDash.bookings', 'Meetings'), v: o.bookings || 0 },
+            { icon: PhoneCall, label: t('hyperDash.calls', 'Calls'), v: o.calls || 0 },
+          ];
+          return (
+            <aside className="w-60 shrink-0 border-l border-[#e3e0db] bg-[#faf9f4] overflow-y-auto px-4 py-5 flex flex-col gap-2.5">
+              <div className="text-[10.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">
+                {t('hyperDash.outreach', 'Outreach')} · 7d
+              </div>
+              {tiles.map(({ icon: Icon, label, v }) => (
+                <div key={label} className="border border-[#e3e0db] rounded-lg px-3.5 py-3 bg-white flex items-center gap-3">
+                  <Icon size={16} className={v > 0 ? 'text-[#117dff]' : 'text-[#c9c5be]'} />
+                  <div>
+                    <div className={`text-[20px] leading-none font-semibold font-['Space_Grotesk'] ${v > 0 ? 'text-[#0a0a0a]' : 'text-[#a3a3a3]'}`}>{v}</div>
+                    <div className="text-[10.5px] font-mono uppercase text-[#a3a3a3] mt-1">{label}</div>
+                  </div>
+                </div>
+              ))}
+              {onOpenLeads && (
+                <button onClick={onOpenLeads}
+                  className="mt-1 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-mono uppercase tracking-wider text-[#117dff] border border-[#117dff]/30 bg-white hover:bg-[#117dff]/5 transition-colors">
+                  <ListChecks size={12} /> {t('hyperDash.viewLeads', 'View all leads')}
+                </button>
+              )}
+            </aside>
+          );
+        })()}
       </div>
 
       {confirmRerun && (

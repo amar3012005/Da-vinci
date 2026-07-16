@@ -37,6 +37,7 @@ import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
+import LeadsView from '../hyperagents/LeadsView';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import UsageTracker from '../components/UsageTracker';
@@ -251,6 +252,7 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
+      if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       return { mode: 'hero', roomId: null };
     } catch { return { mode: 'hero', roomId: null }; }
   };
@@ -263,7 +265,8 @@ export default function HyperAgents() {
     const base = '/hivemind/app/employees';
     const url = mode === 'hero' ? `${base}/mycompany`
       : mode === 'roster' ? `${base}/agents`
-        : (roomId ? `${base}/rooms/${roomId}` : base);
+        : mode === 'leads' ? `${base}/leads`
+          : (roomId ? `${base}/rooms/${roomId}` : base);
     navigate(url, { replace: true });
   }, [navigate]);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
@@ -440,6 +443,14 @@ export default function HyperAgents() {
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
+          {/* YOUR LEADS — outreach progress board (Notion-style). */}
+          <button
+            onClick={() => goMode('leads', null)}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'leads' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+          >
+            <ListChecks size={13} className={viewMode === 'leads' ? 'text-white' : 'text-[#117dff]'} />
+            {t('hyperAgents.yourLeads', 'Your Leads')}
+          </button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
@@ -540,7 +551,10 @@ export default function HyperAgents() {
               goMode('thread', room.id);
             }}
             onShowRoster={() => goMode('roster')}
+            onOpenLeads={() => goMode('leads', null)}
           />
+        ) : viewMode === 'leads' ? (
+          <LeadsView />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
