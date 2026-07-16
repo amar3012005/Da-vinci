@@ -26,7 +26,7 @@ import {
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
-  ArrowLeft, ArrowRight, Target, Eye, Pencil, PhoneCall,
+  ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
   MapPin, Mail,
 } from 'lucide-react';
@@ -725,6 +725,7 @@ function RoomThread({ roomId, onArchived }) {
   const { t, i18n } = useTranslation('dashboard');
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
+  const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -869,6 +870,17 @@ function RoomThread({ roomId, onArchived }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // HQ control-room feed — agent reports from every other room's runs. Non-HQ
+  // rooms just get an empty list, so this is safe to call for any room. Refreshes
+  // when a turn seals (activeTurnId clears) so new reports appear live.
+  useEffect(() => {
+    let alive = true;
+    apiClient.getHqActivity(roomId)
+      .then((d) => { if (alive) setHqActivity(d?.activity || []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [roomId, activeTurnId]);
 
   // Probe Gmail connection so outreach rooms can nudge (and gate Send).
   useEffect(() => {
@@ -1746,7 +1758,35 @@ function RoomThread({ roomId, onArchived }) {
 
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
-          {turns.length === 0 && (
+          {/* HQ control-room feed — agents reporting their room activity to you. */}
+          {hqActivity.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+                <Network size={11} className="text-violet-500" />
+                {t('hyperAgents.controlRoom', 'Control room · reports from your rooms')}
+              </div>
+              {hqActivity.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => a.source_room_id && navigate(`/hivemind/app/employees/rooms/${a.source_room_id}`)}
+                  className="w-full text-left flex items-start gap-2.5 border border-[#e3e0db] rounded-xl px-3.5 py-2.5 bg-[#faf9f4] hover:border-violet-300 hover:bg-white transition-colors group"
+                >
+                  <span className="w-7 h-7 rounded-lg bg-violet-500/10 text-violet-700 flex items-center justify-center text-[11px] font-bold shrink-0 mt-0.5">
+                    {(a.agent_name || a.source_room_name || '?')[0].toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] text-[#0a0a0a] leading-snug">{a.headline}</div>
+                    {a.summary && <div className="text-[11px] text-[#525252] mt-0.5">{a.summary}</div>}
+                    <div className="text-[9.5px] font-mono text-[#a3a3a3] mt-1">
+                      {a.created_at ? new Date(a.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                  <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-violet-600 shrink-0 mt-1" />
+                </button>
+              ))}
+            </div>
+          )}
+          {turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>

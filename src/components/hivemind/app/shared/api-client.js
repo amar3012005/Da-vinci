@@ -503,6 +503,12 @@ class HiveMindApiClient {
   }
 
   // Resolve a queued connector write (Phase 7 approval card). decision = "approve"|"deny".
+  // HQ control-room feed — agent reports from every non-HQ room run.
+  async getHqActivity(roomId) {
+    const { data } = await this.controlPlane.get(`/v1/hyper-rooms/${roomId}/hq-activity`);
+    return data; // { activity: [...] }
+  }
+
   // "Your Leads" board — one row per prospect with outreach state + outcomes.
   async getLeads() {
     const { data } = await this.controlPlane.get('/v1/hyper/leads');
