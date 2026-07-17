@@ -8,10 +8,77 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Loader2, Mail, PhoneCall, Play, Square, CheckCheck, X, ChevronDown, Pencil,
+  Headphones,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
+// tara-deepgram base (same residency-correct derivation as TaraConfig).
+const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
+const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
+const DG_WS = DG_HTTP.replace(/^http/, 'ws');
+
+// Live-listen — hear an in-flight TARA call from the browser (listen-only).
+// Connects to tara-deepgram's /calls/listen WS: binary = PCM16 mono 8kHz
+// (both call directions), JSON = transcript/ended control events.
+function LiveListen({ sessionId }) {
+  const [on, setOn] = useState(false);
+  const [line, setLine] = useState('');
+  const wsRef = useRef(null);
+  const ctxRef = useRef(null);
+  const tRef = useRef(0);
+
+  const stop = useCallback(() => {
+    try { wsRef.current?.close(); } catch { /* closing */ }
+    try { ctxRef.current?.close(); } catch { /* closing */ }
+    wsRef.current = null; ctxRef.current = null; setOn(false);
+  }, []);
+
+  const start = useCallback(() => {
+    if (on || !sessionId) return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctxRef.current = ctx; tRef.current = ctx.currentTime + 0.1;
+    const ws = new WebSocket(`${DG_WS}/calls/listen?session_id=${encodeURIComponent(sessionId)}`);
+    ws.binaryType = 'arraybuffer';
+    wsRef.current = ws;
+    ws.onmessage = (ev) => {
+      if (typeof ev.data === 'string') {
+        try {
+          const j = JSON.parse(ev.data);
+          if (j.type === 'transcript' && j.content) setLine(`${j.role === 'assistant' ? 'TARA' : 'Caller'}: ${j.content}`);
+          if (j.type === 'ended') stop();
+        } catch { /* control frame */ }
+        return;
+      }
+      // PCM16 mono 8kHz → schedule seamless playback.
+      const i16 = new Int16Array(ev.data);
+      if (!i16.length) return;
+      const buf = ctx.createBuffer(1, i16.length, 8000);
+      const ch = buf.getChannelData(0);
+      for (let i = 0; i < i16.length; i++) ch[i] = i16[i] / 32768;
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination);
+      const at = Math.max(tRef.current, ctx.currentTime + 0.02);
+      src.start(at); tRef.current = at + buf.duration;
+    };
+    ws.onclose = () => stop();
+    ws.onerror = () => stop();
+    setOn(true);
+  }, [on, sessionId, stop]);
+
+  useEffect(() => () => stop(), [stop]);
+  if (!sessionId) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <button onClick={on ? stop : start}
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider shrink-0 ${on ? 'bg-red-100 text-red-600' : 'bg-violet-100 text-violet-700 hover:bg-violet-200'}`}
+        title={on ? 'Stop listening' : 'Listen to this call live (listen-only)'}>
+        <Headphones size={10} /> {on ? 'Stop' : 'Listen'}
+      </button>
+      {on && line && <span className="text-[9.5px] text-[#525252] truncate">{line}</span>}
+    </span>
+  );
+}
 
 function Bar({ done, failed, total }) {
   const pDone = total ? (done / total) * 100 : 0;
@@ -64,6 +131,12 @@ function TargetRow({ c, target, onPatch, disabled }) {
       </div>
       {target.resultRef?.error && (
         <div className="mt-1 text-[10px] text-red-600 font-mono truncate">{target.resultRef.error}</div>
+      )}
+      {/* Live-listen while a TARA call is in flight (dial placed → sessionId known). */}
+      {c.channel === 'call' && ['sending', 'sent'].includes(st) && target.resultRef?.sessionId && (
+        <div className="mt-1.5">
+          <LiveListen sessionId={target.resultRef.sessionId} />
+        </div>
       )}
       {open && (p.subject || p.goal) && (
         <div className="mt-2 space-y-1.5">
