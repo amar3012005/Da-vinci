@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Loader2, Mail, Phone, PhoneCall, Send, X, Zap } from 'lucide-react';
+import { renderMarkdownLite } from '../rooms/shared';
 
 /**
  * LiveActionCards — theatrical surfaces for the outbound closed loop.
@@ -68,10 +69,13 @@ export function EmailComposeCard({ approval, fromName, onSend, onDeny, busy, aut
           <span className="text-[#a3a3a3] w-12 shrink-0">Subject</span>
           <span className="text-[#0a0a0a] font-medium truncate">{approval.subject || '(no subject)'}</span>
         </div>
-        {/* Body — realtime typing */}
-        <div className="py-2 min-h-[96px] max-h-[260px] overflow-y-auto whitespace-pre-wrap leading-relaxed text-[12.5px] text-[#1f1f1f]">
-          {resolved ? body : shown}
-          {!resolved && !done && <span className="inline-block w-[7px] h-[14px] bg-[#1a73e8] align-text-bottom animate-pulse ml-0.5" />}
+        {/* Body — raw stream while typing (typewriter reads char-by-char), then
+            clean formatted markdown once written (no raw ** / | / --- left over).
+            Roomier reading area so it doesn't feel cramped in the window. */}
+        <div className="py-3 min-h-[120px] max-h-[420px] overflow-y-auto leading-relaxed text-[13px] text-[#1f1f1f]">
+          {(resolved || done)
+            ? <div className="hyper-markdown">{renderMarkdownLite(resolved ? body : shown)}</div>
+            : <div className="whitespace-pre-wrap">{shown}<span className="inline-block w-[7px] h-[14px] bg-[#1a73e8] align-text-bottom animate-pulse ml-0.5" /></div>}
         </div>
       </div>
       {/* Action bar */}

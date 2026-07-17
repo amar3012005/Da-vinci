@@ -10,21 +10,26 @@ import {
 import { renderMarkdownLite } from './shared';
 
 // Shared frame: colored kind header + rail, markdown body, optional top strip.
+// Brochure-style report frame — a flowing document, NOT a boxed card. Warm-cream
+// ground, serif desk header over an accent rule, generous reading measure. The
+// rich elements (tables/callouts/timeline/mermaid/chart) render inline via
+// renderMarkdownLite.
 function ReportFrame({ accent, icon: Icon, label, sublabel, strip, report }) {
   const body = String(report?.content || '');
   return (
-    <div className="rounded-2xl border overflow-hidden bg-white" style={{ borderColor: `${accent}33` }}>
-      <div className="px-5 py-3 flex items-center gap-2.5 border-b" style={{ background: `${accent}0d`, borderColor: `${accent}1f` }}>
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${accent}1a`, color: accent }}>
-          <Icon size={16} />
-        </span>
-        <div className="min-w-0">
-          <div className="text-[13px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{label}</div>
-          {sublabel && <div className="text-[10.5px] font-mono uppercase tracking-wider" style={{ color: accent }}>{sublabel}</div>}
+    <div className="rounded-xl overflow-hidden" style={{ background: '#F7F3EC' }}>
+      {/* Masthead */}
+      <div className="px-6 pt-5 pb-3">
+        <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-[0.18em]" style={{ color: accent }}>
+          <Icon size={13} /> {sublabel || label}
         </div>
+        <h2 className="mt-1 text-[22px] leading-tight font-semibold text-[#1c1a16]"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>{label}</h2>
+        <div className="mt-2 h-px w-full" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
       </div>
-      {strip && <div className="px-5 pt-3">{strip}</div>}
-      <div className="px-5 py-4 text-[13px] text-[#0a0a0a] leading-relaxed hyper-markdown">
+      {strip && <div className="px-6 pb-1">{strip}</div>}
+      {/* Body — flowing, on the warm ground, comfortable measure */}
+      <div className="px-6 pb-6 pt-2 text-[13.5px] text-[#1c1a16] leading-relaxed hyper-markdown max-w-[760px]">
         {renderMarkdownLite(body)}
       </div>
     </div>
