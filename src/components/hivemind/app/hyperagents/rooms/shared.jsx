@@ -1262,6 +1262,19 @@ export function SimTheater({ simReport, onOpenFull }) {
 // the backend: "<digest line>\n\n<full report body>".
 export function HqReportBubble({ report: a, onOpenRoom }) {
   const [open, setOpen] = useState(false);
+  // Routing card — a work request HQ dispatched to a kind room. Compact, not a
+  // full report bubble; the run's report lands as its own bubble when it seals.
+  if (a.status === 'routed') {
+    return (
+      <button onClick={onOpenRoom}
+        className="w-full text-left flex items-center gap-2.5 rounded-xl border border-[#117dff]/25 bg-[#117dff]/5 px-3.5 py-2 hover:bg-[#117dff]/10 transition-colors group">
+        <ArrowRight size={13} className="text-[#117dff] shrink-0" />
+        <span className="text-[11.5px] text-[#0a0a0a]">{a.headline}</span>
+        <span className="text-[10.5px] font-mono text-[#525252] truncate">— {a.summary}</span>
+        <ExternalLink size={12} className="ml-auto text-[#a3a3a3] group-hover:text-[#117dff] shrink-0" />
+      </button>
+    );
+  }
   const raw = String(a.summary || '');
   const cut = raw.indexOf('\n\n');
   const digest = (cut > 0 ? raw.slice(0, cut) : raw).trim();
