@@ -1339,8 +1339,12 @@ function RoomThread({ roomId, onArchived }) {
     const seal = (trn.lines || []).find(l => l && l.t === 'seal');
     return sum + (Number(seal?.cost_tokens) || 0);
   }, 0);
+  // Count the live seal ONLY while its turn hasn't been refetched into `turns`
+  // yet — otherwise the just-sealed turn is double-counted (11.6k showed 23.3k).
   const liveSeal = liveLines.find(l => l && l.t === 'seal');
-  const totalTokens = sealedTokens + (Number(liveSeal?.cost_tokens) || 0);
+  const liveTurnAlreadyCounted = !!turns.find(trn => trn.id === activeTurnId
+    && (trn.lines || []).some(l => l && l.t === 'seal'));
+  const totalTokens = sealedTokens + (liveTurnAlreadyCounted ? 0 : (Number(liveSeal?.cost_tokens) || 0));
   const fmtTokens = totalTokens >= 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : `${totalTokens}`;
 
   return (
@@ -2644,7 +2648,15 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
               ) : null}
             </div>
             <div className="px-4 py-3">
-              <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />
+              {(() => {
+                // Kind report views (brochure) own the synthesis when registered —
+                // the legacy desk renderer is the fallback. This is the SAME
+                // registry the final_report path uses, so both paths match.
+                const KindReport = reportViewFor(roomKind);
+                return KindReport
+                  ? <KindReport report={{ content: synthLine.content }} roomKind={roomKind} prospectHunts={prospectHunts} />
+                  : <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />;
+              })()}
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
               <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
