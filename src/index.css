@@ -198,3 +198,28 @@ html.cinematic-mode::after { bottom: 0; }
 @media (prefers-reduced-motion: reduce) {
   .cm-kenburns, .cm-grain::after, .cm-spore { animation: none !important; }
 }
+
+/* Room Report Studio — editorial brochure styling for the final synthesis.
+   Matches the SINGULANCE HIVEMIND brochure: Newsreader serif headings, Hanken
+   Grotesk body, warm-cream ground, muted-ink rules. Scoped to .hyper-brochure. */
+.hyper-brochure { font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif; }
+.hyper-brochure .hyper-markdown [class*="font-bold"],
+.hyper-brochure .hyper-markdown [class*="font-semibold"] {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500; letter-spacing: -0.01em; color: #1C1A16;
+}
+.hyper-brochure .hyper-markdown table {
+  border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13px;
+}
+.hyper-brochure .hyper-markdown th {
+  text-align: left; font-family: 'Hanken Grotesk', sans-serif; font-weight: 600;
+  color: #6A6154; border-bottom: 1px solid rgba(28,26,22,0.18);
+  padding: 7px 12px; background: transparent;
+}
+.hyper-brochure .hyper-markdown td {
+  padding: 7px 12px; border-bottom: 1px solid rgba(28,26,22,0.07); color: #1C1A16; vertical-align: top;
+}
+.hyper-brochure .hyper-markdown tr:hover td { background: rgba(28,26,22,0.02); }
+.hyper-brochure .hyper-markdown a { color: #B0836A; text-decoration: none; border-bottom: 1px solid rgba(176,131,106,0.35); }
+.hyper-brochure .hyper-markdown strong { color: #1C1A16; }
+.hyper-brochure .hyper-markdown p, .hyper-brochure .hyper-markdown li { line-height: 1.7; }
