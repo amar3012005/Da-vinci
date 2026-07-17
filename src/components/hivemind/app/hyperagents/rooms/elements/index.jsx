@@ -208,3 +208,69 @@ export const FENCE_ELEMENTS = {
   steps: Steps,
   mermaid: MermaidDiagram,
 };
+
+/* ── EmailElement — the drafted email as a letter artifact, typed live ────── */
+// A brochure letter card that TYPES the email body when it enters view (the
+// "agent writing" script moment), then rests as a clean formatted letter.
+// Reduced-motion or long bodies → instant. Envelope rows parsed from markdown.
+export function EmailElement({ raw, inline }) {
+  const text = String(raw || '').replace(/\r/g, '');
+  const subjM = text.match(/^\s*\*{0,2}Subject:?\*{0,2}\s*(.+)$/im);
+  const toM = text.match(/^\s*\*{0,2}To:?\*{0,2}\s*(.+)$/im);
+  const body = text
+    .replace(subjM ? subjM[0] : '', '')
+    .replace(toM ? toM[0] : '', '')
+    .replace(/^\s*[-–—]{3,}\s*$/gm, '')
+    .trim();
+  const [shown, setShown] = useState('');
+  const [done, setDone] = useState(false);
+  const ref = useRef(null);
+  const started = useRef(false);
+  useEffect(() => {
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const el = ref.current;
+    if (!el) return undefined;
+    const start = () => {
+      if (started.current) return; started.current = true;
+      if (reduced || body.length > 2400) { setShown(body); setDone(true); return; }
+      const step = Math.max(2, Math.ceil(body.length / 220)); // ~2.2s total
+      let i = 0;
+      const id = setInterval(() => {
+        i += step;
+        if (i >= body.length) { setShown(body); setDone(true); clearInterval(id); }
+        else setShown(body.slice(0, i));
+      }, 10);
+    };
+    const io = new IntersectionObserver((es) => { if (es.some(e => e.isIntersecting)) { start(); io.disconnect(); } }, { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [body]);
+  return (
+    <figure ref={ref} className="my-5 rounded-xl overflow-hidden"
+      style={{ background: TOKENS.panel, border: `1px solid ${TOKENS.rule}` }}>
+      <figcaption className="flex items-center justify-between px-5 pt-4"
+        style={{ fontFamily: TOKENS.sans, fontWeight: 700, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#B0836A' }}>
+        <span>Draft email — ready to send</span>
+        {!done && <span className="normal-case tracking-normal" style={{ color: TOKENS.faint, fontWeight: 500 }}>agent writing…</span>}
+      </figcaption>
+      <div className="px-5 pt-3">
+        {toM && (
+          <div className="flex gap-3 py-1.5" style={{ borderBottom: `1px solid ${TOKENS.rule}`, fontFamily: TOKENS.sans, fontSize: 13 }}>
+            <span style={{ color: TOKENS.faint, minWidth: 56 }}>To</span>
+            <span style={{ color: TOKENS.ink }}>{toM[1].replace(/\*/g, '').trim()}</span>
+          </div>
+        )}
+        {subjM && (
+          <div className="flex gap-3 py-1.5" style={{ borderBottom: `1px solid ${TOKENS.rule}`, fontFamily: TOKENS.sans, fontSize: 13 }}>
+            <span style={{ color: TOKENS.faint, minWidth: 56 }}>Subject</span>
+            <span style={{ fontFamily: TOKENS.serif, fontSize: 15.5, color: TOKENS.ink }}>{subjM[1].replace(/\*/g, '').trim()}</span>
+          </div>
+        )}
+      </div>
+      <div className="px-5 py-4" style={{ fontFamily: TOKENS.sans, fontSize: 14.5, lineHeight: 1.7, color: TOKENS.ink, whiteSpace: 'pre-wrap' }}>
+        {done && inline ? inline(shown) : shown}
+        {!done && <span className="inline-block align-text-bottom ml-0.5" style={{ width: 7, height: 15, background: '#B0836A', animation: 'pulse 1s infinite' }} />}
+      </div>
+    </figure>
+  );
+}

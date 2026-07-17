@@ -2654,7 +2654,8 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
                 // registry the final_report path uses, so both paths match.
                 const KindReport = reportViewFor(roomKind);
                 return KindReport
-                  ? <KindReport report={{ content: synthLine.content }} roomKind={roomKind} prospectHunts={prospectHunts} />
+                  ? <KindReport report={{ content: synthLine.content }} roomKind={roomKind} prospectHunts={prospectHunts}
+                      taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)} />
                   : <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />;
               })()}
             </div>
@@ -2778,6 +2779,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
             roomKind={roomKind}
             webSources={webIntel?.sources || []}
             prospectHunts={prospectHunts}
+            taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)}
             onOpenMemory={setEvidenceMemoryId}
           />
         ) : (

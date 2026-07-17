@@ -12,15 +12,15 @@ const KIND = {
   content: { eyebrow: 'Content · Editorial desk', title: 'Content desk', accent: '#D8A87F' },
 };
 
-export function OutreachReport({ report }) {
-  return <BrochureReport report={report} {...KIND.outreach} />;
+export function OutreachReport({ report, taskTitle }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.outreach} />;
 }
-export function ResearchReport({ report }) {
-  return <BrochureReport report={report} {...KIND.research} />;
+export function ResearchReport({ report, taskTitle }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.research} />;
 }
-export function StrategyReport({ report }) {
-  return <BrochureReport report={report} {...KIND.strategy} />;
+export function StrategyReport({ report, taskTitle }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.strategy} />;
 }
-export function ContentReport({ report }) {
-  return <BrochureReport report={report} {...KIND.content} />;
+export function ContentReport({ report, taskTitle }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.content} />;
 }

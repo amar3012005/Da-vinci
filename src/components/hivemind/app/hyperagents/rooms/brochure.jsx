@@ -13,6 +13,7 @@
 //   • tables / timeline / chart / callouts render via renderMarkdownLite
 import React from 'react';
 import { renderMarkdownLite } from './shared';
+import { EmailElement } from './elements';
 
 const B = {
   ground: '#F5F0E8', ink: '#1C1A16', muted: '#6A6154', faint: '#8A8073',
@@ -39,12 +40,19 @@ function splitSections(md) {
 const _CTA_RE = /next step|call to action|book|schedule|get started|contact/i;
 const _isEmailSubject = (b) => /^\s*\*{0,2}subject\s*:/i.test(b);
 
-export default function BrochureReport({ report, eyebrow, title, accent = '#B0836A' }) {
+export default function BrochureReport({ report, eyebrow, title, taskTitle, accent = '#B0836A' }) {
   const content = String(report?.content || '');
   if (!content.trim()) return null;
   const secs = splitSections(content);
   const hero = secs[0] && !secs[0].title ? secs[0] : null;
   const rest = hero ? secs.slice(1) : secs;
+  // Dynamic masthead — what this RUN is about, not a static desk label:
+  // 1) the content's own H1 / bold first line, 2) the turn's task, 3) kind default.
+  let heroBody = hero ? hero.body.join('\n').trim() : '';
+  let runTitle = '';
+  const h1 = heroBody.match(/^#\s+(.+)$/m) || heroBody.match(/^\*\*(.{8,90})\*\*\s*$/m);
+  if (h1) { runTitle = h1[1].replace(/[*#]/g, '').trim(); heroBody = heroBody.replace(h1[0], '').trim(); }
+  const displayTitle = runTitle || (taskTitle ? String(taskTitle).slice(0, 90) : '') || title;
 
   return (
     <div className="hyper-brochure rounded-2xl overflow-hidden"
@@ -59,11 +67,11 @@ export default function BrochureReport({ report, eyebrow, title, accent = '#B083
             {eyebrow}
           </div>
           <h1 className="mt-2" style={{ fontFamily: B.serif, fontWeight: 500, fontSize: 34, lineHeight: 1.12, color: B.ink }}>
-            {title}
+            {displayTitle}
           </h1>
-          {hero && (
+          {heroBody && (
             <div className="mt-3 hyper-markdown" style={{ fontSize: 16, lineHeight: 1.7, color: '#3B372F', maxWidth: 820 }}>
-              {renderMarkdownLite(hero.body.join('\n').trim())}
+              {renderMarkdownLite(heroBody)}
             </div>
           )}
           <div className="mt-4 h-px w-full" style={{ background: B.rule }} />
@@ -91,10 +99,13 @@ export default function BrochureReport({ report, eyebrow, title, accent = '#B083
             <section key={idx} style={{ padding: '32px 0 4px' }}>
               <h2 style={{ fontFamily: B.serif, fontWeight: 500, fontSize: 22, lineHeight: 1.2, color: B.ink }}>{s.title}</h2>
               <div className="mt-1 mb-3 h-px w-14" style={{ background: accent }} />
-              <div className={`hyper-markdown ${_isEmailSubject(bodyMd) ? 'hyper-brochure-letter' : ''}`}
-                style={{ fontSize: 15, lineHeight: 1.7, color: B.ink }}>
-                {renderMarkdownLite(bodyMd)}
-              </div>
+              {_isEmailSubject(bodyMd)
+                ? <EmailElement raw={bodyMd} />
+                : (
+                  <div className="hyper-markdown" style={{ fontSize: 15, lineHeight: 1.7, color: B.ink }}>
+                    {renderMarkdownLite(bodyMd)}
+                  </div>
+                )}
             </section>
           );
         })}
