@@ -223,3 +223,14 @@ html.cinematic-mode::after { bottom: 0; }
 .hyper-brochure .hyper-markdown a { color: #B0836A; text-decoration: none; border-bottom: 1px solid rgba(176,131,106,0.35); }
 .hyper-brochure .hyper-markdown strong { color: #1C1A16; }
 .hyper-brochure .hyper-markdown p, .hyper-brochure .hyper-markdown li { line-height: 1.7; }
+
+/* Brochure dark bands (CTA / feature) — invert markdown children to cream. */
+.hyper-brochure-dark .hyper-markdown,
+.hyper-brochure-dark .hyper-markdown strong { color: #F5F0E8 !important; }
+.hyper-brochure-dark .hyper-markdown a { color: #EE9A6B !important; border-bottom-color: rgba(238,154,107,0.4) !important; }
+.hyper-brochure-dark .hyper-markdown [class*="font-bold"],
+.hyper-brochure-dark .hyper-markdown [class*="font-semibold"] { color: #F5F0E8 !important; font-family: 'Newsreader', Georgia, serif; }
+.hyper-brochure-dark .hyper-markdown th { color: #C9C1D2 !important; border-bottom-color: rgba(245,240,232,0.28) !important; }
+.hyper-brochure-dark .hyper-markdown td { color: #E8E2D6 !important; border-bottom-color: rgba(245,240,232,0.12) !important; }
+/* Ready-to-send letter block inside a section (email subject/body) — a quiet card. */
+.hyper-brochure-letter { background: rgba(255,255,255,0.55); border: 1px solid rgba(28,26,22,0.10); border-radius: 12px; padding: 18px 20px; }
