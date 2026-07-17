@@ -50,7 +50,7 @@ export default function BrochureReport({ report, eyebrow, title, accent = '#B083
     <div className="hyper-brochure rounded-2xl overflow-hidden"
       style={{ background: B.ground, color: B.ink, fontFamily: B.sans }}>
       {/* Outer reading frame — centered column, brochure horizontal padding */}
-      <div className="mx-auto" style={{ maxWidth: 760, padding: '0 28px 44px' }}>
+      <div className="mx-auto" style={{ maxWidth: 'min(100%, 960px)', padding: '0 clamp(20px, 4vw, 48px) 44px' }}>
 
         {/* ── Hero ── */}
         <header style={{ padding: '44px 0 8px' }}>
@@ -62,7 +62,7 @@ export default function BrochureReport({ report, eyebrow, title, accent = '#B083
             {title}
           </h1>
           {hero && (
-            <div className="mt-3 hyper-markdown" style={{ fontSize: 16, lineHeight: 1.7, color: '#3B372F', maxWidth: 660 }}>
+            <div className="mt-3 hyper-markdown" style={{ fontSize: 16, lineHeight: 1.7, color: '#3B372F', maxWidth: 820 }}>
               {renderMarkdownLite(hero.body.join('\n').trim())}
             </div>
           )}

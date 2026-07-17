@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import { BRAND_LOGOS } from '../../shared/connectors-catalog';
+import { FENCE_ELEMENTS, Callout, TimelineBlock, ChartBlock, StatRow, Steps } from './elements';
+export { Callout, TimelineBlock, ChartBlock, StatRow, Steps };
 
 export const LANE_META = {
   Strategist:   { icon: Crown,      color: '#a855f7', bg: 'rgba(168,85,247,0.10)', label: 'Strategist' },
@@ -382,91 +384,6 @@ export function ArtifactPreviewModal({ preview, roomId, onClose }) {
  * Just enough to make lead reports look like a clean Slack message.
  * Headers, lists, bold, inline code, tables, and ```mermaid diagrams. No full markdown engine.
  */
-// ── Rich room-report elements (RS-B) — rendered from fenced/callout blocks the
-// synthesis emits. Pure/self-contained (no external chart dep — inline SVG).
-const _CALLOUT_STYLE = {
-  important: { bar: '#117dff', bg: 'rgba(17,125,255,0.06)', label: 'Important' },
-  insight: { bar: '#10b981', bg: 'rgba(16,185,129,0.06)', label: 'Insight' },
-  risk: { bar: '#f59e0b', bg: 'rgba(245,158,11,0.08)', label: 'Risk' },
-  note: { bar: '#a3a3a3', bg: 'rgba(163,163,163,0.06)', label: 'Note' },
-};
-export function Callout({ kind, text, inline }) {
-  const s = _CALLOUT_STYLE[kind] || _CALLOUT_STYLE.note;
-  return (
-    <div className="my-3 rounded-r-lg pl-3.5 pr-4 py-2.5" style={{ borderLeft: `3px solid ${s.bar}`, background: s.bg }}>
-      <div className="text-[10px] font-mono uppercase tracking-[0.14em] mb-1" style={{ color: s.bar }}>{s.label}</div>
-      <div className="text-[13px] text-[#1c1a16] leading-relaxed">{inline ? inline(text) : text}</div>
-    </div>
-  );
-}
-export function TimelineBlock({ raw }) {
-  const rows = String(raw).split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-    .map(l => { const m = l.match(/^(.*?)\s+[—\-–:]\s+(.+)$/); return m ? { when: m[1], what: m[2] } : { when: '', what: l }; });
-  if (!rows.length) return null;
-  return (
-    <div className="my-3 pl-1">
-      {rows.map((r, idx) => (
-        <div key={idx} className="relative pl-5 pb-3 last:pb-0">
-          <span className="absolute left-0 top-1 w-2.5 h-2.5 rounded-full bg-[#117dff] ring-4 ring-[#117dff]/10" />
-          {idx < rows.length - 1 && <span className="absolute left-[4.5px] top-3.5 bottom-0 w-px bg-[#e3e0db]" />}
-          {r.when && <div className="text-[10.5px] font-mono uppercase tracking-wider text-[#117dff]">{r.when}</div>}
-          <div className="text-[13px] text-[#1c1a16] leading-snug">{r.what}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-export function ChartBlock({ raw }) {
-  let spec; try { spec = JSON.parse(raw); } catch { return null; }
-  const data = (Array.isArray(spec?.data) ? spec.data : []).filter(d => d && d.label != null).slice(0, 12);
-  if (!data.length) return null;
-  const type = String(spec.type || 'bar').toLowerCase();
-  const max = Math.max(...data.map(d => Number(d.value) || 0), 1);
-  const PAL = ['#117dff', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#0891b2', '#ef4444', '#84cc16'];
-  return (
-    <div className="my-3 rounded-lg border border-[#e3e0db] bg-white px-4 py-3">
-      {spec.title && <div className="text-[11px] font-mono uppercase tracking-wider text-[#525252] mb-2">{spec.title}</div>}
-      {type === 'donut' ? (() => {
-        const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0) || 1;
-        let acc = 0; const R = 42, C = 2 * Math.PI * R;
-        return (
-          <div className="flex items-center gap-4">
-            <svg width="104" height="104" viewBox="0 0 104 104">
-              {data.map((d, idx) => {
-                const frac = (Number(d.value) || 0) / total; const dash = frac * C;
-                const el = (
-                  <circle key={idx} cx="52" cy="52" r={R} fill="none" stroke={PAL[idx % PAL.length]} strokeWidth="14"
-                    strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={-acc * C} transform="rotate(-90 52 52)" />
-                );
-                acc += frac; return el;
-              })}
-            </svg>
-            <div className="space-y-1">
-              {data.map((d, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 text-[11.5px]">
-                  <span className="w-2.5 h-2.5 rounded-sm" style={{ background: PAL[idx % PAL.length] }} />
-                  <span className="text-[#1c1a16]">{d.label}</span>
-                  <span className="text-[#a3a3a3] font-mono ml-auto">{d.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })() : (
-        <div className="space-y-1.5">
-          {data.map((d, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <span className="text-[11px] text-[#525252] w-28 shrink-0 truncate text-right">{d.label}</span>
-              <span className="h-3.5 rounded-sm" style={{ width: `${Math.max(2, (Number(d.value) || 0) / max * 100)}%`, background: PAL[idx % PAL.length] }} />
-              <span className="text-[11px] font-mono text-[#a3a3a3]">{d.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function renderMarkdownLite(raw) {
   if (!raw) return null;
   const text = String(raw).replace(/^\s+|\s+$/g, '');
@@ -518,10 +435,9 @@ export function renderMarkdownLite(raw) {
       const code = buf.join('\n');
       if (lang === 'mermaid') {
         blocks.push(<MermaidDiagram key={key++} code={code} />);
-      } else if (lang === 'timeline') {
-        blocks.push(<TimelineBlock key={key++} raw={code} />);
-      } else if (lang === 'chart') {
-        blocks.push(<ChartBlock key={key++} raw={code} />);
+      } else if (FENCE_ELEMENTS[lang]) {
+        const El = FENCE_ELEMENTS[lang];
+        blocks.push(<El key={key++} raw={code} />);
       } else {
         blocks.push(
           <pre key={key++} className="my-2 overflow-x-auto rounded-md border border-[#e3e0db] bg-[#faf9f4] p-2 text-[11px] font-mono text-[#262626] whitespace-pre">{code}</pre>,

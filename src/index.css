@@ -234,3 +234,7 @@ html.cinematic-mode::after { bottom: 0; }
 .hyper-brochure-dark .hyper-markdown td { color: #E8E2D6 !important; border-bottom-color: rgba(245,240,232,0.12) !important; }
 /* Ready-to-send letter block inside a section (email subject/body) — a quiet card. */
 .hyper-brochure-letter { background: rgba(255,255,255,0.55); border: 1px solid rgba(28,26,22,0.10); border-radius: 12px; padding: 18px 20px; }
+
+/* Brochure tables — scroll inside the column instead of breaking it. */
+.hyper-brochure .hyper-markdown { overflow-x: auto; }
+.hyper-brochure .hyper-markdown table { min-width: 520px; }
