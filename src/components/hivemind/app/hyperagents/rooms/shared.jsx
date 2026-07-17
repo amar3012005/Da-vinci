@@ -1532,3 +1532,56 @@ export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sea
     </div>
   );
 }
+
+
+/* ─── Pure helpers (moved from HyperAgents.jsx — right home) ─────────── */
+export function relTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts).getTime();
+  if (Number.isNaN(d)) return '';
+  const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
+  if (s < 45) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  if (s < 604800) return `${Math.floor(s / 86400)}d`;
+  return `${Math.floor(s / 604800)}w`;
+}
+
+const SECTION_ICONS = {
+  market:   [[/landscape/i, Layers], [/win/i, Crown], [/threat|gap/i, AlertTriangle], [/move|recommend/i, Rocket]],
+  content:  [[/pillar/i, Boxes], [/calendar/i, Clock], [/hook|angle/i, Lightbulb], [/distribution/i, Network]],
+  outreach: [[/profile|icp/i, Target], [/prospect/i, Users], [/sequence/i, ListChecks], [/metric|signal/i, Gauge]],
+  business: [[/economic/i, Gauge], [/pricing|positioning/i, Tag], [/risk/i, AlertTriangle], [/kills/i, Swords]],
+  strategy: [[/decision/i, Gavel], [/option/i, Scale], [/rationale/i, Brain], [/tripwire/i, AlertTriangle]],
+};
+export function sectionIconFor(kind, title) {
+  for (const [re, Icon] of (SECTION_ICONS[kind] || [])) if (re.test(title || '')) return Icon;
+  return null;
+}
+
+export function splitSynthesisSections(content) {
+  const lines = String(content || '').replace(/\r/g, '').split('\n');
+  const sections = [];
+  let current = { title: 'Executive summary', body: [] };
+  for (const line of lines) {
+    const heading = line.match(/^#{1,3}\s+(.+?)\s*$/);
+    if (heading) {
+      if (current.body.length || current.title !== 'Executive summary') sections.push(current);
+      current = { title: heading[1], body: [] };
+    } else current.body.push(line);
+  }
+  if (current.body.length || !sections.length) sections.push(current);
+  return sections.filter((section) => section.body.join('').trim());
+}
+
+export function hyperEventKey(event, index) {
+  if (!event) return `empty:${index}`;
+  if (event.id) return `id:${event.id}`;
+  return [
+    event.t || 'line',
+    event.ts || '',
+    event.agent || event.reviewer || event.voter || '',
+    event.kind || event.phase || event.round || '',
+    event.id || event.target_hypothesis_id || '',
+  ].join('|') || `idx:${index}`;
+}

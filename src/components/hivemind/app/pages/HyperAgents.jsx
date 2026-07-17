@@ -45,6 +45,7 @@ import {
   LANE_META, AGREEMENT_META,
   fmtTs, eventDisplayTs, getPersonaContract, contractSnippet,
   SwarmSpinningUp, SimTheater, HqReportBubble, ProspectStack, ToolTimeline,
+  relTime, sectionIconFor, splitSynthesisSections, hyperEventKey,
 } from '../hyperagents/rooms/shared';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
@@ -66,17 +67,6 @@ const ROOM_CONNECTORS = [
   { id: 'linear', label: 'Linear', color: '#5e6ad2', desc: 'Issues & projects' },
 ];
 
-function relTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts).getTime();
-  if (Number.isNaN(d)) return '';
-  const s = Math.max(0, Math.floor((Date.now() - d) / 1000));
-  if (s < 45) return 'now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d`;
-  return `${Math.floor(s / 604800)}w`;
-}
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
 
@@ -142,32 +132,7 @@ const SYNTHESIS_PRESENTATIONS = {
 
 // Per-section icons matched by heading keyword — the row-cards read like a
 // specialist's dossier, not uniform bullets. Fallback = accent dot (existing).
-const SECTION_ICONS = {
-  market:   [[/landscape/i, Layers], [/win/i, Crown], [/threat|gap/i, AlertTriangle], [/move|recommend/i, Rocket]],
-  content:  [[/pillar/i, Boxes], [/calendar/i, Clock], [/hook|angle/i, Lightbulb], [/distribution/i, Network]],
-  outreach: [[/profile|icp/i, Target], [/prospect/i, Users], [/sequence/i, ListChecks], [/metric|signal/i, Gauge]],
-  business: [[/economic/i, Gauge], [/pricing|positioning/i, Tag], [/risk/i, AlertTriangle], [/kills/i, Swords]],
-  strategy: [[/decision/i, Gavel], [/option/i, Scale], [/rationale/i, Brain], [/tripwire/i, AlertTriangle]],
-};
-function sectionIconFor(kind, title) {
-  for (const [re, Icon] of (SECTION_ICONS[kind] || [])) if (re.test(title || '')) return Icon;
-  return null;
-}
 
-function splitSynthesisSections(content) {
-  const lines = String(content || '').replace(/\r/g, '').split('\n');
-  const sections = [];
-  let current = { title: 'Executive summary', body: [] };
-  for (const line of lines) {
-    const heading = line.match(/^#{1,3}\s+(.+?)\s*$/);
-    if (heading) {
-      if (current.body.length || current.title !== 'Executive summary') sections.push(current);
-      current = { title: heading[1], body: [] };
-    } else current.body.push(line);
-  }
-  if (current.body.length || !sections.length) sections.push(current);
-  return sections.filter((section) => section.body.join('').trim());
-}
 
 function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
   // room_kind (from skill_used events) wins; task tag stays as the legacy alias.
@@ -684,17 +649,6 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
 
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
-function hyperEventKey(event, index) {
-  if (!event) return `empty:${index}`;
-  if (event.id) return `id:${event.id}`;
-  return [
-    event.t || 'line',
-    event.ts || '',
-    event.agent || event.reviewer || event.voter || '',
-    event.kind || event.phase || event.round || '',
-    event.id || event.target_hypothesis_id || '',
-  ].join('|') || `idx:${index}`;
-}
 
 function mergeHyperEvents(base, overlay) {
   // Returns the SAME array reference when nothing new arrived — the 250ms
