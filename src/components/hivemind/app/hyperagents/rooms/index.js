@@ -11,12 +11,14 @@
 //   const ReportView = reportViewFor(roomKind);
 //   return ReportView ? <ReportView report={...} .../> : <FinalReportCard .../>;
 
+import { OutreachReport, ResearchReport, StrategyReport, ContentReport } from './reports';
+
 // kind → React component (or null = use the default FinalReportCard).
 const REPORT_VIEWS = {
-  // outreach: OutreachReport,   // P3a
-  // research: ResearchReport,   // P3b
-  // strategy: StrategyReport,   // P3c
-  // content:  ContentReport,    // P3d
+  outreach: OutreachReport,
+  research: ResearchReport,
+  strategy: StrategyReport,
+  content: ContentReport,
 };
 
 // Normalize the BE kind aliases to the FE vertical.
