@@ -1243,6 +1243,7 @@ function RoomThread({ roomId, onArchived }) {
     try {
       const idempo = `${roomId}:${Date.now()}:${msg.length}`;
       const resp = await apiClient.postHyperTurn(roomId, { user_message: msg, idempotency_key: idempo, turn_id: tempId,
+        language: i18n?.language,  // run-wide output language from the navbar toggle
         // self-evolve signal: a rerun = the prior answer was rejected → the employees learn from it
         user_signal: 'the user reran this turn — the previous answer was rejected as wrong or stale' });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
@@ -1269,7 +1270,8 @@ function RoomThread({ roomId, onArchived }) {
     setActiveTurnId(tempId);
     try {
       const resp = await apiClient.postHyperTurn(roomId, {
-        user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId });
+        user_message: msg, idempotency_key: `${roomId}:next:${Date.now()}`, turn_id: tempId,
+        language: i18n?.language });
       setTurns(prev => prev.map(trn => (trn.id === tempId ? { ...trn, id: resp.turn_id } : trn)));
       setActiveTurnId(resp.turn_id);
     } catch (err) {
