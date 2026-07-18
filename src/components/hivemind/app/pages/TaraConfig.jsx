@@ -671,7 +671,13 @@ export default function TaraConfig() {
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
-  useEffect(() => { refreshCalls(); }, []);
+  useEffect(() => {
+    refreshCalls();
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshCalls();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
 
