@@ -37,7 +37,11 @@ function splitSections(md) {
   return secs.filter(s => s.title || s.body.join('').trim());
 }
 
-const _CTA_RE = /next step|call to action|book|schedule|get started|contact/i;
+// A section becomes the closing gradient CTA band ONLY when its TITLE clearly is
+// a call-to-action/closing — anchored at the start so a heading that merely
+// contains a word like "contact" (e.g. "Prospect List — … + contact + source")
+// is NOT swept into the purple band.
+const _CTA_RE = /^\s*(next steps?|call to action|closing|get started|ready to|let'?s talk|book (a|your)|get in touch|take action)\b/i;
 const _isEmailSubject = (b) => /^\s*\*{0,2}subject\s*:/i.test(b);
 
 export default function BrochureReport({ report, eyebrow, title, taskTitle, accent = '#B0836A' }) {

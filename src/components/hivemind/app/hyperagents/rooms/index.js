@@ -11,14 +11,17 @@
 //   const ReportView = reportViewFor(roomKind);
 //   return ReportView ? <ReportView report={...} .../> : <FinalReportCard .../>;
 
-import { OutreachReport, ResearchReport, StrategyReport, ContentReport } from './reports';
+import { OutreachReport, ResearchReport, StrategyReport, ContentReport, GeneralReport } from './reports';
 
-// kind → React component (or null = use the default FinalReportCard).
+// kind → React component. Every kind maps to a brochure view (general/hq is the
+// default) so sealed reports render UNIFORMLY — no legacy fallback renderer.
 const REPORT_VIEWS = {
   outreach: OutreachReport,
   research: ResearchReport,
   strategy: StrategyReport,
   content: ContentReport,
+  general: GeneralReport,
+  hq: GeneralReport,
 };
 
 // Normalize the BE kind aliases to the FE vertical.
@@ -34,7 +37,8 @@ export function normalizeKind(kind) {
   return KIND_ALIAS[k] || k;
 }
 
-// Returns the dedicated ReportView for a kind, or null to signal "use default".
+// Returns the ReportView for a kind — ALWAYS a brochure view (GeneralReport for
+// anything unmapped), so no sealed report falls back to the legacy renderer.
 export function reportViewFor(kind) {
-  return REPORT_VIEWS[normalizeKind(kind)] || null;
+  return REPORT_VIEWS[normalizeKind(kind)] || GeneralReport;
 }
