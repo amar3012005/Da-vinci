@@ -1328,12 +1328,25 @@ export function HqReportBubble({ report: a, onOpenRoom }) {
             ))}
           </div>
         )}
-        {/* Full run report — everything that happened, expandable */}
+        {/* Full run report — everything that happened, expandable. Collapsed =
+            plain 4-line teaser; expanded = the SAME brochure element system the
+            room report uses (serif, tables, callouts, stats/steps/charts/email)
+            so an HQ bubble reads exactly like opening the room's report. */}
         {body && (
           <div className="px-4 pt-2 pb-1">
-            <div className={`text-[12px] text-[#3f3d39] leading-relaxed whitespace-pre-wrap ${open ? '' : 'line-clamp-4'}`}>
-              {body}
-            </div>
+            {open ? (
+              <div className="hyper-brochure rounded-xl overflow-hidden my-1"
+                style={{ background: '#F5F0E8', color: '#1C1A16', padding: '18px 20px' }}>
+                <div className="hyper-markdown" style={{ fontSize: 13, lineHeight: 1.65,
+                  fontFamily: "'Hanken Grotesk', -apple-system, sans-serif" }}>
+                  {renderMarkdownLite(body)}
+                </div>
+              </div>
+            ) : (
+              <div className="text-[12px] text-[#3f3d39] leading-relaxed whitespace-pre-wrap line-clamp-4">
+                {body}
+              </div>
+            )}
             <button onClick={() => setOpen(o => !o)}
               className="mt-1 mb-1 flex items-center gap-1 text-[10.5px] font-mono uppercase tracking-wider text-violet-600 hover:underline">
               <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
