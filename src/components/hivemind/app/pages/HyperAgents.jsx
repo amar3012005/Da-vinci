@@ -49,6 +49,7 @@ import {
 } from '../hyperagents/rooms/shared';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
+import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
 
@@ -687,6 +688,8 @@ function RoomThread({ roomId, onArchived }) {
   const [attachments, setAttachments] = useState([]);
   const fileInputRef = useRef(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [showHire, setShowHire] = useState(false);      // marketplace popup (hire NEW agents)
+  const [hiredCongrats, setHiredCongrats] = useState(null); // {name, title} → congrats overlay
   const [showConnectors, setShowConnectors] = useState(false);
   const [showEvo, setShowEvo] = useState(false);
   // Live per-turn self-evolve signal: {added, employees:[{slug,name,added,total}]} → transient chip.
@@ -1318,6 +1321,35 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  // Hire a NEW agent from the marketplace, straight into THIS room: org-tune the
+  // persona from the profession brief, create the employee, add them to the
+  // room's participants, then play the congrats moment.
+  async function handleHireIntoRoom(prof, field, chosenName) {
+    const empName = (chosenName || '').trim() || prof.title;
+    let persona = prof.brief;
+    try {
+      const { persona: p } = await apiClient.optimizeEmployeePersona({
+        brief: prof.brief, name: empName, role: prof.role_archetype, ground_org: true,
+      });
+      if (p) persona = p;
+    } catch { /* fall back to the raw brief */ }
+    const created = await apiClient.createEmployee({
+      name: empName, persona, scope: 'organization', team_id: null,
+      slack_team_id: null, slack_channels_allowed: [], tools: [],
+      role_archetype: prof.role_archetype,
+      policy_rules: { rate_limit_per_min: 30, marketplace_category: field, marketplace_profession: prof.title },
+    });
+    const emp = created?.employee || created || {};
+    const newId = emp.id || emp.employee_id;
+    if (newId) {
+      const ids = [...(room.participantIds || room.participant_ids || participants.map(p => p.id)), newId];
+      await handleParticipantsChange(Array.from(new Set(ids)));
+    }
+    setShowHire(false);
+    setHiredCongrats({ name: empName, title: prof.title });
+    return emp;
+  }
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -1907,6 +1939,16 @@ function RoomThread({ roomId, onArchived }) {
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
         </div>
+        {!archived && (
+          <div className="p-3 border-t border-[#e3e0db]">
+            <button
+              onClick={() => setShowHire(true)}
+              className="w-full h-9 flex items-center justify-center gap-1.5 rounded-lg bg-[#0a0a0a] hover:bg-[#262626] text-white text-[12px] font-semibold transition-colors"
+            >
+              <Sparkles size={13} /> {t('hyperAgents.hireMoreAgents', 'Hire more Agents')}
+            </button>
+          </div>
+        )}
       </aside>
 
       <AnimatePresence>
@@ -1915,6 +1957,19 @@ function RoomThread({ roomId, onArchived }) {
             currentIds={room.participantIds || room.participant_ids || []}
             onClose={() => setShowPicker(false)}
             onPick={(ids) => { setShowPicker(false); handleParticipantsChange(ids); }}
+          />
+        )}
+        {showHire && (
+          <HireAgentsModal
+            roomName={room.name}
+            onClose={() => setShowHire(false)}
+            onHire={handleHireIntoRoom}
+          />
+        )}
+        {hiredCongrats && (
+          <HiredCongrats
+            hire={hiredCongrats}
+            onDone={() => setHiredCongrats(null)}
           />
         )}
         {showConnectors && (
@@ -3957,6 +4012,155 @@ function RoomToolsModal({ room, onClose }) {
             </button>
           </div>
         </footer>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Marketplace popup — hire a NEW agent straight into the room. Two-level browse
+// (field → profession, from the shared field-catalog), optional name, then Hire.
+function HireAgentsModal({ roomName, onClose, onHire }) {
+  const { t } = useTranslation('dashboard');
+  const [field, setField] = useState(null);
+  const [sel, setSel] = useState(null);       // selected profession
+  const [name, setName] = useState('');
+  const [hiring, setHiring] = useState(false);
+  const [err, setErr] = useState(null);
+  const professions = field ? professionsForField(field) : [];
+
+  async function doHire() {
+    if (!sel || hiring) return;
+    setHiring(true); setErr(null);
+    try {
+      await onHire(sel, field, name);
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message || 'Hire failed');
+      setHiring(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+        className="bg-white rounded-xl w-full max-w-[560px] shadow-2xl overflow-hidden flex flex-col max-h-[82vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        <header className="px-5 py-4 border-b border-[#e3e0db] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-[#7c3aed]" />
+            <h2 className="text-[15px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
+              {t('hyperAgents.hireInto', 'Hire an agent into #{{name}}', { name: roomName || 'room' })}
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={14} /></button>
+        </header>
+
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          {!field ? (
+            <div className="grid grid-cols-2 gap-2">
+              {FIELDS.map(f => (
+                <button key={f.field} onClick={() => setField(f.field)}
+                  className="text-left rounded-lg border border-[#e3e0db] hover:border-[#7c3aed] hover:bg-[#faf9ff] px-3 py-2.5 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[17px]">{f.icon}</span>
+                    <span className="text-[13px] font-semibold text-[#0a0a0a]">{f.field}</span>
+                  </div>
+                  <div className="text-[11px] text-[#737373] mt-0.5">{f.blurb}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <button onClick={() => { setField(null); setSel(null); }}
+                className="mb-2 flex items-center gap-1 text-[11px] font-mono text-[#737373] hover:text-[#0a0a0a]">
+                <ChevronDown size={12} className="rotate-90" /> {t('hyperAgents.allFields', 'All fields')}
+              </button>
+              <div className="space-y-1.5">
+                {professions.map(p => (
+                  <button key={p.title} onClick={() => setSel(p)}
+                    className={`w-full text-left rounded-lg border px-3 py-2.5 transition-colors ${sel?.title === p.title ? 'border-[#7c3aed] bg-[#faf9ff]' : 'border-[#e3e0db] hover:bg-[#faf9f4]'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold text-[#0a0a0a]">{p.title}</span>
+                      <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">{p.role_archetype}</span>
+                    </div>
+                    <div className="text-[11px] text-[#737373] mt-0.5">{p.blurb}</div>
+                  </button>
+                ))}
+              </div>
+              {sel && (
+                <div className="mt-3">
+                  <input
+                    value={name} onChange={e => setName(e.target.value)}
+                    placeholder={t('hyperAgents.agentNameOpt', 'Name (optional) — e.g. {{n}}', { n: NAME_SUGGESTIONS[0] })}
+                    className="w-full h-10 px-3 text-[13px] bg-white border border-[#e3e0db] rounded-lg focus:outline-none focus:border-[#7c3aed] focus:ring-1 focus:ring-[#7c3aed]/20"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          {err && <div className="mt-3 text-[11.5px] text-red-600">{err}</div>}
+        </div>
+
+        <footer className="px-5 py-3.5 border-t border-[#e3e0db] flex items-center justify-between">
+          <span className="text-[11px] text-[#a3a3a3]">
+            {sel ? t('hyperAgents.hireSelected', 'Hire {{title}} into the room', { title: sel.title }) : t('hyperAgents.pickProfession', 'Pick a field, then a profession')}
+          </span>
+          <button
+            onClick={doHire} disabled={!sel || hiring}
+            className="h-9 px-4 bg-[#0a0a0a] hover:bg-[#262626] disabled:opacity-50 text-white text-[12px] font-semibold rounded-lg flex items-center gap-1.5"
+          >
+            {hiring ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            {hiring ? t('hyperAgents.hiring', 'Hiring…') : t('hyperAgents.hire', 'Hire')}
+          </button>
+        </footer>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Congrats moment — a brief celebratory overlay when a new agent joins the room.
+function HiredCongrats({ hire, onDone }) {
+  const { t } = useTranslation('dashboard');
+  useEffect(() => {
+    const id = setTimeout(onDone, 3200);
+    return () => clearTimeout(id);
+  }, [onDone]);
+  const CONFETTI = ['#7c3aed', '#117dff', '#3E8E5B', '#F4B14D', '#EE9A6B', '#B39BE6'];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+      onClick={onDone}
+    >
+      {/* Confetti */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {Array.from({ length: 36 }).map((_, i) => (
+          <motion.span key={i}
+            initial={{ y: -40, x: `${(i * 137) % 100}vw`, opacity: 1, rotate: 0 }}
+            animate={{ y: '105vh', rotate: 360 + (i % 5) * 90, opacity: [1, 1, 0.8] }}
+            transition={{ duration: 2.4 + (i % 6) * 0.25, ease: 'easeIn', delay: (i % 8) * 0.06 }}
+            className="absolute top-0 w-2 h-3 rounded-[1px]"
+            style={{ background: CONFETTI[i % CONFETTI.length] }}
+          />
+        ))}
+      </div>
+      <motion.div
+        initial={{ scale: 0.8, y: 12, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        className="relative z-10 bg-white rounded-2xl shadow-2xl px-8 py-7 text-center max-w-[360px]"
+      >
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-violet-500/10 text-violet-700 flex items-center justify-center text-[26px] mb-3 font-['Space_Grotesk'] font-bold">
+          {(hire.name || '?')[0].toUpperCase()}
+        </div>
+        <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-[#7c3aed]">{t('hyperAgents.hiredEyebrow', 'Hired an agent')}</div>
+        <h3 className="mt-1.5 text-[20px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t('hyperAgents.congrats', 'Congratulations!')}</h3>
+        <p className="mt-1.5 text-[13px] text-[#525252]">
+          {t('hyperAgents.joinedRoom', '{{name}} — {{title}} — just joined your team.', { name: hire.name, title: hire.title })}
+        </p>
       </motion.div>
     </motion.div>
   );
