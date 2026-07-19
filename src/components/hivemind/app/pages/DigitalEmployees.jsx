@@ -1747,8 +1747,14 @@ function AgentMarketplaceModal({ open, onClose, onHireProfession, hiringProf, is
                     const why = whyMap[prof.title];
                     return (
                       <article key={prof.title} className="flex w-[270px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#e3e0db] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                        <div className="flex h-[116px] items-end p-4" style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}>
+                        <div className="flex h-[116px] items-end justify-between gap-2 p-4" style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}>
                           <h3 className="font-['Space_Grotesk'] text-[18px] font-bold leading-[1.1] text-white">{prof.title}</h3>
+                          <span className="shrink-0 rounded-2xl bg-white/85 p-0.5 shadow-sm">
+                            <AgentAvatar
+                              agent={{ id: `prof:${prof.title}`, name: prof.title, roleArchetype: prof.role_archetype }}
+                              size={52} shape="square" ring={false}
+                            />
+                          </span>
                         </div>
                         <div className="flex flex-1 flex-col p-4">
                           <span className="self-start rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[#737373]">{prof.role_archetype}</span>

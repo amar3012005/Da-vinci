@@ -13,14 +13,26 @@ import { Avatar } from '@humation/react';
 import { humation1 } from '@humation/assets-humation-1';
 import { LANE_META } from './rooms/shared';
 
+// role_archetype values (lowercase: strategist/investigator/generalist/skeptic/
+// coordinator/…) and mixed-case lanes both normalize to a LANE_META key so the
+// avatar's ring + palette are correct on marketplace role cards too.
+const _ARCHETYPE_TO_LANE = {
+  strategist: 'Strategist',
+  coordinator: 'Strategist',
+  builder: 'Builder',
+  skeptic: 'Skeptic',
+  investigator: 'Researcher',
+  researcher: 'Researcher',
+  generalist: 'Communicator',
+  communicator: 'Communicator',
+};
+
 function resolveLane(agent) {
-  return (
-    agent?.lane
-    || agent?.hyper?.lane
-    || agent?.roleArchetype
-    || agent?.role_archetype
-    || 'Communicator'
-  );
+  const raw = String(
+    agent?.lane || agent?.hyper?.lane || agent?.roleArchetype || agent?.role_archetype || 'Communicator',
+  ).trim();
+  if (LANE_META[raw]) return raw;                      // already a canonical lane
+  return _ARCHETYPE_TO_LANE[raw.toLowerCase()] || 'Communicator';
 }
 
 function resolveSeed(agent) {

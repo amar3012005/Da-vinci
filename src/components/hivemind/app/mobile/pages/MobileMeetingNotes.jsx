@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import { useQuickRecorder } from '../../shared/QuickRecorderProvider';
+import MobileShell from '../MobileShell';
 
 function when(iso) {
   if (!iso) return 'Recent';
@@ -61,27 +62,19 @@ export default function MobileMeetingNotes() {
   const historyPreview = useMemo(() => meetings.slice(0, 3), [meetings]);
   const primaryLabel = qrec.active ? 'Open recorder' : 'Open meeting config';
 
+  const historyAction = (
+    <button
+      onClick={() => setHistoryOpen(true)}
+      className="relative h-10 w-10 rounded-full border border-[#e3e0db] bg-white grid place-items-center text-[#525252]"
+      aria-label="Open past meetings"
+    >
+      <History size={16} />
+      {meetings.length > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#117dff] text-white text-[9px] font-bold grid place-items-center">{Math.min(meetings.length, 99)}</span>}
+    </button>
+  );
   return (
-    <div className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] overflow-hidden flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <header className="h-14 px-3 bg-white/90 backdrop-blur-xl border-b border-[#ece9e2] flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate('/hivemind/m/chat')} className="w-10 h-10 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Back to chat">
-          <ChevronLeft size={21} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold leading-tight">AI Meeting Notes</div>
-          <div className="text-[10.5px] text-[#8b857d]">Recordings, recaps, and memory-ready notes</div>
-        </div>
-        <button
-          onClick={() => setHistoryOpen(true)}
-          className="relative h-10 w-10 rounded-full border border-[#e3e0db] bg-white grid place-items-center text-[#525252] shadow-[0_8px_24px_rgba(26,24,20,0.05)]"
-          aria-label="Open past meetings"
-        >
-          <History size={16} />
-          {meetings.length > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#117dff] text-white text-[9px] font-bold grid place-items-center">{Math.min(meetings.length, 99)}</span>}
-        </button>
-      </header>
-
-      <main className="flex-1 overflow-y-auto px-3 py-4 pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <MobileShell title="AI Meeting Notes" rightAction={historyAction}>
+      <div className="px-3 py-4 pb-6">
         <section className="relative overflow-hidden rounded-[28px] border border-[#e3e0db] bg-white shadow-[0_18px_50px_rgba(26,24,20,0.06)]">
           <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,_rgba(17,125,255,0.16),_transparent_58%),radial-gradient(circle_at_top_right,_rgba(17,125,255,0.08),_transparent_48%)] pointer-events-none" />
           <div className="relative p-4">
@@ -172,7 +165,7 @@ export default function MobileMeetingNotes() {
           {loading && <div className="pt-3 text-[12px] text-[#8b857d]">Loading meetings...</div>}
           {error && <div className="mt-3 rounded-[16px] border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</div>}
         </section>
-      </main>
+      </div>
 
       <AnimatePresence>
         {historyOpen && (
@@ -254,6 +247,6 @@ export default function MobileMeetingNotes() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </MobileShell>
   );
 }
