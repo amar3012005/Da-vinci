@@ -810,28 +810,13 @@ export default function TalkToHiveMobile() {
     setInput('');
     setLoading(true);
 
-    // Belt-and-braces language enforcement (mirror Chat.jsx + extension).
-    // Wraps the wire message with a strict directive when UI lang != EN so
-    // the LLM can't silently drift back to English. UI history keeps the
-    // clean user text; only the LLM sees the wrapped variant.
+    // Keep the recall query clean; the backend enforces reply language from
+    // the separate `language` field.
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-    const LANG_FULL = {
-      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
-      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
-      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
-      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
-      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
-      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
-      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
-    };
-    const langName = LANG_FULL[lang2] || 'English';
-    const wireMessage = lang2 === 'en'
-      ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
 
     try {
       const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
-        message: wireMessage,
+        message: trimmed,
         model: selectedModel,
         history: fullHistory,
         language: lang2,

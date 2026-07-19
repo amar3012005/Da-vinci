@@ -903,29 +903,13 @@ export function ChatPanel({ isOpen, onClose }) {
       let projectChoice = null;
       let onboardingIntro = null;
 
-      // Belt-and-braces language enforcement: when UI language is anything
-      // other than English, prepend a strict directive to the outgoing
-      // message so the LLM can't silently fall back to English mid-stream.
-      // UI keeps the clean user text (userMsg.content); only the wire
-      // payload carries the directive.
+      // Keep the recall query clean; the backend enforces reply language from
+      // the separate `language` field.
       const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-      const LANG_FULL = {
-        en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
-        pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
-        no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
-        sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
-        uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
-        ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
-        id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
-      };
-      const langName = LANG_FULL[lang2] || 'English';
-      const wireMessage = lang2 === 'en'
-        ? trimmed
-        : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
 
       try {
         const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
-          message: wireMessage,
+          message: trimmed,
           model: selectedModel,
           history: fullHistory,
           language: lang2,

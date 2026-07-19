@@ -853,22 +853,9 @@ function OverviewChat({ inputRef }) {
     setLoading(true);
     setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
 
-    // Response language follows the NAVBAR language toggle — identical
-    // behavior + directive map to the Talk-to-HIVE slide panel (Chat.jsx).
-    const LANG_FULL = {
-      en: 'English', de: 'German', es: 'Spanish', fr: 'French', it: 'Italian',
-      pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', cs: 'Czech', sv: 'Swedish',
-      no: 'Norwegian', fi: 'Finnish', el: 'Greek', hu: 'Hungarian', ro: 'Romanian',
-      sl: 'Slovenian', ar: 'Arabic', he: 'Hebrew', tr: 'Turkish', ru: 'Russian',
-      uk: 'Ukrainian', hi: 'Hindi', bn: 'Bengali', ta: 'Tamil', te: 'Telugu',
-      ja: 'Japanese', ko: 'Korean', zh: 'Chinese', vi: 'Vietnamese', th: 'Thai',
-      id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
-    };
+    // Keep the recall query clean; the backend enforces reply language from
+    // the separate `language` field.
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
-    const langName = LANG_FULL[lang2] || 'English';
-    const wireMessage = lang2 === 'en'
-      ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
 
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
@@ -877,7 +864,7 @@ function OverviewChat({ inputRef }) {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-        message: wireMessage,
+        message: trimmed,
         model: CHAT_MODEL,
         history: fullHistory,
         language: lang2,
