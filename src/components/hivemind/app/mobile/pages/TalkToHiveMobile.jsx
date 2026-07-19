@@ -25,7 +25,6 @@ import {
   ChevronDown,
   Sparkles,
   AlertTriangle,
-  Brain,
   FileText,
   Plus,
   Paperclip,
@@ -46,6 +45,13 @@ import {
   Lock,
   AudioLines,
   Hexagon,
+  Clock,
+  ChevronRight,
+  Copy,
+  Check,
+  RotateCcw,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
@@ -380,9 +386,10 @@ function renderMarkdownMobile(raw) {
   return blocks;
 }
 
+// Claude-style user turn: warm-grey rounded bubble, right-aligned, ink text.
 function UserBubble({ content }) {
   return (
-    <div className="self-end max-w-[85%] px-4 py-2.5 rounded-[20px] rounded-br-md bg-[#117dff] text-white text-[15px] leading-snug shadow-[0_1px_2px_rgba(17,125,255,0.18)]">
+    <div className="self-end max-w-[85%] px-4 py-2.5 rounded-[18px] bg-[#f0eee6] text-[#1a1a17] text-[15.5px] leading-relaxed break-words whitespace-pre-wrap">
       {content}
     </div>
   );
@@ -461,111 +468,138 @@ function MobileDraftCards({ draftIds }) {
   );
 }
 
-function AiBubble({ msg, model }) {
-  const [showSteps, setShowSteps] = useState(false);
+// Collapsed reasoning trace — Claude's clock-pill above the answer. Shows the
+// last step's summary; taps open the full tool timeline.
+function StepsDisclosure({ steps }) {
+  const [open, setOpen] = useState(false);
+  const last = steps[steps.length - 1];
+  const summary = (last && (last.result_summary || last.tool))
+    ? String(last.result_summary || last.tool)
+    : `Worked through ${steps.length} step${steps.length > 1 ? 's' : ''}`;
+  return (
+    <div className="mb-2.5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 max-w-full text-[#8a8577] active:text-[#5f5c55]"
+      >
+        <Clock size={14} className="flex-shrink-0" />
+        <span className="text-[14px] truncate">{open ? 'Reasoning' : summary}</span>
+        <ChevronRight size={15} className={`flex-shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mt-2"
+          >
+            <div className="flex flex-col gap-1 border-l-2 border-[#ece9e2] pl-3">
+              {steps.map((s, i) => (
+                <div key={i} className="text-[12px] text-[#7b766e] flex items-baseline gap-1.5 flex-wrap">
+                  <code className="bg-[#117dff]/10 text-[#0066e0] px-1.5 py-0.5 rounded text-[10.5px] font-mono">{s.tool}</code>
+                  <span className="text-[#a3a3a3] italic">{
+                    typeof s.args === 'object' && s.args && s.args.query
+                      ? `"${String(s.args.query).slice(0, 44)}"`
+                      : ''
+                  }</span>
+                  {s.result_summary && <span className="text-[#16a34a]">→ {s.result_summary}</span>}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Claude-style assistant turn: NO bubble. Reasoning pill → serif answer on the
+// canvas → Sources pill → copy / retry / thumbs action row.
+function AiBubble({ msg, onRetry }) {
   const [showSources, setShowSources] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [vote, setVote] = useState(null);
   const hasSteps = Array.isArray(msg.steps) && msg.steps.length > 0;
   const hasSources = Array.isArray(msg.sources) && msg.sources.length > 0;
 
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(msg.content || ''); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    catch { /* clipboard blocked */ }
+  };
+
   return (
-    <div className="self-start max-w-[95%] w-full">
-      <div className="flex items-center gap-2 px-1 mb-1.5">
-        <div className="w-5 h-5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-          <Brain size={11} className="text-[#117dff]" strokeWidth={2.2} />
+    <div className="self-start w-full max-w-full">
+      {hasSteps && <StepsDisclosure steps={msg.steps} />}
+
+      {msg.error && (
+        <div className="flex items-center gap-2 text-[#b91c1c] text-[13px] font-medium mb-2">
+          <AlertTriangle size={13} /> Error
         </div>
-        <span className="text-[11px] font-bold tracking-[0.04em] text-[#0a0a0a]">HIVE</span>
-        <span className="text-[#d4d0ca] text-[10px]">·</span>
-        <span className="text-[10.5px] font-mono text-[#a3a3a3]">{model || 'GPT-OSS 120B'}</span>
+      )}
+
+      <div
+        className={`text-[16.5px] leading-[1.7] break-words space-y-2 ${msg.error ? 'text-[#b91c1c]' : 'text-[#1a1a17]'}`}
+        style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+      >
+        {renderMarkdownMobile(msg.content)}
       </div>
 
-      <div className={`bg-white border border-[#ece9e2] rounded-[16px] px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] ${msg.error ? 'border-[#fecaca] bg-[#fef2f2]' : ''}`}>
-        {msg.error && (
-          <div className="flex items-center gap-2 text-[#b91c1c] text-[12px] font-medium mb-2">
-            <AlertTriangle size={12} /> Error
-          </div>
-        )}
-        <div className="text-[15px] leading-relaxed text-[#0a0a0a] break-words space-y-0.5">
-          {renderMarkdownMobile(msg.content)}
+      <MobileDraftCards draftIds={msg.draft_ids} />
+
+      {hasSources && (
+        <div className="mt-3">
+          <button
+            onClick={() => setShowSources((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-[13px] text-[#3d3d3a] active:bg-[#f3f1ec]"
+          >
+            <FileText size={13} className="text-[#8a8577]" />
+            Sources
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#f0eee6] text-[11px] font-medium text-[#5f5c55]">{msg.sources.length}</span>
+            <ChevronRight size={14} className={`text-[#a3a3a3] transition-transform ${showSources ? 'rotate-90' : ''}`} />
+          </button>
+          <AnimatePresence>
+            {showSources && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mt-2"
+              >
+                <div className="flex flex-col gap-1.5">
+                  {msg.sources.slice(0, 10).map((s, i) => (
+                    <div key={i} className="text-[12px] bg-[#f7f6f1] border border-[#ece9e2] rounded-lg px-2.5 py-1.5">
+                      <div className="font-semibold text-[#0a0a0a] text-[12px]">{s.title || 'Memory'}</div>
+                      {(s.snippet || s.content) && (
+                        <div className="text-[#525252] text-[11.5px] mt-0.5 line-clamp-2">{(s.snippet || s.content).slice(0, 160)}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        <MobileDraftCards draftIds={msg.draft_ids} />
+      )}
 
-        {(hasSteps || hasSources || msg.usage) && (
-          <>
-            <hr className="border-0 border-t border-[#ece9e2] my-2.5 -mx-4" />
-            <div className="flex items-center gap-3 flex-wrap text-[10.5px] font-mono text-[#a3a3a3]">
-              {hasSteps && (
-                <button
-                  onClick={() => setShowSteps((v) => !v)}
-                  className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.04em] hover:text-[#0a0a0a] active:text-[#0a0a0a]"
-                >
-                  ⚙ {msg.steps.length} steps {showSteps ? '▾' : '›'}
-                </button>
-              )}
-              {hasSources && (
-                <button
-                  onClick={() => setShowSources((v) => !v)}
-                  className="inline-flex items-center gap-1 font-semibold uppercase tracking-[0.04em] hover:text-[#0a0a0a] active:text-[#0a0a0a]"
-                >
-                  <FileText size={11} /> {msg.sources.length} sources {showSources ? '▾' : '›'}
-                </button>
-              )}
-              {msg.usage?.prompt_tokens != null && (
-                <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-[#93c5fd] mr-1" />{msg.usage.prompt_tokens} prompt</span>
-              )}
-              {msg.usage?.completion_tokens != null && (
-                <span><span className="inline-block w-1.5 h-1.5 rounded-full bg-[#86efac] mr-1" />{msg.usage.completion_tokens} completion</span>
-              )}
-            </div>
+      {!msg.error && (
+        <div className="mt-2.5 flex items-center gap-0.5 text-[#b3ada2]">
+          <button onClick={copy} className="w-8 h-8 grid place-items-center rounded-full active:bg-[#f0eee6] active:text-[#5f5c55]" aria-label="Copy">
+            {copied ? <Check size={16} className="text-[#16a34a]" /> : <Copy size={15} />}
+          </button>
+          <button onClick={() => onRetry && onRetry(msg)} className="w-8 h-8 grid place-items-center rounded-full active:bg-[#f0eee6] active:text-[#5f5c55]" aria-label="Retry">
+            <RotateCcw size={15} />
+          </button>
+          <button onClick={() => setVote((v) => (v === 'up' ? null : 'up'))} className={`w-8 h-8 grid place-items-center rounded-full active:bg-[#f0eee6] ${vote === 'up' ? 'text-[#117dff]' : 'active:text-[#5f5c55]'}`} aria-label="Good response">
+            <ThumbsUp size={15} />
+          </button>
+          <button onClick={() => setVote((v) => (v === 'down' ? null : 'down'))} className={`w-8 h-8 grid place-items-center rounded-full active:bg-[#f0eee6] ${vote === 'down' ? 'text-[#b91c1c]' : 'active:text-[#5f5c55]'}`} aria-label="Bad response">
+            <ThumbsDown size={15} />
+          </button>
+        </div>
+      )}
 
-            <AnimatePresence>
-              {showSteps && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden mt-2"
-                >
-                  <div className="flex flex-col gap-1 bg-[#fafaf6] border border-[#ece9e2] rounded-lg p-2">
-                    {msg.steps.map((s, i) => (
-                      <div key={i} className="text-[11px] font-mono text-[#525252] flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-[#a3a3a3]">🔧</span>
-                        <code className="bg-[#117dff]/10 text-[#0066e0] px-1.5 py-0.5 rounded text-[10.5px]">{s.tool}</code>
-                        <span className="text-[#a3a3a3] italic">{
-                          typeof s.args === 'object' && s.args
-                            ? (s.args.query ? `"${String(s.args.query).slice(0, 40)}"` : '')
-                            : ''
-                        }</span>
-                        <span className="text-[#16a34a] ml-auto">→ {s.result_summary}</span>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {showSources && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden mt-2"
-                >
-                  <div className="flex flex-col gap-1.5">
-                    {msg.sources.slice(0, 10).map((s, i) => (
-                      <div key={i} className="text-[12px] bg-[#f7f6f1] border border-[#ece9e2] rounded-lg px-2.5 py-1.5">
-                        <div className="font-semibold text-[#0a0a0a] text-[12px]">{s.title || 'Memory'}</div>
-                        {(s.snippet || s.content) && (
-                          <div className="text-[#525252] text-[11.5px] mt-0.5 line-clamp-2">{(s.snippet || s.content).slice(0, 160)}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
-          </>
-        )}
-      </div>
+      {msg.project_choice && <MobileProjectChoice choice={msg.project_choice} />}
     </div>
   );
 }
@@ -606,28 +640,12 @@ function MobileProjectChoice({ choice }) {
   );
 }
 
-function Thinking({ model }) {
+// Loading state — Claude's pulsing reasoning line while the answer streams.
+function Thinking() {
   return (
-    <div className="self-start max-w-[95%] w-full">
-      <div className="flex items-center gap-2 px-1 mb-1.5">
-        <div className="w-5 h-5 rounded-full bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-          <Brain size={11} className="text-[#117dff]" strokeWidth={2.2} />
-        </div>
-        <span className="text-[11px] font-bold tracking-[0.04em] text-[#0a0a0a]">HIVE</span>
-        <span className="text-[#d4d0ca] text-[10px]">·</span>
-        <span className="text-[10.5px] font-mono text-[#a3a3a3]">{model}</span>
-      </div>
-      <div className="bg-white border border-[#ece9e2] rounded-[16px] px-4 py-3">
-        <div className="flex gap-1.5">
-          {[0, 0.15, 0.3].map((d, i) => (
-            <span
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-[#c0bcb4] animate-[bounce_1.2s_infinite_ease-in-out]"
-              style={{ animationDelay: `${d}s` }}
-            />
-          ))}
-        </div>
-      </div>
+    <div className="self-start flex items-center gap-1.5 text-[#8a8577]">
+      <Clock size={14} className="animate-pulse" />
+      <span className="text-[14px]">Thinking…</span>
     </div>
   );
 }
@@ -712,14 +730,15 @@ export default function TalkToHiveMobile() {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
   }, [input]);
 
-  const send = useCallback(async () => {
-    const trimmed = input.trim();
+  const sendText = useCallback(async (overrideText) => {
+    const fromInput = overrideText == null;
+    const trimmed = (fromInput ? input : overrideText).trim();
     if (!trimmed || loading) return;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
     const fullHistory = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }));
     setMessages((prev) => [...prev, userMsg]);
-    setInput('');
+    if (fromInput) setInput('');
     setLoading(true);
 
     // Belt-and-braces language enforcement (mirror Chat.jsx + extension).
@@ -775,6 +794,17 @@ export default function TalkToHiveMobile() {
       setLoading(false);
     }
   }, [input, loading, messages, selectedModel, i18n.language, activeProjectId]);
+
+  const send = useCallback(() => sendText(), [sendText]);
+
+  // Regenerate: re-run the user prompt that preceded this assistant answer.
+  const retry = useCallback((assistantMsg) => {
+    if (loading) return;
+    const idx = messages.findIndex((m) => m.id === assistantMsg.id);
+    for (let i = idx - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') { sendText(messages[i].content); return; }
+    }
+  }, [loading, messages, sendText]);
 
   // ─── Upload pipeline ──────────────────────────────────────────────────
   // Mobile chat fires-and-forgets: pick file(s) → POST each via
@@ -1047,9 +1077,9 @@ export default function TalkToHiveMobile() {
           {messages.map((m) =>
             m.role === 'user'
               ? <UserBubble key={m.id} content={m.content} />
-              : <AiBubble key={m.id} msg={m} model={m.model} />
+              : <AiBubble key={m.id} msg={m} onRetry={retry} />
           )}
-          {loading && <Thinking model={currentModel.label} />}
+          {loading && <Thinking />}
         </div>
       </div>
 
