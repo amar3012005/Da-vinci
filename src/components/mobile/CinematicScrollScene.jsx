@@ -51,6 +51,7 @@ const CinematicScrollScene = ({
   const canvasRef = useRef(null);
   const stepRefs = useRef([]);
   const [reduced, setReduced] = useState(false);
+  const [activated, setActivated] = useState(false);
 
   const framePath = (i) => `/${frameDir}/f_${String(i + 1).padStart(3, '0')}.webp`;
   const hasVideo = Boolean(videoSrc);
@@ -60,6 +61,28 @@ const CinematicScrollScene = ({
     const noMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(max-width: 767px)').matches;
     setReduced(noMotion);
     if (noMotion) return undefined;
+
+    // A frame sequence can be tens of megabytes. Do not compete with the
+    // initial application bundle for bandwidth or main-thread work.
+    const target = wrapRef.current;
+    if (!target || !('IntersectionObserver' in window)) {
+      setActivated(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setActivated(true);
+        observer.disconnect();
+      },
+      { rootMargin: '900px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!activated || reduced) return undefined;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -177,7 +200,7 @@ const CinematicScrollScene = ({
       if (!isLight) document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVideo, videoSrc, isLight]);
+  }, [activated, hasVideo, videoSrc, isLight, reduced]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked
@@ -226,7 +249,11 @@ const CinematicScrollScene = ({
   return (
     <section ref={wrapRef} className="relative w-full" style={{ height: `${heightVh}vh`, background: bg }}>
       <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
+        {activated ? (
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
+        ) : (
+          <div className="absolute inset-0" style={{ background: isLight ? 'linear-gradient(135deg, #f7f5ef, #e9eef8)' : 'linear-gradient(135deg, #05070f, #101a34)' }} />
+        )}
         {/* scrim on the right so the rail reads over any frame */}
         <div
           className="pointer-events-none absolute inset-y-0 right-0 w-[440px]"
