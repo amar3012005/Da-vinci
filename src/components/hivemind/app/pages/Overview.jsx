@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { userScopedKey } from '../shared/user-storage';
 import MarkdownMessage from '../shared/MarkdownMessage';
 import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
@@ -74,7 +75,9 @@ function ConsoleClock() {
 // as a fixed-height conversation so the page itself never grows — past
 // turns scroll INSIDE the thread box, the page stays put.
 
-const CHAT_STORE_KEY = 'hm.overviewChat';
+// Chat store is PER USER — an unkeyed slot leaked one account's conversation
+// into the next account on the same device (sessionStorage survives login).
+const chatStoreKey = () => userScopedKey('hm.overviewChat'); // lazy — user id resolves after auth
 const CHAT_MODEL = 'gpt-oss-120b';
 const HISTORY_CAP = 40;
 
@@ -87,7 +90,7 @@ const FILE_ACCEPT = ACCEPTED_EXTS.map((e) => `.${e}`).join(',');
 
 function loadStoredChat() {
   try {
-    const raw = window.sessionStorage.getItem(CHAT_STORE_KEY);
+    const raw = window.sessionStorage.getItem(chatStoreKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -832,7 +835,7 @@ function OverviewChat({ inputRef }) {
   // keeps the thread (capped so storage stays small).
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(CHAT_STORE_KEY, JSON.stringify(messages.slice(-HISTORY_CAP)));
+      window.sessionStorage.setItem(chatStoreKey(), JSON.stringify(messages.slice(-HISTORY_CAP)));
     } catch { /* storage blocked — chat still works in-memory */ }
   }, [messages]);
 
@@ -1062,7 +1065,7 @@ function OverviewChat({ inputRef }) {
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
               <button
-                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(CHAT_STORE_KEY); } catch { /* noop */ } }}
+                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(chatStoreKey()); } catch { /* noop */ } }}
                 className="text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"
               >
                 {t('overview.chat.clear', 'Clear')}
