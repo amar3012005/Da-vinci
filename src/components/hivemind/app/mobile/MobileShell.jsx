@@ -5,6 +5,9 @@ import {
   X, LogOut, Hexagon, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
+import SingulanceSplash from './SingulanceSplash';
+
+const SPLASH_FLAG = 'hm_m_splashed';
 
 /**
  * MobileShell — the shared chrome for every /hivemind/m/* page, styled after
@@ -26,11 +29,35 @@ const NAV = [
   { to: '/hivemind/m/usage', label: 'Usage', icon: Gauge },
 ];
 
-export default function MobileShell({ children, rightAction = null, title = null, noScroll = false }) {
+export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
   const [drawer, setDrawer] = useState(false);
+
+  // SINGULANCE onboarding splash — plays once per device, and again right
+  // after a QR scan (?from=dashboard). Decided synchronously on first render so
+  // it covers the very first paint; the query param is stripped on finish.
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const fromQR = new URLSearchParams(window.location.search).has('from');
+      const seen = window.localStorage.getItem(SPLASH_FLAG) === '1';
+      return fromQR || !seen;
+    } catch { return false; }
+  });
+  const finishSplash = () => {
+    setShowSplash(false);
+    try { window.localStorage.setItem(SPLASH_FLAG, '1'); } catch { /* private mode */ }
+    // Strip ?from=... so a refresh/back doesn't replay the splash.
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('from')) {
+        url.searchParams.delete('from');
+        window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+      }
+    } catch { /* noop */ }
+  };
 
   // Close the drawer on any route change.
   useEffect(() => { setDrawer(false); }, [location.pathname]);
@@ -42,6 +69,7 @@ export default function MobileShell({ children, rightAction = null, title = null
       className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] flex flex-col overflow-hidden"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
+      {showSplash && <SingulanceSplash onDone={finishSplash} />}
       {/* ── Top bar: hamburger · (title) · right action ── */}
       <header className="h-14 px-2.5 flex items-center justify-between flex-shrink-0">
         <button
@@ -111,6 +139,7 @@ export default function MobileShell({ children, rightAction = null, title = null
             </nav>
 
             <div className="p-3 border-t border-[#ece9e2]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
+              {extraDrawerActions}
               <button
                 onClick={() => navigate('/hivemind/app/overview?desktop=1')}
                 className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]"
