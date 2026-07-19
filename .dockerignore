@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+build
+coverage
+*.tsbuildinfo
+
+# Local planning/prototype artifacts. These are not needed by the CRA build.
+PHASE1_*
+Davinci startup pitch deck.pdf
