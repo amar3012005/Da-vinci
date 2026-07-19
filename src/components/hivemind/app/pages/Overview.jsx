@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { userScopedKey } from '../shared/user-storage';
+import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import MarkdownMessage from '../shared/MarkdownMessage';
 import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
@@ -220,25 +221,10 @@ async function readChatStream(response, onEvent) {
 }
 
 function ChatBubble({ msg }) {
-  if (msg.role === 'user') {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] bg-[#0a0a0a] text-white rounded-2xl rounded-br-md px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words">
-          {msg.content}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex justify-start">
-      <div className={`max-w-[85%] bg-white border rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed break-words ${
-        msg.error ? 'border-[#f59e0b]/50 text-[#92400e] whitespace-pre-wrap' : 'border-[#e3e0db] text-[#262626]'
-      }`}>
-        {msg.error ? msg.content : <MarkdownMessage>{msg.content}</MarkdownMessage>}
-        {!msg.error && <AgentContext {...msg} />}
-      </div>
-    </div>
-  );
+  // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
+  // bubbleless serif answer with reasoning pill + sources + action row.
+  if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
+  return <div className="flex flex-col">{<AiBubble msg={msg} />}</div>;
 }
 
 // ─── Cognitive band — drifting stream of swarm intelligence ─────
@@ -968,14 +954,14 @@ function OverviewChat({ inputRef }) {
       {hasThread && (
         <div
           ref={threadRef}
-          className="flex-1 min-h-0 overflow-y-auto px-1 pt-3 pb-3 space-y-3 mb-2"
+          className="flex-1 min-h-0 overflow-y-auto px-3 pt-3 pb-3 space-y-4 mb-2 bg-[#faf9f4] rounded-xl"
           style={{
             maskImage: 'linear-gradient(to bottom, transparent, black 28px)',
             WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 28px)',
           }}
         >
           {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
-          {loading && <AgentActivity events={agentEvents} />}
+          {loading && <Thinking events={agentEvents} />}
         </div>
       )}
 

@@ -153,6 +153,7 @@ export default function MobileMemories() {
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(null); // backend total (pagination.total), not the loaded page
   const [loadingMore, setLoadingMore] = useState(false);
   const offsetRef = useRef(0);
   const sentinelRef = useRef(null);
@@ -171,6 +172,7 @@ export default function MobileMemories() {
         const rows = data?.memories || data?.results || data || [];
         if (!cancelled) {
           setMemories(rows);
+          setTotalCount(data?.pagination?.total ?? data?.total ?? null);
           offsetRef.current = rows.length;
           setHasMore(!query.trim() && rows.length >= PAGE_SIZE);
           // Refresh the instant-paint cache only for the default view.
@@ -216,8 +218,8 @@ export default function MobileMemories() {
 
   const stats = useMemo(() => {
     const scopes = new Set(memories.map((m) => m.scope || m.visibility).filter(Boolean));
-    return { count: memories.length, scopes: scopes.size };
-  }, [memories]);
+    return { count: totalCount ?? memories.length, scopes: scopes.size };
+  }, [memories, totalCount]);
 
   return (
     <MobileShell>
