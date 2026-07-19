@@ -855,9 +855,9 @@ function OverviewChat({ inputRef }) {
     };
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
     const langName = LANG_FULL[lang2] || 'English';
-    const wireMessage = lang2 === 'en'
-      ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
+    // Language is a first-class /chat param (backend enforces it in the answer
+    // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
+    const wireMessage = trimmed;
 
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();

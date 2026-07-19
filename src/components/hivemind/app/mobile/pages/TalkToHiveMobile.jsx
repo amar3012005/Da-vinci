@@ -358,9 +358,9 @@ export default function TalkToHiveMobile() {
       id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
     };
     const langName = LANG_FULL[lang2] || 'English';
-    const wireMessage = lang2 === 'en'
-      ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
+    // Language is a first-class /chat param (backend enforces it in the answer
+    // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
+    const wireMessage = trimmed;
 
     try {
       // Streamed like desktop Overview: SSE frames carry live tool_call /
