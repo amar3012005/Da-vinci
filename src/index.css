@@ -238,3 +238,17 @@ html.cinematic-mode::after { bottom: 0; }
 /* Brochure tables — scroll inside the column instead of breaking it. */
 .hyper-brochure .hyper-markdown { overflow-x: auto; }
 .hyper-brochure .hyper-markdown table { min-width: 520px; }
+
+/* AgentAvatar — live-speaker pulse ring (Humation avatars in a room turn). */
+.hm-agent-active { position: relative; }
+.hm-agent-ring {
+  position: absolute; inset: -2px; pointer-events: none;
+  animation: hm-agent-pulse 1.6s ease-in-out infinite;
+}
+@keyframes hm-agent-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%      { opacity: 0.9;  transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-agent-ring { animation: none; opacity: 0.6; }
+}

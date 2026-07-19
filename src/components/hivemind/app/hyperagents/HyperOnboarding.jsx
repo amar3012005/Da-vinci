@@ -4,6 +4,7 @@ import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Build
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import OnboardingTerminal from './OnboardingTerminal';
+import AgentAvatar from './AgentAvatar';
 
 /**
  * HyperOnboarding — Polsia-style company genesis for HyperAgents.
@@ -188,8 +189,17 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
 
           <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team}>
             <div className="flex flex-wrap gap-1.5">
-              {(result?.team || []).map((m) => (
-                <span key={m.id} className="text-[12px] px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-700 font-medium">{m.name}</span>
+              {(result?.team || []).map((m, i) => (
+                <motion.span
+                  key={m.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 * i }}
+                  className="text-[12px] pl-1 pr-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-700 font-medium inline-flex items-center gap-1.5"
+                >
+                  <AgentAvatar agent={m} size={22} />
+                  {m.name}
+                </motion.span>
               ))}
             </div>
           </Panel>

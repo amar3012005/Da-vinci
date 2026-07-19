@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 import {
   Bot,
   Plus,
@@ -341,11 +342,7 @@ function EmployeeCard({ employee, onPause, onResume, onArchive, onOpen, onChat, 
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-9 h-9 rounded-lg border flex items-center justify-center flex-shrink-0 ${
-            selected ? 'bg-[#117dff] border-[#117dff]' : 'bg-[#117dff]/10 border-[#117dff]/20'
-          }`}>
-            <Bot size={16} className={selected ? 'text-white' : 'text-[#117dff]'} />
-          </div>
+          <AgentAvatar agent={employee} size={36} shape="square" />
           <div className="min-w-0">
             <h3 className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</h3>
             {profession ? (
@@ -681,11 +678,7 @@ function WorkspaceSlidePanel({ employees, onClose, initialTaskId, onTaskActivity
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-1">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      selectedSlugs.includes(emp.slug) ? 'bg-[#117dff]' : 'bg-[#117dff]/10'
-                    }`}>
-                      <Bot size={13} className={selectedSlugs.includes(emp.slug) ? 'text-white' : 'text-[#117dff]'} />
-                    </div>
+                    <AgentAvatar agent={emp} size={28} shape="square" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-semibold text-[#0a0a0a] truncate">{emp.name}</p>
                       <p className="text-[10px] text-[#a3a3a3]">{emp.role_archetype || 'generalist'}</p>
@@ -1324,8 +1317,8 @@ function AgentDetailOverlay({ employee, onClose, onChat, onRemint, isAdmin }) {
 
         {/* Header */}
         <div className="flex flex-col items-center px-8 pt-9 pb-5 border-b border-[#eae7e1]">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#117dff]/10 border border-[#117dff]/20 mb-3">
-            <span className="text-[24px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</span>
+          <div className="mb-3">
+            <AgentAvatar agent={employee} size={80} />
           </div>
           <h2 className="text-[20px] font-semibold text-[#0a0a0a]">{employee.name}</h2>
           <div className="mt-1 flex items-center gap-2">
@@ -1581,9 +1574,7 @@ function ExpertChatDrawer({ employee, onClose }) {
       <div className="absolute right-0 top-0 bottom-0 flex w-full max-w-[480px] flex-col bg-white shadow-[-12px_0_40px_rgba(0,0,0,0.12)] animate-[slideIn_0.28s_ease]">
         {/* Header */}
         <header className="flex items-center gap-3 border-b border-[#eae7e1] bg-[#faf9f4] px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#117dff]/10 border border-[#117dff]/20 flex-shrink-0">
-            <span className="text-[13px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</span>
-          </div>
+          <AgentAvatar agent={employee} size={40} />
           <div className="min-w-0 flex-1">
             <div className="text-[14px] font-semibold text-[#0a0a0a] truncate">{employee.name}</div>
             <div className="text-[11px] text-[#737373] truncate">{p.title} · {p.lane} · {p.versionLabel}</div>
@@ -1602,9 +1593,7 @@ function ExpertChatDrawer({ employee, onClose }) {
           {messages.map(msg => (
             <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {msg.role === 'assistant' && (
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#117dff]/10 text-[10px] font-bold text-[#117dff] font-mono">
-                  {initialsOf(employee.name)}
-                </div>
+                <AgentAvatar agent={employee} size={28} />
               )}
               <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed ${
                 msg.role === 'user' ? 'bg-[#117dff] text-white whitespace-pre-wrap' : msg.error ? 'border border-red-200 bg-red-50 text-[#dc2626] whitespace-pre-wrap' : 'bg-[#f3f1ec] text-[#0a0a0a]'
@@ -1615,7 +1604,7 @@ function ExpertChatDrawer({ employee, onClose }) {
           ))}
           {loading && (
             <div className="flex gap-2">
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#117dff]/10 text-[10px] font-bold text-[#117dff] font-mono">{initialsOf(employee.name)}</div>
+              <AgentAvatar agent={employee} size={28} active />
               <div className="rounded-2xl bg-[#f3f1ec] px-4 py-3"><TypingDots /></div>
             </div>
           )}

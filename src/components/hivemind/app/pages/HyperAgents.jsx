@@ -50,6 +50,7 @@ import {
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
 import { FIELDS, professionsForField, NAME_SUGGESTIONS } from '../shared/field-catalog';
+import AgentAvatar from '../hyperagents/AgentAvatar';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
 
@@ -603,19 +604,9 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
           )}
         </div>
         <div className="flex items-center gap-1 mt-0.5 text-[9px] text-[#a3a3a3] font-mono">
-          {participants.slice(0, 4).map(p => {
-            const lane = p.lane || 'Communicator';
-            return (
-              <span
-                key={p.id}
-                title={`${p.name} · ${lane}`}
-                className="px-1 rounded"
-                style={{ background: LANE_META[lane]?.bg, color: LANE_META[lane]?.color }}
-              >
-                {p.name?.[0] || '?'}
-              </span>
-            );
-          })}
+          {participants.slice(0, 4).map(p => (
+            <AgentAvatar key={p.id} agent={p} size={18} />
+          ))}
           {participants.length > 4 && (
             <span className="text-[9px] text-[#a3a3a3]">+{participants.length - 4}</span>
           )}
@@ -1871,9 +1862,7 @@ function RoomThread({ roomId, onArchived }) {
                         <button key={p.slug} type="button"
                           onClick={() => setDraft(draft.replace(/@[a-zA-Z0-9_-]*$/, `@${p.slug} `))}
                           className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-[#faf9f4]">
-                          <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold shrink-0">
-                            {(p.name || p.slug || '?').slice(0, 1).toUpperCase()}
-                          </span>
+                          <AgentAvatar agent={p} size={20} />
                           <span className="text-[12px] text-[#0a0a0a]">{p.name || p.slug}</span>
                           <span className="ml-auto text-[9px] font-mono text-[#a3a3a3]">@{p.slug}</span>
                         </button>
@@ -2678,9 +2667,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
               })()}
             </div>
             <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
-              <span className="h-5 w-5 grid place-items-center rounded-full bg-violet-100 text-violet-700 text-[9px] font-semibold">
-                {(_leadP.name || synthLine.agent || '?').slice(0, 1).toUpperCase()}
-              </span>
+              <AgentAvatar agent={_leadP && _leadP.name ? _leadP : { name: synthLine.agent, slug: synthLine.agent }} size={20} />
               <span className="text-[10px] text-[#525252]">
                 {t('hyperAgents.synthBy', 'by')} <span className="font-medium text-[#0a0a0a]">{_leadP.name || synthLine.agent}</span>
                 {_crew.length > 0 && <> · {t('hyperAgents.synthWith', 'with')} {_crew.map(p => p.name || p.slug).filter(Boolean).join(', ')}</>}
@@ -3006,8 +2993,12 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
       {!seal && typing.length > 0 && (
         <div className="text-[11px] text-[#a3a3a3] italic flex items-center gap-2 pl-2">
           {typing.map((typingLine, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <Loader2 size={10} className="animate-spin" /> {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
+            <span key={i} className="flex items-center gap-1.5">
+              <AgentAvatar
+                agent={(participants || []).find(pp => pp.slug === typingLine.agent || pp.name === typingLine.agent) || { name: typingLine.agent, slug: typingLine.agent }}
+                size={18} active
+              />
+              {typingLine.note || t('hyperAgents.agentTyping', '{{agent}} typing…', { agent: typingLine.agent })}
             </span>
           ))}
         </div>
@@ -3127,14 +3118,7 @@ function ParticipantChip({ agent, canRemove, onRemove, onOpenDm }) {
       onClick={() => onOpenDm?.(agent)}
       title={t('hyperAgents.dmAgent', 'DM {{name}}', { name: agent?.name || agent?.slug })}
     >
-      <div
-        className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
-        style={{ background: meta.bg, color: meta.color }}
-      >
-        {agent?.avatarUrl
-          ? <img src={agent.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-          : (agent?.name?.[0] || agent?.slug?.[0] || '?').toUpperCase()}
-      </div>
+      <AgentAvatar agent={agent} size={28} />
       <div className="flex-1 min-w-0">
         <div className="text-[11px] font-semibold text-[#0a0a0a] truncate">{agent?.name || agent?.slug}</div>
         <div className="flex items-center gap-1 text-[9px] font-mono" style={{ color: meta.color }}>
@@ -3244,14 +3228,7 @@ function AgentDmModal({ agent, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-3 shrink-0">
-          <div
-            className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-[12px] font-semibold"
-            style={{ background: meta.bg, color: meta.color }}
-          >
-            {agent.avatarUrl
-              ? <img src={agent.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-              : (agent.name?.[0] || agent.slug?.[0] || '?').toUpperCase()}
-          </div>
+          <AgentAvatar agent={agent} size={36} />
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-semibold text-[#0a0a0a] truncate">{agent.name || agent.slug}</div>
             <div className="flex items-center gap-1 text-[10px] font-mono" style={{ color: meta.color }}>
@@ -3287,12 +3264,7 @@ function AgentDmModal({ agent, onClose }) {
               )
               : (
                 <div key={i} className="flex gap-2">
-                  <div
-                    className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
-                    style={{ background: meta.bg, color: meta.color }}
-                  >
-                    {(agent.name?.[0] || '?').toUpperCase()}
-                  </div>
+                  <AgentAvatar agent={agent} size={28} />
                   <div className="max-w-[78%] bg-white border border-[#e3e0db] rounded-2xl rounded-tl-md px-3 py-2 text-[13px] text-[#0a0a0a] whitespace-pre-wrap break-words">
                     {m.content}
                   </div>
@@ -3705,14 +3677,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                       return (
                         <label key={emp.id} className={`flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-colors ${checked ? 'bg-[#117dff]/[0.04]' : 'hover:bg-[#faf9f4]'}`}>
                           <input type="checkbox" checked={checked} onChange={() => toggle(emp.id)} className="w-4 h-4 accent-[#117dff]" />
-                          <div
-                            className="w-9 h-9 rounded-[8px] shrink-0 flex items-center justify-center text-[12px] font-semibold font-['Space_Grotesk']"
-                            style={{ background: meta.bg, color: meta.color }}
-                          >
-                            {emp.avatar_url
-                              ? <img src={emp.avatar_url} alt="" className="w-full h-full rounded-[8px] object-cover" />
-                              : (emp.name?.[0] || '?').toUpperCase()}
-                          </div>
+                          <AgentAvatar agent={emp} size={36} shape="square" />
                           <div className="flex-1 min-w-0">
                             <div className="text-[13px] font-semibold text-[#0a0a0a] truncate font-['Space_Grotesk']">{emp.name}</div>
                             <div className="text-[10px] font-mono mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded-full"
@@ -4155,8 +4120,8 @@ function HiredCongrats({ hire, onDone }) {
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
         className="relative z-10 bg-white rounded-2xl shadow-2xl px-8 py-7 text-center max-w-[360px]"
       >
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-violet-500/10 text-violet-700 flex items-center justify-center text-[26px] mb-3 font-['Space_Grotesk'] font-bold">
-          {(hire.name || '?')[0].toUpperCase()}
+        <div className="mx-auto mb-3 w-fit">
+          <AgentAvatar agent={hire} size={64} shape="square" active />
         </div>
         <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-[#7c3aed]">{t('hyperAgents.hiredEyebrow', 'Hired an agent')}</div>
         <h3 className="mt-1.5 text-[20px] font-bold text-[#0a0a0a] font-['Space_Grotesk']">{t('hyperAgents.congrats', 'Congratulations!')}</h3>
@@ -4209,12 +4174,7 @@ function AgentPickerModal({ currentIds, onClose, onPick }) {
             return (
               <label key={emp.id} className="flex items-center gap-2 px-4 py-2.5 cursor-pointer hover:bg-[#faf9f4]">
                 <input type="checkbox" checked={picked.has(emp.id)} onChange={() => toggle(emp.id)} className="accent-violet-500" />
-                <div
-                  className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
-                  style={{ background: meta.bg, color: meta.color }}
-                >
-                  {(emp.name?.[0] || '?').toUpperCase()}
-                </div>
+                <AgentAvatar agent={emp} size={28} />
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-semibold text-[#0a0a0a] truncate">{emp.name}</div>
                   <div className="text-[10px] font-mono" style={{ color: meta.color }}>{meta.label}</div>

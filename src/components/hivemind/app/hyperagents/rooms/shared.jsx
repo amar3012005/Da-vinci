@@ -18,6 +18,7 @@ import {
 import apiClient from '../../shared/api-client';
 import { BRAND_LOGOS } from '../../shared/connectors-catalog';
 import { FENCE_ELEMENTS, Callout, TimelineBlock, ChartBlock, StatRow, Steps } from './elements';
+import AgentAvatar from '../AgentAvatar';
 export { Callout, TimelineBlock, ChartBlock, StatRow, Steps };
 
 export const LANE_META = {
@@ -1070,16 +1071,13 @@ export function AgentBubble({ agent, content: rawContent, kind, agreement, confi
   const isShort = (content || '').length < 280 && !/\n.*\n/.test(content || '');
 
   return (
-    <div className={`flex gap-2 ${indent ? 'ml-6' : ''}`}>
-      <div
-        className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-semibold"
-        style={{ background: meta.bg, color: meta.color }}
-        title={`${agent?.name || agent?.slug} · ${lane}`}
-      >
-        {agent?.avatarUrl
-          ? <img src={agent.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-          : (agent?.name?.[0] || agent?.slug?.[0] || '?').toUpperCase()}
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      className={`flex gap-2 ${indent ? 'ml-6' : ''}`}
+    >
+      <AgentAvatar agent={agent} size={28} active={kind === 'lead'} />
       <div className="min-w-0 max-w-[78%]">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <span className="text-[11px] font-semibold text-[#0a0a0a]">{agent?.name || agent?.slug}</span>
@@ -1114,7 +1112,7 @@ export function AgentBubble({ agent, content: rawContent, kind, agreement, confi
             : <div className="space-y-0.5">{renderMarkdownLite(content)}</div>}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
