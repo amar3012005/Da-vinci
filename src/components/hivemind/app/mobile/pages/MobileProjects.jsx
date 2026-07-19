@@ -21,6 +21,7 @@ export default function MobileProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [selected, setSelected] = useState(null); // project detail sheet
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -69,13 +70,18 @@ export default function MobileProjects() {
           {loading && <div className="py-12 text-center text-[13px] text-[#737373]">Loading…</div>}
           {error && <div className="py-3 text-[13px] text-red-700">{error}</div>}
           {!loading && !error && filtered.length === 0 && <div className="py-16 text-center text-[13px] text-[#737373]">No projects yet.</div>}
-          {filtered.map((p) => (
-            <button key={p.id} className="w-full text-left py-3.5 flex items-center gap-3 active:opacity-60">
-              {/* Same folder element as the desktop projects UI */}
-              <Folder size={18} className="text-[#117dff] flex-shrink-0" />
+          {filtered.map((p, i) => (
+            <button key={p.id} onClick={() => setSelected(p)}
+              className={`w-full text-left py-3.5 flex items-start gap-3 active:opacity-60 ${i ? 'border-t border-[#eceae3]' : ''}`}>
+              <Folder size={18} className="text-[#117dff] flex-shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <div className="text-[16px] leading-tight truncate">{p.name}</div>
-                {editedLabel(p) && <div className="text-[12px] text-[#a8a49c] mt-0.5">{editedLabel(p)}</div>}
+                {p.description && <div className="text-[12px] text-[#8b857d] mt-0.5 line-clamp-2">{p.description}</div>}
+                <div className="mt-1 flex items-center gap-3 text-[11px] text-[#a8a49c]">
+                  <span>{p.member_count ?? p._count?.members ?? 0} members</span>
+                  <span>{p.memory_count ?? p._count?.memories ?? 0} memories</span>
+                  {editedLabel(p) && <span>{editedLabel(p)}</span>}
+                </div>
               </div>
             </button>
           ))}
@@ -90,6 +96,43 @@ export default function MobileProjects() {
       >
         <Plus size={18} /> New project
       </button>
+
+      {/* Project detail sheet — the desktop card's info, mobile-native */}
+      {selected && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-end" onClick={() => setSelected(null)}>
+          <div className="w-full max-h-[75vh] overflow-y-auto bg-white rounded-t-[28px] p-5" onClick={(e) => e.stopPropagation()}
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}>
+            <div className="w-10 h-1 rounded-full bg-[#d4d0ca] mx-auto mb-4" />
+            <div className="flex items-start gap-3">
+              <Folder size={20} className="text-[#117dff] flex-shrink-0 mt-1" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[22px] leading-tight" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>{selected.name}</div>
+                {editedLabel(selected) && <div className="text-[11.5px] text-[#a8a49c] mt-0.5">{editedLabel(selected)}</div>}
+              </div>
+              <button onClick={() => setSelected(null)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec] flex-shrink-0"><X size={16} /></button>
+            </div>
+            {selected.description
+              ? <p className="mt-3 text-[14px] leading-relaxed text-[#3d3d3a]">{selected.description}</p>
+              : <p className="mt-3 text-[13px] text-[#a8a49c]">No description.</p>}
+            <div className="mt-4 flex items-center gap-6 py-3 border-t border-[#eceae3]">
+              <div>
+                <div className="text-[20px] font-semibold">{selected.member_count ?? selected._count?.members ?? 0}</div>
+                <div className="text-[11px] uppercase tracking-wide text-[#a8a49c]">Members</div>
+              </div>
+              <div>
+                <div className="text-[20px] font-semibold">{selected.memory_count ?? selected._count?.memories ?? 0}</div>
+                <div className="text-[11px] uppercase tracking-wide text-[#a8a49c]">Memories</div>
+              </div>
+              {(selected.created_at || selected.createdAt) && (
+                <div>
+                  <div className="text-[13px] font-semibold mt-1.5">{new Date(selected.created_at || selected.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div className="text-[11px] uppercase tracking-wide text-[#a8a49c]">Created</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create sheet */}
       {creating && (

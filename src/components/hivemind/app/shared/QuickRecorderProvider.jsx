@@ -714,12 +714,45 @@ export function QuickRecorderProvider({ children }) {
  * Fixed top-right just below the navbar. Opens the quick-recorder wizard.
  * Hides while a recording/processing session is active (the chip lives there).
  */
+const _MEET_PROMO_SEEN = 'hm_m_meetpromo_dismissed';
+
 export function MeetingNotesPromo({ mobile = false, inline = false }) {
   const qrec = useQuickRecorder();
+  // Mobile: a ONE-TIME banner that slides in from the LEFT on first chat open,
+  // with an explicit X (rightmost) — it never floats over other controls again,
+  // and no blue glow. Dismissal persists per device.
+  const [dismissed, setDismissed] = React.useState(() => {
+    try { return window.localStorage.getItem(_MEET_PROMO_SEEN) === '1'; } catch { return false; }
+  });
   if (!qrec.supported || qrec.active) return null;
+  if (mobile) {
+    if (dismissed) return null;
+    const dismiss = () => {
+      setDismissed(true);
+      try { window.localStorage.setItem(_MEET_PROMO_SEEN, '1'); } catch { /* private mode */ }
+    };
+    return (
+      <motion.div
+        initial={{ x: '-105%', opacity: 0.6 }} animate={{ x: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 26, delay: 0.35 }}
+        className="mx-3 mt-1 mb-1 flex items-center gap-2 pl-2.5 pr-1.5 py-2 rounded-xl bg-white border border-[#e8e5de] shadow-[0_1px_6px_rgba(0,0,0,0.05)]"
+      >
+        <span className="px-1.5 py-0.5 rounded-[4px] bg-[#117dff] text-white text-[9px] font-bold font-['Space_Grotesk'] tracking-wide uppercase flex-shrink-0">New</span>
+        <button onClick={() => { qrec.openConfig(); dismiss(); }}
+          className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[12.5px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a] text-left">
+          <Mic size={13} className="text-[#117dff] flex-shrink-0" />
+          <span className="truncate">AI Meeting Notes — record, transcribe, recall</span>
+        </button>
+        <button onClick={dismiss} aria-label="Dismiss"
+          className="w-8 h-8 rounded-full grid place-items-center text-[#6b6b66] active:bg-[#f1eee7] flex-shrink-0">
+          <X size={15} />
+        </button>
+      </motion.div>
+    );
+  }
   // inline → a normal flex item INSIDE the navbar (can never overlap its
-  // dropdowns). mobile → fixed below the mobile header, z-10 (under any menu).
-  const pos = inline ? '' : `fixed z-10 ${mobile ? 'top-[60px] right-3' : 'top-[64px] right-6'}`;
+  // dropdowns). Desktop floating variant unchanged.
+  const pos = inline ? '' : 'fixed z-10 top-[64px] right-6';
   return (
     <motion.button
       initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}

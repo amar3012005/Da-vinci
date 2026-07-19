@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ChevronRight, GitFork, Lock } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
+import { useAuth } from '../../auth/AuthProvider';
 
 const TYPES = ['all', 'fact', 'decision', 'preference', 'procedure', 'experience', 'synthesis'];
 
@@ -122,13 +123,39 @@ function MemoryCard({ memory, index, onSelect }) {
   );
 }
 
+// ─── First-paint cache ──────────────────────────────────────────────────────
+// The first PAGE_SIZE memories are cached per user+org so a revisit paints
+// instantly (no spinner), then fresh data replaces it in the background. The
+// key includes BOTH ids — switching accounts in the same browser can never
+// surface another account's memories from cache.
+const PAGE_SIZE = 15;
+const _memCacheKey = (userId, orgId) => `hm_m_memcache:${userId || 'anon'}:${orgId || 'noorg'}`;
+function loadMemCache(userId, orgId) {
+  try {
+    const raw = window.localStorage.getItem(_memCacheKey(userId, orgId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+function saveMemCache(userId, orgId, memories) {
+  try {
+    window.localStorage.setItem(_memCacheKey(userId, orgId), JSON.stringify((memories || []).slice(0, PAGE_SIZE)));
+  } catch { /* storage full/private — cache is best-effort */ }
+}
+
 export default function MobileMemories() {
+  const { user, org } = useAuth() || {};
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
-  const [memories, setMemories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const _cached = useMemo(() => loadMemCache(user?.id, org?.id), [user?.id, org?.id]);
+  const [memories, setMemories] = useState(_cached);
+  const [loading, setLoading] = useState(_cached.length === 0); // cache hit → instant paint, no spinner
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const offsetRef = useRef(0);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,12 +163,19 @@ export default function MobileMemories() {
       setLoading(true);
       setError('');
       try {
-        const params = { limit: 40, offset: 0, hide_noise: 'true', is_latest: 'all' };
+        const params = { limit: PAGE_SIZE, offset: 0, hide_noise: 'true', is_latest: 'all' };
         if (type !== 'all') params.memory_type = type;
         const data = query.trim()
           ? await apiClient.searchMemories(query.trim(), { ...params, limit: 40 })
           : await apiClient.listMemories(params);
-        if (!cancelled) setMemories(data?.memories || data?.results || data || []);
+        const rows = data?.memories || data?.results || data || [];
+        if (!cancelled) {
+          setMemories(rows);
+          offsetRef.current = rows.length;
+          setHasMore(!query.trim() && rows.length >= PAGE_SIZE);
+          // Refresh the instant-paint cache only for the default view.
+          if (!query.trim() && type === 'all') saveMemCache(user?.id, org?.id, rows);
+        }
       } catch (err) {
         if (!cancelled) setError(err?.response?.data?.detail || err.message || 'Could not load memories.');
       } finally {
@@ -150,6 +184,35 @@ export default function MobileMemories() {
     }, 220);
     return () => { cancelled = true; clearTimeout(id); };
   }, [query, type]);
+
+  // Page in the remaining memories as the sentinel enters the viewport.
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || query.trim()) return;
+    setLoadingMore(true);
+    try {
+      const params = { limit: PAGE_SIZE, offset: offsetRef.current, hide_noise: 'true', is_latest: 'all' };
+      if (type !== 'all') params.memory_type = type;
+      const data = await apiClient.listMemories(params);
+      const rows = data?.memories || data?.results || data || [];
+      setMemories((prev) => {
+        const seen = new Set(prev.map((m) => m.id));
+        return [...prev, ...rows.filter((m) => !seen.has(m.id))];
+      });
+      offsetRef.current += rows.length;
+      if (rows.length < PAGE_SIZE) setHasMore(false);
+    } catch { setHasMore(false); }
+    finally { setLoadingMore(false); }
+  }, [loadingMore, hasMore, query, type]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) loadMore();
+    }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMore, hasMore, loading]);
 
   const stats = useMemo(() => {
     const scopes = new Set(memories.map((m) => m.scope || m.visibility).filter(Boolean));
@@ -189,7 +252,7 @@ export default function MobileMemories() {
 
         {/* Desktop-style stacked cards */}
         <div className="mt-4 space-y-2.5">
-          {loading && <div className="py-12 text-center text-[13px] text-[#737373]">Loading…</div>}
+          {loading && memories.length === 0 && <div className="py-12 text-center text-[13px] text-[#737373]">Loading…</div>}
           {error && <div className="py-3 text-[13px] text-red-700">{error}</div>}
           {!loading && !error && memories.length === 0 && <div className="py-16 text-center text-[13px] text-[#737373]">No memories match this filter.</div>}
           <AnimatePresence>
@@ -197,6 +260,12 @@ export default function MobileMemories() {
               <MemoryCard key={memory.id || `${titleOf(memory)}-${index}`} memory={memory} index={index} onSelect={setSelected} />
             ))}
           </AnimatePresence>
+          {/* Infinite scroll — the rest loads as the user scrolls */}
+          {hasMore && !loading && !query.trim() && (
+            <div ref={sentinelRef} className="py-4 text-center">
+              {loadingMore && <span className="text-[12px] text-[#a3a3a3]">Loading more…</span>}
+            </div>
+          )}
         </div>
       </div>
 

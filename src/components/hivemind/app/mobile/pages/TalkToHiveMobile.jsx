@@ -67,6 +67,20 @@ import { useAuth } from '../../auth/AuthProvider';
 const MAX_CHARS = 2000;
 const MAX_PERSIST = 200;
 
+const LANG_OPTIONS = [
+  { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
+  { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
+  { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
+  { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
+  { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
+  { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
+  { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
+  { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
+  { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
+  { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
+  { c: 'id', n: 'Indonesia' },
+];
+
 const MODELS = [
   { id: 'gpt-oss-120b', label: 'GPT-OSS 120B', tag: 'Default' },
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', tag: 'Free' },
@@ -643,14 +657,67 @@ function MobileProjectChoice({ choice }) {
   );
 }
 
-// Loading state — Claude's pulsing reasoning line while the answer streams.
-function Thinking() {
+// Loading state — pulsing reasoning line + the LIVE tool calls the chat
+// orchestration is running (streamed as SSE tool_call/tool_result events),
+// animated in place like the desktop AgentActivity, but unboxed.
+function _activityLabel(ev) {
+  const n = String(ev?.name || ev?.tool || '').replace(/^hivemind_/, '').replace(/_/g, ' ');
+  if (ev?.type === 'plan') return 'planning the approach';
+  if (ev?.type === 'tool_result') return n ? `${n} — done` : 'step done';
+  return n ? `running ${n}` : 'working';
+}
+function Thinking({ events = [] }) {
+  const visible = (events || []).slice(-4);
   return (
-    <div className="self-start flex items-center gap-1.5 text-[#8a8577]">
-      <Clock size={14} className="animate-pulse" />
-      <span className="text-[14px]">Thinking…</span>
+    <div className="self-start flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-[#8a8577]">
+        <Clock size={14} className="animate-pulse" />
+        <span className="text-[14px]">Thinking…</span>
+      </div>
+      {visible.map((ev) => {
+        const complete = ev?.type === 'tool_result';
+        return (
+          <motion.div key={ev?.id || `${ev?.type}-${ev?.name}`}
+            initial={{ opacity: 0, x: -6 }} animate={{ opacity: complete ? 0.55 : 1, x: 0 }}
+            className="flex items-center gap-2 pl-5 text-[12px] text-[#6b6b66]">
+            {complete
+              ? <CheckCircle2 size={12} className="text-[#16a34a]" />
+              : <Loader2 size={12} className="animate-spin text-[#117dff]" />}
+            <span className="font-mono text-[11px]">{_activityLabel(ev)}</span>
+          </motion.div>
+        );
+      })}
     </div>
   );
+}
+
+// SSE reader — mirrors desktop Overview.readChatStream frame-for-frame.
+async function readChatStream(response, onEvent) {
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result = null;
+  const consume = (frame) => {
+    const data = frame.split('\n').filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trim()).join('\n');
+    if (!data) return;
+    try {
+      const event = JSON.parse(data);
+      if (event.type === 'done') result = event;
+      else onEvent(event);
+    } catch { /* malformed intermediary frame */ }
+  };
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const frames = buffer.split('\n\n');
+    buffer = frames.pop() || '';
+    frames.forEach(consume);
+    if (done) break;
+  }
+  if (buffer.trim()) consume(buffer);
+  return result;
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────
@@ -663,6 +730,7 @@ export default function TalkToHiveMobile() {
   const [messages, setMessages] = useState(() => loadMsgs());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [agentEvents, setAgentEvents] = useState([]); // live tool_call/tool_result stream
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   // Chat scope — org-wide (null) or one project; mirrors Overview.jsx. Follows
@@ -769,16 +837,34 @@ export default function TalkToHiveMobile() {
       : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
 
     try {
-      const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
-        message: wireMessage,
-        model: selectedModel,
-        history: fullHistory,
-        language: lang2,
-        // Keep mobile on the same grounded tool-routing path as desktop chat.
-        router: 'tool',
-        ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
+      // Streamed like desktop Overview: SSE frames carry live tool_call /
+      // tool_result events → animated activity while the answer is produced.
+      setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
+      const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
+      const chatRes = await fetch(chatUrl, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: wireMessage,
+          model: selectedModel,
+          history: fullHistory,
+          language: lang2,
+          stream: true,
+          // Keep mobile on the same grounded tool-routing path as desktop chat.
+          router: 'tool',
+          ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
+        }),
       });
-      const data = chatRes.data;
+      if (!chatRes.ok) {
+        const errorData = await chatRes.json().catch(() => ({}));
+        throw new Error(errorData.error || `Chat request failed (${chatRes.status})`);
+      }
+      const data = (chatRes.headers.get('content-type') || '').includes('text/event-stream')
+        ? (await readChatStream(chatRes, (event) => {
+            setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-5));
+          })) || {}
+        : await chatRes.json();
       const assistantMsg = {
         id: Date.now() + 1,
         role: 'assistant',
@@ -800,6 +886,7 @@ export default function TalkToHiveMobile() {
       ]);
     } finally {
       setLoading(false);
+      setAgentEvents([]);
     }
   }, [input, loading, messages, selectedModel, i18n.language, chatScope]);
 
@@ -965,7 +1052,61 @@ export default function TalkToHiveMobile() {
     </>
   );
   return (
-    <MobileShell noScroll title="Talk to HIVE" extraDrawerActions={chatDrawerActions}>
+    <MobileShell noScroll bareHeader extraDrawerActions={chatDrawerActions}>
+      {/* Floating top-right cluster — language + model (drop-downs). The chosen
+          model drives the /chat synthesis; language sets the reply language. */}
+      <div className="absolute right-2.5 z-40 flex items-center gap-1.5"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 9px)' }}>
+        <div className="relative">
+          {langMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setLangMenuOpen(false)} />}
+          <button
+            onClick={() => { setLangMenuOpen((v) => !v); setModelMenuOpen(false); setScopeMenuOpen(false); }}
+            className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
+            aria-label="Reply language"
+          >
+            <Globe size={13} className="text-[#117dff]" />
+            <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
+            <ChevronDown size={11} className="text-[#a3a3a3]" />
+          </button>
+          {langMenuOpen && (
+            <div className="absolute top-full mt-1.5 right-0 z-40 w-[180px] max-h-[300px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setLangMenuOpen(false)}>
+              {LANG_OPTIONS.map((l) => {
+                const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
+                return (
+                  <button key={l.c} onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}>
+                    <span>{l.n}</span>
+                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          {modelMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setModelMenuOpen(false)} />}
+          <button
+            onClick={() => { setModelMenuOpen((v) => !v); setLangMenuOpen(false); setScopeMenuOpen(false); }}
+            className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#faf9f4]/85 backdrop-blur-sm text-[11.5px] font-semibold text-[#3d3d3a] active:bg-[#ece9e2]"
+            aria-label="Model"
+          >
+            <Sparkles size={12} className="text-[#117dff]" />
+            <span>{currentModel.label.replace('GPT-OSS ', '').replace('Llama ', 'L')}</span>
+            <ChevronDown size={11} className="text-[#a3a3a3]" />
+          </button>
+          {modelMenuOpen && (
+            <div className="absolute top-full mt-1.5 right-0 z-40 w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setModelMenuOpen(false)}>
+              {MODELS.map((m) => (
+                <button key={m.id} onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}>
+                  <span>{m.label}</span>
+                  <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       {/* New-feature promo — top-right below the header; hides while recording */}
       <MeetingNotesPromo mobile />
 
@@ -975,7 +1116,7 @@ export default function TalkToHiveMobile() {
         className="flex-1 overflow-y-auto overscroll-contain"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        <div className="flex flex-col gap-4 px-4 py-5">
+        <div className="flex flex-col gap-4 px-4 pb-5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 60px)' }}>
           {messages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center text-center gap-4 min-h-[46vh]">
               {/* Claude-style centered greeting: accent mark + large serif name line */}
@@ -1006,7 +1147,7 @@ export default function TalkToHiveMobile() {
               ? <UserBubble key={m.id} content={m.content} />
               : <AiBubble key={m.id} msg={m} onRetry={retry} />
           )}
-          {loading && <Thinking />}
+          {loading && <Thinking events={agentEvents} />}
         </div>
       </div>
 
@@ -1097,7 +1238,7 @@ export default function TalkToHiveMobile() {
       <PwaInstall />
 
       {/* ── Composer ───────────────────────────────── */}
-      <div className="flex-shrink-0 px-3 pt-2 bg-[#faf9f4]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
+      <div className="flex-shrink-0 px-1.5 pt-2 bg-[#faf9f4]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 4px)' }}>
         {/* Claude-style floating input card: text row on top, action row below */}
         <div className="bg-white border border-[#e8e5de] rounded-[28px] shadow-[0_2px_14px_rgba(0,0,0,0.06)] px-4 pt-3 pb-2.5 focus-within:border-[#d5d1c8]">
           <input
@@ -1169,73 +1310,6 @@ export default function TalkToHiveMobile() {
                 {(projects || []).length === 0 && (
                   <p className="px-2 py-1.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
                 )}
-              </div>
-            )}
-          </div>
-          {/* Model drop-UP — routes the /chat synthesis model */}
-          <div className="relative">
-            {modelMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setModelMenuOpen(false)} />}
-            <button
-              onClick={() => { setModelMenuOpen((v) => !v); setScopeMenuOpen(false); setLangMenuOpen(false); }}
-              className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#f1eee7] text-[11.5px] font-semibold text-[#3d3d3a]"
-              aria-label="Model"
-            >
-              <Sparkles size={11} className="text-[#117dff]" />
-              <span>{currentModel.label.replace('GPT-OSS ', '').replace('Llama ', 'L')}</span>
-            </button>
-            {modelMenuOpen && (
-              <div className="absolute bottom-full mb-2 left-0 z-40 w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setModelMenuOpen(false)}>
-                {MODELS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}
-                  >
-                    <span>{m.label}</span>
-                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Language drop-UP — reply language (persisted by i18next) */}
-          <div className="relative">
-            {langMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setLangMenuOpen(false)} />}
-            <button
-              onClick={() => { setLangMenuOpen((v) => !v); setScopeMenuOpen(false); setModelMenuOpen(false); }}
-              className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#f1eee7] text-[11.5px] font-semibold text-[#3d3d3a]"
-              aria-label="Reply language"
-            >
-              <Globe size={12} className="text-[#117dff]" />
-              <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
-            </button>
-            {langMenuOpen && (
-              <div className="absolute bottom-full mb-2 left-0 z-40 w-[180px] max-h-[280px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setLangMenuOpen(false)}>
-                {[
-                  { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
-                  { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
-                  { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
-                  { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
-                  { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
-                  { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
-                  { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
-                  { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
-                  { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
-                  { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
-                  { c: 'id', n: 'Indonesia' },
-                ].map((l) => {
-                  const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
-                  return (
-                    <button
-                      key={l.c}
-                      onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}
-                    >
-                      <span>{l.n}</span>
-                      <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
-                    </button>
-                  );
-                })}
               </div>
             )}
           </div>

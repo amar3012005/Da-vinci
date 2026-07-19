@@ -30,7 +30,7 @@ const NAV = [
   { to: '/hivemind/m/usage', label: 'Usage', icon: Gauge },
 ];
 
-export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null }) {
+export default function MobileShell({ children, rightAction = null, title = null, noScroll = false, extraDrawerActions = null, bareHeader = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, org, logout } = useAuth() || {};
@@ -71,20 +71,32 @@ export default function MobileShell({ children, rightAction = null, title = null
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       {showSplash && <SingulanceSplash onDone={finishSplash} />}
-      {/* ── Top bar: hamburger · (title) · right action ── */}
-      <header className="h-14 px-2.5 flex items-center justify-between flex-shrink-0">
+      {/* ── Top chrome: full bar by default, or a floating standalone hamburger
+             (bareHeader) — the page owns its own top-right controls then. ── */}
+      {bareHeader ? (
         <button
           onClick={() => setDrawer(true)}
-          className="w-11 h-11 rounded-full grid place-items-center active:bg-[#ece9e2]"
+          className="absolute left-2.5 z-40 w-11 h-11 rounded-full grid place-items-center bg-[#faf9f4]/85 backdrop-blur-sm active:bg-[#ece9e2]"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 6px)' }}
           aria-label="Menu"
         >
           <AlignLeft size={22} strokeWidth={2} />
         </button>
-        {title && (
-          <div className="text-[15px] font-semibold font-['Space_Grotesk'] absolute left-1/2 -translate-x-1/2">{title}</div>
-        )}
-        <div className="w-11 h-11 grid place-items-center">{rightAction}</div>
-      </header>
+      ) : (
+        <header className="h-14 px-2.5 flex items-center justify-between flex-shrink-0">
+          <button
+            onClick={() => setDrawer(true)}
+            className="w-11 h-11 rounded-full grid place-items-center active:bg-[#ece9e2]"
+            aria-label="Menu"
+          >
+            <AlignLeft size={22} strokeWidth={2} />
+          </button>
+          {title && (
+            <div className="text-[15px] font-semibold font-['Space_Grotesk'] absolute left-1/2 -translate-x-1/2">{title}</div>
+          )}
+          <div className="w-11 h-11 grid place-items-center">{rightAction}</div>
+        </header>
+      )}
 
       {/* ── Page body (page-enter transition, one place for all /m/* pages) ── */}
       {noScroll ? (
