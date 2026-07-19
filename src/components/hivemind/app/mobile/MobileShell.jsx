@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AlignLeft, MessageCircle, Brain, Mic2, Plug, Folder, Gauge,
@@ -85,12 +86,22 @@ export default function MobileShell({ children, rightAction = null, title = null
         <div className="w-11 h-11 grid place-items-center">{rightAction}</div>
       </header>
 
-      {/* ── Page body ── */}
+      {/* ── Page body (page-enter transition, one place for all /m/* pages) ── */}
       {noScroll ? (
         <div className="flex-1 min-h-0 flex flex-col">{children}</div>
       ) : (
         <main className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {children}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.26, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       )}
 
