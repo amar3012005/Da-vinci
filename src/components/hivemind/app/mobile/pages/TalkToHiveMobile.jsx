@@ -52,6 +52,9 @@ import {
   RotateCcw,
   ThumbsUp,
   ThumbsDown,
+  Boxes,
+  Building2,
+  Globe,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
@@ -662,6 +665,11 @@ export default function TalkToHiveMobile() {
   const [loading, setLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  // Chat scope — org-wide (null) or one project; mirrors Overview.jsx. Follows
+  // the global switcher, overridable per-conversation from the composer chip.
+  const [chatScope, setChatScope] = useState(activeProjectId || null);
+  const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
+  useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -768,7 +776,7 @@ export default function TalkToHiveMobile() {
         language: lang2,
         // Keep mobile on the same grounded tool-routing path as desktop chat.
         router: 'tool',
-        ...(activeProjectId ? { project_id: activeProjectId, project_ids: [activeProjectId] } : {}),
+        ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
       });
       const data = chatRes.data;
       const assistantMsg = {
@@ -793,7 +801,7 @@ export default function TalkToHiveMobile() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, activeProjectId]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope]);
 
   const send = useCallback(() => sendText(), [sendText]);
 
@@ -958,87 +966,6 @@ export default function TalkToHiveMobile() {
   );
   return (
     <MobileShell noScroll title="Talk to HIVE" extraDrawerActions={chatDrawerActions}>
-      {/* Chat chip row — model + reply language */}
-      <div className="flex items-center justify-end gap-2 px-3 py-2 flex-shrink-0 border-b border-[#ece9e2]">
-      {/* Model chip */}
-        <div className="relative">
-          <button
-            onClick={() => setModelMenuOpen((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#f3f1ec] border border-[#ece9e2] text-[11px] font-semibold text-[#0a0a0a]"
-          >
-            <Sparkles size={11} className="text-[#117dff]" />
-            <span>{currentModel.label.replace('GPT-OSS ', '').replace('Llama ', 'L')}</span>
-            <ChevronDown size={11} className="text-[#a3a3a3]" />
-          </button>
-          {modelMenuOpen && (
-            <div
-              className="absolute right-0 top-full mt-1.5 w-[200px] bg-white border border-[#ece9e2] rounded-xl shadow-lg z-30 py-1"
-              onClick={() => setModelMenuOpen(false)}
-            >
-              {MODELS.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${
-                    m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'
-                  } active:bg-[#f3f1ec]`}
-                >
-                  <span>{m.label}</span>
-                  <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Language chip — picks reply language. Persisted by i18next. */}
-        <div className="relative">
-          <button
-            onClick={() => setLangMenuOpen((v) => !v)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#f3f1ec] border border-[#ece9e2] text-[11px] font-semibold text-[#0a0a0a]"
-            aria-label="Reply language"
-          >
-            <span className="text-[#117dff]">🌐</span>
-            <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
-            <ChevronDown size={11} className="text-[#a3a3a3]" />
-          </button>
-          {langMenuOpen && (
-            <div
-              className="absolute right-0 top-full mt-1.5 w-[180px] max-h-[280px] overflow-y-auto bg-white border border-[#ece9e2] rounded-xl shadow-lg z-30 py-1"
-              onClick={() => setLangMenuOpen(false)}
-            >
-              {[
-                { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
-                { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
-                { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
-                { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
-                { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
-                { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
-                { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
-                { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
-                { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
-                { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
-                { c: 'id', n: 'Indonesia' },
-              ].map((l) => {
-                const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
-                return (
-                  <button
-                    key={l.c}
-                    onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
-                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${
-                      active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'
-                    } active:bg-[#f3f1ec]`}
-                  >
-                    <span>{l.n}</span>
-                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* New-feature promo — top-right below the header; hides while recording */}
       <MeetingNotesPromo mobile />
 
@@ -1210,9 +1137,108 @@ export default function TalkToHiveMobile() {
           >
             <Plus size={18} strokeWidth={2} />
           </button>
-          <span className="inline-flex items-center h-9 px-3 rounded-full bg-[#f1eee7] text-[12.5px] font-medium text-[#3d3d3a] max-w-[150px] truncate">
-            {activeProjectId ? (projects.find((pr) => pr.id === activeProjectId)?.name || t('overview.project', 'Project')) : (org?.name || t('overview.personal', 'Personal'))}
-          </span>
+          {/* Scope drop-UP — org-wide vs one project (Overview.jsx behavior) */}
+          <div className="relative">
+            {scopeMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setScopeMenuOpen(false)} />}
+            <button
+              onClick={() => { setScopeMenuOpen((v) => !v); setModelMenuOpen(false); setLangMenuOpen(false); }}
+              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[130px] ${chatScope ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
+              aria-label={t('overview.scope.hint', 'Answer scope: org-wide or one project')}
+            >
+              {chatScope ? <Boxes size={12} /> : <Building2 size={12} />}
+              <span className="truncate">{chatScope ? (projects.find((pr) => pr.id === chatScope)?.name || t('overview.scope.project', 'Project')) : t('overview.scope.org', 'Org-wide')}</span>
+            </button>
+            {scopeMenuOpen && (
+              <div className="absolute bottom-full mb-2 left-0 z-40 w-56 bg-white border border-[#e8e5de] rounded-xl shadow-lg p-1.5">
+                <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('overview.scope.title', 'Answer scope')}</p>
+                <button
+                  onClick={() => { setChatScope(null); setScopeMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${!chatScope ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                >
+                  <Building2 size={12} /> {t('overview.scope.org', 'Org-wide')}
+                </button>
+                {(projects || []).map((pr) => (
+                  <button
+                    key={pr.id}
+                    onClick={() => { setChatScope(pr.id); setScopeMenuOpen(false); }}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                  >
+                    <Boxes size={12} /> <span className="truncate">{pr.name}</span>
+                  </button>
+                ))}
+                {(projects || []).length === 0 && (
+                  <p className="px-2 py-1.5 text-[11px] text-[#a3a3a3]">{t('overview.scope.noProjects', 'No projects yet')}</p>
+                )}
+              </div>
+            )}
+          </div>
+          {/* Model drop-UP — routes the /chat synthesis model */}
+          <div className="relative">
+            {modelMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setModelMenuOpen(false)} />}
+            <button
+              onClick={() => { setModelMenuOpen((v) => !v); setScopeMenuOpen(false); setLangMenuOpen(false); }}
+              className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#f1eee7] text-[11.5px] font-semibold text-[#3d3d3a]"
+              aria-label="Model"
+            >
+              <Sparkles size={11} className="text-[#117dff]" />
+              <span>{currentModel.label.replace('GPT-OSS ', '').replace('Llama ', 'L')}</span>
+            </button>
+            {modelMenuOpen && (
+              <div className="absolute bottom-full mb-2 left-0 z-40 w-[200px] bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setModelMenuOpen(false)}>
+                {MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${m.id === selectedModel ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}
+                  >
+                    <span>{m.label}</span>
+                    <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{m.tag}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Language drop-UP — reply language (persisted by i18next) */}
+          <div className="relative">
+            {langMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setLangMenuOpen(false)} />}
+            <button
+              onClick={() => { setLangMenuOpen((v) => !v); setScopeMenuOpen(false); setModelMenuOpen(false); }}
+              className="relative z-40 inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-[#f1eee7] text-[11.5px] font-semibold text-[#3d3d3a]"
+              aria-label="Reply language"
+            >
+              <Globe size={12} className="text-[#117dff]" />
+              <span>{((i18n.language || 'en').slice(0, 2)).toUpperCase()}</span>
+            </button>
+            {langMenuOpen && (
+              <div className="absolute bottom-full mb-2 left-0 z-40 w-[180px] max-h-[280px] overflow-y-auto bg-white border border-[#e8e5de] rounded-xl shadow-lg py-1" onClick={() => setLangMenuOpen(false)}>
+                {[
+                  { c: 'en', n: 'English' }, { c: 'de', n: 'Deutsch' },
+                  { c: 'es', n: 'Español' }, { c: 'fr', n: 'Français' },
+                  { c: 'it', n: 'Italiano' }, { c: 'pt', n: 'Português' },
+                  { c: 'nl', n: 'Nederlands' }, { c: 'pl', n: 'Polski' },
+                  { c: 'sv', n: 'Svenska' }, { c: 'ru', n: 'Русский' },
+                  { c: 'uk', n: 'Українська' }, { c: 'tr', n: 'Türkçe' },
+                  { c: 'ar', n: 'العربية' }, { c: 'he', n: 'עברית' },
+                  { c: 'hi', n: 'हिन्दी' }, { c: 'ja', n: '日本語' },
+                  { c: 'ko', n: '한국어' }, { c: 'zh', n: '中文' },
+                  { c: 'vi', n: 'Tiếng Việt' }, { c: 'th', n: 'ไทย' },
+                  { c: 'id', n: 'Indonesia' },
+                ].map((l) => {
+                  const active = ((i18n.language || 'en').slice(0, 2)) === l.c;
+                  return (
+                    <button
+                      key={l.c}
+                      onClick={() => { i18n.changeLanguage(l.c); setLangMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between text-[13px] ${active ? 'text-[#117dff] font-semibold' : 'text-[#0a0a0a]'} active:bg-[#f3f1ec]`}
+                    >
+                      <span>{l.n}</span>
+                      <span className="text-[9.5px] font-mono uppercase tracking-wide text-[#a3a3a3]">{l.c}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <span className="flex-1" />
           {/* Push-to-talk mic — tap to record, tap to stop & transcribe */}
           <button
