@@ -46,6 +46,7 @@ import {
   Lock,
   AudioLines,
   Hexagon,
+  Brain,
   Clock,
   ChevronRight,
   Copy,
