@@ -18,6 +18,7 @@ import {
   Settings,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
+import MobileShell from '../MobileShell';
 import { CONNECTOR_CATALOG } from '../../shared/connectors-catalog';
 
 const CATEGORIES = [
@@ -112,27 +113,17 @@ export default function MobileConnectors() {
     finally { setBusyId(null); }
   };
 
+  const liveCount = <span className="text-[11px] text-[#a8a49c] whitespace-nowrap pr-1">{connectedCount} live</span>;
   return (
-    <div className="fixed inset-0 bg-[#faf9f4] text-[#0a0a0a] overflow-hidden flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <header className="h-14 px-3 bg-white/90 backdrop-blur-xl border-b border-[#ece9e2] flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate('/hivemind/m/chat')} className="w-10 h-10 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Back to chat">
-          <ChevronLeft size={21} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-bold leading-tight">Connectors</div>
-          <div className="text-[10.5px] text-[#8b857d]">Apps, browsers, and data sources for your memory engine</div>
-        </div>
-        <span className="text-[11px] text-[#a8a49c]">{connectedCount} live</span>
-      </header>
-
-      <div className="px-3 pt-3 pb-2 flex-shrink-0">
+    <MobileShell title="Connectors" rightAction={liveCount}>
+      <div className="px-3 pt-3 pb-2">
         <label className="flex items-center gap-2 h-11 px-3 rounded-[18px] bg-white border border-[#ece9e2] focus-within:border-[#9fc7ff]">
           <Search size={16} className="text-[#a3a3a3]" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search connectors..." className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-[#b9b5ae]" />
         </label>
       </div>
 
-      <main className="flex-1 overflow-y-auto px-3 pb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="px-3 pb-6">
         <section className="mb-3 rounded-[22px] bg-white border border-[#e3e0db] p-3.5 shadow-[0_12px_34px_rgba(26,24,20,0.045)]">
           <div className="flex gap-3">
             <div className="w-12 h-12 rounded-[17px] bg-[#117dff] text-white shadow-[0_12px_28px_rgba(17,125,255,0.28)] grid place-items-center flex-shrink-0">
@@ -223,8 +214,8 @@ export default function MobileConnectors() {
             );
           })}
         </div>
-      </main>
-    </div>
+      </div>
+    </MobileShell>
   );
 }
 

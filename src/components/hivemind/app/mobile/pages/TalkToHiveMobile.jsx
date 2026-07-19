@@ -21,7 +21,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Send,
   Loader2,
-  Menu,
   Trash2,
   ChevronDown,
   Sparkles,
@@ -49,6 +48,7 @@ import {
   Hexagon,
 } from 'lucide-react';
 import apiClient from '../../shared/api-client';
+import MobileShell from '../MobileShell';
 import useDictation from '../../shared/useDictation';
 import { useTeamContext } from '../../shared/team-context';
 import { MeetingNotesPromo } from '../../shared/QuickRecorderProvider';
@@ -632,93 +632,6 @@ function Thinking({ model }) {
   );
 }
 
-function MobileHiveDrawer({ open, onClose, onNewChat, onInstall, onClearChat }) {
-  const navigate = useNavigate();
-  const navItems = [
-    { label: 'Talk to HIVE', sub: 'Chat with memory', to: '/hivemind/m/chat', Icon: MessageCircle, accent: '#117dff' },
-    { label: 'Memories', sub: 'Search and filter rows', to: '/hivemind/m/memories', Icon: Brain, accent: '#22c55e' },
-    { label: 'AI Meeting Notes', sub: 'Recordings and recaps', to: '/hivemind/m/meeting-notes', Icon: NotebookPen, accent: '#f59e0b' },
-    { label: 'Connectors', sub: 'Apps and data sources', to: '/hivemind/m/connectors', Icon: Cable, accent: '#117dff' },
-  ];
-  const go = (to) => {
-    onClose();
-    navigate(to);
-  };
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.button
-            type="button"
-            aria-label="Close menu"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[70] bg-[#0a0a0a]/30 backdrop-blur-[2px]"
-          />
-          <motion.aside
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-            className="fixed left-0 top-0 bottom-0 z-[80] w-[84vw] max-w-[330px] bg-[#fbfaf6] border-r border-[#e3e0db] shadow-2xl flex flex-col"
-            style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-          >
-            <div className="px-4 pt-4 pb-3 border-b border-[#ece9e2]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[16px] font-bold tracking-tight">HIVEMIND Mobile</div>
-                  <div className="text-[11px] text-[#737373] mt-0.5">compact command center</div>
-                </div>
-                <button onClick={onClose} className="w-9 h-9 rounded-full grid place-items-center active:bg-[#ece9e2]" aria-label="Close">
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-3 space-y-2">
-              {navItems.map(({ label, sub, to, Icon, accent }) => (
-                <button
-                  key={to}
-                  onClick={() => go(to)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-[18px] bg-white border border-[#ece9e2] active:scale-[0.99] active:border-[#cfcac0] transition"
-                >
-                  <span className="w-9 h-9 rounded-[13px] grid place-items-center" style={{ backgroundColor: `${accent}14`, color: accent }}>
-                    <Icon size={17} />
-                  </span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block text-[14px] font-semibold text-[#0a0a0a] leading-tight">{label}</span>
-                    <span className="block text-[11px] text-[#737373] truncate mt-0.5">{sub}</span>
-                  </span>
-                  <ArrowUpRight size={14} className="text-[#a3a3a3]" />
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-auto p-3 border-t border-[#ece9e2] space-y-2">
-              <button onClick={() => { onNewChat(); onClose(); }} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-[14px] bg-[#0a0a0a] text-white text-[13px] font-semibold">
-                <Plus size={15} /> New chat
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={onInstall} className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-[13px] bg-white border border-[#ece9e2] text-[12px] font-medium text-[#525252]">
-                  <Download size={14} /> Install
-                </button>
-                <button onClick={() => go('/hivemind/app/settings')} className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-[13px] bg-white border border-[#ece9e2] text-[12px] font-medium text-[#525252]">
-                  <Settings size={14} /> Settings
-                </button>
-              </div>
-              <button onClick={onClearChat} className="w-full flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-[13px] text-[12px] font-medium text-[#dc2626] active:bg-red-50">
-                <Trash2 size={14} /> Clear chat history
-              </button>
-            </div>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function TalkToHiveMobile() {
@@ -732,7 +645,6 @@ export default function TalkToHiveMobile() {
   const [selectedModel, setSelectedModel] = useState('gpt-oss-120b');
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [scopeModalOpen, setScopeModalOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState([]);
   const [selectedScope, setSelectedScope] = useState('personal');
@@ -997,32 +909,28 @@ export default function TalkToHiveMobile() {
     if (typeof window !== 'undefined' && !window.confirm('Clear all messages?')) return;
     setMessages([]);
     try { localStorage.removeItem(storageKey()); } catch {}
-    setDrawerOpen(false);
   };
 
   const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
 
+  const chatDrawerActions = (
+    <>
+      <button onClick={() => setMessages([])} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] font-semibold bg-[#0a0a0a] text-white mb-2">
+        <Plus size={16} /> New chat
+      </button>
+      <button onClick={() => window.dispatchEvent(new Event('hive:install'))} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#3d3d3a] active:bg-[#f1eee7]">
+        <Download size={16} className="text-[#6b6b66]" /> Install app
+      </button>
+      <button onClick={clearChat} className="w-full h-11 px-3 rounded-[14px] flex items-center gap-3 text-[13.5px] text-[#dc2626] active:bg-red-50">
+        <Trash2 size={16} /> Clear chat history
+      </button>
+    </>
+  );
   return (
-    <div
-      className="fixed inset-0 flex flex-col bg-[#faf9f4] text-[#0a0a0a] z-50"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      {/* ── Header ─────────────────────────────────── */}
-      <header className="flex items-center gap-2 px-3 h-14 border-b border-[#ece9e2] bg-white/85 backdrop-blur-xl flex-shrink-0">
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="w-10 h-10 -ml-1 flex items-center justify-center rounded-full active:bg-[#ece9e2]/60 text-[#525252]"
-          aria-label="Open menu"
-        >
-          <Menu size={21} />
-        </button>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-[14px] font-bold tracking-tight leading-none">Talk to HIVE</div>
-          <div className="text-[10.5px] text-[#8a8a8a] mt-0.5">your second brain</div>
-        </div>
-
-        {/* Model chip */}
+    <MobileShell noScroll title="Talk to HIVE" extraDrawerActions={chatDrawerActions}>
+      {/* Chat chip row — model + reply language */}
+      <div className="flex items-center justify-end gap-2 px-3 py-2 flex-shrink-0 border-b border-[#ece9e2]">
+      {/* Model chip */}
         <div className="relative">
           <button
             onClick={() => setModelMenuOpen((v) => !v)}
@@ -1099,16 +1007,7 @@ export default function TalkToHiveMobile() {
             </div>
           )}
         </div>
-
-      </header>
-
-      <MobileHiveDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onNewChat={() => setMessages([])}
-        onInstall={() => window.dispatchEvent(new Event('hive:install'))}
-        onClearChat={clearChat}
-      />
+      </div>
 
       {/* New-feature promo — top-right below the header; hides while recording */}
       <MeetingNotesPromo mobile />
@@ -1331,6 +1230,6 @@ export default function TalkToHiveMobile() {
         onConfirm={handleConfirmScope}
         onClose={handleCloseScope}
       />
-    </div>
+    </MobileShell>
   );
 }
