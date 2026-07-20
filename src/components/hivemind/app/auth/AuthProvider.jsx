@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useLocation } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import posthog, { isPostHogEnabled } from '../../../../analytics/posthog';
+import { setStorageUser, clearUserScopedStorage } from '../shared/user-storage';
 
 const AuthContext = createContext(undefined);
 
@@ -47,6 +48,9 @@ export function AuthProvider({ children }) {
         setOnboarding(null);
         setAuthState('signed_out');
       } else {
+        // Per-account storage identity — on an account SWITCH this purges the
+        // previous user's chat caches so they never leak across logins.
+        try { setStorageUser(data.user); } catch { /* storage blocked */ }
         setUser(data.user || null);
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
@@ -152,6 +156,9 @@ export function AuthProvider({ children }) {
     setOrg(null);
     setOnboarding(null);
     setAuthState('signed_out');
+    // Purge this account's chat caches + storage identity so the next login
+    // on this device starts clean (the cross-account cache bug).
+    try { setStorageUser(null); clearUserScopedStorage(); } catch { /* noop */ }
     try { if (posthog && isPostHogEnabled()) posthog.reset(); } catch { /* noop */ }
     window.location.href = '/hivemind';
   }, []);

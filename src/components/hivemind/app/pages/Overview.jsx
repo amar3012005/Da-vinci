@@ -28,6 +28,8 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { userScopedKey } from '../shared/user-storage';
+import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import MarkdownMessage from '../shared/MarkdownMessage';
 import { useApiQuery } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
@@ -74,7 +76,9 @@ function ConsoleClock() {
 // as a fixed-height conversation so the page itself never grows — past
 // turns scroll INSIDE the thread box, the page stays put.
 
-const CHAT_STORE_KEY = 'hm.overviewChat';
+// Chat store is PER USER — an unkeyed slot leaked one account's conversation
+// into the next account on the same device (sessionStorage survives login).
+const chatStoreKey = () => userScopedKey('hm.overviewChat'); // lazy — user id resolves after auth
 const CHAT_MODEL = 'gpt-oss-120b';
 const HISTORY_CAP = 40;
 
@@ -87,7 +91,7 @@ const FILE_ACCEPT = ACCEPTED_EXTS.map((e) => `.${e}`).join(',');
 
 function loadStoredChat() {
   try {
-    const raw = window.sessionStorage.getItem(CHAT_STORE_KEY);
+    const raw = window.sessionStorage.getItem(chatStoreKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -217,25 +221,10 @@ async function readChatStream(response, onEvent) {
 }
 
 function ChatBubble({ msg }) {
-  if (msg.role === 'user') {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] bg-[#0a0a0a] text-white rounded-2xl rounded-br-md px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words">
-          {msg.content}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex justify-start">
-      <div className={`max-w-[85%] bg-white border rounded-2xl rounded-bl-md px-4 py-3 text-[13px] leading-relaxed break-words ${
-        msg.error ? 'border-[#f59e0b]/50 text-[#92400e] whitespace-pre-wrap' : 'border-[#e3e0db] text-[#262626]'
-      }`}>
-        {msg.error ? msg.content : <MarkdownMessage>{msg.content}</MarkdownMessage>}
-        {!msg.error && <AgentContext {...msg} />}
-      </div>
-    </div>
-  );
+  // Claude-exact turns (shared/claude-chat): user pill right, assistant is a
+  // bubbleless serif answer with reasoning pill + sources + action row.
+  if (msg.role === 'user') return <div className="flex justify-end"><UserBubble content={msg.content} /></div>;
+  return <div className="flex flex-col">{<AiBubble msg={msg} />}</div>;
 }
 
 // ─── Cognitive band — drifting stream of swarm intelligence ─────
@@ -832,7 +821,7 @@ function OverviewChat({ inputRef }) {
   // keeps the thread (capped so storage stays small).
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(CHAT_STORE_KEY, JSON.stringify(messages.slice(-HISTORY_CAP)));
+      window.sessionStorage.setItem(chatStoreKey(), JSON.stringify(messages.slice(-HISTORY_CAP)));
     } catch { /* storage blocked — chat still works in-memory */ }
   }, [messages]);
 
@@ -866,9 +855,9 @@ function OverviewChat({ inputRef }) {
     };
     const lang2 = (i18n.language || 'en').slice(0, 2).toLowerCase();
     const langName = LANG_FULL[lang2] || 'English';
-    const wireMessage = lang2 === 'en'
-      ? trimmed
-      : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
+    // Language is a first-class /chat param (backend enforces it in the answer
+    // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
+    const wireMessage = trimmed;
 
     try {
       const chatUrl = new URL('/v1/proxy/chat', apiClient.controlPlane.defaults.baseURL).toString();
@@ -965,14 +954,14 @@ function OverviewChat({ inputRef }) {
       {hasThread && (
         <div
           ref={threadRef}
-          className="flex-1 min-h-0 overflow-y-auto px-1 pt-3 pb-3 space-y-3 mb-2"
+          className="flex-1 min-h-0 overflow-y-auto px-3 pt-3 pb-3 space-y-4 mb-2 bg-[#faf9f4] rounded-xl"
           style={{
             maskImage: 'linear-gradient(to bottom, transparent, black 28px)',
             WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 28px)',
           }}
         >
           {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
-          {loading && <AgentActivity events={agentEvents} />}
+          {loading && <Thinking events={agentEvents} />}
         </div>
       )}
 
@@ -1062,7 +1051,7 @@ function OverviewChat({ inputRef }) {
           <div className="flex items-center gap-2">
             {messages.length > 0 && (
               <button
-                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(CHAT_STORE_KEY); } catch { /* noop */ } }}
+                onClick={() => { setMessages([]); try { window.sessionStorage.removeItem(chatStoreKey()); } catch { /* noop */ } }}
                 className="text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] transition-colors"
               >
                 {t('overview.chat.clear', 'Clear')}

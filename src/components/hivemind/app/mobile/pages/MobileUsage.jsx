@@ -61,11 +61,28 @@ export default function MobileUsage() {
           <>
             <UsageCard title="Tokens" used={t.used} limit={t.limit} caption={`${planName} · ${period}`} />
             <div className="text-[13px] text-[#737373] mt-4 mb-2 px-1">This period</div>
-            <UsageCard title="Searches" used={usage.searches?.used ?? usage.searches} limit={usage.searches?.limit} caption={usage.searches?.limit ? undefined : 'queries run'} />
-            <UsageCard title="Memories" used={usage.memories?.used ?? usage.memories} limit={usage.memories?.limit} caption={usage.memories?.limit ? undefined : 'stored'} />
-            {(usage.deepResearch != null || usage.deepResearch?.used != null) && (
-              <UsageCard title="Deep research" used={usage.deepResearch?.used ?? usage.deepResearch} limit={usage.deepResearch?.limit} caption={usage.deepResearch?.limit ? undefined : 'jobs'} />
-            )}
+            {/* Full desktop metric set (same /billing/usage payload keys). */}
+            {[
+              { key: 'searches', title: 'Recall / Chat', sub: 'agent queries' },
+              { key: 'memories', title: 'Memories', sub: 'ingested' },
+              { key: 'graphQueries', title: 'Graph Queries', sub: 'graph loads' },
+              { key: 'kbPages', title: 'KB Pages', sub: 'pages + slides + images' },
+              { key: 'deepResearch', title: 'Deep Research', sub: 'jobs' },
+              { key: 'webIntel', title: 'Web Intel', sub: 'search + crawl' },
+              { key: 'taraSeconds', title: 'TARA Talk Time', sub: 'seconds' },
+              { key: 'hyperAgentRuns', title: 'HyperAgents Runs', sub: 'runs' },
+              { key: 'connectors', title: 'Connectors', sub: 'active sources' },
+              { key: 'hyperRooms', title: 'HyperAgents', sub: 'rooms' },
+              { key: 'users', title: 'Seats', sub: 'org members' },
+            ].map(({ key, title, sub }) => {
+              const d = usage[key];
+              if (d == null) return null;
+              return (
+                <UsageCard key={key} title={title}
+                  used={d?.used ?? d} limit={d?.limit}
+                  caption={d?.limit ? undefined : sub} />
+              );
+            })}
           </>
         )}
       </div>

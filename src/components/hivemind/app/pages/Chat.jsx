@@ -20,6 +20,7 @@ import {
   Square,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import { UserBubble, AiBubble, Thinking } from '../shared/claude-chat';
 import useDictation from '../shared/useDictation';
 import { useTeamContext } from '../shared/team-context';
 import { useQuickRecorder } from '../shared/QuickRecorderProvider';
@@ -369,82 +370,27 @@ function hasSlackPending(text) {
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }) {
+  // Claude-exact turns via shared/claude-chat: user pill right; assistant is a
+  // bubbleless serif answer (reasoning pill, sources, drafts, action row).
   const isUser = msg.role === 'user';
   const displayContent = isUser ? msg.content : stripSlackPending(msg.content);
   const pendingSlack = !isUser && hasSlackPending(msg.content);
-
   if (isUser) {
     return (
-      <motion.div
-        variants={messageVariants}
-        initial="hidden"
-        animate="visible"
-        className="flex justify-end"
-      >
-        <div className="max-w-[76%]">
-          <div
-            className="rounded-2xl rounded-br-sm px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words text-white shadow-sm"
-            style={{
-              background: 'linear-gradient(135deg, #1e8bff 0%, #117dff 60%, #0066e0 100%)',
-              boxShadow: '0 2px 8px rgba(17,125,255,0.25)',
-            }}
-          >
-            {msg.content}
-          </div>
-        </div>
+      <motion.div variants={messageVariants} initial="hidden" animate="visible" className="flex justify-end">
+        <UserBubble content={msg.content} />
       </motion.div>
     );
   }
-
   return (
-    <motion.div
-      variants={messageVariants}
-      initial="hidden"
-      animate="visible"
-      className="flex justify-start"
-    >
-      <div className="max-w-[84%]">
-        {/* HIVE label row */}
-        <div className="flex items-center gap-2 mb-1.5 px-1">
-          <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
-              boxShadow: '0 1px 4px rgba(17,125,255,0.35)',
-            }}
-          >
-            <Brain size={12} className="text-white" />
-          </div>
-          <span className="text-[10px] font-semibold text-[#117dff] uppercase tracking-[0.08em] font-['Space_Grotesk']">HIVE</span>
-          {msg.model && (
-            <span className="text-[10px] text-[#c4c1bb] font-mono truncate">· {msg.model}</span>
-          )}
+    <motion.div variants={messageVariants} initial="hidden" animate="visible" className="flex flex-col">
+      <AiBubble msg={{ ...msg, content: displayContent }} />
+      {pendingSlack && (
+        <div className="mt-2 inline-flex self-start items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-700">
+          Slack action pending · reply confirm
         </div>
-        {/* Bubble */}
-        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-sm px-4 py-3.5 text-[13px] leading-relaxed text-[#0a0a0a] break-words shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
-          {/* Tool timeline rendered ABOVE the answer — matches chrome
-              extension treatment where the agent's tool calls are visible
-              before the synthesized reply. */}
-          <AgentSteps steps={msg.steps} />
-          {msg.error ? (
-            <div className="flex items-start gap-2 text-[#dc2626]">
-              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
-              <span className="whitespace-pre-wrap">{displayContent}</span>
-            </div>
-          ) : (
-            <div className="space-y-0.5">{renderMarkdown(displayContent)}</div>
-          )}
-          {pendingSlack && (
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-amber-700">
-              Slack action pending · reply confirm
-            </div>
-          )}
-          {msg.project_choice && <ProjectChoiceButtons choice={msg.project_choice} />}
-          <DraftCards draftIds={msg.draft_ids} />
-          <Sources sources={msg.sources} />
-          <TokenUsage usage={msg.usage} />
-        </div>
-      </div>
+      )}
+      <TokenUsage usage={msg.usage} />
     </motion.div>
   );
 }
@@ -919,9 +865,9 @@ export function ChatPanel({ isOpen, onClose }) {
         id: 'Indonesian', ms: 'Malay', sk: 'Slovak',
       };
       const langName = LANG_FULL[lang2] || 'English';
-      const wireMessage = lang2 === 'en'
-        ? trimmed
-        : `[STRICT LANGUAGE: Respond ONLY in ${langName}. Even one English word fails the test.]\n\n${trimmed}`;
+      // Language is a first-class /chat param (backend enforces it in the answer
+    // prompt). The old [STRICT LANGUAGE] prefix poisoned recall embeddings.
+    const wireMessage = trimmed;
 
       try {
         const chatRes = await apiClient.controlPlane.post('/v1/proxy/chat', {
@@ -1140,7 +1086,7 @@ export function ChatPanel({ isOpen, onClose }) {
             </div>
 
             {/* ── Messages ── */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 bg-[#faf9f4]">
               {messages.length === 0 ? (
                 <EmptyState setInput={setInput} textareaRef={textareaRef} />
               ) : (
@@ -1148,33 +1094,7 @@ export function ChatPanel({ isOpen, onClose }) {
                   {messages.map((msg) => (
                     <MessageBubble key={msg.id} msg={msg} />
                   ))}
-                  {loading && (
-                    <motion.div
-                      variants={messageVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className="flex justify-start"
-                    >
-                      <div className="max-w-[84%]">
-                        {/* Typing label row */}
-                        <div className="flex items-center gap-2 mb-1.5 px-1">
-                          <div
-                            className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{
-                              background: 'linear-gradient(135deg, #1e8bff 0%, #0066e0 100%)',
-                              boxShadow: '0 1px 4px rgba(17,125,255,0.35)',
-                            }}
-                          >
-                            <Brain size={12} className="text-white" />
-                          </div>
-                          <span className="text-[10px] font-semibold text-[#117dff] uppercase tracking-[0.08em]">HIVE</span>
-                        </div>
-                        <div className="bg-white border border-[#e3e0db] rounded-2xl rounded-bl-sm shadow-[0_1px_6px_rgba(0,0,0,0.06)]">
-                          <TypingDots />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
+                  {loading && <Thinking />}
                 </>
               )}
               <div ref={bottomRef} />

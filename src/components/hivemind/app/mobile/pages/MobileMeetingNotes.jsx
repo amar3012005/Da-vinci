@@ -74,97 +74,76 @@ export default function MobileMeetingNotes() {
   );
   return (
     <MobileShell title="AI Meeting Notes" rightAction={historyAction}>
-      <div className="px-3 py-4 pb-6">
-        <section className="relative overflow-hidden rounded-[28px] border border-[#e3e0db] bg-white shadow-[0_18px_50px_rgba(26,24,20,0.06)]">
-          <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,_rgba(17,125,255,0.16),_transparent_58%),radial-gradient(circle_at_top_right,_rgba(17,125,255,0.08),_transparent_48%)] pointer-events-none" />
-          <div className="relative p-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#d7e6ff] bg-[#f4f8ff] px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.18em] text-[#117dff]">
-              <Sparkles size={11} /> meeting engine
-            </div>
-            <h1 className="mt-4 text-[28px] leading-[0.98] font-bold tracking-tight font-['Space_Grotesk']">
-              Open one clean
-              <br />
-              meeting config.
-            </h1>
-            <p className="mt-3 max-w-[28rem] text-[13px] leading-relaxed text-[#666159]">
-              The same recorder pipeline from the top-right toggle lives here too: participants, save scope, context, record, transcript, insights.
-            </p>
+      <div className="px-5 pt-1 pb-10">
+        {/* Editorial head — serif, unboxed (matches Memories) */}
+        <h1 className="text-[34px] leading-tight" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Meeting Notes</h1>
+        <p className="mt-2 text-[13px] leading-relaxed text-[#737373] max-w-[30rem]">
+          Record a meeting — participants, save scope and context — and the transcript,
+          decisions and action items land in your memory.
+        </p>
 
-            <div className="mt-5 grid gap-2">
-              {[
-                { title: 'Participants', copy: 'Optional names for clearer labels and speaker context.', Icon: Users },
-                { title: 'Save target', copy: 'Personal, project, team, or org, using the same recorder flow.', Icon: FolderKanban },
-                { title: 'Meeting context', copy: 'Topics, companies, and key terms to sharpen insights.', Icon: NotebookPen },
-              ].map(({ title, copy, Icon }) => (
-                <div key={title} className="flex items-start gap-3 rounded-[18px] border border-[#ece9e2] bg-[#fcfbf8] px-3 py-3">
-                  <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-[14px] bg-white border border-[#e3e0db] text-[#117dff]">
-                    <Icon size={16} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-bold leading-tight">{title}</span>
-                    <span className="mt-1 block text-[11.5px] leading-snug text-[#8b857d]">{copy}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+        {/* Primary actions — one clean row, no hero card */}
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            onClick={() => qrec.openConfig()}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#1a1a17] px-5 text-[13.5px] font-semibold text-white active:scale-[0.98]"
+          >
+            <Mic size={15} /> {primaryLabel}
+          </button>
+          <button
+            onClick={() => navigate('/hivemind/app/meeting-notes')}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#dcd8d0] px-4 text-[12.5px] font-medium text-[#525252]"
+          >
+            <Monitor size={14} className="mr-1.5" /> Desktop
+          </button>
+        </div>
 
-            <div className="mt-5 flex items-center gap-2">
-              <button
-                onClick={() => qrec.openConfig()}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-[16px] bg-[#117dff] px-4 text-[13px] font-bold text-white shadow-[0_14px_30px_rgba(17,125,255,0.24)]"
-              >
-                <Mic size={15} /> {primaryLabel}
-              </button>
-              <button
-                onClick={() => navigate('/hivemind/app/meeting-notes')}
-                className="inline-flex h-11 items-center justify-center rounded-[16px] border border-[#e3e0db] bg-white px-4 text-[12px] font-semibold text-[#525252]"
-              >
-                Desktop
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4 rounded-[24px] border border-[#e3e0db] bg-white p-4 shadow-[0_12px_34px_rgba(26,24,20,0.045)]">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[12px] font-mono uppercase tracking-[0.16em] text-[#117dff]">Past meetings</div>
-              <p className="mt-1 text-[12px] leading-snug text-[#7b766e]">Collapsed by default. Open the stack only when you need it.</p>
-            </div>
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#e3e0db] bg-[#faf9f4] px-3 text-[11px] font-semibold text-[#525252]"
-            >
-              <History size={13} /> Open stack
-            </button>
-          </div>
-          <div className="mt-4 space-y-2">
-            {historyPreview.length === 0 && !loading && !error && (
-              <div className="rounded-[18px] border border-dashed border-[#ddd7cc] bg-[#fcfbf8] px-4 py-5 text-center text-[12px] text-[#8b857d]">
-                No meetings yet. Start one from the shared recorder config.
+        {/* What the recorder captures — plain icon lines, hairline separated */}
+        <div className="mt-6">
+          {[
+            { title: 'Participants', copy: 'Optional names for clearer labels and speaker context.', Icon: Users },
+            { title: 'Save target', copy: 'Personal, project, team, or org — same recorder flow.', Icon: FolderKanban },
+            { title: 'Meeting context', copy: 'Topics, companies and key terms sharpen the insights.', Icon: NotebookPen },
+          ].map(({ title, copy, Icon }, i) => (
+            <div key={title} className={`flex items-start gap-3 py-3 ${i ? 'border-t border-[#eceae3]' : ''}`}>
+              <Icon size={16} className="mt-0.5 flex-shrink-0 text-[#117dff]" />
+              <div className="min-w-0">
+                <div className="text-[13.5px] font-semibold leading-tight">{title}</div>
+                <div className="mt-0.5 text-[12px] leading-snug text-[#8b857d]">{copy}</div>
               </div>
-            )}
-            {historyPreview.map((meeting, index) => (
-              <button
-                key={meeting.id || index}
-                onClick={() => openMeeting(meeting)}
-                className="w-full rounded-[18px] border border-[#ece9e2] bg-[#fcfbf8] px-3 py-3 text-left"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-bold leading-snug line-clamp-1">{meeting.title || meeting.name || 'Untitled meeting'}</div>
-                    <div className="mt-1 text-[11px] leading-snug text-[#8b857d] line-clamp-2">{compactSummary(meeting)}</div>
-                  </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-[13px] border border-[#e3e0db] bg-white text-[#117dff]">
-                    <Monitor size={14} />
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-          {loading && <div className="pt-3 text-[12px] text-[#8b857d]">Loading meetings...</div>}
-          {error && <div className="mt-3 rounded-[16px] border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</div>}
-        </section>
+            </div>
+          ))}
+        </div>
+
+        {/* Past meetings — flowing list, hairline dividers, no boxes */}
+        <div className="mt-7 flex items-baseline justify-between">
+          <h2 className="text-[20px]" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>Past meetings</h2>
+          {meetings.length > 3 && (
+            <button onClick={() => setHistoryOpen(true)} className="text-[12px] font-medium text-[#117dff]">
+              All {meetings.length}
+            </button>
+          )}
+        </div>
+        <div className="mt-1">
+          {loading && <div className="py-6 text-[12.5px] text-[#8b857d]">Loading meetings…</div>}
+          {error && <div className="py-3 text-[12.5px] text-red-700">{error}</div>}
+          {!loading && !error && historyPreview.length === 0 && (
+            <div className="py-8 text-center text-[12.5px] text-[#8b857d]">No meetings yet. Start one above.</div>
+          )}
+          {historyPreview.map((meeting, index) => (
+            <button
+              key={meeting.id || index}
+              onClick={() => openMeeting(meeting)}
+              className={`w-full py-3.5 text-left active:bg-[#f1eee7]/60 ${index ? 'border-t border-[#eceae3]' : ''}`}
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="text-[14px] font-semibold leading-snug line-clamp-1 flex-1 min-w-0">{meeting.title || meeting.name || 'Untitled meeting'}</div>
+                <div className="text-[10.5px] font-mono uppercase tracking-wide text-[#a3a3a3] flex-shrink-0">{when(meeting.created_at || meeting.started_at)}</div>
+              </div>
+              <div className="mt-1 text-[12px] leading-snug text-[#8b857d] line-clamp-2">{compactSummary(meeting)}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -186,7 +165,7 @@ export default function MobileMeetingNotes() {
                 </div>
                 <button onClick={() => setHistoryOpen(false)} className="w-9 h-9 rounded-full grid place-items-center bg-[#f3f1ec]"><X size={16} /></button>
               </div>
-              <div className="mt-4 space-y-2.5">
+              <div className="mt-3">
                 {meetings.map((meeting, index) => (
                   <button
                     key={meeting.id || index}
@@ -194,25 +173,13 @@ export default function MobileMeetingNotes() {
                       setHistoryOpen(false);
                       openMeeting(meeting);
                     }}
-                    className="w-full rounded-[20px] border border-[#e3e0db] bg-[#fcfbf8] px-3 py-3 text-left shadow-[0_8px_22px_rgba(26,24,20,0.035)]"
+                    className={`w-full py-3 text-left active:bg-[#f1eee7]/60 ${index ? 'border-t border-[#eceae3]' : ''}`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] border border-[#e3e0db] bg-white text-[#117dff]">
-                            <NotebookPen size={13} />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-[12.5px] font-bold leading-snug line-clamp-1">{meeting.title || meeting.name || 'Untitled meeting'}</span>
-                            <span className="mt-0.5 block text-[10px] font-mono uppercase tracking-[0.12em] text-[#a3a3a3]">{when(meeting.created_at || meeting.started_at)}</span>
-                          </span>
-                        </div>
-                        <div className="mt-2 text-[11px] leading-snug text-[#8b857d] line-clamp-2">{compactSummary(meeting)}</div>
-                      </div>
-                      <div className="mt-0.5 shrink-0 inline-flex items-center gap-1 rounded-full border border-[#e6e1d8] bg-white px-2 py-1 text-[9px] font-mono uppercase text-[#8b857d]">
-                        <Clock3 size={10} /> open
-                      </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13.5px] font-semibold leading-snug line-clamp-1 flex-1 min-w-0">{meeting.title || meeting.name || 'Untitled meeting'}</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wide text-[#a3a3a3] flex-shrink-0">{when(meeting.created_at || meeting.started_at)}</span>
                     </div>
+                    <div className="mt-1 text-[11.5px] leading-snug text-[#8b857d] line-clamp-2">{compactSummary(meeting)}</div>
                   </button>
                 ))}
                 {!loading && !meetings.length && <div className="rounded-[18px] border border-dashed border-[#ddd7cc] bg-[#fcfbf8] px-4 py-5 text-center text-[12px] text-[#8b857d]">No saved meetings yet.</div>}
