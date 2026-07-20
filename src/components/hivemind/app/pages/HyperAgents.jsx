@@ -2085,7 +2085,16 @@ function RoomThread({ roomId, onArchived }) {
 // Immediate "it's working" feedback shown while a live turn has no events yet.
 // Cycles through the real startup phases so the room never looks frozen.
 
-function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
+function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
+  // Normalise participants to an ARRAY once. This component used it both as an
+  // array ((participants || []).find, line ~3009) and as an object
+  // (Object.values(participants || {}), line ~2641). When the backend sends the
+  // non-array shape, the array-style .find threw "(s || []).find is not a
+  // function" and crashed the whole room render. Accept either shape (array, or
+  // an object keyed by slug) and expose a stable array downstream.
+  const participants = Array.isArray(participantsProp)
+    ? participantsProp
+    : (participantsProp && typeof participantsProp === 'object' ? Object.values(participantsProp) : []);
   // Per-room send automation for outbound email approvals ("automate from next
   // turn"). Client-side latch on the existing HITL gate: the approve call is
   // identical, only the click is automated. Persisted per room.
@@ -2627,7 +2636,7 @@ function TurnView({ turn, participants, liveLines, archived, busy, onClear, onRe
         // whether the recon pass VERIFIED it as grounded, and the turn's true cost —
         // so the final card reads like a signed-off report, not an anonymous blob.
         const _leadP = participants[synthLine.agent] || {};
-        const _crew = Object.values(participants || {}).filter(p => (p.slug || p.id) !== synthLine.agent);
+        const _crew = participants.filter(p => (p.slug || p.id) !== synthLine.agent);
         const _v = verifyLine || {};
         const _verified = _v.grounded_ok === true || _v.met === true;
         const _durS = seal?.duration_ms ? Math.round(Number(seal.duration_ms) / 1000) : null;
