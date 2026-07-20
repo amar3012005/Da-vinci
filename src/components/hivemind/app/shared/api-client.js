@@ -258,6 +258,14 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Rebuild the user/org profile: re-run the LLM profile-dreamer over the
+  // caller's memories and persist the grounded facts. Server-gated to
+  // admin/owner. Returns { perUser: [{ applied, ... }] }.
+  async rebuildProfile() {
+    const { data } = await this.controlPlane.post('/v1/proxy/profiles/dream', { apply: true });
+    return data;
+  }
+
   async updateOrganizationProfile(orgId, companyProfile) {
     const { data } = await this.controlPlane.patch(`/v1/orgs/${orgId}/profile`, {
       company_profile: companyProfile,
