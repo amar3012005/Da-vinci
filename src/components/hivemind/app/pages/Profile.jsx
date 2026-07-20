@@ -34,6 +34,7 @@ import {
   Cloud,
   Server,
   Save,
+  RefreshCw,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
@@ -464,7 +465,18 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
           <Eye size={16} className="text-[#117dff]" />
           <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
         </div>
-        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRebuild}
+            disabled={rebuilding}
+            title={t('profile.rebuildHint', 'Rebuild your profile from your latest memories')}
+            className="flex items-center gap-1.5 text-[#117dff] text-xs font-medium hover:text-[#0a5fd0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <RefreshCw size={13} className={rebuilding ? 'animate-spin' : ''} />
+            {rebuilding ? t('profile.rebuilding', 'Rebuilding…') : t('profile.rebuild', 'Rebuild')}
+          </button>
+          <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
+        </div>
       </div>
 
       <div className="space-y-5">
@@ -761,6 +773,22 @@ function ProfileFactsSection({ facts, onRefresh }) {
   const [showAddRow, setShowAddRow] = useState(false);
   const [newFact, setNewFact] = useState({ category: 'static', key: '', value: '' });
   const [addError, setAddError] = useState(null);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  // Re-run the profile-dreamer over the user's memories, then refresh the list.
+  // Server-gated to admin/owner; a non-admin gets a 403 and we just stop.
+  const handleRebuild = async () => {
+    if (rebuilding) return;
+    setRebuilding(true);
+    try {
+      await apiClient.rebuildProfile();
+      await onRefresh?.();
+    } catch (err) {
+      console.warn('[profile] rebuild failed:', err?.message || err);
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   const startEdit = (fact) => {
     setEditingId(fact.id);
