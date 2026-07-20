@@ -465,18 +465,7 @@ function KnowledgeIdentityCard({ facts, onToggleEditor }) {
           <Eye size={16} className="text-[#117dff]" />
           <SectionHeading>{t('profile.brainKnows', 'What Your Brain Knows About You')}</SectionHeading>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRebuild}
-            disabled={rebuilding}
-            title={t('profile.rebuildHint', 'Rebuild your profile from your latest memories')}
-            className="flex items-center gap-1.5 text-[#117dff] text-xs font-medium hover:text-[#0a5fd0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw size={13} className={rebuilding ? 'animate-spin' : ''} />
-            {rebuilding ? t('profile.rebuilding', 'Rebuilding…') : t('profile.rebuild', 'Rebuild')}
-          </button>
-          <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
-        </div>
+        <span className="text-[#a3a3a3] text-xs font-mono">{facts.length} {facts.length !== 1 ? t('profile.facts', 'facts') : t('profile.fact', 'fact')}</span>
       </div>
 
       <div className="space-y-5">
@@ -890,6 +879,17 @@ function ProfileFactsSection({ facts, onRefresh }) {
 
   return (
     <>
+      <div className="flex items-center justify-end mb-3">
+        <button
+          onClick={handleRebuild}
+          disabled={rebuilding}
+          title={t('profile.rebuildHint', 'Rebuild your profile from your latest memories')}
+          className="flex items-center gap-1.5 text-[#117dff] text-xs font-medium hover:text-[#0a5fd0] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <RefreshCw size={13} className={rebuilding ? 'animate-spin' : ''} />
+          {rebuilding ? t('profile.rebuilding', 'Rebuilding…') : t('profile.rebuild', 'Rebuild')}
+        </button>
+      </div>
       <div>
         {facts.length === 0 && !showAddRow ? (
           <div className="px-4 py-8 rounded-xl bg-[#faf9f4] border border-[#e3e0db] text-center">
