@@ -831,14 +831,19 @@ function OverviewChat({ inputRef }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
-  const sendMessage = useCallback(async () => {
-    const trimmed = input.trim();
+  const sendMessage = useCallback(async (opts = {}) => {
+    // opts.text / opts.projectId let a save-memory scope pick re-send the same
+    // message bound to a chosen project (see the project_choice chooser below).
+    const isResend = opts.text != null;
+    const trimmed = (isResend ? opts.text : input).trim();
     if (!trimmed || loading) return;
+    const effProjectId = opts.projectId !== undefined ? opts.projectId : chatScope;
 
     const userMsg = { id: Date.now(), role: 'user', content: trimmed };
     const fullHistory = [...messages, userMsg].slice(-10).map((m) => ({ role: m.role, content: m.content }));
-    setMessages((prev) => [...prev, userMsg]);
-    setInput('');
+    // On a scope re-send, don't echo a duplicate user bubble — the original is already shown.
+    if (!isResend) setMessages((prev) => [...prev, userMsg]);
+    if (!isResend) setInput('');
     setLoading(true);
     setAgentEvents([{ id: `${Date.now()}-plan`, type: 'plan' }]);
 
@@ -874,7 +879,7 @@ function OverviewChat({ inputRef }) {
         // The V2 router selects bounded recall and authorized tools per turn.
         // The endpoint and its response contract remain unchanged.
         router: 'tool',
-        ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
+        ...(effProjectId ? { project_id: effProjectId, project_ids: [effProjectId] } : {}),
         }),
       });
       if (!chatRes.ok) {
@@ -886,14 +891,15 @@ function OverviewChat({ inputRef }) {
             setAgentEvents((prev) => [...prev, { ...event, id: `${Date.now()}-${prev.length}` }].slice(-6));
           })
         : await chatRes.json();
-      let content = chatData.response
+      const content = chatData.response
         || t('overview.chat.empty', "I couldn't find relevant information in your memories.");
-      // Deferred save → list the projects so the user can reply with one.
+      // Deferred save → render a clickable SCOPE CHOOSER (mirrors the mobile
+      // Talk-to-HIVE flow) instead of asking the user to type a project name.
+      // Clicking an option re-sends the same save bound to that scope.
       const pcProjects = chatData.project_choice?.projects;
-      if (Array.isArray(pcProjects) && pcProjects.length) {
-        const names = pcProjects.map((p) => p.name || p.slug || p.id).filter(Boolean);
-        if (names.length) content += `\n\n${t('overview.chat.projects', 'Projects')}: ${names.join(' · ')}`;
-      }
+      const projectChoice = (Array.isArray(pcProjects) && pcProjects.length)
+        ? { projects: pcProjects, originalMessage: trimmed }
+        : null;
       setMessages((prev) => [...prev, {
         id: Date.now() + 1,
         role: 'assistant',
@@ -901,6 +907,7 @@ function OverviewChat({ inputRef }) {
         sources: Array.isArray(chatData.sources) ? chatData.sources : [],
         steps: Array.isArray(chatData.steps) ? chatData.steps : [],
         gaps: Array.isArray(chatData.gaps) ? chatData.gaps : [],
+        projectChoice,
       }]);
     } catch (err) {
       setMessages((prev) => [...prev, {
@@ -960,7 +967,39 @@ function OverviewChat({ inputRef }) {
             WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 28px)',
           }}
         >
-          {messages.map((m) => <ChatBubble key={m.id} msg={m} />)}
+          {messages.map((m) => (
+            <React.Fragment key={m.id}>
+              <ChatBubble msg={m} />
+              {m.projectChoice && !loading && (
+                <div className="mt-2 mb-1 flex flex-col gap-1.5" data-testid="save-scope-chooser">
+                  <p className="text-[11px] text-[#737373] font-['Space_Grotesk']">
+                    {t('overview.chat.chooseScope', 'Where should I save this?')}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: null })}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-[12px] text-[#0a0a0a] hover:border-[#117dff] hover:bg-[#117dff]/5 transition-colors"
+                    >
+                      <Lock size={13} className="text-[#a3a3a3]" />
+                      {t('knowledgebase.scopePersonalLabel', 'My Space')}
+                    </button>
+                    {m.projectChoice.projects.map((p) => (
+                      <button
+                        key={p.id || p.slug}
+                        type="button"
+                        onClick={() => sendMessage({ text: m.projectChoice.originalMessage, projectId: p.id || p.slug })}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[#e3e0db] bg-white px-3 py-1.5 text-[12px] text-[#0a0a0a] hover:border-[#117dff] hover:bg-[#117dff]/5 transition-colors"
+                      >
+                        <Building2 size={13} className="text-[#a3a3a3]" />
+                        {p.name || p.slug || p.id}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
           {loading && <Thinking events={agentEvents} />}
         </div>
       )}
