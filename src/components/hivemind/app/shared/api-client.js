@@ -231,6 +231,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Approve a proposed call contract → Start the campaign (fires the first-contact dial). */
+  async startOutreachCampaign(campaignId) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/start`, {});
+    return data;
+  }
+
+  /** Reject/pause a proposed call contract. */
+  async stopOutreachCampaign(campaignId) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/stop`, {});
+    return data;
+  }
+
   /** Clear onboarding artifacts (company/mission/tasks/screenshot) — rooms kept. */
   async resetHyperOnboarding() {
     const { data } = await this.controlPlane.post('/v1/hyper/onboarding/reset', {});

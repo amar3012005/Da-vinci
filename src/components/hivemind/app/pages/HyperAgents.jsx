@@ -888,6 +888,16 @@ function RoomThread({ roomId, onArchived }) {
           evoFlashTimer.current = setTimeout(() => setEvoFlash(null), 7000);
           return;
         }
+        // TARA call contract: the OS proposed an outbound call. Surface the global
+        // first-contact-HITL popup (<CallContractModal> in AppShell). Not a thread line.
+        if ((e.type === 'call_contract' || data.t === 'call_contract') && data.contract) {
+          try {
+            window.dispatchEvent(new CustomEvent('hm:call-contract', {
+              detail: { campaign_id: data.campaign_id, contract: data.contract },
+            }));
+          } catch { /* ignore */ }
+          return;
+        }
         setLiveLines(prev => mergeLiveEvents(prev, [{ ...data, t: e.type === 'message' ? (data.t || 'line') : e.type }]));
         if (e.type === 'seal' || data.t === 'seal') {
           es.close();
@@ -937,6 +947,8 @@ function RoomThread({ roomId, onArchived }) {
       'skill_used',
       // Post-seal follow-up suggestions (clickable, one-click auto-run):
       'next_tasks',
+      // TARA call contract → first-contact-HITL popup (approve to dial).
+      'call_contract',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
       // network blip — let auto-reconnect handle it

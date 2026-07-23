@@ -16,6 +16,7 @@ import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 import PlanLimitModal from '../components/PlanLimitModal';
 import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
+import CallContractModal from '../components/CallContractModal';
 
 /**
  * PlanLimitGate — listens for the global 'hm:plan-limit' window event
@@ -325,6 +326,10 @@ export default function AppShell() {
         {/* Global 5xx / network outage notice — reacts to 'hm:service-error'
             so a service failure never fails silently (e.g. mycompany 503). */}
         <ServiceErrorToast />
+
+        {/* First-contact HITL popup for an autonomous TARA call — reacts to
+            'hm:call-contract'. Approve → dial; nothing calls without it. */}
+        <CallContractModal />
       </div>
     </TeamProvider>
     </QuickRecorderProvider>
