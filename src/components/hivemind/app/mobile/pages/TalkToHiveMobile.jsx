@@ -262,6 +262,10 @@ export default function TalkToHiveMobile() {
   // Chat scope — org-wide (null) or one project; mirrors Overview.jsx. Follows
   // the global switcher, overridable per-conversation from the composer chip.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
+  // Chat recall scope selector: 'organization' (all the org's knowledge — default),
+  // 'personal' (only my private memories), or 'project' (one project). Maps to the backend
+  // recall scope_filter (org+user-scoped, same method as memories). Persisted per user.
+  const [chatScopeMode, setChatScopeMode] = useState('organization');
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -379,7 +383,11 @@ export default function TalkToHiveMobile() {
           stream: true,
           // Keep mobile on the same grounded tool-routing path as desktop chat.
           router: 'tool',
-          ...(chatScope ? { project_id: chatScope, project_ids: [chatScope] } : {}),
+          // Recall scope from the chat selector: personal | organization (all) | project.
+          scope: chatScopeMode,
+          ...((chatScopeMode === 'project' && (chatScope || activeProjectId))
+            ? { project_id: chatScope || activeProjectId, project_ids: [chatScope || activeProjectId] }
+            : {}),
         }),
       });
       if (!chatRes.ok) {
@@ -414,7 +422,7 @@ export default function TalkToHiveMobile() {
       setLoading(false);
       setAgentEvents([]);
     }
-  }, [input, loading, messages, selectedModel, i18n.language, chatScope]);
+  }, [input, loading, messages, selectedModel, i18n.language, chatScope, chatScopeMode, activeProjectId]);
 
   const send = useCallback(() => sendText(), [sendText]);
 
@@ -809,26 +817,36 @@ export default function TalkToHiveMobile() {
             {scopeMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setScopeMenuOpen(false)} />}
             <button
               onClick={() => { setScopeMenuOpen((v) => !v); setModelMenuOpen(false); setLangMenuOpen(false); }}
-              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[130px] ${chatScope ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
-              aria-label={t('overview.scope.hint', 'Answer scope: org-wide or one project')}
+              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[140px] ${chatScopeMode !== 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
+              aria-label={t('overview.scope.hint', 'Answer scope: personal, org-wide, or one project')}
             >
-              {chatScope ? <Boxes size={12} /> : <Building2 size={12} />}
-              <span className="truncate">{chatScope ? (((ctxProjects?.length ? ctxProjects : projects) || []).find((pr) => pr.id === chatScope)?.name || t('overview.scope.project', 'Project')) : t('overview.scope.org', 'Org-wide')}</span>
+              {chatScopeMode === 'personal' ? <Lock size={12} /> : chatScopeMode === 'project' ? <Boxes size={12} /> : <Building2 size={12} />}
+              <span className="truncate">{
+                chatScopeMode === 'personal' ? t('overview.scope.personal', 'My Space')
+                  : chatScopeMode === 'project' ? (((ctxProjects?.length ? ctxProjects : projects) || []).find((pr) => pr.id === chatScope)?.name || t('overview.scope.project', 'Project'))
+                    : t('overview.scope.org', 'Org-wide')
+              }</span>
             </button>
             {scopeMenuOpen && (
               <div className="absolute bottom-full mb-2 left-0 z-40 w-56 bg-white border border-[#e8e5de] rounded-xl shadow-lg p-1.5">
                 <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('overview.scope.title', 'Answer scope')}</p>
                 <button
-                  onClick={() => { setChatScope(null); setScopeMenuOpen(false); }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${!chatScope ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                  onClick={() => { setChatScopeMode('organization'); setChatScope(null); setScopeMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
                 >
                   <Building2 size={12} /> {t('overview.scope.org', 'Org-wide')}
+                </button>
+                <button
+                  onClick={() => { setChatScopeMode('personal'); setChatScope(null); setScopeMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'personal' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                >
+                  <Lock size={12} /> {t('overview.scope.personal', 'My Space')}
                 </button>
                 {((ctxProjects?.length ? ctxProjects : projects) || []).map((pr) => (
                   <button
                     key={pr.id}
-                    onClick={() => { setChatScope(pr.id); setScopeMenuOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                    onClick={() => { setChatScopeMode('project'); setChatScope(pr.id); setScopeMenuOpen(false); }}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'project' && chatScope === pr.id ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
                   >
                     <Boxes size={12} /> <span className="truncate">{pr.name}</span>
                   </button>
