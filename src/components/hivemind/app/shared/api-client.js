@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_DEFAULTS } from './theme';
 import { isPlanLimitError, extractPlanLimit, emitPlanLimit } from './planLimit';
+import { isServiceError, extractServiceError, emitServiceError } from './serviceError';
 
 const ACCOUNT_DELETE_ENDPOINT = '/v1/account';
 
@@ -59,6 +60,9 @@ class HiveMindApiClient {
       (error) => {
         if (isPlanLimitError(error)) {
           emitPlanLimit(extractPlanLimit(error));
+        } else if (isServiceError(error)) {
+          // 5xx / network outage → global toast so it never fails silently.
+          emitServiceError(extractServiceError(error));
         }
         return Promise.reject(error);
       },
