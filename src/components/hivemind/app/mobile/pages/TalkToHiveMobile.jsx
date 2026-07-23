@@ -262,10 +262,12 @@ export default function TalkToHiveMobile() {
   // Chat scope — org-wide (null) or one project; mirrors Overview.jsx. Follows
   // the global switcher, overridable per-conversation from the composer chip.
   const [chatScope, setChatScope] = useState(activeProjectId || null);
-  // Chat recall scope selector: 'organization' (all the org's knowledge — default),
-  // 'personal' (only my private memories), or 'project' (one project). Maps to the backend
-  // recall scope_filter (org+user-scoped, same method as memories). Persisted per user.
-  const [chatScopeMode, setChatScopeMode] = useState('organization');
+  // Chat recall scope selector — mirrors the Memories page tiers (org+user
+  // multitenant scoping): 'all' (DEFAULT — searches EVERYTHING accessible:
+  // my-space + org-wide + every project the user can see), 'organization'
+  // (org-tier only), 'personal' (only my private memories), or 'project' (one
+  // project). Maps to the backend recall scope_filter; 'all' sends no filter.
+  const [chatScopeMode, setChatScopeMode] = useState('all');
   const [scopeMenuOpen, setScopeMenuOpen] = useState(false);
   useEffect(() => { setChatScope(activeProjectId || null); }, [activeProjectId]);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -410,6 +412,9 @@ export default function TalkToHiveMobile() {
         draft_ids: Array.isArray(data.draft_ids) ? data.draft_ids : [],
         trace: data.trace || null,
         project_choice: data.project_choice || null,
+        // Scope provenance — which tier(s) the answer's memories came from
+        // (my-space / project:<name> / org-wide). Rendered under the answer.
+        scopes_found: Array.isArray(data.scopes_found) ? data.scopes_found : [],
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
@@ -817,19 +822,27 @@ export default function TalkToHiveMobile() {
             {scopeMenuOpen && <div className="fixed inset-0 z-30" onClick={() => setScopeMenuOpen(false)} />}
             <button
               onClick={() => { setScopeMenuOpen((v) => !v); setModelMenuOpen(false); setLangMenuOpen(false); }}
-              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[140px] ${chatScopeMode !== 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
-              aria-label={t('overview.scope.hint', 'Answer scope: personal, org-wide, or one project')}
+              className={`relative z-40 inline-flex items-center gap-1 h-9 px-3 rounded-full text-[12px] font-medium max-w-[140px] ${chatScopeMode !== 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff]' : 'bg-[#f1eee7] text-[#3d3d3a]'}`}
+              aria-label={t('overview.scope.hint', 'Answer scope: all, org-wide, my space, or one project')}
             >
-              {chatScopeMode === 'personal' ? <Lock size={12} /> : chatScopeMode === 'project' ? <Boxes size={12} /> : <Building2 size={12} />}
+              {chatScopeMode === 'personal' ? <Lock size={12} /> : chatScopeMode === 'project' ? <Boxes size={12} /> : chatScopeMode === 'organization' ? <Building2 size={12} /> : <Globe size={12} />}
               <span className="truncate">{
                 chatScopeMode === 'personal' ? t('overview.scope.personal', 'My Space')
                   : chatScopeMode === 'project' ? (((ctxProjects?.length ? ctxProjects : projects) || []).find((pr) => pr.id === chatScope)?.name || t('overview.scope.project', 'Project'))
-                    : t('overview.scope.org', 'Org-wide')
+                    : chatScopeMode === 'organization' ? t('overview.scope.org', 'Org-wide')
+                      : t('overview.scope.all', 'All memory')
               }</span>
             </button>
             {scopeMenuOpen && (
               <div className="absolute bottom-full mb-2 left-0 z-40 w-56 bg-white border border-[#e8e5de] rounded-xl shadow-lg p-1.5">
                 <p className="px-2 py-1 text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('overview.scope.title', 'Answer scope')}</p>
+                <button
+                  onClick={() => { setChatScopeMode('all'); setChatScope(null); setScopeMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'all' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}
+                >
+                  <Globe size={12} /> <span className="flex-1">{t('overview.scope.all', 'All memory')}</span>
+                  <span className="text-[9px] text-[#a3a3a3]">{t('overview.scope.allHint', 'everything')}</span>
+                </button>
                 <button
                   onClick={() => { setChatScopeMode('organization'); setChatScope(null); setScopeMenuOpen(false); }}
                   className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12.5px] text-left ${chatScopeMode === 'organization' ? 'bg-[#117dff]/[0.08] text-[#117dff] font-semibold' : 'text-[#0a0a0a] active:bg-[#faf9f4]'}`}

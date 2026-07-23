@@ -360,6 +360,25 @@ export function AiBubble({ msg, onRetry }) {
         {renderMarkdownMobile(msg.content)}
       </div>
 
+      {Array.isArray(msg.scopes_found) && msg.scopes_found.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[#8a8577]">
+          <span className="italic">Memory found in</span>
+          {msg.scopes_found.map((sc, i) => {
+            const isProject = typeof sc === 'string' && sc.startsWith('project:');
+            const label = sc === 'personal' ? 'My Space'
+              : sc === 'organization' ? 'Org-wide'
+                : sc === 'team' ? 'Team'
+                  : isProject ? `Project: ${sc.slice(8) || '—'}`
+                    : sc;
+            return (
+              <span key={i} className="inline-flex items-center rounded-full border border-[#e3e0db] bg-[#f7f6f1] px-2 py-0.5 text-[10.5px] font-medium text-[#5f5c55]">
+                {label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       <MobileDraftCards draftIds={msg.draft_ids} />
 
       {hasSources && (
