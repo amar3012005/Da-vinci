@@ -671,7 +671,14 @@ export default function TaraConfig() {
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
-  useEffect(() => { refreshCalls(); }, []);
+  // Poll the call list so a just-ended call's insight + leads land in the
+  // dashboard within seconds — no manual Refresh. The post-call insight is
+  // generated synchronously at /calls/end, so a short poll surfaces it ASAP.
+  useEffect(() => {
+    refreshCalls();
+    const id = setInterval(refreshCalls, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
 
