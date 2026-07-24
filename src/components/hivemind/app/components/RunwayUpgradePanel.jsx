@@ -23,6 +23,7 @@ export default function RunwayUpgradePanel() {
   const [loading, setLoading] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
   const [error, setError] = useState(null);
+  const [checkoutUrl, setCheckoutUrl] = useState(null);
   const debRef = useRef(null);
 
   const config = useMemo(() => ({ mode, dataGb, seats, tokens }), [mode, dataGb, seats, tokens]);
@@ -42,7 +43,14 @@ export default function RunwayUpgradePanel() {
     setSubscribing(true); setError(null);
     try {
       const res = await apiClient.runwayCheckout(config);
-      if (res?.checkout_url) { window.location.assign(res.checkout_url); return; }
+      if (res?.checkout_url) {
+        // Match the working Pro/Scale path exactly (window.location.href), and
+        // keep the URL so the fallback anchor below guarantees the user can reach
+        // Stripe even if programmatic navigation is blocked for any reason.
+        setCheckoutUrl(res.checkout_url);
+        window.location.href = res.checkout_url;
+        return;
+      }
       setError('Checkout could not be started. Please try again or use Manage payments below.');
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Checkout failed. Please try again or use Manage payments below.');
@@ -123,6 +131,13 @@ export default function RunwayUpgradePanel() {
         {subscribing ? 'Starting checkout…' : `Subscribe · ${eur(monthly)}/mo`}
         {!subscribing && <ArrowRight size={15} />}
       </button>
+
+      {checkoutUrl && (
+        <p className="mt-3 text-[12px] font-['Space_Grotesk'] text-[#525252]">
+          Not redirected automatically?{' '}
+          <a href={checkoutUrl} className="text-[#117dff] font-semibold underline">Open secure checkout →</a>
+        </p>
+      )}
     </div>
   );
 }
