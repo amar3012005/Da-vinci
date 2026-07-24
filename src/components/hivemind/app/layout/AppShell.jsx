@@ -14,6 +14,7 @@ import GlobalUploadStrip from './GlobalUploadStrip';
 import { QuickRecorderProvider } from '../shared/QuickRecorderProvider';
 import { WelcomeSlides, ActivationGate } from '../shared/WelcomeFlow';
 import PlanLimitModal from '../components/PlanLimitModal';
+import RunwayEstimatorModal from '../components/RunwayEstimatorModal';
 import { PLAN_LIMIT_EVENT } from '../shared/planLimit';
 import ServiceErrorToast from '../components/ServiceErrorToast';
 import CallContractModal from '../components/CallContractModal';
@@ -26,6 +27,7 @@ import CallContractModal from '../components/CallContractModal';
  */
 function PlanLimitGate() {
   const navigate = useNavigate();
+  const { org } = useAuth() || {};
   const [state, setState] = useState(null); // null | { resource, plan, limit, current, suggestedPlan, message, upgradeUrl }
 
   useEffect(() => {
@@ -40,6 +42,23 @@ function PlanLimitGate() {
     close();
     navigate(url);
   };
+
+  // An org that ONBOARDED enterprise but hits a plan limit is in the post-onboarding
+  // "runway" phase (real enterprise limits are effectively unlimited, so a true paid
+  // enterprise org never trips this). Route it to the Sovereign Scope Estimator
+  // ("Upgrade to Runway") to configure + self-serve subscribe — NOT the generic
+  // "upgrade to Pro" wall.
+  const isEnterpriseRunway = String(org?.plan || '').toLowerCase() === 'enterprise';
+
+  if (isEnterpriseRunway) {
+    return (
+      <RunwayEstimatorModal
+        open={state !== null}
+        reason={state?.message || null}
+        onClose={close}
+      />
+    );
+  }
 
   return (
     <PlanLimitModal

@@ -906,6 +906,25 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * Runway self-serve: server-authoritative price for a scope config.
+   * config = { mode:'managed'|'self-hosted', dataGb, seats, tokens }.
+   * Returns { mode, config, currency, rows:[{label,detail,amount}], monthly_total, setup_one_time }.
+   */
+  async runwayQuote(config) {
+    const { data } = await this.controlPlane.post('/v1/billing/runway/quote', config);
+    return data;
+  }
+
+  /**
+   * Runway self-serve: start checkout for the configured scope. Returns
+   * { checkout_url, session_id, monthly_total }. Caller redirects to checkout_url.
+   */
+  async runwayCheckout(config) {
+    const { data } = await this.controlPlane.post('/v1/billing/runway/checkout', config);
+    return data;
+  }
+
   /** Reconcile a completed hosted Checkout with Stripe before webhooks arrive. */
   async reconcileBillingCheckout() {
     const { data } = await this.controlPlane.post('/v1/billing/reconcile', {});
