@@ -178,12 +178,12 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     lastPlayRef.current = playCtx.currentTime;
 
     let url;
+    let grokCapability = null;
     try {
       if (provider === 'grok') {
         const session = await apiClient.createTaraVoiceSession({ provider, language: langFilter || language, mode, voice_id: voiceId || undefined, goal: goal.trim() || undefined });
-        url = new URL(session.ws_url);
-        url.searchParams.set('session_id', session.session_id);
-        url.searchParams.set('capability', session.capability);
+        url = new URL(`${session.ws_url.replace(/\/$/, '')}/${encodeURIComponent(session.session_id)}`);
+        grokCapability = session.capability;
       } else {
         url = new URL(engineWs);
         url.searchParams.set('user_id', userId);
@@ -200,7 +200,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       return;
     }
 
-    const ws = new WebSocket(url.toString());
+    const protocols = provider === 'grok' ? ['hm.tara.v1', `hm.tara.cap.${grokCapability}`] : undefined;
+    const ws = protocols ? new WebSocket(url.toString(), protocols) : new WebSocket(url.toString());
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
 
