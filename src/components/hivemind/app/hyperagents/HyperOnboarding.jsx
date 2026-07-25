@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
+import WebsitePreview from './WebsitePreview';
 
 /**
  * HyperOnboarding — Polsia-style company genesis for HyperAgents.
@@ -177,6 +178,20 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         </div>
 
         <div className="grid grid-cols-2 gap-3.5">
+          <div className="col-span-2">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2">
+              <Globe size={11} /> {t('hyperOnboarding.websitePreview', 'Website preview')}
+            </div>
+            <WebsitePreview
+              image={result?.screenshot}
+              source={result?.website_visual_source}
+              website={result?.website || websiteUrl}
+              company={companyName}
+              tagline={p.tagline}
+              className="max-w-[720px]"
+            />
+          </div>
+
           <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company}>
             <p className="text-[12.5px] text-[#0a0a0a] leading-relaxed">{p.what_it_does || '—'}</p>
             {p.icp ? <p className="text-[11.5px] text-[#525252] mt-1.5"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
