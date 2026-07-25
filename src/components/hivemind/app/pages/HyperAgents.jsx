@@ -38,6 +38,7 @@ import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
+import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
   FinalReportCard, SwarmRounds, ArtifactPreviewModal, AgentBubble, DeepSimulationPanel,
@@ -664,6 +665,7 @@ function mergeHyperEvents(base, overlay) {
 
 function RoomThread({ roomId, onArchived }) {
   const { t, i18n } = useTranslation('dashboard');
+  const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
@@ -708,6 +710,7 @@ function RoomThread({ roomId, onArchived }) {
   const [callNumber, setCallNumber] = useState('');
   const [callBusy, setCallBusy] = useState(false);
   const [callStatus, setCallStatus] = useState(null);
+  const [browserCall, setBrowserCall] = useState(null);
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -742,12 +745,19 @@ function RoomThread({ roomId, onArchived }) {
     if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
     setCallBusy(true);
     setCallStatus(null);
+    setBrowserCall(null);
     setCallOverlay({ number: to, status: 'dialing' });
     try {
       const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
-      setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
-      setCallOverlay({ number: to, status: 'ok' });
-      setCallNumber('');
+      if (result?.delivery === 'browser') {
+        setCallStatus({ ok: true, message: t('hyperAgents.browserCallReady', 'Telephony is not connected for this provider. Run the same call contract in your browser.') });
+        setBrowserCall(result.browser_call || { provider: result.provider, goal: room?.goal || '', language: 'en', mode: 'external' });
+        setCallOverlay(null);
+      } else {
+        setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+        setCallOverlay({ number: to, status: 'ok' });
+        setCallNumber('');
+      }
     } catch (err) {
       setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
       setCallOverlay({ number: to, status: 'error' });
@@ -1724,6 +1734,18 @@ function RoomThread({ roomId, onArchived }) {
               {callStatus && (
                 <div className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${callStatus.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>
                   {callStatus.message}
+                </div>
+              )}
+              {browserCall && (
+                <div className="mt-3">
+                  <AaasVoiceWidget
+                    userId={user?.id}
+                    orgId={org?.id}
+                    provider={browserCall.provider || 'grok'}
+                    language={browserCall.language || 'en'}
+                    initialGoal={browserCall.goal || room?.goal || ''}
+                    initialMode={browserCall.mode || 'external'}
+                  />
                 </div>
               )}
               {callOverlay && (

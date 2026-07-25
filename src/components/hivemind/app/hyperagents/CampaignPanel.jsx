@@ -11,6 +11,7 @@ import {
   Headphones,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
+import AaasVoiceWidget from '../../AaasVoiceWidget';
 
 const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
 // tara-deepgram base (same residency-correct derivation as TaraConfig).
@@ -93,6 +94,7 @@ function Bar({ done, failed, total }) {
 
 function TargetRow({ c, target, onPatch, disabled }) {
   const [open, setOpen] = useState(false);
+  const [browserOpen, setBrowserOpen] = useState(false);
   const [draft, setDraft] = useState(null);
   const st = target.state;
   const sel = st !== 'deselected';
@@ -100,13 +102,14 @@ function TargetRow({ c, target, onPatch, disabled }) {
     sent: ['✓ sent', 'bg-emerald-100 text-emerald-700'],
     failed: ['✗ failed', 'bg-red-100 text-red-700'],
     sending: [c.channel === 'call' ? '📞 dialing…' : 'sending…', 'bg-blue-100 text-blue-700'],
+    browser: ['browser call', 'bg-violet-100 text-violet-700'],
     generating: ['writing…', 'bg-violet-100 text-violet-700'],
     ready: ['ready', 'bg-[#f4f2ec] text-[#525252]'],
     skipped: ['skipped', 'bg-[#f4f2ec] text-[#a3a3a3]'],
     deselected: ['off', 'bg-[#f4f2ec] text-[#a3a3a3]'],
     selected: ['queued', 'bg-[#f4f2ec] text-[#a3a3a3]'],
   }[st] || [st, 'bg-[#f4f2ec] text-[#a3a3a3]'];
-  const immutable = ['sending', 'sent'].includes(st);
+  const immutable = ['sending', 'sent', 'browser'].includes(st);
   const p = target.payload || {};
   return (
     <div className={`rounded-lg border px-3 py-2 ${st === 'sent' ? 'border-emerald-200 bg-emerald-50/40'
@@ -131,6 +134,32 @@ function TargetRow({ c, target, onPatch, disabled }) {
       </div>
       {target.resultRef?.error && (
         <div className="mt-1 text-[10px] text-red-600 font-mono truncate">{target.resultRef.error}</div>
+      )}
+      {c.channel === 'call' && st === 'browser' && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={() => setBrowserOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-violet-100 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-violet-700 hover:bg-violet-200"
+          >
+            <Headphones size={11} /> {browserOpen ? 'Hide browser call' : 'Run in browser'}
+          </button>
+          <span className="ml-2 text-[10px] text-[#737373]">
+            {target.resultRef?.reason || 'Telephony is not connected for this provider.'}
+          </span>
+        </div>
+      )}
+      {c.channel === 'call' && st === 'browser' && browserOpen && (
+        <div className="mt-2">
+          <AaasVoiceWidget
+            userId={c.userId}
+            orgId={c.orgId}
+            provider={c.voiceProvider || target.resultRef?.provider || 'grok'}
+            language={p.language || 'en'}
+            initialGoal={(p.contract?.objective?.directive || p.goal || '').slice(0, 600)}
+            initialMode="external"
+          />
+        </div>
       )}
       {/* Live-listen while a TARA call is in flight (dial placed → sessionId known). */}
       {c.channel === 'call' && ['sending', 'sent'].includes(st) && target.resultRef?.sessionId && (
@@ -281,7 +310,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
 
   const targets = campaign.targets || [];
   const inRun = targets.filter(t => t.state !== 'deselected');
-  const done = targets.filter(t => t.state === 'sent').length;
+  const done = targets.filter(t => t.state === 'sent' || t.state === 'browser').length;
   const failed = targets.filter(t => t.state === 'failed').length;
   const running = runningRef.current || busy;
   const finished = campaign.status === 'done' || (!running && done + failed >= inRun.length && inRun.length > 0);
@@ -320,7 +349,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
           )}
           {finished && (
             <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-mono uppercase tracking-wider">
-              <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls placed`}
+              <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls ready`}
             </span>
           )}
           {err && <span className="text-[10px] text-red-600 truncate">{err}</span>}

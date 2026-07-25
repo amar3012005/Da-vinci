@@ -25,7 +25,7 @@ const MODE_DESC = {
   internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
 };
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram' }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external' }) {
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
@@ -40,8 +40,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const [langFilter, setLangFilter] = useState((language || 'en').split('-')[0].toLowerCase());
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
-  const [mode, setMode] = useState('external'); // external = full agent (clinical) | internal = direct recall
-  const [goal, setGoal] = useState(''); // session goal — drives the strategist (phase/confidence engine)
+  const [mode, setMode] = useState(initialMode === 'internal' ? 'internal' : 'external'); // external = full agent (clinical) | internal = direct recall
+  const [goal, setGoal] = useState(initialGoal || ''); // session goal — drives the strategist (phase/confidence engine)
   // Active skill name per mode (org-wide selection from the Skills tab) — the
   // toggle reflects whichever skill is selected for each side.
   const [skillNames, setSkillNames] = useState({ external: null, internal: null });
@@ -69,6 +69,10 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       })
       .catch(() => {});
   }, [engineHttp, language, provider]);
+
+  useEffect(() => {
+    if (!active && initialGoal) setGoal(initialGoal);
+  }, [active, initialGoal]);
 
   // Reflect the org-wide selected skill on each toggle side.
   useEffect(() => {
