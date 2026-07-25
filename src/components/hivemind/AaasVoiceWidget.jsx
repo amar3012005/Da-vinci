@@ -165,12 +165,18 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const start = useCallback(async () => {
     setError(null);
     if (!userId) { setError('Not signed in — no user id.'); return; }
+    // Capability issuance is network-bound while mic permission is user/browser
+    // bound. Start both together so Grok does not pay those waits serially.
+    const grokSessionPromise = provider === 'grok'
+      ? apiClient.createTaraVoiceSession({ provider, language: langFilter || language, mode, voice_id: voiceId || undefined, goal: goal.trim() || undefined })
+      : null;
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
     } catch {
+      grokSessionPromise?.catch(() => {});
       setError('Microphone permission denied.'); return;
     }
     micStreamRef.current = stream;
@@ -185,7 +191,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     let grokCapability = null;
     try {
       if (provider === 'grok') {
-        const session = await apiClient.createTaraVoiceSession({ provider, language: langFilter || language, mode, voice_id: voiceId || undefined, goal: goal.trim() || undefined });
+        const session = await grokSessionPromise;
         url = new URL(`${session.ws_url.replace(/\/$/, '')}/${encodeURIComponent(session.session_id)}`);
         grokCapability = session.capability;
       } else {
