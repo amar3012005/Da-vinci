@@ -1524,6 +1524,71 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Standalone X paid campaigns ─────────────────────────────
+  async getXAdsStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/status');
+    return data;
+  }
+
+  async getXAdsAccounts() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/accounts');
+    return data;
+  }
+
+  async getXAdsFundingInstruments(accountId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/accounts/${encodeURIComponent(accountId)}/funding-instruments`);
+    return data;
+  }
+
+  async searchXAdsTargets(type, params = {}) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/targeting/${type}`, { params });
+    return data;
+  }
+
+  async getXAdsCampaigns() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/campaigns');
+    return data;
+  }
+
+  async getXAdsCampaign(id) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/campaigns/${id}`);
+    return data;
+  }
+
+  async createXAdsCampaign(payload) {
+    const { data } = await this.controlPlane.post('/v1/proxy/x-ads/campaigns', payload);
+    return data;
+  }
+
+  async updateXAdsCampaign(id, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/proxy/x-ads/campaigns/${id}`, payload);
+    return data;
+  }
+
+  async uploadXAdsCampaignImage(id, file) {
+    const form = new FormData();
+    form.append('image', file);
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  }
+
+  async prepareXAdsCampaign(id) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/prepare`, {});
+    return data;
+  }
+
+  async publishXAdsCampaign(id, confirmationToken) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/publish`, { confirmation_token: confirmationToken });
+    return data;
+  }
+
+  async controlXAdsCampaign(id, action) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/${action}`, {});
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
