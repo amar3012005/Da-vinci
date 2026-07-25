@@ -84,8 +84,12 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       .catch(() => {});
   }, [active]);
 
+  // Grok's voices are 'multilingual' (one voice speaks every supported language),
+  // so an exact language match would filter all 26 of them out and leave the
+  // picker empty. Treat multilingual as matching any selected language.
   const filteredVoices = voices.filter(
-    (v) => (!langFilter || v.language === langFilter) && (!genderFilter || v.gender === genderFilter)
+    (v) => (!langFilter || v.language === langFilter || v.language === 'multilingual')
+      && (!genderFilter || v.gender === genderFilter)
   );
 
   // Keep voiceId valid for the current filter. Without this the dropdown shows
