@@ -25,7 +25,7 @@ const MODE_DESC = {
   internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
 };
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram' }) {
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
@@ -49,8 +49,10 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const previewAudioRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${engineHttp}/voices`)
-      .then((r) => r.json())
+    const catalog = provider === 'grok'
+      ? apiClient.listTaraVoices('grok')
+      : fetch(`${engineHttp}/voices`).then((r) => r.json());
+    catalog
       .then((d) => {
         const list = d.voices || [];
         setVoices(list);
@@ -66,7 +68,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
         if (def) setVoiceId(def.id);
       })
       .catch(() => {});
-  }, [engineHttp, language]);
+  }, [engineHttp, language, provider]);
 
   // Reflect the org-wide selected skill on each toggle side.
   useEffect(() => {
@@ -98,6 +100,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const preview = useCallback(() => {
     if (!voiceId) return;
     setPreviewing(true);
+    if (provider === 'grok') { setPreviewing(false); setError('Grok voice preview is available after provider approval.'); return; }
     const url = `${engineHttp}/voice-preview?voice_id=${encodeURIComponent(voiceId)}&language=${langFilter || 'en'}`;
     if (previewAudioRef.current) { try { previewAudioRef.current.pause(); } catch { /* noop */ } }
     const a = new Audio(url);
@@ -105,7 +108,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     a.onended = () => setPreviewing(false);
     a.onerror = () => setPreviewing(false);
     a.play().catch(() => setPreviewing(false));
-  }, [voiceId, langFilter, engineHttp]);
+  }, [voiceId, langFilter, engineHttp, provider]);
 
   const wsRef = useRef(null);
   const micCtxRef = useRef(null);
@@ -174,14 +177,28 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     playCtxRef.current = playCtx;
     lastPlayRef.current = playCtx.currentTime;
 
-    const url = new URL(engineWs);
-    url.searchParams.set('user_id', userId);
-    if (orgId) url.searchParams.set('org_id', orgId);
-    url.searchParams.set('session_id', `tara_${Date.now()}`);
-    url.searchParams.set('language', langFilter || language);
-    url.searchParams.set('mode', mode);
-    if (voiceId) url.searchParams.set('voice_id', voiceId);
-    if (goal.trim()) url.searchParams.set('goal', goal.trim().slice(0, 200));
+    let url;
+    try {
+      if (provider === 'grok') {
+        const session = await apiClient.createTaraVoiceSession({ provider, language: langFilter || language, mode, voice_id: voiceId || undefined, goal: goal.trim() || undefined });
+        url = new URL(session.ws_url);
+        url.searchParams.set('session_id', session.session_id);
+        url.searchParams.set('capability', session.capability);
+      } else {
+        url = new URL(engineWs);
+        url.searchParams.set('user_id', userId);
+        if (orgId) url.searchParams.set('org_id', orgId);
+        url.searchParams.set('session_id', `tara_${Date.now()}`);
+        url.searchParams.set('language', langFilter || language);
+        url.searchParams.set('mode', mode);
+        if (voiceId) url.searchParams.set('voice_id', voiceId);
+        if (goal.trim()) url.searchParams.set('goal', goal.trim().slice(0, 200));
+      }
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Unable to start TARA session.');
+      stopAll('session-error');
+      return;
+    }
 
     const ws = new WebSocket(url.toString());
     ws.binaryType = 'arraybuffer';
@@ -229,7 +246,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     };
     ws.onerror = () => setError('Connection error.');
     ws.onclose = () => { if (active) stopAll('closed'); };
-  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, active, stopAll]);
+  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, active, stopAll, provider]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -262,7 +279,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] leading-tight">Talk to TARA</h3>
-              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · Deepgram Voice Agent</p>
+              <p className="text-[#a3a3a3] text-[12px]">Real-time voice · {provider === 'grok' ? 'Grok Voice' : 'Deepgram Voice Agent'}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {/* internal = direct HIVEMIND recall (no clinical) · external = full agent */}

@@ -669,9 +669,12 @@ export default function TaraConfig() {
   }, []);
   const [calls, setCalls] = useState([]);
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
+  const [runtimeConfig, setRuntimeConfig] = useState(null);
+  const [providerSaving, setProviderSaving] = useState(false);
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
   useEffect(() => { refreshCalls(); }, []);
+  useEffect(() => { apiClient.getTaraRuntimeConfig().then(setRuntimeConfig).catch(() => {}); }, []);
 
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
 
@@ -694,6 +697,16 @@ export default function TaraConfig() {
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null, role: d?.user?.role || null }))
       .catch(() => {});
   }, []);
+  const canManageProvider = ['owner', 'admin'].includes(String(identity.role || '').toLowerCase());
+  const switchProvider = async (provider) => {
+    if (!canManageProvider || provider === runtimeConfig?.default_provider) return;
+    setProviderSaving(true);
+    try {
+      const next = await apiClient.updateTaraRuntimeConfig({ default_provider: provider, expected_revision: runtimeConfig.revision });
+      setRuntimeConfig(next);
+    } catch { /* stale or unauthorized state remains visible */ }
+    finally { setProviderSaving(false); }
+  };
 
   return (
     <motion.div
@@ -711,12 +724,21 @@ export default function TaraConfig() {
           <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
           <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
         </div>
+        <div className="flex items-center rounded-lg border border-[#e3e0db] overflow-hidden text-[12px] font-semibold">
+          {['deepgram', 'grok'].map((provider) => (
+            <button key={provider} type="button" disabled={!canManageProvider || providerSaving}
+              onClick={() => switchProvider(provider)}
+              className={`px-3 py-2 capitalize ${runtimeConfig?.default_provider === provider ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252]'} disabled:cursor-default`}>
+              {provider}
+            </button>
+          ))}
+        </div>
       </motion.div>
 
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
           The ONE Start. Voice/lang config + current-turn chat live inside. */}
       <motion.div variants={fadeUp}>
-        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language={(i18n.language || 'en').split('-')[0]} />
+        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} provider={runtimeConfig?.default_provider || 'deepgram'} language={(i18n.language || 'en').split('-')[0]} />
       </motion.div>
 
       {/* Stat cards */}

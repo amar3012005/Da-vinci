@@ -671,6 +671,28 @@ class HiveMindApiClient {
     return data; // { call, turns, insight }
   }
 
+  async getTaraRuntimeConfig() {
+    const { data } = await this.controlPlane.get('/v1/tara/runtime-config');
+    return data?.config;
+  }
+
+  async updateTaraRuntimeConfig({ default_provider, grok, deepgram, expected_revision }) {
+    const { data } = await this.controlPlane.patch('/v1/tara/runtime-config', {
+      default_provider, grok, deepgram, expected_revision,
+    });
+    return data?.config;
+  }
+
+  async createTaraVoiceSession(payload) {
+    const { data } = await this.controlPlane.post('/v1/tara/voice-sessions', payload);
+    return data;
+  }
+
+  async listTaraVoices(provider) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/tara/voices?provider=${encodeURIComponent(provider)}`);
+    return data;
+  }
+
   // ── TARA Skills (named prompt presets, org-scoped) ──
   async listTaraSkills() {
     const { data } = await this.controlPlane.get('/v1/proxy/tara/skills');
