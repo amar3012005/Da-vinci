@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Mic,
   Save,
   Play,
   Clock,
@@ -699,7 +698,9 @@ export default function TaraConfig() {
   }, []);
   const canManageProvider = ['owner', 'admin'].includes(String(identity.role || '').toLowerCase());
   const switchProvider = async (provider) => {
-    if (!canManageProvider || provider === runtimeConfig?.default_provider) return;
+    // Guard on runtimeConfig: before it loads, reading .revision below threw and
+    // the click silently did nothing. Buttons are also disabled until it arrives.
+    if (!canManageProvider || !runtimeConfig || provider === runtimeConfig.default_provider) return;
     setProviderSaving(true);
     try {
       const next = await apiClient.updateTaraRuntimeConfig({ default_provider: provider, expected_revision: runtimeConfig.revision });
@@ -718,15 +719,13 @@ export default function TaraConfig() {
       {/* Header — eyebrow + big title + subtitle (Workspace-Admin style) */}
       <motion.div variants={fadeUp} className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-[#a3a3a3] mb-1">
-            <Mic size={12} className="text-[#117dff]" /> HIVEMIND
-          </div>
           <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
           <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
         </div>
         <div className="flex items-center rounded-lg border border-[#e3e0db] overflow-hidden text-[12px] font-semibold">
           {['deepgram', 'grok'].map((provider) => (
-            <button key={provider} type="button" disabled={!canManageProvider || providerSaving}
+            <button key={provider} type="button" disabled={!canManageProvider || providerSaving || !runtimeConfig}
+              title={!runtimeConfig ? 'Loading provider configuration…' : (!canManageProvider ? 'Owners and admins can change the voice provider' : `Use ${provider}`)}
               onClick={() => switchProvider(provider)}
               className={`px-3 py-2 capitalize ${runtimeConfig?.default_provider === provider ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252]'} disabled:cursor-default`}>
               {provider}
@@ -742,7 +741,7 @@ export default function TaraConfig() {
       </motion.div>
 
       {/* Stat cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-2">
         {[
           { icon: Play, label: 'Total Calls', value: String(calls.length), color: '#117dff' },
           { icon: Clock, label: 'Minutes', value: totalMinutes.toFixed(1), color: '#117dff' },
@@ -750,10 +749,13 @@ export default function TaraConfig() {
           { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#117dff' },
           { icon: TrendingUp, label: 'Goal Rate', value: accuracy === null ? '—' : `${accuracy}%`, color: '#16a34a' },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <s.icon size={15} style={{ color: s.color }} />
-            <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums mt-2">{s.value}</p>
-            <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{s.label}</p>
+          // Compact single-line tile: icon + value inline, label beneath.
+          <div key={s.label} className="bg-white border border-[#e3e0db] rounded-lg px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <div className="flex items-center gap-1.5">
+              <s.icon size={12} style={{ color: s.color }} />
+              <p className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] tabular-nums leading-none">{s.value}</p>
+            </div>
+            <p className="text-[#a3a3a3] text-[9px] font-mono uppercase tracking-wider mt-1 truncate">{s.label}</p>
           </div>
         ))}
       </motion.div>
