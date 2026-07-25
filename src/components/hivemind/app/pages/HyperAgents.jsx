@@ -38,6 +38,7 @@ import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
+import CampaignsView from '../hyperagents/CampaignsView';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
@@ -206,7 +207,7 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
-  // | 'thread' (room chat — /employees/rooms/:id) | 'roster' (/employees/agents).
+  // | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
   // The URL is the source of truth on mount/deep-link; goMode() keeps it in
   // sync on every in-app switch so each feature has its own address.
   const _parsePath = () => {
@@ -216,6 +217,7 @@ export default function HyperAgents() {
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
+      if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
     } catch { return { mode: 'hero', roomId: null }; }
   };
@@ -229,6 +231,7 @@ export default function HyperAgents() {
     const url = mode === 'hero' ? `${base}/mycompany`
       : mode === 'roster' ? `${base}/agents`
         : mode === 'leads' ? `${base}/leads`
+          : mode === 'campaigns' ? `${base}/campaigns`
           : (roomId ? `${base}/rooms/${roomId}` : base);
     navigate(url, { replace: true });
   }, [navigate]);
@@ -414,6 +417,14 @@ export default function HyperAgents() {
             <ListChecks size={13} className={viewMode === 'leads' ? 'text-white' : 'text-[#117dff]'} />
             {t('hyperAgents.yourLeads', 'Your Leads')}
           </button>
+          {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
+          <button
+            onClick={() => goMode('campaigns', null)}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'campaigns' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+          >
+            <Megaphone size={13} className={viewMode === 'campaigns' ? 'text-white' : 'text-[#c2410c]'} />
+            {t('hyperAgents.runAdsOnX', 'Run Ads on X')}
+          </button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
@@ -518,6 +529,8 @@ export default function HyperAgents() {
           />
         ) : viewMode === 'leads' ? (
           <LeadsView />
+        ) : viewMode === 'campaigns' ? (
+          <CampaignsView />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
