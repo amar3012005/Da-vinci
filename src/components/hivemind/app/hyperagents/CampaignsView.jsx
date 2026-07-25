@@ -19,6 +19,7 @@ export default function CampaignsView() {
   const summary = EMPTY_SUMMARY;
 
   const connected = Boolean(connector?.connection);
+  const canConnect = Boolean(connector) && connector.catalogStatus !== 'needs_oauth_setup';
   const apiReady = connector?.catalogStatus === 'stable';
 
   const load = useCallback(async () => {
@@ -133,14 +134,20 @@ export default function CampaignsView() {
             <p className="text-[11.5px] text-[#525252] mt-0.5">
               {connected
                 ? (apiReady ? t('campaigns.ready', 'Ready to create and monitor paid campaigns.') : t('campaigns.pendingAccess', 'Account connected. Campaign publishing is waiting for X Ads API activation.'))
-                : t('campaigns.connectBody', 'Authorize the advertiser account that owns the billing profile and campaigns.')}
+                : canConnect
+                  ? t('campaigns.connectBody', 'Authorize the advertiser account that owns the billing profile and campaigns.')
+                  : t('campaigns.awaitingApproval', 'X Ads connection will open after Singulance receives Ads API approval.')}
             </p>
           </div>
           {!connected && (
-            <button onClick={connect} disabled={connecting || loading}
+            <button onClick={connect} disabled={connecting || loading || !canConnect}
               className="h-8 flex items-center gap-1.5 border border-[#0a0a0a] text-[#0a0a0a] bg-white hover:bg-[#faf9f4] text-[11.5px] font-semibold px-3 rounded-lg disabled:opacity-50">
               {connecting ? <Loader2 size={13} className="animate-spin" /> : null}
-              {connecting ? t('campaigns.connecting', 'Connecting') : t('campaigns.connect', 'Connect X Ads')}
+              {connecting
+                ? t('campaigns.connecting', 'Connecting')
+                : canConnect
+                  ? t('campaigns.connect', 'Connect X Ads')
+                  : t('campaigns.waiting', 'Awaiting X approval')}
             </button>
           )}
         </section>
