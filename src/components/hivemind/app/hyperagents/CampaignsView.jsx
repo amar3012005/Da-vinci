@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Nango from '@nangohq/frontend';
 import {
   AlertTriangle, BadgeDollarSign, BarChart3, Check, CheckCircle2, ChevronRight,
   ExternalLink, ImagePlus, Loader2, Megaphone, MousePointerClick,
@@ -274,33 +273,26 @@ export default function CampaignsView() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const connect = useCallback(async (connectorId, fallbackProvider) => {
-    setConnecting(connectorId); setError('');
-    const nango = new Nango();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('x_error');
+    if (oauthError) setError(`X connection failed: ${oauthError.replaceAll('_', ' ')}`);
+    if (params.has('x_connection') || oauthError) {
+      params.delete('x_connection'); params.delete('x_error');
+      const query = params.toString();
+      window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+    }
+  }, []);
+
+  const connect = useCallback(async (kind) => {
+    setConnecting(kind); setError('');
     try {
-      await new Promise((resolve, reject) => {
-        const ui = nango.openConnectUI({
-          baseURL: process.env.REACT_APP_NANGO_CONNECT_URL || 'https://api.hivemind.davinciai.eu:8043',
-          apiURL: process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042',
-          onEvent: async (event) => {
-            try {
-              if (event?.type === 'connect') {
-                const payload = event.payload || {};
-                const providerKey = payload.providerConfigKey || payload.provider_config_key || fallbackProvider;
-                const connectionId = payload.connectionId || payload.connection_id;
-                if (!connectionId) throw new Error('X did not return a connection id');
-                await apiClient.finalizeNangoConnection(providerKey, connectionId); resolve();
-              } else if (event?.type === 'close') resolve();
-              else if (event?.type === 'error') reject(new Error(event?.payload?.error || 'X connection failed'));
-            } catch (err) { reject(err); }
-          },
-        });
-        apiClient.getNangoConnectSession(connectorId).then(({ connect_session_token: token }) => ui?.setSessionToken?.(token)).catch(reject);
-      });
-      await load();
+      const result = await apiClient.startXAdsOAuth(kind);
+      if (!result?.authorization_url) throw new Error('X did not return an authorization URL');
+      window.location.assign(result.authorization_url);
     } catch (err) { setError(errorText(err, 'Could not connect X')); }
     finally { setConnecting(''); }
-  }, [load]);
+  }, []);
 
   const control = async (campaign, action) => {
     setBusy(`${campaign.id}:${action}`); setError('');
@@ -348,9 +340,9 @@ export default function CampaignsView() {
 
         <section className="mx-4 sm:mx-6 mt-4 border-y border-[#e3e0db]">
           <StatusMark done={Boolean(status?.connections?.x)} label="Connect X" detail={status?.identity?.username ? `Connected as @${status.identity.username}` : 'OAuth 2.0 PKCE for identity, media and public Posts.'}
-            action={() => connect('x-account', 'twitter-v2')} disabled={!status?.beta_enabled} busy={connecting === 'x-account'} actionLabel="Connect X" />
+            action={() => connect('oauth2')} disabled={!status?.beta_enabled} busy={connecting === 'oauth2'} actionLabel="Connect X" />
           <StatusMark done={Boolean(status?.connections?.x_ads)} label="Enable X Ads" detail={status?.ads_api_approved ? 'OAuth 1.0a access for advertiser accounts and paid delivery.' : 'Waiting for Singulance Ads API Standard Access approval.'}
-            action={() => connect('x-ads', 'twitter')} disabled={!status?.beta_enabled || !status?.connections?.x || !status?.ads_api_approved} busy={connecting === 'x-ads'} actionLabel="Enable Ads" />
+            action={() => connect('oauth1')} disabled={!status?.beta_enabled || !status?.connections?.x || !status?.ads_api_approved} busy={connecting === 'oauth1'} actionLabel="Enable Ads" />
           <StatusMark done={ready} label="Campaign publishing" detail={ready ? 'Ready for confirmed paid campaigns.' : (status?.beta_enabled ? 'Complete both connections to publish.' : 'Customer beta access is not enabled for this organization.')} />
         </section>
 

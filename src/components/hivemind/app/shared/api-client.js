@@ -1525,6 +1525,16 @@ class HiveMindApiClient {
   }
 
   // ─── Standalone X paid campaigns ─────────────────────────────
+  async startXAdsOAuth(kind) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/start`, {});
+    return data;
+  }
+
+  async disconnectXAdsOAuth(kind) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/disconnect`, {});
+    return data;
+  }
+
   async getXAdsStatus() {
     const { data } = await this.controlPlane.get('/v1/proxy/x-ads/status');
     return data;
