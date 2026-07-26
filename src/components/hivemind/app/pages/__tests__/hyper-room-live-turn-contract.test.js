@@ -29,6 +29,10 @@ describe('HyperAgents live turn adoption', () => {
   it('shows company context and one-click staged tasks on first Room entry', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     expect(source).toContain('function DomainRoomIntro');
+    expect(source).toContain('The category workspace is a permanent part of the room.');
+    expect(source).toContain('setRoomIntroAcknowledged(true)');
+    expect(source).toContain('const pinnedRef = useRef(false)');
+    expect(source).not.toContain('setShowRoomIntro(!window.localStorage.getItem');
     expect(source).toContain("`hm-room-intro-${room.id}`");
     expect(source).toContain('What this Room already knows');
     expect(source).toContain('Suggested operating path');

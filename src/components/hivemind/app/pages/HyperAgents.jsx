@@ -774,6 +774,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
 function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
   const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
   const DomainIcon = domain.icon;
+  const displayLabel = domain.key === 'general' ? (room.name || 'Company HQ') : domain.label;
   const stages = DOMAIN_ROOM_STAGES[domain.key] || DOMAIN_ROOM_STAGES.general;
   const profile = company?.profile || {};
   const companyName = company?.company || 'Your company';
@@ -810,9 +811,9 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
           className="max-w-[880px] border px-5 py-5 md:px-7 md:py-6 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)]"
           style={{ backgroundColor: 'rgba(255,255,255,0.72)', borderColor: `${domain.color}55`, backdropFilter: 'blur(18px)' }}
         >
-          <p className="text-[11px] font-mono uppercase text-[#525252]">{companyName} · {domain.label}</p>
+          <p className="text-[11px] font-mono uppercase text-[#525252]">{companyName} · {displayLabel}</p>
           <h1 className="mt-3 text-[38px] md:text-[58px] leading-[1.02] font-semibold text-[#0a0a0a] break-words">
-            {domain.label}
+            {displayLabel}
           </h1>
           <p className="mt-4 max-w-[720px] text-[14px] md:text-[16px] leading-relaxed text-[#404040]">{domain.desc}</p>
         </div>
@@ -940,6 +941,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const [turns, setTurns] = useState([]);
   const [companyContext, setCompanyContext] = useState(null);
   const [showRoomIntro, setShowRoomIntro] = useState(true);
+  const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -990,12 +992,15 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const [savingGoal, setSavingGoal] = useState(false);
   const threadEndRef = useRef(null);
   const scrollRef = useRef(null);
+  const discussionStartRef = useRef(null);
   const campaignReturnRef = useRef(new URLSearchParams(window.location.search).get('campaignReturn'));
   const campaignReturnedRef = useRef(false);
   const isCampaignRoom = Boolean(campaignReturnRef.current || room?.campaign_id);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
-  const pinnedRef = useRef(true);
+  // Normal rooms open on their permanent category workspace. Once the user
+  // sends or scrolls to the discussion, live activity follows the bottom.
+  const pinnedRef = useRef(false);
   const onThreadScroll = useCallback(() => {
     const el = scrollRef.current;
     if (el) pinnedRef.current = (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
@@ -1109,18 +1114,26 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     if (!room?.id) return;
     if (isCampaignRoom || room.archivedAt || room.archived_at) {
       setShowRoomIntro(false);
+      setRoomIntroAcknowledged(true);
       return;
     }
+    // The category workspace is a permanent part of the room. A separate
+    // acknowledgement flag sequences the optional first-run setup without
+    // making the banner disappear after the first task.
+    setShowRoomIntro(true);
     try {
-      setShowRoomIntro(!window.localStorage.getItem(`hm-room-intro-${room.id}`));
+      setRoomIntroAcknowledged(Boolean(window.localStorage.getItem(`hm-room-intro-${room.id}`)));
     } catch {
-      setShowRoomIntro(true);
+      setRoomIntroAcknowledged(false);
     }
   }, [isCampaignRoom, room?.id, room?.archivedAt, room?.archived_at]);
 
   const finishRoomIntro = useCallback(() => {
     try { window.localStorage.setItem(`hm-room-intro-${roomId}`, '1'); } catch { /* noop */ }
-    setShowRoomIntro(false);
+    setRoomIntroAcknowledged(true);
+    window.requestAnimationFrame(() => {
+      discussionStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }, [roomId]);
 
   useEffect(() => {
@@ -1427,7 +1440,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     if (!room?.id) return;
     if (room.archived_at) return;  // no setup walkthrough on archived rooms
     if (isCampaignRoom) return;    // Campaign orchestration owns model and simulation choices.
-    if (showRoomIntro) return;     // Category welcome comes before advanced controls.
+    if (!roomIntroAcknowledged) return; // Acknowledge the workspace before advanced controls.
     if (submitting || activeTurnId) return; // Never interrupt a task launched from the welcome surface.
     try {
       if (!window.localStorage.getItem(`hm-room-setup-${room.id}`)) {
@@ -1435,7 +1448,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
         setShowSetup(true);
       }
     } catch { /* noop */ }
-  }, [activeTurnId, isCampaignRoom, room?.id, room?.archived_at, showRoomIntro, submitting]);
+  }, [activeTurnId, isCampaignRoom, room?.id, room?.archived_at, roomIntroAcknowledged, submitting]);
 
   function finishSetup() {
     try { window.localStorage.setItem(`hm-room-setup-${room?.id}`, '1'); } catch { /* noop */ }
@@ -2111,6 +2124,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
               onEnter={finishRoomIntro}
             />
           )}
+          <div ref={discussionStartRef} />
           {/* HQ control-room feed — agents reporting their room activity to you. */}
           {hqActivity.length > 0 && (
             <div className="space-y-2">

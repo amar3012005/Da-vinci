@@ -188,6 +188,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               website={result?.website || websiteUrl}
               company={companyName}
               tagline={p.tagline}
+              loading={!done && !result?.screenshot}
               className="max-w-[720px]"
             />
           </div>
