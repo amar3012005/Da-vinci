@@ -84,7 +84,7 @@ function normalizeAction(action, index) {
     date: textFrom(action, ['scheduled_at', 'publish_at', 'date', 'scheduledAt']),
     offset: Number.isFinite(action?.scheduled_offset_minutes) ? action.scheduled_offset_minutes : null,
     creativeRequired: creative.required === true,
-    creativeConcept: textFrom(creative, ['concept', 'description', 'direction']),
+    creativeConcept: textFrom(creative, ['objective', 'subject', 'generation_prompt', 'concept', 'description', 'direction']),
     claimStatus: String(action?.claim_status || '').toLowerCase(),
     evidenceIds: asArray(action?.evidence_ids).map(String),
     evidence: asArray(action?.evidence),

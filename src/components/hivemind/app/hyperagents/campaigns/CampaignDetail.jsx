@@ -11,6 +11,12 @@ const EVENT_LABEL = {
   campaign_created: 'Campaign Room created',
   campaign_generation_started: 'Agents started working',
   campaign_plan_ready: 'Campaign plan completed',
+  campaign_asset_generation_queued: 'Campaign visuals queued',
+  campaign_asset_ready: 'Campaign visual ready',
+  campaign_asset_generation_failed: 'Campaign visual needs attention',
+  campaign_asset_uploaded: 'Replacement image uploaded',
+  campaign_asset_selected: 'Campaign visual selected',
+  campaign_asset_removed: 'Campaign visual removed',
   campaign_ready: 'Campaign ready for approval',
   campaign_needs_input: 'Plan needs more input',
   campaign_generation_needs_input: 'Campaign Room needs more input',
@@ -31,13 +37,13 @@ const EVENT_LABEL = {
   campaign_completed: 'Campaign completed',
 };
 
-const READY = new Set(['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED']);
+const READY = new Set(['PREPARING_ASSETS', 'READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED']);
 const LIVE = new Set(['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED']);
 
 export function campaignProgress(status) {
   return [
     { id: 'room', label: 'Campaign Room', detail: 'Research and debate', state: status === 'GENERATING' ? 'current' : 'complete' },
-    { id: 'plan', label: 'Plan ready', detail: 'Review and approve', state: LIVE.has(status) ? 'complete' : READY.has(status) ? 'current' : 'upcoming' },
+    { id: 'plan', label: status === 'PREPARING_ASSETS' ? 'Creating visuals' : 'Plan ready', detail: status === 'PREPARING_ASSETS' ? 'Generating selected creative' : 'Review and approve', state: LIVE.has(status) ? 'complete' : READY.has(status) ? 'current' : 'upcoming' },
     { id: 'live', label: 'Campaign live', detail: 'Publish and measure', state: LIVE.has(status) ? 'current' : 'upcoming' },
   ];
 }
@@ -57,7 +63,7 @@ function Progress({ status }) {
   </ol>;
 }
 
-export default function CampaignDetail({ campaign, loading, onBack, onOpenRoom, onControl, onApproveAction, onRetryAction, onReconcileAction, onEditAction, onRemoveAction, onRegenerate, busy, executionEnabled = false }) {
+export default function CampaignDetail({ campaign, loading, onBack, onOpenRoom, onControl, onApproveAction, onRetryAction, onReconcileAction, onEditAction, onRemoveAction, onGenerateImage, onUploadImage, onSelectImage, onRemoveImage, onRegenerate, busy, executionEnabled = false }) {
   const [tab, setTab] = useState('plan');
   const [launchOpen, setLaunchOpen] = useState(false);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
@@ -108,7 +114,7 @@ export default function CampaignDetail({ campaign, loading, onBack, onOpenRoom, 
       {campaign.status === 'NEEDS_INPUT' ? <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-4 text-[11.5px] text-amber-900"><strong>Plan needs input.</strong> {campaign.lastError}</div> : null}
 
       {tab === 'plan' ? (plan ? <CampaignReport report={{ bundle: plan.bundle, content: plan.reportMarkdown }} taskTitle={campaign.name} surface="dashboard" /> : <div className="py-14 text-center text-[11.5px] text-[#817b74]">The operating plan appears when the Campaign Room completes.</div>) : null}
-      {campaign.requestedChannels.includes(tab) ? <ChannelTab channel={tab} actions={actions} onApprove={onApproveAction} onRetry={onRetryAction} onReconcile={onReconcileAction} onEdit={onEditAction} onRemove={onRemoveAction} busy={busy} /> : null}
+      {campaign.requestedChannels.includes(tab) ? <ChannelTab channel={tab} actions={actions} onApprove={onApproveAction} onRetry={onRetryAction} onReconcile={onReconcileAction} onEdit={onEditAction} onRemove={onRemoveAction} onGenerateImage={onGenerateImage} onUploadImage={onUploadImage} onSelectImage={onSelectImage} onRemoveImage={onRemoveImage} busy={busy} /> : null}
       {tab === 'performance' ? <div><div className="flex items-center justify-between border-b border-[#d8d3cc] pb-3"><div><h3 className="text-[12.5px] font-semibold">Measured performance</h3><p className="mt-0.5 text-[10.5px] text-[#817b74]">Provider results appear after actions go live.</p></div><button onClick={() => onControl('sync')} disabled={busy || !actions.some((action) => action.status === 'SUCCEEDED')} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#bdb7af] px-3 text-[10.5px] font-semibold disabled:opacity-40"><RefreshCw size={12} />Refresh</button></div>{campaign.requestedChannels.map((channel) => { const metrics = channelMetrics[channel] || {}; const rows = channel === 'x_organic' ? [['Impressions', metrics.impressions], ['Engagements', metrics.engagements], ['Link clicks', metrics.url_clicks], ['Followers', metrics.followers], ['Follower change', metrics.follower_delta], ['Engagement rate', typeof metrics.engagement_rate === 'number' ? `${(metrics.engagement_rate * 100).toFixed(2)}%` : null]] : channel === 'gmail' ? [['Sent', metrics.sent], ['Replies', metrics.replied], ['Booked', metrics.booked], ['Bounced', metrics.bounced]] : [['Calls', metrics.calls], ['Completed', metrics.completed], ['Booked', metrics.booked], ['No answer', metrics.no_answer], ['Blocked', metrics.blocked]]; return <section key={channel} className="border-b border-[#dfdbd4] py-5"><div className="text-[10px] font-mono uppercase text-[#77716a]">{LABEL[channel] || channel}</div><div className="mt-3 grid grid-cols-2 gap-px border border-[#dfdbd4] bg-[#dfdbd4] sm:grid-cols-3">{rows.map(([label, value]) => <div key={label} className="min-h-16 bg-[#fbfaf6] p-3"><div className="text-[18px] font-semibold">{value ?? 0}</div><div className="mt-1 text-[9.5px] text-[#817b74]">{label}</div></div>)}</div>{metrics.synced_at ? <div className="mt-2 text-[9.5px] text-[#8a847d]">Last synchronized {new Date(metrics.synced_at).toLocaleString()}</div> : <div className="mt-2 text-[9.5px] text-[#8a847d]">Metrics appear after the first successful action.</div>}</section>; })}</div> : null}
       {tab === 'activity' ? <div>{events.length ? events.map((event) => <div key={event.id} className="grid grid-cols-[18px_1fr] gap-2 border-b border-[#e1ddd6] py-3"><CheckCircle2 size={12} className="mt-0.5 text-[#6f6962]" /><div><div className="text-[11px] font-semibold">{EVENT_LABEL[event.eventType] || event.eventType.replaceAll('_', ' ')}</div><div className="mt-0.5 text-[9.5px] text-[#817b74]">{new Date(event.createdAt).toLocaleString()}</div></div></div>) : <div className="text-[11px] text-[#817b74]">Campaign activity will appear here.</div>}</div> : null}
     </main>

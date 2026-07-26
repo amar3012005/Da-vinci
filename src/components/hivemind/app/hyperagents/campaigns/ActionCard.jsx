@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Check, CheckCircle2, Clock3, Mail, MessageCircle, Pencil, Phone, RefreshCw, SearchCheck, ShieldAlert, Trash2, X } from 'lucide-react';
+import CampaignCreative from './CampaignCreative';
 
 const ICONS = { x_organic: MessageCircle, gmail: Mail, tara: Phone };
 
-export default function ActionCard({ action, onApprove, onRetry, onReconcile, onEdit, onRemove, busy }) {
+export default function ActionCard({ action, onApprove, onRetry, onReconcile, onEdit, onRemove, onGenerateImage, onUploadImage, onSelectImage, onRemoveImage, busy }) {
   const Icon = ICONS[action.channel] || MessageCircle;
   const payload = action.payload || {};
   const problem = ['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status);
@@ -47,6 +48,7 @@ export default function ActionCard({ action, onApprove, onRetry, onReconcile, on
           {payload.subject ? <div className="text-[11.5px] font-semibold mt-2">{payload.subject}</div> : null}
           {!editing ? <div className="mt-2 text-[12px] leading-5 text-[#383532] whitespace-pre-wrap">{payload.final_copy || payload.text || payload.body || payload.opening}</div> : null}
           {action.rationale ? <div className="mt-2 text-[10.5px] text-[#77716a]">Why this action: {action.rationale}</div> : null}
+          <CampaignCreative action={action} onGenerate={onGenerateImage} onUpload={onUploadImage} onSelect={onSelectImage} onRemove={onRemoveImage} busy={busy} />
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#8b857e]">
             <span className="inline-flex items-center gap-1"><Clock3 size={11} />{action.scheduledAt ? new Date(action.scheduledAt).toLocaleString() : 'After approval'}</span>
             {action.externalId ? <span className="inline-flex items-center gap-1"><CheckCircle2 size={11} />Provider ID {action.externalId}</span> : null}

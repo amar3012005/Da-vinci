@@ -1665,6 +1665,33 @@ class HiveMindApiClient {
     return data;
   }
 
+  async generateCampaignImage(id, actionId, payload = {}) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/generate`, payload);
+    return data;
+  }
+
+  async uploadCampaignImage(id, actionId, file, altText = '') {
+    const form = new FormData();
+    form.append('image', file); form.append('alt_text', altText);
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/upload`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return data;
+  }
+
+  async selectCampaignImage(id, actionId, assetId) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/${assetId}`, {});
+    return data;
+  }
+
+  async removeCampaignImage(id, actionId, assetId) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}/actions/${actionId}/assets/${assetId}`);
+    return data;
+  }
+
+  async getCampaignImageBlob(contentUrl) {
+    const { data } = await this.controlPlane.get(contentUrl, { responseType: 'blob' });
+    return data;
+  }
+
   async regenerateCampaign(id, feedback = '') {
     const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/regenerate`, { feedback });
     return data;

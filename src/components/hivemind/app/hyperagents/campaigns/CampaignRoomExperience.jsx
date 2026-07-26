@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Check, FileCheck2, Lightbulb, MessageSquareText, Search, Sparkles } from 'lucide-react';
+import { CampaignCreativeGallery } from './CampaignCreative';
 
 const CHANNEL_LABELS = { x_organic: 'X', gmail: 'Email', tara: 'TARA' };
 const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan)\b/i;
@@ -90,6 +91,7 @@ function currentStage(campaign, groups) {
     if (groups.debate.length) return 'Agents are reviewing the strategy';
     return 'Researching company and audience context';
   }
+  if (campaign.status === 'PREPARING_ASSETS') return 'Creating campaign visuals';
   if (campaign.status === 'READY_FOR_APPROVAL') return 'Ready to launch';
   if (['RUNNING', 'SCHEDULED'].includes(campaign.status)) return 'Campaign is running';
   if (campaign.status === 'PAUSED') return 'Campaign is paused';
@@ -128,7 +130,8 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
     ? { bundle: plan.bundle, content: plan.reportMarkdown }
     : (plan?.reportMarkdown || groups.synthesis.at(-1)?.content);
   const isGenerating = campaign.status === 'GENERATING';
-  const ready = Boolean(finalReport) || !isGenerating;
+  const preparingAssets = campaign.status === 'PREPARING_ASSETS';
+  const ready = (Boolean(finalReport) || !isGenerating) && !preparingAssets;
   const phaseStatus = {
     brief: 'complete',
     evidence: groups.research.length ? 'complete' : (isGenerating ? 'active' : 'complete'),
@@ -160,6 +163,8 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
 
     <section className="mt-6">
       {finalReport ? (ReportComponent ? <ReportComponent report={finalReport} taskTitle={campaign.name} surface="dashboard" /> : <div className="whitespace-pre-wrap text-[12px] leading-6 text-[#34312e]">{finalReport}</div>) : <div className="border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-4 text-[11px] leading-5 text-[#31554b]">Your Campaign Board will replace this workspace when the team completes its evidence, decisions, content, and schedule checks.</div>}
+      {preparingAssets ? <div className="mt-5 flex items-center gap-2 border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-3 text-[10.5px] text-[#31554b]"><Sparkles size={13} />The visual-prompt skill selected the actions that need imagery. Those campaign visuals are being generated now.</div> : null}
+      <CampaignCreativeGallery actions={campaign.actions || []} />
     </section>
   </div>;
 }
