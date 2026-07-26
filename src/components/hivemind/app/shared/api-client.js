@@ -498,6 +498,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async ensureHyperDomainRooms() {
+    const { data } = await this.controlPlane.post('/v1/hyper/domain-rooms/ensure', {});
+    return data;
+  }
+
   async createHyperRoom(payload) {
     const { data } = await this.controlPlane.post('/v1/hyper-rooms', payload);
     return data;

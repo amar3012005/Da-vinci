@@ -130,7 +130,63 @@ const DOMAIN_ROOMS = [
   { key: 'legal_finance', label: 'Legal & Finance', icon: Scale, color: '#4a3550', desc: 'Contracts, compliance, financial analysis, and controls.' },
 ];
 const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
-const domainRoomLabel = (key) => domainRoomDefinition(key).label;
+
+const DOMAIN_ROOM_STAGES = {
+  general: [
+    ['Understand', 'Assess the company now', 'Synthesize what the company is, what it offers, its audience, current evidence, and the most important unknowns.', 'Assess everything currently known about the company. Separate verified facts from assumptions, identify the most consequential gaps, and produce a concise operating diagnosis.'],
+    ['Prioritize', 'Find the highest-leverage move', 'Compare the strongest opportunities across the company before committing resources.', 'Compare the highest-leverage opportunities across product, growth, operations, finance, and risk. Recommend one priority with explicit trade-offs and evidence.'],
+    ['Plan', 'Build the next 30 days', 'Turn the chosen priority into owners, milestones, dependencies, and success checks.', 'Build a practical 30-day operating plan for the company. Include milestones, owners, dependencies, risks, and measurable success criteria.'],
+    ['Execute', 'Create the first deliverable', 'Produce the most useful ready-to-use artifact from the plan.', 'Choose and create the highest-value first deliverable from the current operating plan. Make it complete, usable, and grounded in company context.'],
+  ],
+  seo: [
+    ['Baseline', 'Audit search readiness', 'Inspect positioning, site structure, technical discoverability, and current search evidence.', 'Audit the company search baseline using available company knowledge and live evidence. Cover technical discoverability, content, authority, and measurement gaps.'],
+    ['Demand', 'Map search opportunities', 'Find intent clusters and questions the company can credibly win.', 'Map the most valuable search-intent clusters for the company and its real audience. Include evidence, intent, difficulty assumptions, and business relevance.'],
+    ['Build', 'Create the SEO roadmap', 'Prioritize technical fixes, pages, content, and internal linking.', 'Create a prioritized SEO execution roadmap with technical fixes, page opportunities, content briefs, internal links, owners, and timing.'],
+    ['Measure', 'Define the learning loop', 'Choose leading and lagging indicators with review intervals.', 'Define an SEO measurement system with baseline requirements, leading indicators, business outcomes, review cadence, and decision thresholds.'],
+  ],
+  marketing: [
+    ['Audience', 'Clarify audience and offer', 'Test the target, pain, promise, proof, and call to action.', 'Clarify the company audience and offer. Challenge the pain, promise, proof, objections, and call to action using available evidence.'],
+    ['Strategy', 'Choose the channel system', 'Decide where the audience can be reached and how channels work together.', 'Design the best evidence-backed channel strategy for this company. Explain channel roles, sequencing, trade-offs, and prerequisites.'],
+    ['Create', 'Build campaign assets', 'Produce ready-to-use content matched to the chosen channels.', 'Create a coherent set of launch-ready marketing assets for the recommended channels. Keep every claim grounded and every action channel-correct.'],
+    ['Learn', 'Plan the experiments', 'Schedule tests with hypotheses, metrics, and stop or scale rules.', 'Build a marketing experiment calendar with hypotheses, variants, success metrics, minimum evidence, and stop, iterate, or scale rules.'],
+  ],
+  branding: [
+    ['Audit', 'Review the current brand', 'Identify strengths, contradictions, sameness, and missing proof.', 'Audit the current company brand using all available context. Assess positioning, differentiation, narrative, voice, visual signals, and proof gaps.'],
+    ['Position', 'Define the market position', 'Choose the category, audience, differentiated promise, and reasons to believe.', 'Develop a defensible positioning system: audience, category, problem, differentiated promise, reasons to believe, alternatives, and boundaries.'],
+    ['Express', 'Build the messaging system', 'Create the narrative hierarchy, voice, messages, and examples.', 'Create a complete messaging architecture with narrative, message hierarchy, voice rules, proof points, objections, and channel examples.'],
+    ['Activate', 'Plan brand activation', 'Apply the system consistently across the highest-impact surfaces.', 'Plan brand activation across the company website, product, sales, social, and customer touchpoints with priorities and quality checks.'],
+  ],
+  fundraising: [
+    ['Readiness', 'Assess fundraising readiness', 'Review traction, evidence, economics, team, risks, and missing materials.', 'Assess the company fundraising readiness. Separate evidence from aspiration and identify the critical gaps in traction, economics, team, narrative, and diligence.'],
+    ['Narrative', 'Build the investor story', 'Connect problem, insight, solution, market, traction, model, and ask.', 'Build an investor narrative grounded only in known company facts. Include problem, insight, solution, market, traction, business model, moat, team, roadmap, and ask.'],
+    ['Target', 'Define investor fit', 'Specify the investor profile and a research method for a qualified list.', 'Define the ideal investor profile and create an evidence-first method to identify and rank suitable investors without inventing names or fit.'],
+    ['Process', 'Create the raise plan', 'Design materials, outreach waves, meetings, diligence, and decision gates.', 'Create a fundraising operating plan with materials, outreach waves, meeting sequence, diligence readiness, owners, timing, and decision gates.'],
+  ],
+  research: [
+    ['Frame', 'Define the research question', 'Turn the business need into answerable questions, scope, and evidence standards.', 'Frame the highest-value research question for the company. Define scope, sub-questions, evidence standards, exclusions, and the decision it must inform.'],
+    ['Gather', 'Build the evidence base', 'Collect relevant company, market, customer, and external sources.', 'Gather a source-backed evidence base for the current research question. Keep verified facts, source quality, assumptions, and unknowns visibly separate.'],
+    ['Challenge', 'Test competing explanations', 'Debate interpretations, contradictions, limitations, and confidence.', 'Challenge the evidence through competing hypotheses. Identify contradictions, weak sources, missing data, confidence levels, and what would change the conclusion.'],
+    ['Decide', 'Produce the decision brief', 'Convert findings into implications, recommendation, and next research.', 'Produce a decision-ready research brief with findings, sources, confidence, implications, recommendation, risks, and the next evidence to collect.'],
+  ],
+  product: [
+    ['Discover', 'Clarify the user problem', 'Connect users, jobs, pain, evidence, alternatives, and desired outcomes.', 'Clarify the most important user problem using current company knowledge. Separate observed evidence from assumptions and define the desired outcome.'],
+    ['Define', 'Write the product requirements', 'Specify outcomes, scope, flows, constraints, states, and acceptance criteria.', 'Write decision-ready product requirements for the priority problem, including users, outcomes, scope, flows, constraints, edge states, and acceptance criteria.'],
+    ['Prioritize', 'Choose what to build', 'Compare impact, evidence, effort, risk, and strategic fit.', 'Prioritize the product opportunities using impact, evidence, effort, risk, dependencies, and strategic fit. Make one explicit recommendation.'],
+    ['Deliver', 'Plan validation and rollout', 'Define prototype, experiment, instrumentation, release, and review gates.', 'Create the validation and rollout plan with prototype or experiment, instrumentation, release stages, owners, risks, and review gates.'],
+  ],
+  design: [
+    ['Journey', 'Map the user journey', 'Identify actors, steps, goals, friction, handoffs, and failure states.', 'Map the end-to-end user journey for the priority experience. Include actors, goals, steps, friction, handoffs, edge cases, and failure states.'],
+    ['Interaction', 'Design the core flow', 'Specify information hierarchy, actions, states, feedback, and recovery.', 'Design the core interaction flow with information hierarchy, controls, states, feedback, empty states, errors, and recovery paths.'],
+    ['System', 'Define reusable patterns', 'Turn the flow into components, behavior rules, content, and accessibility.', 'Define the reusable design system patterns needed for this experience, including components, behaviors, content rules, responsive constraints, and accessibility.'],
+    ['Validate', 'Create the validation plan', 'Test comprehension, completion, confidence, and accessibility.', 'Create a design validation plan with target users, scenarios, tasks, success measures, accessibility checks, and decision thresholds.'],
+  ],
+  legal_finance: [
+    ['Scope', 'Define jurisdiction and exposure', 'Identify the decision, entities, regions, contracts, money flows, and review boundaries.', 'Define the legal and financial scope of the current company decision. Identify entities, jurisdictions, contracts, money flows, assumptions, and professional-review boundaries.'],
+    ['Analyze', 'Assess obligations and economics', 'Map requirements, liabilities, costs, revenue effects, and scenarios.', 'Analyze the relevant obligations, liabilities, controls, unit economics, cash effects, and scenarios. Clearly distinguish facts, assumptions, and items requiring qualified review.'],
+    ['Control', 'Design safeguards', 'Create approvals, records, limits, monitoring, and escalation paths.', 'Design practical legal and financial controls with owners, approvals, evidence records, thresholds, monitoring, and escalation paths.'],
+    ['Decide', 'Prepare the review package', 'Summarize recommendation, exposure, alternatives, and required sign-offs.', 'Prepare a decision package with recommendation, alternatives, financial impact, legal exposure, unresolved questions, and required expert sign-offs.'],
+  ],
+};
 
 const SYNTHESIS_PRESENTATIONS = {
   RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
@@ -228,7 +284,7 @@ export default function HyperAgents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [roomCategory, setRoomCategory] = useState('all');
+  const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
   // | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
   // The URL is the source of truth on mount/deep-link; goMode() keeps it in
@@ -272,6 +328,14 @@ export default function HyperAgents() {
   const fetchRooms = useCallback(async () => {
     setError(null);
     try {
+      if (!domainRoomsEnsuredRef.current) {
+        domainRoomsEnsuredRef.current = true;
+        try {
+          await apiClient.ensureHyperDomainRooms();
+        } catch {
+          domainRoomsEnsuredRef.current = false;
+        }
+      }
       const resp = await apiClient.listHyperRooms();
       const list = resp?.rooms || [];
       setRooms(list);
@@ -315,19 +379,13 @@ export default function HyperAgents() {
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
-  const roomCategoryCounts = useMemo(() => {
-    const counts = Object.fromEntries(DOMAIN_ROOMS.map(domain => [domain.key, 0]));
-    liveRooms.forEach((room) => {
-      const key = room.room_tag || room.roomTag || 'general';
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return counts;
+  const domainHomeRooms = useMemo(() => {
+    const order = Object.fromEntries(DOMAIN_ROOMS.map((domain, index) => [domain.key, index]));
+    return liveRooms
+      .filter(room => room.is_domain_home)
+      .sort((a, b) => (order[a.room_tag] ?? 99) - (order[b.room_tag] ?? 99));
   }, [liveRooms]);
-  const visibleLiveRooms = useMemo(() => (
-    roomCategory === 'all'
-      ? liveRooms
-      : liveRooms.filter(room => (room.room_tag || room.roomTag || 'general') === roomCategory)
-  ), [liveRooms, roomCategory]);
+  const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
   // A brand-new org (no rooms yet, never onboarded/skipped) gets the
@@ -353,6 +411,7 @@ export default function HyperAgents() {
       if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
     } catch { /* noop */ }
     goMode('hero', null); // Enter your workspace → the mycompany dashboard
+    domainRoomsEnsuredRef.current = false;
     fetchRooms();
     emitUsageChanged();
   }, [fetchRooms, goMode]);
@@ -466,46 +525,24 @@ export default function HyperAgents() {
           </button>
         </div>
 
-        <nav className="px-2 pt-3 pb-2 border-b border-[#e3e0db]" aria-label="Room categories">
-          <div className="px-1 pb-1.5 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-            {t('hyperAgents.roomCategories', 'Room categories')}
-          </div>
-          <button
-            type="button"
-            onClick={() => setRoomCategory('all')}
-            className={`w-full h-8 mb-1.5 px-2 flex items-center gap-2 rounded-[6px] border text-[10.5px] font-semibold transition-colors ${roomCategory === 'all' ? 'bg-[#0a0a0a] border-[#0a0a0a] text-white' : 'bg-white border-[#e3e0db] text-[#525252] hover:text-[#0a0a0a]'}`}
-          >
-            <LayoutGrid size={12} />
-            <span>{t('hyperAgents.allRooms', 'All rooms')}</span>
-            <span className={`ml-auto font-mono text-[9px] ${roomCategory === 'all' ? 'text-white/70' : 'text-[#a3a3a3]'}`}>{liveRooms.length}</span>
-          </button>
-          <div className="grid grid-cols-1 gap-0.5">
-            {DOMAIN_ROOMS.map((domain) => {
-              const Icon = domain.icon;
-              const active = roomCategory === domain.key;
-              return (
-                <button
-                  type="button"
-                  key={domain.key}
-                  onClick={() => setRoomCategory(domain.key)}
-                  title={`${domain.label}: ${domain.desc}`}
-                  className={`min-w-0 h-7 px-2 flex items-center gap-2 rounded-[6px] border text-[10px] font-semibold transition-colors ${active ? 'bg-white text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:bg-white hover:text-[#0a0a0a]'}`}
-                  style={active ? { borderColor: domain.color } : undefined}
-                >
-                  <Icon size={11} style={{ color: domain.color }} className="shrink-0" />
-                  <span>{domain.label}</span>
-                  <span className="ml-auto font-mono text-[8.5px] text-[#a3a3a3]">{roomCategoryCounts[domain.key] || 0}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-            {roomCategory === 'all' ? t('hyperAgents.rooms', 'Rooms') : domainRoomLabel(roomCategory)}
+            {t('hyperAgents.companyRooms', 'Company rooms')}
           </div>
-          {visibleLiveRooms.map(r => (
+          {domainHomeRooms.map(r => (
+            <RoomRow
+              key={r.id}
+              room={r}
+              active={r.id === activeRoomId && viewMode === 'thread'}
+              onClick={() => goMode('thread', r.id)}
+            />
+          ))}
+          {workRooms.length > 0 && (
+            <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] border-t border-[#e3e0db] mt-1">
+              {t('hyperAgents.workRooms', 'Work rooms')}
+            </div>
+          )}
+          {workRooms.map(r => (
             <RoomRow
               key={r.id}
               room={r}
@@ -514,11 +551,6 @@ export default function HyperAgents() {
               onDelete={handleDeleteRoom}
             />
           ))}
-          {visibleLiveRooms.length === 0 && (
-            <div className="px-3 py-4 text-[10.5px] leading-relaxed text-[#a3a3a3]">
-              {t('hyperAgents.noRoomsInCategory', 'No rooms in this category yet.')}
-            </div>
-          )}
           {archivedRooms.length > 0 && (
             <details className="px-2 pt-3 text-[10px] text-[#a3a3a3]">
               <summary className="cursor-pointer hover:text-[#525252] flex items-center gap-1">
@@ -739,6 +771,145 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   );
 }
 
+function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
+  const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const DomainIcon = domain.icon;
+  const stages = DOMAIN_ROOM_STAGES[domain.key] || DOMAIN_ROOM_STAGES.general;
+  const profile = company?.profile || {};
+  const companyName = company?.company || 'Your company';
+  const facts = [
+    ['Mission', company?.mission],
+    ['What you do', profile.what_it_does],
+    ['Positioning', profile.positioning],
+    ['Audience', profile.icp],
+    ['Offer', profile.offer],
+  ].filter(([, value]) => typeof value === 'string' && value.trim());
+  const contextPrefix = [
+    `Company: ${companyName}.`,
+    company?.mission ? `Mission: ${company.mission}` : '',
+    profile.positioning ? `Positioning: ${profile.positioning}` : '',
+    profile.icp ? `Audience: ${profile.icp}` : '',
+    profile.offer ? `Offer: ${profile.offer}` : '',
+  ].filter(Boolean).join('\n');
+
+  return (
+    <div className="-mx-4 -mt-4 mb-6 border-b border-[#e3e0db] bg-white">
+      <section
+        className="min-h-[42vh] max-h-[520px] px-6 py-8 md:px-10 md:py-10 flex flex-col justify-between overflow-hidden border-b"
+        style={{ backgroundColor: `${domain.color}14`, borderColor: `${domain.color}35` }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase text-[#404040]">
+            <DomainIcon size={15} style={{ color: domain.color }} /> Company room
+          </span>
+          <button type="button" onClick={onEnter} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#404040] hover:text-[#0a0a0a]">
+            Enter discussion <ArrowRight size={13} />
+          </button>
+        </div>
+        <div
+          className="max-w-[880px] border px-5 py-5 md:px-7 md:py-6 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)]"
+          style={{ backgroundColor: 'rgba(255,255,255,0.72)', borderColor: `${domain.color}55`, backdropFilter: 'blur(18px)' }}
+        >
+          <p className="text-[11px] font-mono uppercase text-[#525252]">{companyName} · {domain.label}</p>
+          <h1 className="mt-3 text-[38px] md:text-[58px] leading-[1.02] font-semibold text-[#0a0a0a] break-words">
+            {domain.label}
+          </h1>
+          <p className="mt-4 max-w-[720px] text-[14px] md:text-[16px] leading-relaxed text-[#404040]">{domain.desc}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10.5px] font-mono text-[#525252]">
+          <span>{facts.length} company facts loaded</span>
+          <span>{Array.isArray(company?.research) ? company.research.length : 0} research signals</span>
+          <span>{Array.isArray(company?.team) ? company.team.length : 0} team members</span>
+        </div>
+      </section>
+
+      <section className="px-6 py-7 md:px-10 md:py-8 border-b border-[#e3e0db]">
+        <div className="max-w-[1080px]">
+          <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Company context</p>
+          <h2 className="mt-1 text-[20px] font-semibold text-[#0a0a0a]">What this Room already knows</h2>
+          <div className="mt-5 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+            {facts.map(([label, value]) => (
+              <div key={label} className="grid grid-cols-1 gap-1 py-3 md:grid-cols-[150px_1fr] md:gap-5">
+                <span className="text-[10px] font-mono uppercase text-[#737373]">{label}</span>
+                <span className="text-[12.5px] leading-relaxed text-[#262626]">{value}</span>
+              </div>
+            ))}
+            {facts.length === 0 && (
+              <div className="py-3 text-[12px] text-[#737373]">Company context will appear here after onboarding completes.</div>
+            )}
+          </div>
+          <div className="mt-7 grid grid-cols-1 gap-7 lg:grid-cols-2">
+            <div>
+              <h3 className="text-[11px] font-semibold text-[#262626]">Evidence already available</h3>
+              <div className="mt-2 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+                {(Array.isArray(company?.research) ? company.research : []).slice(0, 8).map((item, index) => (
+                  <div key={`${item?.url || item?.title || 'signal'}-${index}`} className="py-2.5">
+                    <p className="text-[11.5px] font-medium text-[#262626]">{item?.title || `Research signal ${index + 1}`}</p>
+                    {item?.snippet && <p className="mt-0.5 text-[10.5px] leading-relaxed text-[#737373] line-clamp-2">{item.snippet}</p>}
+                  </div>
+                ))}
+                {(!Array.isArray(company?.research) || company.research.length === 0) && (
+                  <div className="py-2.5 text-[11px] text-[#a3a3a3]">No external research has been filed yet.</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-[11px] font-semibold text-[#262626]">Team and company documents</h3>
+              <div className="mt-2 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+                {(Array.isArray(company?.team) ? company.team : []).map((member) => (
+                  <div key={member.id || member.name} className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[11.5px] font-medium text-[#262626]">{member.name}</span>
+                    <span className="text-[9.5px] font-mono uppercase text-[#737373] text-right">{member.role || 'Agent'}</span>
+                  </div>
+                ))}
+                {(Array.isArray(company?.documents) ? company.documents : []).map((document) => (
+                  <div key={document} className="flex items-center gap-2 py-2.5 text-[11px] text-[#525252]">
+                    <FileText size={11} style={{ color: domain.color }} /> {document}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-7 md:px-10 md:py-8">
+        <div className="max-w-[1080px]">
+          <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Suggested operating path</p>
+          <h2 className="mt-1 text-[20px] font-semibold text-[#0a0a0a]">Start with the next useful task</h2>
+          <div className="mt-5 border-y border-[#e3e0db] divide-y divide-[#e3e0db]">
+            {stages.map(([stage, title, detail, prompt], index) => (
+              <div key={title} className="grid grid-cols-[34px_1fr_auto] items-center gap-3 py-4">
+                <span
+                  className="h-7 w-7 flex items-center justify-center rounded-[6px] text-[10px] font-mono font-semibold border"
+                  style={{ color: domain.color, borderColor: `${domain.color}55`, backgroundColor: `${domain.color}12` }}
+                >
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-[9.5px] font-mono uppercase" style={{ color: domain.color }}>{stage}</span>
+                    <h3 className="text-[13px] font-semibold text-[#171717]">{title}</h3>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#737373]">{detail}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRun(`${contextPrefix}\n\nTask: ${prompt}`)}
+                  className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] text-white text-[10.5px] font-semibold hover:bg-[#262626] disabled:opacity-50"
+                >
+                  <ArrowUpRight size={12} /> Run
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
 
@@ -767,6 +938,8 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
+  const [companyContext, setCompanyContext] = useState(null);
+  const [showRoomIntro, setShowRoomIntro] = useState(true);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -925,6 +1098,30 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    apiClient.hyperCompany()
+      .then((data) => setCompanyContext(data?.company || null))
+      .catch(() => setCompanyContext(null));
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!room?.id) return;
+    if (isCampaignRoom || room.archivedAt || room.archived_at) {
+      setShowRoomIntro(false);
+      return;
+    }
+    try {
+      setShowRoomIntro(!window.localStorage.getItem(`hm-room-intro-${room.id}`));
+    } catch {
+      setShowRoomIntro(true);
+    }
+  }, [isCampaignRoom, room?.id, room?.archivedAt, room?.archived_at]);
+
+  const finishRoomIntro = useCallback(() => {
+    try { window.localStorage.setItem(`hm-room-intro-${roomId}`, '1'); } catch { /* noop */ }
+    setShowRoomIntro(false);
+  }, [roomId]);
 
   useEffect(() => {
     const campaignId = campaignReturnRef.current || room?.campaign_id || room?.campaignId;
@@ -1230,13 +1427,15 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     if (!room?.id) return;
     if (room.archived_at) return;  // no setup walkthrough on archived rooms
     if (isCampaignRoom) return;    // Campaign orchestration owns model and simulation choices.
+    if (showRoomIntro) return;     // Category welcome comes before advanced controls.
+    if (submitting || activeTurnId) return; // Never interrupt a task launched from the welcome surface.
     try {
       if (!window.localStorage.getItem(`hm-room-setup-${room.id}`)) {
         setSetupStep(0);
         setShowSetup(true);
       }
     } catch { /* noop */ }
-  }, [isCampaignRoom, room?.id, room?.archived_at]);
+  }, [activeTurnId, isCampaignRoom, room?.id, room?.archived_at, showRoomIntro, submitting]);
 
   function finishSetup() {
     try { window.localStorage.setItem(`hm-room-setup-${room?.id}`, '1'); } catch { /* noop */ }
@@ -1263,9 +1462,9 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     setAttachments(prev => prev.filter(a => a.id !== id));
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e, suggestedText = '') {
     e?.preventDefault?.();
-    const base = draft.trim();
+    const base = String(suggestedText || draft).trim();
     const doneAtts = attachments.filter(a => a.status === 'done');
     if (attachments.some(a => a.status === 'uploading')) return;   // wait for uploads
     if ((!base && doneAtts.length === 0) || submitting) return;
@@ -1282,6 +1481,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     const echo = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`)
       + (doneAtts.length ? `   📎 ${names}` : '');
     setSubmitting(true);
+    if (suggestedText) finishRoomIntro();
     pinnedRef.current = true;  // user just sent → pin to bottom so they see their message + the reply
     setLiveLines([]);
     setDraft('');
@@ -1503,6 +1703,8 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const participants = room.participants || [];
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
+  const roomDomain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const RoomDomainIcon = roomDomain.icon;
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -1532,11 +1734,12 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
             <div className="flex items-center gap-1.5 text-[#0a0a0a]">
               <Hash size={13} className="text-[#a3a3a3]" />
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
-              {room.room_tag && room.room_tag !== 'general' && (
-                <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
-                  {domainRoomLabel(room.room_tag)}
-                </span>
-              )}
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] border"
+                style={{ color: roomDomain.color, borderColor: `${roomDomain.color}55`, backgroundColor: `${roomDomain.color}12` }}
+              >
+                <RoomDomainIcon size={9} /> {roomDomain.label}
+              </span>
               {archived && (
                 <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
                   {t('hyperAgents.archived', 'archived')}
@@ -1899,6 +2102,15 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
 
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+          {showRoomIntro && (
+            <DomainRoomIntro
+              room={room}
+              company={companyContext}
+              busy={submitting}
+              onRun={(prompt) => handleSubmit(null, prompt)}
+              onEnter={finishRoomIntro}
+            />
+          )}
           {/* HQ control-room feed — agents reporting their room activity to you. */}
           {hqActivity.length > 0 && (
             <div className="space-y-2">
@@ -1912,7 +2124,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
               ))}
             </div>
           )}
-          {turns.length === 0 && hqActivity.length === 0 && (
+          {!showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>
