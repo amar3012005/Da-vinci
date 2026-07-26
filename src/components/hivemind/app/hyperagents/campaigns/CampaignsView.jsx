@@ -1,12 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, BarChart3, Loader2, Megaphone, Pause, Play, Plus, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import apiClient from '../../shared/api-client';
+import CampaignDashboardModal from './CampaignDashboardModal';
 import CampaignDetail from './CampaignDetail';
 import CreateCampaignWizard from './CreateCampaignWizard';
 
 const statusTone = { RUNNING: 'text-emerald-700 bg-emerald-50', COMPLETED: 'text-emerald-700 bg-emerald-50', FAILED: 'text-red-700 bg-red-50', NEEDS_INPUT: 'text-amber-800 bg-amber-50' };
 
+export function withCampaignSearchParam(searchParams, campaignId) {
+  const next = new URLSearchParams(searchParams);
+  if (campaignId) next.set('campaign', campaignId); else next.delete('campaign');
+  return next;
+}
+
 export default function CampaignsView() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCampaignId = searchParams.get('campaign');
   const [campaigns, setCampaigns] = useState([]); const [capabilities, setCapabilities] = useState(null);
   const [paidCampaigns, setPaidCampaigns] = useState([]);
   const [selected, setSelected] = useState(null); const [loading, setLoading] = useState(true); const [detailLoading, setDetailLoading] = useState(false);
@@ -31,12 +41,21 @@ export default function CampaignsView() {
   }, []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
+    if (!selectedCampaignId) { if (selected) setSelected(null); return; }
+    if (selected?.id === selectedCampaignId) return;
+    loadDetail(selectedCampaignId);
+  }, [selectedCampaignId, selected, loadDetail]);
+  useEffect(() => {
     if (!selected || !['GENERATING', 'RUNNING', 'SCHEDULED'].includes(selected.status)) return undefined;
     const timer = window.setInterval(() => loadDetail(selected.id, true), 5000); return () => window.clearInterval(timer);
   }, [selected, loadDetail]);
-  const open = (campaign) => { setSelected(campaign); loadDetail(campaign.id); };
-  const create = async (payload) => { const data = await apiClient.createCampaign(payload); setShowCreate(false); await load(); await loadDetail(data.campaign.id); };
-  const control = async (action) => { setBusy(true); setError(''); try { await apiClient.controlCampaign(selected.id, action); await loadDetail(selected.id); await load(); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
+  const setCampaignUrl = useCallback((campaignId, replace = false) => {
+    setSearchParams(withCampaignSearchParam(searchParams, campaignId), { replace });
+  }, [searchParams, setSearchParams]);
+  const closeCampaign = useCallback(() => { setSelected(null); setCampaignUrl(null, true); load(); }, [load, setCampaignUrl]);
+  const open = (campaign) => { setSelected(campaign); setCampaignUrl(campaign.id); loadDetail(campaign.id); };
+  const create = async (payload) => { const data = await apiClient.createCampaign(payload); setShowCreate(false); await load(); setCampaignUrl(data.campaign.id); await loadDetail(data.campaign.id); };
+  const control = async (action) => { setBusy(true); setError(''); try { await apiClient.controlCampaign(selected.id, action); await loadDetail(selected.id); await load(); return true; } catch (err) { setError(err?.response?.data?.message || err.message); return false; } finally { setBusy(false); } };
   const approveAction = async (actionId) => { setBusy(true); setError(''); try { await apiClient.approveCampaignAction(selected.id, actionId); await loadDetail(selected.id); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
   const controlAction = async (actionId, action) => { setBusy(true); setError(''); try { await apiClient.controlCampaignAction(selected.id, actionId, action); await loadDetail(selected.id); await load(); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
   const editAction = async (actionId, payload) => { setBusy(true); setError(''); try { await apiClient.editCampaignAction(selected.id, actionId, payload); await loadDetail(selected.id); await load(); } catch (err) { setError(err?.response?.data?.message || err.message); throw err; } finally { setBusy(false); } };
@@ -48,7 +67,6 @@ export default function CampaignsView() {
     window.location.assign(channel === 'tara' ? '/hivemind/app/tara' : '/hivemind/app/connectors');
   };
   const totals = useMemo(() => ({ running: campaigns.filter((x) => ['RUNNING', 'SCHEDULED'].includes(x.status)).length, actions: campaigns.reduce((n, x) => n + Number(x._count?.actions || 0), 0) }), [campaigns]);
-  if (selected) return <CampaignDetail campaign={selected} loading={detailLoading} onBack={() => { setSelected(null); load(); }} onControl={control} onApproveAction={approveAction} onRetryAction={(id) => controlAction(id, 'retry')} onReconcileAction={(id) => controlAction(id, 'reconcile')} onEditAction={editAction} onRemoveAction={removeAction} onRegenerate={regenerate} busy={busy} executionEnabled={Boolean(capabilities?.execution_enabled)} />;
   return <div className="h-full overflow-y-auto bg-[#fbfaf6]">
     <header className="px-4 sm:px-7 py-5 border-b border-[#dfdbd4] flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="flex items-center gap-2"><Megaphone size={17} /><h1 className="text-[18px] font-semibold">Your Campaigns</h1><span className="text-[9px] font-mono uppercase bg-[#ece9e3] rounded px-1.5 py-0.5">AI operated</span></div><p className="text-[11px] text-[#77716a] mt-1">One goal, one Campaign Room, coordinated execution across your connected channels.</p></div><div className="flex gap-2"><button onClick={load} disabled={loading} className="w-9 h-9 border border-[#c9c3bb] rounded-md grid place-items-center" title="Refresh"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} /></button><button onClick={() => setShowCreate(true)} disabled={!capabilities?.enabled} className="h-9 px-4 bg-[#171717] text-white rounded-md inline-flex items-center gap-1.5 text-[11.5px] font-semibold disabled:bg-[#bcb6ae]"><Plus size={13} />Create campaign</button></div></header>
     <main className="px-4 sm:px-7 py-6">
@@ -59,6 +77,9 @@ export default function CampaignsView() {
       </div>
       {paidCampaigns.length ? <section className="mt-9"><div className="flex items-center justify-between pb-2 border-b border-[#d8d3cc]"><div><h2 className="text-[12px] font-semibold">Paid X campaigns</h2><p className="text-[10px] text-[#817b74] mt-0.5">Existing Ads API campaigns remain independently controlled.</p></div></div>{paidCampaigns.map((campaign) => <div key={campaign.id} className="grid grid-cols-[1fr_110px_90px] gap-3 items-center py-3 border-b border-[#e6e2dc]"><div className="min-w-0"><div className="text-[12px] font-semibold truncate">{campaign.name}</div><div className="text-[10px] text-[#817b74] mt-0.5">{campaign.metrics?.impressions || 0} impressions · {campaign.metrics?.url_clicks || 0} link clicks</div></div><span className="text-[9px] font-mono uppercase">{campaign.status}</span><div className="flex justify-end gap-1">{['ACTIVE', 'PENDING_REVIEW'].includes(campaign.status) ? <button onClick={() => controlPaid(campaign.id, 'pause')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Pause paid campaign"><Pause size={12} /></button> : null}{campaign.status === 'PAUSED' ? <button onClick={() => controlPaid(campaign.id, 'resume')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Resume paid campaign"><Play size={12} /></button> : null}<button onClick={() => controlPaid(campaign.id, 'sync')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Refresh paid performance"><RefreshCw size={12} /></button></div></div>)}</section> : null}
     </main>
+    {selected || (selectedCampaignId && detailLoading) ? <CampaignDashboardModal campaign={selected} loading={detailLoading} onClose={closeCampaign}>
+      {selected ? <CampaignDetail campaign={selected} loading={detailLoading} onBack={closeCampaign} onControl={control} onApproveAction={approveAction} onRetryAction={(id) => controlAction(id, 'retry')} onReconcileAction={(id) => controlAction(id, 'reconcile')} onEditAction={editAction} onRemoveAction={removeAction} onRegenerate={regenerate} busy={busy} executionEnabled={Boolean(capabilities?.execution_enabled)} /> : null}
+    </CampaignDashboardModal> : null}
     {showCreate ? <CreateCampaignWizard capabilities={capabilities} onClose={() => setShowCreate(false)} onCreate={create} onConnect={connect} /> : null}
   </div>;
 }
