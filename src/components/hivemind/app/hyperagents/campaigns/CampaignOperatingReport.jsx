@@ -134,7 +134,7 @@ export function normalizeCampaignReport(report) {
   actions.flatMap((action) => action.evidence).forEach((item, index) => evidence.push({
     id: `action-evidence-${index + 1}`, claim: String(item), source: 'Campaign action', status: 'verified', url: '',
   }));
-  const risks = [...audience.safetyNotes, ...asArray(bundle.safety?.guardrails || bundle.safety?.notes || bundle.safety), ...asArray(bundle.risks), ...asArray(bundle.prohibited_claims)]
+  const risks = [...audience.safetyNotes, ...asArray(bundle.safety?.guardrails || bundle.safety?.notes || bundle.safety), ...asArray(bundle.safety?.prohibited_claims), ...asArray(bundle.risks), ...asArray(bundle.prohibited_claims)]
     .map((item) => textFrom(item, ['title', 'risk', 'description', 'note']) || String(item));
   const qualityChecks = bundle.quality_gate?.checks && typeof bundle.quality_gate.checks === 'object' ? bundle.quality_gate.checks : {};
   const launchChecklist = normalizeRows(bundle.launch_checklist || bundle.launchChecklist, ['title', 'item', 'name'], ['detail', 'status', 'owner']);
@@ -168,7 +168,12 @@ export function normalizeCampaignReport(report) {
     decisions: normalizeRows(bundle.debate_decisions || bundle.debate?.decisions || bundle.decisions, ['decision', 'title', 'topic'], ['rationale', 'reason', 'outcome']),
     evidence,
     risks: [...new Set(risks.filter(Boolean))],
-    kpis: normalizeRows(bundle.kpis, ['name', 'metric', 'title'], ['target', 'source', 'definition']),
+    kpis: asArray(bundle.kpis).map((item) => ({
+      title: textFrom(item, ['name', 'metric', 'title']) || String(item),
+      detail: item && typeof item === 'object'
+        ? [textFrom(item, ['target']), textFrom(item, ['source']), textFrom(item, ['definition'])].filter(Boolean).join(' · ')
+        : '',
+    })),
     measurement: {
       primary: textFrom(bundle.measurement, ['primary_kpi']),
       attribution: textFrom(bundle.measurement, ['attribution_limit']),
@@ -297,6 +302,8 @@ export default function CampaignOperatingReport({ report, taskTitle, surface = '
     <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={ShieldCheck} title="Launch readiness" note="A compact final check before anything is published." /><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{data.launchChecklist.map((item) => <div key={item.title} className="flex items-start gap-2 py-1">{item.complete ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.green }} /> : <Circle size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.gold }} />}<div><div className="text-[11.5px] font-semibold">{item.title}</div>{item.detail ? <div className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.detail}</div> : null}</div></div>)}</div></section>
 
     <DetailDisclosure title="Room decisions" count={data.decisions.length}><div className="space-y-3">{data.decisions.map((item) => <div key={item.title}><p className="text-[12px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-1 text-[11px] leading-5" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></DetailDisclosure>
+    <DetailDisclosure title="Company grounding" count={data.companyFacts.length + data.companyUnknowns.length}><div className="grid gap-5 sm:grid-cols-2"><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.green }}>Facts used</div><div className="mt-2 space-y-2">{data.companyFacts.map((fact) => <p key={fact} className="border-l-2 pl-3 text-[11px] leading-5" style={{ borderColor: COLORS.green }}>{fact}</p>)}</div></div><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.gold }}>Unknowns retained</div><div className="mt-2 space-y-2">{data.companyUnknowns.map((item) => <p key={item} className="border-l-2 pl-3 text-[11px] leading-5" style={{ borderColor: COLORS.gold }}>{item}</p>)}</div></div></div></DetailDisclosure>
+    <DetailDisclosure title="KPI contract" count={data.kpis.length}><div className="grid gap-px overflow-hidden rounded-md border sm:grid-cols-2" style={{ borderColor: COLORS.line, background: COLORS.line }}>{data.kpis.map((item) => <div key={item.title} className="bg-white p-3"><p className="text-[11.5px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-1 text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></DetailDisclosure>
     <DetailDisclosure title="Risks and assumptions" count={data.risks.length + data.assumptions.length}><div className="grid gap-4 sm:grid-cols-2"><div>{data.risks.map((risk) => <p key={risk} className="mb-2 border-l-2 pl-3 text-[11px] leading-5 last:mb-0" style={{ borderColor: COLORS.red }}>{risk}</p>)}</div><div>{data.assumptions.map((item) => <div key={item.title} className="mb-2 last:mb-0"><p className="text-[11px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-0.5 text-[10px]" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></div></DetailDisclosure>
   </div>;
 }

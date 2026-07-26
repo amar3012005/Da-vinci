@@ -39,7 +39,6 @@ import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
 import CampaignsView from '../hyperagents/CampaignsView';
-import CampaignRoomExperience from '../hyperagents/campaigns/CampaignRoomExperience';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
@@ -71,26 +70,6 @@ const ROOM_CONNECTORS = [
   { id: 'airtable', label: 'Airtable', color: '#2d7ff9', desc: 'Bases & records' },
   { id: 'linear', label: 'Linear', color: '#5e6ad2', desc: 'Issues & projects' },
 ];
-
-function textFromCampaignTurn(value) {
-  const text = String(value || '');
-  const match = text.match(/^Create a ([^\n]+?) campaign for this goal:/i);
-  return match ? `${match[1].replace(/\b\w/g, (letter) => letter.toUpperCase())} campaign` : 'Campaign Room';
-}
-
-function goalFromCampaignTurn(value) {
-  const text = String(value || '');
-  const match = text.match(/^Create a [^\n]+? campaign for this goal:\s*([^\n]+)/i);
-  return match?.[1]?.trim() || text.split('\n')[0].trim();
-}
-
-function channelsFromCampaignTurn(value) {
-  const match = String(value || '').match(/Prepare the campaign for ([^\n.]+)[.]/i);
-  const labels = match?.[1]?.split(',').map((item) => item.trim().toLowerCase()) || [];
-  const channelIds = { x: 'x_organic', email: 'gmail', tara: 'tara' };
-  return labels.map((label) => channelIds[label]).filter(Boolean);
-}
-
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
 
@@ -865,7 +844,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    const campaignId = campaignReturnRef.current;
+    const campaignId = campaignReturnRef.current || room?.campaign_id || room?.campaignId;
     if (!campaignId || !onCampaignReady) return undefined;
     let active = true;
     const checkCampaign = async () => {
@@ -883,7 +862,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     checkCampaign();
     const timer = window.setInterval(checkCampaign, 4000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [onCampaignReady, roomId]);
+  }, [onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
 
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
@@ -2338,6 +2317,9 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const isCampaignTurn = roomKind === 'campaign'
     || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
     || /^Create a [^\n]+? campaign for this goal:/i.test(turn.userMessage || turn.user_message || '');
+  const campaignBundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
+  const campaignBundle = campaignBundleLine?.bundle || null;
+  const campaignInvalid = [...lines].reverse().find((line) => line.t === 'campaign_bundle_invalid');
   if (campaignHandoff || campaignHandoffFailed) {
     return (
       <div className="space-y-3">
@@ -2368,25 +2350,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
       </div>
     );
   }
-  if (isCampaignTurn) {
-    const bundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
-    const bundle = bundleLine?.bundle || finalReport?.bundle || finalReport?.report?.bundle || null;
-    const reportMarkdown = finalReport?.content || finalReport?.report || synthLine?.content || '';
-    const requestedChannels = bundle?.actions
-      ? [...new Set(bundle.actions.map((action) => action?.channel).filter(Boolean))]
-      : channelsFromCampaignTurn(turn.userMessage || turn.user_message || '');
-    const campaign = {
-      name: textFromCampaignTurn(turn.userMessage || turn.user_message || '') || 'Campaign Room',
-      goal: goalFromCampaignTurn(turn.userMessage || turn.user_message || ''),
-      requestedChannels,
-      status: bundle || finalReport ? 'READY_FOR_APPROVAL' : errorLine ? 'FAILED' : 'GENERATING',
-      roomTranscript: [{ lines }],
-      planVersions: bundle || reportMarkdown ? [{ bundle, reportMarkdown }] : [],
-    };
-    const CampaignReport = reportViewFor('campaign');
-    return <CampaignRoomExperience campaign={campaign} ReportComponent={CampaignReport} />;
-  }
-
   return (
     <div className="space-y-2">
       {/* User bubble */}
@@ -2781,7 +2744,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </>
       )}
 
-      {synthLine && (() => {
+      {synthLine && !isCampaignTurn && (() => {
         // Report-card chrome around the deliverable: WHO wrote it (lead + the team),
         // whether the recon pass VERIFIED it as grounded, and the turn's true cost —
         // so the final card reads like a signed-off report, not an anonymous blob.
@@ -2936,10 +2899,17 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         // Per-kind report view (P3) if the kind registers one; else the default
         // FinalReportCard. Registry falls back to null, so behavior is unchanged
         // until a kind ships its dedicated view.
-        const KindReport = reportViewFor(roomKind);
+        const KindReport = reportViewFor(isCampaignTurn ? 'campaign' : roomKind);
+        if (isCampaignTurn && !campaignBundle) {
+          const errors = Array.isArray(campaignInvalid?.errors) ? campaignInvalid.errors : [];
+          return <section className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50/60" aria-label="Campaign plan needs refinement">
+            <div className="border-b border-amber-200 px-4 py-3"><div className="flex items-center gap-2 text-[11px] font-semibold text-amber-900"><AlertTriangle size={14} />Campaign plan needs refinement</div><p className="mt-1 text-[10.5px] leading-5 text-amber-800">The Room did not submit an executable campaign contract, so no plan was marked ready and nothing was published.</p></div>
+            {errors.length ? <div className="px-4 py-3"><div className="text-[9px] font-mono uppercase text-amber-700">Contract checks</div><ul className="mt-2 space-y-1 text-[10.5px] leading-5 text-amber-900">{errors.slice(0, 8).map((item) => <li key={item}>• {item}</li>)}</ul></div> : null}
+          </section>;
+        }
         return KindReport ? (
           <KindReport
-            report={finalReport}
+            report={isCampaignTurn ? { ...finalReport, bundle: campaignBundle } : finalReport}
             roomKind={roomKind}
             webSources={webIntel?.sources || []}
             prospectHunts={prospectHunts}
