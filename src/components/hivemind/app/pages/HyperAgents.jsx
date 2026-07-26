@@ -119,7 +119,7 @@ const ROOM_FORMATS = [
 // Expertise and collaboration are orthogonal. `room_tag` selects a versioned
 // Director/skills/toolkit/report pack; `template` still selects how agents work.
 const DOMAIN_ROOMS = [
-  { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Flexible room with the existing general behavior.' },
+  { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Your company command center for cross-functional priorities, decisions, and execution.' },
   { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
   { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
   { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
@@ -710,6 +710,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   const participants = room.participants || [];
   const projectLabel = room.project?.name || room.project?.slug || null;
   const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const domainLabel = room.is_domain_home && domain.key === 'general' ? 'HQ' : domain.label;
   const DomainIcon = domain.icon;
   return (
     <div
@@ -733,7 +734,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
         </div>
         <div className="flex items-center gap-1 mt-0.5 text-[9px] text-[#a3a3a3] font-mono">
           <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase" style={{ color: domain.color }}>
-            <DomainIcon size={9} /> {domain.label}
+            <DomainIcon size={9} /> {domainLabel}
           </span>
           <span className="text-[#d4d0ca]">·</span>
           {participants.slice(0, 4).map(p => (
@@ -1718,6 +1719,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
   const roomDomain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
   const RoomDomainIcon = roomDomain.icon;
+  const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -1751,7 +1753,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                 className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] border"
                 style={{ color: roomDomain.color, borderColor: `${roomDomain.color}55`, backgroundColor: `${roomDomain.color}12` }}
               >
-                <RoomDomainIcon size={9} /> {roomDomain.label}
+                <RoomDomainIcon size={9} /> {roomDomainLabel}
               </span>
               {archived && (
                 <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">

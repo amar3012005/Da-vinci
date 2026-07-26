@@ -13,6 +13,7 @@ describe('HyperAgents live turn adoption', () => {
     ['general', 'seo', 'marketing', 'branding', 'fundraising', 'research', 'product', 'design', 'legal_finance']
       .forEach((roomTag) => expect(source).toContain(`key: '${roomTag}'`));
     expect(source).toContain("t('hyperAgents.companyRooms', 'Company rooms')");
+    expect(source).toContain("domain.key === 'general' ? 'HQ' : domain.label");
     expect(source).toContain("t('hyperAgents.workRooms', 'Work rooms')");
     expect(source).toContain('domainHomeRooms.map');
     expect(source).toContain('workRooms.map');
