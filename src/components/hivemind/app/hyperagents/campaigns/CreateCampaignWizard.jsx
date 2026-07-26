@@ -26,10 +26,13 @@ const SUCCESS_METRICS = {
 };
 
 export function deriveCampaignPayload(form, capabilities, idempotencyKey, timezone = 'UTC') {
-  const readyChannels = (capabilities?.channels || [])
+  const availableChannels = (capabilities?.channels || [])
     .filter((channel) => V1_CHANNELS.has(channel.id) && channel.executable)
     .map((channel) => channel.id);
-  const channels = form.channels.length ? form.channels : readyChannels;
+  const launchReadyChannels = (capabilities?.channels || [])
+    .filter((channel) => V1_CHANNELS.has(channel.id) && channel.execution_ready)
+    .map((channel) => channel.id);
+  const channels = form.channels.length ? form.channels : (launchReadyChannels.length ? launchReadyChannels : availableChannels);
   return {
     name: '',
     objective: form.objective,
@@ -92,7 +95,7 @@ export default function CreateCampaignWizard({ capabilities, onClose, onCreate, 
         </section>
 
         <section className="mt-6">
-          <div className="flex items-baseline justify-between gap-3"><h3 className="text-[11px] font-semibold text-[#34312e]">Channels <span className="font-normal text-[#817b74]">(optional)</span></h3><span className="text-[9.5px] text-[#817b74]">Leave blank to use every ready channel</span></div>
+          <div className="flex items-baseline justify-between gap-3"><h3 className="text-[11px] font-semibold text-[#34312e]">Channels <span className="font-normal text-[#817b74]">(optional)</span></h3><span className="text-[9.5px] text-[#817b74]">Leave blank to use channels ready to launch</span></div>
           {readyChannels.length ? <div className="mt-3 flex flex-wrap gap-2">{readyChannels.map((channel) => {
             const active = selected.has(channel.id);
             return <button key={channel.id} type="button" onClick={() => patch('channels', active ? form.channels.filter((id) => id !== channel.id) : [...form.channels, channel.id])} className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-[11px] font-semibold ${active ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#c9c3bb] bg-white text-[#45413d]'}`} aria-pressed={active}>{active ? <Check size={12} /> : null}{CHANNEL_NAMES[channel.id]}</button>;

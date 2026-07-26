@@ -15,7 +15,7 @@ describe('campaign dashboard shell', () => {
       { channels: [
         { id: 'x_organic', executable: true, execution_ready: true },
         { id: 'gmail', executable: true, execution_ready: true },
-        { id: 'tara', executable: false, execution_ready: false },
+        { id: 'tara', executable: true, execution_ready: false },
         { id: 'x_ads', executable: true, execution_ready: true },
       ] },
       'create-key',
