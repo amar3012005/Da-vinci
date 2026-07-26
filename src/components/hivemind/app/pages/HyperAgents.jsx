@@ -116,6 +116,21 @@ const ROOM_FORMATS = [
     descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
 ];
 
+// Expertise and collaboration are orthogonal. `room_tag` selects a versioned
+// Director/skills/toolkit/report pack; `template` still selects how agents work.
+const DOMAIN_ROOMS = [
+  { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Flexible room with the existing general behavior.' },
+  { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
+  { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
+  { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
+  { key: 'fundraising', label: 'Fundraising', icon: CreditCard, color: '#4338ca', desc: 'Investor narrative, readiness, targeting, and process.' },
+  { key: 'research', label: 'Research', icon: FileText, color: '#0369a1', desc: 'Source-backed investigation and decision evidence.' },
+  { key: 'product', label: 'Product', icon: Rocket, color: '#0f766e', desc: 'Discovery, requirements, prioritization, and rollout.' },
+  { key: 'design', label: 'Design', icon: LayoutGrid, color: '#be185d', desc: 'User flows, interaction systems, and accessibility.' },
+  { key: 'legal_finance', label: 'Legal & Finance', icon: Scale, color: '#4a3550', desc: 'Contracts, compliance, financial analysis, and controls.' },
+];
+const domainRoomLabel = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key)?.label || key;
+
 const SYNTHESIS_PRESENTATIONS = {
   RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
   OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
@@ -130,6 +145,13 @@ const SYNTHESIS_PRESENTATIONS = {
   outreach: { label: 'Outreach desk',    accent: '#be185d', soft: '#fdf2f8', icon: Send,     note: 'ICP, ranked prospects, sequence, and signals' },
   business: { label: 'Operating desk',   accent: '#0369a1', soft: '#f0f9ff', icon: Gauge,    note: 'Unit economics, pricing, risks, and the fatal metric' },
   strategy: { label: 'Decision memo',    accent: '#4338ca', soft: '#eef2ff', icon: Gavel,    note: 'Options scored, decision taken, tripwire set' },
+  seo: { label: 'SEO operating report', accent: '#047857', soft: '#ecfdf5', icon: Search, note: 'Search opportunity, priorities, execution, and measurement' },
+  marketing: { label: 'Marketing operating report', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Audience, channels, ready assets, calendar, and experiments' },
+  branding: { label: 'Brand operating report', accent: '#9d174d', soft: '#fdf2f8', icon: Eye, note: 'Positioning, messaging, voice, visual direction, and activation' },
+  fundraising: { label: 'Fundraising operating report', accent: '#4338ca', soft: '#eef2ff', icon: CreditCard, note: 'Readiness, investor narrative, fit, process, and risk' },
+  product: { label: 'Product operating report', accent: '#0f766e', soft: '#ecfdf5', icon: Rocket, note: 'Decision, users, requirements, delivery, and measurement' },
+  design: { label: 'Design operating report', accent: '#be185d', soft: '#fdf2f8', icon: LayoutGrid, note: 'Experience, flow, components, states, and validation' },
+  legal_finance: { label: 'Legal & Finance report', accent: '#4a3550', soft: '#f5f3ff', icon: Scale, note: 'Sources, analysis, exposure, controls, and review gates' },
   general:  { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
 };
 
@@ -614,6 +636,11 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="text-[12px] font-semibold text-[#0a0a0a] truncate">{room.name}</div>
+          {room.room_tag && room.room_tag !== 'general' && (
+            <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252] text-[8px] font-mono uppercase tracking-wider">
+              {domainRoomLabel(room.room_tag)}
+            </span>
+          )}
           {projectLabel && (
             <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#117dff]/10 text-[#117dff] text-[8px] font-mono uppercase tracking-wider max-w-[86px] truncate">
               <FolderOpen size={8} /> {projectLabel}
@@ -1449,6 +1476,11 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
             <div className="flex items-center gap-1.5 text-[#0a0a0a]">
               <Hash size={13} className="text-[#a3a3a3]" />
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
+              {room.room_tag && room.room_tag !== 'general' && (
+                <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
+                  {domainRoomLabel(room.room_tag)}
+                </span>
+              )}
               {archived && (
                 <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
                   {t('hyperAgents.archived', 'archived')}
@@ -2292,7 +2324,11 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const skillUses = lines.filter(l => l.t === 'skill_used');
   // Room kind for the sealed report's desk identity — already emitted on every
   // skill_used event; old turns without it fall back to the task-tag alias.
-  const roomKind = (skillUses.find(sk => sk.room_kind) || {}).room_kind || '';
+  const domainPack = lines.find(l => l.t === 'domain_pack');
+  const roomKind = domainPack?.room_kind
+    || (skillUses.find(sk => sk.room_kind) || {}).room_kind
+    || router?.room_kind
+    || '';
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
@@ -3446,6 +3482,7 @@ function CreateRoomModal({ onClose, onCreated }) {
   // Default to Smart (auto) — the orchestrator picks the best format from the
   // first question. No-code users never have to understand the 10 templates.
   const [template, setTemplate] = useState('auto');
+  const [roomTag, setRoomTag] = useState('general');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [skepticId, setSkepticId] = useState('');
@@ -3510,6 +3547,7 @@ function CreateRoomModal({ onClose, onCreated }) {
         goal: goal.trim(),
         participant_ids: Array.from(picked),
         template,
+        room_tag: roomTag,
       };
       if (template === 'swarm' && skepticId) {
         payload.permanent_skeptic_id = skepticId;
@@ -3600,6 +3638,33 @@ function CreateRoomModal({ onClose, onCreated }) {
               {/* ───────── STEP 1 — Room ───────── */}
               {step === 1 && (
                 <div className="space-y-5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2 block">Room expertise</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {DOMAIN_ROOMS.map((domain) => {
+                        const Icon = domain.icon;
+                        const on = roomTag === domain.key;
+                        return (
+                          <button
+                            type="button"
+                            key={domain.key}
+                            onClick={() => {
+                              setRoomTag(domain.key);
+                              if (!name.trim() && domain.key !== 'general') setName(`${domain.label} room`);
+                            }}
+                            title={domain.desc}
+                            className={`min-h-[86px] text-left p-3 rounded-[8px] border transition-colors ${on ? 'border-[#117dff] bg-[#117dff]/[0.04]' : 'border-[#e3e0db] bg-white hover:border-[#d4d0ca]'}`}
+                          >
+                            <span className="w-7 h-7 rounded-[6px] flex items-center justify-center mb-2" style={{ background: `${domain.color}16`, color: domain.color }}>
+                              <Icon size={14} />
+                            </span>
+                            <span className="block text-[12.5px] font-semibold text-[#171717]">{domain.label}</span>
+                            <span className="block mt-0.5 text-[10px] leading-snug text-[#737373]">{domain.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div>
                     <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
                     <input
