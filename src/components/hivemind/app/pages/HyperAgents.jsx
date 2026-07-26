@@ -479,7 +479,7 @@ export default function HyperAgents() {
             <span>{t('hyperAgents.allRooms', 'All rooms')}</span>
             <span className={`ml-auto font-mono text-[9px] ${roomCategory === 'all' ? 'text-white/70' : 'text-[#a3a3a3]'}`}>{liveRooms.length}</span>
           </button>
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-1 gap-0.5">
             {DOMAIN_ROOMS.map((domain) => {
               const Icon = domain.icon;
               const active = roomCategory === domain.key;
@@ -489,11 +489,11 @@ export default function HyperAgents() {
                   key={domain.key}
                   onClick={() => setRoomCategory(domain.key)}
                   title={`${domain.label}: ${domain.desc}`}
-                  className={`min-w-0 h-8 px-2 flex items-center gap-1.5 rounded-[6px] border text-[9.5px] font-semibold transition-colors ${active ? 'bg-white text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:bg-white hover:text-[#0a0a0a]'}`}
+                  className={`min-w-0 h-7 px-2 flex items-center gap-2 rounded-[6px] border text-[10px] font-semibold transition-colors ${active ? 'bg-white text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:bg-white hover:text-[#0a0a0a]'}`}
                   style={active ? { borderColor: domain.color } : undefined}
                 >
                   <Icon size={11} style={{ color: domain.color }} className="shrink-0" />
-                  <span className="truncate">{domain.label}</span>
+                  <span>{domain.label}</span>
                   <span className="ml-auto font-mono text-[8.5px] text-[#a3a3a3]">{roomCategoryCounts[domain.key] || 0}</span>
                 </button>
               );
