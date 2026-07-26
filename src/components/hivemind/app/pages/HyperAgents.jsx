@@ -129,7 +129,8 @@ const DOMAIN_ROOMS = [
   { key: 'design', label: 'Design', icon: LayoutGrid, color: '#be185d', desc: 'User flows, interaction systems, and accessibility.' },
   { key: 'legal_finance', label: 'Legal & Finance', icon: Scale, color: '#4a3550', desc: 'Contracts, compliance, financial analysis, and controls.' },
 ];
-const domainRoomLabel = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key)?.label || key;
+const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
+const domainRoomLabel = (key) => domainRoomDefinition(key).label;
 
 const SYNTHESIS_PRESENTATIONS = {
   RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
@@ -227,6 +228,7 @@ export default function HyperAgents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [roomCategory, setRoomCategory] = useState('all');
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
   // | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
   // The URL is the source of truth on mount/deep-link; goMode() keeps it in
@@ -313,6 +315,19 @@ export default function HyperAgents() {
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
+  const roomCategoryCounts = useMemo(() => {
+    const counts = Object.fromEntries(DOMAIN_ROOMS.map(domain => [domain.key, 0]));
+    liveRooms.forEach((room) => {
+      const key = room.room_tag || room.roomTag || 'general';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  }, [liveRooms]);
+  const visibleLiveRooms = useMemo(() => (
+    roomCategory === 'all'
+      ? liveRooms
+      : liveRooms.filter(room => (room.room_tag || room.roomTag || 'general') === roomCategory)
+  ), [liveRooms, roomCategory]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
   // A brand-new org (no rooms yet, never onboarded/skipped) gets the
@@ -451,11 +466,46 @@ export default function HyperAgents() {
           </button>
         </div>
 
+        <nav className="px-2 pt-3 pb-2 border-b border-[#e3e0db]" aria-label="Room categories">
+          <div className="px-1 pb-1.5 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+            {t('hyperAgents.roomCategories', 'Room categories')}
+          </div>
+          <button
+            type="button"
+            onClick={() => setRoomCategory('all')}
+            className={`w-full h-8 mb-1.5 px-2 flex items-center gap-2 rounded-[6px] border text-[10.5px] font-semibold transition-colors ${roomCategory === 'all' ? 'bg-[#0a0a0a] border-[#0a0a0a] text-white' : 'bg-white border-[#e3e0db] text-[#525252] hover:text-[#0a0a0a]'}`}
+          >
+            <LayoutGrid size={12} />
+            <span>{t('hyperAgents.allRooms', 'All rooms')}</span>
+            <span className={`ml-auto font-mono text-[9px] ${roomCategory === 'all' ? 'text-white/70' : 'text-[#a3a3a3]'}`}>{liveRooms.length}</span>
+          </button>
+          <div className="grid grid-cols-2 gap-1">
+            {DOMAIN_ROOMS.map((domain) => {
+              const Icon = domain.icon;
+              const active = roomCategory === domain.key;
+              return (
+                <button
+                  type="button"
+                  key={domain.key}
+                  onClick={() => setRoomCategory(domain.key)}
+                  title={`${domain.label}: ${domain.desc}`}
+                  className={`min-w-0 h-8 px-2 flex items-center gap-1.5 rounded-[6px] border text-[9.5px] font-semibold transition-colors ${active ? 'bg-white text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:bg-white hover:text-[#0a0a0a]'}`}
+                  style={active ? { borderColor: domain.color } : undefined}
+                >
+                  <Icon size={11} style={{ color: domain.color }} className="shrink-0" />
+                  <span className="truncate">{domain.label}</span>
+                  <span className="ml-auto font-mono text-[8.5px] text-[#a3a3a3]">{roomCategoryCounts[domain.key] || 0}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-            {t('hyperAgents.rooms', 'Rooms')}
+            {roomCategory === 'all' ? t('hyperAgents.rooms', 'Rooms') : domainRoomLabel(roomCategory)}
           </div>
-          {liveRooms.map(r => (
+          {visibleLiveRooms.map(r => (
             <RoomRow
               key={r.id}
               room={r}
@@ -464,6 +514,11 @@ export default function HyperAgents() {
               onDelete={handleDeleteRoom}
             />
           ))}
+          {visibleLiveRooms.length === 0 && (
+            <div className="px-3 py-4 text-[10.5px] leading-relaxed text-[#a3a3a3]">
+              {t('hyperAgents.noRoomsInCategory', 'No rooms in this category yet.')}
+            </div>
+          )}
           {archivedRooms.length > 0 && (
             <details className="px-2 pt-3 text-[10px] text-[#a3a3a3]">
               <summary className="cursor-pointer hover:text-[#525252] flex items-center gap-1">
@@ -622,6 +677,8 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   const { t } = useTranslation('dashboard');
   const participants = room.participants || [];
   const projectLabel = room.project?.name || room.project?.slug || null;
+  const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const DomainIcon = domain.icon;
   return (
     <div
       role="button"
@@ -636,11 +693,6 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="text-[12px] font-semibold text-[#0a0a0a] truncate">{room.name}</div>
-          {room.room_tag && room.room_tag !== 'general' && (
-            <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#f3f1ec] text-[#525252] text-[8px] font-mono uppercase tracking-wider">
-              {domainRoomLabel(room.room_tag)}
-            </span>
-          )}
           {projectLabel && (
             <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#117dff]/10 text-[#117dff] text-[8px] font-mono uppercase tracking-wider max-w-[86px] truncate">
               <FolderOpen size={8} /> {projectLabel}
@@ -648,6 +700,10 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
           )}
         </div>
         <div className="flex items-center gap-1 mt-0.5 text-[9px] text-[#a3a3a3] font-mono">
+          <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase" style={{ color: domain.color }}>
+            <DomainIcon size={9} /> {domain.label}
+          </span>
+          <span className="text-[#d4d0ca]">·</span>
           {participants.slice(0, 4).map(p => (
             <AgentAvatar key={p.id} agent={p} size={18} />
           ))}
@@ -3482,7 +3538,7 @@ function CreateRoomModal({ onClose, onCreated }) {
   // Default to Smart (auto) — the orchestrator picks the best format from the
   // first question. No-code users never have to understand the 10 templates.
   const [template, setTemplate] = useState('auto');
-  const [roomTag, setRoomTag] = useState('general');
+  const [roomTag, setRoomTag] = useState('');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [skepticId, setSkepticId] = useState('');
@@ -3529,7 +3585,7 @@ function CreateRoomModal({ onClose, onCreated }) {
     { n: 2, label: t('hyperAgents.stepFlow', 'Collaboration'), icon: Network },
     { n: 3, label: t('hyperAgents.stepAgents', 'Agents'), icon: Users },
   ];
-  const step1Valid = !!name.trim() && !!goal.trim() && scopeReady;
+  const step1Valid = !!roomTag && !!name.trim() && !!goal.trim() && scopeReady;
   const step3Valid = picked.size > 0;
   const canCreate = step1Valid && step3Valid && !busy;
   const stepValid = step === 1 ? step1Valid : step === 3 ? step3Valid : true;
@@ -3640,6 +3696,7 @@ function CreateRoomModal({ onClose, onCreated }) {
                 <div className="space-y-5">
                   <div>
                     <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2 block">Room expertise</label>
+                    <p className="text-[10.5px] text-[#737373] -mt-1 mb-2.5">Choose the operating specialty that controls this Room's skills, toolkit, and final report.</p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {DOMAIN_ROOMS.map((domain) => {
                         const Icon = domain.icon;
