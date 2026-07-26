@@ -1645,6 +1645,21 @@ class HiveMindApiClient {
     return data;
   }
 
+  async editCampaignAction(id, actionId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/campaigns/${id}/actions/${actionId}`, payload);
+    return data;
+  }
+
+  async removeCampaignAction(id, actionId) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}/actions/${actionId}`);
+    return data;
+  }
+
+  async regenerateCampaign(id, feedback = '') {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/regenerate`, { feedback });
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
