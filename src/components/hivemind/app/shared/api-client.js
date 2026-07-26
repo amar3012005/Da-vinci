@@ -1640,6 +1640,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async controlCampaignAction(id, actionId, action) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/${action}`, {});
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}

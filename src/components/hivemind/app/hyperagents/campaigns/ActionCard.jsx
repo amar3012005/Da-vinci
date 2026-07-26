@@ -1,9 +1,9 @@
 import React from 'react';
-import { CheckCircle2, Clock3, Mail, MessageCircle, Phone, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, Clock3, Mail, MessageCircle, Phone, RefreshCw, SearchCheck, ShieldAlert } from 'lucide-react';
 
 const ICONS = { x_organic: MessageCircle, gmail: Mail, tara: Phone };
 
-export default function ActionCard({ action, onApprove, busy }) {
+export default function ActionCard({ action, onApprove, onRetry, onReconcile, busy }) {
   const Icon = ICONS[action.channel] || MessageCircle;
   const payload = action.payload || {};
   const problem = ['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status);
@@ -26,6 +26,8 @@ export default function ActionCard({ action, onApprove, busy }) {
             {problem && action.lastError ? <span className="inline-flex items-center gap-1 text-red-700"><ShieldAlert size={11} />{action.lastError}</span> : null}
           </div>
           {action.status === 'AWAITING_APPROVAL' && onApprove ? <button onClick={() => onApprove(action.id)} disabled={busy} className="mt-3 h-8 px-3 bg-[#171717] text-white rounded-md text-[10.5px] font-semibold">Approve this action</button> : null}
+          {['FAILED', 'BLOCKED'].includes(action.status) && onRetry ? <button onClick={() => onRetry(action.id)} disabled={busy} className="mt-3 h-8 px-3 border border-[#bdb7af] rounded-md text-[10.5px] font-semibold inline-flex items-center gap-1.5"><RefreshCw size={12} />Retry action</button> : null}
+          {action.status === 'NEEDS_RECONCILIATION' && onReconcile ? <button onClick={() => onReconcile(action.id)} disabled={busy} className="mt-3 h-8 px-3 border border-[#bdb7af] rounded-md text-[10.5px] font-semibold inline-flex items-center gap-1.5"><SearchCheck size={12} />Reconcile provider state</button> : null}
         </div>
       </div>
     </article>
