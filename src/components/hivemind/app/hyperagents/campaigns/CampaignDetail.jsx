@@ -4,10 +4,26 @@ import ActionCard from './ActionCard';
 import ChannelTab from './ChannelTab';
 
 const LABEL = { x_organic: 'X', gmail: 'Email', tara: 'TARA' };
+const EVENT_LABEL = {
+  campaign_created: 'Campaign and dedicated Room created',
+  campaign_generation_started: 'Agents started gathering and debating',
+  campaign_plan_ready: 'Campaign plan contract accepted',
+  campaign_needs_input: 'Plan contract needs more input',
+  campaign_generation_needs_input: 'Campaign Room needs more input',
+  campaign_generation_failed: 'Campaign Room generation failed',
+  campaign_approved: 'Immutable campaign plan approved',
+  campaign_action_approved: 'Campaign action approved',
+  campaign_action_succeeded: 'Campaign action completed',
+  campaign_action_failed: 'Campaign action needs attention',
+  campaign_paused: 'Campaign paused',
+  campaign_resumed: 'Campaign resumed',
+  campaign_completed: 'Campaign completed',
+};
 
 export default function CampaignDetail({ campaign, loading, onBack, onControl, onApproveAction, busy, executionEnabled = false }) {
   const [tab, setTab] = useState('overview');
   const actions = campaign?.actions || []; const plan = campaign?.planVersions?.[0];
+  const events = campaign?.events || [];
   const tabs = useMemo(() => ['overview', 'strategy', 'audience', ...campaign.requestedChannels, 'schedule', 'performance', 'room', 'audit'], [campaign.requestedChannels]);
   if (loading && !campaign) return <div className="h-full grid place-items-center"><Loader2 className="animate-spin text-[#77716a]" size={22} /></div>;
   return <div className="h-full overflow-y-auto bg-[#fbfaf6]">
@@ -21,7 +37,7 @@ export default function CampaignDetail({ campaign, loading, onBack, onControl, o
     </div>
     <main className="px-4 sm:px-7 py-6 max-w-6xl">
       {!executionEnabled ? <div className="mb-4 border border-[#d8d3cc] bg-white rounded-md px-4 py-3 text-[11px] text-[#615c56]"><strong>Generate-only pilot:</strong> plans and ready actions are available, while external publishing is intentionally disabled.</div> : null}
-      {campaign.status === 'GENERATING' ? <div className="border border-[#d8d3cc] rounded-md p-5 bg-white flex gap-3"><Loader2 size={16} className="animate-spin mt-0.5" /><div><div className="text-[12.5px] font-semibold">Campaign Room is working</div><div className="text-[11px] text-[#77716a] mt-1">Agents are gathering evidence, debating the strategy, and compiling ready actions. This continues if you leave the page.</div></div></div> : null}
+      {campaign.status === 'GENERATING' ? <div className="border border-[#d8d3cc] rounded-md p-5 bg-white flex gap-3"><Loader2 size={16} className="animate-spin mt-0.5 shrink-0" /><div><div className="text-[12.5px] font-semibold">Campaign Room is working</div><div className="text-[11px] text-[#77716a] mt-1">Agents are gathering evidence, debating the strategy, and compiling ready actions. This continues if you leave the page.</div>{events[0] ? <div className="text-[9.5px] font-mono uppercase text-[#817b74] mt-2">{EVENT_LABEL[events[0].eventType] || events[0].eventType.replaceAll('_', ' ')}</div> : null}</div></div> : null}
       {campaign.status === 'NEEDS_INPUT' ? <div className="border border-amber-300 bg-amber-50 rounded-md p-4 text-[11.5px] text-amber-900"><strong>Plan needs input.</strong> {campaign.lastError}</div> : null}
       {tab === 'overview' ? <div><div className="grid sm:grid-cols-4 border-y border-[#dfdbd4] divide-y sm:divide-y-0 sm:divide-x divide-[#dfdbd4]">{[['Actions', actions.length], ['Ready or queued', actions.filter((x) => ['READY', 'QUEUED', 'AWAITING_APPROVAL'].includes(x.status)).length], ['Completed', actions.filter((x) => x.status === 'SUCCEEDED').length], ['Channels', campaign.requestedChannels.length]].map(([label, value]) => <div key={label} className="py-4 sm:px-4 first:pl-0"><div className="text-[20px] font-semibold">{value}</div><div className="text-[9.5px] font-mono uppercase text-[#817b74] mt-1">{label}</div></div>)}</div><div className="mt-6"><h3 className="text-[12px] font-semibold">Ready actions</h3>{actions.length ? actions.slice(0, 5).map((action) => <ActionCard key={action.id} action={action} onApprove={onApproveAction} busy={busy} />) : <div className="py-10 text-[11.5px] text-[#817b74]">Actions appear after the Campaign Room submits a valid plan.</div>}</div></div> : null}
       {tab === 'strategy' ? <div className="max-w-3xl whitespace-pre-wrap text-[12.5px] leading-6 text-[#34312e]">{plan?.reportMarkdown || 'Strategy is still being generated.'}</div> : null}
@@ -29,8 +45,8 @@ export default function CampaignDetail({ campaign, loading, onBack, onControl, o
       {campaign.requestedChannels.includes(tab) ? <ChannelTab channel={tab} actions={actions} onApprove={onApproveAction} busy={busy} /> : null}
       {tab === 'schedule' ? <div>{[...actions].sort((a, b) => new Date(a.scheduledAt || 0) - new Date(b.scheduledAt || 0)).map((action) => <ActionCard key={action.id} action={action} />)}</div> : null}
       {tab === 'performance' ? <div className="py-12 text-center text-[12px] text-[#817b74]">Performance baselines appear after the first action executes. Growth is compared with the preceding period and is not presented as causal attribution.</div> : null}
-      {tab === 'room' ? <div><div className="border-l-2 border-[#171717] pl-4"><div className="text-[12.5px] font-semibold">Dedicated Campaign Room</div><div className="text-[11px] text-[#77716a] mt-1">The room researches and generates; only the approved scheduler can execute.</div></div><div className="mt-5 space-y-3">{(campaign.roomTranscript || []).flatMap((turn) => (turn.lines || []).filter((line) => line?.t === 'line' || line?.t === 'campaign_bundle_invalid').map((line, index) => <div key={`${turn.id}-${index}`} className="border-b border-[#e1ddd6] pb-3"><div className="text-[9px] font-mono uppercase text-[#8a847d]">{line.agent || (line.t === 'campaign_bundle_invalid' ? 'Plan validator' : 'Agent')}</div><div className="text-[11.5px] leading-5 text-[#45413d] mt-1 whitespace-pre-wrap">{line.content || (line.errors || []).join('\n')}</div></div>))}</div></div> : null}
-      {tab === 'audit' ? <div className="space-y-2">{(campaign.approvals || []).map((approval) => <div key={approval.id} className="flex items-center gap-2 text-[11px]"><CheckCircle2 size={12} className="text-emerald-700" />Plan approved {new Date(approval.approvedAt).toLocaleString()}</div>)}</div> : null}
+      {tab === 'room' ? <div><div className="border-l-2 border-[#171717] pl-4"><div className="text-[12.5px] font-semibold">Dedicated Campaign Room</div><div className="text-[11px] text-[#77716a] mt-1">The room researches and generates; only the approved scheduler can execute.</div></div><div className="mt-5 space-y-3">{(campaign.roomTranscript || []).flatMap((turn) => (turn.lines || []).filter((line) => ['line', 'campaign_bundle_invalid', 'campaign_tool'].includes(line?.t)).map((line, index) => <div key={`${turn.id}-${index}`} className="border-b border-[#e1ddd6] pb-3"><div className="text-[9px] font-mono uppercase text-[#8a847d]">{line.agent || (line.t === 'campaign_bundle_invalid' ? 'Plan validator' : line.t === 'campaign_tool' ? 'Campaign pipeline' : 'Agent')}</div><div className="text-[11.5px] leading-5 text-[#45413d] mt-1 whitespace-pre-wrap">{line.content || (line.t === 'campaign_tool' ? `${line.tool} ${line.status}` : (line.errors || []).join('\n'))}</div></div>))}</div></div> : null}
+      {tab === 'audit' ? <div className="space-y-0">{events.length ? events.map((event) => <div key={event.id} className="grid grid-cols-[18px_1fr] gap-2 py-3 border-b border-[#e1ddd6]"><CheckCircle2 size={12} className="text-[#6f6962] mt-0.5" /><div><div className="text-[11px] font-semibold">{EVENT_LABEL[event.eventType] || event.eventType.replaceAll('_', ' ')}</div><div className="text-[9.5px] text-[#817b74] mt-0.5">{new Date(event.createdAt).toLocaleString()}</div></div></div>) : <div className="text-[11px] text-[#817b74]">Pipeline events appear here as the campaign progresses.</div>}</div> : null}
     </main>
   </div>;
 }
