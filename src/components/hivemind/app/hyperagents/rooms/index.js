@@ -11,7 +11,7 @@
 //   const ReportView = reportViewFor(roomKind);
 //   return ReportView ? <ReportView report={...} .../> : <FinalReportCard .../>;
 
-import { OutreachReport, ResearchReport, StrategyReport, ContentReport, GeneralReport } from './reports';
+import { OutreachReport, ResearchReport, StrategyReport, ContentReport, CampaignReport, GeneralReport } from './reports';
 
 // kind → React component. Every kind maps to a brochure view (general/hq is the
 // default) so sealed reports render UNIFORMLY — no legacy fallback renderer.
@@ -20,6 +20,7 @@ const REPORT_VIEWS = {
   research: ResearchReport,
   strategy: StrategyReport,
   content: ContentReport,
+  campaign: CampaignReport,
   general: GeneralReport,
   hq: GeneralReport,
 };

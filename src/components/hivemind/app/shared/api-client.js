@@ -1609,6 +1609,37 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Unified AI Campaigns ───────────────────────────────────
+  async getCampaignCapabilities() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/capabilities');
+    return data;
+  }
+
+  async getCampaigns() {
+    const { data } = await this.controlPlane.get('/v1/campaigns');
+    return data;
+  }
+
+  async getCampaign(id) {
+    const { data } = await this.controlPlane.get(`/v1/campaigns/${id}`);
+    return data;
+  }
+
+  async createCampaign(payload) {
+    const { data } = await this.controlPlane.post('/v1/campaigns', payload);
+    return data;
+  }
+
+  async controlCampaign(id, action) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/${action}`, {});
+    return data;
+  }
+
+  async approveCampaignAction(id, actionId) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/approve`, {});
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
