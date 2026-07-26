@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { CheckCircle2, Circle, Lightbulb, MessageSquareText, Search, Sparkles } from 'lucide-react';
+import { Check, FileCheck2, Lightbulb, MessageSquareText, Search, Sparkles } from 'lucide-react';
 
 const CHANNEL_LABELS = { x_organic: 'X', gmail: 'Email', tara: 'TARA' };
 const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan)\b/i;
@@ -99,16 +99,24 @@ function currentStage(campaign, groups) {
   return 'Campaign planning';
 }
 
-function ActivitySection({ icon: Icon, title, description, items, active }) {
-  return <section className="border-b border-[#dfdbd4] py-5 last:border-b-0">
-    <div className="flex items-start gap-3">
-      <div className={`mt-0.5 w-8 h-8 shrink-0 grid place-items-center rounded-md border ${active ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#d8d3cc] bg-white text-[#6f6962]'}`}><Icon size={14} /></div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2"><h3 className="text-[12.5px] font-semibold text-[#24211f]">{title}</h3>{active ? <span className="text-[9px] font-mono uppercase text-[#256d5b]">In progress</span> : null}</div>
-        <p className="mt-0.5 text-[10.5px] text-[#817b74]">{description}</p>
-        {items.length ? <div className="mt-3 space-y-2">{items.map((item, index) => <div key={`${title}-${index}`} className="flex gap-2.5 text-[11.5px] leading-5 text-[#45413d]"><CheckCircle2 size={12} className="mt-1 shrink-0 text-[#628276]" /><div>{item.agent ? <span className="font-semibold">{item.agent}: </span> : null}{item.content}</div></div>)}</div> : <div className="mt-3 flex items-center gap-2 text-[10.5px] text-[#9a948d]"><Circle size={10} />Waiting for this stage</div>}
-      </div>
+function Phase({ icon: Icon, title, note, status }) {
+  const complete = status === 'complete';
+  const active = status === 'active';
+  return <div className="relative min-w-0 px-3 py-3 first:pl-0 last:pr-0">
+    <div className="flex items-center gap-2">
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${complete ? 'border-[#3f806c] bg-[#eaf4ef] text-[#256d5b]' : active ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#d8d3cc] bg-white text-[#9a948d]'}`}>
+        {complete ? <Check size={13} /> : <Icon size={13} />}
+      </span>
+      <div className="min-w-0"><div className="truncate text-[11px] font-semibold text-[#24211f]">{title}</div><div className="truncate text-[9px] text-[#817b74]">{active ? 'In progress' : complete ? 'Complete' : note}</div></div>
     </div>
+  </div>;
+}
+
+function SignalList({ title, items, empty }) {
+  const visible = items.slice(-3).reverse();
+  return <section>
+    <div className="flex items-center justify-between gap-3"><h3 className="text-[11px] font-semibold text-[#34312e]">{title}</h3>{items.length > visible.length ? <span className="text-[9px] text-[#817b74]">{items.length} signals</span> : null}</div>
+    {visible.length ? <div className="mt-2 space-y-2">{visible.map((item, index) => <div key={`${title}-${index}`} className="flex gap-2 text-[10.5px] leading-5 text-[#615c56]"><Check size={11} className="mt-1 shrink-0 text-[#4c806f]" /><p>{item.agent ? <span className="font-semibold text-[#34312e]">{item.agent}: </span> : null}{item.content}</p></div>)}</div> : <p className="mt-2 text-[10.5px] text-[#9a948d]">{empty}</p>}
   </section>;
 }
 
@@ -120,7 +128,13 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
     ? { bundle: plan.bundle, content: plan.reportMarkdown }
     : (plan?.reportMarkdown || groups.synthesis.at(-1)?.content);
   const isGenerating = campaign.status === 'GENERATING';
-  const activeSection = isGenerating ? (groups.debate.length ? 'debate' : 'research') : '';
+  const ready = Boolean(finalReport) || !isGenerating;
+  const phaseStatus = {
+    brief: 'complete',
+    evidence: groups.research.length ? 'complete' : (isGenerating ? 'active' : 'complete'),
+    decisions: groups.decisions.length || groups.synthesis.length ? 'complete' : (groups.debate.length ? 'active' : 'pending'),
+    build: ready ? 'complete' : (groups.synthesis.length || groups.decisions.length ? 'active' : 'pending'),
+  };
 
   return <div className="max-w-5xl">
     <header className="border border-[#d8d3cc] bg-white rounded-md overflow-hidden">
@@ -131,15 +145,21 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
       <div className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2"><span className="text-[9px] font-mono uppercase text-[#8a847d] mr-1">Channels</span>{campaign.requestedChannels.map((channel) => <span key={channel} className="px-2 py-1 rounded border border-[#d8d3cc] bg-[#fbfaf6] text-[10px] font-semibold text-[#45413d]">{CHANNEL_LABELS[channel] || channel}</span>)}</div>
     </header>
 
-    <div className="mt-5 border-y border-[#dfdbd4]">
-      <ActivitySection icon={Search} title="Research" description="Company, audience, and market context gathered for this campaign." items={groups.research} active={activeSection === 'research'} />
-      <ActivitySection icon={MessageSquareText} title="Debate" description="Campaign specialists challenge the positioning, channel choices, and content approach." items={groups.debate} active={activeSection === 'debate'} />
-      <ActivitySection icon={Lightbulb} title="Decisions" description="The room resolves trade-offs and checks that the plan is ready to operate." items={groups.decisions} active={false} />
-    </div>
+    <section className="mt-5 border-y border-[#dfdbd4]">
+      <div className="grid grid-cols-2 divide-x divide-y divide-[#e6e2dc] sm:grid-cols-4 sm:divide-y-0">
+        <Phase icon={FileCheck2} title="Brief" note="Goal and pace" status={phaseStatus.brief} />
+        <Phase icon={Search} title="Evidence" note="Company context" status={phaseStatus.evidence} />
+        <Phase icon={MessageSquareText} title="Decisions" note="Strategy review" status={phaseStatus.decisions} />
+        <Phase icon={Lightbulb} title="Build" note="Content and schedule" status={phaseStatus.build} />
+      </div>
+      {isGenerating ? <div className="grid gap-5 border-t border-[#e6e2dc] py-5 sm:grid-cols-2">
+        <SignalList title="Evidence gathered" items={groups.research} empty="The team is grounding the campaign in your company context." />
+        <SignalList title="Strategic decisions" items={[...groups.debate, ...groups.decisions]} empty="The room will compare campaign routes after evidence is ready." />
+      </div> : null}
+    </section>
 
     <section className="mt-6">
-      <div className="mb-3"><div className="flex items-center gap-2"><Sparkles size={13} className="text-[#256d5b]" /><h3 className="text-[12.5px] font-semibold">Final synthesis</h3></div><p className="mt-1 text-[10.5px] text-[#817b74]">The polished operating plan produced from the room's research and decisions.</p></div>
-      {finalReport ? (ReportComponent ? <ReportComponent report={finalReport} taskTitle={campaign.name} /> : <div className="whitespace-pre-wrap text-[12px] leading-6 text-[#34312e]">{finalReport}</div>) : <div className="border border-[#d8d3cc] bg-white rounded-md p-5 text-[11px] text-[#817b74]">The final campaign plan will appear here when the team completes its work.</div>}
+      {finalReport ? (ReportComponent ? <ReportComponent report={finalReport} taskTitle={campaign.name} surface="dashboard" /> : <div className="whitespace-pre-wrap text-[12px] leading-6 text-[#34312e]">{finalReport}</div>) : <div className="border-l-2 border-[#256d5b] bg-[#f2f7f4] px-4 py-4 text-[11px] leading-5 text-[#31554b]">Your Campaign Board will replace this workspace when the team completes its evidence, decisions, content, and schedule checks.</div>}
     </section>
   </div>;
 }

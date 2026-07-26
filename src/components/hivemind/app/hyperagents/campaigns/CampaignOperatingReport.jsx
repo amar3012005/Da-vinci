@@ -1,45 +1,35 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   CalendarDays,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Circle,
+  Clipboard,
   Compass,
   FileText,
   Gauge,
   Layers3,
   Megaphone,
-  MessageSquareQuote,
   ShieldCheck,
   Target,
   UsersRound,
 } from 'lucide-react';
 
 const COLORS = {
-  ink: '#191919',
-  muted: '#68635d',
-  line: '#dedbd5',
-  paper: '#fbfaf7',
-  green: '#176b57',
-  blue: '#245f89',
-  gold: '#8a6418',
-  red: '#9b3c35',
+  ink: '#191919', muted: '#68635d', line: '#dedbd5', paper: '#fbfaf7',
+  green: '#176b57', blue: '#245f89', gold: '#8a6418', red: '#9b3c35',
 };
 
-const asArray = (value) => {
-  if (Array.isArray(value)) return value.filter((item) => item != null && item !== '');
-  return value == null || value === '' ? [] : [value];
-};
-
-const readable = (value) => String(value || '')
-  .replaceAll('_', ' ')
-  .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const asArray = (value) => Array.isArray(value)
+  ? value.filter((item) => item != null && item !== '')
+  : (value == null || value === '' ? [] : [value]);
+const readable = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const textFrom = (value, keys = []) => {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   if (!value || typeof value !== 'object') return '';
-  for (const key of keys) {
-    if (value[key] != null && value[key] !== '') return String(value[key]);
-  }
+  for (const key of keys) if (value[key] != null && value[key] !== '') return String(value[key]);
   return '';
 };
 
@@ -47,12 +37,10 @@ function LegacyContent({ content }) {
   return String(content || '').split(/\n{2,}/).map((block, index) => {
     const heading = block.match(/^#{1,3}\s+(.+)$/m);
     const body = heading ? block.replace(heading[0], '').trim() : block.trim();
-    return (
-      <div key={`${heading?.[1] || 'paragraph'}-${index}`} className="mb-4 last:mb-0">
-        {heading ? <h3 className="mb-1.5 text-[13px] font-semibold">{heading[1]}</h3> : null}
-        {body ? <p className="whitespace-pre-wrap">{body.replace(/\*\*/g, '')}</p> : null}
-      </div>
-    );
+    return <div key={`${heading?.[1] || 'paragraph'}-${index}`} className="mb-4 last:mb-0">
+      {heading ? <h3 className="mb-1.5 text-[13px] font-semibold">{heading[1]}</h3> : null}
+      {body ? <p className="whitespace-pre-wrap">{body.replace(/\*\*/g, '')}</p> : null}
+    </div>;
   });
 }
 
@@ -65,9 +53,7 @@ function parseBundle(report) {
   try {
     const parsed = JSON.parse(content);
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function normalizeAudience(audience) {
@@ -84,18 +70,23 @@ function normalizeAudience(audience) {
 
 function normalizeAction(action, index) {
   const payload = action?.payload && typeof action.payload === 'object' ? action.payload : {};
-  const finalCopy = textFrom(action, ['final_copy', 'copy', 'body', 'text'])
-    || textFrom(payload, ['text', 'body', 'opening', 'message']);
+  const creative = action?.creative_brief && typeof action.creative_brief === 'object' ? action.creative_brief : {};
   return {
     id: String(action?.id || `action-${index + 1}`),
     channel: readable(action?.channel || action?.type || 'Campaign'),
+    channelId: String(action?.channel || action?.type || 'campaign').toLowerCase(),
     title: textFrom(action, ['title', 'name']) || `Campaign action ${index + 1}`,
-    finalCopy,
+    format: readable(action?.format || payload?.format || ''),
+    finalCopy: textFrom(action, ['final_copy', 'copy', 'body', 'text']) || textFrom(payload, ['text', 'body', 'opening', 'message']),
     subject: textFrom(payload, ['subject']),
     recipient: textFrom(payload, ['recipient_name', 'to', 'audience']),
     rationale: textFrom(action, ['rationale', 'purpose']),
     date: textFrom(action, ['scheduled_at', 'publish_at', 'date', 'scheduledAt']),
     offset: Number.isFinite(action?.scheduled_offset_minutes) ? action.scheduled_offset_minutes : null,
+    creativeRequired: creative.required === true,
+    creativeConcept: textFrom(creative, ['concept', 'description', 'direction']),
+    claimStatus: String(action?.claim_status || '').toLowerCase(),
+    evidenceIds: asArray(action?.evidence_ids).map(String),
     evidence: asArray(action?.evidence),
   };
 }
@@ -103,238 +94,209 @@ function normalizeAction(action, index) {
 function normalizeRows(values, titleKeys, detailKeys) {
   return asArray(values).map((value) => ({
     title: textFrom(value, titleKeys) || String(value),
-    detail: textFrom(value, detailKeys),
+    detail: value && typeof value === 'object' ? textFrom(value, detailKeys) : '',
   }));
 }
 
 function formatSchedule(action) {
   if (action.date) {
     const parsed = new Date(action.date);
-    if (!Number.isNaN(parsed.getTime())) {
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(parsed);
-    }
+    if (!Number.isNaN(parsed.getTime())) return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(parsed);
     return action.date;
   }
-  if (action.offset === 0) return 'Immediately after launch';
+  if (action.offset === 0) return 'Launch day';
   if (action.offset != null) {
     const days = Math.floor(action.offset / 1440);
     const hours = Math.floor((action.offset % 1440) / 60);
     const minutes = action.offset % 60;
-    const parts = [days && `${days}d`, hours && `${hours}h`, minutes && `${minutes}m`].filter(Boolean);
-    return `${parts.join(' ') || '0m'} after launch`;
+    return `${[days && `Day ${days + 1}`, hours && `${hours}h`, minutes && `${minutes}m`].filter(Boolean).join(' ') || 'Launch day'}`;
   }
-  return 'Schedule to be confirmed';
+  return 'Timing pending';
 }
 
 export function normalizeCampaignReport(report) {
   const bundle = parseBundle(report) || {};
   const actions = asArray(bundle.actions || bundle.timeline?.actions).map(normalizeAction);
   const audience = normalizeAudience(bundle.audience);
-  const risks = [
-    ...audience.safetyNotes,
-    ...asArray(bundle.safety?.notes || bundle.safety),
-    ...asArray(bundle.risks),
-    ...asArray(bundle.prohibited_claims),
-  ].map((item) => textFrom(item, ['title', 'risk', 'description', 'note']) || String(item));
-  const evidence = [
-    ...asArray(bundle.evidence || bundle.sources),
-    ...actions.flatMap((action) => action.evidence),
-  ].map((item) => textFrom(item, ['title', 'source', 'url', 'claim']) || String(item));
-  const hasBundle = Object.keys(bundle).length > 0;
-  const launchChecklist = normalizeRows(
-    bundle.launch_checklist || bundle.launchChecklist,
-    ['title', 'item', 'name'],
-    ['detail', 'status', 'owner'],
-  );
+  const strategyOptions = asArray(bundle.strategy_options).map((option, index) => ({
+    id: String(option?.id || `strategy-${index + 1}`),
+    name: textFrom(option, ['name', 'title']) || `Strategy ${index + 1}`,
+    thesis: textFrom(option, ['thesis', 'description', 'strategy']),
+    tradeoff: textFrom(option, ['tradeoff', 'risk']),
+  }));
+  const evidence = asArray(bundle.evidence || bundle.sources).map((item, index) => ({
+    id: String(item?.id || `evidence-${index + 1}`),
+    claim: textFrom(item, ['claim', 'title', 'description']) || String(item),
+    source: textFrom(item, ['source', 'url']),
+    status: String(item?.status || 'verified').toLowerCase(),
+    url: textFrom(item, ['url']),
+  }));
+  actions.flatMap((action) => action.evidence).forEach((item, index) => evidence.push({
+    id: `action-evidence-${index + 1}`, claim: String(item), source: 'Campaign action', status: 'verified', url: '',
+  }));
+  const risks = [...audience.safetyNotes, ...asArray(bundle.safety?.guardrails || bundle.safety?.notes || bundle.safety), ...asArray(bundle.risks), ...asArray(bundle.prohibited_claims)]
+    .map((item) => textFrom(item, ['title', 'risk', 'description', 'note']) || String(item));
+  const qualityChecks = bundle.quality_gate?.checks && typeof bundle.quality_gate.checks === 'object' ? bundle.quality_gate.checks : {};
+  const launchChecklist = normalizeRows(bundle.launch_checklist || bundle.launchChecklist, ['title', 'item', 'name'], ['detail', 'status', 'owner']);
   const derivedChecklist = [
-    { title: 'Strategy and positioning', complete: Boolean(bundle.strategy || bundle.positioning) },
-    { title: 'Audience defined', complete: Boolean(audience.rationale || audience.segments.length) },
-    { title: 'Final content prepared', complete: actions.length > 0 && actions.every((action) => action.finalCopy) },
-    { title: 'Timeline prepared', complete: actions.length > 0 && actions.every((action) => action.date || action.offset != null) },
-    { title: 'Safety reviewed', complete: risks.length > 0 },
+    { title: 'Goal aligned', complete: qualityChecks.goal_alignment === 'passed' || Boolean(bundle.strategy) },
+    { title: 'Company grounded', complete: qualityChecks.company_grounding === 'passed' || evidence.length > 0 },
+    { title: 'Content complete', complete: qualityChecks.channel_completeness === 'passed' || (actions.length > 0 && actions.every((action) => action.finalCopy)) },
+    { title: 'Schedule complete', complete: qualityChecks.schedule_completeness === 'passed' || (actions.length > 0 && actions.every((action) => action.date || action.offset != null)) },
+    { title: 'Providers ready', complete: qualityChecks.provider_validity === 'passed' },
   ];
 
   return {
-    hasBundle,
-    legacyContent: hasBundle ? '' : String(report?.content || ''),
-    summary: textFrom(bundle.summary || bundle.overview, ['summary', 'description', 'objective'])
-      || textFrom(bundle, ['goal', 'objective']),
+    hasBundle: Object.keys(bundle).length > 0,
+    legacyContent: Object.keys(bundle).length ? '' : String(report?.content || ''),
+    summary: textFrom(bundle.summary || bundle.overview, ['summary', 'description', 'objective']) || textFrom(bundle, ['goal', 'objective']),
     strategy: textFrom(bundle, ['strategy', 'strategic_thesis']),
-    positioning: textFrom(bundle.positioning, ['statement', 'summary', 'value_proposition'])
-      || (typeof bundle.positioning === 'string' ? bundle.positioning : ''),
+    strategyOptions,
+    selectedStrategyId: String(bundle.selected_strategy_id || strategyOptions[0]?.id || ''),
+    positioning: textFrom(bundle.positioning, ['statement', 'summary', 'value_proposition']) || (typeof bundle.positioning === 'string' ? bundle.positioning : ''),
+    companyName: textFrom(bundle.company_grounding, ['company_name']),
+    companyFacts: asArray(bundle.company_grounding?.facts_used).map(String),
+    companyUnknowns: asArray(bundle.company_grounding?.unknowns).map(String),
+    horizon: {
+      days: Number(bundle.campaign_horizon?.duration_days || 0),
+      intensity: readable(bundle.campaign_horizon?.intensity || ''),
+      rationale: textFrom(bundle.campaign_horizon, ['rationale']),
+    },
     audience,
     pillars: normalizeRows(bundle.content_pillars || bundle.contentPillars, ['title', 'name', 'pillar'], ['description', 'rationale', 'angle']),
     actions,
     decisions: normalizeRows(bundle.debate_decisions || bundle.debate?.decisions || bundle.decisions, ['decision', 'title', 'topic'], ['rationale', 'reason', 'outcome']),
-    evidence: [...new Set(evidence.filter(Boolean))],
+    evidence,
     risks: [...new Set(risks.filter(Boolean))],
-    kpis: normalizeRows(bundle.kpis || bundle.measurement, ['name', 'metric', 'title'], ['target', 'source', 'definition']),
+    kpis: normalizeRows(bundle.kpis, ['name', 'metric', 'title'], ['target', 'source', 'definition']),
+    measurement: {
+      primary: textFrom(bundle.measurement, ['primary_kpi']),
+      attribution: textFrom(bundle.measurement, ['attribution_limit']),
+      cadence: textFrom(bundle.measurement, ['review_cadence']),
+    },
     assumptions: normalizeRows(bundle.assumptions, ['assumption', 'title', 'name'], ['validation', 'detail', 'owner']),
     launchChecklist: launchChecklist.length
       ? launchChecklist.map((item) => ({ ...item, complete: !/pending|missing|blocked|not ready/i.test(item.detail) }))
       : derivedChecklist,
+    qualityReady: bundle.quality_gate?.ready === true,
   };
 }
 
-function Section({ icon: Icon, title, note, children }) {
-  return (
-    <section className="border-t px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}>
-      <div className="mb-4 flex items-start gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white" style={{ color: COLORS.green, border: `1px solid ${COLORS.line}` }}>
-          <Icon size={16} aria-hidden="true" />
-        </span>
-        <div>
-          <h2 className="text-[15px] font-semibold" style={{ color: COLORS.ink }}>{title}</h2>
-          {note ? <p className="mt-0.5 text-[11px]" style={{ color: COLORS.muted }}>{note}</p> : null}
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Empty({ children = 'Not included in this campaign plan.' }) {
-  return <p className="text-[12px] italic" style={{ color: COLORS.muted }}>{children}</p>;
-}
-
-function DetailRows({ rows }) {
-  if (!rows.length) return <Empty />;
-  return (
-    <div className="divide-y" style={{ borderColor: COLORS.line }}>
-      {rows.map((row, index) => (
-        <div key={`${row.title}-${index}`} className="py-3 first:pt-0 last:pb-0">
-          <div className="text-[12.5px] font-semibold" style={{ color: COLORS.ink }}>{row.title}</div>
-          {row.detail ? <div className="mt-1 text-[12px] leading-5" style={{ color: COLORS.muted }}>{row.detail}</div> : null}
-        </div>
-      ))}
+function PanelHeading({ icon: Icon, title, note, right }) {
+  return <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start gap-3">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border bg-white" style={{ color: COLORS.green, borderColor: COLORS.line }}><Icon size={16} /></span>
+      <div><h2 className="text-[15px] font-semibold">{title}</h2>{note ? <p className="mt-0.5 text-[11px]" style={{ color: COLORS.muted }}>{note}</p> : null}</div>
     </div>
-  );
+    {right}
+  </div>;
 }
 
-function ActionPreview({ action, index }) {
-  return (
-    <article className="rounded-lg border bg-white p-4" style={{ borderColor: COLORS.line }}>
-      <div className="flex flex-wrap items-start gap-2">
-        <span className="rounded px-2 py-1 text-[10px] font-semibold" style={{ background: '#e9f2ef', color: COLORS.green }}>
-          {action.channel}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[13px] font-semibold" style={{ color: COLORS.ink }}>{index + 1}. {action.title}</h3>
-          <p className="mt-0.5 text-[11px]" style={{ color: COLORS.blue }}>{formatSchedule(action)}</p>
-        </div>
+function StrategyPanel({ data }) {
+  const [activeId, setActiveId] = useState(data.selectedStrategyId);
+  const active = data.strategyOptions.find((option) => option.id === activeId) || data.strategyOptions[0];
+  return <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}>
+    <PanelHeading icon={Compass} title="Strategy" note="The room compared routes and selected one recommendation." />
+    {data.strategyOptions.length ? <>
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Campaign strategies">
+        {data.strategyOptions.map((option) => <button key={option.id} type="button" role="tab" aria-selected={active?.id === option.id} onClick={() => setActiveId(option.id)} className={`shrink-0 rounded-md border px-3 py-2 text-left ${active?.id === option.id ? 'border-[#191919] bg-[#191919] text-white' : 'border-[#d8d3cc] bg-white'}`}>
+          <span className="block text-[11px] font-semibold">{option.name}</span>
+          {option.id === data.selectedStrategyId ? <span className="mt-0.5 block text-[9px] opacity-70">Recommended</span> : null}
+        </button>)}
       </div>
-      {action.recipient ? <p className="mt-3 text-[11px]" style={{ color: COLORS.muted }}>Audience: {action.recipient}</p> : null}
-      {action.subject ? <p className="mt-3 text-[12px] font-semibold" style={{ color: COLORS.ink }}>Subject: {action.subject}</p> : null}
-      {action.finalCopy ? (
-        <div className="mt-3 whitespace-pre-wrap border-l-2 pl-3 text-[12.5px] leading-5" style={{ borderColor: COLORS.green, color: COLORS.ink }}>
-          {action.finalCopy}
-        </div>
-      ) : <Empty>Final copy is not available in this legacy plan.</Empty>}
-      {action.rationale ? <p className="mt-3 text-[11px] leading-5" style={{ color: COLORS.muted }}>{action.rationale}</p> : null}
+      <div className="mt-4 border-l-2 pl-4" style={{ borderColor: COLORS.gold }}>
+        <p className="text-[13px] leading-6">{active?.thesis}</p>
+        {active?.tradeoff ? <p className="mt-2 text-[11px] leading-5" style={{ color: COLORS.muted }}><strong>Trade-off:</strong> {active.tradeoff}</p> : null}
+      </div>
+    </> : <p className="mt-4 whitespace-pre-wrap text-[13px] leading-6">{data.strategy || 'Strategy is included in the legacy campaign report.'}</p>}
+    {data.positioning ? <div className="mt-4 rounded-md bg-[#f4f0e6] px-4 py-3 text-[12.5px] font-medium leading-6">{data.positioning}</div> : null}
+  </section>;
+}
+
+function ActionWorkspace({ actions, evidence }) {
+  const [activeId, setActiveId] = useState(actions[0]?.id || '');
+  const [copied, setCopied] = useState(false);
+  const action = actions.find((item) => item.id === activeId) || actions[0];
+  const linkedEvidence = useMemo(() => evidence.filter((item) => action?.evidenceIds.includes(item.id)), [action, evidence]);
+  const copy = async () => {
+    if (!action?.finalCopy || !window.navigator?.clipboard) return;
+    await window.navigator.clipboard.writeText(action.finalCopy);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+  if (!action) return <p className="mt-4 text-[12px] italic" style={{ color: COLORS.muted }}>No executable content was included in this legacy plan.</p>;
+  return <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="max-h-[520px] overflow-y-auto border-r pr-3" style={{ borderColor: COLORS.line }}>
+      {actions.map((item, index) => <button key={item.id} type="button" onClick={() => { setActiveId(item.id); setCopied(false); }} className={`mb-1.5 w-full rounded-md border px-3 py-2.5 text-left last:mb-0 ${item.id === action.id ? 'border-[#191919] bg-white' : 'border-transparent hover:border-[#d8d3cc]'}`}>
+        <span className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold">{index + 1}. {item.channel}</span><span className="text-[9px]" style={{ color: COLORS.blue }}>{formatSchedule(item)}</span></span>
+        <span className="mt-1 block truncate text-[11.5px] font-medium">{item.title}</span>
+      </button>)}
+    </div>
+    <article className="min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><div className="text-[10px] font-semibold uppercase" style={{ color: COLORS.green }}>{action.channel}{action.format ? ` · ${action.format}` : ''}</div><h3 className="mt-1 text-[16px] font-semibold">{action.title}</h3><p className="mt-1 text-[11px]" style={{ color: COLORS.blue }}>{formatSchedule(action)}</p></div>
+        <button type="button" onClick={copy} className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-white px-3 text-[10.5px] font-semibold" style={{ borderColor: COLORS.line }}>{copied ? <Check size={13} /> : <Clipboard size={13} />}{copied ? 'Copied' : 'Copy'}</button>
+      </div>
+      {action.subject ? <p className="mt-4 text-[12px] font-semibold">Subject: {action.subject}</p> : null}
+      <div className="mt-4 whitespace-pre-wrap border-l-2 pl-4 text-[13px] leading-6" style={{ borderColor: COLORS.green }}>{action.finalCopy}</div>
+      {action.channelId === 'x_organic' ? <div className={`mt-2 text-right text-[10px] ${action.finalCopy.length > 280 ? 'text-red-700' : 'text-[#817b74]'}`}>{action.finalCopy.length}/280 characters</div> : null}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {action.rationale ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Why this action</div><p className="mt-1 text-[11.5px] leading-5">{action.rationale}</p></div> : null}
+        {action.creativeConcept ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Creative direction</div><p className="mt-1 text-[11.5px] leading-5">{action.creativeConcept}</p></div> : null}
+      </div>
+      {(action.claimStatus || linkedEvidence.length) ? <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px]"><span className="rounded bg-[#eef4f1] px-2 py-1 font-semibold" style={{ color: COLORS.green }}>{readable(action.claimStatus || 'grounded')}</span>{linkedEvidence.map((item) => <span key={item.id} className="rounded border bg-white px-2 py-1" style={{ borderColor: COLORS.line }}>{item.claim}</span>)}</div> : null}
     </article>
-  );
+  </div>;
+}
+
+function DetailDisclosure({ title, count, children }) {
+  if (!count) return null;
+  return <details className="border-t px-5 py-4 sm:px-7" style={{ borderColor: COLORS.line }}>
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-semibold">{title}<span className="flex items-center gap-2 text-[10px] font-normal" style={{ color: COLORS.muted }}>{count}<ChevronDown size={13} /></span></summary>
+    <div className="mt-4">{children}</div>
+  </details>;
 }
 
 export default function CampaignOperatingReport({ report, taskTitle, surface = 'card' }) {
   const data = normalizeCampaignReport(report);
   const displayTitle = data.summary || taskTitle || 'Campaign operating plan';
+  if (!data.hasBundle && data.legacyContent) return <div className={surface === 'dashboard' ? '' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line }}>
+    <header className="px-5 py-6 sm:px-7"><div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><FileText size={14} />Legacy campaign report</div><h1 className="mt-2 text-[22px] font-semibold">{displayTitle}</h1></header>
+    <div className="border-t px-5 py-6 text-[12.5px] leading-6 sm:px-7" style={{ borderColor: COLORS.line }}><LegacyContent content={data.legacyContent} /></div>
+  </div>;
 
-  return (
-    <div className={surface === 'dashboard' ? 'overflow-hidden' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
-      <header className="px-5 py-6 sm:px-7 sm:py-8" style={{ background: '#202522', color: '#f7f4ed' }}>
-        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase">
-          <Megaphone size={14} aria-hidden="true" /> Campaign operating report
-        </div>
-        <h1 className="mt-3 max-w-3xl text-[25px] font-semibold leading-tight sm:text-[30px]">{displayTitle}</h1>
-        <p className="mt-3 max-w-2xl text-[12px] leading-5 text-[#d8d5cd]">
-          Strategy, executable content, timing, evidence, and launch readiness in one approved plan.
-        </p>
-      </header>
+  return <div className={surface === 'dashboard' ? 'overflow-hidden' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
+    <header className="px-5 py-6 sm:px-7" style={{ background: '#202522', color: '#f7f4ed' }}>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><Megaphone size={14} />Campaign Board</div>{data.qualityReady ? <span className="inline-flex items-center gap-1.5 rounded bg-[#dcece5] px-2 py-1 text-[9px] font-semibold text-[#145b49]"><CheckCircle2 size={11} />Ready for approval</span> : null}</div>
+      <h1 className="mt-3 max-w-4xl text-[24px] font-semibold leading-tight sm:text-[28px]">{displayTitle}</h1>
+      {data.companyName ? <p className="mt-2 text-[11px] text-[#d8d5cd]">Grounded for {data.companyName}</p> : null}
+      <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-md bg-white/15 sm:grid-cols-4">
+        {[
+          ['Horizon', data.horizon.days ? `${data.horizon.days} days` : 'Campaign plan'],
+          ['Pace', data.horizon.intensity || 'Defined by plan'],
+          ['Actions', String(data.actions.length)],
+          ['Channels', String(new Set(data.actions.map((action) => action.channel)).size)],
+        ].map(([label, value]) => <div key={label} className="bg-[#2a302c] px-3 py-2.5"><div className="text-[8.5px] uppercase text-[#aaa9a3]">{label}</div><div className="mt-1 text-[12px] font-semibold">{value}</div></div>)}
+      </div>
+    </header>
 
-      {!data.hasBundle && data.legacyContent ? (
-        <Section icon={FileText} title="Campaign brief" note="Legacy report preserved while structured campaign details are unavailable.">
-          <div className="hyper-markdown text-[12.5px] leading-6" style={{ color: COLORS.ink }}>
-            <LegacyContent content={data.legacyContent} />
-          </div>
-        </Section>
-      ) : null}
+    <StrategyPanel data={data} />
 
-      <Section icon={Compass} title="Strategy and positioning" note="The campaign's core choice and market-facing promise.">
-        {data.strategy ? <p className="whitespace-pre-wrap text-[13px] leading-6">{data.strategy}</p> : <Empty />}
-        {data.positioning ? (
-          <div className="mt-4 border-l-2 pl-4 text-[13px] font-medium leading-6" style={{ borderColor: COLORS.gold }}>
-            {data.positioning}
-          </div>
-        ) : null}
-      </Section>
+    <section className="grid border-b lg:grid-cols-2" style={{ borderColor: COLORS.line }}>
+      <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}><PanelHeading icon={UsersRound} title="Audience" note="Who the sequence is designed to move." /><p className="mt-4 text-[12.5px] leading-6">{data.audience.rationale}</p><div className="mt-3 flex flex-wrap gap-2">{data.audience.segments.map((segment) => <span key={segment.title} title={segment.detail} className="rounded border bg-white px-2.5 py-1.5 text-[10.5px] font-semibold" style={{ borderColor: COLORS.line }}>{segment.title}</span>)}</div></div>
+      <div className="px-5 py-6 sm:px-7"><PanelHeading icon={Layers3} title="Content system" note="The themes connecting every action." /><div className="mt-4 space-y-3">{data.pillars.map((pillar) => <div key={pillar.title}><div className="text-[12px] font-semibold">{pillar.title}</div>{pillar.detail ? <p className="mt-0.5 text-[11px] leading-5" style={{ color: COLORS.muted }}>{pillar.detail}</p> : null}</div>)}</div></div>
+    </section>
 
-      <Section icon={UsersRound} title="Audience" note="Who this campaign is for and why the message should matter.">
-        {data.audience.rationale ? <p className="mb-4 text-[12.5px] leading-6">{data.audience.rationale}</p> : null}
-        <DetailRows rows={data.audience.segments} />
-      </Section>
+    <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={CalendarDays} title="Campaign sequence" note="Select an action to inspect its final copy, timing, rationale, and evidence." right={<span className="text-[10px]" style={{ color: COLORS.muted }}>{data.actions.length} actions</span>} /><ActionWorkspace actions={data.actions} evidence={data.evidence} /></section>
 
-      <Section icon={Layers3} title="Content pillars" note="The themes holding the campaign together across channels.">
-        <DetailRows rows={data.pillars} />
-      </Section>
+    <section className="grid border-b lg:grid-cols-2" style={{ borderColor: COLORS.line }}>
+      <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}><PanelHeading icon={Target} title="Evidence" note="Verified facts stay distinct from assumptions." /><div className="mt-4 space-y-3">{data.evidence.map((item) => <div key={item.id} className="flex items-start gap-2"><span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${item.status === 'verified' ? 'bg-emerald-600' : item.status === 'missing' ? 'bg-red-600' : 'bg-amber-500'}`} /><div><p className="text-[11.5px] leading-5">{item.claim}</p>{item.source ? <p className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.source}</p> : null}</div></div>)}</div></div>
+      <div className="px-5 py-6 sm:px-7"><PanelHeading icon={Gauge} title="Measurement" note="What the team will learn after launch." /><div className="mt-4 space-y-3"><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Primary outcome</div><p className="mt-1 text-[12px]">{data.measurement.primary || data.kpis[0]?.title || 'Measure against the campaign objective'}</p></div>{data.measurement.cadence ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Review cadence</div><p className="mt-1 text-[12px]">{data.measurement.cadence}</p></div> : null}{data.measurement.attribution ? <p className="text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{data.measurement.attribution}</p> : null}</div></div>
+    </section>
 
-      <Section icon={FileText} title="Ready-to-publish content" note="Full copy and channel-specific delivery details.">
-        {data.actions.length ? <div className="grid gap-3">{data.actions.map((action, index) => <ActionPreview key={action.id} action={action} index={index} />)}</div> : <Empty />}
-      </Section>
+    <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={ShieldCheck} title="Launch readiness" note="A compact final check before anything is published." /><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{data.launchChecklist.map((item) => <div key={item.title} className="flex items-start gap-2 py-1">{item.complete ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.green }} /> : <Circle size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.gold }} />}<div><div className="text-[11.5px] font-semibold">{item.title}</div>{item.detail ? <div className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.detail}</div> : null}</div></div>)}</div></section>
 
-      <Section icon={CalendarDays} title="Timeline" note="Exact dates when available; otherwise timing is relative to launch approval.">
-        {data.actions.length ? (
-          <ol className="space-y-0">
-            {data.actions.map((action, index) => (
-              <li key={`schedule-${action.id}`} className="flex gap-3 border-b py-3 first:pt-0 last:border-0 last:pb-0" style={{ borderColor: COLORS.line }}>
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white" style={{ background: index === 0 ? COLORS.green : COLORS.blue }}>{index + 1}</span>
-                <div className="min-w-0">
-                  <div className="text-[12.5px] font-semibold">{formatSchedule(action)}</div>
-                  <div className="mt-0.5 text-[11px]" style={{ color: COLORS.muted }}>{action.channel} · {action.title}</div>
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : <Empty />}
-      </Section>
-
-      <Section icon={MessageSquareQuote} title="Debate decisions" note="Trade-offs the agent team resolved before producing this plan.">
-        <DetailRows rows={data.decisions} />
-      </Section>
-
-      <Section icon={Target} title="Evidence" note="Sources and signals used to ground campaign choices.">
-        {data.evidence.length ? <ul className="space-y-2">{data.evidence.map((item, index) => <li key={`${item}-${index}`} className="text-[12px] leading-5">{item}</li>)}</ul> : <Empty />}
-      </Section>
-
-      <Section icon={ShieldCheck} title="Safety and constraints" note="Claims, exclusions, and risks that must remain true at execution time.">
-        {data.risks.length ? <ul className="space-y-2">{data.risks.map((risk, index) => <li key={`${risk}-${index}`} className="border-l-2 pl-3 text-[12px] leading-5" style={{ borderColor: COLORS.red }}>{risk}</li>)}</ul> : <Empty>No explicit risks or safety constraints were included in this legacy plan.</Empty>}
-      </Section>
-
-      <Section icon={Gauge} title="KPIs" note="How progress will be measured against the campaign objective.">
-        <DetailRows rows={data.kpis} />
-      </Section>
-
-      <Section icon={Circle} title="Assumptions" note="Beliefs to validate as campaign evidence arrives.">
-        <DetailRows rows={data.assumptions} />
-      </Section>
-
-      <Section icon={CheckCircle2} title="Launch checklist" note="A concise readiness view; approval and provider checks still happen at launch.">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {data.launchChecklist.map((item, index) => (
-            <div key={`${item.title}-${index}`} className="flex items-start gap-2 py-1.5">
-              {item.complete
-                ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" style={{ color: COLORS.green }} aria-label="Ready" />
-                : <Circle size={16} className="mt-0.5 shrink-0" style={{ color: COLORS.gold }} aria-label="Needs review" />}
-              <div>
-                <div className="text-[12px] font-semibold">{item.title}</div>
-                {item.detail ? <div className="mt-0.5 text-[10.5px]" style={{ color: COLORS.muted }}>{item.detail}</div> : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
-    </div>
-  );
+    <DetailDisclosure title="Room decisions" count={data.decisions.length}><div className="space-y-3">{data.decisions.map((item) => <div key={item.title}><p className="text-[12px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-1 text-[11px] leading-5" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></DetailDisclosure>
+    <DetailDisclosure title="Risks and assumptions" count={data.risks.length + data.assumptions.length}><div className="grid gap-4 sm:grid-cols-2"><div>{data.risks.map((risk) => <p key={risk} className="mb-2 border-l-2 pl-3 text-[11px] leading-5 last:mb-0" style={{ borderColor: COLORS.red }}>{risk}</p>)}</div><div>{data.assumptions.map((item) => <div key={item.title} className="mb-2 last:mb-0"><p className="text-[11px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-0.5 text-[10px]" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></div></DetailDisclosure>
+  </div>;
 }

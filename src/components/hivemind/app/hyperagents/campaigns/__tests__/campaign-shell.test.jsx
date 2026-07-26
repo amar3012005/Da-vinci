@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import CampaignDashboardModal from '../CampaignDashboardModal';
-import { deriveCampaignPayload } from '../CreateCampaignWizard';
+import { campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
 
 jest.mock('../../../shared/api-client', () => ({}));
@@ -11,7 +11,7 @@ jest.mock('react-router-dom', () => ({ useSearchParams: jest.fn() }), { virtual:
 describe('campaign dashboard shell', () => {
   test('builds a minimal campaign payload with ready channels and strategic defaults', () => {
     const payload = deriveCampaignPayload(
-      { objective: 'LEAD_GENERATION', goal: '  Start qualified conversations with founders  ', channels: [] },
+      { objective: 'LEAD_GENERATION', goal: '  Start qualified conversations with founders  ', channels: [], durationDays: 30, intensity: 'high' },
       { channels: [
         { id: 'x_organic', executable: true, execution_ready: true },
         { id: 'gmail', executable: true, execution_ready: true },
@@ -28,6 +28,15 @@ describe('campaign dashboard shell', () => {
     expect(payload.success_metrics).toEqual(['Qualified replies', 'Meetings booked', 'Conversion rate']);
     expect(payload.autonomy_mode).toBe('APPROVE_PLAN_ONCE');
     expect(payload.timezone).toBe('Europe/Berlin');
+    expect(payload.duration_days).toBe(30);
+    expect(payload.intensity).toBe('high');
+    expect(payload.cadence).toEqual({ preset: 'high' });
+  });
+
+  test('summarizes horizon and pace without asking the user for an exact post count', () => {
+    expect(campaignPaceSummary({ durationDays: 14, intensity: 'focused', channels: ['x_organic'] })).toEqual({
+      minimum: 6, maximum: 8, channelLabel: 'X', actionSummary: '6-8 X actions',
+    });
   });
 
   test('uses an explicit channel selection instead of all ready channels', () => {

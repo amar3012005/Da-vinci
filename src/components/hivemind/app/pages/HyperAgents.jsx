@@ -39,6 +39,7 @@ import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
 import CampaignsView from '../hyperagents/CampaignsView';
+import CampaignRoomExperience from '../hyperagents/campaigns/CampaignRoomExperience';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
@@ -70,6 +71,25 @@ const ROOM_CONNECTORS = [
   { id: 'airtable', label: 'Airtable', color: '#2d7ff9', desc: 'Bases & records' },
   { id: 'linear', label: 'Linear', color: '#5e6ad2', desc: 'Issues & projects' },
 ];
+
+function textFromCampaignTurn(value) {
+  const text = String(value || '');
+  const match = text.match(/^Create a ([^\n]+?) campaign for this goal:/i);
+  return match ? `${match[1].replace(/\b\w/g, (letter) => letter.toUpperCase())} campaign` : 'Campaign Room';
+}
+
+function goalFromCampaignTurn(value) {
+  const text = String(value || '');
+  const match = text.match(/^Create a [^\n]+? campaign for this goal:\s*([^\n]+)/i);
+  return match?.[1]?.trim() || text.split('\n')[0].trim();
+}
+
+function channelsFromCampaignTurn(value) {
+  const match = String(value || '').match(/Prepare the campaign for ([^\n.]+)[.]/i);
+  const labels = match?.[1]?.split(',').map((item) => item.trim().toLowerCase()) || [];
+  const channelIds = { x: 'x_organic', email: 'gmail', tara: 'tara' };
+  return labels.map((label) => channelIds[label]).filter(Boolean);
+}
 
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
@@ -384,7 +404,7 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
+      <aside className="hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -2312,6 +2332,28 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const [evidenceMemoryId, setEvidenceMemoryId] = useState(null);
   // In-app artifact preview (email draft / doc / notion) — no Google redirect.
   const [artifactPreview, setArtifactPreview] = useState(null);
+
+  const isCampaignTurn = roomKind === 'campaign'
+    || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
+    || /^Create a [^\n]+? campaign for this goal:/i.test(turn.userMessage || turn.user_message || '');
+  if (isCampaignTurn) {
+    const bundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
+    const bundle = bundleLine?.bundle || finalReport?.bundle || finalReport?.report?.bundle || null;
+    const reportMarkdown = finalReport?.content || finalReport?.report || synthLine?.content || '';
+    const requestedChannels = bundle?.actions
+      ? [...new Set(bundle.actions.map((action) => action?.channel).filter(Boolean))]
+      : channelsFromCampaignTurn(turn.userMessage || turn.user_message || '');
+    const campaign = {
+      name: textFromCampaignTurn(turn.userMessage || turn.user_message || '') || 'Campaign Room',
+      goal: goalFromCampaignTurn(turn.userMessage || turn.user_message || ''),
+      requestedChannels,
+      status: bundle || finalReport ? 'READY_FOR_APPROVAL' : errorLine ? 'FAILED' : 'GENERATING',
+      roomTranscript: [{ lines }],
+      planVersions: bundle || reportMarkdown ? [{ bundle, reportMarkdown }] : [],
+    };
+    const CampaignReport = reportViewFor('campaign');
+    return <CampaignRoomExperience campaign={campaign} ReportComponent={CampaignReport} />;
+  }
 
   return (
     <div className="space-y-2">
