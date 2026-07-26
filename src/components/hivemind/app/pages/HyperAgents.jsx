@@ -2290,6 +2290,8 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const costCapHit = lines.find(l => l.t === 'cost_cap_hit') || lines.find(l => l.t === 'seal' && l.cost_cap_hit);
   const deadlineHit = lines.find(l => l.t === 'deadline_hit');
   const roomWarnings = lines.filter(l => l.t === 'warning');
+  const campaignHandoff = [...lines].reverse().find(l => l.t === 'campaign_handoff' && l.campaign_id);
+  const campaignHandoffFailed = [...lines].reverse().find(l => l.t === 'campaign_handoff_failed');
 
   // Phase 1-6 — lead plan, recon/verify verdict, write-approval cards, and the
   // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
@@ -2336,6 +2338,36 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const isCampaignTurn = roomKind === 'campaign'
     || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
     || /^Create a [^\n]+? campaign for this goal:/i.test(turn.userMessage || turn.user_message || '');
+  if (campaignHandoff || campaignHandoffFailed) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col items-end">
+          <div className="max-w-[80%] rounded-2xl rounded-tr-md bg-violet-500 px-3 py-2 text-[13px] text-white shadow-sm">{visibleUserMessage}</div>
+        </div>
+        {campaignHandoff ? (
+          <section className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-label="Campaign created">
+            <div className="border-b border-[#e4e0da] bg-[#171d1a] px-4 py-4 text-white">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><Megaphone size={13} />Campaign toolkit</div>
+              <h3 className="mt-2 text-[16px] font-semibold">{campaignHandoff.name || 'Campaign Room started'}</h3>
+              <p className="mt-1 text-[11px] text-[#cfd7d2]">The specialist Room is building the strategy, evidence, complete sequence, and schedule. Nothing has been published.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-2 text-[10px] text-[#6f6962]"><span className="h-2 w-2 rounded-full bg-emerald-600" />{String(campaignHandoff.status || 'GENERATING').replaceAll('_', ' ')}</div>
+              <div className="flex flex-wrap gap-2">
+                {campaignHandoff.room_url && <a href={campaignHandoff.room_url} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#cfc9c1] px-3 text-[10.5px] font-semibold text-[#26221f] hover:bg-[#f6f4f0]"><Users size={12} />Open Campaign Room</a>}
+                <a href={campaignHandoff.campaign_url} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10.5px] font-semibold text-white"><Megaphone size={12} />Open Campaign<ExternalLink size={11} /></a>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[10.5px] text-red-800">
+            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+            <span>{campaignHandoffFailed.message || 'The Campaign Room could not be created.'}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
   if (isCampaignTurn) {
     const bundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
     const bundle = bundleLine?.bundle || finalReport?.bundle || finalReport?.report?.bundle || null;
