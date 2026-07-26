@@ -35,11 +35,26 @@ function LiveListen({ sessionId }) {
     wsRef.current = null; ctxRef.current = null; setOn(false);
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback(async () => {
     if (on || !sessionId) return;
+    // Mint a short-lived, session-scoped listen capability. The adapter's shared
+    // key authorizes DIALING, so it must never reach the browser — Core checks
+    // that this org owns the call, then signs a token good only for this session.
+    let token;
+    try {
+      ({ token } = await apiClient.createTaraListenToken(sessionId));
+    } catch (e) {
+      setLine(e?.response?.status === 404
+        ? 'This call is no longer live.'
+        : 'Could not start listening.');
+      return;
+    }
+    if (!token) { setLine('Could not start listening.'); return; }
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx; tRef.current = ctx.currentTime + 0.1;
-    const ws = new WebSocket(`${DG_WS}/calls/listen?session_id=${encodeURIComponent(sessionId)}`);
+    const ws = new WebSocket(
+      `${DG_WS}/calls/listen?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`,
+    );
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
     ws.onmessage = (ev) => {

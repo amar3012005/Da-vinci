@@ -693,6 +693,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Short-lived, session-scoped live-listen capability. Core verifies the
+  // caller's org owns the call before signing, so the privileged adapter dial
+  // key never reaches the browser. 404 = not this org's call / no longer live.
+  async createTaraListenToken(sessionId) {
+    const { data } = await this.controlPlane.post('/v1/proxy/tara/calls/listen-token', {
+      session_id: sessionId,
+    });
+    return data;
+  }
+
   // ── TARA Skills (named prompt presets, org-scoped) ──
   async listTaraSkills() {
     const { data } = await this.controlPlane.get('/v1/proxy/tara/skills');
