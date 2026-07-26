@@ -3,6 +3,7 @@ import {
   AlertTriangle, BadgeDollarSign, BarChart3, Check, CheckCircle2, ChevronRight,
   ExternalLink, ImagePlus, Loader2, Megaphone, MousePointerClick,
   Pause, Play, Plus, RefreshCw, Search, ShieldCheck, X,
+  Send, Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -259,6 +260,9 @@ export default function CampaignsView() {
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [retryCampaign, setRetryCampaign] = useState(null);
+  const [postText, setPostText] = useState('');
+  const [postBusy, setPostBusy] = useState('');
+  const [testPost, setTestPost] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -299,6 +303,25 @@ export default function CampaignsView() {
     try { await apiClient.controlXAdsCampaign(campaign.id, action); await load(); }
     catch (err) { setError(errorText(err, `Could not ${action} campaign`)); }
     finally { setBusy(''); }
+  };
+
+  const publishTestPost = async () => {
+    const text = postText.trim();
+    if (!text || !window.confirm(`Publish this public Post as @${status?.identity?.username || 'your connected account'}?\n\n${text}`)) return;
+    setPostBusy('publish'); setError('');
+    try {
+      const result = await apiClient.createXPost(text);
+      setTestPost(result.post); setPostText('');
+    } catch (err) { setError(errorText(err, 'Could not publish the X Post')); }
+    finally { setPostBusy(''); }
+  };
+
+  const deleteTestPost = async () => {
+    if (!testPost?.id || !window.confirm('Delete this public Post from X?')) return;
+    setPostBusy('delete'); setError('');
+    try { await apiClient.deleteXPost(testPost.id); setTestPost(null); }
+    catch (err) { setError(errorText(err, 'Could not delete the X Post')); }
+    finally { setPostBusy(''); }
   };
 
   const summary = useMemo(() => campaigns.reduce((value, campaign) => ({
@@ -345,6 +368,34 @@ export default function CampaignsView() {
             action={() => connect('oauth1')} disabled={!status?.beta_enabled || !status?.connections?.x || !status?.ads_api_approved} busy={connecting === 'oauth1'} actionLabel="Enable Ads" />
           <StatusMark done={ready} label="Campaign publishing" detail={ready ? 'Ready for confirmed paid campaigns.' : (status?.beta_enabled ? 'Complete both connections to publish.' : 'Customer beta access is not enabled for this organization.')} />
         </section>
+
+        {status?.connections?.x ? (
+          <section className="mx-4 sm:mx-6 mt-4 py-4 border-y border-[#e3e0db] grid lg:grid-cols-[220px_1fr_auto] gap-3 lg:items-end">
+            <div>
+              <div className="text-[12.5px] font-semibold text-[#0a0a0a]">Test X API</div>
+              <div className="text-[10.5px] text-[#737373] mt-1">Publish an ordinary public Post as @{status.identity?.username}.</div>
+            </div>
+            <label className="text-[10.5px] font-mono uppercase text-[#737373]">Post text
+              <textarea rows={2} maxLength={280} value={postText} onChange={(event) => setPostText(event.target.value)} disabled={Boolean(postBusy)}
+                placeholder="Write a public test Post"
+                className="mt-1.5 w-full border border-[#d4d0ca] rounded-lg px-3 py-2 text-[12px] leading-relaxed normal-case font-sans resize-none disabled:bg-[#f5f3ee]" />
+              <span className="block text-right text-[10px] text-[#a3a3a3] normal-case font-sans mt-1">{Array.from(postText).length}/280</span>
+            </label>
+            <button type="button" onClick={publishTestPost} disabled={Boolean(postBusy) || !postText.trim()}
+              className="h-9 px-3 bg-[#0a0a0a] text-white rounded-lg text-[11.5px] font-semibold flex items-center justify-center gap-1.5 disabled:bg-[#c9c5be]">
+              {postBusy === 'publish' ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Review and post
+            </button>
+            {testPost ? (
+              <div className="lg:col-start-2 lg:col-span-2 flex items-center justify-between gap-3 border border-emerald-200 bg-emerald-50 rounded-lg px-3 py-2">
+                <a href={testPost.url} target="_blank" rel="noreferrer" className="text-[11.5px] font-semibold text-emerald-800 inline-flex items-center gap-1.5">View public Post <ExternalLink size={11} /></a>
+                <button type="button" onClick={deleteTestPost} disabled={Boolean(postBusy)} title="Delete test Post"
+                  className="w-8 h-8 grid place-items-center text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-50">
+                  {postBusy === 'delete' ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {error ? <div className="mx-4 sm:mx-6 mt-4 flex items-center gap-2 text-[11.5px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertTriangle size={13} /> {error}</div> : null}
 

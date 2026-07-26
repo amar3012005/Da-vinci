@@ -1535,6 +1535,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async createXPost(text) {
+    const { data } = await this.controlPlane.post('/v1/proxy/x-ads/posts', { text, confirmed: true });
+    return data;
+  }
+
+  async deleteXPost(id) {
+    const { data } = await this.controlPlane.delete(`/v1/proxy/x-ads/posts/${id}`, { data: { confirmed: true } });
+    return data;
+  }
+
   async getXAdsStatus() {
     const { data } = await this.controlPlane.get('/v1/proxy/x-ads/status');
     return data;
