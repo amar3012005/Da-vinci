@@ -238,12 +238,12 @@ function ActionPreview({ action, index }) {
   );
 }
 
-export default function CampaignOperatingReport({ report, taskTitle }) {
+export default function CampaignOperatingReport({ report, taskTitle, surface = 'card' }) {
   const data = normalizeCampaignReport(report);
   const displayTitle = data.summary || taskTitle || 'Campaign operating plan';
 
   return (
-    <div className="overflow-hidden rounded-lg border" style={{ background: COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
+    <div className={surface === 'dashboard' ? 'overflow-hidden' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
       <header className="px-5 py-6 sm:px-7 sm:py-8" style={{ background: '#202522', color: '#f7f4ed' }}>
         <div className="flex items-center gap-2 text-[10px] font-semibold uppercase">
           <Megaphone size={14} aria-hidden="true" /> Campaign operating report

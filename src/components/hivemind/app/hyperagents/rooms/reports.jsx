@@ -25,8 +25,8 @@ export function StrategyReport({ report, taskTitle }) {
 export function ContentReport({ report, taskTitle }) {
   return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.content} />;
 }
-export function CampaignReport({ report, taskTitle }) {
-  return <CampaignOperatingReport report={report} taskTitle={taskTitle} />;
+export function CampaignReport({ report, taskTitle, surface }) {
+  return <CampaignOperatingReport report={report} taskTitle={taskTitle} surface={surface} />;
 }
 // Default view for hq/general/unknown kinds — same brochure system, neutral
 // accent — so EVERY room's sealed report renders uniformly (no old fallback).

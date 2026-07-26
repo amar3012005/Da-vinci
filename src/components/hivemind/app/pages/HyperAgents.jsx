@@ -224,7 +224,7 @@ export default function HyperAgents() {
   const _init = _parsePath();
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
-  const goMode = useCallback((mode, roomId) => {
+  const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
     const base = '/hivemind/app/employees';
@@ -233,7 +233,10 @@ export default function HyperAgents() {
         : mode === 'leads' ? `${base}/leads`
           : mode === 'campaigns' ? `${base}/campaigns`
           : (roomId ? `${base}/rooms/${roomId}` : base);
-    navigate(url, { replace: true });
+    const params = new URLSearchParams();
+    if (query.campaignReturn) params.set('campaignReturn', query.campaignReturn);
+    if (query.campaign) params.set('campaign', query.campaign);
+    navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
   }, [navigate]);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
@@ -530,7 +533,7 @@ export default function HyperAgents() {
         ) : viewMode === 'leads' ? (
           <LeadsView />
         ) : viewMode === 'campaigns' ? (
-          <CampaignsView />
+          <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
@@ -549,6 +552,7 @@ export default function HyperAgents() {
             key={activeRoomId}
             roomId={activeRoomId}
             onArchived={() => { fetchRooms(); setActiveRoomId(null); }}
+            onCampaignReady={(campaignId) => goMode('campaigns', null, { campaign: campaignId })}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
@@ -676,7 +680,7 @@ function mergeHyperEvents(base, overlay) {
   return merged || current;
 }
 
-function RoomThread({ roomId, onArchived }) {
+function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const { t, i18n } = useTranslation('dashboard');
   const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
@@ -731,6 +735,9 @@ function RoomThread({ roomId, onArchived }) {
   const [savingGoal, setSavingGoal] = useState(false);
   const threadEndRef = useRef(null);
   const scrollRef = useRef(null);
+  const campaignReturnRef = useRef(new URLSearchParams(window.location.search).get('campaignReturn'));
+  const campaignReturnedRef = useRef(false);
+  const isCampaignRoom = Boolean(campaignReturnRef.current || room?.campaign_id);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
   const pinnedRef = useRef(true);
@@ -836,6 +843,27 @@ function RoomThread({ roomId, onArchived }) {
   }, [roomId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const campaignId = campaignReturnRef.current;
+    if (!campaignId || !onCampaignReady) return undefined;
+    let active = true;
+    const checkCampaign = async () => {
+      try {
+        const response = await apiClient.getCampaign(campaignId);
+        const campaign = response?.campaign;
+        const hasPlan = Boolean(campaign?.planVersions?.length);
+        if (active && !campaignReturnedRef.current && campaign?.roomId === roomId
+          && hasPlan && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
+          campaignReturnedRef.current = true;
+          onCampaignReady(campaignId);
+        }
+      } catch { /* The Room remains usable while campaign status is temporarily unavailable. */ }
+    };
+    checkCampaign();
+    const timer = window.setInterval(checkCampaign, 4000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [onCampaignReady, roomId]);
 
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
@@ -1119,13 +1147,14 @@ function RoomThread({ roomId, onArchived }) {
   useEffect(() => {
     if (!room?.id) return;
     if (room.archived_at) return;  // no setup walkthrough on archived rooms
+    if (isCampaignRoom) return;    // Campaign orchestration owns model and simulation choices.
     try {
       if (!window.localStorage.getItem(`hm-room-setup-${room.id}`)) {
         setSetupStep(0);
         setShowSetup(true);
       }
     } catch { /* noop */ }
-  }, [room?.id, room?.archived_at]);
+  }, [isCampaignRoom, room?.id, room?.archived_at]);
 
   function finishSetup() {
     try { window.localStorage.setItem(`hm-room-setup-${room?.id}`, '1'); } catch { /* noop */ }
@@ -1471,7 +1500,7 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
-            {!archived && (
+            {!archived && !isCampaignRoom && (
               <div className="mt-1 inline-flex items-center gap-1.5">
                 <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.quality', 'Quality')}</span>
                 <div className="inline-flex rounded-lg border border-[#e3e0db] overflow-hidden">
@@ -2026,7 +2055,7 @@ function RoomThread({ roomId, onArchived }) {
 
       {/* First-run setup walkthrough — 4 small slides. No Save: each choice applies live.
           Finishing (or skipping) just closes it; the room then works as usual. */}
-      {showSetup && room && (
+      {showSetup && room && !isCampaignRoom && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={finishSetup}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 pt-3">

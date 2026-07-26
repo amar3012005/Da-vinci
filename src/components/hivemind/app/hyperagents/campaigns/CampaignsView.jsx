@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import apiClient from '../../shared/api-client';
 import CampaignDashboardModal from './CampaignDashboardModal';
 import CampaignDetail from './CampaignDetail';
+import CampaignActivation from './CampaignActivation';
 import CreateCampaignWizard from './CreateCampaignWizard';
 
 const statusTone = { RUNNING: 'text-emerald-700 bg-emerald-50', COMPLETED: 'text-emerald-700 bg-emerald-50', FAILED: 'text-red-700 bg-red-50', NEEDS_INPUT: 'text-amber-800 bg-amber-50' };
@@ -14,13 +15,14 @@ export function withCampaignSearchParam(searchParams, campaignId) {
   return next;
 }
 
-export default function CampaignsView() {
+export default function CampaignsView({ onOpenRoom }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCampaignId = searchParams.get('campaign');
   const [campaigns, setCampaigns] = useState([]); const [capabilities, setCapabilities] = useState(null);
   const [paidCampaigns, setPaidCampaigns] = useState([]);
   const [selected, setSelected] = useState(null); const [loading, setLoading] = useState(true); const [detailLoading, setDetailLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [activation, setActivation] = useState(null);
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -53,8 +55,32 @@ export default function CampaignsView() {
     setSearchParams(withCampaignSearchParam(searchParams, campaignId), { replace });
   }, [searchParams, setSearchParams]);
   const closeCampaign = useCallback(() => { setSelected(null); setCampaignUrl(null, true); load(); }, [load, setCampaignUrl]);
-  const open = (campaign) => { setSelected(campaign); setCampaignUrl(campaign.id); loadDetail(campaign.id); };
-  const create = async (payload) => { const data = await apiClient.createCampaign(payload); setShowCreate(false); await load(); setCampaignUrl(data.campaign.id); await loadDetail(data.campaign.id); };
+  const open = async (campaign) => {
+    if (campaign.status === 'GENERATING' && onOpenRoom) {
+      const data = await apiClient.getCampaign(campaign.id);
+      if (data.campaign?.roomId) { onOpenRoom(data.campaign.roomId, campaign.id); return; }
+    }
+    setSelected(campaign); setCampaignUrl(campaign.id); loadDetail(campaign.id);
+  };
+  const create = async (payload) => {
+    setShowCreate(false);
+    setActivation({ status: 'working', step: 1, goal: payload.goal });
+    const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    try {
+      const data = await apiClient.createCampaign(payload);
+      for (const step of [2, 3, 4]) { setActivation((current) => ({ ...current, step })); await delay(300); }
+      setActivation((current) => ({ ...current, status: 'opening', step: 5, campaign: data.campaign }));
+      await delay(700);
+      setActivation(null);
+      if (data.campaign?.roomId && onOpenRoom) { onOpenRoom(data.campaign.roomId, data.campaign.id); return; }
+      await load();
+      setCampaignUrl(data.campaign.id);
+      await loadDetail(data.campaign.id);
+    } catch (err) {
+      setActivation((current) => ({ ...current, status: 'failed', error: err?.response?.data?.message || err.message || 'Could not create Campaign Room' }));
+      throw err;
+    }
+  };
   const control = async (action) => { setBusy(true); setError(''); try { await apiClient.controlCampaign(selected.id, action); await loadDetail(selected.id); await load(); return true; } catch (err) { setError(err?.response?.data?.message || err.message); return false; } finally { setBusy(false); } };
   const approveAction = async (actionId) => { setBusy(true); setError(''); try { await apiClient.approveCampaignAction(selected.id, actionId); await loadDetail(selected.id); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
   const controlAction = async (actionId, action) => { setBusy(true); setError(''); try { await apiClient.controlCampaignAction(selected.id, actionId, action); await loadDetail(selected.id); await load(); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
@@ -78,8 +104,9 @@ export default function CampaignsView() {
       {paidCampaigns.length ? <section className="mt-9"><div className="flex items-center justify-between pb-2 border-b border-[#d8d3cc]"><div><h2 className="text-[12px] font-semibold">Paid X campaigns</h2><p className="text-[10px] text-[#817b74] mt-0.5">Existing Ads API campaigns remain independently controlled.</p></div></div>{paidCampaigns.map((campaign) => <div key={campaign.id} className="grid grid-cols-[1fr_110px_90px] gap-3 items-center py-3 border-b border-[#e6e2dc]"><div className="min-w-0"><div className="text-[12px] font-semibold truncate">{campaign.name}</div><div className="text-[10px] text-[#817b74] mt-0.5">{campaign.metrics?.impressions || 0} impressions · {campaign.metrics?.url_clicks || 0} link clicks</div></div><span className="text-[9px] font-mono uppercase">{campaign.status}</span><div className="flex justify-end gap-1">{['ACTIVE', 'PENDING_REVIEW'].includes(campaign.status) ? <button onClick={() => controlPaid(campaign.id, 'pause')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Pause paid campaign"><Pause size={12} /></button> : null}{campaign.status === 'PAUSED' ? <button onClick={() => controlPaid(campaign.id, 'resume')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Resume paid campaign"><Play size={12} /></button> : null}<button onClick={() => controlPaid(campaign.id, 'sync')} disabled={busy} className="w-8 h-8 border border-[#c9c3bb] rounded-md grid place-items-center" title="Refresh paid performance"><RefreshCw size={12} /></button></div></div>)}</section> : null}
     </main>
     {selected || (selectedCampaignId && detailLoading) ? <CampaignDashboardModal campaign={selected} loading={detailLoading} onClose={closeCampaign}>
-      {selected ? <CampaignDetail campaign={selected} loading={detailLoading} onBack={closeCampaign} onControl={control} onApproveAction={approveAction} onRetryAction={(id) => controlAction(id, 'retry')} onReconcileAction={(id) => controlAction(id, 'reconcile')} onEditAction={editAction} onRemoveAction={removeAction} onRegenerate={regenerate} busy={busy} executionEnabled={Boolean(capabilities?.execution_enabled)} /> : null}
+      {selected ? <CampaignDetail campaign={selected} loading={detailLoading} onBack={closeCampaign} onOpenRoom={onOpenRoom || (() => {})} onControl={control} onApproveAction={approveAction} onRetryAction={(id) => controlAction(id, 'retry')} onReconcileAction={(id) => controlAction(id, 'reconcile')} onEditAction={editAction} onRemoveAction={removeAction} onRegenerate={regenerate} busy={busy} executionEnabled={Boolean(capabilities?.execution_enabled)} /> : null}
     </CampaignDashboardModal> : null}
     {showCreate ? <CreateCampaignWizard capabilities={capabilities} onClose={() => setShowCreate(false)} onCreate={create} onConnect={connect} /> : null}
+    {activation ? <CampaignActivation activation={activation} onClose={() => setActivation(null)} /> : null}
   </div>;
 }

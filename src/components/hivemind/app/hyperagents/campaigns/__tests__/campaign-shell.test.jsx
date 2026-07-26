@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import CampaignDashboardModal, { campaignTimeline } from '../CampaignDashboardModal';
+import CampaignDashboardModal from '../CampaignDashboardModal';
 import { deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
 
@@ -46,7 +46,7 @@ describe('campaign dashboard shell', () => {
     expect(closed.toString()).toBe('view=campaigns&source=nav');
   });
 
-  test('renders a timeline-first modal with chronological, human-readable events', () => {
+  test('renders one dashboard shell without a duplicate campaign header or timeline', () => {
     const campaign = {
       id: 'campaign-42', name: 'Founder awareness', status: 'READY_FOR_APPROVAL',
       events: [
@@ -55,14 +55,11 @@ describe('campaign dashboard shell', () => {
         { id: 'started', eventType: 'campaign_generation_started', createdAt: '2026-07-26T17:56:17Z' },
       ],
     };
-    expect(campaignTimeline(campaign.events).map((event) => event.id)).toEqual(['created', 'started', 'ready']);
-
     const markup = renderToStaticMarkup(<CampaignDashboardModal campaign={campaign} loading={false} onClose={jest.fn()}><div>Campaign detail</div></CampaignDashboardModal>);
     expect(markup).toContain('role="dialog"');
-    expect(markup).toContain('aria-label="Campaign progress"');
-    expect(markup).toContain('Campaign and dedicated Room created');
-    expect(markup).toContain('Agents started gathering and debating');
-    expect(markup).toContain('Campaign plan contract accepted');
+    expect(markup).toContain('Founder awareness');
     expect(markup).toContain('Campaign detail');
+    expect(markup).not.toContain('Campaign progress and operating plan');
+    expect(markup).not.toContain('Campaign plan contract accepted');
   });
 });
