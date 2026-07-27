@@ -1684,6 +1684,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async deleteCampaign(id) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}`);
+    return data;
+  }
+
   async controlCampaign(id, action) {
     const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/${action}`, {});
     return data;
