@@ -1659,6 +1659,16 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getCampaignSettings() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/settings');
+    return data;
+  }
+
+  async updateCampaignSettings(autonomyMode) {
+    const { data } = await this.controlPlane.patch('/v1/campaigns/settings', { autonomy_mode: autonomyMode });
+    return data;
+  }
+
   async getCampaigns() {
     const { data } = await this.controlPlane.get('/v1/campaigns');
     return data;

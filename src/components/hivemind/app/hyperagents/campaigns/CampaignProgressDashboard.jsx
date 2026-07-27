@@ -1,87 +1,76 @@
-import React from 'react';
-import { ArrowLeft, Check, CheckCircle2, Circle, Clock3, ExternalLink, Loader2, Rocket, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Circle, Compass, ExternalLink, Loader2, Pause, Play, Rocket, Send, Settings2, X } from 'lucide-react';
 import { CHANNEL_NAMES } from './channel-catalog';
-import { campaignProgress } from './CampaignDetail';
+import { CampaignAssetImage } from './CampaignCreative';
 
-const STATUS_LABEL = {
-  GENERATING: 'Campaign Intelligence is working',
-  PREPARING_ASSETS: 'Creating campaign visuals',
-  READY_FOR_APPROVAL: 'Plan ready for review',
-  RUNNING: 'Campaign is running',
-  SCHEDULED: 'Campaign is scheduled',
-  PAUSED: 'Campaign is paused',
-  COMPLETED: 'Campaign completed',
-  NEEDS_INPUT: 'Campaign needs your input',
-  FAILED: 'Campaign needs attention',
-};
+const STATUS_LABEL = { GENERATING: 'Campaign Intelligence is working', PREPARING_ASSETS: 'Creating campaign visuals', READY_FOR_APPROVAL: 'Ready for review', RUNNING: 'Running', SCHEDULED: 'Scheduled', PAUSED: 'Paused', COMPLETED: 'Completed', NEEDS_INPUT: 'Needs input', FAILED: 'Needs attention' };
+const TABS = [['posts', 'Posts', Send], ['schedule', 'Schedule', CalendarDays], ['strategy', 'Strategy', Compass], ['reactions', 'Reactions', Activity], ['controls', 'Controls', Settings2]];
 
-function Progress({ status }) {
-  return <ol className="grid grid-cols-3" aria-label="Campaign progress">
-    {campaignProgress(status).map((step, index) => <li key={step.id} className="relative min-w-0">
-      {index ? <span className={`absolute right-1/2 top-[15px] h-px w-full ${step.state === 'upcoming' ? 'bg-[#d8d3cc]' : 'bg-[#256d5b]'}`} /> : null}
-      <div className="relative flex flex-col items-center text-center">
-        <span className={`grid h-8 w-8 place-items-center rounded-full border ${step.state === 'complete' ? 'border-[#256d5b] bg-[#256d5b] text-white' : step.state === 'current' ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#cfc9c1] bg-[#fffefa] text-[#aaa49c]'}`}>
-          {step.state === 'complete' ? <Check size={14} /> : <Circle size={8} className={step.state === 'current' ? 'fill-current' : ''} />}
-        </span>
-        <span className="mt-2 text-[10.5px] font-semibold">{step.label}</span>
-        <span className="mt-0.5 text-[9px] text-[#817b74]">{step.detail}</span>
-      </div>
-    </li>)}
-  </ol>;
+function actionLabel(action) {
+  if (action.status === 'SUCCEEDED') return 'Published';
+  if (action.status === 'PAUSED') return 'Paused';
+  if (['QUEUED', 'EXECUTING'].includes(action.status)) return 'Scheduled';
+  if (action.status === 'AWAITING_APPROVAL') return 'Needs approval';
+  if (['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status)) return 'Needs attention';
+  return 'Ready';
+}
+
+function selectedAsset(action) {
+  return (action.assets || []).find((asset) => asset.id === action.payload?.asset_id)
+    || (action.assets || []).find((asset) => ['READY', 'APPROVED'].includes(asset.status));
+}
+
+function PostsView({ actions }) {
+  const [index, setIndex] = useState(0);
+  const action = actions[Math.min(index, Math.max(actions.length - 1, 0))];
+  if (!action) return <div className="py-16 text-center text-[11px] text-[#817b74]">Final posts will appear when the Campaign Contract is accepted.</div>;
+  const asset = selectedAsset(action);
+  const copy = action.payload?.text || action.payload?.final_copy || action.payload?.body || action.payload?.opening || '';
+  return <div>
+    <div className="flex items-end justify-between gap-4"><div><h2 className="text-[15px] font-semibold">Final campaign posts</h2><p className="mt-1 text-[10px] text-[#817b74]">Exact creative and live execution state from the accepted contract.</p></div><span className="font-mono text-[9px] uppercase text-[#817b74]">{index + 1} of {actions.length}</span></div>
+    <div className="mt-4 grid overflow-hidden rounded-md border border-[#d8d3cc] bg-white lg:grid-cols-[1fr_270px]">
+      <article className="min-w-0 p-5 lg:border-r lg:border-[#e3dfd8]">
+        <div className="flex items-center justify-between text-[9px] font-mono uppercase text-[#817b74]"><span>{CHANNEL_NAMES[action.channel] || action.channel}</span><span>{Array.from(copy).length}{action.channel === 'x_organic' ? '/280' : ''}</span></div>
+        {asset ? <CampaignAssetImage asset={asset} alt={asset.metadata?.alt_text || action.payload?.asset_alt_text || ''} className="mt-4 aspect-[16/7] w-full rounded-md border border-[#e3dfd8] object-cover" /> : null}
+        <h3 className="mt-5 text-[13px] font-semibold">{action.payload?.title || `Campaign action ${index + 1}`}</h3>
+        <p className="mt-3 whitespace-pre-wrap text-[14px] leading-6 text-[#26221f]">{copy}</p>
+      </article>
+      <aside className="bg-[#faf9f6] p-4"><div className="text-[8.5px] font-mono uppercase text-[#817b74]">Publishing status</div><div className="mt-2 inline-flex rounded bg-[#e7f2ed] px-2 py-1 text-[8.5px] font-mono uppercase text-[#256d5b]">{actionLabel(action)}</div><div className="mt-4 text-[10.5px] font-semibold">{action.scheduledAt ? new Date(action.scheduledAt).toLocaleString() : 'Timing set by approved schedule'}</div><div className="mt-5 border-y border-[#e3dfd8] py-3"><div className="text-[8.5px] font-mono uppercase text-[#817b74]">Why this action</div><p className="mt-2 text-[10px] leading-5 text-[#615c56]">{action.rationale || 'The Campaign Intelligence team selected this action as part of the approved sequence.'}</p></div><div className="mt-4 text-[8.5px] font-mono uppercase text-[#817b74]">Success measure</div><p className="mt-1 text-[10px] text-[#615c56]">{action.successMetric || 'Defined in campaign measurement plan'}</p></aside>
+    </div>
+    <div className="mt-3 flex items-center justify-between"><div className="flex gap-1">{actions.map((item, itemIndex) => <button key={item.id} onClick={() => setIndex(itemIndex)} title={`Open action ${itemIndex + 1}`} className={`h-1 w-6 rounded ${itemIndex === index ? 'bg-[#256d5b]' : 'bg-[#d8d3cc]'}`} />)}</div><div className="flex gap-1"><button onClick={() => setIndex(Math.max(0, index - 1))} disabled={index === 0} className="grid h-8 w-8 place-items-center rounded-md border border-[#d8d3cc] disabled:opacity-30" title="Previous post"><ArrowLeft size={13} /></button><button onClick={() => setIndex(Math.min(actions.length - 1, index + 1))} disabled={index === actions.length - 1} className="grid h-8 w-8 place-items-center rounded-md border border-[#d8d3cc] disabled:opacity-30" title="Next post"><ArrowRight size={13} /></button></div></div>
+  </div>;
+}
+
+function ScheduleView({ actions, timezone }) {
+  const groups = actions.reduce((result, action) => { const key = action.scheduledAt ? new Date(action.scheduledAt).toLocaleDateString() : 'Awaiting launch'; (result[key] ||= []).push(action); return result; }, {});
+  return <div><div className="flex items-end justify-between"><div><h2 className="text-[15px] font-semibold">Campaign schedule</h2><p className="mt-1 text-[10px] text-[#817b74]">Every final action in the campaign timezone.</p></div><span className="rounded-md border border-[#d8d3cc] bg-white px-2 py-1.5 text-[9px] font-semibold">{timezone || 'UTC'}</span></div><div className="mt-4 border-t border-[#d8d3cc]">{Object.entries(groups).map(([date, rows]) => <section key={date} className="grid gap-3 border-b border-[#e3dfd8] py-4 sm:grid-cols-[110px_1fr]"><div><div className="text-[10.5px] font-semibold">{date}</div><div className="mt-1 text-[8.5px] font-mono uppercase text-[#817b74]">{rows.length} action{rows.length === 1 ? '' : 's'}</div></div><div className="space-y-2">{rows.map((action) => <div key={action.id} className="grid grid-cols-[26px_1fr_auto] items-center gap-3 rounded-md border border-[#d8d3cc] bg-white px-3 py-2.5"><span className="grid h-6 w-6 place-items-center rounded bg-[#171717] text-[8px] font-semibold text-white">{action.channel === 'x_organic' ? 'X' : action.channel.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><div className="truncate text-[10.5px] font-semibold">{action.payload?.title || action.actionType}</div><div className="mt-0.5 text-[9px] text-[#817b74]">{action.scheduledAt ? new Date(action.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Starts after approval'}</div></div><span className="rounded bg-[#edf3f0] px-2 py-1 text-[8px] font-mono uppercase text-[#256d5b]">{actionLabel(action)}</span></div>)}</div></section>)}</div></div>;
+}
+
+function StrategyView({ bundle }) {
+  const audience = bundle?.audience || {};
+  return <div><h2 className="text-[15px] font-semibold">Strategy at a glance</h2><p className="mt-1 text-[10px] text-[#817b74]">The operational decisions; detailed reasoning remains in Campaign Intelligence.</p><div className="mt-5 border-l-2 border-[#256d5b] bg-[#f1f6f3] px-4 py-3 text-[12px] font-semibold leading-5">{bundle?.positioning?.statement || bundle?.strategy || 'The accepted strategy will appear here.'}</div><div className="mt-5 grid gap-5 sm:grid-cols-2"><section><h3 className="text-[10.5px] font-semibold">Audience</h3><p className="mt-2 text-[10.5px] leading-5 text-[#615c56]">{audience.rationale || 'Audience is being finalized.'}</p></section><section><h3 className="text-[10.5px] font-semibold">Content system</h3><div className="mt-2 divide-y divide-[#e3dfd8] border-y border-[#e3dfd8]">{(bundle?.content_pillars || []).map((pillar) => <div key={pillar} className="py-2 text-[10.5px]">{pillar}</div>)}</div></section></div></div>;
+}
+
+function ReactionsView({ metrics }) {
+  const latest = metrics?.[0]?.metrics || {};
+  const values = [['Impressions', latest.impressions], ['Engagements', latest.engagements], ['Link clicks', latest.url_clicks || latest.link_clicks], ['Replies', latest.replies], ['Follows', latest.follows]];
+  return <div><h2 className="text-[15px] font-semibold">Audience reactions</h2><p className="mt-1 text-[10px] text-[#817b74]">Verified provider results only. Missing metrics remain unavailable, never estimated.</p><div className="mt-5 grid grid-cols-2 border-y border-[#d8d3cc] sm:grid-cols-5">{values.map(([label, value], index) => <div key={label} className={`px-3 py-4 ${index ? 'border-l border-[#e3dfd8]' : ''}`}><div className="text-[18px] font-semibold">{value ?? '—'}</div><div className="mt-1 text-[8px] font-mono uppercase text-[#817b74]">{label}</div></div>)}</div><div className="mt-6 border-y border-[#e3dfd8] py-4"><h3 className="text-[10.5px] font-semibold">Campaign learning</h3><p className="mt-2 text-[10.5px] text-[#817b74]">Agent interpretation will appear after enough verified reaction data is available.</p></div></div>;
+}
+
+function ControlsView({ campaign, readiness, canLaunch, onLaunch, busy, onOpenRoom }) {
+  const postLaunch = ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'FAILED'].includes(campaign.status);
+  return <div><div className="flex items-start justify-between gap-4"><div><h2 className="text-[15px] font-semibold">Campaign controls</h2><p className="mt-1 text-[10px] text-[#817b74]">Health, connections, approval policy, recovery, and audit.</p></div><button onClick={() => onOpenRoom(campaign.roomId, campaign.id)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#cfc9c1] bg-white px-3 text-[10px] font-semibold"><ExternalLink size={12} />Campaign Intelligence</button></div><div className="mt-5 flex items-center justify-between border-y border-[#d8d3cc] py-3"><div><div className="text-[10.5px] font-semibold">{postLaunch ? 'Campaign health' : 'Launch readiness'}</div><div className="mt-1 text-[9.5px] text-[#817b74]">{campaign.autonomyMode === 'FULL_AUTO' ? 'Auto operation' : 'Manual Review'} · {STATUS_LABEL[campaign.status] || campaign.status}</div></div><span className={`rounded px-2 py-1 text-[8px] font-mono uppercase ${readiness?.decision === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{readiness?.decision === 'ready' && postLaunch ? 'healthy' : readiness?.decision || 'checking'}</span></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{(readiness?.checks || []).map((item) => <div key={item.id} className="flex items-start gap-2.5 bg-[#f7f8f5] px-3 py-2.5">{item.status === 'passed' ? <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-700" /> : <Circle size={13} className="mt-0.5 shrink-0 fill-amber-500 text-amber-500" />}<div><div className="text-[10px] font-semibold">{item.label}</div>{item.status !== 'passed' ? <div className="mt-1 text-[9px] leading-4 text-[#817b74]">{item.detail}</div> : null}</div></div>)}</div><div className="mt-5 flex justify-end gap-2">{campaign.status === 'READY_FOR_APPROVAL' ? <button onClick={() => onLaunch('launch')} disabled={!canLaunch || busy} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[10.5px] font-semibold text-white disabled:bg-[#aaa49c]"><Rocket size={13} />Launch campaign</button> : null}{['RUNNING', 'SCHEDULED'].includes(campaign.status) ? <button onClick={() => onLaunch('pause')} disabled={busy} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#cfc9c1] px-4 text-[10.5px] font-semibold"><Pause size={13} />Pause</button> : null}{campaign.status === 'PAUSED' ? <button onClick={() => onLaunch('resume')} disabled={busy} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[10.5px] font-semibold text-white"><Play size={13} />Resume</button> : null}</div></div>;
 }
 
 export default function CampaignProgressDashboard({ campaign, loading, onClose, onOpenRoom, onLaunch, busy, executionEnabled }) {
+  const [tab, setTab] = useState('posts');
   if (loading && !campaign) return <div className="grid min-h-[420px] place-items-center"><Loader2 className="animate-spin text-[#77716a]" size={22} /></div>;
-  const readiness = campaign.readiness;
-  const events = (campaign.events || []).slice(0, 6);
+  const actions = campaign.actions || []; const readiness = campaign.readiness;
+  const plan = campaign.planVersions?.find((item) => item.id === campaign.currentPlanVersionId) || campaign.planVersions?.[0];
+  const counts = actions.reduce((result, action) => { const key = actionLabel(action); result[key] = (result[key] || 0) + 1; return result; }, {});
   const canLaunch = campaign.status === 'READY_FOR_APPROVAL' && executionEnabled && readiness?.decision === 'ready';
-  const postLaunch = ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'FAILED'].includes(campaign.status);
-  const actionCounts = (campaign.actions || []).reduce((counts, action) => {
-    if (action.status === 'SUCCEEDED') counts.published += 1;
-    else if (action.status === 'PAUSED') counts.paused += 1;
-    else if (['QUEUED', 'EXECUTING', 'AWAITING_APPROVAL'].includes(action.status)) counts.scheduled += 1;
-    else if (['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status)) counts.attention += 1;
-    else counts.ready += 1;
-    return counts;
-  }, { published: 0, paused: 0, scheduled: 0, ready: 0, attention: 0 });
-  const actionSummary = campaign.status === 'PAUSED'
-    ? [['Published', actionCounts.published], ['Paused', actionCounts.paused], ['Scheduled', actionCounts.scheduled], ['Needs attention', actionCounts.attention]]
-    : [['Published', actionCounts.published], ['Scheduled', actionCounts.scheduled], ['Ready', actionCounts.ready], ['Needs attention', actionCounts.attention]];
-  const readinessTitle = postLaunch ? 'Campaign health' : 'Launch readiness';
-  const readinessNote = postLaunch ? 'Live execution state for the approved plan.' : 'Only decisions still needed from you appear here.';
-
-  return <div className="h-full overflow-y-auto bg-[#fbfaf6]">
-    <header className="border-b border-[#dfdbd4] bg-[#fffefa] px-4 py-4 sm:px-7">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <button onClick={onClose} className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#6f6962]"><ArrowLeft size={12} />All campaigns</button>
-          <h1 className="mt-2 truncate text-[18px] font-semibold text-[#171717]">{campaign.name}</h1>
-          <p className="mt-1 max-w-3xl text-[11px] text-[#746e67]">{campaign.goal}</p>
-        </div>
-        <button onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-md hover:bg-[#f0ede7]" title="Close campaign progress"><X size={15} /></button>
-      </div>
-    </header>
-
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:px-7">
-      <section aria-label="Campaign status">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div><div className="text-[9px] font-mono uppercase text-[#817b74]">Current status</div><h2 className="mt-1 text-[17px] font-semibold">{STATUS_LABEL[campaign.status] || campaign.status}</h2><div className="mt-2 flex flex-wrap gap-1.5">{campaign.requestedChannels.map((id) => <span key={id} className="rounded border border-[#d8d3cc] bg-white px-2 py-1 text-[9.5px] font-semibold">{CHANNEL_NAMES[id] || id}</span>)}</div></div>
-          <button onClick={() => onOpenRoom(campaign.roomId, campaign.id)} className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white"><ExternalLink size={13} />Open Campaign Intelligence</button>
-        </div>
-        <div className="mx-auto mt-8 max-w-xl"><Progress status={campaign.status} /></div>
-      </section>
-
-      <section className="mt-8 grid grid-cols-2 border-y border-[#d8d3cc] sm:grid-cols-4" aria-label="Campaign action summary">
-        {actionSummary.map(([label, value], index) => <div key={label} className={`px-3 py-4 ${index ? 'border-l border-[#e3dfd8]' : ''}`}><div className={`text-[18px] font-semibold ${label === 'Needs attention' && value ? 'text-red-700' : 'text-[#171717]'}`}>{value}</div><div className="mt-1 text-[8.5px] font-mono uppercase text-[#817b74]">{label}</div></div>)}
-      </section>
-
-      <section className="mt-6 border-b border-[#d8d3cc] pb-6" aria-label={readinessTitle}>
-        <div className="flex items-center justify-between gap-3"><div><h3 className="text-[12px] font-semibold">{readinessTitle}</h3><p className="mt-0.5 text-[10px] text-[#817b74]">{readinessNote}</p></div><span className={`rounded px-2 py-1 text-[8.5px] font-mono uppercase ${readiness?.decision === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{readiness?.decision === 'ready' && postLaunch ? 'healthy' : readiness?.decision || 'checking'}</span></div>
-        <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">{(readiness?.checks || []).map((item) => <div key={item.id} className="flex items-start gap-2.5">{item.status === 'passed' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-700" /> : <Circle size={14} className="mt-0.5 shrink-0 fill-amber-500 text-amber-500" />}<div><div className="text-[10.5px] font-semibold">{item.label}</div>{item.status !== 'passed' ? <><div className="mt-0.5 text-[9.5px] leading-4 text-[#817b74]">{item.detail}</div>{item.recovery ? <div className="mt-1 text-[9.5px] leading-4 text-[#615c56]">Next: {item.recovery}</div> : null}</> : null}</div></div>)}</div>
-        {campaign.status === 'READY_FOR_APPROVAL' ? <div className="mt-5 flex justify-end"><button onClick={() => onLaunch('launch')} disabled={!canLaunch || busy} title={canLaunch ? 'Launch campaign' : readiness?.summary?.next_action || 'Complete launch requirements'} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:bg-[#aaa49c]"><Rocket size={13} />Launch campaign</button></div> : null}
-      </section>
-
-      <section className="mt-6" aria-label="Recent campaign activity"><h3 className="text-[12px] font-semibold">Recent progress</h3><div className="mt-2">{events.map((event) => <div key={event.id} className="flex gap-2.5 border-b border-[#e6e2dc] py-3"><Clock3 size={12} className="mt-0.5 shrink-0 text-[#817b74]" /><div><div className="text-[10.5px] font-semibold">{String(event.eventType || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())}</div><div className="mt-0.5 text-[9px] text-[#817b74]">{new Date(event.createdAt).toLocaleString()}</div></div></div>)}</div></section>
-    </main>
+  return <div className="grid h-full grid-rows-[auto_1fr] bg-[#fbfaf6]">
+    <header className="flex items-start justify-between gap-4 border-b border-[#dfdbd4] bg-white px-5 py-4"><div className="min-w-0"><button onClick={onClose} className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold text-[#6f6962]"><ArrowLeft size={11} />All campaigns</button><h1 className="mt-2 truncate text-[17px] font-semibold">{campaign.name}</h1><div className="mt-1 flex flex-wrap items-center gap-2 text-[9.5px] text-[#817b74]"><span>{campaign.brief?.duration_days || 14}-day campaign</span><span>·</span><span>{campaign.requestedChannels.map((id) => CHANNEL_NAMES[id] || id).join(', ')}</span><span className="rounded bg-[#e7f2ed] px-1.5 py-0.5 font-mono uppercase text-[#256d5b]">{STATUS_LABEL[campaign.status] || campaign.status}</span></div></div><div className="flex items-center gap-4"><div className="hidden gap-4 sm:flex">{[['Published', counts.Published || 0], ['Scheduled', counts.Scheduled || 0], ['Attention', counts['Needs attention'] || 0]].map(([label, value]) => <div key={label} className="text-right"><div className="text-[14px] font-semibold">{value}</div><div className="text-[7.5px] font-mono uppercase text-[#817b74]">{label}</div></div>)}</div><button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-md border border-[#e3dfd8]" title="Close campaign"><X size={14} /></button></div></header>
+    <div className="grid min-h-0 md:grid-cols-[155px_1fr]"><nav className="flex overflow-x-auto border-b border-[#dfdbd4] bg-[#f3f5f2] p-2 md:block md:border-b-0 md:border-r">{TABS.map(([id, label, Icon]) => <button key={id} onClick={() => setTab(id)} className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-[10.5px] font-semibold md:w-full ${tab === id ? 'bg-white text-[#171717] shadow-sm' : 'text-[#6f746f]'}`}><Icon size={13} />{label}{id === 'posts' || id === 'schedule' ? <span className="ml-auto rounded border border-[#d8d3cc] px-1.5 py-0.5 text-[8px] font-mono">{actions.length}</span> : null}</button>)}</nav><main className="min-w-0 overflow-y-auto p-4 sm:p-6">{tab === 'posts' ? <PostsView actions={actions} /> : tab === 'schedule' ? <ScheduleView actions={actions} timezone={campaign.schedulePolicy?.timezone} /> : tab === 'strategy' ? <StrategyView bundle={plan?.bundle} /> : tab === 'reactions' ? <ReactionsView metrics={campaign.metricSnapshots} /> : <ControlsView campaign={campaign} readiness={readiness} canLaunch={canLaunch} onLaunch={onLaunch} busy={busy} onOpenRoom={onOpenRoom} />}</main></div>
   </div>;
 }

@@ -93,7 +93,7 @@ export function deriveCampaignPayload(form, capabilities, idempotencyKey, timezo
   };
 }
 
-export default function CreateCampaignWizard({ capabilities, onClose, onCreate, onConnect }) {
+export default function CreateCampaignWizard({ capabilities, autonomyMode = 'MANUAL_REVIEW', onClose, onCreate, onConnect }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showMoreChannels, setShowMoreChannels] = useState(false);
@@ -164,7 +164,7 @@ export default function CreateCampaignWizard({ capabilities, onClose, onCreate, 
       </div>
 
       <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[#e6e2dc] px-5 py-4">
-        <p className="max-w-md text-[9.5px] leading-4 text-[#817b74]">Your AI team decides the strategy, audience, formats, and exact cadence. Nothing is published until you review the finished campaign.</p>
+        <p className="max-w-md text-[9.5px] leading-4 text-[#817b74]">{autonomyMode === 'AUTO' ? 'Auto mode: after contract, provider, creative, and safety checks pass, the campaign launches and follows its schedule without another approval prompt.' : 'Manual Review: your AI team prepares everything, then waits for you to approve the finished campaign before launch.'}</p>
         <button onClick={submit} disabled={busy || form.goal.trim().length < 12 || (!form.channels.length && !readyChannels.length)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11.5px] font-semibold text-white disabled:bg-[#bbb5ad]">{busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}Create campaign</button>
       </footer>
     </div>

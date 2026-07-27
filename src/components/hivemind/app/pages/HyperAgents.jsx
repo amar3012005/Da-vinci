@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
-  AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
+  AlertTriangle, CheckCircle2, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
@@ -1155,8 +1155,15 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     setCampaignHandoff(null);
   }, [campaignReturn]);
 
+  const completeCampaignHandoff = useCallback((campaignId) => {
+    try { window.localStorage.setItem(`hm-campaign-handoff-${campaignId}`, '1'); } catch { /* noop */ }
+    campaignReturnedRef.current = true;
+    setCampaignHandoff(null);
+    onCampaignReady?.(campaignId);
+  }, [onCampaignReady]);
+
   useEffect(() => {
-    const campaignId = campaignReturn || room?.campaign_id || room?.campaignId;
+    const campaignId = campaignReturn;
     if (!campaignId || !onCampaignReady) return undefined;
     let active = true;
     const checkCampaign = async () => {
@@ -1164,7 +1171,9 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
         const response = await apiClient.getCampaign(campaignId);
         const campaign = response?.campaign;
         const hasPlan = Boolean(campaign?.planVersions?.length);
-        if (active && !activeTurnId && !campaignReturnedRef.current && campaign?.roomId === roomId
+        let handoffCompleted = false;
+        try { handoffCompleted = window.localStorage.getItem(`hm-campaign-handoff-${campaignId}`) === '1'; } catch { /* noop */ }
+        if (active && !activeTurnId && !campaignReturnedRef.current && !handoffCompleted && campaign?.roomId === roomId
           && hasPlan && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
           campaignReturnedRef.current = true;
           setCampaignHandoff({ campaignId, seconds: 10, status: campaign.status });
@@ -1174,19 +1183,19 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     checkCampaign();
     const timer = window.setInterval(checkCampaign, 4000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [activeTurnId, campaignReturn, onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
+  }, [activeTurnId, campaignReturn, onCampaignReady, roomId]);
 
   useEffect(() => {
     if (!campaignHandoff) return undefined;
     if (campaignHandoff.seconds <= 0) {
-      onCampaignReady?.(campaignHandoff.campaignId);
+      completeCampaignHandoff(campaignHandoff.campaignId);
       return undefined;
     }
     const timer = window.setTimeout(() => {
       setCampaignHandoff((current) => current ? { ...current, seconds: current.seconds - 1 } : null);
     }, 1000);
     return () => window.clearTimeout(timer);
-  }, [campaignHandoff, onCampaignReady]);
+  }, [campaignHandoff, completeCampaignHandoff]);
 
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
@@ -1317,6 +1326,8 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      // Durable, progressively visible Campaign Intelligence stages.
+      'campaign_stage',
       // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
       'skill_used',
       // Post-seal follow-up suggestions (clickable, one-click auto-run):
@@ -2210,7 +2221,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="font-mono text-[18px] font-semibold text-[#173d32]">{campaignHandoff.seconds}s</div>
-                  <button type="button" onClick={() => onCampaignReady?.(campaignHandoff.campaignId)} className="mt-0.5 text-[10px] font-semibold text-[#256d5b] hover:underline">Open now</button>
+                  <button type="button" onClick={() => completeCampaignHandoff(campaignHandoff.campaignId)} className="mt-0.5 text-[10px] font-semibold text-[#256d5b] hover:underline">Open now</button>
                 </div>
               </div>
             </section>
@@ -2691,6 +2702,7 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const campaignBundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
   const campaignBundle = campaignBundleLine?.bundle || null;
   const campaignInvalid = [...lines].reverse().find((line) => line.t === 'campaign_bundle_invalid');
+  const campaignStages = lines.filter((line) => line.t === 'campaign_stage');
   if (campaignHandoff || campaignHandoffFailed) {
     return (
       <div className="space-y-3">
@@ -3264,6 +3276,20 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             ? t('hyperAgents.harnessCheckFailed', 'Needs attention: {{items}}', { items: harnessCheck.failed.join(', ') })
             : t('hyperAgents.harnessCheckGeneric', 'Some report quality checks need attention.')}
         </div>
+      )}
+
+      {isCampaignTurn && campaignStages.length > 0 && (
+        <section className="mx-2 my-3 border-y border-[#d8d3cc] py-3" aria-label="Campaign Intelligence progress">
+          <div className="text-[9px] font-mono uppercase text-[#256d5b]">Campaign Intelligence progress</div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {campaignStages.slice(-8).map((stage, index) => (
+              <div key={`${stage.stage}-${stage.status}-${stage.attempt || 0}-${index}`} className="flex items-start gap-2.5 bg-[#f7f8f5] px-3 py-2.5">
+                {stage.status === 'complete' ? <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-700" /> : <Loader2 size={13} className="mt-0.5 shrink-0 animate-spin text-[#256d5b]" />}
+                <div><div className="text-[10.5px] font-semibold text-[#2f342f]">{stage.title}</div><div className="mt-0.5 text-[9.5px] leading-4 text-[#747a75]">{stage.detail}</div></div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {finalReport && (() => {

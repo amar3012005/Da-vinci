@@ -26,7 +26,17 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain("setCampaignHandoff({ campaignId, seconds: 10");
     expect(source).toContain('Campaign Intelligence finished');
     expect(source).toContain('Campaign contract accepted');
-    expect(source).toContain('onCampaignReady?.(campaignHandoff.campaignId)');
+    expect(source).toContain("window.localStorage.setItem(`hm-campaign-handoff-${campaignId}`, '1')");
+    expect(source).toContain("window.localStorage.getItem(`hm-campaign-handoff-${campaignId}`) === '1'");
+    expect(source).toContain('const campaignId = campaignReturn;');
+    expect(source).toContain('completeCampaignHandoff(campaignHandoff.campaignId)');
+  });
+
+  it('keeps Campaign Intelligence work progressively visible in the Room', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain("'campaign_stage'");
+    expect(source).toContain('Campaign Intelligence progress');
+    expect(source).toContain('campaignStages.slice(-8)');
   });
 
   it('requires an explicit expertise category for every new Room', () => {

@@ -99,19 +99,26 @@ describe('campaign dashboard shell', () => {
     expect(markup).not.toContain('Campaign plan contract accepted');
   });
 
-  test('campaign popup contains progress and controls while the operating plan stays in the room', () => {
+  test('campaign popup opens on final posts while strategy and controls remain available as compact views', () => {
     const campaign = {
       id: 'campaign-42', roomId: 'room-fixed', name: 'Founder awareness', goal: 'Make the category legible',
       status: 'READY_FOR_APPROVAL', requestedChannels: ['x_organic'],
+      actions: [{
+        id: 'action-1', channel: 'x_organic', status: 'READY', scheduledAt: null,
+        payload: { title: 'Opening post', text: 'A final campaign post.' }, assets: [],
+        rationale: 'Open the sequence with the category promise.', successMetric: 'Qualified engagement',
+      }],
+      planVersions: [], metricSnapshots: [],
       readiness: { decision: 'blocked', checks: [{ id: 'provider', label: 'X connected', status: 'blocked', detail: 'Connect X', recovery: 'Open connectors' }] },
       events: [{ id: 'ready', eventType: 'campaign_plan_ready', createdAt: '2026-07-26T17:56:32Z' }],
     };
     const markup = renderToStaticMarkup(<CampaignProgressDashboard campaign={campaign} loading={false} onClose={jest.fn()} onOpenRoom={jest.fn()} onLaunch={jest.fn()} busy={false} executionEnabled={false} />);
-    expect(markup).toContain('Open Campaign Intelligence');
-    expect(markup).toContain('Launch readiness');
-    expect(markup).toContain('Recent progress');
+    expect(markup).toContain('Final campaign posts');
+    expect(markup).toContain('Schedule');
+    expect(markup).toContain('Strategy');
+    expect(markup).toContain('Reactions');
+    expect(markup).toContain('Controls');
     expect(markup).not.toContain('Campaign Board');
-    expect(markup).not.toContain('Campaign sequence');
-    expect(markup).not.toContain('Strategy and positioning');
+    expect(markup).not.toContain('Recent progress');
   });
 });

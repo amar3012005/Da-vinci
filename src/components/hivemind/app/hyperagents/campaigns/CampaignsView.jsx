@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, Loader2, Megaphone, Pause, Play, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, BarChart3, Bot, Loader2, Megaphone, Pause, Play, Plus, RefreshCw, UserCheck } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../../shared/api-client';
 import CampaignDashboardModal from './CampaignDashboardModal';
@@ -24,11 +24,13 @@ export default function CampaignsView({ onOpenRoom }) {
   const [selected, setSelected] = useState(null); const [loading, setLoading] = useState(true); const [detailLoading, setDetailLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [activation, setActivation] = useState(null);
+  const [settings, setSettings] = useState({ autonomy_mode: 'MANUAL_REVIEW' });
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [caps, list, xStatus] = await Promise.all([apiClient.getCampaignCapabilities(), apiClient.getCampaigns(), apiClient.getXAdsStatus().catch(() => null)]);
+      const [caps, list, campaignSettings, xStatus] = await Promise.all([apiClient.getCampaignCapabilities(), apiClient.getCampaigns(), apiClient.getCampaignSettings(), apiClient.getXAdsStatus().catch(() => null)]);
       setCapabilities(caps); setCampaigns(list.campaigns || []);
+      setSettings(campaignSettings || { autonomy_mode: 'MANUAL_REVIEW' });
       if (xStatus?.connections?.x && xStatus?.connections?.x_ads) {
         const paid = await apiClient.getXAdsCampaigns().catch(() => ({ campaigns: [] })); setPaidCampaigns(paid.campaigns || []);
       } else setPaidCampaigns([]);
@@ -68,7 +70,7 @@ export default function CampaignsView({ onOpenRoom }) {
     setActivation({ status: 'working', step: 1, goal: payload.goal });
     const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
     try {
-      const data = await apiClient.createCampaign(payload);
+      const data = await apiClient.createCampaign({ ...payload, autonomy_mode: settings.autonomy_mode === 'AUTO' ? 'FULL_AUTO' : 'APPROVE_PLAN_ONCE' });
       for (const step of [2, 3, 4]) { setActivation((current) => ({ ...current, step })); await delay(300); }
       setActivation((current) => ({ ...current, status: 'opening', step: 5, campaign: data.campaign }));
       await delay(700);
@@ -82,6 +84,13 @@ export default function CampaignsView({ onOpenRoom }) {
       throw err;
     }
   };
+  const updateAutonomy = async (autonomyMode) => {
+    if (autonomyMode === settings.autonomy_mode || busy) return;
+    setBusy(true); setError('');
+    try { setSettings(await apiClient.updateCampaignSettings(autonomyMode)); }
+    catch (err) { setError(err?.response?.data?.message || err.message || 'Could not update campaign autonomy'); }
+    finally { setBusy(false); }
+  };
   const control = async (action) => { setBusy(true); setError(''); try { await apiClient.controlCampaign(selected.id, action); await loadDetail(selected.id); await load(); return true; } catch (err) { setError(err?.response?.data?.message || err.message); return false; } finally { setBusy(false); } };
   const controlPaid = async (campaignId, action) => { setBusy(true); setError(''); try { await apiClient.controlXAdsCampaign(campaignId, action); await load(); } catch (err) { setError(err?.response?.data?.message || err.message); } finally { setBusy(false); } };
   const connect = async (channel) => {
@@ -91,7 +100,7 @@ export default function CampaignsView({ onOpenRoom }) {
   const totals = useMemo(() => ({ running: campaigns.filter((x) => ['RUNNING', 'SCHEDULED'].includes(x.status)).length, actions: campaigns.reduce((n, x) => n + Number(x._count?.actions || 0), 0) }), [campaigns]);
   const selectedExecutionBlockers = selected?.requestedChannels?.filter((channel) => !capabilities?.channels?.find((item) => item.id === channel)?.execution_ready) || [];
   return <div className="h-full overflow-y-auto bg-[#fbfaf6]">
-    <header className="px-4 sm:px-7 py-5 border-b border-[#dfdbd4] flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><div className="flex items-center gap-2"><Megaphone size={17} /><h1 className="text-[18px] font-semibold">Your Campaigns</h1><span className="text-[9px] font-mono uppercase bg-[#ece9e3] rounded px-1.5 py-0.5">AI operated</span></div><p className="text-[11px] text-[#77716a] mt-1">One goal, one Campaign Room, coordinated execution across your connected channels.</p></div><div className="flex gap-2"><button onClick={load} disabled={loading} className="w-9 h-9 border border-[#c9c3bb] rounded-md grid place-items-center" title="Refresh"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} /></button><button onClick={() => setShowCreate(true)} disabled={!capabilities?.enabled} className="h-9 px-4 bg-[#171717] text-white rounded-md inline-flex items-center gap-1.5 text-[11.5px] font-semibold disabled:bg-[#bcb6ae]"><Plus size={13} />Create campaign</button></div></header>
+    <header className="px-4 sm:px-7 py-5 border-b border-[#dfdbd4] flex flex-col xl:flex-row xl:items-center justify-between gap-4"><div><div className="flex items-center gap-2"><Megaphone size={17} /><h1 className="text-[18px] font-semibold">Your Campaigns</h1><span className="text-[9px] font-mono uppercase bg-[#ece9e3] rounded px-1.5 py-0.5">AI operated</span></div><p className="text-[11px] text-[#77716a] mt-1">One goal, one Campaign Room, coordinated execution across your connected channels.</p></div><div className="flex flex-wrap items-center gap-2"><div className="inline-flex h-9 items-center rounded-md border border-[#c9c3bb] bg-[#f2f0eb] p-0.5" aria-label="Campaign autonomy"><button onClick={() => updateAutonomy('MANUAL_REVIEW')} disabled={busy} title="Review the finished campaign before launch" className={`inline-flex h-8 items-center gap-1.5 rounded-[4px] px-3 text-[10.5px] font-semibold ${settings.autonomy_mode === 'MANUAL_REVIEW' ? 'bg-white text-[#171717] shadow-sm' : 'text-[#77716a]'}`}><UserCheck size={12} />Manual Review</button><button onClick={() => updateAutonomy('AUTO')} disabled={busy} title="Launch and operate future campaigns automatically after safety checks" className={`inline-flex h-8 items-center gap-1.5 rounded-[4px] px-3 text-[10.5px] font-semibold ${settings.autonomy_mode === 'AUTO' ? 'bg-[#171717] text-white' : 'text-[#77716a]'}`}><Bot size={12} />Auto</button></div><button onClick={load} disabled={loading} className="w-9 h-9 border border-[#c9c3bb] rounded-md grid place-items-center" title="Refresh"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} /></button><button onClick={() => setShowCreate(true)} disabled={!capabilities?.enabled} className="h-9 px-4 bg-[#171717] text-white rounded-md inline-flex items-center gap-1.5 text-[11.5px] font-semibold disabled:bg-[#bcb6ae]"><Plus size={13} />Create campaign</button></div></header>
     <main className="px-4 sm:px-7 py-6">
       {error ? <div className="mb-4 flex gap-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2"><AlertTriangle size={13} />{error}</div> : null}
       <div className="grid grid-cols-2 sm:grid-cols-4 border-y border-[#dfdbd4] divide-x divide-[#dfdbd4]">{[['Campaigns', campaigns.length], ['Active', totals.running], ['Connected channels', capabilities?.channels?.filter((x) => x.executable).length || 0], ['Completed', campaigns.filter((x) => x.status === 'COMPLETED').length]].map(([label, value]) => <div key={label} className="py-4 px-3 sm:px-5 first:pl-0"><div className="text-[20px] font-semibold">{value}</div><div className="text-[9px] font-mono uppercase text-[#817b74] mt-1">{label}</div></div>)}</div>
@@ -103,7 +112,7 @@ export default function CampaignsView({ onOpenRoom }) {
     {selected || (selectedCampaignId && detailLoading) ? <CampaignDashboardModal campaign={selected} loading={detailLoading} onClose={closeCampaign}>
       {selected ? <CampaignProgressDashboard campaign={selected} loading={detailLoading} onClose={closeCampaign} onOpenRoom={onOpenRoom || (() => {})} onLaunch={control} busy={busy} executionEnabled={Boolean(capabilities?.execution_enabled) && selectedExecutionBlockers.length === 0} /> : null}
     </CampaignDashboardModal> : null}
-    {showCreate ? <CreateCampaignWizard capabilities={capabilities} onClose={() => setShowCreate(false)} onCreate={create} onConnect={connect} /> : null}
+    {showCreate ? <CreateCampaignWizard capabilities={capabilities} autonomyMode={settings.autonomy_mode} onClose={() => setShowCreate(false)} onCreate={create} onConnect={connect} /> : null}
     {activation ? <CampaignActivation activation={activation} onClose={() => setActivation(null)} /> : null}
   </div>;
 }
