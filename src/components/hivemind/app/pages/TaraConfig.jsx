@@ -379,20 +379,16 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
     setErr(null);
     setCallState('dialing');
     try {
-      const r = await fetch(`${apiBase}/calls/outbound`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: phone.trim(),
-          session_id: `out-${Date.now()}`,
-          user_id: identity?.userId,
-          org_id: identity?.orgId,
-          company: identity?.orgName || undefined,
-          language: callLang,
-          goal: goal.trim() || undefined,
-        }),
+      // Dial through the control plane, never the adapter directly: the
+      // adapter's gate needs a shared key the browser must not hold, so the
+      // direct call 401'd. Tenant + provider are resolved server-side.
+      const d0 = await apiClient.startTaraOutbound({
+        to: phone.trim(),
+        language: callLang,
+        company: identity?.orgName || undefined,
+        goal: goal.trim() || undefined,
       });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+      const r = { ok: true, json: async () => d0 };
       const d = await r.json();
       setCallLegId(d.call_leg_id);
     } catch (e) {
@@ -403,7 +399,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
 
   const hangup = async () => {
     if (!callLegId) return;
-    try { await fetch(`${apiBase}/calls/outbound/${callLegId}/hangup`, { method: 'POST' }); } catch { /* ignore */ }
+    try { await apiClient.hangupTaraOutbound(callLegId); } catch { /* ignore */ }
     setCallState('ended');
     stopPoll();
   };

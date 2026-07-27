@@ -698,6 +698,22 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Browser-initiated outbound dial. Goes through the control plane, NOT the
+  // adapter: the adapter's dial gate needs a shared key that must never reach a
+  // browser (it authorizes calling anyone). The session cookie proves who is
+  // asking and the tenant is pinned server-side.
+  async startTaraOutbound({ to, language, voice_id, goal, company }) {
+    const { data } = await this.controlPlane.post('/v1/tara/outbound', {
+      to, language, voice_id, goal, company,
+    });
+    return data;
+  }
+
+  async hangupTaraOutbound(callLegId) {
+    const { data } = await this.controlPlane.post(`/v1/tara/outbound/${encodeURIComponent(callLegId)}/hangup`, {});
+    return data;
+  }
+
   // Post-call state for specific sessions: post_call is 'live' | 'processing' |
   // 'ready', and `insight` carries summary + outcome + leads + learnings in one
   // shot. Lets the campaign panel show a truthful "analysing" state instead of a
