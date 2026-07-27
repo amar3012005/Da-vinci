@@ -18,11 +18,16 @@ const EMAIL_PACE_MS = 8500; // FE pacing (BE enforces 8s — stay just above)
 const _CORE_HTTP = (process.env.REACT_APP_CORE_API_URL || 'https://core.hivemind.davinciai.eu:8050').replace(/\/$/, '');
 const DG_HTTP = (process.env.REACT_APP_TARA_DG_HTTP || `${_CORE_HTTP}/voice2`).replace(/\/$/, '');
 const DG_WS = DG_HTTP.replace(/^http/, 'ws');
+// The live-listen tap lives on whichever ADAPTER ran the call — /voice2 for
+// deepgram, /voice-grok for grok. Assuming deepgram means a Grok call connects
+// to a service that has never heard of that session, so you get silence.
+const GROK_WS = `${_CORE_HTTP}/voice-grok`.replace(/^http/, 'ws');
+const listenBaseFor = (provider) => (provider === 'grok' ? GROK_WS : DG_WS);
 
 // Live-listen — hear an in-flight TARA call from the browser (listen-only).
 // Connects to tara-deepgram's /calls/listen WS: binary = PCM16 mono 8kHz
 // (both call directions), JSON = transcript/ended control events.
-function LiveListen({ sessionId }) {
+function LiveListen({ sessionId, provider }) {
   const [on, setOn] = useState(false);
   const [line, setLine] = useState('');
   const wsRef = useRef(null);
@@ -53,7 +58,7 @@ function LiveListen({ sessionId }) {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     ctxRef.current = ctx; tRef.current = ctx.currentTime + 0.1;
     const ws = new WebSocket(
-      `${DG_WS}/calls/listen?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`,
+      `${listenBaseFor(provider)}/calls/listen?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`,
     );
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
@@ -80,7 +85,7 @@ function LiveListen({ sessionId }) {
     ws.onclose = () => stop();
     ws.onerror = () => stop();
     setOn(true);
-  }, [on, sessionId, stop]);
+  }, [on, sessionId, provider, stop]);
 
   useEffect(() => () => stop(), [stop]);
   if (!sessionId) return null;
@@ -179,7 +184,7 @@ function TargetRow({ c, target, onPatch, disabled }) {
       {/* Live-listen while a TARA call is in flight (dial placed → sessionId known). */}
       {c.channel === 'call' && ['sending', 'sent'].includes(st) && target.resultRef?.sessionId && (
         <div className="mt-1.5">
-          <LiveListen sessionId={target.resultRef.sessionId} />
+          <LiveListen sessionId={target.resultRef.sessionId} provider={target.resultRef.provider || c.voiceProvider} />
         </div>
       )}
       {open && (p.subject || p.goal) && (
