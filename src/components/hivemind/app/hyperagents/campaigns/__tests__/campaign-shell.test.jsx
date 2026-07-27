@@ -3,12 +3,20 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import CampaignDashboardModal from '../CampaignDashboardModal';
 import { campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
+import { CHANNEL_DESCRIPTIONS, CHANNEL_NAMES } from '../channel-catalog';
 
 jest.mock('../../../shared/api-client', () => ({}));
 jest.mock('../CampaignDetail', () => () => <div>Campaign detail</div>);
 jest.mock('react-router-dom', () => ({ useSearchParams: jest.fn() }), { virtual: true });
 
 describe('campaign dashboard shell', () => {
+  test('distinguishes organic X publishing from paid X advertising', () => {
+    expect(CHANNEL_NAMES.x_organic).toBe('X Organic Posts');
+    expect(CHANNEL_NAMES.x_ads).toBe('Paid X Ads');
+    expect(CHANNEL_DESCRIPTIONS.x_organic).toMatch(/regular posts/i);
+    expect(CHANNEL_DESCRIPTIONS.x_ads).toMatch(/Ads API approval/i);
+  });
+
   test('builds a minimal campaign payload with ready channels and strategic defaults', () => {
     const payload = deriveCampaignPayload(
       { objective: 'LEAD_GENERATION', goal: '  Start qualified conversations with founders  ', channels: [], durationDays: 30, intensity: 'high' },
@@ -35,7 +43,7 @@ describe('campaign dashboard shell', () => {
 
   test('summarizes horizon and pace without asking the user for an exact post count', () => {
     expect(campaignPaceSummary({ durationDays: 14, intensity: 'focused', channels: ['x_organic'] })).toEqual({
-      minimum: 6, maximum: 8, channelLabel: 'X', actionSummary: '6-8 X actions',
+      minimum: 6, maximum: 8, channelLabel: 'X Organic Posts', actionSummary: '6-8 X Organic Posts actions',
     });
   });
 
