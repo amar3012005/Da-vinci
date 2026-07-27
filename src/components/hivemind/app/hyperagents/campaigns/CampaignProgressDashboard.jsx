@@ -35,8 +35,18 @@ export default function CampaignProgressDashboard({ campaign, loading, onClose, 
   const readiness = campaign.readiness;
   const events = (campaign.events || []).slice(0, 6);
   const canLaunch = campaign.status === 'READY_FOR_APPROVAL' && executionEnabled && readiness?.decision === 'ready';
+  const postLaunch = ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'FAILED'].includes(campaign.status);
+  const actionCounts = (campaign.actions || []).reduce((counts, action) => {
+    if (action.status === 'SUCCEEDED') counts.published += 1;
+    else if (['QUEUED', 'EXECUTING', 'AWAITING_APPROVAL'].includes(action.status)) counts.scheduled += 1;
+    else if (['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status)) counts.attention += 1;
+    else counts.ready += 1;
+    return counts;
+  }, { published: 0, scheduled: 0, ready: 0, attention: 0 });
+  const readinessTitle = postLaunch ? 'Campaign health' : 'Launch readiness';
+  const readinessNote = postLaunch ? 'Live execution state for the approved plan.' : 'Only decisions still needed from you appear here.';
 
-  return <div className="min-h-full bg-[#fbfaf6]">
+  return <div className="h-full overflow-y-auto bg-[#fbfaf6]">
     <header className="border-b border-[#dfdbd4] bg-[#fffefa] px-4 py-4 sm:px-7">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -57,13 +67,17 @@ export default function CampaignProgressDashboard({ campaign, loading, onClose, 
         <div className="mx-auto mt-8 max-w-xl"><Progress status={campaign.status} /></div>
       </section>
 
-      <section className="mt-8 border-y border-[#d8d3cc] py-5" aria-label="Launch readiness">
-        <div className="flex items-center justify-between gap-3"><div><h3 className="text-[12px] font-semibold">Launch readiness</h3><p className="mt-0.5 text-[10px] text-[#817b74]">Only the decisions still needed from you appear here.</p></div><span className={`rounded px-2 py-1 text-[8.5px] font-mono uppercase ${readiness?.decision === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{readiness?.decision || 'checking'}</span></div>
-        <div className="mt-4 space-y-3">{(readiness?.checks || []).map((item) => <div key={item.id} className="flex items-start gap-2.5">{item.status === 'passed' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-700" /> : <Circle size={14} className="mt-0.5 shrink-0 fill-amber-500 text-amber-500" />}<div><div className="text-[10.5px] font-semibold">{item.label}</div>{item.status !== 'passed' ? <><div className="mt-0.5 text-[9.5px] leading-4 text-[#817b74]">{item.detail}</div>{item.recovery ? <div className="mt-1 text-[9.5px] leading-4 text-[#615c56]">Next: {item.recovery}</div> : null}</> : null}</div></div>)}</div>
+      <section className="mt-8 grid grid-cols-2 border-y border-[#d8d3cc] sm:grid-cols-4" aria-label="Campaign action summary">
+        {[['Published', actionCounts.published], ['Scheduled', actionCounts.scheduled], ['Ready', actionCounts.ready], ['Needs attention', actionCounts.attention]].map(([label, value], index) => <div key={label} className={`px-3 py-4 ${index ? 'border-l border-[#e3dfd8]' : ''}`}><div className={`text-[18px] font-semibold ${label === 'Needs attention' && value ? 'text-red-700' : 'text-[#171717]'}`}>{value}</div><div className="mt-1 text-[8.5px] font-mono uppercase text-[#817b74]">{label}</div></div>)}
+      </section>
+
+      <section className="mt-6 border-b border-[#d8d3cc] pb-6" aria-label={readinessTitle}>
+        <div className="flex items-center justify-between gap-3"><div><h3 className="text-[12px] font-semibold">{readinessTitle}</h3><p className="mt-0.5 text-[10px] text-[#817b74]">{readinessNote}</p></div><span className={`rounded px-2 py-1 text-[8.5px] font-mono uppercase ${readiness?.decision === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>{readiness?.decision === 'ready' && postLaunch ? 'healthy' : readiness?.decision || 'checking'}</span></div>
+        <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">{(readiness?.checks || []).map((item) => <div key={item.id} className="flex items-start gap-2.5">{item.status === 'passed' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-emerald-700" /> : <Circle size={14} className="mt-0.5 shrink-0 fill-amber-500 text-amber-500" />}<div><div className="text-[10.5px] font-semibold">{item.label}</div>{item.status !== 'passed' ? <><div className="mt-0.5 text-[9.5px] leading-4 text-[#817b74]">{item.detail}</div>{item.recovery ? <div className="mt-1 text-[9.5px] leading-4 text-[#615c56]">Next: {item.recovery}</div> : null}</> : null}</div></div>)}</div>
         {campaign.status === 'READY_FOR_APPROVAL' ? <div className="mt-5 flex justify-end"><button onClick={() => onLaunch('launch')} disabled={!canLaunch || busy} title={canLaunch ? 'Launch campaign' : readiness?.summary?.next_action || 'Complete launch requirements'} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:bg-[#aaa49c]"><Rocket size={13} />Launch campaign</button></div> : null}
       </section>
 
-      <section className="mt-6" aria-label="Recent campaign activity"><h3 className="text-[12px] font-semibold">Recent progress</h3><div className="mt-2">{events.map((event) => <div key={event.id} className="flex gap-2.5 border-b border-[#e6e2dc] py-3"><Clock3 size={12} className="mt-0.5 shrink-0 text-[#817b74]" /><div><div className="text-[10.5px] font-semibold">{String(event.eventType || '').replaceAll('_', ' ')}</div><div className="mt-0.5 text-[9px] text-[#817b74]">{new Date(event.createdAt).toLocaleString()}</div></div></div>)}</div></section>
+      <section className="mt-6" aria-label="Recent campaign activity"><h3 className="text-[12px] font-semibold">Recent progress</h3><div className="mt-2">{events.map((event) => <div key={event.id} className="flex gap-2.5 border-b border-[#e6e2dc] py-3"><Clock3 size={12} className="mt-0.5 shrink-0 text-[#817b74]" /><div><div className="text-[10.5px] font-semibold">{String(event.eventType || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())}</div><div className="mt-0.5 text-[9px] text-[#817b74]">{new Date(event.createdAt).toLocaleString()}</div></div></div>)}</div></section>
     </main>
   </div>;
 }
