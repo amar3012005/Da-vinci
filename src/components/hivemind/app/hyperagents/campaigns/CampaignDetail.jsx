@@ -31,6 +31,7 @@ const EVENT_LABEL = {
   campaign_asset_selected: 'Campaign visual selected',
   campaign_asset_removed: 'Campaign visual removed',
   campaign_ready: 'Campaign ready for approval',
+  campaign_governance_unmet: 'Campaign delivery has unmet requirements',
   campaign_needs_input: 'Plan needs more input',
   campaign_generation_needs_input: 'Campaign Room needs more input',
   campaign_generation_failed: 'Campaign Room generation failed',
