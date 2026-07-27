@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import CampaignDashboardModal from '../CampaignDashboardModal';
-import CampaignProgressDashboard from '../CampaignProgressDashboard';
+import CampaignProgressDashboard, { launchProgress } from '../CampaignProgressDashboard';
 import { campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
 import { CHANNEL_DESCRIPTIONS, CHANNEL_NAMES } from '../channel-catalog';
@@ -19,6 +19,12 @@ jest.mock('../CampaignDetail', () => ({
 jest.mock('react-router-dom', () => ({ useSearchParams: jest.fn() }), { virtual: true });
 
 describe('campaign dashboard shell', () => {
+  test('continues from accepted plan through launch and scheduling', () => {
+    expect(launchProgress({ status: 'READY_FOR_APPROVAL', actions: [] }).map(([label, state]) => [label, state])).toEqual([
+      ['Plan accepted', 'complete'], ['Launch checks', 'current'], ['First action', 'upcoming'], ['Schedule active', 'upcoming'],
+    ]);
+    expect(launchProgress({ status: 'RUNNING', actions: [{ status: 'SUCCEEDED' }] }).map(([, state]) => state)).toEqual(['complete', 'complete', 'complete', 'current']);
+  });
   test('distinguishes organic X publishing from paid X advertising', () => {
     expect(CHANNEL_NAMES.x_organic).toBe('X Organic Posts');
     expect(CHANNEL_NAMES.x_ads).toBe('Paid X Ads');
