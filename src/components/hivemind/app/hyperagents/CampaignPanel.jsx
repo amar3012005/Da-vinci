@@ -231,7 +231,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
                 <p key={i} className="text-[10px] text-[#a37c00]">↳ learning: {typeof ln === 'string' ? ln : JSON.stringify(ln)}</p>
               ))}
               {!post.insight && (
-                <p className="text-[10px] text-[#a3a3a3]">No insight produced for this call.</p>
+                <p className="text-[10px] text-[#a3a3a3]">No insight produced — the call ended before anything was said.</p>
               )}
             </div>
           )}
@@ -309,7 +309,10 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
         const next = {};
         for (const call of calls || []) if (call?.sessionId) next[call.sessionId] = call;
         setPostCall(next);
-        const unresolved = postKey.split(',').some((s) => (next[s]?.post_call || 'processing') !== 'ready');
+        const unresolved = postKey.split(',').some((s) => {
+          const st = next[s]?.post_call || 'processing';
+          return st !== 'ready' && st !== 'none';  // 'none' is terminal too
+        });
         if (unresolved) timer = setTimeout(tick, 4000);
       } catch {
         if (!dead) timer = setTimeout(tick, 8000);
