@@ -8,6 +8,10 @@ import { CHANNEL_NAMES, PAID_CHANNEL_IDS } from './channel-catalog';
 import { CampaignReport } from '../rooms/reports';
 
 const LABEL = CHANNEL_NAMES;
+const STATUS_LABEL = {
+  READY_FOR_APPROVAL: 'PLAN READY',
+  PREPARING_ASSETS: 'PREPARING VISUALS',
+};
 
 function metricRows(channel, metrics) {
   if (channel === 'x_organic') return [['Impressions', metrics.impressions], ['Engagements', metrics.engagements], ['Link clicks', metrics.url_clicks], ['Followers', metrics.followers], ['Follower change', metrics.follower_delta], ['Engagement rate', typeof metrics.engagement_rate === 'number' ? `${(metrics.engagement_rate * 100).toFixed(2)}%` : null]];
@@ -96,7 +100,7 @@ export default function CampaignDetail({ campaign, loading, onBack, onOpenRoom, 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
             <button onClick={onBack} className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#6f6962]"><ArrowLeft size={12} />All campaigns</button>
-            <div className="mt-2 flex items-center gap-2"><h1 className="truncate text-[18px] font-semibold text-[#171717]">{campaign.name}</h1><span className="shrink-0 rounded bg-[#efede8] px-1.5 py-0.5 text-[8.5px] font-mono uppercase">{campaign.status}</span></div>
+            <div className="mt-2 flex items-center gap-2"><h1 className="truncate text-[18px] font-semibold text-[#171717]">{campaign.name}</h1><span className="shrink-0 rounded bg-[#efede8] px-1.5 py-0.5 text-[8.5px] font-mono uppercase">{STATUS_LABEL[campaign.status] || campaign.status}</span></div>
             <p className="mt-1 max-w-3xl text-[11px] text-[#746e67]">{campaign.goal}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">

@@ -18,6 +18,7 @@ import {
   Target,
   UsersRound,
 } from 'lucide-react';
+import { CHANNEL_NAMES } from './channel-catalog';
 
 const COLORS = {
   ink: '#191919', muted: '#68635d', line: '#dedbd5', paper: '#fbfaf7',
@@ -28,6 +29,7 @@ const asArray = (value) => Array.isArray(value)
   ? value.filter((item) => item != null && item !== '')
   : (value == null || value === '' ? [] : [value]);
 const readable = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+const channelName = (value) => CHANNEL_NAMES[String(value || '').toLowerCase()] || readable(value);
 
 const textFrom = (value, keys = []) => {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -76,7 +78,7 @@ function normalizeAction(action, index) {
   const creative = action?.creative_brief && typeof action.creative_brief === 'object' ? action.creative_brief : {};
   return {
     id: String(action?.id || `action-${index + 1}`),
-    channel: readable(action?.channel || action?.type || 'Campaign'),
+    channel: channelName(action?.channel || action?.type || 'Campaign'),
     channelId: String(action?.channel || action?.type || 'campaign').toLowerCase(),
     title: textFrom(action, ['title', 'name']) || `Campaign action ${index + 1}`,
     format: readable(action?.format || payload?.format || ''),
@@ -178,7 +180,7 @@ export function normalizeCampaignReport(report) {
     actions,
     mediaChannels: asArray(bundle.media_plan?.channels).map((item, index) => ({
       id: String(item?.channel || `channel-${index + 1}`),
-      channel: readable(item?.channel || `Channel ${index + 1}`),
+      channel: channelName(item?.channel || `Channel ${index + 1}`),
       role: textFrom(item, ['role']),
       rationale: textFrom(item, ['rationale']),
       budget: item?.budget_amount == null ? '' : `${bundle.media_plan?.currency || ''} ${item.budget_amount}`.trim(),
@@ -192,7 +194,7 @@ export function normalizeCampaignReport(report) {
       hook: textFrom(item, ['hook']),
       cta: textFrom(item, ['cta']),
       experiment: textFrom(item, ['experiment_hypothesis']),
-      channels: asArray(item?.channels).map(readable),
+      channels: asArray(item?.channels).map(channelName),
     })),
     decisions: normalizeRows(bundle.debate_decisions || bundle.debate?.decisions || bundle.decisions, ['decision', 'title', 'topic'], ['rationale', 'reason', 'outcome']),
     evidence,

@@ -71,6 +71,7 @@ describe('CampaignOperatingReport', () => {
       'Operators',
       'Proof of work',
       'Channel roles',
+      'X Organic Posts',
       'Organic awareness and message learning',
       'Creative hypotheses',
       'Proof-led copy earns qualified engagement.',
@@ -95,6 +96,17 @@ describe('CampaignOperatingReport', () => {
     ].forEach((value) => expect(markup).toContain(value));
     expect(markup).toContain('role="tablist"');
     expect(markup).not.toContain('Not included in this campaign plan.');
+  });
+
+  it('distinguishes regular X posts from paid X ads throughout the report', () => {
+    const bundle = JSON.parse(JSON.stringify(v3Bundle));
+    bundle.actions.push({ ...bundle.actions[0], id: 'paid-x-1', channel: 'x_ads', title: 'Paid amplification' });
+    bundle.media_plan.channels.push({ channel: 'x_ads', role: 'Paid reach', rationale: 'Amplify approved creative.', budget_amount: 100, prerequisites: ['X Ads approval'], exclusions: [] });
+
+    const markup = renderReport({ report: { bundle } });
+
+    expect(markup).toContain('X Organic Posts');
+    expect(markup).toContain('Paid X Ads');
   });
 
   it('degrades gracefully for the existing bundle contract', () => {
