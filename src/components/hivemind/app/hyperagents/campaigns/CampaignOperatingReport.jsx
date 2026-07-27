@@ -9,8 +9,11 @@ import {
   Compass,
   FileText,
   Gauge,
+  Lightbulb,
   Layers3,
   Megaphone,
+  RadioTower,
+  Rocket,
   ShieldCheck,
   Target,
   UsersRound,
@@ -88,6 +91,10 @@ function normalizeAction(action, index) {
     claimStatus: String(action?.claim_status || '').toLowerCase(),
     evidenceIds: asArray(action?.evidence_ids).map(String),
     evidence: asArray(action?.evidence),
+    hypothesisId: String(action?.hypothesis_id || ''),
+    dependencies: asArray(action?.dependencies).map(String),
+    successMeasure: textFrom(action, ['success_measure', 'success_metric']),
+    rollbackOrExit: textFrom(action, ['rollback_or_exit']),
   };
 }
 
@@ -129,6 +136,8 @@ export function normalizeCampaignReport(report) {
     claim: textFrom(item, ['claim', 'title', 'description']) || String(item),
     source: textFrom(item, ['source', 'url']),
     status: String(item?.status || 'verified').toLowerCase(),
+    sourceType: readable(item?.source_type || ''),
+    confidence: readable(item?.confidence || ''),
     url: textFrom(item, ['url']),
   }));
   actions.flatMap((action) => action.evidence).forEach((item, index) => evidence.push({
@@ -137,7 +146,9 @@ export function normalizeCampaignReport(report) {
   const risks = [...audience.safetyNotes, ...asArray(bundle.safety?.guardrails || bundle.safety?.notes || bundle.safety), ...asArray(bundle.safety?.prohibited_claims), ...asArray(bundle.risks), ...asArray(bundle.prohibited_claims)]
     .map((item) => textFrom(item, ['title', 'risk', 'description', 'note']) || String(item));
   const qualityChecks = bundle.quality_gate?.checks && typeof bundle.quality_gate.checks === 'object' ? bundle.quality_gate.checks : {};
+  const launchPlan = bundle.launch_plan && typeof bundle.launch_plan === 'object' ? bundle.launch_plan : {};
   const launchChecklist = normalizeRows(bundle.launch_checklist || bundle.launchChecklist, ['title', 'item', 'name'], ['detail', 'status', 'owner']);
+  const launchBlockers = asArray(launchPlan.blocked_by).map(String);
   const derivedChecklist = [
     { title: 'Goal aligned', complete: qualityChecks.goal_alignment === 'passed' || Boolean(bundle.strategy) },
     { title: 'Company grounded', complete: qualityChecks.company_grounding === 'passed' || evidence.length > 0 },
@@ -165,13 +176,31 @@ export function normalizeCampaignReport(report) {
     audience,
     pillars: normalizeRows(bundle.content_pillars || bundle.contentPillars, ['title', 'name', 'pillar'], ['description', 'rationale', 'angle']),
     actions,
+    mediaChannels: asArray(bundle.media_plan?.channels).map((item, index) => ({
+      id: String(item?.channel || `channel-${index + 1}`),
+      channel: readable(item?.channel || `Channel ${index + 1}`),
+      role: textFrom(item, ['role']),
+      rationale: textFrom(item, ['rationale']),
+      budget: item?.budget_amount == null ? '' : `${bundle.media_plan?.currency || ''} ${item.budget_amount}`.trim(),
+      prerequisites: asArray(item?.prerequisites).map(String),
+      exclusions: asArray(item?.exclusions).map(String),
+    })),
+    creativeHypotheses: asArray(bundle.creative_system?.hypotheses).map((item, index) => ({
+      id: String(item?.id || `hypothesis-${index + 1}`),
+      insight: textFrom(item, ['insight']),
+      promise: textFrom(item, ['promise']),
+      hook: textFrom(item, ['hook']),
+      cta: textFrom(item, ['cta']),
+      experiment: textFrom(item, ['experiment_hypothesis']),
+      channels: asArray(item?.channels).map(readable),
+    })),
     decisions: normalizeRows(bundle.debate_decisions || bundle.debate?.decisions || bundle.decisions, ['decision', 'title', 'topic'], ['rationale', 'reason', 'outcome']),
     evidence,
     risks: [...new Set(risks.filter(Boolean))],
     kpis: asArray(bundle.kpis).map((item) => ({
       title: textFrom(item, ['name', 'metric', 'title']) || String(item),
       detail: item && typeof item === 'object'
-        ? [textFrom(item, ['target']), textFrom(item, ['source']), textFrom(item, ['definition'])].filter(Boolean).join(' · ')
+        ? [item.target_type ? `${readable(item.target_type)} target` : '', textFrom(item, ['target']), textFrom(item, ['source']), textFrom(item, ['definition'])].filter(Boolean).join(' · ')
         : '',
     })),
     measurement: {
@@ -179,12 +208,47 @@ export function normalizeCampaignReport(report) {
       attribution: textFrom(bundle.measurement, ['attribution_limit']),
       cadence: textFrom(bundle.measurement, ['review_cadence']),
     },
+    monitoring: {
+      baseline: textFrom(bundle.monitoring_plan, ['baseline']),
+      primary: textFrom(bundle.monitoring_plan, ['primary_outcome']),
+      attribution: textFrom(bundle.monitoring_plan, ['attribution_limit']),
+      checkpoints: asArray(bundle.monitoring_plan?.checkpoints).map((item, index) => ({
+        id: `checkpoint-${index + 1}`,
+        timing: textFrom(item, ['timing']),
+        metrics: asArray(item?.metrics).map(String),
+        decision: textFrom(item, ['decision_rule']),
+      })),
+    },
+    launchPlan: {
+      mode: readable(launchPlan.mode || ''),
+      approvalMode: readable(launchPlan.approval_mode || ''),
+      prerequisites: asArray(launchPlan.prerequisites).map(String),
+      blockers: launchBlockers,
+      verification: asArray(launchPlan.verification_steps).map(String),
+      rollback: asArray(launchPlan.rollback_steps).map(String),
+    },
     assumptions: normalizeRows(bundle.assumptions, ['assumption', 'title', 'name'], ['validation', 'detail', 'owner']),
-    launchChecklist: launchChecklist.length
+    launchChecklist: (launchChecklist.length
       ? launchChecklist.map((item) => ({ ...item, complete: !/pending|missing|blocked|not ready/i.test(item.detail) }))
-      : derivedChecklist,
+      : derivedChecklist).concat(launchBlockers.map((blocker) => ({ title: blocker, detail: 'Required before launch', complete: false }))),
     qualityReady: bundle.quality_gate?.ready === true,
   };
+}
+
+function CampaignDesign({ data }) {
+  const [activeId, setActiveId] = useState(data.creativeHypotheses[0]?.id || '');
+  const hypothesis = data.creativeHypotheses.find((item) => item.id === activeId) || data.creativeHypotheses[0];
+  if (!data.mediaChannels.length && !data.creativeHypotheses.length) return null;
+  return <section className="grid border-b lg:grid-cols-2" style={{ borderColor: COLORS.line }}>
+    <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}>
+      <PanelHeading icon={RadioTower} title="Channel roles" note="Why each channel exists in this campaign." />
+      <div className="mt-4 divide-y" style={{ borderColor: COLORS.line }}>{data.mediaChannels.map((item) => <div key={item.id} className="py-3 first:pt-0 last:pb-0"><div className="flex items-center justify-between gap-3"><div className="text-[11.5px] font-semibold">{item.channel}</div>{item.budget ? <div className="text-[10px]" style={{ color: COLORS.blue }}>{item.budget}</div> : null}</div><p className="mt-1 text-[11px] font-medium">{item.role}</p>{item.rationale ? <p className="mt-1 text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{item.rationale}</p> : null}</div>)}</div>
+    </div>
+    <div className="px-5 py-6 sm:px-7">
+      <PanelHeading icon={Lightbulb} title="Creative hypotheses" note="The message ideas this campaign will test." />
+      {data.creativeHypotheses.length ? <><div className="mt-4 flex gap-2 overflow-x-auto" role="tablist" aria-label="Creative hypotheses">{data.creativeHypotheses.map((item, index) => <button key={item.id} type="button" role="tab" aria-selected={hypothesis?.id === item.id} onClick={() => setActiveId(item.id)} className={`shrink-0 rounded-md border px-3 py-2 text-[10.5px] font-semibold ${hypothesis?.id === item.id ? 'border-[#191919] bg-[#191919] text-white' : 'border-[#d8d3cc] bg-white'}`}>Idea {index + 1}</button>)}</div><div className="mt-4 border-l-2 pl-4" style={{ borderColor: COLORS.gold }}><p className="text-[12px] font-semibold">{hypothesis?.hook}</p><p className="mt-1 text-[11px] leading-5">{hypothesis?.promise}</p>{hypothesis?.experiment ? <p className="mt-2 text-[10px] leading-5" style={{ color: COLORS.muted }}><strong>Test:</strong> {hypothesis.experiment}</p> : null}</div></> : null}
+    </div>
+  </section>;
 }
 
 function PanelHeading({ icon: Icon, title, note, right }) {
@@ -248,7 +312,10 @@ function ActionWorkspace({ actions, evidence }) {
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {action.rationale ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Why this action</div><p className="mt-1 text-[11.5px] leading-5">{action.rationale}</p></div> : null}
         {action.creativeConcept ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Creative direction</div><p className="mt-1 text-[11.5px] leading-5">{action.creativeConcept}</p></div> : null}
+        {action.successMeasure ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Success signal</div><p className="mt-1 text-[11.5px] leading-5">{action.successMeasure}</p></div> : null}
+        {action.rollbackOrExit ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Pause or exit when</div><p className="mt-1 text-[11.5px] leading-5">{action.rollbackOrExit}</p></div> : null}
       </div>
+      {action.dependencies.length ? <div className="mt-4 flex flex-wrap gap-1.5">{action.dependencies.map((item) => <span key={item} className="rounded border bg-white px-2 py-1 text-[9.5px]" style={{ borderColor: COLORS.line }}>{item}</span>)}</div> : null}
       {(action.claimStatus || linkedEvidence.length) ? <div className="mt-4 flex flex-wrap items-center gap-2 text-[10px]"><span className="rounded bg-[#eef4f1] px-2 py-1 font-semibold" style={{ color: COLORS.green }}>{readable(action.claimStatus || 'grounded')}</span>{linkedEvidence.map((item) => <span key={item.id} className="rounded border bg-white px-2 py-1" style={{ borderColor: COLORS.line }}>{item.claim}</span>)}</div> : null}
     </article>
   </div>;
@@ -287,6 +354,8 @@ export default function CampaignOperatingReport({ report, taskTitle, surface = '
 
     <StrategyPanel data={data} />
 
+    <CampaignDesign data={data} />
+
     <section className="grid border-b lg:grid-cols-2" style={{ borderColor: COLORS.line }}>
       <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}><PanelHeading icon={UsersRound} title="Audience" note="Who the sequence is designed to move." /><p className="mt-4 text-[12.5px] leading-6">{data.audience.rationale}</p><div className="mt-3 flex flex-wrap gap-2">{data.audience.segments.map((segment) => <span key={segment.title} title={segment.detail} className="rounded border bg-white px-2.5 py-1.5 text-[10.5px] font-semibold" style={{ borderColor: COLORS.line }}>{segment.title}</span>)}</div></div>
       <div className="px-5 py-6 sm:px-7"><PanelHeading icon={Layers3} title="Content system" note="The themes connecting every action." /><div className="mt-4 space-y-3">{data.pillars.map((pillar) => <div key={pillar.title}><div className="text-[12px] font-semibold">{pillar.title}</div>{pillar.detail ? <p className="mt-0.5 text-[11px] leading-5" style={{ color: COLORS.muted }}>{pillar.detail}</p> : null}</div>)}</div></div>
@@ -295,11 +364,11 @@ export default function CampaignOperatingReport({ report, taskTitle, surface = '
     <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={CalendarDays} title="Campaign sequence" note="Select an action to inspect its final copy, timing, rationale, and evidence." right={<span className="text-[10px]" style={{ color: COLORS.muted }}>{data.actions.length} actions</span>} /><ActionWorkspace actions={data.actions} evidence={data.evidence} /></section>
 
     <section className="grid border-b lg:grid-cols-2" style={{ borderColor: COLORS.line }}>
-      <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}><PanelHeading icon={Target} title="Evidence" note="Verified facts stay distinct from assumptions." /><div className="mt-4 space-y-3">{data.evidence.map((item) => <div key={item.id} className="flex items-start gap-2"><span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${item.status === 'verified' ? 'bg-emerald-600' : item.status === 'missing' ? 'bg-red-600' : 'bg-amber-500'}`} /><div><p className="text-[11.5px] leading-5">{item.claim}</p>{item.source ? <p className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.source}</p> : null}</div></div>)}</div></div>
-      <div className="px-5 py-6 sm:px-7"><PanelHeading icon={Gauge} title="Measurement" note="What the team will learn after launch." /><div className="mt-4 space-y-3"><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Primary outcome</div><p className="mt-1 text-[12px]">{data.measurement.primary || data.kpis[0]?.title || 'Measure against the campaign objective'}</p></div>{data.measurement.cadence ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Review cadence</div><p className="mt-1 text-[12px]">{data.measurement.cadence}</p></div> : null}{data.measurement.attribution ? <p className="text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{data.measurement.attribution}</p> : null}</div></div>
+      <div className="px-5 py-6 sm:px-7 lg:border-r" style={{ borderColor: COLORS.line }}><PanelHeading icon={Target} title="Evidence" note="Verified facts stay distinct from assumptions." /><div className="mt-4 space-y-3">{data.evidence.map((item) => <div key={item.id} className="flex items-start gap-2"><span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${item.status === 'verified' ? 'bg-emerald-600' : item.status === 'missing' ? 'bg-red-600' : 'bg-amber-500'}`} /><div><p className="text-[11.5px] leading-5">{item.claim}</p>{item.source ? <p className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{[item.sourceType, item.confidence, item.source].filter(Boolean).join(' · ')}</p> : null}</div></div>)}</div></div>
+      <div className="px-5 py-6 sm:px-7"><PanelHeading icon={Gauge} title="Measurement" note="What the team will learn after launch." /><div className="mt-4 space-y-3"><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Primary outcome</div><p className="mt-1 text-[12px]">{data.monitoring.primary || data.measurement.primary || data.kpis[0]?.title || 'Measure against the campaign objective'}</p></div>{data.monitoring.baseline ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Baseline</div><p className="mt-1 text-[11px] leading-5">{data.monitoring.baseline}</p></div> : null}{data.monitoring.checkpoints.map((item) => <div key={item.id} className="border-t pt-3" style={{ borderColor: COLORS.line }}><div className="text-[10.5px] font-semibold">{item.timing}</div><div className="mt-1 text-[9.5px]" style={{ color: COLORS.blue }}>{item.metrics.join(' · ')}</div><p className="mt-1 text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{item.decision}</p></div>)}{data.measurement.cadence && !data.monitoring.checkpoints.length ? <div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.muted }}>Review cadence</div><p className="mt-1 text-[12px]">{data.measurement.cadence}</p></div> : null}<p className="text-[10.5px] leading-5" style={{ color: COLORS.muted }}>{data.monitoring.attribution || data.measurement.attribution}</p></div></div>
     </section>
 
-    <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={ShieldCheck} title="Launch readiness" note="A compact final check before anything is published." /><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{data.launchChecklist.map((item) => <div key={item.title} className="flex items-start gap-2 py-1">{item.complete ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.green }} /> : <Circle size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.gold }} />}<div><div className="text-[11.5px] font-semibold">{item.title}</div>{item.detail ? <div className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.detail}</div> : null}</div></div>)}</div></section>
+    <section className="border-b px-5 py-6 sm:px-7" style={{ borderColor: COLORS.line }}><PanelHeading icon={ShieldCheck} title="Launch readiness" note="A compact final check before anything is published." right={data.launchPlan.approvalMode ? <span className="inline-flex items-center gap-1 text-[9.5px]" style={{ color: COLORS.muted }}><Rocket size={12} />{data.launchPlan.approvalMode}</span> : null} /><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{data.launchChecklist.map((item) => <div key={`${item.title}-${item.detail}`} className="flex items-start gap-2 py-1">{item.complete ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.green }} /> : <Circle size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.gold }} />}<div><div className="text-[11.5px] font-semibold">{item.title}</div>{item.detail ? <div className="mt-0.5 text-[9.5px]" style={{ color: COLORS.muted }}>{item.detail}</div> : null}</div></div>)}</div></section>
 
     <DetailDisclosure title="Room decisions" count={data.decisions.length}><div className="space-y-3">{data.decisions.map((item) => <div key={item.title}><p className="text-[12px] font-semibold">{item.title}</p>{item.detail ? <p className="mt-1 text-[11px] leading-5" style={{ color: COLORS.muted }}>{item.detail}</p> : null}</div>)}</div></DetailDisclosure>
     <DetailDisclosure title="Company grounding" count={data.companyFacts.length + data.companyUnknowns.length}><div className="grid gap-5 sm:grid-cols-2"><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.green }}>Facts used</div><div className="mt-2 space-y-2">{data.companyFacts.map((fact) => <p key={fact} className="border-l-2 pl-3 text-[11px] leading-5" style={{ borderColor: COLORS.green }}>{fact}</p>)}</div></div><div><div className="text-[9px] font-semibold uppercase" style={{ color: COLORS.gold }}>Unknowns retained</div><div className="mt-2 space-y-2">{data.companyUnknowns.map((item) => <p key={item} className="border-l-2 pl-3 text-[11px] leading-5" style={{ borderColor: COLORS.gold }}>{item}</p>)}</div></div></div></DetailDisclosure>

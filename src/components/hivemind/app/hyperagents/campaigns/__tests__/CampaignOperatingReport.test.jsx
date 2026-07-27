@@ -5,7 +5,7 @@ import CampaignOperatingReport, { normalizeCampaignReport } from '../CampaignOpe
 const renderReport = (props) => renderToStaticMarkup(<CampaignOperatingReport {...props} />);
 
 const v3Bundle = {
-  contract_version: 3,
+  contract_version: 4,
   summary: 'Launch the Singulance awareness campaign',
   strategy: 'Lead with concrete proof that Campaign Rooms produce executable work.',
   strategy_options: [
@@ -37,13 +37,24 @@ const v3Bundle = {
     creative_brief: { required: true, concept: 'Show the finished Campaign Board.' },
     claim_status: 'verified',
     evidence_ids: ['ev-1'],
+    hypothesis_id: 'proof-hypothesis',
+    dependencies: ['Approved X connection'],
+    success_measure: 'Establish an organic engagement baseline.',
+    rollback_or_exit: 'Pause the remaining sequence if provider validation fails.',
   }],
-  evidence: [{ id: 'ev-1', claim: 'Campaign Room product workflow', source: 'Product workflow', status: 'verified' }],
+  evidence: [{ id: 'ev-1', claim: 'Campaign Room product workflow', source: 'Product workflow', source_type: 'company', confidence: 'high', status: 'verified' }],
+  media_plan: { currency: null, channels: [{ channel: 'x_organic', role: 'Organic awareness and message learning', rationale: 'Use the connected X audience for the first message test.', budget_amount: 0, prerequisites: ['Approved X connection'], exclusions: ['No paid promotion'] }] },
+  creative_system: { approved_claim_ids: ['ev-1'], hypotheses: [
+    { id: 'proof-hypothesis', insight: 'Operators need finished work.', promise: 'Show the approval-ready result.', hook: 'A campaign should leave the room ready to run.', cta: 'Inspect the plan.', channels: ['x_organic'], experiment_hypothesis: 'Proof-led copy earns qualified engagement.' },
+    { id: 'control-hypothesis', insight: 'Operators need control over external actions.', promise: 'Keep launch approval-bound.', hook: 'AI can plan without publishing.', cta: 'Review the workflow.', channels: ['x_organic'], experiment_hypothesis: 'Control-led copy earns trust-oriented replies.' },
+  ] },
+  launch_plan: { mode: 'draft_only', approval_mode: 'APPROVE_PLAN_ONCE', prerequisites: ['Confirm X identity'], blocked_by: ['Approve the final visual'], ceilings: [], verification_steps: ['Read back the published Post'], rollback_steps: ['Pause remaining scheduled actions'] },
+  monitoring_plan: { baseline: 'Capture the X account baseline before launch.', primary_outcome: 'Qualified organic engagement', attribution_limit: 'Engagement does not prove revenue causation.', checkpoints: [{ timing: '24 hours after each Post', metrics: ['Impressions', 'Engagements'], decision_rule: 'Review message resonance; do not auto-optimize.' }], optimization_requires_approval: true },
   kpis: [{ name: 'Engagement rate', target: 'Establish a seven-day baseline', source: 'X API' }],
   measurement: { primary_kpi: 'Engagement rate', review_cadence: 'Daily', attribution_limit: 'Organic engagement is directional.' },
   assumptions: [{ assumption: 'Proof-led language will outperform feature lists.', validation: 'Compare post engagement.' }],
   launch_checklist: [{ item: 'Final copy approved', status: 'ready' }],
-  quality_gate: { ready: true, checks: { goal_alignment: 'passed', company_grounding: 'passed', channel_completeness: 'passed', provider_validity: 'passed', schedule_completeness: 'passed' } },
+  quality_gate: { ready: true, checks: { goal_alignment: 'passed', company_grounding: 'passed', channel_completeness: 'passed', provider_validity: 'passed', schedule_completeness: 'passed', evidence_integrity: 'passed', creative_completeness: 'passed', launch_safety: 'passed', measurement_readiness: 'passed' } },
 };
 
 describe('CampaignOperatingReport', () => {
@@ -59,11 +70,22 @@ describe('CampaignOperatingReport', () => {
       '14 days',
       'Operators',
       'Proof of work',
+      'Channel roles',
+      'Organic awareness and message learning',
+      'Creative hypotheses',
+      'Proof-led copy earns qualified engagement.',
       v3Bundle.actions[0].final_copy,
+      'Establish an organic engagement baseline.',
+      'Pause the remaining sequence if provider validation fails.',
+      'Approved X connection',
       'Use product proof',
       'Campaign Room product workflow',
+      'Company · High · Product workflow',
       'Do not claim guaranteed growth.',
       'Engagement rate',
+      'Capture the X account baseline before launch.',
+      '24 hours after each Post',
+      'Approve the final visual',
       'Proof-led language will outperform feature lists.',
       'Final copy approved',
       'Campaign sequence',

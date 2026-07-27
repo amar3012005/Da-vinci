@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Check, FileCheck2, Lightbulb, MessageSquareText, Search, Sparkles } from 'lucide-react';
 import { CampaignCreativeGallery } from './CampaignCreative';
+import { CHANNEL_NAMES } from './channel-catalog';
 
-const CHANNEL_LABELS = { x_organic: 'X', gmail: 'Email', tara: 'TARA' };
-const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan)\b/i;
+const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|CHANNEL_CAPABILITIES_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan)\b/i;
 const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 function textFromLine(line) {
@@ -145,7 +145,7 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
         <div><div className="inline-flex items-center gap-1.5 text-[9.5px] font-mono uppercase text-[#256d5b]"><Sparkles size={11} />Campaign Mode</div><h2 className="mt-1 text-[16px] font-semibold text-[#171717]">{campaign.name}</h2><p className="mt-1 max-w-3xl text-[11.5px] leading-5 text-[#615c56]">{campaign.goal}</p></div>
         <div className="shrink-0"><div className="text-[9px] font-mono uppercase text-[#8a847d]">Current stage</div><div className="mt-1 text-[11.5px] font-semibold text-[#24211f]">{stage}</div></div>
       </div>
-      <div className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2"><span className="text-[9px] font-mono uppercase text-[#8a847d] mr-1">Channels</span>{campaign.requestedChannels.map((channel) => <span key={channel} className="px-2 py-1 rounded border border-[#d8d3cc] bg-[#fbfaf6] text-[10px] font-semibold text-[#45413d]">{CHANNEL_LABELS[channel] || channel}</span>)}</div>
+      <div className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2"><span className="text-[9px] font-mono uppercase text-[#8a847d] mr-1">Channels</span>{campaign.requestedChannels.map((channel) => <span key={channel} className="px-2 py-1 rounded border border-[#d8d3cc] bg-[#fbfaf6] text-[10px] font-semibold text-[#45413d]">{CHANNEL_NAMES[channel] || channel}</span>)}</div>
     </header>
 
     <section className="mt-5 border-y border-[#dfdbd4]">

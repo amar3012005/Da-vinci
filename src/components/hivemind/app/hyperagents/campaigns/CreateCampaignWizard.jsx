@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { CalendarDays, Check, Gauge, Link2, Loader2, Sparkles, X } from 'lucide-react';
+import { CalendarDays, Check, ChevronDown, Gauge, Link2, Loader2, Sparkles, X } from 'lucide-react';
+import { CAMPAIGN_CHANNEL_IDS, CHANNEL_NAMES } from './channel-catalog';
 
 export const CAMPAIGN_TYPES = [
   ['AWARENESS', 'Build awareness'],
@@ -12,8 +13,9 @@ export const CAMPAIGN_TYPES = [
   ['CUSTOM', 'Something else'],
 ];
 
-const CHANNEL_NAMES = { x_organic: 'X', gmail: 'Email', tara: 'TARA' };
-const V1_CHANNELS = new Set(Object.keys(CHANNEL_NAMES));
+const CAMPAIGN_CHANNELS = new Set(CAMPAIGN_CHANNEL_IDS);
+const PRIMARY_CHANNELS = new Set(['x_organic', 'gmail', 'tara', 'x_ads', 'google_ads', 'meta', 'linkedin']);
+const CONNECTABLE_CHANNELS = new Set(['x_organic', 'gmail', 'tara']);
 export const CAMPAIGN_HORIZONS = [
   { days: 7, label: 'Quick test', note: '7 days' },
   { days: 14, label: 'Focused campaign', note: '2 weeks' },
@@ -60,10 +62,10 @@ const SUCCESS_METRICS = {
 
 export function deriveCampaignPayload(form, capabilities, idempotencyKey, timezone = 'UTC') {
   const availableChannels = (capabilities?.channels || [])
-    .filter((channel) => V1_CHANNELS.has(channel.id) && channel.executable)
+    .filter((channel) => CAMPAIGN_CHANNELS.has(channel.id) && channel.executable)
     .map((channel) => channel.id);
   const launchReadyChannels = (capabilities?.channels || [])
-    .filter((channel) => V1_CHANNELS.has(channel.id) && channel.execution_ready)
+    .filter((channel) => CAMPAIGN_CHANNELS.has(channel.id) && channel.execution_ready)
     .map((channel) => channel.id);
   const channels = form.channels.length ? form.channels : (launchReadyChannels.length ? launchReadyChannels : availableChannels);
   const durationDays = Number(form.durationDays || 14);
@@ -94,11 +96,15 @@ export function deriveCampaignPayload(form, capabilities, idempotencyKey, timezo
 export default function CreateCampaignWizard({ capabilities, onClose, onCreate, onConnect }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [showMoreChannels, setShowMoreChannels] = useState(false);
   const idempotencyKey = useRef(window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
   const [form, setForm] = useState({ objective: 'AWARENESS', goal: '', channels: [], durationDays: 14, intensity: 'focused' });
-  const readyChannels = useMemo(() => (capabilities?.channels || []).filter((channel) => V1_CHANNELS.has(channel.id) && channel.executable), [capabilities]);
-  const visibleChannels = useMemo(() => (capabilities?.channels || []).filter((channel) => V1_CHANNELS.has(channel.id)), [capabilities]);
+  const readyChannels = useMemo(() => (capabilities?.channels || []).filter((channel) => CAMPAIGN_CHANNELS.has(channel.id) && channel.executable), [capabilities]);
+  const visibleChannels = useMemo(() => (capabilities?.channels || []).filter((channel) => CAMPAIGN_CHANNELS.has(channel.id) && channel.planning_ready), [capabilities]);
+  const primaryChannels = useMemo(() => visibleChannels.filter((channel) => PRIMARY_CHANNELS.has(channel.id)), [visibleChannels]);
+  const moreChannels = useMemo(() => visibleChannels.filter((channel) => !PRIMARY_CHANNELS.has(channel.id)), [visibleChannels]);
   const selected = useMemo(() => new Set(form.channels), [form.channels]);
+  const selectedConnections = useMemo(() => visibleChannels.filter((channel) => selected.has(channel.id) && CONNECTABLE_CHANNELS.has(channel.id) && !channel.connected), [selected, visibleChannels]);
   const selectedForSummary = form.channels.length ? form.channels : readyChannels.filter((channel) => channel.execution_ready).map((channel) => channel.id);
   const pace = campaignPaceSummary({ durationDays: form.durationDays, intensity: form.intensity, channels: selectedForSummary });
   const patch = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -106,7 +112,7 @@ export default function CreateCampaignWizard({ capabilities, onClose, onCreate, 
   const submit = async () => {
     if (form.goal.trim().length < 12) { setError('Describe what you want this campaign to achieve.'); return; }
     const payload = deriveCampaignPayload(form, capabilities, idempotencyKey.current, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
-    if (!payload.channels.length) { setError('Connect at least one channel before creating a campaign.'); return; }
+    if (!payload.channels.length) { setError('Select at least one channel for the campaign plan.'); return; }
     setBusy(true); setError('');
     try { await onCreate(payload); }
     catch (err) { setError(err?.response?.data?.message || err.message || 'Could not create campaign'); }
@@ -136,14 +142,12 @@ export default function CreateCampaignWizard({ capabilities, onClose, onCreate, 
 
         <section className="mt-6">
           <div className="flex items-baseline justify-between gap-3"><h3 className="text-[11px] font-semibold text-[#34312e]">Channels <span className="font-normal text-[#817b74]">(optional)</span></h3><span className="text-[9.5px] text-[#817b74]">Leave blank to use channels ready to launch</span></div>
-          {visibleChannels.length ? <div className="mt-3 flex flex-wrap gap-2">{visibleChannels.map((channel) => {
+          {visibleChannels.length ? <><div className="mt-3 flex flex-wrap gap-2">{primaryChannels.map((channel) => {
             const active = selected.has(channel.id);
-            if (!channel.executable) return <button key={channel.id} type="button" onClick={() => onConnect(channel.id)} className="inline-flex h-9 items-center gap-2 rounded-md border border-[#c9c3bb] bg-white px-3 text-[11px] font-semibold text-[#45413d]"><Link2 size={12} />Connect {CHANNEL_NAMES[channel.id]}</button>;
             return <button key={channel.id} type="button" onClick={() => patch('channels', active ? form.channels.filter((id) => id !== channel.id) : [...form.channels, channel.id])} className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-[11px] font-semibold ${active ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#c9c3bb] bg-white text-[#45413d]'}`} aria-pressed={active}>{active ? <Check size={12} /> : null}{CHANNEL_NAMES[channel.id]}<span className={`text-[9px] font-normal ${active ? 'text-white/70' : 'text-[#817b74]'}`}>{channel.execution_ready ? 'Ready' : 'Plan only'}</span></button>;
-          })}</div> : <div className="mt-3 rounded-md border border-[#ded9d2] bg-[#faf8f3] px-3 py-3 text-[10.5px] text-[#615c56]">
-            <div>No execution channel is ready yet.</div>
-            <div className="mt-2 flex flex-wrap gap-2">{(capabilities?.channels || []).filter((channel) => V1_CHANNELS.has(channel.id) && !channel.connected).map((channel) => <button key={channel.id} type="button" onClick={() => onConnect(channel.id)} className="h-8 rounded-md border border-[#bdb7af] bg-white px-3 font-semibold">Connect {CHANNEL_NAMES[channel.id]}</button>)}</div>
-          </div>}
+          })}</div>{moreChannels.length ? <div className="mt-2"><button type="button" onClick={() => setShowMoreChannels((value) => !value)} className="inline-flex h-8 items-center gap-1.5 text-[10px] font-semibold text-[#615c56]">More channels <ChevronDown size={12} className={showMoreChannels ? 'rotate-180' : ''} /></button>{showMoreChannels ? <div className="mt-1 flex flex-wrap gap-2">{moreChannels.map((channel) => { const active = selected.has(channel.id); return <button key={channel.id} type="button" onClick={() => patch('channels', active ? form.channels.filter((id) => id !== channel.id) : [...form.channels, channel.id])} className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-[11px] font-semibold ${active ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#c9c3bb] bg-white text-[#45413d]'}`} aria-pressed={active}>{active ? <Check size={12} /> : null}{CHANNEL_NAMES[channel.id]}<span className={`text-[9px] font-normal ${active ? 'text-white/70' : 'text-[#817b74]'}`}>Plan only</span></button>; })}</div> : null}</div> : null}</> : <div className="mt-3 rounded-md border border-[#ded9d2] bg-[#faf8f3] px-3 py-3 text-[10.5px] text-[#615c56]">Campaign planning is unavailable for this organization.</div>}
+          {form.channels.some((id) => !visibleChannels.find((channel) => channel.id === id)?.execution_ready) ? <p className="mt-2 text-[9.5px] leading-4 text-[#817b74]">Plan-only channels receive complete creative, media, budget, and measurement plans. Publishing stays blocked until the required account and adapter are connected.</p> : null}
+          {selectedConnections.length ? <div className="mt-2 flex flex-wrap items-center gap-2">{selectedConnections.map((channel) => <button key={channel.id} type="button" onClick={() => onConnect(channel.id)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#bdb7af] bg-white px-3 text-[10px] font-semibold text-[#45413d]"><Link2 size={11} />Connect {CHANNEL_NAMES[channel.id]}</button>)}</div> : null}
         </section>
 
         <section className="mt-6 border-t border-[#e6e2dc] pt-5">
@@ -161,7 +165,7 @@ export default function CreateCampaignWizard({ capabilities, onClose, onCreate, 
 
       <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[#e6e2dc] px-5 py-4">
         <p className="max-w-md text-[9.5px] leading-4 text-[#817b74]">Your AI team decides the strategy, audience, formats, and exact cadence. Nothing is published until you review the finished campaign.</p>
-        <button onClick={submit} disabled={busy || form.goal.trim().length < 12 || !readyChannels.length} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11.5px] font-semibold text-white disabled:bg-[#bbb5ad]">{busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}Create campaign</button>
+        <button onClick={submit} disabled={busy || form.goal.trim().length < 12 || (!form.channels.length && !readyChannels.length)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-[#171717] px-4 text-[11.5px] font-semibold text-white disabled:bg-[#bbb5ad]">{busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}Create campaign</button>
       </footer>
     </div>
   </div>;

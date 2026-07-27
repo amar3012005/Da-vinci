@@ -23,7 +23,7 @@ describe('campaign dashboard shell', () => {
     );
 
     expect(payload.goal).toBe('Start qualified conversations with founders');
-    expect(payload.channels).toEqual(['x_organic', 'gmail']);
+    expect(payload.channels).toEqual(['x_organic', 'gmail', 'x_ads']);
     expect(payload.audience).toEqual({ mode: 'existing_first', discover_if_insufficient: true });
     expect(payload.success_metrics).toEqual(['Qualified replies', 'Meetings booked', 'Conversion rate']);
     expect(payload.autonomy_mode).toBe('APPROVE_PLAN_ONCE');
@@ -46,6 +46,16 @@ describe('campaign dashboard shell', () => {
       'create-key',
     );
     expect(payload.channels).toEqual(['x_organic']);
+  });
+
+  test('keeps an explicit plan-only platform in the campaign brief', () => {
+    const payload = deriveCampaignPayload(
+      { objective: 'AWARENESS', goal: 'Build category awareness with a paid social test', channels: ['meta'], durationDays: 7, intensity: 'light' },
+      { channels: [{ id: 'meta', planning_ready: true, executable: false, execution_ready: false }] },
+      'create-key',
+    );
+    expect(payload.channels).toEqual(['meta']);
+    expect(payload.duration_days).toBe(7);
   });
 
   test('campaign deep links preserve unrelated query parameters', () => {
