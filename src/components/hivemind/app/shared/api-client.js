@@ -698,6 +698,19 @@ class HiveMindApiClient {
     return data;
   }
 
+  // Post-call state for specific sessions: post_call is 'live' | 'processing' |
+  // 'ready', and `insight` carries summary + outcome + leads + learnings in one
+  // shot. Lets the campaign panel show a truthful "analysing" state instead of a
+  // timer-driven spinner, and render everything the moment it lands.
+  async listTaraCallsBySessions(sessionIds) {
+    const ids = (sessionIds || []).filter(Boolean);
+    if (!ids.length) return { calls: [] };
+    const { data } = await this.controlPlane.get(
+      `/v1/proxy/tara/calls?session_ids=${encodeURIComponent(ids.join(','))}`,
+    );
+    return data;
+  }
+
   // Short-lived, session-scoped live-listen capability. Core verifies the
   // caller's org owns the call before signing, so the privileged adapter dial
   // key never reaches the browser. 404 = not this org's call / no longer live.

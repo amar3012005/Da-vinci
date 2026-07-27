@@ -112,7 +112,7 @@ function Bar({ done, failed, total }) {
   );
 }
 
-function TargetRow({ c, target, onPatch, disabled }) {
+function TargetRow({ c, target, onPatch, disabled, post }) {
   const [open, setOpen] = useState(false);
   const [browserOpen, setBrowserOpen] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -187,6 +187,56 @@ function TargetRow({ c, target, onPatch, disabled }) {
           <LiveListen sessionId={target.resultRef.sessionId} provider={target.resultRef.provider || c.voiceProvider} />
         </div>
       )}
+      {/* Post-call results — everything the analysis produced, in one block.
+          'processing' is server-derived (call ended, insight not written yet),
+          so this spinner reflects real work rather than a timer. */}
+      {c.channel === 'call' && target.resultRef?.sessionId && post && post.post_call !== 'live' && (
+        <div className="mt-1.5 rounded-md bg-[#faf9f6] border border-[#eceae4] px-2 py-1.5">
+          {post.post_call === 'processing' ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
+              <Loader2 size={10} className="animate-spin" /> Analysing call…
+            </span>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {post.insight?.goal_outcome && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-blue-100 text-blue-700">
+                    {post.insight.goal_outcome}
+                  </span>
+                )}
+                {post.insight?.sentiment && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-[#f4f2ec] text-[#525252]">
+                    {post.insight.sentiment}
+                  </span>
+                )}
+                {post.insight?.lead_found && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider bg-amber-100 text-amber-700">
+                    ★ lead
+                  </span>
+                )}
+                {typeof post.turnCount === 'number' && post.turnCount > 0 && (
+                  <span className="text-[9px] font-mono text-[#a3a3a3]">{post.turnCount} turns</span>
+                )}
+              </div>
+              {post.insight?.summary && (
+                <p className="text-[10.5px] text-[#525252] leading-snug">{post.insight.summary}</p>
+              )}
+              {(post.insight?.leads || []).slice(0, 2).map((ld, i) => (
+                <p key={i} className="text-[10px] text-[#0a0a0a]">
+                  ★ {[ld.name, ld.company, ld.contact].filter(Boolean).join(' · ')}
+                  {ld.next_step ? <span className="text-[#525252]"> — next: {ld.next_step}</span> : null}
+                </p>
+              ))}
+              {(post.insight?.tara_learnings || []).slice(0, 2).map((ln, i) => (
+                <p key={i} className="text-[10px] text-[#a37c00]">↳ learning: {typeof ln === 'string' ? ln : JSON.stringify(ln)}</p>
+              ))}
+              {!post.insight && (
+                <p className="text-[10px] text-[#a3a3a3]">No insight produced for this call.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {open && (p.subject || p.goal) && (
         <div className="mt-2 space-y-1.5">
           {c.channel === 'email' ? (
@@ -237,6 +287,37 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
       return c;
     } catch { return null; }
   }, []);
+
+  // ── Post-call results: insight + outcome + leads + learnings, in one shot ──
+  // Keyed by sessionId. post_call is 'live' | 'processing' | 'ready', derived
+  // SERVER-side from real rows (has the call ended? does an insight row exist?),
+  // so the "analysing" state below is truthful rather than a timer dressed up as
+  // progress. Polls only while something is unresolved and stops by itself, so a
+  // finished campaign costs nothing.
+  const [postCall, setPostCall] = useState({});
+  const postKey = (campaign?.targets || [])
+    .map((t) => t.resultRef?.sessionId).filter(Boolean).join(',');
+  const isCallCampaign = campaign?.channel === 'call';
+  useEffect(() => {
+    if (!postKey || !isCallCampaign) return undefined;
+    let dead = false;
+    let timer = null;
+    const tick = async () => {
+      try {
+        const { calls } = await apiClient.listTaraCallsBySessions(postKey.split(','));
+        if (dead) return;
+        const next = {};
+        for (const call of calls || []) if (call?.sessionId) next[call.sessionId] = call;
+        setPostCall(next);
+        const unresolved = postKey.split(',').some((s) => (next[s]?.post_call || 'processing') !== 'ready');
+        if (unresolved) timer = setTimeout(tick, 4000);
+      } catch {
+        if (!dead) timer = setTimeout(tick, 8000);
+      }
+    };
+    tick();
+    return () => { dead = true; if (timer) clearTimeout(timer); };
+  }, [postKey, isCallCampaign]);
 
   // Create the campaign (snapshot) on mount.
   useEffect(() => {
@@ -376,7 +457,8 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
         </div>
         <div className="mt-2 flex flex-col gap-1.5 max-h-80 overflow-y-auto">
           {targets.map(t => (
-            <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget} disabled={false} />
+            <TargetRow key={t.id} c={campaign} target={t} onPatch={patchTarget} disabled={false}
+              post={postCall[t.resultRef?.sessionId]} />
           ))}
         </div>
       </div>
