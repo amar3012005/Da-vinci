@@ -1771,7 +1771,9 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
       : liveLines;
     const latestByStage = new Map();
     (lines || []).filter(line => line?.t === 'campaign_stage').forEach(stage => latestByStage.set(stage.stage || stage.title, stage));
-    return Array.from(latestByStage.values()).slice(-6);
+    const stages = Array.from(latestByStage.values());
+    const accepted = stages.some(stage => stage.status === 'complete' && stage.title === 'Campaign contract accepted');
+    return stages.filter(stage => !(accepted && stage.stage === 'validation')).slice(-6);
   })();
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
