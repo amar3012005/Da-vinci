@@ -1761,6 +1761,18 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const roomDomain = domainRoomDefinition(isCampaignRoom ? 'campaign' : (room.room_tag || room.roomTag || 'general'));
   const RoomDomainIcon = roomDomain.icon;
   const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
+  const campaignProgressStages = (() => {
+    if (!isCampaignRoom) return [];
+    const active = turns.find(turn => turn.id === activeTurnId);
+    const fallback = [...turns].reverse().find(turn => (turn.lines || []).some(line => line?.t === 'campaign_stage'));
+    const selected = active || fallback;
+    const lines = selected
+      ? mergeHyperEvents(Array.isArray(selected.lines) ? selected.lines : [], selected.id === activeTurnId ? liveLines : [])
+      : liveLines;
+    const latestByStage = new Map();
+    (lines || []).filter(line => line?.t === 'campaign_stage').forEach(stage => latestByStage.set(stage.stage || stage.title, stage));
+    return Array.from(latestByStage.values()).slice(-6);
+  })();
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -2382,6 +2394,24 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
           {participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
+          {campaignProgressStages.length > 0 && (
+            <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Campaign Intelligence progress">
+              <div className="text-[9px] font-mono uppercase text-[#256d5b]">Campaign Intelligence progress</div>
+              <div className="mt-3 space-y-3">
+                {campaignProgressStages.map((stage, index) => (
+                  <div key={`${stage.stage}-${index}`} className="flex items-start gap-2">
+                    {stage.status === 'complete'
+                      ? <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-700" />
+                      : <Loader2 size={12} className="mt-0.5 shrink-0 animate-spin text-[#256d5b]" />}
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold leading-4 text-[#2f342f]">{stage.title}</div>
+                      <div className="mt-0.5 text-[9px] leading-4 text-[#817b74]">{stage.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
         {!archived && (
           <div className="p-3 border-t border-[#e3e0db]">
@@ -2702,7 +2732,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const campaignBundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
   const campaignBundle = campaignBundleLine?.bundle || null;
   const campaignInvalid = [...lines].reverse().find((line) => line.t === 'campaign_bundle_invalid');
-  const campaignStages = lines.filter((line) => line.t === 'campaign_stage');
   if (campaignHandoff || campaignHandoffFailed) {
     return (
       <div className="space-y-3">
@@ -3276,20 +3305,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             ? t('hyperAgents.harnessCheckFailed', 'Needs attention: {{items}}', { items: harnessCheck.failed.join(', ') })
             : t('hyperAgents.harnessCheckGeneric', 'Some report quality checks need attention.')}
         </div>
-      )}
-
-      {isCampaignTurn && campaignStages.length > 0 && (
-        <section className="mx-2 my-3 border-y border-[#d8d3cc] py-3" aria-label="Campaign Intelligence progress">
-          <div className="text-[9px] font-mono uppercase text-[#256d5b]">Campaign Intelligence progress</div>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {campaignStages.slice(-8).map((stage, index) => (
-              <div key={`${stage.stage}-${stage.status}-${stage.attempt || 0}-${index}`} className="flex items-start gap-2.5 bg-[#f7f8f5] px-3 py-2.5">
-                {stage.status === 'complete' ? <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-700" /> : <Loader2 size={13} className="mt-0.5 shrink-0 animate-spin text-[#256d5b]" />}
-                <div><div className="text-[10.5px] font-semibold text-[#2f342f]">{stage.title}</div><div className="mt-0.5 text-[9.5px] leading-4 text-[#747a75]">{stage.detail}</div></div>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       {finalReport && (() => {
