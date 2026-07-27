@@ -1,12 +1,21 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import CampaignDashboardModal from '../CampaignDashboardModal';
+import CampaignProgressDashboard from '../CampaignProgressDashboard';
 import { campaignPaceSummary, deriveCampaignPayload } from '../CreateCampaignWizard';
 import { withCampaignSearchParam } from '../CampaignsView';
 import { CHANNEL_DESCRIPTIONS, CHANNEL_NAMES } from '../channel-catalog';
 
 jest.mock('../../../shared/api-client', () => ({}));
-jest.mock('../CampaignDetail', () => () => <div>Campaign detail</div>);
+jest.mock('../CampaignDetail', () => ({
+  __esModule: true,
+  default: () => <div>Campaign detail</div>,
+  campaignProgress: () => [
+    { id: 'brief', label: 'Briefed', detail: 'Goal accepted', state: 'complete' },
+    { id: 'room', label: 'Building', detail: 'Agents working', state: 'complete' },
+    { id: 'ready', label: 'Ready', detail: 'Launch decision', state: 'current' },
+  ],
+}));
 jest.mock('react-router-dom', () => ({ useSearchParams: jest.fn() }), { virtual: true });
 
 describe('campaign dashboard shell', () => {
@@ -88,5 +97,21 @@ describe('campaign dashboard shell', () => {
     expect(markup).toContain('Campaign detail');
     expect(markup).not.toContain('Campaign progress and operating plan');
     expect(markup).not.toContain('Campaign plan contract accepted');
+  });
+
+  test('campaign popup contains progress and controls while the operating plan stays in the room', () => {
+    const campaign = {
+      id: 'campaign-42', roomId: 'room-fixed', name: 'Founder awareness', goal: 'Make the category legible',
+      status: 'READY_FOR_APPROVAL', requestedChannels: ['x_organic'],
+      readiness: { decision: 'blocked', checks: [{ id: 'provider', label: 'X connected', status: 'blocked', detail: 'Connect X', recovery: 'Open connectors' }] },
+      events: [{ id: 'ready', eventType: 'campaign_plan_ready', createdAt: '2026-07-26T17:56:32Z' }],
+    };
+    const markup = renderToStaticMarkup(<CampaignProgressDashboard campaign={campaign} loading={false} onClose={jest.fn()} onOpenRoom={jest.fn()} onLaunch={jest.fn()} busy={false} executionEnabled={false} />);
+    expect(markup).toContain('Open Campaign Intelligence');
+    expect(markup).toContain('Launch readiness');
+    expect(markup).toContain('Recent progress');
+    expect(markup).not.toContain('Campaign Board');
+    expect(markup).not.toContain('Campaign sequence');
+    expect(markup).not.toContain('Strategy and positioning');
   });
 });

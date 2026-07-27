@@ -142,10 +142,14 @@ export default function CampaignRoomExperience({ campaign, ReportComponent }) {
   return <div className="max-w-5xl">
     <header className="border border-[#d8d3cc] bg-white rounded-md overflow-hidden">
       <div className="px-4 sm:px-5 py-4 border-b border-[#e6e2dc] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div><div className="inline-flex items-center gap-1.5 text-[9.5px] font-mono uppercase text-[#256d5b]"><Sparkles size={11} />Campaign Mode</div><h2 className="mt-1 text-[16px] font-semibold text-[#171717]">{campaign.name}</h2><p className="mt-1 max-w-3xl text-[11.5px] leading-5 text-[#615c56]">{campaign.goal}</p></div>
+        <div><div className="inline-flex items-center gap-1.5 text-[9.5px] font-mono uppercase text-[#256d5b]"><Sparkles size={11} />Permanent intelligence room</div><h2 className="mt-1 text-[18px] font-semibold text-[#171717]">Campaign Intelligence</h2><p className="mt-1 max-w-3xl text-[11px] leading-5 text-[#615c56]">Research, debate, build, and verify every company campaign in one operating room.</p></div>
         <div className="shrink-0"><div className="text-[9px] font-mono uppercase text-[#8a847d]">Current stage</div><div className="mt-1 text-[11.5px] font-semibold text-[#24211f]">{stage}</div></div>
       </div>
-      <div className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2"><span className="text-[9px] font-mono uppercase text-[#8a847d] mr-1">Channels</span>{campaign.requestedChannels.map((channel) => <span key={channel} className="px-2 py-1 rounded border border-[#d8d3cc] bg-[#fbfaf6] text-[10px] font-semibold text-[#45413d]">{CHANNEL_NAMES[channel] || channel}</span>)}</div>
+      <div className="grid grid-cols-2 border-b border-[#e6e2dc] sm:grid-cols-4">{[
+        ['Company truth', 'Ground every claim'], ['Strategic debate', 'Challenge weak routes'],
+        ['Channel build', 'Produce ready actions'], ['Launch verification', 'Protect every send'],
+      ].map(([title, note]) => <div key={title} className="border-r border-t border-[#e6e2dc] px-4 py-3 last:border-r-0 sm:border-t-0"><div className="text-[10px] font-semibold text-[#24211f]">{title}</div><div className="mt-0.5 text-[9px] text-[#817b74]">{note}</div></div>)}</div>
+      <div className="px-4 sm:px-5 py-3"><div className="text-[9px] font-mono uppercase text-[#8a847d]">Active campaign</div><div className="mt-1 text-[12px] font-semibold text-[#24211f]">{campaign.name}</div><p className="mt-0.5 text-[10.5px] text-[#615c56]">{campaign.goal}</p><div className="mt-2 flex flex-wrap gap-2">{campaign.requestedChannels.map((channel) => <span key={channel} className="px-2 py-1 rounded border border-[#d8d3cc] bg-[#fbfaf6] text-[10px] font-semibold text-[#45413d]">{CHANNEL_NAMES[channel] || channel}</span>)}</div></div>
     </header>
 
     <section className="mt-5 border-y border-[#dfdbd4]">

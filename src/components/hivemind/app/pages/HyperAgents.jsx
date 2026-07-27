@@ -30,7 +30,7 @@ import {
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
   MapPin, Mail,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
 import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, GmailConnectGate } from '../hyperagents/elements';
 import { useAuth } from '../auth/AuthProvider';
@@ -120,7 +120,7 @@ const ROOM_FORMATS = [
 // Director/skills/toolkit/report pack; `template` still selects how agents work.
 const DOMAIN_ROOMS = [
   { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Your company command center for cross-functional priorities, decisions, and execution.' },
-  { key: 'campaign', label: 'Campaign Intelligence', icon: Megaphone, color: '#256d5b', desc: 'Research, debate, creative development, scheduling, and launch readiness for one campaign.' },
+  { key: 'campaign', label: 'Campaign Intelligence', icon: Megaphone, color: '#256d5b', desc: 'One permanent workspace for campaign research, debate, creative development, scheduling, and launch readiness.' },
   { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
   { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
   { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
@@ -138,6 +138,12 @@ const DOMAIN_ROOM_STAGES = {
     ['Prioritize', 'Find the highest-leverage move', 'Compare the strongest opportunities across the company before committing resources.', 'Compare the highest-leverage opportunities across product, growth, operations, finance, and risk. Recommend one priority with explicit trade-offs and evidence.'],
     ['Plan', 'Build the next 30 days', 'Turn the chosen priority into owners, milestones, dependencies, and success checks.', 'Build a practical 30-day operating plan for the company. Include milestones, owners, dependencies, risks, and measurable success criteria.'],
     ['Execute', 'Create the first deliverable', 'Produce the most useful ready-to-use artifact from the plan.', 'Choose and create the highest-value first deliverable from the current operating plan. Make it complete, usable, and grounded in company context.'],
+  ],
+  campaign: [
+    ['Ground', 'Audit campaign evidence', 'Bring company truth, audience context, prior performance, and channel constraints onto the board.', 'Audit the evidence available for the active campaign. Separate verified company and audience facts from assumptions, identify missing channel requirements, and recommend what the team must learn before building.'],
+    ['Decide', 'Debate the strongest strategy', 'Challenge positioning, audience, offer, channel roles, and the campaign sequence before committing.', 'Debate the strongest strategy for the active campaign. Compare credible routes, challenge unsupported claims, resolve trade-offs, and record one clear recommendation.'],
+    ['Build', 'Create the complete sequence', 'Produce channel-correct copy, creative briefs, timing, rationale, and dependencies for every action.', 'Build the complete scheduled campaign sequence from the accepted strategy. Include final channel-ready copy, visual briefs where useful, timing, rationale, dependencies, and success signals. Do not return a single sample action.'],
+    ['Verify', 'Check launch readiness', 'Validate claims, providers, budgets, approvals, schedule, and measurement before anything can launch.', 'Run a launch-readiness review for the active campaign. Validate every claim, channel provider, budget, approval, scheduled action, creative requirement, and measurement rule. Return explicit blockers and recovery steps.'],
   ],
   seo: [
     ['Baseline', 'Audit search readiness', 'Inspect positioning, site structure, technical discoverability, and current search evidence.', 'Audit the company search baseline using available company knowledge and live evidence. Cover technical discoverability, content, authority, and measurement gaps.'],
@@ -339,9 +345,13 @@ export default function HyperAgents() {
       }
       const resp = await apiClient.listHyperRooms();
       const list = resp?.rooms || [];
-      setRooms(list);
-      if (!activeRoomId && list.length && !list[0].archived_at) {
-        setActiveRoomId(list[0].id);
+      const campaignHome = list.find((candidate) => (candidate.room_tag || candidate.roomTag) === 'campaign' && (candidate.is_domain_home || candidate.isDomainHome));
+      const visibleRooms = campaignHome
+        ? list.filter((candidate) => (candidate.room_tag || candidate.roomTag) !== 'campaign' || candidate.id === campaignHome.id)
+        : list;
+      setRooms(visibleRooms);
+      if (!activeRoomId && visibleRooms.length && !visibleRooms[0].archived_at) {
+        setActiveRoomId(visibleRooms[0].id);
       }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -972,6 +982,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const [gmailGateOpen, setGmailGateOpen] = useState(false);
   const gmailGateShownRef = useRef(false);
   const navigate = useNavigate();
+  const location = useLocation();
   // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
   const [showSwarm, setShowSwarm] = useState(false);
   const [swarmDraft, setSwarmDraft] = useState('');
@@ -995,10 +1006,10 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const threadEndRef = useRef(null);
   const scrollRef = useRef(null);
   const discussionStartRef = useRef(null);
-  const campaignReturnRef = useRef(new URLSearchParams(window.location.search).get('campaignReturn'));
+  const campaignReturn = useMemo(() => new URLSearchParams(location.search).get('campaignReturn'), [location.search]);
   const campaignReturnedRef = useRef(false);
   const [campaignHandoff, setCampaignHandoff] = useState(null);
-  const isCampaignRoom = Boolean(campaignReturnRef.current || room?.campaign_id);
+  const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
   // Normal rooms open on their permanent category workspace. Once the user
@@ -1115,7 +1126,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
 
   useEffect(() => {
     if (!room?.id) return;
-    if (isCampaignRoom || room.archivedAt || room.archived_at) {
+    if (room.archivedAt || room.archived_at) {
       setShowRoomIntro(false);
       setRoomIntroAcknowledged(true);
       return;
@@ -1129,7 +1140,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     } catch {
       setRoomIntroAcknowledged(false);
     }
-  }, [isCampaignRoom, room?.id, room?.archivedAt, room?.archived_at]);
+  }, [room?.id, room?.archivedAt, room?.archived_at]);
 
   const finishRoomIntro = useCallback(() => {
     try { window.localStorage.setItem(`hm-room-intro-${roomId}`, '1'); } catch { /* noop */ }
@@ -1140,7 +1151,12 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   }, [roomId]);
 
   useEffect(() => {
-    const campaignId = campaignReturnRef.current || room?.campaign_id || room?.campaignId;
+    campaignReturnedRef.current = false;
+    setCampaignHandoff(null);
+  }, [campaignReturn]);
+
+  useEffect(() => {
+    const campaignId = campaignReturn || room?.campaign_id || room?.campaignId;
     if (!campaignId || !onCampaignReady) return undefined;
     let active = true;
     const checkCampaign = async () => {
@@ -1158,7 +1174,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     checkCampaign();
     const timer = window.setInterval(checkCampaign, 4000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [activeTurnId, onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
+  }, [activeTurnId, campaignReturn, onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
 
   useEffect(() => {
     if (!campaignHandoff) return undefined;
@@ -2190,7 +2206,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#587069]">
                     <span>Research complete</span><span>Debate complete</span><span>Campaign contract accepted</span>
                   </div>
-                  <p className="mt-1 text-[10.5px] text-[#615c56]">Next: review the operating plan, remaining launch requirements, and scheduled actions in Your Campaigns.</p>
+                  <p className="mt-1 text-[10.5px] text-[#615c56]">The complete operating plan stays in this room. Your Campaigns shows progress, launch requirements, and controls.</p>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="font-mono text-[18px] font-semibold text-[#173d32]">{campaignHandoff.seconds}s</div>

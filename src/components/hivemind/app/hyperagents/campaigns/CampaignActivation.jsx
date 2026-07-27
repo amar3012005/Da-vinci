@@ -3,7 +3,7 @@ import { Brain, Check, Loader2, Megaphone, Network, Play, UsersRound, X } from '
 
 const STEPS = [
   { label: 'Campaign brief accepted', detail: 'Goal, objective, and channels', icon: Megaphone },
-  { label: 'Creating dedicated Room', detail: 'One private workspace for this campaign', icon: Network },
+  { label: 'Opening Campaign Intelligence', detail: 'One permanent workspace for every campaign', icon: Network },
   { label: 'Assigning campaign agents', detail: 'Research, strategy, and content roles', icon: UsersRound },
   { label: 'Connecting company context', detail: 'Company knowledge and existing audience', icon: Brain },
   { label: 'Starting campaign workflow', detail: 'Your request is sent to the Room', icon: Play },
@@ -20,7 +20,7 @@ export default function CampaignActivation({ activation, onClose }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-[9.5px] font-mono uppercase text-[#256d5b]">{opening ? 'Room ready' : failed ? 'Setup paused' : 'Activating campaign'}</div>
-            <h2 id="campaign-activation-title" className="mt-1 text-[22px] font-semibold text-[#171717]">{opening ? 'Opening your HyperAgents Room' : 'Setting up your Campaign Room'}</h2>
+            <h2 id="campaign-activation-title" className="mt-1 text-[22px] font-semibold text-[#171717]">{opening ? 'Opening Campaign Intelligence' : 'Preparing Campaign Intelligence'}</h2>
             <p className="mt-2 max-w-xl text-[11.5px] leading-5 text-[#6f6962]">{activation?.goal}</p>
           </div>
           {failed ? <button onClick={onClose} className="grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-[#f0ede7]" title="Close setup"><X size={15} /></button> : null}
@@ -46,7 +46,7 @@ export default function CampaignActivation({ activation, onClose }) {
       </div>
 
       <footer className="border-t border-[#e3dfd8] px-5 py-4 sm:px-7">
-        {failed ? <div className="flex items-center justify-between gap-4"><p className="text-[11px] text-red-700">{activation.error || 'The Campaign Room could not be created.'}</p><button onClick={onClose} className="h-9 shrink-0 rounded-md border border-[#bdb7af] px-3 text-[11px] font-semibold">Back to campaigns</button></div> : <div><div className="h-1 overflow-hidden rounded bg-[#e5e1da]"><div className="h-full bg-[#256d5b] transition-all duration-500" style={{ width: `${opening ? 100 : Math.max(8, ((activeStep + 0.5) / STEPS.length) * 100)}%` }} /></div><div className="mt-2 flex items-center justify-between text-[9.5px] font-mono text-[#8a847d]"><span>{opening ? 'Campaign workflow started' : 'Preparing the dedicated workspace'}</span><span>{opening ? 'Opening Room...' : `${Math.min(activeStep + 1, STEPS.length)}/${STEPS.length}`}</span></div></div>}
+        {failed ? <div className="flex items-center justify-between gap-4"><p className="text-[11px] text-red-700">{activation.error || 'Campaign Intelligence could not be opened.'}</p><button onClick={onClose} className="h-9 shrink-0 rounded-md border border-[#bdb7af] px-3 text-[11px] font-semibold">Back to campaigns</button></div> : <div><div className="h-1 overflow-hidden rounded bg-[#e5e1da]"><div className="h-full bg-[#256d5b] transition-all duration-500" style={{ width: `${opening ? 100 : Math.max(8, ((activeStep + 0.5) / STEPS.length) * 100)}%` }} /></div><div className="mt-2 flex items-center justify-between text-[9.5px] font-mono text-[#8a847d]"><span>{opening ? 'Campaign workflow started' : 'Preparing the permanent workspace'}</span><span>{opening ? 'Opening Room...' : `${Math.min(activeStep + 1, STEPS.length)}/${STEPS.length}`}</span></div></div>}
       </footer>
     </div>
   </div>;
