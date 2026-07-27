@@ -10,7 +10,7 @@ describe('HyperAgents live turn adoption', () => {
 
   it('keeps every domain as a permanent company Room and tags work Rooms', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
-    ['general', 'seo', 'marketing', 'branding', 'fundraising', 'research', 'product', 'design', 'legal_finance']
+    ['general', 'campaign', 'seo', 'marketing', 'branding', 'fundraising', 'research', 'product', 'design', 'legal_finance']
       .forEach((roomTag) => expect(source).toContain(`key: '${roomTag}'`));
     expect(source).toContain("t('hyperAgents.companyRooms', 'Company rooms')");
     expect(source).toContain("domain.key === 'general' ? 'HQ' : domain.label");
@@ -18,6 +18,15 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('domainHomeRooms.map');
     expect(source).toContain('workRooms.map');
     expect(source).toContain('RoomDomainIcon');
+  });
+
+  it('keeps campaign completion in Campaign Intelligence before the dashboard handoff', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain("label: 'Campaign Intelligence'");
+    expect(source).toContain("setCampaignHandoff({ campaignId, seconds: 10");
+    expect(source).toContain('Campaign Intelligence finished');
+    expect(source).toContain('Campaign contract accepted');
+    expect(source).toContain('onCampaignReady?.(campaignHandoff.campaignId)');
   });
 
   it('requires an explicit expertise category for every new Room', () => {

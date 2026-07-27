@@ -120,6 +120,7 @@ const ROOM_FORMATS = [
 // Director/skills/toolkit/report pack; `template` still selects how agents work.
 const DOMAIN_ROOMS = [
   { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Your company command center for cross-functional priorities, decisions, and execution.' },
+  { key: 'campaign', label: 'Campaign Intelligence', icon: Megaphone, color: '#256d5b', desc: 'Research, debate, creative development, scheduling, and launch readiness for one campaign.' },
   { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
   { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
   { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
@@ -996,6 +997,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const discussionStartRef = useRef(null);
   const campaignReturnRef = useRef(new URLSearchParams(window.location.search).get('campaignReturn'));
   const campaignReturnedRef = useRef(false);
+  const [campaignHandoff, setCampaignHandoff] = useState(null);
   const isCampaignRoom = Boolean(campaignReturnRef.current || room?.campaign_id);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
@@ -1146,17 +1148,29 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
         const response = await apiClient.getCampaign(campaignId);
         const campaign = response?.campaign;
         const hasPlan = Boolean(campaign?.planVersions?.length);
-        if (active && !campaignReturnedRef.current && campaign?.roomId === roomId
+        if (active && !activeTurnId && !campaignReturnedRef.current && campaign?.roomId === roomId
           && hasPlan && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
           campaignReturnedRef.current = true;
-          onCampaignReady(campaignId);
+          setCampaignHandoff({ campaignId, seconds: 10, status: campaign.status });
         }
       } catch { /* The Room remains usable while campaign status is temporarily unavailable. */ }
     };
     checkCampaign();
     const timer = window.setInterval(checkCampaign, 4000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
+  }, [activeTurnId, onCampaignReady, room?.campaignId, room?.campaign_id, roomId]);
+
+  useEffect(() => {
+    if (!campaignHandoff) return undefined;
+    if (campaignHandoff.seconds <= 0) {
+      onCampaignReady?.(campaignHandoff.campaignId);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setCampaignHandoff((current) => current ? { ...current, seconds: current.seconds - 1 } : null);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [campaignHandoff, onCampaignReady]);
 
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
@@ -1717,7 +1731,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const participants = room.participants || [];
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
-  const roomDomain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const roomDomain = domainRoomDefinition(isCampaignRoom ? 'campaign' : (room.room_tag || room.roomTag || 'general'));
   const RoomDomainIcon = roomDomain.icon;
   const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
 
@@ -2164,6 +2178,27 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
               taskTag={room?.taskTag || 'GENERAL'}
             />
           ))}
+          {campaignHandoff && (
+            <section className="sticky bottom-3 z-20 overflow-hidden rounded-md border border-[#8ebaaa] bg-white shadow-[0_16px_45px_-24px_rgba(15,70,55,0.55)]" aria-live="polite">
+              <div className="h-1 bg-[#dcebe5]">
+                <div className="h-full bg-[#256d5b] transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(0, campaignHandoff.seconds) * 10}%` }} />
+              </div>
+              <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e3f2ec] text-[#256d5b]"><CheckCheck size={17} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] font-semibold text-[#173d32]">Campaign Intelligence finished</div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#587069]">
+                    <span>Research complete</span><span>Debate complete</span><span>Campaign contract accepted</span>
+                  </div>
+                  <p className="mt-1 text-[10.5px] text-[#615c56]">Next: review the operating plan, remaining launch requirements, and scheduled actions in Your Campaigns.</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-mono text-[18px] font-semibold text-[#173d32]">{campaignHandoff.seconds}s</div>
+                  <button type="button" onClick={() => onCampaignReady?.(campaignHandoff.campaignId)} className="mt-0.5 text-[10px] font-semibold text-[#256d5b] hover:underline">Open now</button>
+                </div>
+              </div>
+            </section>
+          )}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}
