@@ -38,11 +38,15 @@ export default function CampaignProgressDashboard({ campaign, loading, onClose, 
   const postLaunch = ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED', 'FAILED'].includes(campaign.status);
   const actionCounts = (campaign.actions || []).reduce((counts, action) => {
     if (action.status === 'SUCCEEDED') counts.published += 1;
+    else if (action.status === 'PAUSED') counts.paused += 1;
     else if (['QUEUED', 'EXECUTING', 'AWAITING_APPROVAL'].includes(action.status)) counts.scheduled += 1;
     else if (['FAILED', 'BLOCKED', 'NEEDS_RECONCILIATION'].includes(action.status)) counts.attention += 1;
     else counts.ready += 1;
     return counts;
-  }, { published: 0, scheduled: 0, ready: 0, attention: 0 });
+  }, { published: 0, paused: 0, scheduled: 0, ready: 0, attention: 0 });
+  const actionSummary = campaign.status === 'PAUSED'
+    ? [['Published', actionCounts.published], ['Paused', actionCounts.paused], ['Scheduled', actionCounts.scheduled], ['Needs attention', actionCounts.attention]]
+    : [['Published', actionCounts.published], ['Scheduled', actionCounts.scheduled], ['Ready', actionCounts.ready], ['Needs attention', actionCounts.attention]];
   const readinessTitle = postLaunch ? 'Campaign health' : 'Launch readiness';
   const readinessNote = postLaunch ? 'Live execution state for the approved plan.' : 'Only decisions still needed from you appear here.';
 
@@ -68,7 +72,7 @@ export default function CampaignProgressDashboard({ campaign, loading, onClose, 
       </section>
 
       <section className="mt-8 grid grid-cols-2 border-y border-[#d8d3cc] sm:grid-cols-4" aria-label="Campaign action summary">
-        {[['Published', actionCounts.published], ['Scheduled', actionCounts.scheduled], ['Ready', actionCounts.ready], ['Needs attention', actionCounts.attention]].map(([label, value], index) => <div key={label} className={`px-3 py-4 ${index ? 'border-l border-[#e3dfd8]' : ''}`}><div className={`text-[18px] font-semibold ${label === 'Needs attention' && value ? 'text-red-700' : 'text-[#171717]'}`}>{value}</div><div className="mt-1 text-[8.5px] font-mono uppercase text-[#817b74]">{label}</div></div>)}
+        {actionSummary.map(([label, value], index) => <div key={label} className={`px-3 py-4 ${index ? 'border-l border-[#e3dfd8]' : ''}`}><div className={`text-[18px] font-semibold ${label === 'Needs attention' && value ? 'text-red-700' : 'text-[#171717]'}`}>{value}</div><div className="mt-1 text-[8.5px] font-mono uppercase text-[#817b74]">{label}</div></div>)}
       </section>
 
       <section className="mt-6 border-b border-[#d8d3cc] pb-6" aria-label={readinessTitle}>
