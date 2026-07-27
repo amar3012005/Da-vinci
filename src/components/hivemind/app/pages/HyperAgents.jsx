@@ -2644,8 +2644,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const simulationClaims = lines.filter(l => l.t === 'simulation_claim');
   const trustDeltas = seal?.trust || {};
   const template = router?.template || 'debate';
-  const sealStatus = seal?.status || 'complete';
-  const qualityLow = seal?.quality_low;
   const toolCallCounts = seal?.tool_call_counts || {};
   const toolCallTotal = seal?.tool_call_total || 0;
 
@@ -3580,42 +3578,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
       })()}
       {seal && (
         <div className="space-y-1 py-1">
-          <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${
-            sealStatus === 'escalated' ? 'text-amber-700' :
-            sealStatus === 'blocked' ? 'text-amber-700' :
-            sealStatus === 'failed' ? 'text-red-600' :
-            qualityLow ? 'text-amber-600' :
-            'text-[#a3a3a3]'
-          }`}>
-            {errorLine
-              ? t('hyperAgents.sealFailed', '─── failed: {{msg}} ───', { msg: errorLine.message || t('hyperAgents.unknownError', 'unknown error') })
-              : sealStatus === 'blocked'
-                ? t('hyperAgents.sealBlocked', '─── blocked · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                : sealStatus === 'escalated'
-                  ? t('hyperAgents.sealEscalated', '─── escalated · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                  : qualityLow
-                    ? t('hyperAgents.sealLowQuality', '─── sealed (low quality) · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                    : t('hyperAgents.sealComplete', '─── sealed · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })}
-          </div>
-          {seal && (Number(seal.tokens_in) > 0 || Number(seal.tokens_out) > 0) && (
-            <div className="mt-1 flex flex-wrap justify-center items-center gap-x-2 gap-y-0.5 text-[9px] font-mono text-[#a3a3a3]">
-              {Number(seal.tokens_in) > 0 && <span><span className="text-[#737373]">{Number(seal.tokens_in).toLocaleString()}</span> in</span>}
-              {Number(seal.tokens_out) > 0 && <span>· <span className="text-[#737373]">{Number(seal.tokens_out).toLocaleString()}</span> out</span>}
-              {Number(seal.tokens_cached) > 0 && (
-                <span className="text-emerald-600" title={t('hyperAgents.cachedHint', 'Groq prompt-cache hits — cached input billed at 50%')}>
-                  · {Number(seal.tokens_cached).toLocaleString()} cached ⚡
-                </span>
-              )}
-              {seal.tok_by && ((seal.tok_by.director || 0) + (seal.tok_by.synth || 0) + (seal.tok_by.debate || 0) + (seal.tok_by.web || 0)) > 0 && (
-                <span title={t('hyperAgents.tokByHint', 'director = gather plan (fast model) · synth = final deliverable (best model) · debate = the room · web = live search')}>
-                  · plan {Math.round((seal.tok_by.director || 0) / 1000)}k
-                  {(seal.tok_by.synth || 0) > 0 ? ` · synth ${Math.round(seal.tok_by.synth / 1000)}k` : ''}
-                  {(seal.tok_by.debate || 0) > 0 ? ` · debate ${Math.round(seal.tok_by.debate / 1000)}k` : ''}
-                  {(seal.tok_by.web || 0) > 0 ? ` · web ${Math.round(seal.tok_by.web / 1000)}k` : ''}
-                </span>
-              )}
-            </div>
-          )}
           {Object.keys(trustDeltas).length > 0 && (
             <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2">
               {Object.entries(trustDeltas).map(([slug, score]) => (
