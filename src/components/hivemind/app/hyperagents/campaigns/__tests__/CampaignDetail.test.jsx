@@ -6,16 +6,14 @@ jest.mock('../ActionCard', () => () => null);
 jest.mock('../ChannelTab', () => () => null);
 
 describe('campaign dashboard progress', () => {
-  test('shows the launch handoff instead of repeating room internals', () => {
+  test('reduces campaign lifecycle to three user-facing stages', () => {
     expect(campaignProgress('GENERATING').map(({ label, state }) => [label, state])).toEqual([
-      ['Plan accepted', 'current'],
-      ['Launch checks', 'upcoming'],
-      ['First action', 'upcoming'],
-      ['Schedule active', 'upcoming'],
+      ['Campaign Room', 'current'],
+      ['Plan ready', 'upcoming'],
+      ['Campaign live', 'upcoming'],
     ]);
 
-    expect(campaignProgress('READY_FOR_APPROVAL').map(({ state }) => state)).toEqual(['complete', 'current', 'upcoming', 'upcoming']);
-    expect(campaignProgress({ status: 'RUNNING', actions: [{ status: 'QUEUED' }] }).map(({ state }) => state)).toEqual(['complete', 'complete', 'current', 'upcoming']);
-    expect(campaignProgress({ status: 'RUNNING', actions: [{ status: 'SUCCEEDED' }] }).map(({ state }) => state)).toEqual(['complete', 'complete', 'complete', 'current']);
+    expect(campaignProgress('READY_FOR_APPROVAL').map(({ state }) => state)).toEqual(['complete', 'current', 'upcoming']);
+    expect(campaignProgress('RUNNING').map(({ state }) => state)).toEqual(['complete', 'complete', 'current']);
   });
 });

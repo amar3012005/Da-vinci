@@ -53,24 +53,17 @@ const EVENT_LABEL = {
 const READY = new Set(['PREPARING_ASSETS', 'READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED']);
 const LIVE = new Set(['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED']);
 
-export function campaignProgress(campaignOrStatus) {
-  const campaign = typeof campaignOrStatus === 'string' ? { status: campaignOrStatus, actions: [] } : (campaignOrStatus || {});
-  const status = campaign.status;
-  const accepted = READY.has(status);
-  const launching = LIVE.has(status);
-  const firstActionComplete = (campaign.actions || []).some((action) => action.status === 'SUCCEEDED');
-  const complete = status === 'COMPLETED';
+export function campaignProgress(status) {
   return [
-    { id: 'contract', label: 'Plan accepted', detail: 'Campaign Intelligence complete', state: accepted ? 'complete' : 'current' },
-    { id: 'launch', label: status === 'PREPARING_ASSETS' ? 'Preparing visuals' : 'Launch checks', detail: 'Providers, assets, and schedule', state: launching ? 'complete' : accepted ? 'current' : 'upcoming' },
-    { id: 'first-action', label: 'First action', detail: 'Publishing now', state: firstActionComplete ? 'complete' : launching ? 'current' : 'upcoming' },
-    { id: 'schedule', label: complete ? 'Completed' : 'Schedule active', detail: 'Remaining actions operate automatically', state: complete ? 'complete' : firstActionComplete ? 'current' : 'upcoming' },
+    { id: 'room', label: 'Campaign Room', detail: 'Research and debate', state: status === 'GENERATING' ? 'current' : 'complete' },
+    { id: 'plan', label: status === 'PREPARING_ASSETS' ? 'Creating visuals' : 'Plan ready', detail: status === 'PREPARING_ASSETS' ? 'Generating selected creative' : 'Review and approve', state: LIVE.has(status) ? 'complete' : READY.has(status) ? 'current' : 'upcoming' },
+    { id: 'live', label: 'Campaign live', detail: 'Publish and measure', state: LIVE.has(status) ? 'current' : 'upcoming' },
   ];
 }
 
-function Progress({ campaign }) {
-  return <ol className="grid grid-cols-4" aria-label="Campaign launch progress">
-    {campaignProgress(campaign).map((step, index) => <li key={step.id} className="relative min-w-0">
+function Progress({ status }) {
+  return <ol className="grid grid-cols-3" aria-label="Campaign progress">
+    {campaignProgress(status).map((step, index) => <li key={step.id} className="relative min-w-0">
       {index ? <span className={`absolute right-1/2 top-[13px] h-px w-full ${step.state === 'upcoming' ? 'bg-[#d8d3cc]' : 'bg-[#256d5b]'}`} aria-hidden="true" /> : null}
       <div className="relative flex flex-col items-center text-center">
         <span className={`grid h-7 w-7 place-items-center rounded-full border ${step.state === 'complete' ? 'border-[#256d5b] bg-[#256d5b] text-white' : step.state === 'current' ? 'border-[#171717] bg-[#171717] text-white' : 'border-[#cfc9c1] bg-[#fffefa] text-[#aaa49c]'}`}>
@@ -119,7 +112,7 @@ export default function CampaignDetail({ campaign, loading, onBack, onOpenRoom, 
             <button onClick={onBack} className="grid h-9 w-9 place-items-center rounded-md hover:bg-[#f0ede7]" title="Close campaign dashboard" aria-label="Close campaign dashboard"><X size={15} /></button>
           </div>
         </div>
-        <div className="mx-auto mt-4 max-w-2xl"><Progress campaign={campaign} /></div>
+        <div className="mx-auto mt-4 max-w-xl"><Progress status={campaign.status} /></div>
       </div>
       <nav className="flex gap-5 overflow-x-auto px-4 sm:px-7" aria-label="Campaign dashboard sections">
         {tabs.map((id) => <button key={id} onClick={() => setTab(id)} className={`h-9 shrink-0 border-b-2 text-[10.5px] font-semibold capitalize ${tab === id ? 'border-[#171717] text-[#171717]' : 'border-transparent text-[#817b74]'}`}>{LABEL[id] || id}</button>)}
