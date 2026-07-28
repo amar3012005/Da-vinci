@@ -75,10 +75,11 @@ export default function SeoOperatingReport({ report, taskTitle }) {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right"><div className="text-[9px] font-mono uppercase text-[#77716a]">SEO health</div><div className="text-[32px] font-semibold leading-none">{audit.score}</div></div>
+          <div className="text-right"><div className="text-[9px] font-mono uppercase text-[#77716a]">{audit.evidence_quality?.score_status === 'provisional' ? 'Provisional health' : 'SEO health'}</div><div className="text-[32px] font-semibold leading-none">{audit.score}</div></div>
           <Gauge size={30} color={audit.score >= 80 ? ACCENT : audit.score >= 55 ? '#b54708' : '#b42318'} />
         </div>
       </div>
+      {audit.evidence_quality?.level === 'degraded' && <div className="mt-4 flex items-start gap-2 border border-[#f5c26b] bg-[#fff8e8] p-3 text-[11px] leading-4 text-[#7a4b00]"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><span>{audit.evidence_quality.reason} The findings remain visible, but rerun the rendered crawl before acting on content depth, architecture, or the health score.</span></div>}
       <div className="mt-6 grid grid-cols-2 border-t border-[#dedbd5] pt-4 sm:grid-cols-6">
         <Metric label="Pages" value={audit.coverage?.pages_scanned} />
         <Metric label="Discovered" value={audit.coverage?.pages_discovered} />
