@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2 } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import OnboardingTerminal from './OnboardingTerminal';
@@ -19,7 +19,7 @@ import WebsitePreview from './WebsitePreview';
  * agents right).
  *
  * Server contract:
- *   POST /v1/hyper/onboarding/start  { website_url, goal? }
+ *   POST /v1/hyper/onboarding/start  { website_url, company_location?, goal? }
  *   GET  /v1/hyper/onboarding/status → { running, done, error, lines, result }
  */
 
@@ -53,6 +53,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const { t } = useTranslation('dashboard');
   const [phase, setPhase] = useState('input'); // input | running | done
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [companyLocation, setCompanyLocation] = useState('');
   const [goal, setGoal] = useState('');
   const [lines, setLines] = useState([]);
   const [result, setResult] = useState(null);
@@ -93,7 +94,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     if (!websiteUrl.trim() || starting) return;
     setStarting(true); setError(null);
     try {
-      await apiClient.startHyperOnboarding({ website_url: websiteUrl.trim(), goal: goal.trim() || undefined });
+      await apiClient.startHyperOnboarding({ website_url: websiteUrl.trim(), company_location: companyLocation.trim() || undefined, goal: goal.trim() || undefined });
       setPhase('running'); setLines([]); poll();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -120,6 +121,12 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               <input type="text" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)}
                 placeholder={t('hyperOnboarding.urlPlaceholder', 'yourcompany.com')} autoFocus
                 className="w-full pl-10 pr-4 py-3.5 bg-white border border-[#e3e0db] rounded-xl text-[14px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15 font-mono" />
+            </div>
+            <div className="relative">
+              <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
+              <input type="text" value={companyLocation} onChange={(e) => setCompanyLocation(e.target.value)}
+                placeholder={t('hyperOnboarding.locationPlaceholder', 'Company location (optional, e.g. Berlin, Germany)')}
+                className="w-full pl-10 pr-4 py-3 bg-white border border-[#e3e0db] rounded-xl text-[13px] text-[#0a0a0a] placeholder-[#a3a3a3] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
             </div>
             <input type="text" value={goal} onChange={(e) => setGoal(e.target.value)}
               placeholder={t('hyperOnboarding.goalPlaceholder', 'Optional: what should your AI team focus on first?')}
@@ -195,6 +202,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
 
           <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company}>
             <p className="text-[12.5px] text-[#0a0a0a] leading-relaxed">{p.what_it_does || '—'}</p>
+            {p.location ? <p className="text-[11.5px] text-[#525252] mt-1.5"><span className="text-[#a3a3a3]">Company location:</span> {p.location}</p> : null}
             {p.icp ? <p className="text-[11.5px] text-[#525252] mt-1.5"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
             {p.positioning ? <p className="text-[11.5px] text-[#525252] mt-1"><span className="text-[#a3a3a3]">Positioning:</span> {p.positioning}</p> : null}
           </Panel>

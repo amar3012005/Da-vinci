@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  Mail, PhoneCall, Reply, CalendarCheck, ListChecks,
+  Mail, PhoneCall, Reply, CalendarCheck, ListChecks, MapPin,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -145,6 +145,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads
           <p className="text-[12.5px] text-[#525252] mt-2 leading-relaxed">{p.what_it_does}</p>
 
           <div className="mt-4 space-y-2 text-[12px]">
+            {p.location ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase inline-flex items-center gap-1"><MapPin size={10} /> Company location</span><p className="text-[#3f3d39] mt-0.5">{p.location}</p></div> : null}
             {p.icp ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase">ICP</span><p className="text-[#3f3d39] mt-0.5">{p.icp}</p></div> : null}
             {p.positioning ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase">Positioning</span><p className="text-[#3f3d39] mt-0.5">{p.positioning}</p></div> : null}
           </div>
@@ -201,6 +202,8 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads
                       : <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] shrink-0 mt-0.5" />}
                 </div>
                 {task.detail ? <p className="text-[11.5px] text-[#525252] mt-1 leading-relaxed">{task.detail}</p> : null}
+                {task.deliverable ? <p className="mt-2 text-[10.5px] text-[#77716a]"><span className="font-semibold text-[#3f3d39]">Deliverable:</span> {task.deliverable}</p> : null}
+                {task.done_when ? <p className="mt-0.5 text-[10.5px] text-[#77716a]"><span className="font-semibold text-[#3f3d39]">Done when:</span> {task.done_when}</p> : null}
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.tag}</span>
                   {task.status === 'done'
