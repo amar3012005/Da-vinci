@@ -4,6 +4,7 @@
 import React from 'react';
 import BrochureReport from './brochure';
 import CampaignOperatingReport from '../campaigns/CampaignOperatingReport';
+import SeoOperatingReport from '../seo/SeoOperatingReport';
 
 const KIND = {
   outreach: { eyebrow: 'Outreach · Outreach desk', title: 'Outreach desk', accent: '#B0836A' },
@@ -33,7 +34,7 @@ export function ContentReport({ report, taskTitle }) {
   return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.content} />;
 }
 export function SeoReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.seo} />;
+  return <SeoOperatingReport report={report} taskTitle={taskTitle} />;
 }
 export function MarketingReport({ report, taskTitle }) {
   return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.marketing} />;
