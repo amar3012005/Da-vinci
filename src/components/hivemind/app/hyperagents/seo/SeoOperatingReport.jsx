@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, CheckCircle2, ChevronRight, ExternalLink, FileSearch, Gauge, Layers3 } from 'lucide-react';
+import { AlertTriangle, BarChart3, CheckCircle2, ChevronRight, ExternalLink, FileSearch, Gauge, Layers3, ListChecks } from 'lucide-react';
 import BrochureReport from '../rooms/brochure';
 
 const ACCENT = '#047857';
@@ -80,6 +80,11 @@ export default function SeoOperatingReport({ report, taskTitle }) {
         </div>
       </div>
       {audit.evidence_quality?.level === 'degraded' && <div className="mt-4 flex items-start gap-2 border border-[#f5c26b] bg-[#fff8e8] p-3 text-[11px] leading-4 text-[#7a4b00]"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><span>{audit.evidence_quality.reason} The findings remain visible, but rerun the rendered crawl before acting on content depth, architecture, or the health score.</span></div>}
+      {audit.maturity && <div className="mt-5 grid gap-4 border-y border-[#dedbd5] py-4 md:grid-cols-[180px_1fr_auto] md:items-center">
+        <div><div className="text-[9px] font-mono uppercase text-[#77716a]">Current SEO stage</div><div className="mt-1 text-[15px] font-semibold text-[#047857]">{audit.maturity.label}</div></div>
+        <p className="text-[11px] leading-5 text-[#5f5a54]">{audit.maturity.rationale}</p>
+        <div className="text-[10px] font-mono uppercase text-[#77716a]">Stage {audit.maturity.stage_number} / {audit.maturity.stage_count}</div>
+      </div>}
       <div className="mt-6 grid grid-cols-2 border-t border-[#dedbd5] pt-4 sm:grid-cols-6">
         <Metric label="Pages" value={audit.coverage?.pages_scanned} />
         <Metric label="Discovered" value={audit.coverage?.pages_discovered} />
@@ -91,7 +96,7 @@ export default function SeoOperatingReport({ report, taskTitle }) {
     </header>
 
     <nav className="flex overflow-x-auto border-b border-[#dedbd5] px-5" aria-label="SEO report views">
-      {[['fixes', 'Priority fixes'], ['performance', 'Search performance'], ['pages', 'Pages'], ['architecture', 'Architecture'], ['evidence', 'Evidence']].map(([id, label]) => (
+      {[['fixes', 'Priority fixes'], ['procedure', 'Optimization procedure'], ['performance', 'Search performance'], ['pages', 'Pages'], ['architecture', 'Architecture'], ['evidence', 'Evidence']].map(([id, label]) => (
         <button type="button" key={id} onClick={() => setView(id)} className={`h-11 shrink-0 border-b-2 px-3 text-[12px] font-semibold ${view === id ? 'border-[#191919] text-[#191919]' : 'border-transparent text-[#77716a]'}`}>{label}</button>
       ))}
     </nav>
@@ -120,6 +125,19 @@ export default function SeoOperatingReport({ report, taskTitle }) {
     </div>}
 
     {view === 'performance' && <SearchPerformance evidence={audit.search_console} slice={performanceSlice} onSlice={setPerformanceSlice} />}
+
+    {view === 'procedure' && <section className="p-6">
+      <div className="flex items-center gap-2"><ListChecks size={17} color={ACCENT} /><h3 className="text-[15px] font-semibold">Website optimization procedure</h3></div>
+      <p className="mt-2 max-w-3xl text-[11px] leading-5 text-[#66615b]">Work through these evidence-gated phases in order. A phase advances only after its verification condition is met.</p>
+      <div className="mt-5 divide-y divide-[#dedbd5] border-y border-[#dedbd5]">
+        {(audit.optimization_procedure || []).map((step) => <div key={step.id} className="grid gap-4 py-5 md:grid-cols-[90px_230px_1fr]">
+          <div><span className={`inline-flex px-2 py-1 text-[9px] font-mono uppercase ${step.status === 'current' ? 'bg-[#047857] text-white' : step.status === 'complete' ? 'bg-[#e7f6ef] text-[#047857]' : 'bg-[#efede8] text-[#77716a]'}`}>{step.status}</span></div>
+          <div><div className="text-[10px] font-mono uppercase text-[#77716a]">Phase {step.order}</div><div className="mt-1 text-[13px] font-semibold">{step.phase}</div><p className="mt-2 text-[11px] leading-5 text-[#66615b]">{step.objective}</p></div>
+          <div><div className="space-y-2">{(step.actions || []).map((action) => <div key={action} className="flex gap-2 text-[12px] leading-5"><CheckCircle2 size={14} className="mt-0.5 shrink-0" color={step.status === 'upcoming' ? '#9a958e' : ACCENT} /><span>{action}</span></div>)}</div><div className="mt-4 border-l-2 border-[#b7b1a9] pl-3 text-[10px] leading-4 text-[#66615b]"><strong>Verify:</strong> {step.verification}</div></div>
+        </div>)}
+      </div>
+      {audit.maturity?.exit_criteria?.length > 0 && <div className="mt-5"><div className="text-[9px] font-mono uppercase text-[#77716a]">Advance when</div><div className="mt-2 text-[12px] font-medium">{audit.maturity.exit_criteria.join(' ')}</div></div>}
+    </section>}
 
     {view === 'pages' && <section className="overflow-x-auto p-5">
       <table className="w-full min-w-[760px] border-collapse text-left text-[11px]"><thead><tr className="border-b border-[#cfcac2] text-[9px] font-mono uppercase text-[#77716a]"><th className="py-2 pr-4">Page</th><th>Status</th><th>Words</th><th>Links</th><th>Inlinks</th><th>Depth</th><th>Source</th><th>Issues</th><th>Template</th></tr></thead><tbody>{(audit.pages || []).map((page) => <tr key={page.url} className="border-b border-[#e6e2dc]"><td className="max-w-[300px] py-3 pr-4"><a href={page.url} target="_blank" rel="noreferrer" className="block truncate font-medium hover:text-[#047857]">{page.title || page.url}</a><div className="truncate text-[9px] text-[#8a857f]">{page.url}</div></td><td>{page.status}</td><td>{page.word_count}</td><td>{page.internal_links}</td><td>{page.internal_inlinks}</td><td>{page.crawl_depth ?? '-'}</td><td>{readable(page.discovery_source)}</td><td>{page.issue_count}</td><td>{page.template}</td></tr>)}</tbody></table>

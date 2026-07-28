@@ -8,6 +8,9 @@ describe('SEO operating report contract', () => {
     expect(source).toContain('```seo_audit');
     expect(source).toContain("audit?.schema === 'seo-audit-v1'");
     expect(source).toContain('Priority fixes');
+    expect(source).toContain('Current SEO stage');
+    expect(source).toContain('Optimization procedure');
+    expect(source).toContain('audit.optimization_procedure');
     expect(source).toContain('Search performance');
     expect(source).toContain('audit.search_console');
     expect(source).toContain('First-party search evidence');
