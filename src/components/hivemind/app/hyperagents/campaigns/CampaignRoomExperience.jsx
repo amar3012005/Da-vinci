@@ -3,7 +3,7 @@ import { Check, FileCheck2, Lightbulb, MessageSquareText, Search, Sparkles } fro
 import { CampaignCreativeGallery } from './CampaignCreative';
 import { CHANNEL_NAMES } from './channel-catalog';
 
-const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|CHANNEL_CAPABILITIES_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan)\b/i;
+const INTERNAL_FIELD = /\b(CAMPAIGN_ID|BRIEF_JSON|AUDIENCE_POLICY_JSON|CHANNEL_CAPABILITIES_JSON|USER_FEEDBACK|EXECUTION_CONTEXT|campaign__submit_plan|campaign__govern_delivery)\b/i;
 const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 function textFromLine(line) {
@@ -51,8 +51,8 @@ function debateItem(line) {
 
 function decisionItem(line) {
   if (line.t === 'campaign_bundle') return 'The final campaign plan passed its readiness checks.';
-  if (line.t === 'campaign_bundle_invalid') return 'The draft needed refinement before it could become launch-ready.';
-  if (line.t === 'campaign_tool') return line.status === 'accepted' ? 'The final campaign plan passed its readiness checks.' : 'The team is refining the plan to meet every campaign requirement.';
+  if (line.t === 'campaign_bundle_invalid') return 'Governance found unmet campaign requirements. Nothing was approved.';
+  if (line.t === 'campaign_tool') return line.status === 'accepted' ? 'The final campaign plan passed its readiness checks.' : 'Governance rejected the incomplete delivery.';
   return safeCampaignRoomText(textFromLine(line));
 }
 
