@@ -1271,6 +1271,14 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
           evoFlashTimer.current = setTimeout(() => setEvoFlash(null), 7000);
           return;
         }
+        if ((e.type === 'room_journal' || data.t === 'room_journal') && data.entry) {
+          setRoom(p => {
+            if (!p) return p;
+            const journal = [...(Array.isArray(p.room_journal) ? p.room_journal : (p.evo_journal || [])), data.entry].slice(-8);
+            return { ...p, room_journal: journal, evo_journal: journal };
+          });
+          return;
+        }
         // TARA call contract: the OS proposed an outbound call. Surface the global
         // first-contact-HITL popup (<CallContractModal> in AppShell). Not a thread line.
         if ((e.type === 'call_contract' || data.t === 'call_contract') && data.contract) {
@@ -1326,6 +1334,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      'room_journal',
       // Durable, progressively visible Campaign Intelligence stages.
       'campaign_stage',
       // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
@@ -1448,12 +1457,12 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   // Clear the room's journal (forget prior-turn memory). Optimistic + reverts.
   async function resetJournal() {
     if (!room) return;
-    const prev = room.evo_journal || [];
-    setRoom(p => ({ ...p, evo_journal: [] }));
+    const prev = room.room_journal || room.evo_journal || [];
+    setRoom(p => ({ ...p, room_journal: [], evo_journal: [] }));
     try {
       await apiClient.updateHyperRoom(roomId, { journal_reset: true });
     } catch (e) {
-      setRoom(p => ({ ...p, evo_journal: prev }));
+      setRoom(p => ({ ...p, room_journal: prev, evo_journal: prev }));
       setError(e.response?.data?.error || e.message);
     }
   }
@@ -1926,7 +1935,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                   );
                 })()}
                 {(() => {
-                  const jr = Array.isArray(room.evo_journal) ? room.evo_journal : [];
+                  const jr = Array.isArray(room.room_journal) ? room.room_journal : (Array.isArray(room.evo_journal) ? room.evo_journal : []);
                   if (!jr.length) return null;
                   return (
                     <button type="button" onClick={() => setShowJournal(true)}
@@ -1959,12 +1968,29 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                   </div>
                   <div className="overflow-y-auto px-5 py-4 space-y-2">
                     <p className="text-[11px] text-[#737373] leading-snug">{t('hyperAgents.journalBlurb', 'What this room asked and decided in prior turns — injected at the start of each new turn so the team has continuity (and answers direct recall questions instantly).')}</p>
-                    {(Array.isArray(room.evo_journal) ? room.evo_journal : []).map((entry, i) => (
-                      <div key={i} className="flex gap-2 border border-[#e3e0db] rounded-lg px-3 py-2 text-[11px] leading-snug text-[#404040] bg-[#faf9f7]">
-                        <span className="text-[#117dff] font-mono shrink-0">{i + 1}.</span>
-                        <span className="break-words">{String(entry)}</span>
-                      </div>
-                    ))}
+                    {(Array.isArray(room.room_journal) ? room.room_journal : (room.evo_journal || [])).map((entry, i) => {
+                      const structured = entry && typeof entry === 'object';
+                      return (
+                        <div key={entry?.turn_id || i} className="border border-[#e3e0db] rounded-lg px-3 py-2.5 text-[11px] leading-snug text-[#404040] bg-[#faf9f7]">
+                          <div className="flex gap-2">
+                            <span className="text-[#117dff] font-mono shrink-0">{i + 1}.</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-[#171717] break-words">{structured ? entry.asked : String(entry)}</p>
+                              {structured && <p className="mt-1 break-words">{entry.swarm_summary}</p>}
+                              {structured && Array.isArray(entry.agents) && entry.agents.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-[#e3e0db] space-y-1">
+                                  {entry.agents.map((agent, j) => (
+                                    <p key={`${agent.slug || agent.name}-${j}`} className="break-words">
+                                      <span className="font-medium text-[#171717]">{agent.name}:</span> {agent.contribution}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
