@@ -43,6 +43,7 @@ import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardMo
 import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
+import { SeoRoomBanner, SeoRoomProgress, latestSeoAuditFromTurns } from '../hyperagents/seo/SeoRoomWorkspace';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
@@ -955,6 +956,8 @@ function RoomThread({ roomId, onArchived }) {
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
   const [companyContext, setCompanyContext] = useState(null);
+  const [seoJobAudit, setSeoJobAudit] = useState(null);
+  const [seoConnection, setSeoConnection] = useState(null);
   const [showRoomIntro, setShowRoomIntro] = useState(true);
   const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
@@ -1281,6 +1284,39 @@ function RoomThread({ roomId, onArchived }) {
       .catch(() => {});
     return () => { alive = false; };
   }, [roomId, activeTurnId]);
+
+  // SEO workspace state is read from tenant-scoped deterministic evidence.
+  // The final Room report wins below; this ledger snapshot supplies continuity
+  // before the first turn is opened and after a browser refresh.
+  useEffect(() => {
+    const roomKind = String(room?.room_tag || room?.roomTag || '').toLowerCase();
+    if (roomKind !== 'seo') {
+      setSeoJobAudit(null);
+      setSeoConnection(null);
+      return undefined;
+    }
+    let alive = true;
+    Promise.allSettled([
+      apiClient.listWebJobs({ type: 'seo_audit', limit: 10 }),
+      apiClient.searchConsoleStatus(),
+    ]).then(([jobsResult, connectionResult]) => {
+      if (!alive) return;
+      if (jobsResult.status === 'fulfilled') {
+        const jobs = jobsResult.value?.jobs || [];
+        const companyWebsite = companyContext?.website || '';
+        const companyHost = (() => { try { return new URL(companyWebsite).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+        const latest = jobs.find((job) => {
+          const audit = Array.isArray(job?.results) ? job.results[0] : null;
+          if (job?.status !== 'succeeded' || audit?.schema !== 'seo-audit-v1') return false;
+          if (!companyHost) return true;
+          try { return new URL(audit.seed_url).hostname.replace(/^www\./, '') === companyHost; } catch { return false; }
+        });
+        setSeoJobAudit(latest?.results?.[0] || null);
+      }
+      setSeoConnection(connectionResult.status === 'fulfilled' ? connectionResult.value : { connected: false, status: 'not_connected' });
+    });
+    return () => { alive = false; };
+  }, [room?.id, room?.room_tag, room?.roomTag, companyContext?.website, activeTurnId]);
 
   // Probe Gmail connection so outreach rooms can nudge (and gate Send).
   useEffect(() => {
@@ -1842,6 +1878,7 @@ function RoomThread({ roomId, onArchived }) {
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
   const roomDomain = domainRoomDefinition(isCampaignRoom ? 'campaign' : (room.room_tag || room.roomTag || 'general'));
+  const isSeoRoom = roomDomain.key === 'seo';
   const RoomDomainIcon = roomDomain.icon;
   const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
   const campaignProgressStages = (() => {
@@ -1861,6 +1898,19 @@ function RoomThread({ roomId, onArchived }) {
   const launchedCampaigns = roomCampaigns.filter((campaign) => ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status));
   const latestLaunchedCampaign = launchedCampaigns[0] || null;
   const selectedExecutionBlockers = selectedCampaign?.requestedChannels?.filter((channel) => !campaignCapabilities?.channels?.find((item) => item.id === channel)?.execution_ready) || [];
+  const latestRoomSeoAudit = latestSeoAuditFromTurns(turns, liveLines);
+  const roomSeoAudit = (() => {
+    if (!latestRoomSeoAudit || !companyContext?.website) return latestRoomSeoAudit || seoJobAudit;
+    try {
+      const reportHost = new URL(latestRoomSeoAudit.seed_url).hostname.replace(/^www\./, '');
+      const companyHost = new URL(companyContext.website).hostname.replace(/^www\./, '');
+      return reportHost === companyHost ? latestRoomSeoAudit : seoJobAudit;
+    } catch { return seoJobAudit; }
+  })();
+  const seoWebsite = roomSeoAudit?.seed_url || companyContext?.website || '';
+  const seoRunning = isSeoRoom && Boolean(submitting || activeTurnId);
+  const runSeoTask = (prompt) => handleSubmit(null, prompt);
+  const connectSeoEvidence = () => navigate('/hivemind/app/connectors');
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -2226,6 +2276,16 @@ function RoomThread({ roomId, onArchived }) {
           </div>
         </header>
 
+        {isSeoRoom && !archived && <SeoRoomBanner
+          audit={roomSeoAudit}
+          website={seoWebsite}
+          connection={seoConnection}
+          running={seoRunning}
+          busy={submitting}
+          onRun={runSeoTask}
+          onConnect={connectSeoEvidence}
+        />}
+
         {callOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !callBusy && setCallOpen(false)}>
             <div className="w-full max-w-md rounded-xl border border-[#e3e0db] bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
@@ -2286,7 +2346,7 @@ function RoomThread({ roomId, onArchived }) {
 
         {/* Thread */}
         <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
-          {showRoomIntro && (
+          {showRoomIntro && !isSeoRoom && (
             <DomainRoomIntro
               room={room}
               company={companyContext}
@@ -2507,6 +2567,14 @@ function RoomThread({ roomId, onArchived }) {
           {participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
+          {isSeoRoom && <SeoRoomProgress
+            audit={roomSeoAudit}
+            connection={seoConnection}
+            running={seoRunning}
+            busy={submitting}
+            onRun={runSeoTask}
+            onConnect={connectSeoEvidence}
+          />}
           {isCampaignRoom && launchedCampaigns.length > 0 ? (
             <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Launched campaigns">
               <div className="flex items-center justify-between">
