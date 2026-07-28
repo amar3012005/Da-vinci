@@ -181,7 +181,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const companyName = result?.company || (websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Your company').toUpperCase();
 
   return (
-    <div className="flex flex-col gap-3 h-[calc(100vh-5rem)] min-h-[560px] overflow-hidden">
+    <div className="flex flex-col gap-3 h-[calc(100vh-6.5rem)] min-h-[560px] overflow-hidden">
       {/* ── Top build-log strip (Polsia position, day-mode styling) ── */}
       <div className="shrink-0">
         <div className="flex items-center gap-2 mb-1.5 px-0.5">
