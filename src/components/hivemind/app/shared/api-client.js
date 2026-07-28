@@ -219,6 +219,12 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Confirm the organization's headquarters before entering its workspace. */
+  async updateHyperCompanyLocation(location) {
+    const { data } = await this.controlPlane.patch('/v1/hyper/company/location', { location });
+    return data;
+  }
+
   /** Closed-loop outcome counters (emails sent / replies / calls / bookings, 7d+30d). */
   async hyperOutcomes() {
     const { data } = await this.controlPlane.get('/v1/hyper/outcomes');

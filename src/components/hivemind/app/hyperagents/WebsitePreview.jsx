@@ -109,7 +109,7 @@ function WebsiteAnalysisParticles() {
   return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
 }
 
-export default function WebsitePreview({ image, source, website, company, tagline, loading = false, className = '' }) {
+export default function WebsitePreview({ image, source, website, company, tagline, loading = false, compact = false, className = '' }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [image]);
   const src = useMemo(() => previewSrc(image), [image]);
@@ -118,12 +118,12 @@ export default function WebsitePreview({ image, source, website, company, taglin
     <img
       src={src}
       alt={`${company || domain || 'Company'} website preview`}
-      className={`w-full aspect-video ${source === 'official-site-image' ? 'object-contain bg-white p-3' : 'object-cover object-top bg-[#f4f6f8]'}`}
+      className={`w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} ${source === 'official-site-image' ? 'object-contain bg-white p-3' : 'object-cover object-top bg-[#f4f6f8]'}`}
       loading="lazy"
       onError={() => setFailed(true)}
     />
   ) : (
-    <div className="relative w-full aspect-video overflow-hidden bg-[#f4f6f8] border-b border-[#d9dee5] px-5 py-4 flex flex-col justify-between">
+    <div className={`relative w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} overflow-hidden bg-[#f4f6f8] border-b border-[#d9dee5] px-5 py-4 flex flex-col justify-between`}>
       {loading && <WebsiteAnalysisParticles />}
       <div className="relative z-[1] flex items-start justify-between gap-3">
         <div className="w-9 h-9 rounded-[8px] bg-[#0a0a0a] text-white grid place-items-center">
@@ -145,11 +145,11 @@ export default function WebsitePreview({ image, source, website, company, taglin
     </div>
   );
 
-  const frame = `block overflow-hidden rounded-[8px] border border-[#d9dee5] bg-white transition-colors ${className}`;
+  const frame = `overflow-hidden rounded-[8px] border border-[#d9dee5] bg-white transition-colors ${compact ? 'flex flex-col' : 'block'} ${className}`;
   if (!website) return <div className={frame}>{content}</div>;
   return (
     <a href={websiteHref(website)} target="_blank" rel="noreferrer" className={`${frame} group hover:border-[#0a0a0a]`}>
-      {content}
+      <div className={compact ? 'min-h-0 flex-1' : ''}>{content}</div>
       <div className="h-8 px-3 flex items-center gap-2 text-[10.5px] text-[#525252] bg-white border-t border-[#ece9e3]">
         <span className="font-mono truncate">{domain}</span>
         <ExternalLink size={11} className="ml-auto shrink-0 text-[#a3a3a3] group-hover:text-[#0a0a0a]" />
