@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  Mail, PhoneCall, Reply, CalendarCheck, ListChecks, MapPin,
+  MapPin,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -38,7 +38,7 @@ function SectionTitle({ children }) {
   );
 }
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads }) {
+export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -132,55 +132,52 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads
         </div>
       </div>
 
-      {/* Body: scrollable company columns on the left, a fixed outcomes rail on
-          the right so the value counters (emails/replies/meetings/calls) are
-          always visible without scrolling the whole page. */}
-      <div className="flex-1 min-h-0 flex">
-      {/* Three-column Polsia grid — scrolls internally, keeping the rail fixed */}
-      <div className="flex-1 min-w-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* ── Col 1 · Company ── */}
-        <div>
-          <SectionTitle>{t('hyperDash.company', 'Company')}</SectionTitle>
-          {p.tagline ? <p className="text-[13px] text-[#0a0a0a] font-medium">{p.tagline}</p> : null}
-          <p className="text-[12.5px] text-[#525252] mt-2 leading-relaxed line-clamp-3">{p.what_it_does}</p>
+      <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(250px,0.92fr)_minmax(340px,1.08fr)_minmax(280px,0.98fr)] gap-6">
+        {/* Company context stays complete; the website remains anchored bottom-left. */}
+        <section className="min-h-0 flex flex-col">
+          <div className="min-h-0 overflow-y-auto pr-2 pb-4">
+            <SectionTitle>{t('hyperDash.company', 'Company')}</SectionTitle>
+            {p.tagline ? <p className="text-[13px] leading-5 text-[#0a0a0a] font-semibold">{p.tagline}</p> : null}
+            {p.what_it_does ? <p className="text-[12.5px] text-[#525252] mt-2 leading-5">{p.what_it_does}</p> : null}
 
-          {(p.social_profiles || []).length ? (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {p.social_profiles.map((social) => (
-                <a key={social.url} href={social.url} target="_blank" rel="noreferrer" className="inline-flex h-6 items-center border border-[#d9dee5] rounded-md px-2 text-[9.5px] font-mono uppercase text-[#117dff] hover:border-[#117dff]">
-                  {social.platform}
-                </a>
-              ))}
+            {(p.social_profiles || []).length ? (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {p.social_profiles.map((social) => (
+                  <a key={social.url} href={social.url} target="_blank" rel="noreferrer" className="inline-flex h-6 items-center border border-[#d9dee5] rounded-md px-2 text-[9.5px] font-mono uppercase text-[#117dff] hover:border-[#117dff]">
+                    {social.platform}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-5 space-y-4">
+              {p.location ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase inline-flex items-center gap-1"><MapPin size={10} /> Company location</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.location}</p></div> : null}
+              {p.icp ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">ICP</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.icp}</p></div> : null}
+              {p.positioning ? <div><span className="text-[#a3a3a3] font-mono text-[10px] uppercase">Positioning</span><p className="text-[12px] leading-5 text-[#3f3d39] mt-1">{p.positioning}</p></div> : null}
             </div>
-          ) : null}
 
-          <div className="mt-4 space-y-2 text-[12px]">
-            {p.location ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase inline-flex items-center gap-1"><MapPin size={10} /> Company location</span><p className="text-[#3f3d39] mt-0.5">{p.location}</p></div> : null}
-            {p.icp ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase">ICP</span><p className="text-[#3f3d39] mt-0.5 line-clamp-2">{p.icp}</p></div> : null}
-            {p.positioning ? <div><span className="text-[#a3a3a3] font-mono text-[10.5px] uppercase">Positioning</span><p className="text-[#3f3d39] mt-0.5 line-clamp-2">{p.positioning}</p></div> : null}
-          </div>
+            <div className="mt-5">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Target size={11} /> {t('hyperDash.mission', 'Mission')}</div>
+              <p className="text-[12.5px] text-[#0a0a0a] leading-5">{c.mission}</p>
+            </div>
 
-          <div className="mt-5">
-            <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-1.5"><Target size={11} /> {t('hyperDash.mission', 'Mission')}</div>
-            <p className="text-[12.5px] text-[#0a0a0a] leading-relaxed line-clamp-3">{c.mission}</p>
-          </div>
-
-          <div className="mt-5">
-            <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2"><Users size={11} /> {t('hyperDash.team', 'Team')}</div>
-            <div className="space-y-1.5">
-              {employees.slice(0, 6).map((m) => (
-                <div key={m.id} className="flex items-center gap-2 text-[12px]">
-                  <span className="w-6 h-6 rounded-lg bg-violet-500/10 text-violet-700 flex items-center justify-center text-[10px] font-bold">{(m.name || '?')[0]}</span>
-                  <span className="text-[#0a0a0a] font-medium">{m.name}</span>
-                  {m.roleArchetype ? <span className="text-[#a3a3a3] text-[11px]">{m.roleArchetype}</span> : null}
-                </div>
-              ))}
+            <div className="mt-5">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Users size={11} /> {t('hyperDash.team', 'Team')}</div>
+              <div className="space-y-2">
+                {employees.slice(0, 6).map((member) => (
+                  <div key={member.id} className="flex items-center gap-2 text-[12px] min-w-0">
+                    <span className="w-6 h-6 rounded-lg bg-violet-500/10 text-violet-700 flex items-center justify-center text-[10px] font-bold shrink-0">{(member.name || '?')[0]}</span>
+                    <span className="text-[#0a0a0a] font-medium shrink-0">{member.name}</span>
+                    {member.roleArchetype ? <span className="text-[#a3a3a3] text-[11px] truncate">{member.roleArchetype}</span> : null}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {c.website ? (
-            <div className="mt-5">
-              <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
+            <div className="shrink-0 pt-3 border-t border-[#ece9e3] bg-white">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#a3a3a3] uppercase mb-2"><Globe size={11} /> {t('hyperDash.website', 'Website')}</div>
               <WebsitePreview
                 image={c.screenshot}
                 source={c.website_visual_source}
@@ -188,96 +185,108 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads
                 company={c.company}
                 tagline={p.tagline}
                 compact
-                className="h-[112px]"
+                className="h-[180px] 2xl:h-[250px]"
               />
             </div>
           ) : null}
-        </div>
+        </section>
 
-        {/* ── Col 2 · Tasks (click → room) ── */}
-        <div>
-          <SectionTitle>{t('hyperDash.tasks', 'Tasks')}</SectionTitle>
-          <div className="space-y-1.5">
-            {(c.tasks || []).map((task) => (
-              <motion.button
-                key={task.id}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => openTask(task)}
-                title={task.detail || task.title}
-                className={`w-full h-[38px] text-left border rounded-lg px-2.5 transition-colors group flex items-center gap-1.5 ${task.room_id ? 'bg-[#faf9f4] border-[#e3e0db]' : 'bg-white border-[#e3e0db] hover:border-[#0a0a0a]'}`}
-              >
-                <span className={`text-[8.5px] font-mono uppercase px-1.5 py-0.5 rounded shrink-0 ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.room_name || task.room_tag || task.tag}</span>
-                <span className="text-[11.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] truncate min-w-0">{task.title}</span>
-                <span className="ml-auto shrink-0">
-                  {openingTask === task.id
-                    ? <span className="w-3.5 h-3.5 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin shrink-0 mt-0.5" />
-                    : task.room_id
-                      ? <MessageSquare size={13} className="text-[#117dff] shrink-0 mt-0.5" />
-                      : <ArrowUpRight size={13} className="text-[#a3a3a3] group-hover:text-[#0a0a0a] shrink-0 mt-0.5" />}
-                </span>
-              </motion.button>
-            ))}
-            {(c.tasks || []).length === 0 && (
+        {/* One substantive task per expertise room; cards route directly into that room. */}
+        <section className="min-h-0 flex flex-col">
+          <div className="shrink-0"><SectionTitle>{t('hyperDash.tasks', 'Tasks')}</SectionTitle></div>
+          <div className="min-h-0 overflow-y-auto pr-2 space-y-2.5">
+            {(c.tasks || []).map((task) => {
+              const taskActive = task.status === 'active' || Boolean(task.room_id);
+              const taskDone = task.status === 'done';
+              return (
+                <motion.button
+                  key={task.id}
+                  data-company-task="true"
+                  whileTap={{ scale: 0.995 }}
+                  onClick={() => openTask(task)}
+                  className={`w-full text-left border rounded-lg px-4 py-3.5 transition-colors group ${taskActive ? 'bg-[#faf9f4] border-[#d8d3cc]' : 'bg-white border-[#e3e0db] hover:border-[#0a0a0a]'}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[13px] leading-5 font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{task.title}</h3>
+                      {task.detail ? <p className="mt-1 text-[11.5px] leading-[18px] text-[#625d57]">{task.detail}</p> : null}
+                      {task.deliverable ? <p className="mt-2 text-[10.5px] leading-4 text-[#77716a]"><span className="font-semibold text-[#3f3d39]">Output:</span> {task.deliverable}</p> : null}
+                    </div>
+                    <span className="shrink-0 mt-0.5">
+                      {openingTask === task.id
+                        ? <span className="block w-4 h-4 border-2 border-[#117dff] border-t-transparent rounded-full animate-spin" />
+                        : taskActive
+                          ? <MessageSquare size={14} className="text-[#117dff]" />
+                          : <ArrowUpRight size={14} className="text-[#a3a3a3] group-hover:text-[#0a0a0a]" />}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                    <span className={`text-[9px] font-mono uppercase px-2 py-1 rounded ${TAG_STYLES[task.tag] || TAG_STYLES.RESEARCH}`}>{task.room_name || task.room_tag || task.tag}</span>
+                    {taskDone ? <span className="text-[9px] font-mono uppercase px-2 py-1 rounded bg-[#16a34a] text-white">Done</span> : null}
+                    {!taskDone && taskActive ? <span className="text-[9px] font-mono uppercase px-2 py-1 rounded bg-[#117dff]/10 text-[#117dff]">In room</span> : null}
+                  </div>
+                </motion.button>
+              );
+            })}
+            {(c.tasks || []).length === 0 ? (
               <p className="text-[11.5px] text-[#a3a3a3]">{t('hyperDash.noTasks', 'No planned tasks — re-run onboarding or create a room manually.')}</p>
-            )}
+            ) : null}
           </div>
-        </div>
+        </section>
 
-        {/* ── Col 3 · Documents · Research ── */}
-        <div>
+        {/* Durable company memory, completed room outputs, evidence, and HQ. */}
+        <section className="min-h-0 overflow-y-auto pr-2">
           <SectionTitle>{t('hyperDash.documents', 'Documents')}</SectionTitle>
-          <div className="space-y-1.5">
-            {(c.documents || []).map((d) => (
-              <div key={d} className="flex items-center gap-2 text-[12px] text-[#3f3d39]">
-                <FileText size={12} className="text-[#a3a3a3] shrink-0" /> {d}
+          <div className="space-y-2">
+            {(c.documents || []).map((documentTitle) => (
+              <div key={documentTitle} className="flex items-center gap-2 text-[12px] text-[#3f3d39]">
+                <FileText size={12} className="text-[#a3a3a3] shrink-0" /> {documentTitle}
               </div>
             ))}
           </div>
-          <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — agents recall these before acting.')}</p>
+          <p className="text-[10.5px] text-[#a3a3a3] mt-2 font-mono leading-4">{t('hyperDash.filedTo', 'Filed to HIVEMIND memory — agents recall these before acting.')}</p>
 
-          {(c.deliverables || []).length > 0 && (
+          {(c.deliverables || []).length > 0 ? (
             <div className="mt-6">
               <SectionTitle>{t('hyperDash.deliverables', 'Deliverables')}</SectionTitle>
-              <div className="space-y-1.5">
-                {(c.deliverables || []).map((d) => (
-                  <button key={d.room_id}
-                    onClick={() => onOpenRoom?.({ id: d.room_id, name: d.title })}
+              <div className="space-y-2">
+                {(c.deliverables || []).map((deliverable) => (
+                  <button key={deliverable.room_id}
+                    onClick={() => onOpenRoom?.({ id: deliverable.room_id, name: deliverable.title })}
                     className="w-full flex items-center gap-2 text-[12px] text-[#0a0a0a] hover:text-[#117dff] text-left group">
                     <MessageSquare size={12} className="text-[#16a34a] shrink-0" />
-                    <span className="group-hover:underline line-clamp-1">{d.title}</span>
-                    <span className="text-[9.5px] font-mono text-[#a3a3a3] ml-auto shrink-0">
-                      {d.sealed_at ? new Date(d.sealed_at).toLocaleDateString() : ''}
-                    </span>
+                    <span className="group-hover:underline min-w-0 flex-1">{deliverable.title}</span>
+                    <span className="text-[9.5px] font-mono text-[#a3a3a3] shrink-0">{deliverable.sealed_at ? new Date(deliverable.sealed_at).toLocaleDateString() : ''}</span>
                   </button>
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          {(c.research || []).length > 0 && (
+          {(c.research || []).length > 0 ? (
             <div className="mt-6">
               <SectionTitle>{t('hyperDash.research', 'Market research')}</SectionTitle>
-              <div className="space-y-2.5">
-                {(c.research || []).slice(0, 3).map((r, i) => (
-                  <a key={i} href={r.url} target="_blank" rel="noreferrer" className="block group">
+              <div className="space-y-3">
+                {(c.research || []).slice(0, 8).map((researchItem, index) => (
+                  <a key={`${researchItem.url || 'research'}-${index}`} href={researchItem.url} target="_blank" rel="noreferrer" className="block group">
                     <div className="flex items-start gap-2">
-                      <Search size={11} className="text-[#a3a3a3] mt-0.5 shrink-0" />
+                      <Search size={11} className="text-[#a3a3a3] mt-1 shrink-0" />
                       <div className="min-w-0">
-                        <span className="text-[12px] text-[#0a0a0a] font-medium group-hover:underline leading-snug line-clamp-1">{r.title || r.url}</span>
-                        <p className="text-[11px] text-[#a3a3a3] leading-relaxed line-clamp-2">{r.snippet}</p>
+                        <span className="text-[12px] text-[#0a0a0a] font-medium group-hover:underline leading-4">{researchItem.title || researchItem.url}</span>
+                        {researchItem.snippet ? <p className="text-[11px] text-[#a3a3a3] leading-[17px] mt-0.5 line-clamp-3">{researchItem.snippet}</p> : null}
                       </div>
                     </div>
                   </a>
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="mt-6">
             <SectionTitle>{t('hyperDash.hq', 'HQ')}</SectionTitle>
             <button
               onClick={() => state.hq_room_id && onOpenRoom?.({ id: c.room_id || state.hq_room_id, name: c.room_name })}
-              className="w-full flex items-center justify-between border border-[#e3e0db] hover:border-[#0a0a0a] rounded-xl px-4 py-3 bg-white transition-colors group"
+              className="w-full flex items-center justify-between border border-[#e3e0db] hover:border-[#0a0a0a] rounded-lg px-4 py-3 bg-white transition-colors group"
             >
               <span className="flex items-center gap-2 text-[12.5px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">
                 <Sparkles size={13} className="text-violet-500" /> {c.room_name || `${c.company} — HQ`}
@@ -286,45 +295,12 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenLeads
             </button>
           </div>
 
-          <div className="mt-6 flex items-center gap-2 text-[10.5px] font-mono text-[#a3a3a3]">
+          <div className="mt-6 flex items-center gap-2 text-[10.5px] font-mono text-[#a3a3a3] pb-2">
             <Building2 size={11} />
             {t('hyperDash.onboardedAt', 'Onboarded')} {c.onboarded_at ? new Date(c.onboarded_at).toLocaleDateString() : ''}
             <button onClick={() => setConfirmRerun(true)} className="ml-auto text-[#117dff] hover:underline">{t('hyperDash.rerun', 'Re-run onboarding')}</button>
           </div>
-        </div>
-      </div>
-      {/* ── Right rail · outreach outcomes, stacked row by row (always visible) ── */}
-      {(() => {
-          const o = state.outcomes || {};
-          const tiles = [
-            { icon: Mail, label: t('hyperDash.emailsSent', 'Emails sent'), v: o.emails_sent || 0 },
-            { icon: Reply, label: t('hyperDash.replies', 'Replies'), v: o.replies || 0 },
-            { icon: CalendarCheck, label: t('hyperDash.bookings', 'Meetings'), v: o.bookings || 0 },
-            { icon: PhoneCall, label: t('hyperDash.calls', 'Calls'), v: o.calls || 0 },
-          ];
-          return (
-            <aside className="w-60 shrink-0 border-l border-[#e3e0db] bg-[#faf9f4] overflow-y-auto px-4 py-5 flex flex-col gap-2.5">
-              <div className="text-[10.5px] font-mono uppercase tracking-wider text-[#a3a3a3] mb-0.5">
-                {t('hyperDash.outreach', 'Outreach')} · 7d
-              </div>
-              {tiles.map(({ icon: Icon, label, v }) => (
-                <div key={label} className="border border-[#e3e0db] rounded-lg px-3.5 py-3 bg-white flex items-center gap-3">
-                  <Icon size={16} className={v > 0 ? 'text-[#117dff]' : 'text-[#c9c5be]'} />
-                  <div>
-                    <div className={`text-[20px] leading-none font-semibold font-['Space_Grotesk'] ${v > 0 ? 'text-[#0a0a0a]' : 'text-[#a3a3a3]'}`}>{v}</div>
-                    <div className="text-[10.5px] font-mono uppercase text-[#a3a3a3] mt-1">{label}</div>
-                  </div>
-                </div>
-              ))}
-              {onOpenLeads && (
-                <button onClick={onOpenLeads}
-                  className="mt-1 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-mono uppercase tracking-wider text-[#117dff] border border-[#117dff]/30 bg-white hover:bg-[#117dff]/5 transition-colors">
-                  <ListChecks size={12} /> {t('hyperDash.viewLeads', 'View all leads')}
-                </button>
-              )}
-            </aside>
-          );
-        })()}
+        </section>
       </div>
 
       {confirmRerun && (
