@@ -20,23 +20,24 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('RoomDomainIcon');
   });
 
-  it('keeps campaign completion in Campaign Intelligence before the dashboard handoff', () => {
+  it('keeps campaign completion and its dashboard inside Campaign Intelligence', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     expect(source).toContain("label: 'Campaign Intelligence'");
-    expect(source).toContain("setCampaignHandoff({ campaignId, seconds: 10");
-    expect(source).toContain('Campaign Intelligence finished');
-    expect(source).toContain('Campaign contract accepted');
-    expect(source).toContain("window.localStorage.setItem(`hm-campaign-handoff-${campaignId}`, '1')");
-    expect(source).toContain("window.localStorage.getItem(`hm-campaign-handoff-${campaignId}`) === '1'");
-    expect(source).toContain('const campaignId = campaignReturn;');
-    expect(source).toContain('completeCampaignHandoff(campaignHandoff.campaignId)');
+    expect(source).toContain('<CampaignDashboardModal campaign={selectedCampaign}');
+    expect(source).toContain('<CampaignProgressDashboard');
+    expect(source).toContain('setSelectedCampaign(campaign)');
+    expect(source).toContain('Campaign launched');
+    expect(source).toContain('Launched campaigns');
+    expect(source).toContain('Create campaign');
+    expect(source).not.toContain('hm-campaign-handoff-');
+    expect(source).not.toContain('seconds: 10');
   });
 
   it('keeps Campaign Intelligence work progressively visible in the Room', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
     expect(source).toContain("'campaign_stage'");
     expect(source).toContain('Campaign Intelligence progress');
-    expect(source).toContain('campaignStages.slice(-8)');
+    expect(source).toContain("stages.filter(stage => !(accepted && stage.stage === 'validation')).slice(-6)");
   });
 
   it('requires an explicit expertise category for every new Room', () => {

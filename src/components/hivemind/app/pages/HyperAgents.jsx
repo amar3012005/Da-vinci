@@ -39,6 +39,10 @@ import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
 import CampaignsView from '../hyperagents/CampaignsView';
+import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardModal';
+import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
+import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
+import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
@@ -671,7 +675,6 @@ export default function HyperAgents() {
             key={activeRoomId}
             roomId={activeRoomId}
             onArchived={() => { fetchRooms(); setActiveRoomId(null); }}
-            onCampaignReady={(campaignId) => goMode('campaigns', null, { campaign: campaignId })}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center flex-col gap-3 text-[12px] text-[#a3a3a3]">
@@ -946,7 +949,7 @@ function mergeHyperEvents(base, overlay) {
   return merged || current;
 }
 
-function RoomThread({ roomId, onArchived, onCampaignReady }) {
+function RoomThread({ roomId, onArchived }) {
   const { t, i18n } = useTranslation('dashboard');
   const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
@@ -1007,8 +1010,15 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
   const scrollRef = useRef(null);
   const discussionStartRef = useRef(null);
   const campaignReturn = useMemo(() => new URLSearchParams(location.search).get('campaignReturn'), [location.search]);
-  const campaignReturnedRef = useRef(false);
-  const [campaignHandoff, setCampaignHandoff] = useState(null);
+  const [roomCampaigns, setRoomCampaigns] = useState([]);
+  const [campaignCapabilities, setCampaignCapabilities] = useState(null);
+  const [campaignSettings, setCampaignSettings] = useState({ autonomy_mode: 'MANUAL_REVIEW' });
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
+  const [showCampaignCreate, setShowCampaignCreate] = useState(false);
+  const [campaignActivation, setCampaignActivation] = useState(null);
+  const [campaignBusy, setCampaignBusy] = useState(false);
+  const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
   const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
@@ -1150,52 +1160,116 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     });
   }, [roomId]);
 
-  useEffect(() => {
-    campaignReturnedRef.current = false;
-    setCampaignHandoff(null);
-  }, [campaignReturn]);
+  const loadRoomCampaigns = useCallback(async () => {
+    if (!isCampaignRoom) return [];
+    try {
+      const [list, capabilities, settings] = await Promise.all([
+        apiClient.getCampaigns(),
+        apiClient.getCampaignCapabilities(),
+        apiClient.getCampaignSettings(),
+      ]);
+      const related = (list?.campaigns || []).filter((campaign) => campaign.roomId === roomId || campaign.room_id === roomId);
+      setRoomCampaigns(related);
+      setCampaignCapabilities(capabilities);
+      setCampaignSettings(settings || { autonomy_mode: 'MANUAL_REVIEW' });
+      return related;
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not load campaigns');
+      return [];
+    }
+  }, [isCampaignRoom, roomId]);
 
-  const completeCampaignHandoff = useCallback((campaignId) => {
-    try { window.localStorage.setItem(`hm-campaign-handoff-${campaignId}`, '1'); } catch { /* noop */ }
-    campaignReturnedRef.current = true;
-    setCampaignHandoff(null);
-    onCampaignReady?.(campaignId);
-  }, [onCampaignReady]);
+  const openRoomCampaign = useCallback(async (campaignOrId) => {
+    const campaignId = typeof campaignOrId === 'string' ? campaignOrId : campaignOrId?.id;
+    if (!campaignId) return;
+    setCampaignDetailLoading(true);
+    try {
+      const response = await apiClient.getCampaign(campaignId);
+      setSelectedCampaign(response?.campaign || null);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not open campaign');
+    } finally {
+      setCampaignDetailLoading(false);
+    }
+  }, []);
 
+  useEffect(() => { if (isCampaignRoom) loadRoomCampaigns(); }, [isCampaignRoom, loadRoomCampaigns]);
+  useEffect(() => { if (campaignReturn) setPendingCampaignId(campaignReturn); }, [campaignReturn]);
+
+  // The Room owns completion: poll the campaign associated with the active run and
+  // open the existing dashboard in-place as soon as its governed plan is available.
   useEffect(() => {
-    const campaignId = campaignReturn;
-    if (!campaignId || !onCampaignReady) return undefined;
+    if (!isCampaignRoom || !pendingCampaignId) return undefined;
     let active = true;
     const checkCampaign = async () => {
       try {
-        const response = await apiClient.getCampaign(campaignId);
+        const response = await apiClient.getCampaign(pendingCampaignId);
         const campaign = response?.campaign;
-        const hasPlan = Boolean(campaign?.planVersions?.length);
-        let handoffCompleted = false;
-        try { handoffCompleted = window.localStorage.getItem(`hm-campaign-handoff-${campaignId}`) === '1'; } catch { /* noop */ }
-        if (active && !activeTurnId && !campaignReturnedRef.current && !handoffCompleted && campaign?.roomId === roomId
-          && hasPlan && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
-          campaignReturnedRef.current = true;
-          setCampaignHandoff({ campaignId, seconds: 10, status: campaign.status });
+        if (!active || !campaign) return;
+        setRoomCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)]);
+        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
+          setSelectedCampaign(campaign);
+          setPendingCampaignId(null);
         }
-      } catch { /* The Room remains usable while campaign status is temporarily unavailable. */ }
+      } catch { /* The visible Room remains usable during a transient campaign read failure. */ }
     };
     checkCampaign();
-    const timer = window.setInterval(checkCampaign, 4000);
+    const timer = window.setInterval(checkCampaign, 3500);
     return () => { active = false; window.clearInterval(timer); };
-  }, [activeTurnId, campaignReturn, onCampaignReady, roomId]);
+  }, [isCampaignRoom, pendingCampaignId]);
 
   useEffect(() => {
-    if (!campaignHandoff) return undefined;
-    if (campaignHandoff.seconds <= 0) {
-      completeCampaignHandoff(campaignHandoff.campaignId);
-      return undefined;
+    if (!selectedCampaign || !['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status)) return undefined;
+    const timer = window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000);
+    return () => window.clearInterval(timer);
+  }, [openRoomCampaign, selectedCampaign]);
+
+  const createCampaignInRoom = useCallback(async (payload) => {
+    setShowCampaignCreate(false);
+    setCampaignActivation({ status: 'working', step: 1, goal: payload.goal });
+    const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    try {
+      const response = await apiClient.createCampaign({
+        ...payload,
+        autonomy_mode: campaignSettings.autonomy_mode === 'AUTO' ? 'FULL_AUTO' : 'APPROVE_PLAN_ONCE',
+      });
+      for (const step of [2, 3, 4]) { setCampaignActivation((current) => ({ ...current, step })); await delay(250); }
+      setCampaignActivation((current) => ({ ...current, status: 'opening', step: 5, campaign: response.campaign }));
+      setPendingCampaignId(response.campaign?.id || null);
+      await load({ quiet: true });
+      await loadRoomCampaigns();
+      await delay(500);
+      setCampaignActivation(null);
+    } catch (err) {
+      setCampaignActivation((current) => ({ ...current, status: 'failed', error: err?.response?.data?.message || err.message || 'Could not create campaign' }));
+      throw err;
     }
-    const timer = window.setTimeout(() => {
-      setCampaignHandoff((current) => current ? { ...current, seconds: current.seconds - 1 } : null);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [campaignHandoff, completeCampaignHandoff]);
+  }, [campaignSettings.autonomy_mode, load, loadRoomCampaigns]);
+
+  const connectCampaignChannel = useCallback(async (channel) => {
+    if (channel === 'x_organic') {
+      const data = await apiClient.startXAdsOAuth('oauth2');
+      window.location.assign(data.authorization_url);
+      return;
+    }
+    window.location.assign(channel === 'tara' ? '/hivemind/app/tara' : '/hivemind/app/connectors');
+  }, []);
+
+  const controlRoomCampaign = useCallback(async (action) => {
+    if (!selectedCampaign?.id || campaignBusy) return false;
+    setCampaignBusy(true);
+    try {
+      await apiClient.controlCampaign(selectedCampaign.id, action);
+      await openRoomCampaign(selectedCampaign.id);
+      await loadRoomCampaigns();
+      return true;
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Campaign control failed');
+      return false;
+    } finally {
+      setCampaignBusy(false);
+    }
+  }, [campaignBusy, loadRoomCampaigns, openRoomCampaign, selectedCampaign]);
 
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
@@ -1784,6 +1858,9 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
     const accepted = stages.some(stage => stage.status === 'complete' && stage.title === 'Campaign contract accepted');
     return stages.filter(stage => !(accepted && stage.stage === 'validation')).slice(-6);
   })();
+  const launchedCampaigns = roomCampaigns.filter((campaign) => ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status));
+  const latestLaunchedCampaign = launchedCampaigns[0] || null;
+  const selectedExecutionBlockers = selectedCampaign?.requestedChannels?.filter((channel) => !campaignCapabilities?.channels?.find((item) => item.id === channel)?.execution_ready) || [];
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -2101,6 +2178,17 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!archived && isCampaignRoom && (
+              <button
+                type="button"
+                onClick={() => setShowCampaignCreate(true)}
+                disabled={!campaignCapabilities?.enabled}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10.5px] font-semibold text-white disabled:bg-[#aaa49c]"
+                title="Create and run a campaign in this Campaign Intelligence Room"
+              >
+                <Plus size={12} /> Create campaign
+              </button>
+            )}
             {!archived && (
               <button
                 type="button"
@@ -2245,26 +2333,23 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
               taskTag={room?.taskTag || 'GENERAL'}
             />
           ))}
-          {campaignHandoff && (
-            <section className="sticky bottom-3 z-20 overflow-hidden rounded-md border border-[#8ebaaa] bg-white shadow-[0_16px_45px_-24px_rgba(15,70,55,0.55)]" aria-live="polite">
-              <div className="h-1 bg-[#dcebe5]">
-                <div className="h-full bg-[#256d5b] transition-[width] duration-1000 ease-linear" style={{ width: `${Math.max(0, campaignHandoff.seconds) * 10}%` }} />
-              </div>
-              <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#e3f2ec] text-[#256d5b]"><CheckCheck size={17} /></span>
+          {latestLaunchedCampaign && (
+            <button
+              type="button"
+              onClick={() => openRoomCampaign(latestLaunchedCampaign)}
+              className="w-full overflow-hidden rounded-md border border-[#8ebaaa] bg-[#eff8f4] text-left shadow-[0_14px_36px_-28px_rgba(15,70,55,0.6)]"
+              aria-label={`View launched campaign ${latestLaunchedCampaign.name}`}
+            >
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#256d5b] text-white"><Rocket size={16} /></span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-semibold text-[#173d32]">Campaign Intelligence finished</div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#587069]">
-                    <span>Research complete</span><span>Debate complete</span><span>Campaign contract accepted</span>
-                  </div>
-                  <p className="mt-1 text-[10.5px] text-[#615c56]">The complete operating plan stays in this room. Your Campaigns shows progress, launch requirements, and controls.</p>
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-[#256d5b]">Campaign launched</div>
+                  <div className="mt-0.5 truncate text-[12.5px] font-semibold text-[#173d32]">{latestLaunchedCampaign.name}</div>
+                  <div className="mt-0.5 text-[10px] text-[#587069]">The schedule and campaign controls are active. Open the dashboard to inspect posts, timing, and reactions.</div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="font-mono text-[18px] font-semibold text-[#173d32]">{campaignHandoff.seconds}s</div>
-                  <button type="button" onClick={() => completeCampaignHandoff(campaignHandoff.campaignId)} className="mt-0.5 text-[10px] font-semibold text-[#256d5b] hover:underline">Open now</button>
-                </div>
+                <ArrowUpRight size={15} className="shrink-0 text-[#256d5b]" />
               </div>
-            </section>
+            </button>
           )}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -2422,7 +2507,30 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
           {participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
-          {campaignProgressStages.length > 0 && (
+          {isCampaignRoom && launchedCampaigns.length > 0 ? (
+            <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Launched campaigns">
+              <div className="flex items-center justify-between">
+                <div className="text-[9px] font-mono uppercase text-[#256d5b]">Launched campaigns</div>
+                <span className="rounded border border-[#b9d5ca] px-1.5 py-0.5 text-[8px] font-mono text-[#256d5b]">{launchedCampaigns.length}</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {launchedCampaigns.map((campaign) => (
+                  <button key={campaign.id} type="button" onClick={() => openRoomCampaign(campaign)} className="w-full rounded-md border border-[#d8d3cc] bg-white px-3 py-2.5 text-left hover:border-[#8ebaaa] hover:bg-[#f4faf7]">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded bg-[#e3f2ec] text-[#256d5b]"><Megaphone size={12} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[10.5px] font-semibold text-[#2f342f]">{campaign.name}</div>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <span className="truncate text-[8.5px] font-mono uppercase text-[#6f746f]">{campaign.status.replaceAll('_', ' ')}</span>
+                          <ArrowUpRight size={10} className="shrink-0 text-[#256d5b]" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : campaignProgressStages.length > 0 ? (
             <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Campaign Intelligence progress">
               <div className="text-[9px] font-mono uppercase text-[#256d5b]">Campaign Intelligence progress</div>
               <div className="mt-3 space-y-3">
@@ -2439,7 +2547,7 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
         </div>
         {!archived && (
           <div className="p-3 border-t border-[#e3e0db]">
@@ -2452,6 +2560,32 @@ function RoomThread({ roomId, onArchived, onCampaignReady }) {
           </div>
         )}
       </aside>
+
+      {selectedCampaign || campaignDetailLoading ? (
+        <CampaignDashboardModal campaign={selectedCampaign} loading={campaignDetailLoading} onClose={() => setSelectedCampaign(null)}>
+          {selectedCampaign ? (
+            <CampaignProgressDashboard
+              campaign={selectedCampaign}
+              loading={campaignDetailLoading}
+              onClose={() => setSelectedCampaign(null)}
+              onOpenRoom={() => setSelectedCampaign(null)}
+              onLaunch={controlRoomCampaign}
+              busy={campaignBusy}
+              executionEnabled={Boolean(campaignCapabilities?.execution_enabled) && selectedExecutionBlockers.length === 0}
+            />
+          ) : null}
+        </CampaignDashboardModal>
+      ) : null}
+      {showCampaignCreate ? (
+        <CreateCampaignWizard
+          capabilities={campaignCapabilities}
+          autonomyMode={campaignSettings.autonomy_mode}
+          onClose={() => setShowCampaignCreate(false)}
+          onCreate={createCampaignInRoom}
+          onConnect={connectCampaignChannel}
+        />
+      ) : null}
+      {campaignActivation ? <CampaignActivation activation={campaignActivation} onClose={() => setCampaignActivation(null)} /> : null}
 
       <AnimatePresence>
         {showPicker && (
