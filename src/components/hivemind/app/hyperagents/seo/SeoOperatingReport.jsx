@@ -71,8 +71,9 @@ export default function SeoOperatingReport({ report, taskTitle }) {
           <Gauge size={30} color={audit.score >= 80 ? ACCENT : audit.score >= 55 ? '#b54708' : '#b42318'} />
         </div>
       </div>
-      <div className="mt-6 grid grid-cols-2 border-t border-[#dedbd5] pt-4 sm:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 border-t border-[#dedbd5] pt-4 sm:grid-cols-6">
         <Metric label="Pages" value={audit.coverage?.pages_scanned} />
+        <Metric label="Discovered" value={audit.coverage?.pages_discovered} />
         <Metric label="Critical" value={audit.severity?.critical} tone={severityColor.critical} />
         <Metric label="High" value={audit.severity?.high} tone={severityColor.high} />
         <Metric label="Templates" value={audit.templates?.length} />
@@ -81,7 +82,7 @@ export default function SeoOperatingReport({ report, taskTitle }) {
     </header>
 
     <nav className="flex overflow-x-auto border-b border-[#dedbd5] px-5" aria-label="SEO report views">
-      {[['fixes', 'Priority fixes'], ['pages', 'Pages'], ['evidence', 'Evidence']].map(([id, label]) => (
+      {[['fixes', 'Priority fixes'], ['pages', 'Pages'], ['architecture', 'Architecture'], ['evidence', 'Evidence']].map(([id, label]) => (
         <button type="button" key={id} onClick={() => setView(id)} className={`h-11 shrink-0 border-b-2 px-3 text-[12px] font-semibold ${view === id ? 'border-[#191919] text-[#191919]' : 'border-transparent text-[#77716a]'}`}>{label}</button>
       ))}
     </nav>
@@ -110,11 +111,20 @@ export default function SeoOperatingReport({ report, taskTitle }) {
     </div>}
 
     {view === 'pages' && <section className="overflow-x-auto p-5">
-      <table className="w-full min-w-[620px] border-collapse text-left text-[11px]"><thead><tr className="border-b border-[#cfcac2] text-[9px] font-mono uppercase text-[#77716a]"><th className="py-2 pr-4">Page</th><th>Status</th><th>Words</th><th>Links</th><th>Issues</th><th>Template</th></tr></thead><tbody>{(audit.pages || []).map((page) => <tr key={page.url} className="border-b border-[#e6e2dc]"><td className="max-w-[300px] py-3 pr-4"><a href={page.url} target="_blank" rel="noreferrer" className="block truncate font-medium hover:text-[#047857]">{page.title || page.url}</a><div className="truncate text-[9px] text-[#8a857f]">{page.url}</div></td><td>{page.status}</td><td>{page.word_count}</td><td>{page.internal_links}</td><td>{page.issue_count}</td><td>{page.template}</td></tr>)}</tbody></table>
+      <table className="w-full min-w-[760px] border-collapse text-left text-[11px]"><thead><tr className="border-b border-[#cfcac2] text-[9px] font-mono uppercase text-[#77716a]"><th className="py-2 pr-4">Page</th><th>Status</th><th>Words</th><th>Links</th><th>Inlinks</th><th>Depth</th><th>Source</th><th>Issues</th><th>Template</th></tr></thead><tbody>{(audit.pages || []).map((page) => <tr key={page.url} className="border-b border-[#e6e2dc]"><td className="max-w-[300px] py-3 pr-4"><a href={page.url} target="_blank" rel="noreferrer" className="block truncate font-medium hover:text-[#047857]">{page.title || page.url}</a><div className="truncate text-[9px] text-[#8a857f]">{page.url}</div></td><td>{page.status}</td><td>{page.word_count}</td><td>{page.internal_links}</td><td>{page.internal_inlinks}</td><td>{page.crawl_depth ?? '-'}</td><td>{readable(page.discovery_source)}</td><td>{page.issue_count}</td><td>{page.template}</td></tr>)}</tbody></table>
+    </section>}
+
+    {view === 'architecture' && <section className="p-6">
+      <div className="grid gap-px overflow-hidden border border-[#dedbd5] bg-[#dedbd5] sm:grid-cols-3">
+        <div className="bg-[#fbfaf7] p-4"><div className="text-[9px] font-mono uppercase text-[#77716a]">Orphan candidates</div><div className="mt-2 text-[26px] font-semibold">{audit.architecture?.orphan_candidates || 0}</div></div>
+        <div className="bg-[#fbfaf7] p-4"><div className="text-[9px] font-mono uppercase text-[#77716a]">Without inlinks</div><div className="mt-2 text-[26px] font-semibold">{audit.architecture?.pages_without_internal_inlinks || 0}</div></div>
+        <div className="bg-[#fbfaf7] p-4"><div className="text-[9px] font-mono uppercase text-[#77716a]">Maximum depth</div><div className="mt-2 text-[26px] font-semibold">{audit.architecture?.max_crawl_depth || 0}</div></div>
+      </div>
+      <div className="mt-6"><h3 className="text-[14px] font-semibold">Template coverage</h3><div className="mt-3 divide-y divide-[#dedbd5] border-y border-[#dedbd5]">{(audit.templates || []).map((row) => <div key={row.template} className="grid grid-cols-[1fr_auto_auto] gap-5 py-3 text-[11px]"><span className="font-medium">{row.template}</span><span>{row.pages} page(s)</span><span>{row.issues} issue(s)</span></div>)}</div></div>
     </section>}
 
     {view === 'evidence' && <section className="grid gap-0 md:grid-cols-2">
-      <div className="border-b border-[#dedbd5] p-6 md:border-b-0 md:border-r"><div className="flex items-center gap-2"><Layers3 size={16} color={ACCENT} /><h3 className="text-[14px] font-semibold">Evidence boundaries</h3></div><div className="mt-4 grid grid-cols-2 border-y border-[#dedbd5] py-3 text-[11px]"><div>robots.txt<br/><strong>{audit.site_files?.robots?.present ? 'Detected' : 'Not detected'}</strong></div><div>sitemap<br/><strong>{audit.site_files?.sitemap?.present ? 'Detected' : 'Not detected'}</strong></div></div><div className="mt-4 space-y-3">{(audit.limitations || []).map((item) => <div key={item} className="flex gap-2 text-[12px] leading-5 text-[#56514c]"><CheckCircle2 size={14} className="mt-0.5 shrink-0" color={ACCENT} />{item}</div>)}</div></div>
+      <div className="border-b border-[#dedbd5] p-6 md:border-b-0 md:border-r"><div className="flex items-center gap-2"><Layers3 size={16} color={ACCENT} /><h3 className="text-[14px] font-semibold">Evidence boundaries</h3></div><div className="mt-4 grid grid-cols-2 border-y border-[#dedbd5] py-3 text-[11px]"><div>robots.txt<br/><strong>{audit.site_files?.robots?.present ? 'Detected' : 'Not detected'}</strong></div><div>sitemap<br/><strong>{audit.site_files?.sitemap?.present ? 'Detected' : 'Not detected'}</strong></div></div><div className="mt-4 text-[10px] font-mono uppercase text-[#77716a]">{audit.capability?.id || 'seo audit'} · v{audit.capability?.version || 'legacy'} · {readable(audit.site_files?.discovery?.source || 'rendered links')}</div><div className="mt-4 space-y-3">{(audit.limitations || []).map((item) => <div key={item} className="flex gap-2 text-[12px] leading-5 text-[#56514c]"><CheckCircle2 size={14} className="mt-0.5 shrink-0" color={ACCENT} />{item}</div>)}</div></div>
       <div className="p-6"><h3 className="text-[14px] font-semibold">Crawl errors</h3>{(audit.crawl_errors || []).length ? <div className="mt-4 divide-y divide-[#dedbd5]">{audit.crawl_errors.map((row, index) => <div key={`${row.url}-${index}`} className="py-3 text-[11px]"><div className="font-medium">{readable(row.type)}</div><div className="mt-1 break-all text-[#77716a]">{row.url || row.message}</div></div>)}</div> : <div className="mt-5 text-[12px] text-[#77716a]">No crawl errors were recorded in this sample.</div>}</div>
     </section>}
 
