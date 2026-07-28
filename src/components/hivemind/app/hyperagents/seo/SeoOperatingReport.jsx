@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronRight, ExternalLink, FileSearch, Gauge, Layers3 } from 'lucide-react';
+import { AlertTriangle, BarChart3, CheckCircle2, ChevronRight, ExternalLink, FileSearch, Gauge, Layers3 } from 'lucide-react';
 import BrochureReport from '../rooms/brochure';
 
 const ACCENT = '#047857';
@@ -18,6 +18,13 @@ export function parseSeoAudit(report) {
 }
 
 const readable = (value) => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+const compact = (value) => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
+const percent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
+const change = (value, inverse = false) => {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return 'New';
+  const adjusted = inverse ? -Number(value) : Number(value);
+  return `${adjusted > 0 ? '+' : ''}${(adjusted * 100).toFixed(1)}%`;
+};
 
 function Metric({ label, value, tone }) {
   return <div className="min-w-0 border-r border-[#dedbd5] px-4 last:border-r-0 first:pl-0">
@@ -48,6 +55,7 @@ export default function SeoOperatingReport({ report, taskTitle }) {
   const audit = parsed.audit;
   const [view, setView] = useState('fixes');
   const [severity, setSeverity] = useState('all');
+  const [performanceSlice, setPerformanceSlice] = useState('opportunities');
   const findings = useMemo(() => (audit?.findings || []).filter((row) => severity === 'all' || row.severity === severity), [audit, severity]);
   const [selectedId, setSelectedId] = useState('');
   const selected = findings.find((row) => row.id === selectedId) || findings[0];
@@ -82,7 +90,7 @@ export default function SeoOperatingReport({ report, taskTitle }) {
     </header>
 
     <nav className="flex overflow-x-auto border-b border-[#dedbd5] px-5" aria-label="SEO report views">
-      {[['fixes', 'Priority fixes'], ['pages', 'Pages'], ['architecture', 'Architecture'], ['evidence', 'Evidence']].map(([id, label]) => (
+      {[['fixes', 'Priority fixes'], ['performance', 'Search performance'], ['pages', 'Pages'], ['architecture', 'Architecture'], ['evidence', 'Evidence']].map(([id, label]) => (
         <button type="button" key={id} onClick={() => setView(id)} className={`h-11 shrink-0 border-b-2 px-3 text-[12px] font-semibold ${view === id ? 'border-[#191919] text-[#191919]' : 'border-transparent text-[#77716a]'}`}>{label}</button>
       ))}
     </nav>
@@ -110,6 +118,8 @@ export default function SeoOperatingReport({ report, taskTitle }) {
       </section>
     </div>}
 
+    {view === 'performance' && <SearchPerformance evidence={audit.search_console} slice={performanceSlice} onSlice={setPerformanceSlice} />}
+
     {view === 'pages' && <section className="overflow-x-auto p-5">
       <table className="w-full min-w-[760px] border-collapse text-left text-[11px]"><thead><tr className="border-b border-[#cfcac2] text-[9px] font-mono uppercase text-[#77716a]"><th className="py-2 pr-4">Page</th><th>Status</th><th>Words</th><th>Links</th><th>Inlinks</th><th>Depth</th><th>Source</th><th>Issues</th><th>Template</th></tr></thead><tbody>{(audit.pages || []).map((page) => <tr key={page.url} className="border-b border-[#e6e2dc]"><td className="max-w-[300px] py-3 pr-4"><a href={page.url} target="_blank" rel="noreferrer" className="block truncate font-medium hover:text-[#047857]">{page.title || page.url}</a><div className="truncate text-[9px] text-[#8a857f]">{page.url}</div></td><td>{page.status}</td><td>{page.word_count}</td><td>{page.internal_links}</td><td>{page.internal_inlinks}</td><td>{page.crawl_depth ?? '-'}</td><td>{readable(page.discovery_source)}</td><td>{page.issue_count}</td><td>{page.template}</td></tr>)}</tbody></table>
     </section>}
@@ -130,4 +140,49 @@ export default function SeoOperatingReport({ report, taskTitle }) {
 
     {parsed.content && <div className="border-t border-[#dedbd5]"><BrochureReport report={{ ...report, content: parsed.content }} taskTitle={taskTitle} eyebrow="SEO · Search operating desk" title="SEO operating report" accent={ACCENT} /></div>}
   </div>;
+}
+
+function SearchPerformance({ evidence, slice, onSlice }) {
+  if (evidence?.status !== 'connected') {
+    const copy = evidence?.status === 'property_required'
+      ? 'Search Console is connected, but this organization has not selected its verified property.'
+      : evidence?.status === 'reauthorization_required'
+        ? 'The organization property needs a current authorized owner connection.'
+        : 'Connect Search Console to replace inferred demand with first-party queries, pages, clicks, impressions, CTR, and position.';
+    return <section className="p-6">
+      <div className="border border-[#dedbd5] bg-white p-5">
+        <div className="flex items-center gap-2 text-[10px] font-mono uppercase text-[#047857]"><BarChart3 size={15} /> First-party search evidence</div>
+        <h3 className="mt-3 text-[18px] font-semibold">Search performance is not available yet</h3>
+        <p className="mt-2 max-w-2xl text-[12px] leading-5 text-[#5f5a54]">{copy}</p>
+        <a href="/hivemind/app/connectors" className="mt-4 inline-flex h-9 items-center bg-[#047857] px-4 text-[12px] font-semibold text-white">Open connectors</a>
+      </div>
+    </section>;
+  }
+  const totals = evidence.totals || {};
+  const current = totals.current || {};
+  const changes = totals.change || {};
+  const slices = [['opportunities', 'Opportunities'], ['queries', 'Queries'], ['landing_pages', 'Landing pages'], ['trend', 'Daily trend']];
+  return <section>
+    <header className="border-b border-[#dedbd5] px-6 py-5">
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="text-[10px] font-mono uppercase text-[#047857]">Google Search Console · finalized data</div><h3 className="mt-1 break-all text-[15px] font-semibold">{evidence.site_url}</h3><div className="mt-1 text-[10px] text-[#77716a]">{evidence.periods?.current?.start_date} to {evidence.periods?.current?.end_date} · compared with previous 28 days</div></div><div className="text-[9px] font-mono uppercase text-[#77716a]">{readable(evidence.permission_level)}</div></div>
+      <div className="mt-5 grid grid-cols-2 gap-px border border-[#dedbd5] bg-[#dedbd5] sm:grid-cols-4">
+        {[
+          ['Clicks', compact(current.clicks), change(changes.clicks)],
+          ['Impressions', compact(current.impressions), change(changes.impressions)],
+          ['CTR', percent(current.ctr), change(changes.ctr)],
+          ['Position', Number(current.position || 0).toFixed(1), `${Number(changes.position || 0) > 0 ? '+' : ''}${Number(changes.position || 0).toFixed(1)}`],
+        ].map(([label, value, delta]) => <div key={label} className="bg-[#fbfaf7] p-4"><div className="text-[9px] font-mono uppercase text-[#77716a]">{label}</div><div className="mt-1 text-[23px] font-semibold">{value}</div><div className="mt-1 text-[10px] text-[#66615b]">{delta} vs previous</div></div>)}
+      </div>
+    </header>
+    <nav className="flex overflow-x-auto border-b border-[#dedbd5] px-5">{slices.map(([id, label]) => <button type="button" key={id} onClick={() => onSlice(id)} className={`h-10 shrink-0 border-b-2 px-3 text-[11px] font-semibold ${slice === id ? 'border-[#047857] text-[#047857]' : 'border-transparent text-[#77716a]'}`}>{label}</button>)}</nav>
+    {slice === 'opportunities' && <div className="divide-y divide-[#e6e2dc] px-6">{(evidence.opportunities || []).length ? evidence.opportunities.map((item, index) => <div key={`${item.type}-${item.query || item.page}-${index}`} className="grid gap-2 py-4 md:grid-cols-[180px_1fr_220px]"><div className="text-[10px] font-mono uppercase text-[#047857]">{readable(item.type)}</div><div className="min-w-0 break-words text-[12px] font-semibold">{item.query || item.page}</div><div className="break-words font-mono text-[9px] text-[#77716a]">{JSON.stringify(item.evidence || {})}</div></div>) : <div className="py-12 text-center text-[12px] text-[#77716a]">No deterministic opportunity crossed the current evidence thresholds.</div>}</div>}
+    {slice === 'queries' && <PerformanceTable rows={evidence.queries || []} primary="query" />}
+    {slice === 'landing_pages' && <PerformanceTable rows={evidence.pages || []} primary="page" />}
+    {slice === 'trend' && <PerformanceTable rows={evidence.daily || []} primary="date" />}
+    <footer className="border-t border-[#dedbd5] px-6 py-4 text-[10px] leading-4 text-[#77716a]">{(evidence.limitations || []).join(' ')}</footer>
+  </section>;
+}
+
+function PerformanceTable({ rows, primary }) {
+  return <div className="overflow-x-auto p-5"><table className="w-full min-w-[680px] border-collapse text-left text-[11px]"><thead><tr className="border-b border-[#cfcac2] text-[9px] font-mono uppercase text-[#77716a]"><th className="py-2 pr-4">{readable(primary)}</th><th>Clicks</th><th>Impressions</th><th>CTR</th><th>Position</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row[primary]}-${index}`} className="border-b border-[#e6e2dc]"><td className="max-w-[430px] break-words py-3 pr-4 font-medium">{row[primary]}</td><td>{compact(row.clicks)}</td><td>{compact(row.impressions)}</td><td>{percent(row.ctr)}</td><td>{Number(row.position || 0).toFixed(1)}</td></tr>)}</tbody></table>{!rows.length && <div className="py-10 text-center text-[12px] text-[#77716a]">No rows were returned for this finalized period.</div>}</div>;
 }

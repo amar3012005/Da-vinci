@@ -36,6 +36,7 @@ import {
   Chrome,
   Settings as SettingsIcon,
   MapPin,
+  Search,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useApiQuery, useCopyToClipboard } from '../shared/hooks';
@@ -297,6 +298,18 @@ const CONNECTORS = [
     priority: 3,
     oauthProvider: 'google-gemini',
     nangoProvider: 'google-gemini',
+  },
+  {
+    id: 'google-search-console',
+    name: 'Google Search Console',
+    description: 'First-party queries, pages, clicks, impressions, CTR, and position for SEO Intelligence.',
+    icon: Search,
+    category: 'google_workspace',
+    status: 'available',
+    color: '#047857',
+    priority: 2,
+    oauthProvider: 'google-search-console',
+    googleService: 'search-console',
   },
   {
     id: 'slack',
@@ -1642,6 +1655,73 @@ function GoogleWorkspaceIntroModal({ onProceed, onCancel }) {
       </motion.div>
     </div>
   );
+}
+
+function SearchConsolePropertyModal({ open, onClose, onSelected }) {
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [selected, setSelected] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    setLoading(true);
+    setError('');
+    apiClient.searchConsoleProperties()
+      .then((result) => {
+        if (!active) return;
+        const rows = Array.isArray(result?.properties) ? result.properties : [];
+        setProperties(rows);
+        setSelected(rows[0]?.site_url || '');
+      })
+      .catch((requestError) => active && setError(requestError?.response?.data?.message || requestError.message || 'Unable to load Search Console properties.'))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [open]);
+
+  if (!open) return null;
+  const save = async () => {
+    if (!selected) return;
+    setSaving(true);
+    setError('');
+    try {
+      await apiClient.selectSearchConsoleProperty(selected);
+      onSelected?.(selected);
+      onClose();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || requestError.message || 'Unable to select this property.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onClose}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-lg overflow-hidden rounded-lg border border-[#d9d5ce] bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+      <header className="flex items-start justify-between border-b border-[#e6e2dc] px-5 py-4">
+        <div><div className="text-[10px] font-mono uppercase text-[#047857]">SEO Intelligence</div><h3 className="mt-1 text-[18px] font-semibold">Select the company property</h3><p className="mt-1 text-[12px] text-[#66615b]">Only properties returned by your connected Google account can be selected.</p></div>
+        <button type="button" onClick={onClose} title="Close" className="p-1 text-[#77716a] hover:text-[#191919]"><X size={17} /></button>
+      </header>
+      <div className="p-5">
+        {loading ? <div className="flex items-center gap-2 py-8 text-[12px] text-[#66615b]"><RefreshCw size={14} className="animate-spin" /> Loading verified properties</div>
+          : properties.length ? <div className="space-y-2">{properties.map((property) => <label key={property.site_url}
+            className={`flex cursor-pointer items-start gap-3 border p-3 ${selected === property.site_url ? 'border-[#047857] bg-[#ecfdf5]' : 'border-[#dedbd5]'}`}>
+            <input type="radio" name="search-console-property" value={property.site_url} checked={selected === property.site_url} onChange={() => setSelected(property.site_url)} className="mt-0.5" />
+            <span className="min-w-0"><span className="block break-all text-[12px] font-semibold">{property.site_url}</span><span className="mt-1 block text-[10px] font-mono uppercase text-[#77716a]">{String(property.permission_level || 'unknown').replaceAll('_', ' ')}</span></span>
+          </label>)}</div>
+            : <div className="py-8 text-[12px] text-[#66615b]">No verified Search Console properties were returned for this Google account.</div>}
+        {error && <div className="mt-4 border border-[#f2b8b5] bg-[#fff4f2] p-3 text-[11px] text-[#b42318]">{error}</div>}
+      </div>
+      <footer className="flex justify-end gap-2 border-t border-[#e6e2dc] px-5 py-4">
+        <button type="button" onClick={onClose} className="h-9 px-4 text-[12px] font-semibold text-[#66615b]">Cancel</button>
+        <button type="button" onClick={save} disabled={!selected || saving} className="h-9 bg-[#047857] px-4 text-[12px] font-semibold text-white disabled:opacity-40">
+          {saving ? 'Saving...' : 'Use this property'}
+        </button>
+      </footer>
+    </motion.div>
+  </div>;
 }
 
 // ─── Per-service Sync Config Schemas ──────────────────────────────────────────
@@ -3407,6 +3487,7 @@ export default function Connectors() {
   // Per-service standalone config modal (when user clicks Configure/Sync Now
   // on an individual Google service tile, OUTSIDE the post-OAuth wizard)
   const [standaloneConfigProvider, setStandaloneConfigProvider] = useState(null);
+  const [searchConsolePropertyOpen, setSearchConsolePropertyOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [toastMessage, setToastMessage] = useState(null);
   const [targetScopes, setTargetScopes] = useState({});
@@ -3480,7 +3561,16 @@ export default function Connectors() {
     const needsConfig = searchParams.get('needs_config');
     const email = searchParams.get('email');
 
-    if (connected === 'gmail' && needsConfig === 'true') {
+    if (connected === 'google-search-console' && needsConfig === 'true') {
+      setSearchConsolePropertyOpen(true);
+      setToastMessage({ type: 'success', text: 'Search Console connected. Select the company property.' });
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('connected');
+      nextParams.delete('needs_config');
+      nextParams.delete('email');
+      setSearchParams(nextParams, { replace: true });
+      refetchOAuth();
+    } else if (connected === 'gmail' && needsConfig === 'true') {
       // Gmail connected — check if multiple Google services were granted.
       // If yes → start wizard chain. If just Gmail → open single Gmail settings.
       (async () => {
@@ -4079,6 +4169,10 @@ export default function Connectors() {
         if (provider) handleDisconnect(provider);
       }}
       onResync={() => {
+        if (connector.id === 'google-search-console') {
+          setSearchConsolePropertyOpen(true);
+          return;
+        }
         const isGoogleSvc = connector.category === 'google_workspace'
           && connector.id !== 'google-workspace';
         if (isGoogleSvc) {
@@ -4235,6 +4329,19 @@ export default function Connectors() {
             onCancel={() => {
               setWorkspaceIntroOpen(false);
               setPendingWorkspaceConnect(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {searchConsolePropertyOpen && (
+          <SearchConsolePropertyModal
+            open
+            onClose={() => setSearchConsolePropertyOpen(false)}
+            onSelected={(siteUrl) => {
+              setToastMessage({ type: 'success', text: `SEO Intelligence will use ${siteUrl}.` });
+              refetchOAuth();
             }}
           />
         )}

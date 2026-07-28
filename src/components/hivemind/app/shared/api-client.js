@@ -1980,6 +1980,26 @@ class HiveMindApiClient {
     return data;
   }
 
+  async searchConsoleStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/seo/search-console/status');
+    return data;
+  }
+
+  async searchConsoleProperties() {
+    const { data } = await this.controlPlane.get('/v1/proxy/seo/search-console/properties');
+    return data;
+  }
+
+  async selectSearchConsoleProperty(siteUrl) {
+    const { data } = await this.controlPlane.post('/v1/proxy/seo/search-console/property', { site_url: siteUrl });
+    return data;
+  }
+
+  async collectSearchConsoleEvidence() {
+    const { data } = await this.controlPlane.post('/v1/proxy/seo/search-console/collect', {});
+    return data;
+  }
+
   // Per-service sync config + run trigger
   async googleServiceSync(provider, config = {}) {
     const { data } = await this.controlPlane.post('/v1/proxy/connectors/google/sync', { provider, config });
