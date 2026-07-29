@@ -74,9 +74,12 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         const s = await apiClient.hyperOnboardingStatus();
         setLines(s.lines || []);
         if (s.done) {
-          stopPolling();
           if (s.error) setError(s.error);
-          else { setResult(s.result); setPhase('done'); }
+          else {
+            setResult(s.result);
+            setPhase('done');
+            if (!s.result?.screenshot_pending) stopPolling();
+          }
         }
       } catch { /* transient */ }
     }, 1100);
@@ -87,7 +90,10 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       try {
         const s = await apiClient.hyperOnboardingStatus();
         if (s.running) { setPhase('running'); setLines(s.lines || []); poll(); }
-        else if (s.done && !s.error && s.result) { setResult(s.result); setLines(s.lines || []); setPhase('done'); }
+        else if (s.done && !s.error && s.result) {
+          setResult(s.result); setLines(s.lines || []); setPhase('done');
+          if (s.result?.screenshot_pending) poll();
+        }
       } catch { /* fresh */ }
     })();
   }, [poll]);
@@ -221,7 +227,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               website={result?.website || websiteUrl}
               company={companyName}
               tagline={p.tagline}
-              loading={!done && !result?.screenshot}
+              loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
               compact
               className="h-[142px] w-full max-w-[960px]"
             />

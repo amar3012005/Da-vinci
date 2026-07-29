@@ -208,6 +208,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
                 website={c.website}
                 company={c.company}
                 tagline={p.tagline}
+                loading={Boolean(c.screenshot_pending)}
                 compact
                 className="h-[180px] 2xl:h-[250px]"
               />
