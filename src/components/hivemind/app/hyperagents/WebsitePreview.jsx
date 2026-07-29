@@ -31,30 +31,9 @@ function WebsiteAnalysisParticles() {
     let frameId;
     let width = 1;
     let height = 1;
-    let particles = [];
-
-    let randomSeed = 421337;
-    const random = () => {
-      randomSeed = (randomSeed * 16807) % 2147483647;
-      return (randomSeed - 1) / 2147483646;
-    };
-
     const seedParticles = () => {
-      randomSeed = 421337;
-      const count = Math.max(260, Math.min(620, Math.round((width * height) / 310)));
-      particles = Array.from({ length: count }, (_, index) => {
-        const angle = random() * Math.PI * 2;
-        const radius = 0.18 + Math.pow(random(), 0.72) * 0.82;
-        const ringBias = index % 3 === 0 ? 0.68 + random() * 0.2 : radius;
-        return {
-          angle,
-          radius: ringBias,
-          drift: (random() - 0.5) * 0.00022,
-          wobble: random() * Math.PI * 2,
-          size: 0.45 + random() * 1.15,
-          alpha: 0.16 + random() * 0.5,
-        };
-      });
+      // The grid is calculated from the rectangle itself so its visual weight
+      // stays stable from the onboarding card through the full dashboard.
     };
 
     const resize = () => {
@@ -74,20 +53,26 @@ function WebsiteAnalysisParticles() {
       context.fillRect(0, 0, width, height);
       const cx = width * 0.5;
       const cy = height * 0.5;
-      const rx = Math.min(width * 0.29, 235);
-      const ry = Math.min(height * 0.38, 58);
-      particles.forEach((particle) => {
-        const movement = reduceMotion ? 0 : time * particle.drift;
-        const pulse = reduceMotion ? 1 : 0.96 + Math.sin((time / 950) + particle.wobble) * 0.045;
-        const angle = particle.angle + movement;
-        const radius = particle.radius * pulse;
-        const x = cx + Math.cos(angle) * rx * radius + Math.sin(particle.wobble) * 4;
-        const y = cy + Math.sin(angle) * ry * radius + Math.cos(particle.wobble) * 2;
-        context.fillStyle = `rgba(52, 58, 64, ${particle.alpha})`;
-        context.beginPath();
-        context.arc(x, y, particle.size, 0, Math.PI * 2);
-        context.fill();
-      });
+      const columns = Math.max(22, Math.floor(width / 28));
+      const rows = Math.max(8, Math.floor(height / 20));
+      const stepX = width / (columns + 1);
+      const stepY = height / (rows + 1);
+      const breathe = reduceMotion ? 1 : 0.92 + Math.sin(time / 1250) * 0.08;
+      for (let row = 1; row <= rows; row += 1) {
+        for (let column = 1; column <= columns; column += 1) {
+          const x = column * stepX;
+          const y = row * stepY;
+          const dx = (x - cx) / (width * 0.34);
+          const dy = (y - cy) / (height * 0.72);
+          const field = Math.exp(-((dx * dx) + (dy * dy)) * 2.4) * breathe;
+          const size = 0.45 + field * 2.35;
+          const alpha = 0.08 + field * 0.42;
+          context.fillStyle = `rgba(82, 86, 90, ${alpha})`;
+          context.beginPath();
+          context.arc(x, y, size, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
 
       if (!reduceMotion) frameId = window.requestAnimationFrame(draw);
     };

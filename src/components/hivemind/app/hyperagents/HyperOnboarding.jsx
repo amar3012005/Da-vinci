@@ -229,7 +229,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
               tagline={p.tagline}
               loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
               compact
-              className="h-[142px] w-full max-w-[960px]"
+              className="h-[204px] w-full max-w-none"
             />
           </div>
 
