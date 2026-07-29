@@ -33,16 +33,28 @@ function WebsiteAnalysisParticles() {
     let height = 1;
     let particles = [];
 
+    let randomSeed = 421337;
+    const random = () => {
+      randomSeed = (randomSeed * 16807) % 2147483647;
+      return (randomSeed - 1) / 2147483646;
+    };
+
     const seedParticles = () => {
-      const count = Math.max(24, Math.min(58, Math.round((width * height) / 9500)));
-      particles = Array.from({ length: count }, (_, index) => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.28,
-        vy: (Math.random() - 0.5) * 0.28,
-        radius: index % 7 === 0 ? 2.1 : 1.35,
-        phase: Math.random() * Math.PI * 2,
-      }));
+      randomSeed = 421337;
+      const count = Math.max(260, Math.min(620, Math.round((width * height) / 310)));
+      particles = Array.from({ length: count }, (_, index) => {
+        const angle = random() * Math.PI * 2;
+        const radius = 0.18 + Math.pow(random(), 0.72) * 0.82;
+        const ringBias = index % 3 === 0 ? 0.68 + random() * 0.2 : radius;
+        return {
+          angle,
+          radius: ringBias,
+          drift: (random() - 0.5) * 0.00022,
+          wobble: random() * Math.PI * 2,
+          size: 0.45 + random() * 1.15,
+          alpha: 0.16 + random() * 0.5,
+        };
+      });
     };
 
     const resize = () => {
@@ -58,38 +70,22 @@ function WebsiteAnalysisParticles() {
 
     const draw = (time = 0) => {
       context.clearRect(0, 0, width, height);
+      context.fillStyle = '#eef0f2';
+      context.fillRect(0, 0, width, height);
+      const cx = width * 0.5;
+      const cy = height * 0.5;
+      const rx = Math.min(width * 0.29, 235);
+      const ry = Math.min(height * 0.38, 58);
       particles.forEach((particle) => {
-        if (!reduceMotion) {
-          particle.x += particle.vx;
-          particle.y += particle.vy;
-          if (particle.x < 0 || particle.x > width) particle.vx *= -1;
-          if (particle.y < 0 || particle.y > height) particle.vy *= -1;
-        }
-      });
-
-      for (let i = 0; i < particles.length; i += 1) {
-        for (let j = i + 1; j < particles.length; j += 1) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt((dx * dx) + (dy * dy));
-          if (distance < 105) {
-            context.strokeStyle = `rgba(17, 125, 255, ${(1 - distance / 105) * 0.17})`;
-            context.lineWidth = 0.75;
-            context.beginPath();
-            context.moveTo(particles[i].x, particles[i].y);
-            context.lineTo(particles[j].x, particles[j].y);
-            context.stroke();
-          }
-        }
-      }
-
-      particles.forEach((particle, index) => {
-        const pulse = reduceMotion ? 1 : 0.78 + Math.sin((time / 700) + particle.phase) * 0.22;
-        context.fillStyle = index % 5 === 0
-          ? `rgba(15, 118, 110, ${0.48 * pulse})`
-          : `rgba(17, 125, 255, ${0.5 * pulse})`;
+        const movement = reduceMotion ? 0 : time * particle.drift;
+        const pulse = reduceMotion ? 1 : 0.96 + Math.sin((time / 950) + particle.wobble) * 0.045;
+        const angle = particle.angle + movement;
+        const radius = particle.radius * pulse;
+        const x = cx + Math.cos(angle) * rx * radius + Math.sin(particle.wobble) * 4;
+        const y = cy + Math.sin(angle) * ry * radius + Math.cos(particle.wobble) * 2;
+        context.fillStyle = `rgba(52, 58, 64, ${particle.alpha})`;
         context.beginPath();
-        context.arc(particle.x, particle.y, particle.radius * pulse, 0, Math.PI * 2);
+        context.arc(x, y, particle.size, 0, Math.PI * 2);
         context.fill();
       });
 
@@ -114,7 +110,16 @@ export default function WebsitePreview({ image, source, website, company, taglin
   useEffect(() => setFailed(false), [image]);
   const src = useMemo(() => previewSrc(image), [image]);
   const domain = websiteLabel(website);
-  const content = src && !failed ? (
+  const content = loading && (!src || failed) ? (
+    <div className={`relative w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} overflow-hidden bg-[#eef0f2]`}>
+      <WebsiteAnalysisParticles />
+      <div className="absolute inset-0 grid place-items-center">
+        <span className="rounded-[6px] border border-[#cfd3d7] bg-white/85 px-2.5 py-1 text-[9.5px] font-mono uppercase text-[#52565a] backdrop-blur-sm">
+          Capturing website
+        </span>
+      </div>
+    </div>
+  ) : src && !failed ? (
     <img
       src={src}
       alt={`${company || domain || 'Company'} website preview`}
@@ -124,16 +129,10 @@ export default function WebsitePreview({ image, source, website, company, taglin
     />
   ) : (
     <div className={`relative w-full ${compact ? 'h-full min-h-0' : 'aspect-video'} overflow-hidden bg-[#f4f6f8] border-b border-[#d9dee5] px-5 py-4 flex flex-col justify-between`}>
-      {loading && <WebsiteAnalysisParticles />}
       <div className="relative z-[1] flex items-start justify-between gap-3">
         <div className="w-9 h-9 rounded-[8px] bg-[#0a0a0a] text-white grid place-items-center">
           <Globe size={17} />
         </div>
-        {loading && (
-          <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#117dff]/20 bg-white/80 px-2 py-1 text-[9.5px] font-mono uppercase text-[#117dff] backdrop-blur-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#117dff] animate-pulse" /> Analyzing website
-          </span>
-        )}
       </div>
       <div className="relative z-[1] min-w-0">
         <div className="text-[18px] leading-tight font-semibold text-[#0a0a0a] font-['Space_Grotesk'] break-words">
