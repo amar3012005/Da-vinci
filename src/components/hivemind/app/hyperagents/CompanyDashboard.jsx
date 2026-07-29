@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  MapPin, Mail, Phone,
+  MapPin, Mail, Phone, Pencil, X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -50,6 +50,14 @@ function socialBrand(platform) {
   };
 }
 
+function socialUsername(url) {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    const value = parts.at(-1) || '';
+    return value ? `@${value.replace(/^@/, '')}` : '';
+  } catch { return ''; }
+}
+
 function SectionTitle({ children }) {
   return (
     <div className="text-[12px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] border-b border-[#0a0a0a] pb-1.5 mb-3">
@@ -65,6 +73,9 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const [openingTask, setOpeningTask] = useState(null);
   const [confirmRerun, setConfirmRerun] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [editingContacts, setEditingContacts] = useState(false);
+  const [savingContacts, setSavingContacts] = useState(false);
+  const [contactDraft, setContactDraft] = useState(null);
 
   const doRerun = async () => {
     if (resetting) return;
@@ -124,6 +135,27 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const c = state.company;
   const p = c.profile || {};
   const employees = state.employees || [];
+  const openContactEditor = () => {
+    setContactDraft({
+      emails: (p.contact_details?.emails || []).join('\n'),
+      phones: (p.contact_details?.phones || []).join('\n'),
+      social_profiles: (p.social_profiles || []).map((item) => ({ platform: item.platform || '', url: item.url || '' })),
+    });
+    setEditingContacts(true);
+  };
+  const saveContacts = async () => {
+    if (!contactDraft || savingContacts) return;
+    setSavingContacts(true);
+    try {
+      const response = await apiClient.updateHyperCompanyContacts({
+        emails: contactDraft.emails.split(/\n|,/).map((item) => item.trim()).filter(Boolean),
+        phones: contactDraft.phones.split(/\n|,/).map((item) => item.trim()).filter(Boolean),
+        social_profiles: contactDraft.social_profiles.filter((item) => item.platform && item.url),
+      });
+      setState((current) => current ? { ...current, company: response.company } : current);
+      setEditingContacts(false);
+    } finally { setSavingContacts(false); }
+  };
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
@@ -141,8 +173,9 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
             {(p.social_profiles || []).map((social) => {
               const brand = socialBrand(social.platform);
               return (
-                <a key={social.url} href={social.url} target="_blank" rel="noreferrer" title={brand.label} className="inline-flex h-5 w-5 items-center justify-center">
+                <a key={social.url} href={social.url} target="_blank" rel="noreferrer" title={brand.label} className="inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono">
                   <img src={`https://api.iconify.design/${brand.icon}.svg`} alt={brand.label} className="h-3.5 w-3.5 object-contain" />
+                  <span>{socialUsername(social.url) || brand.label}</span>
                 </a>
               );
             })}
@@ -152,6 +185,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
             {(p.contact_details?.phones || []).slice(0, 1).map((phone) => (
               <a key={phone} href={`tel:${phone}`} className="inline-flex items-center gap-1 hover:text-[#0a0a0a] font-mono"><Phone size={11} /> {phone}</a>
             ))}
+            <button onClick={openContactEditor} title="Edit company contacts and social profiles" className="inline-flex h-5 w-5 items-center justify-center text-[#737373] hover:text-[#0a0a0a]"><Pencil size={12} /></button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -165,6 +199,23 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
           </button>
         </div>
       </div>
+
+      {editingContacts && contactDraft ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/25 p-4" role="dialog" aria-modal="true" aria-label="Edit company contacts">
+          <div className="w-full max-w-[620px] rounded-lg border border-[#d9dee5] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#ece9e3] px-5 py-4">
+              <div><h2 className="text-[16px] font-semibold text-[#0a0a0a]">Company contact details</h2><p className="mt-1 text-[11.5px] text-[#737373]">These corrections become the context your rooms use.</p></div>
+              <button onClick={() => setEditingContacts(false)} className="h-8 w-8 grid place-items-center text-[#737373] hover:text-[#0a0a0a]" title="Close"><X size={16} /></button>
+            </div>
+            <div className="space-y-4 p-5">
+              <label className="block text-[11px] font-semibold text-[#525252]">Emails<textarea value={contactDraft.emails} onChange={(event) => setContactDraft({ ...contactDraft, emails: event.target.value })} className="mt-1.5 min-h-16 w-full resize-y rounded-md border border-[#d9dee5] p-2 text-[12px] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" placeholder="hello@company.com" /></label>
+              <label className="block text-[11px] font-semibold text-[#525252]">Phone numbers<textarea value={contactDraft.phones} onChange={(event) => setContactDraft({ ...contactDraft, phones: event.target.value })} className="mt-1.5 min-h-16 w-full resize-y rounded-md border border-[#d9dee5] p-2 text-[12px] font-mono text-[#0a0a0a] outline-none focus:border-[#117dff]" placeholder="+49 ..." /></label>
+              <div><span className="text-[11px] font-semibold text-[#525252]">Social profiles</span><div className="mt-1.5 space-y-2">{contactDraft.social_profiles.map((social, index) => <div key={`${social.platform}-${index}`} className="grid grid-cols-[120px_1fr] gap-2"><input value={social.platform} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, platform: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px]" placeholder="platform" /><input value={social.url} onChange={(event) => { const next = [...contactDraft.social_profiles]; next[index] = { ...social, url: event.target.value }; setContactDraft({ ...contactDraft, social_profiles: next }); }} className="rounded-md border border-[#d9dee5] px-2 py-1.5 text-[12px] font-mono" placeholder="https://..." /></div>)}</div><button onClick={() => setContactDraft({ ...contactDraft, social_profiles: [...contactDraft.social_profiles, { platform: '', url: '' }] })} className="mt-2 text-[11px] font-semibold text-[#117dff]">Add social profile</button></div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[#ece9e3] px-5 py-3"><button onClick={() => setEditingContacts(false)} className="px-3 py-2 text-[12px] font-semibold text-[#525252]">Cancel</button><button onClick={saveContacts} disabled={savingContacts} className="rounded-md bg-[#0a0a0a] px-3 py-2 text-[12px] font-semibold text-white disabled:opacity-50">{savingContacts ? 'Saving...' : 'Save details'}</button></div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden px-6 py-4 grid grid-cols-1 lg:grid-cols-[minmax(250px,0.92fr)_minmax(340px,1.08fr)_minmax(280px,0.98fr)] gap-6">
         {/* Company context stays complete; the website remains anchored bottom-left. */}

@@ -225,6 +225,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async updateHyperCompanyContacts(payload) {
+    const { data } = await this.controlPlane.patch('/v1/hyper/company/contacts', payload);
+    return data;
+  }
+
   /** Closed-loop outcome counters (emails sent / replies / calls / bookings, 7d+30d). */
   async hyperOutcomes() {
     const { data } = await this.controlPlane.get('/v1/hyper/outcomes');
@@ -1672,6 +1677,51 @@ class HiveMindApiClient {
 
   async updateCampaignSettings(autonomyMode) {
     const { data } = await this.controlPlane.patch('/v1/campaigns/settings', { autonomy_mode: autonomyMode });
+    return data;
+  }
+
+  async getCampaignConnections() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/connections');
+    return data;
+  }
+
+  async provisionCampaignConnections() {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/provision', {});
+    return data;
+  }
+
+  async syncCampaignConnections() {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/sync', {});
+    return data;
+  }
+
+  async startCampaignConnection(platform, returnPath, connectionKind = 'organic', accountRef = null) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/connect', {
+      platform,
+      return_path: returnPath,
+      connection_kind: connectionKind,
+      account_ref: accountRef,
+    });
+    return data;
+  }
+
+  async disconnectCampaignConnection(accountRef) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/disconnect', {
+      account_ref: accountRef,
+    });
+    return data;
+  }
+
+  async getCampaignAdAccounts(accountRef) {
+    const params = new URLSearchParams({ account_ref: accountRef });
+    const { data } = await this.controlPlane.get(`/v1/campaigns/connections/ad-accounts?${params.toString()}`);
+    return data;
+  }
+
+  async selectCampaignAdAccount(channel, accountRef, adAccountRef) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/ad-accounts/select', {
+      channel, account_ref: accountRef, ad_account_ref: adAccountRef,
+    });
     return data;
   }
 
