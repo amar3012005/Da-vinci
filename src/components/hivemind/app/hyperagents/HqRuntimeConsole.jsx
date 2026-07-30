@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, ArrowRight, BookOpen, Check, Clock3, Cable, Send,
+  Activity, AlertTriangle, ArrowRight, Check, Clock3, Cable, Send,
   Loader2, Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles,
-  TerminalSquare, Wrench, X,
+  TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
@@ -37,6 +37,29 @@ function IdentityPulse({ state }) {
   </div>;
 }
 
+const QUEUE_STATUS = {
+  RUNNING: ['Running', 'border-[#9ebcf2] bg-[#eaf1ff] text-[#185bcc]'],
+  READY: ['Ready', 'border-[#d8d3cc] bg-white text-[#525252]'],
+  WAITING_FOR_EVIDENCE: ['Waiting for evidence', 'border-[#e6d4a4] bg-[#fff8e8] text-[#8c6514]'],
+  WAITING_FOR_CONNECTOR: ['Waiting for access', 'border-[#e6d4a4] bg-[#fff8e8] text-[#8c6514]'],
+  BLOCKED: ['Blocked', 'border-[#f0c6c1] bg-[#fff1ef] text-[#b44239]'],
+  COMPLETED: ['Completed', 'border-[#c7dfcd] bg-[#edf8ef] text-[#328347]'],
+};
+
+function RuntimeQueuePanel({ queue, onClose }) {
+  const active = queue.filter((item) => ['RUNNING', 'READY'].includes(item.status));
+  return <section className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(360px,calc(100vw-2rem))] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_18px_50px_-24px_rgba(0,0,0,0.5)]" aria-label="Runtime operating queue">
+    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-white px-4 py-3"><ListTodo size={14} className="text-[#185bcc]" /><span className="flex-1 text-[13px] font-semibold text-[#171717]">Runtime queue</span><span className="font-mono text-[9px] text-[#737373]">{active.length} active</span><button type="button" onClick={onClose} aria-label="Close runtime queue" title="Close" className="grid h-7 w-7 place-items-center text-[#777168] hover:bg-[#f0eee9]"><X size={14} /></button></header>
+    <div className="max-h-[min(62vh,520px)] overflow-y-auto p-2">
+      {queue.map((item) => {
+        const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
+        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.blocked_reason ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{item.blocked_reason}</p> : null}</div></div></article>;
+      })}
+      {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
+    </div>
+  </section>;
+}
+
 export function HqRuntimeRail({ baselineReady }) {
   const [runtime, setRuntime] = useState(null);
   const [work, setWork] = useState({ work_orders: [], schedules: [] });
@@ -48,25 +71,19 @@ export function HqRuntimeRail({ baselineReady }) {
     const timer = window.setInterval(load, 5000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
-  const pending = work.work_orders || [];
   const schedules = work.schedules || [];
   return <section className="flex h-full flex-col" aria-label="HQ runtime status">
     <header className="border-b border-[#e3e0db] px-4 py-4">
       <IdentityPulse state={runtime?.state} />
-      <h2 className="mt-4 text-[15px] font-semibold text-[#171717]">HQ Runtime</h2>
-      <p className="mt-1 text-[10.5px] leading-4 text-[#737373]">Durable company state, delegated work, and scheduled wake-ups.</p>
+      <h2 className="mt-3 text-[15px] font-semibold text-[#171717]">Runtime</h2>
     </header>
-    <div className="flex-1 overflow-y-auto px-4 py-4">
-      <div className="grid grid-cols-2 border-y border-[#e3e0db] py-3">
-        <div className="border-r border-[#e3e0db] pr-3"><div className="font-mono text-[8px] uppercase text-[#a3a3a3]">State</div><div className="mt-1 text-[10px] font-semibold text-[#171717]">{runtime?.state?.replaceAll('_', ' ') || (baselineReady ? 'READY' : 'BASELINE REQUIRED')}</div></div>
-        <div className="pl-3"><div className="font-mono text-[8px] uppercase text-[#a3a3a3]">Active work</div><div className="mt-1 text-[11px] font-semibold text-[#171717]">{pending.length}</div></div>
-      </div>
-      <div className="mt-5 font-mono text-[8px] uppercase tracking-[0.14em] text-[#a3a3a3]">Checkpoints</div>
+    <div className="px-4 py-4">
+      <div className="border-y border-[#e3e0db] py-3"><div className="font-mono text-[8px] uppercase text-[#a3a3a3]">State</div><div className="mt-1 text-[10px] font-semibold text-[#171717]">{runtime?.state?.replaceAll('_', ' ') || (baselineReady ? 'READY' : 'BASELINE REQUIRED')}</div></div>
+      <div className="mt-5 font-mono text-[8px] uppercase tracking-[0.14em] text-[#a3a3a3]">Crucial checkpoints</div>
       <div className="mt-3">
-        {schedules.slice(0, 6).map((item) => <div key={item.id} className="relative border-l border-[#d8d3cc] pb-5 pl-4 last:pb-0"><span className="absolute -left-[5px] top-0 h-[9px] w-[9px] rounded-full border border-[#9ebcf2] bg-white" /><div className="text-[10px] font-medium capitalize text-[#262626]">{String(item.triggerType || 'checkpoint').replaceAll('_', ' ')}</div><div className="mt-1 font-mono text-[8px] text-[#a3a3a3]">{new Date(item.dueAt).toLocaleString()}</div></div>)}
+        {schedules.slice(0, 5).map((item) => <div key={item.id} className="relative border-l border-[#d8d3cc] pb-5 pl-4 last:pb-0"><span className="absolute -left-[5px] top-0 h-[9px] w-[9px] rounded-full border border-[#9ebcf2] bg-white" /><div className="text-[10px] font-medium capitalize text-[#262626]">{String(item.triggerType || 'checkpoint').replaceAll('_', ' ')}</div><time className="mt-1 block font-mono text-[8px] text-[#a3a3a3]">{new Date(item.dueAt).toLocaleString()}</time></div>)}
         {!schedules.length ? <p className="text-[10px] leading-4 text-[#a3a3a3]">HQ wakes when a material event or scheduled checkpoint arrives.</p> : null}
       </div>
-      {pending.length ? <><div className="mt-6 font-mono text-[8px] uppercase tracking-[0.14em] text-[#a3a3a3]">In progress</div>{pending.slice(0, 4).map((item) => <div key={item.id} className="mt-3 border-l-2 border-[#185bcc] pl-3"><div className="text-[10px] font-medium text-[#262626]">{item.title || item.objective || 'Bounded work order'}</div><div className="mt-1 text-[9px] capitalize text-[#737373]">{String(item.status || 'queued').replaceAll('_', ' ')}</div></div>)}</> : null}
     </div>
   </section>;
 }
@@ -145,16 +162,18 @@ function RuntimeTranscript({ events, state }) {
   </div>;
 }
 
-export default function HqRuntimeConsole({ objective, baselineReady, resources }) {
+export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [runtime, setRuntime] = useState(null);
   const [usage, setUsage] = useState({ input_tokens: 0, output_tokens: 0 });
   const [events, setEvents] = useState([]);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
-  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
   const [work, setWork] = useState({ todos: [], capability_requests: [] });
   const [instruction, setInstruction] = useState('');
   const [instructionBusy, setInstructionBusy] = useState(false);
+  const [instructionNotice, setInstructionNotice] = useState('');
   const [dismissedCapabilityRequestId, setDismissedCapabilityRequestId] = useState(null);
   const cursorRef = useRef('0');
   const capabilityWakeRef = useRef('');
@@ -224,26 +243,43 @@ export default function HqRuntimeConsole({ objective, baselineReady, resources }
   };
   const latest = useMemo(() => events.slice(-120), [events]);
   const capabilityRequest = work.capability_requests?.[0];
+  const runtimeQueue = work.runtime_queue || work.todos || [];
+  const waitForInstructionAcceptance = async (instructionId) => {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      const data = await apiClient.getHqEvents('0', 200).catch(() => null);
+      const accepted = (data?.events || []).some((item) => item.eventType === 'instruction_received' && String(item.details?.instruction_id || '') === String(instructionId));
+      if (accepted) return true;
+      await new Promise((resolve) => window.setTimeout(resolve, 600));
+    }
+    return false;
+  };
   const submitInstruction = async (submitEvent) => {
     submitEvent.preventDefault();
     const value = instruction.trim();
     if (!value || instructionBusy) return;
-    setInstructionBusy(true); setError('');
-    try { await apiClient.addHqInstruction(value); setInstruction(''); await load(); }
+    setInstructionBusy(true); setError(''); setInstructionNotice('HQ is waking and applying this instruction...');
+    try {
+      const response = await apiClient.addHqInstruction(value);
+      const accepted = await waitForInstructionAcceptance(response?.instruction?.id);
+      await load();
+      if (!accepted) { setInstructionNotice('Instruction is durable and queued. HQ will apply it as soon as the active cycle releases.'); return false; }
+      setInstruction(''); setInstructionNotice('HQ accepted the instruction and updated its queue.');
+      return true;
+    }
     catch (requestError) { setError(requestError?.response?.data?.message || requestError.message); }
     finally { setInstructionBusy(false); }
+    return false;
   };
   const openCapability = () => {
     if (!capabilityRequest?.connectPath) return;
     window.open(capabilityRequest.connectPath, '_blank', 'noopener,noreferrer');
   };
-  return <section className="-mx-4 bg-[#fbfaf7]" aria-label="Company HQ runtime">
-    <header className="border-y border-[#e3e0db] bg-white px-5 py-3 sm:px-8"><div className="mx-auto flex max-w-5xl items-center justify-between gap-4"><div className="min-w-0"><div className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.14em] text-[#185bcc]"><ShieldCheck size={11} />Autonomous company runtime</div><p className="mt-1 truncate text-[11px] text-[#737373]">{runtime?.objective || objective || 'Waiting for a source-backed company objective.'}</p></div><div className="flex shrink-0 items-center gap-2"><div className="hidden items-center divide-x divide-[#dedbd6] rounded-md border border-[#dedbd6] bg-[#faf9f7] sm:flex"><div className="px-2.5 py-1.5"><div className="font-mono text-[7px] uppercase text-[#a3a3a3]">Input</div><div className="font-mono text-[10px] font-semibold text-[#525252]">{fmtTokens(usage.input_tokens)}</div></div><div className="px-2.5 py-1.5"><div className="font-mono text-[7px] uppercase text-[#a3a3a3]">Output</div><div className="font-mono text-[10px] font-semibold text-[#525252]">{fmtTokens(usage.output_tokens)}</div></div></div>{!runtime ? <button type="button" onClick={() => run('activate')} disabled={!baselineReady || busy} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:opacity-40">{busy === 'activate' ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}Activate</button> : runtime.state === 'PAUSED' ? <button type="button" onClick={() => run('resume')} disabled={busy} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10px] font-semibold text-white"><Play size={12} />Resume</button> : <><button type="button" onClick={() => run('wake')} disabled={busy} title="Wake now" className="grid h-8 w-8 place-items-center rounded-md border border-[#dedbd6] bg-white text-[#525252]"><RefreshCw size={13} className={busy === 'wake' ? 'animate-spin' : ''} /></button><button type="button" onClick={() => run('pause')} disabled={busy} title="Pause HQ" className="grid h-8 w-8 place-items-center rounded-md border border-[#dedbd6] bg-white text-[#525252]"><Pause size={13} /></button></>}</div></div></header>
+  return <section className="-mx-4 -my-4 min-h-full bg-[#fbfaf7]" aria-label="Company HQ runtime">
+    <header className="sticky top-0 z-20 border-y border-[#e3e0db] bg-white/95 px-5 py-3 backdrop-blur sm:px-8"><div className="relative mx-auto flex max-w-4xl items-center justify-between gap-4"><div className="flex min-w-0 items-center gap-2"><IdentityPulse state={runtime?.state} /><span className="hidden truncate text-[11px] text-[#737373] sm:block">{runtime?.objective || objective || 'Awaiting a company objective.'}</span></div><div className="flex shrink-0 items-center gap-2"><div className="hidden items-center divide-x divide-[#dedbd6] rounded-md border border-[#dedbd6] bg-[#faf9f7] sm:flex"><div className="px-2.5 py-1.5"><div className="font-mono text-[7px] uppercase text-[#a3a3a3]">In</div><div className="font-mono text-[10px] font-semibold text-[#525252]">{fmtTokens(usage.input_tokens)}</div></div><div className="px-2.5 py-1.5"><div className="font-mono text-[7px] uppercase text-[#a3a3a3]">Out</div><div className="font-mono text-[10px] font-semibold text-[#525252]">{fmtTokens(usage.output_tokens)}</div></div></div><button type="button" onClick={() => setQueueOpen((open) => !open)} title="Runtime queue" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#dedbd6] bg-white px-2.5 text-[10px] font-semibold text-[#525252]"><ListTodo size={12} /><span className="hidden sm:inline">Queue</span>{runtimeQueue.length ? <span className="font-mono text-[8px] text-[#185bcc]">{runtimeQueue.length}</span> : null}</button><button type="button" onClick={() => { setInstructionNotice(''); setInstructionsOpen(true); }} title="Runtime instructions" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#dedbd6] bg-white px-2.5 text-[10px] font-semibold text-[#525252]"><SlidersHorizontal size={12} /><span className="hidden sm:inline">Instructions</span></button>{!runtime ? <button type="button" onClick={() => run('activate')} disabled={!baselineReady || busy} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:opacity-40">{busy === 'activate' ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}Activate</button> : runtime.state === 'PAUSED' ? <button type="button" onClick={() => run('resume')} disabled={busy} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10px] font-semibold text-white"><Play size={12} />Resume</button> : <><button type="button" onClick={() => run('wake')} disabled={busy} title="Wake now" className="grid h-8 w-8 place-items-center rounded-md border border-[#dedbd6] bg-white text-[#525252]"><RefreshCw size={13} className={busy === 'wake' ? 'animate-spin' : ''} /></button><button type="button" onClick={() => run('pause')} disabled={busy} title="Pause HQ" className="grid h-8 w-8 place-items-center rounded-md border border-[#dedbd6] bg-white text-[#525252]"><Pause size={13} /></button></>}</div>{queueOpen ? <RuntimeQueuePanel queue={runtimeQueue} onClose={() => setQueueOpen(false)} /> : null}</div></header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
     {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-[#d8d3cc] bg-white font-serif text-[24px] italic text-[#185bcc]">I</span><div className="mt-4 text-[15px] font-medium text-[#262626]">Waiting to become operational</div><div className="mt-1 text-[11px] text-[#737373]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} /> : <div className="grid min-h-[220px] place-items-center"><Loader2 size={18} className="animate-spin text-[#185bcc]" /></div>}
-    {runtime ? <form onSubmit={submitInstruction} className="sticky bottom-0 z-10 border-t border-[#e3e0db] bg-[#fbfaf7]/95 px-5 py-4 backdrop-blur sm:px-8"><div className="mx-auto flex max-w-4xl items-end gap-2 rounded-[8px] border border-[#d8d3cc] bg-white p-2 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.45)]"><textarea value={instruction} onChange={(event) => setInstruction(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitInstruction(event); } }} rows={2} placeholder="Give HQ a standing instruction..." className="min-h-[48px] flex-1 resize-none bg-transparent px-2 py-1 text-[13px] leading-5 outline-none placeholder:text-[#aaa49c]" /><button type="submit" disabled={!instruction.trim() || instructionBusy} title="Send instruction" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#171717] text-white disabled:opacity-35">{instructionBusy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}</button></div></form> : null}
-    <footer className="border-t border-[#e3e0db] bg-white px-5 py-3 sm:px-8"><div className="mx-auto max-w-5xl"><button type="button" onClick={() => setResourcesOpen((open) => !open)} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#185bcc]"><BookOpen size={12} />{resourcesOpen ? 'Hide company resources' : 'Open company resources'}</button></div></footer>
-    {resourcesOpen ? <div className="border-t border-[#e3e0db] bg-white p-4">{resources}</div> : null}
+    {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#185bcc]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#185bcc]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#185bcc]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${capabilityRequest.provider}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#185bcc]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{capabilityRequest.reason}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
   </section>;
 }
