@@ -735,6 +735,48 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
   );
 }
 
+
+// Server-side upload limits, verified live against core:
+//   60 MB  -> 413 {"error":"payload_too_large","max_bytes":52428800}
+//   0 B    -> 400 "The uploaded file is empty — nothing to ingest."
+//   1 B    -> 400 "...below the 32-byte minimum"
+// Those raw codes reached the user verbatim ("payload_too_large"), which is a
+// machine string, not something a person can act on. Map them to what the user
+// should DO. Everything else falls through to the server's own message, which is
+// already written for humans on the validation paths.
+export const KB_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const KB_MIN_UPLOAD_BYTES = 32;
+
+function friendlyUploadError(err) {
+  const st = err?.response?.status;
+  const data = err?.response?.data || {};
+  const raw = String(data.error || data.message || err?.message || '');
+  if (st === 413 || raw.includes('payload_too_large')) {
+    const cap = Number(data.max_bytes) || KB_MAX_UPLOAD_BYTES;
+    return `Too large — the limit is ${Math.round(cap / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  if (st === 400 && /empty/i.test(raw)) return 'This file is empty — there is nothing to ingest.';
+  if (st === 400 && /minimum|too small/i.test(raw)) return 'This file is too small to contain readable content.';
+  if (st === 415 || /unsupported|mime/i.test(raw)) {
+    return 'Unsupported file type. Use PDF, Word, Excel, PowerPoint, CSV, Markdown, text or an image.';
+  }
+  if (st === 401 || st === 403) return 'You are not signed in, or lack access to this workspace.';
+  return raw || 'Upload failed.';
+}
+
+// Pre-flight so an oversized file is refused instantly instead of after a full
+// upload that ends in 413 — on a 60 MB file that is minutes of the user's time
+// spent to be told no.
+function preflightRejectReason(file) {
+  const size = Number(file?.size ?? 0);
+  if (size === 0) return 'This file is empty — there is nothing to ingest.';
+  if (size < KB_MIN_UPLOAD_BYTES) return 'This file is too small to contain readable content.';
+  if (size > KB_MAX_UPLOAD_BYTES) {
+    return `Too large — the limit is ${Math.round(KB_MAX_UPLOAD_BYTES / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  return null;
+}
+
 export default function KnowledgeBase() {
   const { t } = useTranslation('dashboard');
   const { org, user } = useAuth();
@@ -1111,12 +1153,19 @@ export default function KnowledgeBase() {
         }]);
         return;
       }
-      if (file.size > 100 * 1024 * 1024) {
+      // This gate said 100 MB while the server rejects at 50 MB — verified live:
+      // a 60 MB upload returns 413 {"error":"payload_too_large","max_bytes":52428800}.
+      // So anything between 50 and 100 MB uploaded in FULL, over the wire, before
+      // being refused — minutes of the user's time spent to be told no, and the
+      // raw string "payload_too_large" was what they saw. Now the client gate
+      // matches the server contract and also catches empty/undersized files.
+      const rejectReason = preflightRejectReason(file);
+      if (rejectReason) {
         setUploads((prev) => [...prev, {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
-          error: 'File too large (max 100MB)',
+          error: rejectReason,
         }]);
         return;
       }
@@ -1345,7 +1394,7 @@ export default function KnowledgeBase() {
                     ? (err.response?.data?.message || 'This file is already in this scope.')
                     : isPlanLimit
                       ? 'Upgrade for more pages'
-                      : (err.response?.data?.error || err.message),
+                      : friendlyUploadError(err),
                 // Duplicate → user gets an "Upload anyway" action. Stash the
                 // existing-doc info + a force re-ingest closure (same file/scope).
                 existingTitle: isDuplicate ? (err.response?.data?.existing_title || null) : undefined,
