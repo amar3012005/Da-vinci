@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, Target, Users, FileText, Globe, ArrowUpRight,
   Sparkles, LayoutGrid, MessageSquare, RefreshCw, Search,
-  MapPin, Mail, Phone, Pencil, X,
+  MapPin, Mail, Phone, Pencil, X, Power, Check, ArrowRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
@@ -66,7 +66,17 @@ function SectionTitle({ children }) {
   );
 }
 
-export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
+const RUNTIME_FOCUSES = [
+  { id: 'seo', label: 'SEO', detail: 'Grow qualified search visibility.' },
+  { id: 'social_campaigns', label: 'Social media campaigns', detail: 'Plan, publish, and learn from connected channels.' },
+  { id: 'marketing', label: 'Marketing', detail: 'Improve positioning, offers, and demand.' },
+  { id: 'outreach', label: 'Outreach', detail: 'Build and operate accountable outreach.' },
+  { id: 'clients_revenue', label: 'Getting clients & making money', detail: 'Prioritize pipeline and measurable revenue work.' },
+  { id: 'legal_finance', label: 'Legal & finance', detail: 'Track material obligations, risk, and financial work.' },
+  { id: 'fundraising', label: 'Fundraising', detail: 'Prepare evidence, narrative, and investor work.' },
+];
+
+export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRuntime }) {
   const { t } = useTranslation('dashboard');
   const [state, setState] = useState(null); // {company, employees, hq_room_id}
   const [loading, setLoading] = useState(true);
@@ -76,12 +86,33 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
   const [editingContacts, setEditingContacts] = useState(false);
   const [savingContacts, setSavingContacts] = useState(false);
   const [contactDraft, setContactDraft] = useState(null);
+  const [runtimeInvite, setRuntimeInvite] = useState(null);
+  const [runtimeFocuses, setRuntimeFocuses] = useState([]);
+  const [runtimeLaunching, setRuntimeLaunching] = useState(false);
+  const [runtimeError, setRuntimeError] = useState('');
+  const runtimeCompanyReady = Boolean(state?.onboarded && state?.company?.company);
+  const runtimeInviteStorageKey = `hm_runtime_invite:${state?.hq_room_id || state?.company?.company || 'company'}`;
 
   const doRerun = async () => {
     if (resetting) return;
     setResetting(true);
-    try { await apiClient.resetHyperOnboarding(); } catch { /* proceed anyway */ }
-    window.location.href = '/hivemind/app/employees?onboard=1';
+    setRuntimeError('');
+    try {
+      await apiClient.resetHyperOnboarding();
+      try {
+        window.localStorage.removeItem('hm_hyper_onboarded');
+        Object.keys(window.localStorage)
+          .filter((key) => key.startsWith('hm_runtime_invite:') || key.startsWith('hm-room-intro-') || key.startsWith('hm-room-setup-'))
+          .forEach((key) => window.localStorage.removeItem(key));
+        Object.keys(window.sessionStorage)
+          .filter((key) => key.startsWith('hm_hq_runtime_stream:'))
+          .forEach((key) => window.sessionStorage.removeItem(key));
+      } catch { /* storage can be unavailable */ }
+      window.location.href = '/hivemind/app/employees?onboard=1';
+    } catch (error) {
+      setRuntimeError(error?.response?.data?.error || error.message || 'Company reset did not complete. Nothing new was started.');
+      setResetting(false);
+    }
   };
 
   const load = useCallback(async () => {
@@ -92,6 +123,22 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!runtimeCompanyReady) return undefined;
+    try { if (window.localStorage.getItem(runtimeInviteStorageKey) === 'seen') return undefined; } catch { /* continue */ }
+    const timer = window.setTimeout(() => setRuntimeInvite('intro'), 5000);
+    return () => window.clearTimeout(timer);
+  }, [runtimeCompanyReady, runtimeInviteStorageKey]);
+  useEffect(() => {
+    if (!state?.company?.screenshot_pending) return undefined;
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      load();
+      if (attempts >= 24) window.clearInterval(timer);
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [state?.company?.screenshot_pending, load]);
 
   const openTask = async (task) => {
     if (openingTask) return;
@@ -156,9 +203,56 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
       setEditingContacts(false);
     } finally { setSavingContacts(false); }
   };
+  const closeRuntimeInvite = () => {
+    try { window.localStorage.setItem(runtimeInviteStorageKey, 'seen'); } catch { /* noop */ }
+    setRuntimeInvite(null);
+  };
+  const toggleRuntimeFocus = (focus) => {
+    setRuntimeFocuses((current) => current.includes(focus)
+      ? current.filter((item) => item !== focus)
+      : [...current, focus]);
+    setRuntimeError('');
+  };
+  const wakeRuntime = async () => {
+    if (!runtimeFocuses.length || runtimeLaunching) {
+      if (!runtimeFocuses.length) setRuntimeError('Choose at least one operating focus.');
+      return;
+    }
+    setRuntimeLaunching(true);
+    setRuntimeError('');
+    const labels = RUNTIME_FOCUSES.filter((item) => runtimeFocuses.includes(item.id)).map((item) => item.label);
+    const instruction = `Run this company autonomously with primary focus on ${labels.join(', ')}. Read the current company context, location, baseline, active plans, and connected capabilities first. Build a durable prioritized todo list, execute bounded work through the right Company Rooms and tools, measure outcomes, and adapt without discarding valid prior decisions.`;
+    try {
+      const result = await apiClient.launchHqRuntime({
+        instruction,
+        focuses: runtimeFocuses,
+        authority_policy: { internal_autonomy: true },
+      });
+      try { window.localStorage.setItem(runtimeInviteStorageKey, 'seen'); } catch { /* noop */ }
+      setRuntimeInvite(null);
+      onOpenRuntime?.(result);
+    } catch (error) {
+      setRuntimeError(error?.response?.data?.error || error?.message || 'Runtime could not be started.');
+    } finally { setRuntimeLaunching(false); }
+  };
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+      {runtimeInvite ? (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-[#101828]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Activate Runtime">
+          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="flex max-h-[calc(100vh-2rem)] w-full max-w-[760px] flex-col overflow-hidden rounded-lg border border-[#cbd8ee] bg-white shadow-[0_28px_90px_rgba(12,38,84,0.28)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#dce6f5] bg-[#f5f8ff] px-6 py-5">
+              <div className="flex min-w-0 gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#185bcc] text-white"><Power size={19} /></span><div><div className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#185bcc]">New · Autonomous company runtime</div><h2 className="mt-1 text-[22px] font-semibold text-[#101828]">Try Runtime</h2><p className="mt-1 max-w-[560px] text-[12px] leading-5 text-[#52627a]">Run your company autonomously. Runtime reads company memory, chooses bounded work, calls skills and tools, delegates to Company Rooms, and wakes again when evidence changes.</p></div></div>
+              <button type="button" onClick={closeRuntimeInvite} className="grid h-8 w-8 shrink-0 place-items-center text-[#667085] hover:text-[#101828]" title="Not now"><X size={17} /></button>
+            </div>
+            {runtimeInvite === 'intro' ? (
+              <div className="flex items-center justify-between gap-4 px-6 py-5"><p className="text-[12px] text-[#52627a]">You remain in control. Runtime pauses when access or approval is required.</p><button type="button" onClick={() => setRuntimeInvite('focus')} className="inline-flex h-10 items-center gap-2 rounded-md bg-[#101828] px-5 text-[12px] font-semibold text-white hover:bg-[#185bcc]">RUN <ArrowRight size={14} /></button></div>
+            ) : (
+              <div className="min-h-0 overflow-y-auto px-6 py-5"><div className="mb-4"><h3 className="text-[15px] font-semibold text-[#101828]">What do you want Runtime to operate?</h3><p className="mt-1 text-[11px] text-[#667085]">Choose one or more priorities. Runtime will order the work from current company evidence.</p></div><div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{RUNTIME_FOCUSES.map((item) => { const selected = runtimeFocuses.includes(item.id); return <button key={item.id} type="button" onClick={() => toggleRuntimeFocus(item.id)} className={`min-h-[92px] rounded-md border p-3 text-left transition-colors ${selected ? 'border-[#185bcc] bg-[#eef4ff]' : 'border-[#d9e1ec] bg-white hover:border-[#9db7df]'}`}><span className="flex items-center justify-between gap-2 text-[12px] font-semibold text-[#101828]">{item.label}{selected ? <Check size={14} className="text-[#185bcc]" /> : null}</span><span className="mt-2 block text-[10.5px] leading-4 text-[#667085]">{item.detail}</span></button>; })}</div>{runtimeError ? <p className="mt-3 text-[11px] text-[#c2410c]">{runtimeError}</p> : null}<div className="sticky bottom-0 mt-5 flex items-center justify-between gap-3 border-t border-[#e7ecf3] bg-white pt-4"><button type="button" onClick={() => setRuntimeInvite('intro')} className="text-[11px] font-medium text-[#667085] hover:text-[#101828]">Back</button><button type="button" disabled={runtimeLaunching || !runtimeFocuses.length} onClick={wakeRuntime} className="inline-flex h-10 items-center gap-2 rounded-md bg-[#185bcc] px-5 text-[12px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Power size={14} />{runtimeLaunching ? 'WAKING…' : 'WAKE ME UP'}</button></div></div>
+            )}
+          </motion.div>
+        </div>
+      ) : null}
       {/* Header — Polsia's name bar */}
       <div className="px-6 pt-5 pb-4 border-b border-[#e3e0db] flex items-start justify-between bg-white z-10 shrink-0">
         <div className="min-w-0">
@@ -342,7 +436,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
             </div>
           ) : null}
 
-          {(c.research || []).length > 0 ? (
+            {(c.research || []).length > 0 ? (
             <div className="mt-5 min-h-0 flex-1 flex flex-col">
               <div className="shrink-0"><SectionTitle>{t('hyperDash.research', 'Market research')}</SectionTitle></div>
               <div className="min-h-0 overflow-y-auto pr-2 space-y-3">
@@ -359,7 +453,7 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster }) {
                 ))}
               </div>
             </div>
-          ) : null}
+            ) : null}
 
           <div className="mt-5 shrink-0">
             <SectionTitle>{t('hyperDash.hq', 'HQ')}</SectionTitle>

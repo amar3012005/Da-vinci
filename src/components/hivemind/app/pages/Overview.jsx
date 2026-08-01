@@ -1246,6 +1246,21 @@ export default function Overview() {
         {/* Live clock */}
         <ConsoleClock />
 
+        {/* Re-entry into the first-run tour. Dismissing it is permanent
+            (localStorage), so without this a user who skipped once could never
+            see it again. Quiet by default, beside the clock. */}
+        <button
+          type="button"
+          onClick={tour.reopen}
+          title="Replay the guided tour"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[#e3e0db]
+            px-2.5 py-1.5 text-[11px] font-medium text-[#6b6b70] hover:text-[#0a0a0a]
+            hover:border-[#c9c6c0] transition-colors"
+        >
+          <HelpCircle size={13} />
+          Guide
+        </button>
+
         {/* The numbers that matter */}
         <div className="ml-auto flex items-center gap-5 flex-wrap">
           {STATS.map((s, i) => {

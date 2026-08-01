@@ -21,44 +21,44 @@ const KIND = {
   general: { eyebrow: 'Room · Operating desk', title: 'Room report', accent: '#7c3aed' },
 };
 
-export function OutreachReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.outreach} />;
+export function OutreachReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.outreach} />;
 }
-export function ResearchReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.research} />;
+export function ResearchReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.research} />;
 }
-export function StrategyReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.strategy} />;
+export function StrategyReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.strategy} />;
 }
-export function ContentReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.content} />;
+export function ContentReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.content} />;
 }
-export function SeoReport({ report, taskTitle }) {
-  return <SeoOperatingReport report={report} taskTitle={taskTitle} />;
+export function SeoReport({ report, taskTitle, surface }) {
+  return <SeoOperatingReport report={report} taskTitle={taskTitle} surface={surface} />;
 }
-export function MarketingReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.marketing} />;
+export function MarketingReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.marketing} />;
 }
-export function BrandingReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.branding} />;
+export function BrandingReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.branding} />;
 }
-export function FundraisingReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.fundraising} />;
+export function FundraisingReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.fundraising} />;
 }
-export function ProductReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.product} />;
+export function ProductReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.product} />;
 }
-export function DesignReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.design} />;
+export function DesignReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.design} />;
 }
-export function LegalFinanceReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.legal_finance} />;
+export function LegalFinanceReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.legal_finance} />;
 }
 export function CampaignReport({ report, taskTitle, surface }) {
   return <CampaignOperatingReport report={report} taskTitle={taskTitle} surface={surface} />;
 }
 // Default view for hq/general/unknown kinds — same brochure system, neutral
 // accent — so EVERY room's sealed report renders uniformly (no old fallback).
-export function GeneralReport({ report, taskTitle }) {
-  return <BrochureReport report={report} taskTitle={taskTitle} {...KIND.general} />;
+export function GeneralReport({ report, taskTitle, surface }) {
+  return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} {...KIND.general} />;
 }
