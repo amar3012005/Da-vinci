@@ -249,6 +249,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async updateHqAuthorityPolicy(payload) {
+    const { data } = await this.controlPlane.patch('/v1/hq/authority-policy', payload);
+    return data;
+  }
+
   async activateHqRuntime(payload = {}) {
     const { data } = await this.controlPlane.post('/v1/hq/activate', payload);
     return data;

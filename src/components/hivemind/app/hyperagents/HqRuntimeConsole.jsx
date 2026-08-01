@@ -251,6 +251,8 @@ export function HqRuntimeRail({ baselineReady }) {
   const [work, setWork] = useState({ work_orders: [], schedules: [] });
   const [restarting, setRestarting] = useState(false);
   const [restartOpen, setRestartOpen] = useState(false);
+  const [permissionBusy, setPermissionBusy] = useState('');
+  const [permissionError, setPermissionError] = useState('');
   useEffect(() => {
     let active = true;
     const load = () => Promise.all([apiClient.getHqRuntime(), apiClient.getHqWork()])
@@ -260,6 +262,18 @@ export function HqRuntimeRail({ baselineReady }) {
     return () => { active = false; window.clearInterval(timer); };
   }, []);
   const schedules = work.schedules || [];
+  const outboundPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_messages)
+    ? runtime.authorityPolicy.outbound_messages : 'unconfigured';
+  const updateOutboundPermission = async (preference) => {
+    if (permissionBusy || preference === outboundPermission) return;
+    setPermissionBusy(preference); setPermissionError('');
+    try {
+      const response = await apiClient.updateHqAuthorityPolicy({ outbound_messages: preference });
+      setRuntime(response?.runtime || runtime);
+    } catch (requestError) {
+      setPermissionError(requestError?.response?.data?.error || requestError?.message || 'Permission could not be updated.');
+    } finally { setPermissionBusy(''); }
+  };
   const restart = async () => {
     if (restarting) return;
     setRestartOpen(false);
@@ -273,6 +287,17 @@ export function HqRuntimeRail({ baselineReady }) {
     </header>
     <div className="px-4 py-4">
       <div className="border-y border-[#e3e0db] py-3"><div className="font-mono text-[8px] uppercase text-[#a3a3a3]">State</div><div className="mt-1 text-[10px] font-semibold text-[#171717]">{runtime?.state?.replaceAll('_', ' ') || (baselineReady ? 'READY' : 'BASELINE REQUIRED')}</div></div>
+      <div className="mt-5 border-y border-[#e3e0db] py-3" aria-label="Runtime permissions">
+        <div className="flex items-center gap-2"><ShieldCheck size={12} className="text-[#171717]" /><div className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#737373]">Permissions granted</div></div>
+        <div className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">Outbound email</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{outboundPermission === 'unconfigured' ? 'Choose a policy' : 'Organization policy'}</div></div><div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => <button key={preference} type="button" onClick={() => updateOutboundPermission(preference)} disabled={Boolean(permissionBusy)} aria-pressed={outboundPermission === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${outboundPermission === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === preference ? 'Saving' : preference}</button>)}</div></div>
+        <div className="mt-3 space-y-2 border-t border-[#ebe8e3] pt-3">{[
+          ['Internal work', runtime?.authorityPolicy?.internal_autonomy === false ? 'Restricted' : 'Allowed'],
+          ['External writes', runtime?.authorityPolicy?.external_writes === 'auto' ? 'Automatic' : 'Approval required'],
+          ['Spending', runtime?.authorityPolicy?.spending === 'auto' ? 'Automatic' : 'Approval required'],
+          ['Deletion', runtime?.authorityPolicy?.deletion === 'auto' ? 'Automatic' : 'Approval required'],
+        ].map(([label, value]) => <div key={label} className="flex items-center justify-between gap-3 text-[9px]"><span className="text-[#777168]">{label}</span><span className="font-medium text-[#3f3f3f]">{value}</span></div>)}</div>
+        {permissionError ? <p className="mt-2 text-[9px] leading-4 text-red-700">{permissionError}</p> : null}
+      </div>
       <div className="mt-5 font-mono text-[8px] uppercase tracking-[0.14em] text-[#a3a3a3]">Crucial checkpoints</div>
       <div className="mt-3">
         {schedules.slice(0, 5).map((item) => <div key={item.id} className="relative border-l border-[#d8d3cc] pb-5 pl-4 last:pb-0"><span className="absolute -left-[5px] top-0 h-[9px] w-[9px] rounded-full border border-[#171717] bg-white" /><div className="text-[10px] font-medium capitalize text-[#262626]">{String(item.triggerType || 'checkpoint').replaceAll('_', ' ')}</div><time className="mt-1 block font-mono text-[8px] text-[#a3a3a3]">{new Date(item.dueAt).toLocaleString()}</time></div>)}
