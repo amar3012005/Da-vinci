@@ -28,11 +28,12 @@ import {
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
-  MapPin, Mail,
+  MapPin, Mail, Copy, Download, Power,
+  ContactRound,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
-import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, GmailConnectGate } from '../hyperagents/elements';
+import { EmailComposeCard, CallRingingCard, GmailConnectGate } from '../hyperagents/elements';
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
@@ -43,6 +44,12 @@ import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardMo
 import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
 import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
 import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
+import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import {
+  CAMPAIGN_INTELLIGENCE_V2,
+  CampaignConnectionsRail,
+  CampaignIntelligenceQuickRuns,
+} from '../hyperagents/campaigns/CampaignIntelligenceV2';
 import { SeoRoomBanner, SeoRoomProgress, latestSeoAuditFromTurns } from '../hyperagents/seo/SeoRoomWorkspace';
 import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
@@ -52,7 +59,7 @@ import {
   LANE_META, AGREEMENT_META,
   fmtTs, eventDisplayTs, getPersonaContract, contractSnippet,
   SwarmSpinningUp, SimTheater, HqReportBubble, ProspectStack, ToolTimeline,
-  relTime, sectionIconFor, splitSynthesisSections, hyperEventKey,
+  relTime, hyperEventKey,
 } from '../hyperagents/rooms/shared';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
@@ -128,6 +135,7 @@ const DOMAIN_ROOMS = [
   { key: 'campaign', label: 'Campaign Intelligence', icon: Megaphone, color: '#256d5b', desc: 'One permanent workspace for campaign research, debate, creative development, scheduling, and launch readiness.' },
   { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
   { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
+  { key: 'outreach', label: 'Outreach Intelligence', icon: ContactRound, color: '#0f766e', desc: 'Prospect discovery, qualification, lead intelligence, and governed outreach preparation.' },
   { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
   { key: 'fundraising', label: 'Fundraising', icon: CreditCard, color: '#4338ca', desc: 'Investor narrative, readiness, targeting, and process.' },
   { key: 'research', label: 'Research', icon: FileText, color: '#0369a1', desc: 'Source-backed investigation and decision evidence.' },
@@ -149,6 +157,12 @@ const DOMAIN_ROOM_STAGES = {
     ['Decide', 'Debate the strongest strategy', 'Challenge positioning, audience, offer, channel roles, and the campaign sequence before committing.', 'Debate the strongest strategy for the active campaign. Compare credible routes, challenge unsupported claims, resolve trade-offs, and record one clear recommendation.'],
     ['Build', 'Create the complete sequence', 'Produce channel-correct copy, creative briefs, timing, rationale, and dependencies for every action.', 'Build the complete scheduled campaign sequence from the accepted strategy. Include final channel-ready copy, visual briefs where useful, timing, rationale, dependencies, and success signals. Do not return a single sample action.'],
     ['Verify', 'Check launch readiness', 'Validate claims, providers, budgets, approvals, schedule, and measurement before anything can launch.', 'Run a launch-readiness review for the active campaign. Validate every claim, channel provider, budget, approval, scheduled action, creative requirement, and measurement rule. Return explicit blockers and recovery steps.'],
+  ],
+  outreach: [
+    ['Scope', 'Define the prospect assignment', 'Resolve the requested audience, geography, quantity, evidence requirements, and outreach authority.', 'Read the current company ICP and the active assignment. Define the exact prospect segment, geography, quantity, evidence requirements, and whether the work is research-only, draft-only, or authorized for contact.'],
+    ['Discover', 'Find source-backed prospects', 'Use existing leads first, then connected discovery tools to find relevant organizations without inventing records.', 'Search the shared lead book first. If it is insufficient, use approved discovery tools to find source-backed prospects that match the company ICP and the exact assignment.'],
+    ['Qualify', 'Verify fit and distinct angles', 'Validate every selected prospect and write a company-specific reason and outreach angle.', 'Qualify each prospect against the requested criteria. Persist source evidence, a distinct fit rationale, and a personalized outreach angle for every accepted record.'],
+    ['Deliver', 'Return the governed lead packet', 'Verify persistence, requested counts, evidence, and authority before returning work to HQ.', 'Verify that the requested number of qualified lead records exists in the shared lead book with evidence and distinct outreach angles. Report exact counts and blockers. Do not contact anyone unless explicitly authorized.'],
   ],
   seo: [
     ['Baseline', 'Audit search readiness', 'Inspect positioning, site structure, technical discoverability, and current search evidence.', 'Audit the company search baseline using available company knowledge and live evidence. Cover technical discoverability, content, authority, and measurement gaps.'],
@@ -200,84 +214,6 @@ const DOMAIN_ROOM_STAGES = {
   ],
 };
 
-const SYNTHESIS_PRESENTATIONS = {
-  RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
-  OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
-  MARKETING: { label: 'Campaign board', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Positioning, assets, channels, and experiments' },
-  STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
-  FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
-  GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
-  // Room-KIND desks (preferred key — derived from skill_used.room_kind; the
-  // upper-case task tags above remain as aliases for old turns):
-  market:   { label: 'Competitive desk', accent: '#0f766e', soft: '#ecfdf5', icon: Layers,   note: 'Landscape, asymmetries, threats, and the next moves' },
-  content:  { label: 'Editorial desk',   accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Pillars, calendar, hooks, and distribution' },
-  outreach: { label: 'Outreach desk',    accent: '#be185d', soft: '#fdf2f8', icon: Send,     note: 'ICP, ranked prospects, sequence, and signals' },
-  business: { label: 'Operating desk',   accent: '#0369a1', soft: '#f0f9ff', icon: Gauge,    note: 'Unit economics, pricing, risks, and the fatal metric' },
-  strategy: { label: 'Decision memo',    accent: '#4338ca', soft: '#eef2ff', icon: Gavel,    note: 'Options scored, decision taken, tripwire set' },
-  seo: { label: 'SEO operating report', accent: '#047857', soft: '#ecfdf5', icon: Search, note: 'Search opportunity, priorities, execution, and measurement' },
-  marketing: { label: 'Marketing operating report', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Audience, channels, ready assets, calendar, and experiments' },
-  branding: { label: 'Brand operating report', accent: '#9d174d', soft: '#fdf2f8', icon: Eye, note: 'Positioning, messaging, voice, visual direction, and activation' },
-  fundraising: { label: 'Fundraising operating report', accent: '#4338ca', soft: '#eef2ff', icon: CreditCard, note: 'Readiness, investor narrative, fit, process, and risk' },
-  product: { label: 'Product operating report', accent: '#0f766e', soft: '#ecfdf5', icon: Rocket, note: 'Decision, users, requirements, delivery, and measurement' },
-  design: { label: 'Design operating report', accent: '#be185d', soft: '#fdf2f8', icon: LayoutGrid, note: 'Experience, flow, components, states, and validation' },
-  legal_finance: { label: 'Legal & Finance report', accent: '#4a3550', soft: '#f5f3ff', icon: Scale, note: 'Sources, analysis, exposure, controls, and review gates' },
-  general:  { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
-};
-
-// Per-section icons matched by heading keyword — the row-cards read like a
-// specialist's dossier, not uniform bullets. Fallback = accent dot (existing).
-
-
-function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
-  // room_kind (from skill_used events) wins; task tag stays as the legacy alias.
-  const kind = String(roomKind || '').toLowerCase();
-  const spec = SYNTHESIS_PRESENTATIONS[kind]
-    || SYNTHESIS_PRESENTATIONS[String(taskTag || 'GENERAL').toUpperCase()]
-    || SYNTHESIS_PRESENTATIONS.GENERAL;
-  const Icon = spec.icon;
-  const sections = splitSynthesisSections(content);
-  return (
-    <div className="overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: `${spec.accent}33` }}>
-      <div className="px-4 py-3" style={{ background: `linear-gradient(110deg, ${spec.soft}, white)` }}>
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
-          <div className="min-w-0">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>
-              {kind && SYNTHESIS_PRESENTATIONS[kind] ? `${kind.toUpperCase()} · ${spec.label}` : spec.label}
-            </div>
-            <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-px bg-[#e9e6e0]">
-        {sections.map((section, index) => (
-          <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
-            <div className="mb-2 flex items-center gap-2">
-              {(() => {
-                const SIcon = sectionIconFor(kind, section.title);
-                return SIcon
-                  ? <SIcon size={12} style={{ color: spec.accent }} />
-                  : <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />;
-              })()}
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
-            </div>
-            {(() => {
-              const bodyMd = section.body.join('\n').trim();
-              // An outreach section that IS an email renders as a real email
-              // artifact (envelope + letter body), never raw markdown prose.
-              const email = parseEmailMarkdown(bodyMd);
-              if (email) {
-                return <EmailBlock subject={email.subject} envelope={email.envelope} body={email.body} renderMarkdown={renderMarkdownLite} />;
-              }
-              return <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(bodyMd)}</div>;
-            })()}
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
 export default function HyperAgents() {
@@ -296,9 +232,10 @@ export default function HyperAgents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAgentRooms, setShowAgentRooms] = useState(false);
   const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
-  // | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
+  // | 'runtime' | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
   // The URL is the source of truth on mount/deep-link; goMode() keeps it in
   // sync on every in-app switch so each feature has its own address.
   const _parsePath = () => {
@@ -307,6 +244,7 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
+      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
       if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
@@ -321,6 +259,7 @@ export default function HyperAgents() {
     const base = '/hivemind/app/employees';
     const url = mode === 'hero' ? `${base}/mycompany`
       : mode === 'roster' ? `${base}/agents`
+        : mode === 'runtime' ? `${base}/runtime`
         : mode === 'leads' ? `${base}/leads`
           : mode === 'campaigns' ? `${base}/campaigns`
           : (roomId ? `${base}/rooms/${roomId}` : base);
@@ -401,6 +340,14 @@ export default function HyperAgents() {
       .filter(room => room.is_domain_home)
       .sort((a, b) => (order[a.room_tag] ?? 99) - (order[b.room_tag] ?? 99));
   }, [liveRooms]);
+  const hqRoom = useMemo(
+    () => domainHomeRooms.find((room) => (room.room_tag || room.roomTag || 'general') === 'general') || null,
+    [domainHomeRooms],
+  );
+  const agentHomeRooms = useMemo(
+    () => domainHomeRooms.filter((room) => room.id !== hqRoom?.id),
+    [domainHomeRooms, hqRoom?.id],
+  );
   const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
@@ -523,6 +470,14 @@ export default function HyperAgents() {
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
+          <button
+            onClick={() => goMode('runtime', hqRoom?.id || null)}
+            disabled={!hqRoom}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' ? 'bg-[#185bcc] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+          >
+            <Power size={13} className={viewMode === 'runtime' ? 'text-white' : 'text-[#185bcc]'} />
+            Runtime
+          </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
             onClick={() => goMode('leads', null)}
@@ -545,14 +500,31 @@ export default function HyperAgents() {
           <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
             {t('hyperAgents.companyRooms', 'Company rooms')}
           </div>
-          {domainHomeRooms.map(r => (
-            <RoomRow
-              key={r.id}
-              room={r}
-              active={r.id === activeRoomId && viewMode === 'thread'}
-              onClick={() => goMode('thread', r.id)}
-            />
-          ))}
+          {agentHomeRooms.length > 0 ? (
+            <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
+              <button
+                type="button"
+                onClick={() => setShowAgentRooms((current) => !current)}
+                aria-expanded={showAgentRooms}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white"
+              >
+                <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-violet-500" />View agent rooms <span className="font-mono text-[9px] text-[#a3a3a3]">{agentHomeRooms.length}</span></span>
+                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms ? 'rotate-180' : ''}`} />
+              </button>
+              {showAgentRooms ? (
+                <div className="border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
+                  {agentHomeRooms.map(r => (
+                    <RoomRow
+                      key={r.id}
+                      room={r}
+                      active={r.id === activeRoomId && viewMode === 'thread'}
+                      onClick={() => goMode('thread', r.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {workRooms.length > 0 && (
             <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] border-t border-[#e3e0db] mt-1">
               {t('hyperAgents.workRooms', 'Work rooms')}
@@ -653,6 +625,13 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
+            onOpenRuntime={() => goMode('runtime', hqRoom?.id || null)}
+          />
+        ) : viewMode === 'runtime' && hqRoom ? (
+          <RoomThread
+            key={`runtime-${hqRoom.id}`}
+            roomId={hqRoom.id}
+            onArchived={() => { fetchRooms(); goMode('hero', null); }}
           />
         ) : viewMode === 'leads' ? (
           <LeadsView />
@@ -787,7 +766,7 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   );
 }
 
-function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
+function DomainRoomIntro({ room, company, busy, onRun, onEnter, onStartCampaign, onAnalyseGrowth, campaignV2 = false }) {
   const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
   const DomainIcon = domain.icon;
   const displayLabel = domain.key === 'general' ? (room.name || 'Company HQ') : domain.label;
@@ -809,11 +788,85 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
     profile.offer ? `Offer: ${profile.offer}` : '',
   ].filter(Boolean).join('\n');
 
+  if (campaignV2) {
+    return (
+      <div className="-mx-4 -mt-4 mb-6 border-b border-[#bfd3ff] bg-[#f7f9fd]">
+        <section
+          className="relative isolate h-[238px] overflow-hidden border-b border-[#8dadf0] bg-[#1d3d92] text-white md:h-[276px]"
+          aria-label="Campaign Intelligence workspace"
+        >
+          <div className="absolute inset-0" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-[42%] bg-[#2447a3]" />
+            <div className="absolute -right-[7%] top-[-34%] h-[168%] w-[57%] -skew-x-[29deg] border-l border-[#a6c0ff] bg-[#dbe6fb]" />
+            <div className="absolute right-[18%] top-[-31%] h-[92%] w-[34%] -rotate-[29deg] border border-[#aac4ff] bg-[#4478e0]" />
+            <div className="absolute bottom-[-42%] right-[-8%] h-[83%] w-[55%] -skew-x-[28deg] border border-[#6f98ee] bg-[#173276]" />
+            <div className="absolute left-[57%] top-0 h-[36%] w-px bg-[#6d98ed]/80" />
+            <div className="absolute left-[73%] top-0 h-[51%] w-px bg-[#6d98ed]/80" />
+            <div className="absolute left-[56.6%] top-[35%] h-2 w-2 rounded-full border border-[#a8c2ff] bg-[#1d3d92]" />
+            <div className="absolute left-[72.6%] top-[50%] h-2 w-2 rounded-full border border-[#a8c2ff] bg-[#1d3d92]" />
+          </div>
+          <div className="relative z-10 flex h-full flex-col justify-between px-5 py-5 md:px-8 md:py-6">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-[#c3d6ff]">
+                <DomainIcon size={14} /> Company room
+              </span>
+              <button type="button" onClick={onEnter} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#f4f7ff] transition hover:text-white">
+                Enter discussion <ArrowRight size={12} />
+              </button>
+            </div>
+            <div className="max-w-[650px] pb-2">
+              <p className="text-[10px] font-mono uppercase tracking-[0.17em] text-[#c3d6ff]">Result · Campaign Intelligence</p>
+              <h1 className="mt-2 text-[36px] font-semibold leading-[0.96] text-white md:text-[54px]">Campaign Intelligence</h1>
+              <p className="mt-3 max-w-[540px] text-[12px] leading-5 text-[#e1eaff] md:text-[14px]">Research, debate, creative direction, scheduling, and launch readiness in one room.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[8.5px] font-mono uppercase tracking-[0.1em] text-[#c3d6ff]">
+              <span>{facts.length} company facts</span>
+              <span>{Array.isArray(company?.research) ? company.research.length : 0} research signals</span>
+              <span>{Array.isArray(company?.team) ? company.team.length : 0} team members</span>
+            </div>
+          </div>
+        </section>
+        <CampaignIntelligenceQuickRuns busy={busy} onRun={onRun} onStartCampaign={onStartCampaign} />
+      </div>
+    );
+  }
+
+  // HQ is an operating surface, not another specialist briefing. Its evidence,
+  // growth state, and controls live in the dedicated panels below the thread.
+  // Keep the entry point as a durable category banner only.
+  if (domain.key === 'general') {
+    return (
+      <div className="-mx-4 -mt-4 mb-5 border-b border-[#ded8ff] bg-[#fbfaff]">
+        <section
+          className="relative isolate overflow-hidden border-b px-6 py-7 md:px-10 md:py-9"
+          style={{ background: `${domain.color}12`, borderColor: `${domain.color}35` }}
+          aria-label="Company HQ"
+        >
+          <div className="absolute inset-y-0 right-0 w-[34%] bg-white/35" aria-hidden="true" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div>
+              <span className="inline-flex items-center gap-2 text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-[#5b21b6]">
+                <DomainIcon size={13} /> Company HQ
+              </span>
+              <h1 className="mt-3 text-[32px] font-semibold leading-none text-[#171717] md:text-[46px]">{displayLabel}</h1>
+            </div>
+            <button type="button" onClick={onEnter} className="relative inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#404040] hover:text-[#0a0a0a]">
+              Enter discussion <ArrowRight size={12} />
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="-mx-4 -mt-4 mb-6 border-b border-[#e3e0db] bg-white">
       <section
         className="min-h-[42vh] max-h-[520px] px-6 py-8 md:px-10 md:py-10 flex flex-col justify-between overflow-hidden border-b"
-        style={{ backgroundColor: `${domain.color}14`, borderColor: `${domain.color}35` }}
+        style={{
+          background: `${domain.color}14`,
+          borderColor: `${domain.color}35`,
+        }}
       >
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase text-[#404040]">
@@ -824,14 +877,20 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
           </button>
         </div>
         <div
-          className="max-w-[880px] border px-5 py-5 md:px-7 md:py-6 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)]"
-          style={{ backgroundColor: 'rgba(255,255,255,0.72)', borderColor: `${domain.color}55`, backdropFilter: 'blur(18px)' }}
+          className="max-w-[880px] px-5 py-5 md:px-7 md:py-6 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)] border"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.72)',
+            borderColor: `${domain.color}55`,
+            backdropFilter: 'blur(18px)',
+          }}
         >
-          <p className="text-[11px] font-mono uppercase text-[#525252]">{companyName} · {displayLabel}</p>
-          <h1 className="mt-3 text-[38px] md:text-[58px] leading-[1.02] font-semibold text-[#0a0a0a] break-words">
+          <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#525252]">{companyName} · {displayLabel}</p>
+          <h1 className="text-[38px] md:text-[58px] mt-3 leading-[1.02] font-semibold text-[#0a0a0a] break-words">
             {displayLabel}
           </h1>
-          <p className="mt-4 max-w-[720px] text-[14px] md:text-[16px] leading-relaxed text-[#404040]">{domain.desc}</p>
+          <p className="mt-4 max-w-[720px] text-[14px] md:text-[16px] leading-relaxed text-[#404040]">
+            {domain.desc}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10.5px] font-mono text-[#525252]">
           <span>{facts.length} company facts loaded</span>
@@ -890,11 +949,12 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
         </div>
       </section>
 
-      <section className="px-6 py-7 md:px-10 md:py-8">
+      {!campaignV2 ? <section className="px-6 py-7 md:px-10 md:py-8">
         <div className="max-w-[1080px]">
           <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Suggested operating path</p>
           <h2 className="mt-1 text-[20px] font-semibold text-[#0a0a0a]">Start with the next useful task</h2>
           <div className="mt-5 border-y border-[#e3e0db] divide-y divide-[#e3e0db]">
+            {domain.key === 'general' ? <div className="grid grid-cols-[34px_1fr_auto] items-center gap-3 py-4"><span className="h-7 w-7 flex items-center justify-center rounded-[6px] text-[10px] font-mono font-semibold border" style={{ color: domain.color, borderColor: `${domain.color}55`, backgroundColor: `${domain.color}12` }}>0</span><div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-2"><span className="text-[9.5px] font-mono uppercase" style={{ color: domain.color }}>Baseline</span><h3 className="text-[13px] font-semibold text-[#171717]">Analyse current state</h3></div><p className="mt-1 text-[11.5px] leading-relaxed text-[#737373]">Collect a sourced view of your website, social accounts, content, performance, outreach, campaigns, and market signals.</p></div><button type="button" disabled={busy} onClick={onAnalyseGrowth} className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] text-white text-[10.5px] font-semibold hover:bg-[#262626] disabled:opacity-50"><ArrowUpRight size={12} /> Analyse</button></div> : null}
             {stages.map(([stage, title, detail, prompt], index) => (
               <div key={title} className="grid grid-cols-[34px_1fr_auto] items-center gap-3 py-4">
                 <span
@@ -922,7 +982,7 @@ function DomainRoomIntro({ room, company, busy, onRun, onEnter }) {
             ))}
           </div>
         </div>
-      </section>
+      </section> : null}
     </div>
   );
 }
@@ -958,6 +1018,14 @@ function RoomThread({ roomId, onArchived }) {
   const [companyContext, setCompanyContext] = useState(null);
   const [seoJobAudit, setSeoJobAudit] = useState(null);
   const [seoConnection, setSeoConnection] = useState(null);
+  const [growthBaseline, setGrowthBaseline] = useState(null);
+  const [growthOperatingState, setGrowthOperatingState] = useState(null);
+  const [growthPlans, setGrowthPlans] = useState([]);
+  const [growthBaselineHistory, setGrowthBaselineHistory] = useState([]);
+  const [growthBaselineRunning, setGrowthBaselineRunning] = useState(false);
+  const [growthBaselineEvents, setGrowthBaselineEvents] = useState([]);
+  const [growthBaselineError, setGrowthBaselineError] = useState('');
+  const growthBaselineStartedRef = useRef(false);
   const [showRoomIntro, setShowRoomIntro] = useState(true);
   const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
@@ -981,12 +1049,13 @@ function RoomThread({ roomId, onArchived }) {
   const [evoFlash, setEvoFlash] = useState(null);
   const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
-  // Gmail connect gate — the outreach-powers nudge. Opens once per room when a
-  // task room loads and no Google connector is connected; also opened when Send
-  // is pressed with no connection. `null` = unknown (still checking).
+  // Connection gates are driven by typed Director events. Gmail has a direct
+  // in-Room OAuth gate; other capabilities fall back to the Room connector picker.
   const [gmailConnected, setGmailConnected] = useState(null);
   const [gmailGateOpen, setGmailGateOpen] = useState(false);
-  const gmailGateShownRef = useRef(false);
+  const [gmailConnecting, setGmailConnecting] = useState(false);
+  const [gmailResumeTurnId, setGmailResumeTurnId] = useState(null);
+  const gmailGateShownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
@@ -1015,6 +1084,7 @@ function RoomThread({ roomId, onArchived }) {
   const campaignReturn = useMemo(() => new URLSearchParams(location.search).get('campaignReturn'), [location.search]);
   const [roomCampaigns, setRoomCampaigns] = useState([]);
   const [campaignCapabilities, setCampaignCapabilities] = useState(null);
+  const [campaignConnections, setCampaignConnections] = useState(null);
   const [campaignSettings, setCampaignSettings] = useState({ autonomy_mode: 'MANUAL_REVIEW' });
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
@@ -1023,6 +1093,8 @@ function RoomThread({ roomId, onArchived }) {
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
   const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
+  const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
+  const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
   // Normal rooms open on their permanent category workspace. Once the user
@@ -1086,6 +1158,68 @@ function RoomThread({ roomId, onArchived }) {
       setSavingScope(false);
     }
   }, [roomId]);
+
+  useEffect(() => {
+    if (!isHqRoom) return;
+    apiClient.getGrowthBaselines(12)
+      .then((data) => {
+        const baselines = data?.baselines || [];
+        setGrowthBaselineHistory(baselines);
+        // A targeted refresh is intentionally small. It must never replace the
+        // last complete company audit as HQ's default view.
+        const latestFullTransfer = baselines.find((entry) => entry?.payload?.scope?.mode === 'full_all');
+        setGrowthBaseline(latestFullTransfer?.payload || baselines[0]?.payload || null);
+      })
+      .catch(() => { setGrowthBaseline(null); setGrowthBaselineHistory([]); });
+  }, [isHqRoom, roomId]);
+
+  useEffect(() => {
+    if (!isHqRoom) return;
+    Promise.all([apiClient.getGrowthOperatingState(), apiClient.getGrowthPlans(12)])
+      .then(([state, plans]) => { setGrowthOperatingState(state); setGrowthPlans(plans?.plans || []); })
+      .catch(() => { setGrowthOperatingState(null); setGrowthPlans([]); });
+  }, [isHqRoom, roomId]);
+
+  const runGrowthBaseline = useCallback(async (mode = 'full_all') => {
+    if (!isHqRoom || growthBaselineRunning) return;
+    const stages = [
+      ['Amira Patel', 'Researcher', 'Read the company profile, offer, ICP, and website structure.'],
+      ['Ravi Patel', 'Social analyst', 'Collected Instagram profile, recent content, and account insights.'],
+      ['Elena Kovacs', 'Market analyst', 'Reconciled the LinkedIn organization profile and page analytics.'],
+      ['Luca Romano', 'Channel strategist', 'Reviewed X activity, follower trends, and content performance.'],
+      ['HQ', 'Operating system', 'Filed source artifacts and calculated the current company baseline.'],
+    ].map(([agent, role, label], index) => ({ id: `baseline-${index}`, agent, role, label, done: false }));
+    setGrowthBaselineError(''); setGrowthBaselineEvents(stages); setGrowthBaselineRunning(true);
+    let stage = 0;
+    const timer = window.setInterval(() => {
+      stage = Math.min(stage + 1, stages.length - 1);
+      setGrowthBaselineEvents((current) => current.map((item, index) => ({ ...item, done: index < stage })));
+    }, 850);
+    try {
+      const data = await apiClient.runGrowthBaseline({ mode });
+      setGrowthBaselineEvents(stages.map((item) => ({ ...item, done: true })));
+      setGrowthBaseline(data?.baseline || null);
+      const refreshed = await apiClient.getGrowthBaselines(12);
+      setGrowthBaselineHistory(refreshed?.baselines || []);
+    } catch (error) {
+      setGrowthBaselineError(error?.response?.data?.message || error?.message || 'The baseline could not be collected.');
+    } finally {
+      window.clearInterval(timer);
+      setGrowthBaselineRunning(false);
+    }
+  }, [growthBaselineRunning, isHqRoom]);
+
+  const selectGrowthBaseline = useCallback((resourceId) => {
+    const selected = growthBaselineHistory.find((entry) => entry.id === resourceId);
+    if (selected?.payload) setGrowthBaseline(selected.payload);
+  }, [growthBaselineHistory]);
+
+  useEffect(() => {
+    if (!isHqRoom || !growthBaselineRequested || growthBaselineStartedRef.current) return;
+    growthBaselineStartedRef.current = true;
+    runGrowthBaseline();
+    navigate(location.pathname, { replace: true });
+  }, [growthBaselineRequested, isHqRoom, location.pathname, navigate, runGrowthBaseline]);
 
   const handleSaveGoal = useCallback(async () => {
     const nextGoal = goalDraft.trim();
@@ -1166,14 +1300,23 @@ function RoomThread({ roomId, onArchived }) {
   const loadRoomCampaigns = useCallback(async () => {
     if (!isCampaignRoom) return [];
     try {
-      const [list, capabilities, settings] = await Promise.all([
+      const connectionRequest = CAMPAIGN_INTELLIGENCE_V2
+        ? apiClient.getCampaignConnections().then((state) => (
+          state?.status === 'UNPROVISIONED' && state?.configured
+            ? apiClient.provisionCampaignConnections()
+            : state
+        )).catch(() => null)
+        : Promise.resolve(null);
+      const [list, capabilities, settings, connections] = await Promise.all([
         apiClient.getCampaigns(),
         apiClient.getCampaignCapabilities(),
         apiClient.getCampaignSettings(),
+        connectionRequest,
       ]);
       const related = (list?.campaigns || []).filter((campaign) => campaign.roomId === roomId || campaign.room_id === roomId);
       setRoomCampaigns(related);
       setCampaignCapabilities(capabilities);
+      setCampaignConnections(connections);
       setCampaignSettings(settings || { autonomy_mode: 'MANUAL_REVIEW' });
       return related;
     } catch (err) {
@@ -1222,7 +1365,8 @@ function RoomThread({ roomId, onArchived }) {
   }, [isCampaignRoom, pendingCampaignId]);
 
   useEffect(() => {
-    if (!selectedCampaign || !['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status)) return undefined;
+    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status)));
+    if (!selectedCampaign || !(['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status) || pendingCampaignAssets)) return undefined;
     const timer = window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000);
     return () => window.clearInterval(timer);
   }, [openRoomCampaign, selectedCampaign]);
@@ -1249,14 +1393,105 @@ function RoomThread({ roomId, onArchived }) {
     }
   }, [campaignSettings.autonomy_mode, load, loadRoomCampaigns]);
 
-  const connectCampaignChannel = useCallback(async (channel) => {
-    if (channel === 'x_organic') {
-      const data = await apiClient.startXAdsOAuth('oauth2');
-      window.location.assign(data.authorization_url);
+  const startCampaignFromPreset = useCallback(async ({ title, prompt }) => {
+    const organicPriority = ['x_organic', 'linkedin', 'instagram', 'facebook', 'tiktok', 'youtube', 'pinterest', 'reddit', 'threads', 'bluesky'];
+    const eligible = new Set(
+      (campaignCapabilities?.channels || [])
+        .filter((channel) => channel.execution_ready && channel.executable)
+        .map((channel) => channel.id),
+    );
+    const channels = organicPriority.filter((channel) => eligible.has(channel)).slice(0, 3);
+    if (!channels.length) {
+      setError('Connect and enable at least one organic channel before starting this campaign.');
       return;
     }
-    window.location.assign(channel === 'tara' ? '/hivemind/app/tara' : '/hivemind/app/connectors');
+    await createCampaignInRoom({
+      name: title,
+      objective: 'AWARENESS',
+      goal: `${prompt}\n\nUse only these connected organic channels: ${channels.join(', ')}.`,
+      channels,
+      audience: { mode: 'existing_first', discover_if_insufficient: true },
+      offer: '', cta: '', destination_url: '', geography: [], languages: ['English'],
+      duration_days: 7,
+      intensity: 'focused',
+      cadence: { preset: 'focused' },
+      brand_constraints: '', prohibited_claims: '',
+      success_metrics: ['Impressions', 'Engagements', 'Link clicks'],
+      idempotency_key: `campaign-preset:${roomId}:${Date.now()}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    });
+  }, [campaignCapabilities?.channels, createCampaignInRoom, roomId]);
+
+  const connectCampaignChannel = useCallback(async (channel) => {
+    const providerPlatforms = {
+      x_organic: 'twitter', x_ads: 'twitter', linkedin: 'linkedin', linkedin_ads: 'linkedin', instagram: 'instagram',
+      meta: 'facebook', facebook: 'facebook', tiktok: 'tiktok', youtube: 'youtube',
+      tiktok_ads: 'tiktok', pinterest: 'pinterest', pinterest_ads: 'pinterest', google_ads: 'googleads',
+      reddit: 'reddit', threads: 'threads', bluesky: 'bluesky',
+    };
+    const platform = providerPlatforms[channel];
+    if (!platform) {
+      window.location.assign(channel === 'tara' ? '/hivemind/app/tara' : '/hivemind/app/connectors');
+      return;
+    }
+    try {
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      const connectionKind = ['x_ads', 'google_ads', 'meta', 'linkedin_ads', 'tiktok_ads', 'pinterest_ads'].includes(channel) ? 'ads' : 'organic';
+      const data = await apiClient.startCampaignConnection(platform, returnPath, connectionKind);
+      if (data.connected) {
+        setCampaignConnections(await apiClient.syncCampaignConnections());
+        setCampaignCapabilities(await apiClient.getCampaignCapabilities());
+      } else {
+        window.location.assign(data.authorization_url);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not connect this channel');
+    }
   }, []);
+
+  const disconnectCampaignChannel = useCallback(async (accountRef) => {
+    if (!accountRef) return;
+    try {
+      setCampaignConnections(await apiClient.disconnectCampaignConnection(accountRef));
+      const nextCapabilities = await apiClient.getCampaignCapabilities();
+      setCampaignCapabilities(nextCapabilities);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not disconnect this account');
+    }
+  }, []);
+
+  const selectCampaignAdAccount = useCallback(async (channel, accountRef, adAccountRef) => {
+    try {
+      const state = await apiClient.selectCampaignAdAccount(channel, accountRef, adAccountRef);
+      setCampaignConnections(state);
+      setCampaignCapabilities(await apiClient.getCampaignCapabilities());
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not select this advertising account');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isCampaignRoom) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('campaign_connection') && !params.get('connected')) return;
+    const connectionFailed = params.get('campaign_connection_error');
+    const refresh = connectionFailed
+      ? Promise.reject(new Error('The account connection was not approved. No access was saved.'))
+      : Promise.all([apiClient.syncCampaignConnections(), apiClient.getCampaignCapabilities()]);
+    refresh
+      .then(([state, capabilities]) => { setCampaignConnections(state); setCampaignCapabilities(capabilities); })
+      .catch((err) => setError(err?.response?.data?.message || err.message || 'Could not refresh connected channels'))
+      .finally(() => {
+        params.delete('campaign_connection');
+        params.delete('campaign_connection_error');
+        params.delete('connected');
+        params.delete('profileId');
+        params.delete('accountId');
+        params.delete('username');
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', next);
+      });
+  }, [isCampaignRoom]);
 
   const controlRoomCampaign = useCallback(async (action) => {
     if (!selectedCampaign?.id || campaignBusy) return false;
@@ -1318,7 +1553,8 @@ function RoomThread({ roomId, onArchived }) {
     return () => { alive = false; };
   }, [room?.id, room?.room_tag, room?.roomTag, companyContext?.website, activeTurnId]);
 
-  // Probe Gmail connection so outreach rooms can nudge (and gate Send).
+  // Probe the tenant-scoped global connector state so an explicit Gmail action
+  // can run from any Room without a second per-Room toggle.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -1332,18 +1568,77 @@ function RoomThread({ roomId, onArchived }) {
     return () => { alive = false; };
   }, [roomId]);
 
-  // Auto-open the gate ONCE for an outreach-shaped room with no Gmail.
+  // The Director emits this only for an explicit action in the active message.
+  // Room names/goals never trigger connector prompts on their own.
   useEffect(() => {
-    if (gmailConnected === false && !gmailGateShownRef.current && room) {
-      const outreachy = /outreach|cold[- ]?email|email (campaign|sequence|messaging)|messaging|prospect/i
-        .test(`${room.name || ''} ${room.goal || ''}`);
-      if (outreachy) { gmailGateShownRef.current = true; setGmailGateOpen(true); }
+    if (gmailGateShownRef.current === activeTurnId || !activeTurnId) return;
+    const request = [...(liveLines || [])].reverse().find((line) => (
+      line?.t === 'connection_required'
+      && line?.explicit === true
+    ));
+    if (!request) return;
+    if (request.connector === 'gmail' && gmailConnected == null) return;
+    gmailGateShownRef.current = activeTurnId;
+    if (request.connector === 'gmail') {
+      if (gmailConnected === false) {
+        setGmailResumeTurnId(activeTurnId);
+        setGmailGateOpen(true);
+      }
+      return;
     }
-  }, [gmailConnected, room]);
+    setShowConnectors(true);
+  }, [activeTurnId, gmailConnected, liveLines]);
 
-  const connectGmail = useCallback(() => {
-    navigate('/hivemind/app/connectors?connect=gmail');
-  }, [navigate]);
+  const connectGmail = useCallback(async () => {
+    setGmailConnecting(true);
+    setError(null);
+    let didConnect = false;
+    try {
+      const baseURL = process.env.REACT_APP_NANGO_CONNECT_URL || 'https://api.hivemind.davinciai.eu:8043';
+      const apiURL = process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042';
+      const nango = new Nango();
+      await new Promise((resolve, reject) => {
+        const ui = nango.openConnectUI({
+          baseURL,
+          apiURL,
+          onEvent: async (event) => {
+            try {
+              if (event?.type === 'connect') {
+                const payload = event.payload || {};
+                const providerKey = payload.providerConfigKey || payload.provider_config_key || 'gmail';
+                const connectionId = payload.connectionId || payload.connection_id;
+                if (!connectionId) throw new Error('Nango did not return a connection id');
+                await apiClient.finalizeNangoConnection(providerKey, connectionId);
+                didConnect = true;
+                resolve();
+              } else if (event?.type === 'close') {
+                resolve();
+              } else if (event?.type === 'error') {
+                reject(new Error(event?.payload?.error || 'Gmail connection failed'));
+              }
+            } catch (err) { reject(err); }
+          },
+        });
+        apiClient.getNangoConnectSession('gmail')
+          .then(({ connect_session_token }) => {
+            if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+            else reject(new Error('Gmail Connect UI unavailable'));
+          })
+          .catch((err) => {
+            try { ui?.close?.(); } catch { /* noop */ }
+            reject(err);
+          });
+      });
+      if (didConnect) {
+        setGmailConnected(true);
+        setGmailGateOpen(false);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || 'Could not connect Gmail');
+    } finally {
+      setGmailConnecting(false);
+    }
+  }, []);
 
   // Auto-scroll on new content — ONLY when pinned to the bottom, and INSTANTLY (no 'smooth', which
   // fights itself when live SSE events fire in rapid succession). Scrolls just the thread container,
@@ -1437,6 +1732,9 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
+      // Director-owned event-driven execution: the natural work brief, selected
+      // post-output capability, and resumable connector gate must arrive live.
+      'work_brief', 'action_intent', 'connection_required',
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
@@ -1455,7 +1753,8 @@ function RoomThread({ roomId, onArchived }) {
       'call_contract',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
-      // network blip — let auto-reconnect handle it
+      // A terminal 404 is handled by the poll below. Keep EventSource's normal
+      // reconnect behavior for transient network failures.
     });
 
     // Fallback poll — guarantees the turn renders + completes even when the
@@ -1483,7 +1782,25 @@ function RoomThread({ roomId, onArchived }) {
             });
           }
         }
-      } catch { /* ignore — SSE may still deliver */ }
+      } catch (error) {
+        const status = error?.response?.status;
+        // The user may clear/archive a Room in another tab while this view is
+        // open. A missing turn cannot recover through retrying every 250ms;
+        // stop the live loop and refresh the durable Room state once.
+        if (status === 404) {
+          stopped = true;
+          clearInterval(poll);
+          try { es.close(); } catch { /* noop */ }
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
+        }
+        // Other errors may be transient while SSE continues delivering.
+      }
     };
     // Poll is the reliable path when SSE is buffered/blocked (wallet extensions,
     // partitioned storage, or an edge proxy holding text/event-stream). Fire it
@@ -1767,6 +2084,15 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  // OAuth can finish while the original turn is still synthesizing. Wait for its
+  // seal, then replace only that turn and continue with Gmail now available.
+  useEffect(() => {
+    if (!gmailConnected || !gmailResumeTurnId || submitting || activeTurnId) return;
+    const turn = turns.find((item) => item.id === gmailResumeTurnId);
+    setGmailResumeTurnId(null);
+    if (turn) handleRerunTurn(turn);
+  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns]);
+
   // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
   // this room (keeps the journal/context; no dashboard round-trip).
   async function runNextTask(taskLine) {
@@ -1928,11 +2254,15 @@ function RoomThread({ roomId, onArchived }) {
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
-      <GmailConnectGate open={gmailGateOpen} onClose={() => setGmailGateOpen(false)}
-        onConnect={connectGmail} connecting={false} />
-      <section className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {/* Header */}
-        <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
+      <GmailConnectGate
+        open={gmailGateOpen}
+        onClose={() => { setGmailGateOpen(false); setGmailResumeTurnId(null); }}
+        onConnect={connectGmail}
+        connecting={gmailConnecting}
+      />
+      <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#fbfaf7]">
+        {/* Human rooms retain their room chrome. HQ is a dedicated runtime surface. */}
+        {!isHqRoom && <header className="px-4 py-3 border-b border-[#e3e0db] bg-[#fbfaf7] flex items-center justify-between">
           <div className="min-w-0 flex items-center gap-2">
             {/* "Out of Room" moved to the left-rail footer for a calmer, more
                 feasible room UX — exit lives with the room list, not the header. */}
@@ -1996,7 +2326,7 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
-            {!archived && !isCampaignRoom && (
+            {!archived && !isCampaignRoom && !isHqRoom && (
               <div className="mt-1 inline-flex items-center gap-1.5">
                 <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.quality', 'Quality')}</span>
                 <div className="inline-flex rounded-lg border border-[#e3e0db] overflow-hidden">
@@ -2274,7 +2604,7 @@ function RoomThread({ roomId, onArchived }) {
               </button>
             )}
           </div>
-        </header>
+        </header>}
 
         {isSeoRoom && !archived && <SeoRoomBanner
           audit={roomSeoAudit}
@@ -2345,19 +2675,46 @@ function RoomThread({ roomId, onArchived }) {
         )}
 
         {/* Thread */}
-        <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
-          {showRoomIntro && !isSeoRoom && (
+        <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto bg-[#fbfaf7] ${isHqRoom ? 'px-4 py-4' : 'px-4 py-4 space-y-4'}`}>
+          {showRoomIntro && !isSeoRoom && !isHqRoom && (
             <DomainRoomIntro
               room={room}
               company={companyContext}
               busy={submitting}
               onRun={(prompt) => handleSubmit(null, prompt)}
               onEnter={finishRoomIntro}
+              onStartCampaign={startCampaignFromPreset}
+              onAnalyseGrowth={isHqRoom ? runGrowthBaseline : undefined}
+              campaignV2={CAMPAIGN_INTELLIGENCE_V2 && isCampaignRoom}
             />
           )}
           <div ref={discussionStartRef} />
+          {isHqRoom && <HqRuntimeConsole
+            objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
+            baselineReady={Boolean(growthBaseline)}
+          />}
+          {latestLaunchedCampaign && (
+            <div className="sticky top-0 z-20 -mx-1 border-b border-[#b7d0ff] bg-[#f5f9ff]/95 px-1 py-2 backdrop-blur" aria-label="Current launched campaign">
+              <button
+                type="button"
+                onClick={() => openRoomCampaign(latestLaunchedCampaign)}
+                className="w-full overflow-hidden rounded-md border border-[#9ebff8] bg-[#eaf2ff] text-left shadow-[0_14px_36px_-28px_rgba(17,63,142,0.65)]"
+                aria-label={`View launched campaign ${latestLaunchedCampaign.name}`}
+              >
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#185bcc] text-white"><Rocket size={16} /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">Campaign launched</div>
+                    <div className="mt-0.5 truncate text-[12.5px] font-semibold text-[#102c60]">{latestLaunchedCampaign.name}</div>
+                    <div className="mt-0.5 text-[10px] text-[#46658f]">The schedule and controls are active. Open the dashboard to inspect posts, timing, and reactions.</div>
+                  </div>
+                  <ArrowUpRight size={15} className="shrink-0 text-[#185bcc]" />
+                </div>
+              </button>
+            </div>
+          )}
           {/* HQ control-room feed — agents reporting their room activity to you. */}
-          {hqActivity.length > 0 && (
+          {!isHqRoom && hqActivity.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
                 <Network size={11} className="text-violet-500" />
@@ -2369,14 +2726,15 @@ function RoomThread({ roomId, onArchived }) {
               ))}
             </div>
           )}
-          {!showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
+          {!isHqRoom && !showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>
           )}
-          {turns.map(turn => (
+          {!isHqRoom && turns.map(turn => (
+            <div key={turn.id} className="space-y-2">
+              {turn.runtimePlaybookRunId ? <div className="flex items-center justify-between border border-[#dedbd6] bg-white px-3 py-2 text-[9px] text-[#625f58]" aria-label="Runtime lifecycle phase"><span className="font-mono uppercase tracking-[0.12em]">Runtime · {String(turn.runtimeStageId || 'phase').replaceAll('_', ' ')}</span><span className="font-mono">checkpoint {turn.runtimeCheckpointSequence || '-'} · attempt {turn.runtimeAttempt || 1}</span></div> : null}
             <TurnView
-              key={turn.id}
               turn={turn}
               participants={participantBySlug}
               liveLines={turn.id === activeTurnId ? liveLines : null}
@@ -2392,25 +2750,8 @@ function RoomThread({ roomId, onArchived }) {
               roomId={roomId}
               taskTag={room?.taskTag || 'GENERAL'}
             />
+            </div>
           ))}
-          {latestLaunchedCampaign && (
-            <button
-              type="button"
-              onClick={() => openRoomCampaign(latestLaunchedCampaign)}
-              className="w-full overflow-hidden rounded-md border border-[#8ebaaa] bg-[#eff8f4] text-left shadow-[0_14px_36px_-28px_rgba(15,70,55,0.6)]"
-              aria-label={`View launched campaign ${latestLaunchedCampaign.name}`}
-            >
-              <div className="flex items-center gap-3 px-4 py-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#256d5b] text-white"><Rocket size={16} /></span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[9px] font-mono uppercase tracking-wider text-[#256d5b]">Campaign launched</div>
-                  <div className="mt-0.5 truncate text-[12.5px] font-semibold text-[#173d32]">{latestLaunchedCampaign.name}</div>
-                  <div className="mt-0.5 text-[10px] text-[#587069]">The schedule and campaign controls are active. Open the dashboard to inspect posts, timing, and reactions.</div>
-                </div>
-                <ArrowUpRight size={15} className="shrink-0 text-[#256d5b]" />
-              </div>
-            </button>
-          )}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={11} className="inline mr-1" /> {error}
@@ -2436,7 +2777,7 @@ function RoomThread({ roomId, onArchived }) {
         )}
 
         {/* Composer */}
-        {!archived && (
+        {!archived && !isHqRoom && (
           <form onSubmit={handleSubmit} className="border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
             <input
               ref={fileInputRef}
@@ -2535,9 +2876,9 @@ function RoomThread({ roomId, onArchived }) {
         )}
       </section>
 
-      {/* Right rail: participants */}
-      <aside className="w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
-        <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
+      {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}
+      <aside className={`${isHqRoom ? 'hidden lg:flex' : 'flex'} w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
+        <header className={`${isHqRoom ? 'hidden' : 'flex'} px-3 py-3 border-b border-[#e3e0db] items-center justify-between`}>
           <div className="flex items-center gap-1.5">
             <Users size={12} className="text-[#525252]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('hyperAgents.participants', 'Participants')}</span>
@@ -2552,8 +2893,8 @@ function RoomThread({ roomId, onArchived }) {
             </button>
           )}
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-          {participants.map(p => (
+        <div className={`flex-1 min-h-0 overflow-y-auto ${isHqRoom ? '' : 'p-3 space-y-2'}`}>
+          {!isHqRoom && participants.map(p => (
             <ParticipantChip
               key={p.id}
               agent={p}
@@ -2564,9 +2905,10 @@ function RoomThread({ roomId, onArchived }) {
               )}
             />
           ))}
-          {participants.length === 0 && (
+          {!isHqRoom && participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
+          {isHqRoom && <HqRuntimeRail baselineReady={Boolean(growthBaseline)} />}
           {isSeoRoom && <SeoRoomProgress
             audit={roomSeoAudit}
             connection={seoConnection}
@@ -2575,6 +2917,9 @@ function RoomThread({ roomId, onArchived }) {
             onRun={runSeoTask}
             onConnect={connectSeoEvidence}
           />}
+          {CAMPAIGN_INTELLIGENCE_V2 && isCampaignRoom ? (
+            <CampaignConnectionsRail capabilities={campaignCapabilities || campaignConnections} onConnect={connectCampaignChannel} onDisconnect={disconnectCampaignChannel} onSelectAdAccount={selectCampaignAdAccount} />
+          ) : null}
           {isCampaignRoom && launchedCampaigns.length > 0 ? (
             <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Launched campaigns">
               <div className="flex items-center justify-between">
@@ -2617,7 +2962,7 @@ function RoomThread({ roomId, onArchived }) {
             </section>
           ) : null}
         </div>
-        {!archived && (
+        {!archived && !isHqRoom && (
           <div className="p-3 border-t border-[#e3e0db]">
             <button
               onClick={() => setShowHire(true)}
@@ -2798,6 +3143,64 @@ function RoomThread({ roomId, onArchived }) {
 // Immediate "it's working" feedback shown while a live turn has no events yet.
 // Cycles through the real startup phases so the room never looks frozen.
 
+function legacyPlanNarrative(plan) {
+  if (!plan) return '';
+  const steps = [...new Set((Array.isArray(plan.steps) ? plan.steps : []).map((step) => String(step || '').trim()).filter(Boolean))];
+  const assignments = Object.entries(plan.assignments || {})
+    .filter(([owner, task]) => owner && task)
+    .slice(0, 2)
+    .map(([owner, task]) => `${owner} will ${String(task).replace(/^debate\s*/i, 'review ').replace(/^[A-Z]/, (c) => c.toLowerCase())}`);
+  const opening = steps.length
+    ? `We’ll start by ${steps[0].replace(/^[A-Z]/, (c) => c.toLowerCase())}.`
+    : 'We’ll start by grounding this in the most relevant company context.';
+  const collaboration = assignments.length ? ` ${assignments.join(' while ')}.` : '';
+  const report = ['answer', 'report', 'doc', 'notion'].includes(String(plan.intended_output || '').toLowerCase())
+    ? ' Then we’ll bring the evidence and recommendations together in one polished report.'
+    : ' Then we’ll return one clear, ready-to-use result.';
+  return `${opening}${collaboration}${report}`;
+}
+
+function reportMarkdown(report) {
+  return String(report?.bundle?.report_markdown || report?.report_markdown || report?.content || '').trim();
+}
+
+function ReportActions({ report, title }) {
+  const [copied, setCopied] = useState(false);
+  const markdown = reportMarkdown(report);
+  if (!markdown) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard permission is browser-owned */ }
+  };
+  const download = () => {
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `${String(title || 'room-report').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'room-report'}.md`;
+    anchor.click();
+    URL.revokeObjectURL(href);
+  };
+  return <div className="mb-1 flex items-center justify-end gap-1" aria-label="Report actions">
+    <button type="button" onClick={copy} className="grid h-8 w-8 place-items-center text-[#77716a] hover:text-[#0a0a0a]" title={copied ? 'Copied' : 'Copy report'} aria-label={copied ? 'Copied' : 'Copy report'}>
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+    <button type="button" onClick={download} className="grid h-8 w-8 place-items-center text-[#77716a] hover:text-[#0a0a0a]" title="Download report as Markdown" aria-label="Download report as Markdown">
+      <Download size={14} />
+    </button>
+  </div>;
+}
+
+function RoomLeadResponse({ content }) {
+  if (!content) return null;
+  return <div className="max-w-4xl py-3 pl-2 pr-5 text-[15px] leading-7 text-[#292724]">
+    {renderMarkdownLite(content)}
+  </div>;
+}
+
 function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Normalise participants to an ARRAY once. This component used it both as an
   // array ((participants || []).find, line ~3009) and as an object
@@ -2912,6 +3315,8 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
   // under the same turn_id), so take the LATEST plan/verdict and group rounds.
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
+  const workBrief = lines.find(l => l.t === 'work_brief' && l.content);
+  const workBriefText = workBrief?.content || legacyPlanNarrative(planLine);
   // Every tool call the room made, in order — recall sweeps + live web searches —
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
@@ -2926,6 +3331,8 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
     return Object.values(byQuery);
   })();
   const skillUses = lines.filter(l => l.t === 'skill_used');
+  const actionIntents = lines.filter(l => l.t === 'action_intent' && l.explicit);
+  const connectionRequests = lines.filter(l => l.t === 'connection_required' && l.explicit);
   // Room kind for the sealed report's desk identity — already emitted on every
   // skill_used event; old turns without it fall back to the task-tag alias.
   const domainPack = lines.find(l => l.t === 'domain_pack');
@@ -2936,7 +3343,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
-  const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
   // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
   // connector's brand logo. Dedup to the last per (connector,url).
   const connectorLogos = (() => {
@@ -3032,55 +3438,23 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         )}
       </div>
 
-      {/* Phase 1/3/6 — the lead's plan + goal progress. Frames the turn: target
-          output, done-criterion, ordered steps, per-agent assignments, and (if
-          the goalkeeper re-planned) the current round. */}
-      {planLine && (
-        <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2">
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <ListChecks size={12} className="text-violet-600" />
-            <span className="text-[11px] font-medium text-violet-800">{t('hyperAgents.planLabel', 'Plan')}</span>
-            <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[9px] font-mono uppercase tracking-wider">→ {planLine.intended_output}</span>
-            {goalkeeperRounds.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-mono uppercase tracking-wider" title={t('hyperAgents.goalkeeperTitle', 'The goalkeeper re-planned because the previous round fell short of the done-criterion.')}>
-                {t('hyperAgents.round', 'round')} {goalkeeperRounds.length + 1}
-              </span>
-            )}
-          </div>
-          {planLine.done_criterion && (
-            <div className="text-[10px] text-[#525252] mb-1">
-              <span className="text-[#a3a3a3]">{t('hyperAgents.doneWhen', 'done when:')}</span> {planLine.done_criterion}
-            </div>
-          )}
-          {Array.isArray(planLine.steps) && planLine.steps.length > 0 && (
-            <ol className="list-decimal list-inside text-[10px] text-[#525252] space-y-0.5 mb-1 marker:text-violet-400">
-              {planLine.steps.map((s, i) => <li key={i}>{s}</li>)}
-            </ol>
-          )}
-          {planLine.assignments && Object.keys(planLine.assignments).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {Object.entries(planLine.assignments).map(([who, task]) => (
-                <span key={who} className="px-1.5 py-0.5 rounded bg-white border border-violet-100 text-[9px] text-[#525252]" title={String(task)}>
-                  <span className="text-violet-700 font-medium">{who}</span>: {String(task).slice(0, 64)}{String(task).length > 64 ? '…' : ''}
-                </span>
-              ))}
-            </div>
-          )}
-          {goalkeeperRounds.length > 0 && (
-            <div className="mt-1.5 pt-1.5 border-t border-violet-100 space-y-0.5">
-              {goalkeeperRounds.map((g, i) => (
-                <div key={i} className="text-[9px] text-amber-700 font-mono">
-                  ↻ {t('hyperAgents.replanned', 'round')} {g.round} → {g.next_round}: {(g.gaps || []).join('; ') || t('hyperAgents.unmet', 'done-criterion unmet')}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* The structured plan remains an internal execution contract. The user sees
+          one short, natural account of what the team is about to do. */}
+      {workBriefText && !synthLine?.conversational && (
+        <RoomLeadResponse content={workBriefText} />
       )}
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} prospectHunts={prospectHunts} skillUses={skillUses} sealed={!!seal} />
+      <ToolTimeline
+        gathers={gathers}
+        webIntels={webIntels}
+        prospectHunts={prospectHunts}
+        skillUses={skillUses}
+        actionIntents={actionIntents}
+        connectionRequests={connectionRequests}
+        sealed={!!seal}
+      />
 
 
 
@@ -3384,64 +3758,11 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </>
       )}
 
-      {synthLine && !isCampaignTurn && (() => {
-        // Report-card chrome around the deliverable: WHO wrote it (lead + the team),
-        // whether the recon pass VERIFIED it as grounded, and the turn's true cost —
-        // so the final card reads like a signed-off report, not an anonymous blob.
-        const _leadP = participants[synthLine.agent] || {};
-        const _crew = participants.filter(p => (p.slug || p.id) !== synthLine.agent);
-        const _v = verifyLine || {};
-        const _verified = _v.grounded_ok === true || _v.met === true;
-        const _durS = seal?.duration_ms ? Math.round(Number(seal.duration_ms) / 1000) : null;
-        return (
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/60 to-white shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-3.5 py-2 border-b border-violet-100 bg-violet-50/50 flex-wrap">
-              <Sparkles size={13} className="text-violet-600" />
-              <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
-                {t('hyperAgents.finalOutput', 'Final — room synthesis')}
-              </span>
-              {_verified && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-medium"
-                      title={t('hyperAgents.verifiedTitle', 'The recon pass checked this deliverable against the gathered evidence — grounded.')}>
-                  <CheckCheck size={10} /> {t('hyperAgents.verified', 'verified')}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => { try { navigator.clipboard.writeText(synthLine.content || ''); } catch { /* noop */ } }}
-                className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100"
-                title={t('hyperAgents.copySynth', 'Copy the deliverable as markdown')}
-              >{t('hyperAgents.copy', 'copy')}</button>
-              {eventDisplayTs(synthLine) ? (
-                <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
-              ) : null}
-            </div>
-            <div className="px-4 py-3">
-              {(() => {
-                // Kind report views (brochure) own the synthesis when registered —
-                // the legacy desk renderer is the fallback. This is the SAME
-                // registry the final_report path uses, so both paths match.
-                const KindReport = reportViewFor(roomKind);
-                return KindReport
-                  ? <KindReport report={{ content: synthLine.content }} roomKind={roomKind} prospectHunts={prospectHunts}
-                      taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)} />
-                  : <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />;
-              })()}
-            </div>
-            <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
-              <AgentAvatar agent={_leadP && _leadP.name ? _leadP : { name: synthLine.agent, slug: synthLine.agent }} size={20} />
-              <span className="text-[10px] text-[#525252]">
-                {t('hyperAgents.synthBy', 'by')} <span className="font-medium text-[#0a0a0a]">{_leadP.name || synthLine.agent}</span>
-                {_crew.length > 0 && <> · {t('hyperAgents.synthWith', 'with')} {_crew.map(p => p.name || p.slug).filter(Boolean).join(', ')}</>}
-              </span>
-              <span className="ml-auto flex items-center gap-2 text-[9px] font-mono text-[#a3a3a3] tabular-nums">
-                {_durS != null && <span>{_durS}s</span>}
-                {seal?.cost_tokens != null && <span>{Number(seal.cost_tokens).toLocaleString()} tok</span>}
-              </span>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Conversational and handoff replies are direct prose. Task synthesis is
+          intentionally not rendered here: final_report is the sole report source. */}
+      {synthLine && !finalReport && (synthLine.conversational || campaignHandoff) ? (
+        <RoomLeadResponse content={synthLine.content} />
+      ) : null}
 
       {revises.map((rev, i) => (
         <div key={`revise-${i}`} className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
@@ -3547,22 +3868,28 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
             {errors.length ? <div className="px-4 py-3"><div className="text-[9px] font-mono uppercase text-amber-700">Contract checks</div><ul className="mt-2 space-y-1 text-[10.5px] leading-5 text-amber-900">{errors.slice(0, 8).map((item) => <li key={item}>• {item}</li>)}</ul></div> : null}
           </section>;
         }
-        return KindReport ? (
-          <KindReport
-            report={isCampaignTurn ? { ...finalReport, bundle: campaignBundle } : finalReport}
-            roomKind={roomKind}
-            webSources={webIntel?.sources || []}
-            prospectHunts={prospectHunts}
-            taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)}
-            onOpenMemory={setEvidenceMemoryId}
-          />
-        ) : (
-          <FinalReportCard
-            report={finalReport}
-            webSources={webIntel?.sources || []}
-            onOpenMemory={setEvidenceMemoryId}
-          />
-        );
+        const renderedReport = isCampaignTurn ? { ...finalReport, bundle: campaignBundle } : finalReport;
+        const reportTitle = String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90);
+        return <section className="mt-5 border-t border-[#e3e0db] pt-2" aria-label="Final report">
+          <ReportActions report={renderedReport} title={reportTitle} />
+          {KindReport ? (
+            <KindReport
+              report={renderedReport}
+              roomKind={roomKind}
+              surface="room"
+              webSources={webIntel?.sources || []}
+              prospectHunts={prospectHunts}
+              taskTitle={reportTitle}
+              onOpenMemory={setEvidenceMemoryId}
+            />
+          ) : (
+            <FinalReportCard
+              report={renderedReport}
+              webSources={webIntel?.sources || []}
+              onOpenMemory={setEvidenceMemoryId}
+            />
+          )}
+        </section>;
       })()}
 
       {/* OUTREACH PROSPECTS — full stacked cards with all firm info; green "email
