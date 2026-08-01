@@ -15,7 +15,8 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain("t('hyperAgents.companyRooms', 'Company rooms')");
     expect(source).toContain("domain.key === 'general' ? 'HQ' : domain.label");
     expect(source).toContain("t('hyperAgents.workRooms', 'Work rooms')");
-    expect(source).toContain('domainHomeRooms.map');
+    expect(source).toContain('const hqRoom = useMemo');
+    expect(source).toContain('agentHomeRooms.map');
     expect(source).toContain('workRooms.map');
     expect(source).toContain('RoomDomainIcon');
   });
@@ -58,5 +59,40 @@ describe('HyperAgents live turn adoption', () => {
     expect(source).toContain('What this Room already knows');
     expect(source).toContain('Suggested operating path');
     expect(source).toContain('onClick={() => onRun(`${contextPrefix}');
+  });
+
+  it('keeps the Campaign Intelligence operating banner as a campaign-only room surface', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain('campaignV2 ?');
+    expect(source).toContain('h-[238px]');
+    expect(source).toContain('bg-[#1d3d92]');
+    expect(source).toContain('CampaignIntelligenceQuickRuns busy={busy} onRun={onRun} onStartCampaign={onStartCampaign}');
+    expect(source).toContain('const startCampaignFromPreset');
+    expect(source).toContain('Use only these connected organic channels: ${channels.join');
+    expect(source).toContain('campaignV2={CAMPAIGN_INTELLIGENCE_V2 && isCampaignRoom}');
+    expect(source).toContain('aria-label="Current launched campaign"');
+    expect(source).toContain('sticky top-0 z-20');
+  });
+
+  it('shows natural work briefs, direct greetings, and one report with copy and download', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain('function legacyPlanNarrative');
+    expect(source).toContain('<RoomLeadResponse content={workBriefText} />');
+    expect(source).toContain('synthLine.conversational || campaignHandoff');
+    expect(source).toContain('Download report as Markdown');
+    expect(source).toContain('Copy report');
+  });
+
+  it('routes explicit Director connection events and resumes Gmail after OAuth', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'HyperAgents.jsx'), 'utf8');
+    expect(source).toContain("line?.t === 'connection_required'");
+    expect(source).toContain('line?.explicit === true');
+    expect(source).toContain("request.connector === 'gmail'");
+    expect(source).toContain('setShowConnectors(true);');
+    expect(source).toContain("apiClient.getNangoConnectSession('gmail')");
+    expect(source).toContain('await apiClient.finalizeNangoConnection(providerKey, connectionId);');
+    expect(source).toContain('if (turn) handleRerunTurn(turn);');
+    expect(source).toContain("'work_brief', 'action_intent', 'connection_required'");
+    expect(source).not.toContain('const outreachy = /outreach');
   });
 });

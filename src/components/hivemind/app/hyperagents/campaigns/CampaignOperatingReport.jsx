@@ -334,12 +334,12 @@ function DetailDisclosure({ title, count, children }) {
 export default function CampaignOperatingReport({ report, taskTitle, surface = 'card' }) {
   const data = normalizeCampaignReport(report);
   const displayTitle = data.summary || taskTitle || 'Campaign operating plan';
-  if (!data.hasBundle && data.legacyContent) return <div className={surface === 'dashboard' ? '' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line }}>
+  if (!data.hasBundle && data.legacyContent) return <div className={surface === 'card' ? 'overflow-hidden rounded-lg border' : ''} style={{ background: surface === 'room' ? 'transparent' : COLORS.paper, borderColor: COLORS.line }}>
     <header className="px-5 py-6 sm:px-7"><div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><FileText size={14} />Legacy campaign report</div><h1 className="mt-2 text-[22px] font-semibold">{displayTitle}</h1></header>
     <div className="border-t px-5 py-6 text-[12.5px] leading-6 sm:px-7" style={{ borderColor: COLORS.line }}><LegacyContent content={data.legacyContent} /></div>
   </div>;
 
-  return <div className={surface === 'dashboard' ? 'overflow-hidden' : 'overflow-hidden rounded-lg border'} style={{ background: COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
+  return <div className={surface === 'card' ? 'overflow-hidden rounded-lg border' : 'overflow-hidden'} style={{ background: surface === 'room' ? 'transparent' : COLORS.paper, borderColor: COLORS.line, color: COLORS.ink }}>
     <header className="px-5 py-6 sm:px-7" style={{ background: '#202522', color: '#f7f4ed' }}>
       <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><Megaphone size={14} />Campaign Board</div>{data.qualityReady ? <span className="inline-flex items-center gap-1.5 rounded bg-[#dcece5] px-2 py-1 text-[9px] font-semibold text-[#145b49]"><CheckCircle2 size={11} />Ready for approval</span> : null}</div>
       <h1 className="mt-3 max-w-4xl text-[24px] font-semibold leading-tight sm:text-[28px]">{displayTitle}</h1>

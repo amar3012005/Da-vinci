@@ -213,6 +213,107 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Dated, source-backed growth snapshot. Runs independently from Rooms. */
+  async runGrowthBaseline(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-baseline', payload);
+    return data;
+  }
+
+  async getGrowthBaselines(limit = 12) {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-baselines', { params: { limit } });
+    return data;
+  }
+
+  async getGrowthOperatingState() {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-operating-state');
+    return data;
+  }
+
+  async runGrowthPlan(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-plan', payload);
+    return data;
+  }
+
+  async getGrowthPlans(limit = 12) {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-plans', { params: { limit } });
+    return data;
+  }
+
+  async createGrowthGoal(payload) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-goals', payload);
+    return data;
+  }
+
+  async getHqRuntime() {
+    const { data } = await this.controlPlane.get('/v1/hq/runtime');
+    return data;
+  }
+
+  async activateHqRuntime(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hq/activate', payload);
+    return data;
+  }
+
+  async launchHqRuntime(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hq/launch', payload);
+    return data;
+  }
+
+  async pauseHqRuntime(reason) {
+    const { data } = await this.controlPlane.post('/v1/hq/pause', { reason });
+    return data;
+  }
+
+  async resumeHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/resume', {});
+    return data;
+  }
+
+  async wakeHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/wake', {});
+    return data;
+  }
+
+  async restartHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/restart', {});
+    return data;
+  }
+
+  async getHqEvents(after = '0', limit = 100) {
+    const { data } = await this.controlPlane.get('/v1/hq/events', { params: { after, limit } });
+    return data;
+  }
+
+  async getHqWork() {
+    const { data } = await this.controlPlane.get('/v1/hq/work');
+    return data;
+  }
+
+  async decideHqWorkflowApproval(workflowId, decision) {
+    const { data } = await this.controlPlane.post(`/v1/hq/workflows/${encodeURIComponent(workflowId)}/approval`, { decision });
+    return data;
+  }
+
+  async addHqInstruction(instruction) {
+    const { data } = await this.controlPlane.post('/v1/hq/instructions', { instruction });
+    return data;
+  }
+
+  async recheckHqCapabilities() {
+    const { data } = await this.controlPlane.post('/v1/hq/capabilities/recheck', {});
+    return data;
+  }
+
+  async getHqResources() {
+    const { data } = await this.controlPlane.get('/v1/hq/resources');
+    return data;
+  }
+
+  hqEventStreamUrl(after = '0') {
+    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    return `${base}/v1/hq/events/stream?after=${encodeURIComponent(after)}`;
+  }
+
   /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
   async hyperCompany() {
     const { data } = await this.controlPlane.get('/v1/hyper/company');

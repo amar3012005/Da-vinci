@@ -1,8 +1,5 @@
-// "Your Leads" — a Notion-style outreach board. One row per prospect the org
-// has run outreach on: all firm info + sent state, sent date/time, reply/meeting
-// outcome, and a coarse "potential". Read-only view over GET /v1/hyper/leads
-// (outreach_targets ⨝ outbound_actions). No re-sends happen here — sending is
-// the campaign panel's job, and the backend hard-dedups repeat emails.
+// "Your Leads" — shared prospect intelligence plus outreach outcomes. Room
+// discoveries appear immediately; campaign/send state enriches the same rows.
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Mail, PhoneCall, Reply, CalendarCheck, RefreshCw, Globe, CheckCheck, Clock,
@@ -51,7 +48,7 @@ export default function LeadsView() {
             <ListChecks size={20} className="text-[#117dff]" /> {t('leads.title', 'Your Leads')}
           </h1>
           <p className="text-[11.5px] text-[#525252] mt-1">
-            {t('leads.subtitle', 'Every prospect your agents reached out to — status, replies and potential.')}
+            {t('leads.subtitle', 'Every prospect your agents discovered — why they fit, the best angle, and what happened next.')}
           </p>
         </div>
         <button onClick={load}
@@ -86,7 +83,7 @@ export default function LeadsView() {
         {err && <div className="text-[12px] text-red-600 mb-3">{err}</div>}
         {!loading && leads.length === 0 && (
           <div className="text-[12.5px] text-[#a3a3a3] py-12 text-center">
-            {t('leads.empty', 'No leads yet — run an outreach room, then send emails or calls from a report.')}
+            {t('leads.empty', 'No leads yet — ask a Company Room to discover or qualify prospects.')}
           </div>
         )}
         {leads.length > 0 && (
@@ -102,7 +99,8 @@ export default function LeadsView() {
             {leads.map((l) => {
               const [pLabel, pClass] = POTENTIAL[l.potential] || POTENTIAL.none;
               return (
-                <div key={l.id} className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.8fr_0.9fr_1.1fr] gap-2 px-4 py-3 border-b border-[#eceae4] last:border-0 items-center hover:bg-[#faf9f4]/60">
+                <div key={l.id} className="border-b border-[#eceae4] last:border-0 hover:bg-[#faf9f4]/60">
+                  <div className="grid grid-cols-[1.6fr_1.4fr_0.8fr_0.8fr_0.9fr_1.1fr] gap-2 px-4 pt-3 pb-2 items-center">
                   <div className="min-w-0">
                     <div className="text-[12.5px] font-semibold text-[#0a0a0a] truncate flex items-center gap-1.5">
                       {l.channel === 'call' ? <PhoneCall size={11} className="text-[#a3a3a3] shrink-0" /> : <Mail size={11} className="text-[#a3a3a3] shrink-0" />}
@@ -126,7 +124,9 @@ export default function LeadsView() {
                         ? <span className="text-[10.5px] font-mono text-[#a3a3a3]" title={l.skipped_reason}>{t('leads.skipped', 'Skipped')}</span>
                         : l.error
                           ? <span className="text-[10.5px] font-mono text-red-500" title={l.error}>{t('leads.failed', 'Failed')}</span>
-                          : <span className="text-[10.5px] font-mono text-[#a3a3a3]">{t('leads.queued', 'Queued')}</span>}
+                          : l.state === 'discovered'
+                            ? <span className="text-[10.5px] font-mono text-[#525252]">{t('leads.discovered', 'Discovered')}</span>
+                            : <span className="text-[10.5px] font-mono text-[#a3a3a3]">{t('leads.queued', 'Queued')}</span>}
                   </div>
                   <div>
                     {l.replied
@@ -139,8 +139,21 @@ export default function LeadsView() {
                     <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider ${pClass}`}>{pLabel}</span>
                   </div>
                   <div className="text-[10.5px] font-mono text-[#525252] flex items-center gap-1">
-                    <Clock size={10} className="text-[#a3a3a3] shrink-0" /> {fmt(l.sent_at)}
+                    <Clock size={10} className="text-[#a3a3a3] shrink-0" /> {fmt(l.sent_at || l.discovered_at)}
                   </div>
+                  </div>
+                  {(l.fit_reason || l.outreach_angle || l.distinctive_signal) && (
+                    <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2 px-4 pb-3 pt-1 text-[11px] leading-relaxed">
+                      <div className="min-w-0">
+                        <span className="font-mono uppercase text-[9.5px] text-[#a3a3a3] mr-2">{t('leads.whyThisLead', 'Why this lead')}</span>
+                        <span className="text-[#353535]">{l.fit_reason || l.distinctive_signal}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-mono uppercase text-[9.5px] text-[#a3a3a3] mr-2">{t('leads.bestAngle', 'Best angle')}</span>
+                        <span className="text-[#353535]">{l.outreach_angle || 'Validate the current need before outreach.'}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

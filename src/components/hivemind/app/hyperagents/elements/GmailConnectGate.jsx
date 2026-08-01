@@ -31,15 +31,16 @@ export default function GmailConnectGate({ open, onClose, onConnect, connecting 
           <div className="flex items-center gap-2">
             <Mail size={15} className="text-[#117dff]" />
             <span className="text-[13px] font-semibold text-[#0a0a0a]" style={{ fontFamily: 'Space Grotesk' }}>
-              Give your agents outreach powers
+              Connect Gmail to continue
             </span>
           </div>
           <button type="button" onClick={onClose} className="text-[#a3a3a3] hover:text-[#0a0a0a]"><X size={16} /></button>
         </div>
         <div className="px-5 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
           <p className="text-[12.5px] text-[#525252] leading-relaxed">
-            With Gmail connected, your agents don&apos;t stop at reports — they <b>write real emails in front
-            of you</b> and send with one click (or automatically, once you allow it). Watch:
+            This request includes an email action. Connect Gmail and the Room will continue by creating
+            the finished email in your mailbox. You can also continue without connecting and keep the
+            complete email in the Room.
           </p>
           <EmailComposeCard
             approval={DEMO_APPROVAL}
@@ -52,9 +53,9 @@ export default function GmailConnectGate({ open, onClose, onConnect, connecting 
             onDeny={() => setDemoSendTried(true)}
           />
           <ul className="text-[12px] text-[#525252] space-y-1 pl-1">
-            <li className="flex items-center gap-2"><Check size={12} className="text-emerald-600" /> Drafts stay yours — nothing sends without your click</li>
+            <li className="flex items-center gap-2"><Check size={12} className="text-emerald-600" /> Drafts stay yours — sending remains approval controlled</li>
             <li className="flex items-center gap-2"><Check size={12} className="text-emerald-600" /> Replies are detected automatically and counted on your dashboard</li>
-            <li className="flex items-center gap-2"><Zap size={12} className="text-[#117dff]" /> Flip one toggle later to automate sending entirely</li>
+            <li className="flex items-center gap-2"><Zap size={12} className="text-[#117dff]" /> The pending Room request resumes after connection</li>
           </ul>
         </div>
         <div className="flex items-center justify-between border-t border-[#e3e0db] px-5 py-3.5 bg-[#faf9f4]">

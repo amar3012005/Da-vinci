@@ -1,79 +1,42 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  ArrowUpRight,
-  Bot,
-  BookOpen,
-  Brain,
-  Building2,
-  Cable,
-  CreditCard,
-  Cpu,
-  FlaskConical,
-  Globe,
-  Hexagon,
-  Key,
-  LayoutDashboard,
-  MessageSquare,
-  Mic,
-  Network,
-  Server,
-  User,
-  X,
-} from 'lucide-react';
+import { TOUR_STEPS, TOUR_VERSION } from './tours.config';
 
 /**
- * OverviewTour — first-visit guided tour for the Overview page.
+ * First-run guided tour.
  *
- * Renders a glass-morphism backdrop, a centered explainer card carousel, and
- * an SVG overlay that draws a faint connector from the card to EVERY sidebar
- * nav item. Only the connector for the active step glows (animated draw +
- * arrowhead + spotlight ring on the target). Advancing walks the sidebar from
- * Overview all the way down to Billing, one card per page.
+ * This file RENDERS; it holds no copy. Every stop lives in tours.config.js —
+ * read the header there before editing anything.
  *
- * Targets are anchored via `data-tour-id="<route path>"` on each sidebar
- * NavLink, measured live with getBoundingClientRect so the arrows track the
- * real layout (and re-measure on resize / scroll-into-view).
+ * Design contract, deliberately:
+ *  - Arrows, arrowheads, the section bracket and the ring on the lifted nav item
+ *    are INK, never a coloured glow. Blue stays typographic (eyebrow + checks),
+ *    matching how the login onboarding uses it.
+ *  - One arrow per step. A step listing several routes draws a single bracket
+ *    spanning the section with a stub into each child, so a group reads as one
+ *    idea instead of six separate ones.
+ *  - The elbow leaves the card horizontally, drops, then approaches flat, so the
+ *    head lands against the nav item's right edge instead of cutting diagonally
+ *    across the sidebar.
+ *
+ * Robustness, because a tour that traps someone is worse than no tour:
+ *  - A target absent from the DOM (route hidden by plan or role) makes the whole
+ *    step drop out, rather than pointing an arrow at nothing.
+ *  - Under 1024px there is no sidebar to point at, so the card centres and no
+ *    arrows are drawn.
+ *  - Esc closes, arrows navigate, and the draw animation is dropped under
+ *    prefers-reduced-motion.
  */
 
-const STORAGE_KEY = 'hm.walkthrough.overview-tour';
-const STORAGE_VERSION = 1;
+const STORAGE_KEY = 'hm.tour.overview';
+const CARD_W = 404;
 
-/** Tour steps — sidebar order, Overview → Billing. */
-const STEPS = [
-  { to: '/hivemind/app/overview', icon: LayoutDashboard, title: 'Overview', desc: 'Your memory engine at a glance — health, totals, recent memories and quick actions.' },
-  { to: '/hivemind/app/connectors', icon: Cable, title: 'Connectors', desc: 'Plug in Slack, Gmail, Drive and more. Connected tools stream securely into your cortex.' },
-  { to: '/hivemind/app/memories', icon: Brain, title: 'Memories', desc: 'Every durable fact, decision and document — searchable by meaning, not keywords.' },
-  { to: '/hivemind/app/graph', icon: Network, title: 'Memory Graph', desc: 'See it all connect in 3D. Nodes are memories; lines are relationships HIVEMIND inferred.' },
-  { to: '/hivemind/app/knowledge', icon: BookOpen, title: 'Knowledge Base', desc: 'Upload documents. HIVEMIND parses and promotes them into recallable memories.' },
-  { to: '/hivemind/app/workspace', icon: Building2, title: 'Workspace Admin', desc: 'Govern members, teams, projects and access — scoped recall with an audit trail.' },
-  { to: '/hivemind/app/employees', icon: Bot, title: 'Hyper Agents', desc: 'Digital employees that collaborate in rooms, debate when roles clash, and self-evolve.' },
-  { to: '/hivemind/app/web', icon: Globe, title: 'Web Intel', desc: 'Search and crawl the live web — results land straight in your memory.' },
-  { to: '/hivemind/app/tara', icon: Mic, title: 'TARA × HIVE', desc: 'Talk to your cortex by voice — ask, recall and let agents act on what they know.' },
-  { to: '/hivemind/app/swarm', icon: Bot, title: 'Agent Swarm', desc: 'Orchestrate multi-agent runs across your knowledge for deeper, parallel work.' },
-  { to: '/hivemind/app/engine', icon: Cpu, title: 'Engine', desc: 'Tune the memory engine — ingestion, models and relationship thresholds.' },
-  { to: '/hivemind/app/mcp', icon: Server, title: 'MCP Server', desc: 'Connect Claude, Cursor and custom clients to your cortex over MCP.' },
-  { to: '/hivemind/app/keys', icon: Key, title: 'API Keys', desc: 'Mint and revoke keys for agents and MCP clients — instant control.' },
-  { to: '/hivemind/app/evaluation', icon: FlaskConical, title: 'Evaluation', desc: 'Run golden-case evals to gate quality before you ship changes.' },
-  { to: '/hivemind/app/profile', icon: User, title: 'Profile', desc: 'Your account, identity and preferences.' },
-  { to: '/hivemind/app/billing', icon: CreditCard, title: 'Billing', desc: 'Plans, usage and upgrades — unlock Pro limits and advanced connectors.' },
-  { to: 'talk-to-hive', icon: MessageSquare, title: 'Talk to HIVE', desc: 'Chat with your cortex from anywhere — ask questions, recall context, and let agents act on what they know.' },
-];
-
-/** Gate: show once per (key, version). */
 export function useOverviewTour() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     try {
-      const seen = window.localStorage.getItem(STORAGE_KEY);
-      setOpen(seen !== String(STORAGE_VERSION));
+      setOpen(window.localStorage.getItem(STORAGE_KEY) !== String(TOUR_VERSION));
     } catch {
       setOpen(true);
     }
@@ -81,383 +44,231 @@ export function useOverviewTour() {
 
   const close = useCallback(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, String(STORAGE_VERSION));
+      window.localStorage.setItem(STORAGE_KEY, String(TOUR_VERSION));
     } catch {
-      /* best effort */
+      /* private mode — best effort */
     }
     setOpen(false);
   }, []);
 
   const reopen = useCallback(() => setOpen(true), []);
-
   return { open, close, reopen };
 }
 
-/**
- * Build an orthogonal (90°) connector with rounded corners through a list of
- * right-angle points. Segments are axis-aligned; each bend is rounded with a
- * quadratic arc clamped to the shorter adjacent segment.
- */
-function roundedElbow(pts, radius = 14) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 1; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const len1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-    const len2 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const rr = Math.min(radius, len1 / 2, len2 / 2);
-    const v1x = Math.sign(p1.x - p0.x);
-    const v1y = Math.sign(p1.y - p0.y);
-    const v2x = Math.sign(p2.x - p1.x);
-    const v2y = Math.sign(p2.y - p1.y);
-    const a = { x: p1.x - v1x * rr, y: p1.y - v1y * rr };
-    const b = { x: p1.x + v2x * rr, y: p1.y + v2y * rr };
-    d += ` L ${a.x} ${a.y} Q ${p1.x} ${p1.y} ${b.x} ${b.y}`;
-  }
-  const last = pts[pts.length - 1];
-  d += ` L ${last.x} ${last.y}`;
-  return d;
+const findEl = (routeId) => document.querySelector(`[data-tour-id="${routeId}"]`);
+
+function resolveSteps(narrow) {
+  return TOUR_STEPS.filter((s) => {
+    if (!s.targets.length) return true;
+    if (narrow) return true;
+    return s.targets.some((t) => findEl(t));
+  });
 }
 
-/**
- * Route a horizontal-vertical-horizontal (90°) elbow from the card anchor to a
- * target tip. A short vertical channel sits just card-side of the target so the
- * arrow always approaches the target horizontally. Works for targets on either
- * side of the card.
- */
-function elbowPath(from, to) {
-  const dir = Math.sign(from.x - to.x) || 1; // +1 target on left, -1 on right
-  const channelX = to.x + 26 * dir;
-  return roundedElbow([
-    { x: from.x, y: from.y },
-    { x: channelX, y: from.y },
-    { x: channelX, y: to.y },
-    { x: to.x, y: to.y },
-  ]);
-}
-
-/**
- * Compute the connector endpoints between the card and a target rect. Picks the
- * card edge (left/right) facing the target and the target edge facing the card.
- */
-function geomFor(cardRect, rect) {
-  const cardCenterX = cardRect.left + cardRect.width / 2;
-  const cardCenterY = cardRect.top + cardRect.height / 2;
-  const itemCenterX = rect.left + rect.width / 2;
-  const itemCenterY = rect.top + rect.height / 2;
-  const onLeft = itemCenterX < cardCenterX;
-  const from = onLeft
-    ? { x: cardRect.left + 8, y: cardCenterY }
-    : { x: cardRect.left + cardRect.width - 8, y: cardCenterY };
-  // For sidebar (left) targets, land the arrowhead just OUTSIDE the sidebar's
-  // right edge — the sidebar is lifted above the arrow layer, so a tip inside
-  // it would be hidden. +16 clears the nav padding + the item's glow ring.
-  const to = onLeft
-    ? { x: rect.right + 16, y: itemCenterY }
-    : { x: rect.left - 8, y: itemCenterY };
-  return { from, to };
+function Check() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+      className="mt-[3px] flex-none text-blue-600">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
 }
 
 export default function OverviewTour({ onClose }) {
-  const [index, setIndex] = useState(0);
-  const [cardRect, setCardRect] = useState(null);
-  const [targets, setTargets] = useState([]); // [{ to, x, y, rect }]
+  const narrow = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const [steps] = useState(() => resolveSteps(narrow));
+  const [i, setI] = useState(0);
+  const [geom, setGeom] = useState(null);
   const cardRef = useRef(null);
-  const cleanupRef = useRef(null);
+  const step = steps[Math.min(i, steps.length - 1)];
 
-  const total = STEPS.length;
-  const step = STEPS[index];
-  const isLast = index === total - 1;
-  const Icon = step.icon || Hexagon;
-
-  // Measure card anchor + every sidebar target rect.
-  const measure = useCallback(() => {
-    const card = cardRef.current?.getBoundingClientRect?.();
-    if (card) {
-      setCardRect({ left: card.left, top: card.top, width: card.width, height: card.height });
-    }
-    const next = [];
-    for (const s of STEPS) {
-      const el = document.querySelector(`[data-tour-id="${s.to}"]`);
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      // Anchor the arrow tip just right of the nav item.
-      next.push({
-        to: s.to,
-        x: r.right + 6,
-        y: r.top + r.height / 2,
-        rect: { left: r.left, top: r.top, width: r.width, height: r.height },
-      });
-    }
-    setTargets(next);
-  }, []);
-
-  // Re-measure on mount, resize, and whenever the step changes (after the
-  // active item is scrolled into view).
-  useLayoutEffect(() => {
-    const el = document.querySelector(`[data-tour-id="${step.to}"]`);
-    if (el?.scrollIntoView) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-    // Let smooth-scroll settle before measuring.
-    const raf1 = window.requestAnimationFrame(() => {
-      const raf2 = window.requestAnimationFrame(measure);
-      cleanupRef.current = raf2;
-    });
-    const t = window.setTimeout(measure, 320);
-    return () => {
-      window.cancelAnimationFrame(raf1);
-      if (cleanupRef.current) window.cancelAnimationFrame(cleanupRef.current);
-      window.clearTimeout(t);
-    };
-  }, [index, measure, step.to]);
-
-  useEffect(() => {
-    const onResize = () => measure();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [measure]);
-
-  const goNext = useCallback(() => {
-    if (isLast) {
-      onClose?.();
-      return;
-    }
-    setIndex((i) => Math.min(i + 1, total - 1));
-  }, [isLast, onClose, total]);
-
-  const goPrev = useCallback(() => setIndex((i) => Math.max(i - 1, 0)), []);
+  const go = useCallback((n) => {
+    if (n < 0) return;
+    if (n >= steps.length) { onClose?.(); return; }
+    setI(n);
+  }, [steps.length, onClose]);
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'Enter') goNext();
-      else if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape') onClose?.();
+      else if (e.key === 'ArrowRight') go(i + 1);
+      else if (e.key === 'ArrowLeft') go(i - 1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [goNext, goPrev, onClose]);
+  }, [i, go, onClose]);
 
-  // Lift the WHOLE sidebar above the dim backdrop so the entire nav stays
-  // crisp and fully readable during the tour (z > tour). Mount/unmount only.
+  // Lift the active nav item(s) above the scrim and ring them in ink.
   useEffect(() => {
-    const sb = document.querySelector('[data-tour-sidebar]');
-    if (!sb) return undefined;
-    const savedZ = sb.style.zIndex;
-    sb.style.zIndex = '132';
-    return () => { sb.style.zIndex = savedZ; };
-  }, []);
+    if (narrow) return undefined;
+    const els = step.targets.map(findEl).filter(Boolean);
+    els.forEach((el) => {
+      el.style.position = 'relative';
+      el.style.zIndex = '10000';
+      el.style.boxShadow = '0 0 0 1.5px var(--hm-tour-ink, #16171a)';
+      el.style.borderRadius = '8px';
+      el.style.background = 'var(--hm-tour-panel, #ffffff)';
+    });
+    return () => els.forEach((el) => {
+      el.style.zIndex = '';
+      el.style.boxShadow = '';
+      el.style.background = '';
+    });
+  }, [step, narrow]);
 
-  // Spotlight: give the active nav item a glowing ring so it's unmistakable.
-  // It already sits above the dim (the whole sidebar is lifted). Styles are
-  // saved and restored on step change.
-  useEffect(() => {
-    const el = document.querySelector(`[data-tour-id="${step.to}"]`);
-    if (!el) return undefined;
-    const saved = {
-      boxShadow: el.style.boxShadow,
-      borderRadius: el.style.borderRadius,
-      transition: el.style.transition,
-      background: el.style.background,
+  // Measure AFTER the card has its real height, so the arrow starts at its centre.
+  useLayoutEffect(() => {
+    if (narrow) { setGeom(null); return undefined; }
+    const measure = () => {
+      const els = step.targets.map(findEl).filter(Boolean);
+      if (!els.length || !cardRef.current) { setGeom(null); return; }
+      const rs = els.map((el) => el.getBoundingClientRect());
+      const top = Math.min(...rs.map((r) => r.top));
+      const bottom = Math.max(...rs.map((r) => r.bottom));
+      // The card is ANCHORED DEAD CENTRE and does not move between steps. It
+      // used to track the target vertically, which made the whole panel jump on
+      // every Next — the arrow is what should move, not the thing you are reading.
+      const cardH = cardRef.current.offsetHeight;
+      setGeom({
+        rs, top, bottom, cardH,
+        cardTop: Math.round((window.innerHeight - cardH) / 2),
+        cardLeft: Math.round((window.innerWidth - CARD_W) / 2),
+      });
     };
-    el.style.borderRadius = '8px';
-    el.style.transition = 'box-shadow 0.25s ease, background 0.25s ease';
-    el.style.background = 'rgba(17,125,255,0.10)';
-    el.style.boxShadow =
-      '0 0 0 2px #117dff, 0 0 0 5px rgba(17,125,255,0.25), 0 0 24px rgba(17,125,255,0.55)';
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
     return () => {
-      el.style.boxShadow = saved.boxShadow;
-      el.style.borderRadius = saved.borderRadius;
-      el.style.transition = saved.transition;
-      el.style.background = saved.background;
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
     };
-  }, [step.to]);
+  }, [step, narrow]);
 
-  const activeTarget = targets.find((t) => t.to === step.to) || null;
+  const cardStyle = (narrow || !geom)
+    ? { left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }
+    : { left: geom.cardLeft, top: geom.cardTop };
+
+  const paths = [];
+  let head = null;
+  if (geom && !narrow) {
+    const fromX = geom.cardLeft;
+    const fromY = geom.cardTop + geom.cardH / 2;
+    if (step.brace && geom.rs.length > 1) {
+      const x = Math.max(...geom.rs.map((r) => r.right)) + 10;
+      const y1 = geom.top + 3;
+      const y2 = geom.bottom - 3;
+      paths.push(`M ${x - 6} ${y1} H ${x} V ${y2} H ${x - 6}`);
+      geom.rs.forEach((r) => paths.push(`M ${r.right + 2} ${r.top + r.height / 2} H ${x}`));
+      const toY = (y1 + y2) / 2;
+      paths.push(`M ${fromX} ${fromY} H ${(fromX + x) / 2} V ${toY} H ${x + 4}`);
+      head = { x: x + 4, y: toY };
+    } else {
+      const r = geom.rs[0];
+      const toX = r.right + 9;
+      const toY = r.top + r.height / 2;
+      paths.push(`M ${fromX} ${fromY} H ${(fromX + toX) / 2} V ${toY} H ${toX}`);
+      head = { x: toX, y: toY };
+    }
+  }
+
+  if (!step) return null;
 
   return (
-    <div className="fixed inset-0 z-[130]">
-      {/* Dim + blur backdrop. The active sidebar item is lifted above this
-          (z 131) so it stays crisp and glowing — see the elevation effect. */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0"
-        style={{
-          background: 'rgba(20,18,15,0.34)',
-          backdropFilter: 'blur(4px) saturate(115%)',
-          WebkitBackdropFilter: 'blur(4px) saturate(115%)',
-        }}
-      />
+    <div className="fixed inset-0 z-[9998]" role="presentation">
+      <style>{`
+        :root { --hm-tour-ink:#16171a; --hm-tour-panel:#ffffff; }
+        @media (prefers-color-scheme: dark) {
+          :root { --hm-tour-ink:#eceef0; --hm-tour-panel:#17191a; }
+        }
+        @keyframes hmTourDraw { to { stroke-dashoffset: 0; } }
+        .hm-tour-line { stroke-dasharray: 1600; stroke-dashoffset: 1600;
+          animation: hmTourDraw .55s ease forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .hm-tour-line { animation: none; stroke-dashoffset: 0; }
+        }
+      `}</style>
 
-      {/* SVG connector overlay */}
-      {cardRect && (
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-          <defs>
-            <marker
-              id="ovt-arrow"
-              viewBox="0 0 10 10"
-              refX="8"
-              refY="5"
-              markerWidth="7"
-              markerHeight="7"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#117dff" />
-            </marker>
-          </defs>
+      <div className="absolute inset-0 bg-[#121412]/40" onClick={onClose} aria-hidden="true" />
 
-          {/* Faint connectors to every target (subtle blue guide lines) */}
-          {targets.map((t) => {
-            const { from, to } = geomFor(cardRect, t.rect);
-            return (
-              <path
-                key={t.to}
-                d={elbowPath(from, to)}
-                fill="none"
-                stroke="rgba(17,125,255,0.18)"
-                strokeWidth="1.25"
-                strokeDasharray="3 5"
-              />
-            );
-          })}
-
-          {/* Active connector — white halo underlay (pops on the dimmed light
-              content) + crisp blue line + blue arrowhead. Fades in. */}
-          {activeTarget && (() => {
-            const { from, to } = geomFor(cardRect, activeTarget.rect);
-            const d = elbowPath(from, to);
-            return (
-              <motion.g
-                key={`active-${step.to}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <path d={d} fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-                <path d={d} fill="none" stroke="#117dff" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" markerEnd="url(#ovt-arrow)" />
-              </motion.g>
-            );
-          })()}
+      {paths.length > 0 && (
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-[9999]" aria-hidden="true">
+          {paths.map((d, k) => (
+            <path key={d} d={d} fill="none" stroke="var(--hm-tour-ink)" strokeWidth="1.5"
+              strokeLinecap="round"
+              className={k === paths.length - 1 ? 'hm-tour-line' : undefined}
+              opacity={k === paths.length - 1 ? 1 : 0.85} />
+          ))}
+          {head && (
+            <polygon
+              points={`${head.x},${head.y} ${head.x + 7.5},${head.y - 4} ${head.x + 7.5},${head.y + 4}`}
+              fill="var(--hm-tour-ink)" />
+          )}
         </svg>
       )}
 
-      {/* Centered explainer card */}
-      <div className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none">
+      <AnimatePresence mode="wait">
         <motion.div
+          key={step.eyebrow}
           ref={cardRef}
-          initial={{ opacity: 0, y: 18, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-          className="relative pointer-events-auto w-full max-w-[400px]"
+          role="dialog"
+          aria-modal="true"
+          aria-label={step.title}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.26, ease: [0.2, 0.7, 0.3, 1] }}
+          className="absolute z-[10001] rounded-2xl border border-black/10 px-6 pt-5 pb-4"
+          style={{
+            ...cardStyle,
+            width: CARD_W,
+            background: 'rgba(255,255,255,0.87)',
+            boxShadow: '0 1px 2px rgba(10,10,11,0.04), 0 18px 44px rgba(10,10,11,0.14)',
+            backdropFilter: 'blur(26px) saturate(1.6)',
+            WebkitBackdropFilter: 'blur(26px) saturate(1.6)',
+          }}
         >
-          <div
-            className="rounded-[24px] border border-white/40 p-5"
-            style={{
-              background: 'rgba(255,255,255,0.86)',
-              backdropFilter: 'blur(18px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-              boxShadow:
-                '0 24px 70px -20px rgba(17,125,255,0.35), 0 8px 30px rgba(0,0,0,0.14)',
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#117dff]/10 border border-[#117dff]/20 flex items-center justify-center">
-                  <Hexagon size={16} className="text-[#117dff]" />
-                </div>
-                <span className="text-[#0a0a0a] text-sm font-bold font-['Space_Grotesk'] tracking-tight">
-                  HIVEMIND tour
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Skip tour"
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[#a3a3a3] hover:text-[#525252] hover:bg-black/5 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
+          <p className="flex items-center gap-2 mb-3 font-mono text-[11px] tracking-[0.18em] text-blue-600">
+            <span className="opacity-50">{'\u27E9'}</span>
+            <span>{step.eyebrow}</span>
+            <span className="text-neutral-400 tracking-[0.14em]">· {String(i + 1).padStart(2, '0')}</span>
+          </p>
 
-            {/* Body */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.26 }}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
-                    style={{
-                      background:
-                        'radial-gradient(120% 120% at 30% 20%, #7db4ff 0%, #117dff 60%, #0b3b86 120%)',
-                      boxShadow: '0 6px 18px rgba(17,125,255,0.35)',
-                    }}
-                  >
-                    <Icon size={22} className="text-white" strokeWidth={1.7} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a3a3a3]">
-                      {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-                    </div>
-                    <h2 className="text-[#0a0a0a] text-[20px] leading-tight font-bold font-['Space_Grotesk']">
-                      {step.title}
-                    </h2>
-                  </div>
-                </div>
-                <p className="text-[#525252] text-sm leading-relaxed min-h-[60px]">
-                  {step.desc}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+          <h3 className="text-[26px] leading-[1.08] font-extrabold tracking-[-0.035em] text-neutral-900 mb-2.5">
+            {step.title}
+          </h3>
+          <p className="text-[13px] leading-[1.62] text-neutral-600 m-0">{step.body}</p>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5">
-              <div className="flex items-center gap-1">
-                {STEPS.map((s, i) => (
-                  <button
-                    key={s.to}
-                    type="button"
-                    onClick={() => setIndex(i)}
-                    aria-label={`Go to ${s.title}`}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === index ? 'w-5 bg-[#117dff]' : 'w-1.5 bg-[#d4d0ca] hover:bg-[#a3a3a3]'
-                    }`}
-                  />
-                ))}
-              </div>
+          {step.checks && step.checks.length > 0 && (
+            <ul className="list-none mt-3.5 mb-0 p-0 flex flex-col gap-[7px]">
+              {step.checks.map((c) => (
+                <li key={c} className="flex gap-2.5 text-[12.5px] leading-[1.45] text-neutral-800">
+                  <Check />
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
-              <div className="flex items-center gap-2">
-                {index > 0 && (
-                  <button
-                    type="button"
-                    onClick={goPrev}
-                    className="h-9 px-3 rounded-full border border-[#e3e0db] text-[#525252] text-sm hover:bg-black/5 transition-colors font-['Space_Grotesk']"
-                  >
-                    Back
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={goNext}
-                  className="h-9 pl-4 pr-3 rounded-full bg-[#117dff] text-white text-sm font-medium font-['Space_Grotesk'] hover:bg-[#0066e0] active:scale-95 transition-all shadow-[0_4px_16px_rgba(17,125,255,0.3)] flex items-center gap-1.5"
-                >
-                  {isLast ? 'Done' : 'Next'}
-                  <ArrowUpRight size={16} />
-                </button>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 mt-[19px] pt-3.5 border-t border-black/10">
+            <button type="button" onClick={() => go(i + 1)}
+              className="rounded-[9px] px-4 py-2 text-[12.5px] font-semibold tracking-[-0.01em] bg-neutral-900 text-white hover:opacity-90">
+              {i === steps.length - 1 ? 'Finish' : 'Next'}
+            </button>
+            <button type="button" onClick={() => go(i - 1)} disabled={i === 0}
+              className="rounded-[9px] px-3 py-2 text-[12.5px] border border-black/10 text-neutral-600 disabled:opacity-30">
+              Back
+            </button>
+            <span className="ml-auto font-mono text-[11px] tracking-[0.1em] text-neutral-400 tabular-nums">
+              {String(i + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+            </span>
+            <button type="button" onClick={onClose}
+              className="text-[12px] text-neutral-400 underline underline-offset-2 p-1">
+              Skip
+            </button>
           </div>
         </motion.div>
-      </div>
+      </AnimatePresence>
     </div>
   );
 }
