@@ -252,3 +252,6 @@ html.cinematic-mode::after { bottom: 0; }
 @media (prefers-reduced-motion: reduce) {
   .hm-agent-ring { animation: none; opacity: 0.6; }
 }
+
+/* Governed external actions must remain actionable above first-run tours. */
+[aria-label="Choose email send policy"] { z-index: 10020 !important; }
