@@ -1544,6 +1544,47 @@ class HiveMindApiClient {
   // poll status to completion. Transparent to callers — same return shape
   // ({ documentId, segmentCount, promotedCount }). Pass options.onStatus to
   // surface live stage/progress, options.signal to cancel.
+  /**
+   * sha256 of a File, in the browser. Used to ask the server "do you already have
+   * this?" BEFORE spending the upload.
+   *
+   * crypto.subtle needs a secure context; on http:// it is undefined. Returns null
+   * there so callers skip the pre-check and upload normally rather than breaking.
+   */
+  async fileChecksum(file) {
+    try {
+      if (!window.crypto?.subtle?.digest) return null;
+      const buf = await file.arrayBuffer();
+      const hash = await window.crypto.subtle.digest('SHA-256', buf);
+      return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Ask whether a checksum is already ingested, before uploading the bytes.
+   *
+   * Without this the client had to transfer an entire file to learn it was a
+   * duplicate — a full 8.3 MB transfer to be told "already have it", and across a
+   * 27-file batch, most of the elapsed time. Sends only the hash.
+   *
+   * Returns { duplicate, in_progress, stage, existing_document_id, existing_title,
+   * promoted_count }. Fails OPEN: any error resolves to duplicate:false so a
+   * pre-check problem can never block a real upload.
+   */
+  async precheckUpload(checksum, { scopeKey = null } = {}) {
+    if (!checksum) return { duplicate: false, in_progress: false };
+    try {
+      const { data } = await this.core.post('/api/knowledge/upload/precheck', {
+        checksum, ...(scopeKey ? { scope_key: scopeKey } : {}),
+      });
+      return data || { duplicate: false, in_progress: false };
+    } catch {
+      return { duplicate: false, in_progress: false };
+    }
+  }
+
   async uploadDocument(file, options = {}) {
     const formData = new FormData();
     formData.append('file', file);
