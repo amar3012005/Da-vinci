@@ -673,6 +673,7 @@ function ConnectorCard({ connector, config, onConnect, onDisconnect, onResync, o
 
   return (
     <motion.div
+      id={`connector-${connector.id}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={`group relative rounded-xl border transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${
@@ -3547,6 +3548,7 @@ export default function Connectors() {
     refetch: refetchClaudeWeb,
   } = useApiQuery(() => apiClient.claudeWebStatus().catch(() => null), []);
   const [claudeDisconnectOpen, setClaudeDisconnectOpen] = useState(false);
+  const [deepLinkConnectStarted, setDeepLinkConnectStarted] = useState(false);
 
   const endpoints = useMemo(() => connectorStatus?.statuses || [], [connectorStatus]);
   // eslint-disable-next-line no-unused-vars
@@ -4039,6 +4041,44 @@ export default function Connectors() {
     }
     return c;
   });
+
+  // HQ capability requests deep-link here with the exact provider. Native
+  // Google OAuth can safely begin on page load; popup-based providers remain
+  // focused and highlighted so the user can start them with one click.
+  useEffect(() => {
+    const requestedProvider = searchParams.get('connect');
+    if (!requestedProvider || deepLinkConnectStarted) return;
+
+    const connector = mergedConnectors.find((item) =>
+      [item.id, item.oauthProvider, item.nangoProvider].includes(requestedProvider)
+    );
+    if (!connector) return;
+
+    setDeepLinkConnectStarted(true);
+    setActiveCategory(connector.category || null);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`connector-${connector.id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+
+    const isNativeGoogle = connector.oauthProvider
+      && connector.oauthProvider !== 'google-gemini'
+      && (connector.oauthProvider === 'gmail' || connector.oauthProvider.startsWith('google-'));
+    if (isNativeGoogle) {
+      handleOAuthConnect(connector.oauthProvider, {
+        services: connector.googleService,
+        isMaster: connector.isMaster,
+      });
+      return;
+    }
+
+    setToastMessage({
+      type: 'success',
+      text: `${connector.name} is required by HQ. Select Connect to continue.`,
+    });
+  }, [deepLinkConnectStarted, handleOAuthConnect, mergedConnectors, searchParams]);
 
   // Sort order:
   //   1. Connection state (connected first, then available, then coming_soon, then disabled/missing config last)

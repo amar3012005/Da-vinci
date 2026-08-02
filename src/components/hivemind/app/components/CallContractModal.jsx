@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Target, Mic2, Globe } from 'lucide-react';
+import { Phone, PhoneOff, Target, Mic2, Globe, X, ShieldCheck } from 'lucide-react';
 import apiClient from '../shared/api-client';
 
 /**
@@ -19,14 +19,21 @@ import apiClient from '../shared/api-client';
 export const CALL_CONTRACT_EVENT = 'hm:call-contract';
 
 export default function CallContractModal() {
-  const [state, setState] = useState(null); // null | { campaignId, contract }
+  const [state, setState] = useState(null); // null | { campaignId, contract, preference }
   const [busy, setBusy] = useState(null);    // null | 'approve' | 'reject'
   const [err, setErr] = useState('');
 
   useEffect(() => {
     const onEvent = (e) => {
       const d = e.detail || {};
-      if (d.contract) { setState({ campaignId: d.campaign_id || d.campaignId, contract: d.contract }); setErr(''); }
+      if (d.contract) {
+        setState({
+          campaignId: d.campaign_id || d.campaignId,
+          contract: d.contract,
+          preference: ['manual', 'auto'].includes(d.authority_preference) ? d.authority_preference : 'unconfigured',
+        });
+        setErr('');
+      }
     };
     window.addEventListener(CALL_CONTRACT_EVENT, onEvent);
     return () => window.removeEventListener(CALL_CONTRACT_EVENT, onEvent);
@@ -34,10 +41,10 @@ export default function CallContractModal() {
 
   const close = () => { setState(null); setBusy(null); setErr(''); };
 
-  const approve = async () => {
+  const approve = async (preference = state?.preference === 'auto' ? 'auto' : 'manual') => {
     if (!state?.campaignId) return close();
     setBusy('approve'); setErr('');
-    try { await apiClient.startOutreachCampaign(state.campaignId); close(); }
+    try { await apiClient.startOutreachCampaign(state.campaignId, preference); close(); }
     catch (e) { setErr(e?.response?.data?.error || e.message || 'Could not start the call'); setBusy(null); }
   };
   const reject = async () => {
@@ -63,14 +70,21 @@ export default function CallContractModal() {
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="TARA outbound call permission"
           onClick={close}
         >
           <motion.div
             initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="bg-white rounded-2xl border border-[#e3e0db] shadow-2xl p-6 max-w-md w-full mx-4"
+            className="relative bg-[#fbfaf7] rounded-lg border border-[#d8d3cc] shadow-2xl p-6 max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
+            <button type="button" onClick={close} aria-label="Close call permission" title="Close"
+              className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] hover:bg-[#eeece7] hover:text-[#171717]">
+              <X size={16} />
+            </button>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-11 h-11 rounded-xl bg-[#117dff]/10 flex items-center justify-center">
                 <Phone size={20} className="text-[#117dff]" />
@@ -95,18 +109,31 @@ export default function CallContractModal() {
 
             {err ? <p className="text-[#b45309] text-[12px] font-['Space_Grotesk'] mb-3">{err}</p> : null}
 
+            {state.preference === 'unconfigured' ? (
+              <div className="mb-4 border-y border-[#e3e0db] py-3">
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-[#262626]"><ShieldCheck size={14} /> Choose how TARA may place outbound calls</div>
+                <p className="mt-1 text-[11px] leading-4 text-[#777168]">This organization setting remains visible in Runtime and can be changed at any time.</p>
+              </div>
+            ) : null}
+
             <div className="flex gap-3">
-              <button
+              {state.preference !== 'unconfigured' ? <button
                 type="button" onClick={reject} disabled={busy === 'approve'}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#e3e0db] text-[#525252] text-[13px] font-semibold font-['Space_Grotesk'] hover:bg-[#f5f4ef] transition-colors disabled:opacity-50"
               >
                 <PhoneOff size={15} /> {busy === 'reject' ? 'Cancelling…' : 'Not now'}
-              </button>
+              </button> : null}
+              {state.preference === 'unconfigured' ? <button
+                type="button" onClick={() => approve('manual')} disabled={Boolean(busy)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-md border border-[#171717] bg-white text-[#171717] text-[12px] font-semibold font-['Space_Grotesk'] disabled:opacity-50"
+              >
+                <ShieldCheck size={14} /> {busy === 'approve' ? 'Saving...' : 'Manual & call'}
+              </button> : null}
               <button
-                type="button" onClick={approve} disabled={busy === 'approve'}
+                type="button" onClick={() => approve(state.preference === 'unconfigured' ? 'auto' : state.preference)} disabled={Boolean(busy)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#117dff] hover:bg-[#0066e0] text-white text-[13px] font-semibold font-['Space_Grotesk'] transition-colors disabled:opacity-50"
               >
-                <Phone size={15} /> {busy === 'approve' ? 'Connecting…' : 'Approve & call'}
+                <Phone size={15} /> {busy === 'approve' ? 'Connecting…' : state.preference === 'unconfigured' ? 'Auto & call' : 'Approve & call'}
               </button>
             </div>
           </motion.div>

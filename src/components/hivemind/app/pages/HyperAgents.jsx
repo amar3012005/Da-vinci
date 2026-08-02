@@ -1689,7 +1689,11 @@ function RoomThread({ roomId, onArchived }) {
         if ((e.type === 'call_contract' || data.t === 'call_contract') && data.contract) {
           try {
             window.dispatchEvent(new CustomEvent('hm:call-contract', {
-              detail: { campaign_id: data.campaign_id, contract: data.contract },
+              detail: {
+                campaign_id: data.campaign_id,
+                contract: data.contract,
+                authority_preference: data.authority_preference,
+              },
             }));
           } catch { /* ignore */ }
           return;
