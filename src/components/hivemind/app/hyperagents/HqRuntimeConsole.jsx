@@ -263,10 +263,10 @@ function GrowthBrief({ brief }) {
   </section>;
 }
 
-export function AgentRuntimeTasksPanel({ queue, firstLife, onDecision }) {
+export function AgentRuntimeTasksPanel({ queue, firstLife, onDecision, onClose }) {
   const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
   return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Agent Runtime tasks">
-    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Agent Runtime tasks</span><span className="font-mono text-[9px] text-white/65">{active.length} active</span></header>
+    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Agent Runtime tasks</span><span className="font-mono text-[9px] text-white/65">{active.length} active</span>{onClose ? <button type="button" onClick={onClose} aria-label="Close Agent Runtime tasks" title="Close" className="grid h-7 w-7 place-items-center text-white/70 hover:bg-white/10 hover:text-white lg:hidden"><X size={14} /></button> : null}</header>
     <div className="max-h-[min(46vh,430px)] overflow-y-auto p-2">
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
@@ -409,7 +409,7 @@ function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null }) {
+function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, tasksOpen = false, onCloseTasks }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -435,7 +435,8 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growth
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
         </div> : null}
       </main>
-      <aside className="sticky top-[78px] z-10 w-full" aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} onDecision={onFirstLifeDecision} /></aside>
+      {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Agent Runtime tasks" onClick={onCloseTasks} /> : null}
+      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
     </div>
   </div>;
 }
@@ -468,6 +469,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [instructionNotice, setInstructionNotice] = useState('');
   const [approvalBusy, setApprovalBusy] = useState('');
   const [dismissedWorkflowApprovalId, setDismissedWorkflowApprovalId] = useState(null);
+  const [tasksOpen, setTasksOpen] = useState(false);
   const [dismissedCapabilityRequestId, setDismissedCapabilityRequestId] = useState(null);
   const [liveSequence, setLiveSequence] = useState(null);
   const [streamState, setStreamState] = useState('hydrating');
@@ -721,7 +723,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         <RuntimeMark state={runtime?.state} />
         <div className="relative flex min-w-0 shrink-0 items-center gap-1.5">
           <TokenMeter usage={usage} />
-          <RuntimeButton icon={ListTodo} label="Tasks" badge={queueActiveCount || undefined} onClick={() => document.getElementById('agent-runtime-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} title="Agent Runtime tasks" />
+          <RuntimeButton icon={ListTodo} label="Tasks" badge={queueActiveCount || undefined} onClick={() => { if (window.matchMedia('(max-width: 1023px)').matches) setTasksOpen(true); else document.getElementById('agent-runtime-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} title="Agent Runtime tasks" />
           <RuntimeButton icon={SlidersHorizontal} label="Instructions" trailing={ArrowUpRight} tone="solid" onClick={() => { setInstructionNotice(''); setInstructionsOpen(true); }} title="Standing operating instructions" />
           {!runtime
             ? <RuntimeButton icon={Power} label="Activate" tone="solid" onClick={() => run('activate')} disabled={!baselineReady || Boolean(busy)} spinning={busy === 'activate'} />
@@ -733,7 +735,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
     {playbookApproval && playbookApproval.run_id !== dismissedWorkflowApprovalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Choose ${approvalNoun} policy`}>
