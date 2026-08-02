@@ -735,6 +735,48 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
   );
 }
 
+
+// Server-side upload limits, verified live against core:
+//   60 MB  -> 413 {"error":"payload_too_large","max_bytes":52428800}
+//   0 B    -> 400 "The uploaded file is empty — nothing to ingest."
+//   1 B    -> 400 "...below the 32-byte minimum"
+// Those raw codes reached the user verbatim ("payload_too_large"), which is a
+// machine string, not something a person can act on. Map them to what the user
+// should DO. Everything else falls through to the server's own message, which is
+// already written for humans on the validation paths.
+export const KB_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const KB_MIN_UPLOAD_BYTES = 32;
+
+function friendlyUploadError(err) {
+  const st = err?.response?.status;
+  const data = err?.response?.data || {};
+  const raw = String(data.error || data.message || err?.message || '');
+  if (st === 413 || raw.includes('payload_too_large')) {
+    const cap = Number(data.max_bytes) || KB_MAX_UPLOAD_BYTES;
+    return `Too large — the limit is ${Math.round(cap / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  if (st === 400 && /empty/i.test(raw)) return 'This file is empty — there is nothing to ingest.';
+  if (st === 400 && /minimum|too small/i.test(raw)) return 'This file is too small to contain readable content.';
+  if (st === 415 || /unsupported|mime/i.test(raw)) {
+    return 'Unsupported file type. Use PDF, Word, Excel, PowerPoint, CSV, Markdown, text or an image.';
+  }
+  if (st === 401 || st === 403) return 'You are not signed in, or lack access to this workspace.';
+  return raw || 'Upload failed.';
+}
+
+// Pre-flight so an oversized file is refused instantly instead of after a full
+// upload that ends in 413 — on a 60 MB file that is minutes of the user's time
+// spent to be told no.
+function preflightRejectReason(file) {
+  const size = Number(file?.size ?? 0);
+  if (size === 0) return 'This file is empty — there is nothing to ingest.';
+  if (size < KB_MIN_UPLOAD_BYTES) return 'This file is too small to contain readable content.';
+  if (size > KB_MAX_UPLOAD_BYTES) {
+    return `Too large — the limit is ${Math.round(KB_MAX_UPLOAD_BYTES / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  return null;
+}
+
 export default function KnowledgeBase() {
   const { t } = useTranslation('dashboard');
   const { org, user } = useAuth();
@@ -1111,12 +1153,19 @@ export default function KnowledgeBase() {
         }]);
         return;
       }
-      if (file.size > 100 * 1024 * 1024) {
+      // This gate said 100 MB while the server rejects at 50 MB — verified live:
+      // a 60 MB upload returns 413 {"error":"payload_too_large","max_bytes":52428800}.
+      // So anything between 50 and 100 MB uploaded in FULL, over the wire, before
+      // being refused — minutes of the user's time spent to be told no, and the
+      // raw string "payload_too_large" was what they saw. Now the client gate
+      // matches the server contract and also catches empty/undersized files.
+      const rejectReason = preflightRejectReason(file);
+      if (rejectReason) {
         setUploads((prev) => [...prev, {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
-          error: 'File too large (max 100MB)',
+          error: rejectReason,
         }]);
         return;
       }
@@ -1189,6 +1238,44 @@ export default function KnowledgeBase() {
       try {
         const fileExt = (file.name.split('.').pop() || '').toLowerCase();
         const isImage = IMAGE_EXTS.has(fileExt) || /^image\//.test(file.type || '');
+
+        // ── PRE-CHECK: never spend an upload to learn it is a duplicate ────────
+        // Previously the whole file went over the wire and the server answered 409
+        // — a full 8.3 MB transfer to be told "already have it", and across a
+        // 27-file batch, most of the elapsed time. Hash locally, ask first.
+        // Skipped when force=true (the user explicitly chose "upload anyway") and
+        // silently skipped on http:// where crypto.subtle is unavailable.
+        if (!force) {
+          setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id
+            ? { ...u, stage: 'checking', message: 'Checking if already uploaded…' } : u)));
+          const checksum = await apiClient.fileChecksum(file);
+          if (checksum) {
+            const pre = await apiClient.precheckUpload(checksum);
+            if (pre?.duplicate) {
+              setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id ? {
+                ...u,
+                status: 'duplicate',
+                _completedAt: Date.now(),
+                progress: 100,
+                stage: 'existing',
+                error: pre.message || 'Already in your knowledge base.',
+                existingTitle: pre.existing_title || null,
+                // Same affordance as a server-side 409: let them force a re-ingest.
+                _retryForce: () => uploadOne({ uploadEntry, file }, { force: true }),
+              } : u)));
+              return; // bytes never sent
+            }
+            if (pre?.in_progress) {
+              setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id ? {
+                ...u, status: 'duplicate', _completedAt: Date.now(), progress: 100,
+                stage: pre.stage || 'processing',
+                error: pre.message || 'This file is already being processed.',
+              } : u)));
+              return;
+            }
+          }
+        }
+
         const uploadFn = isImage ? apiClient.uploadImage.bind(apiClient) : apiClient.uploadDocument.bind(apiClient);
         const uploadOpts = isImage
           ? {
@@ -1204,6 +1291,40 @@ export default function KnowledgeBase() {
             };
         const result = await uploadFn(file, {
           ...uploadOpts,
+          // ── REAL SERVER STAGES ─────────────────────────────────────────────
+          // uploadDocument already polls /api/knowledge/status to completion and
+          // exposes onStatus — this page simply never passed it, so the UI showed
+          // an elapsed-seconds counter and called everything "processing" while
+          // the server knew exactly which phase it was in (parsing → embedded →
+          // promoting → ready, tracked per job in knowledge_ingest_jobs).
+          //
+          // Showing the true phase is what makes a 2-minute ingest trustworthy
+          // instead of looking hung: "indexing (12 segments)" reads as progress,
+          // "processing 131s" reads as broken.
+          onStatus: ({ status, progress, stage, segments, promoted } = {}) => {
+            const LABEL = {
+              queued: 'Queued — waiting for a worker',
+              parsing: 'Reading the document (layout + tables)',
+              parsed: 'Document read',
+              segmenting: 'Splitting into sections',
+              segmented: 'Sections created',
+              embedding: 'Building the search index',
+              embedded: 'Search index built',
+              promoting: 'Extracting memories',
+              promoted: 'Memories extracted',
+              ready: 'Done',
+              indexed: 'Done',
+              failed: 'Failed',
+            };
+            setUploads((prev) => prev.map((u) => (u.id === uploadEntry.id ? {
+              ...u,
+              stage: stage || status || u.stage,
+              stageLabel: LABEL[stage] || LABEL[status] || 'Processing',
+              serverProgress: typeof progress === 'number' ? progress : u.serverProgress,
+              segments: segments ?? u.segments,
+              promoted: promoted ?? u.promoted,
+            } : u)));
+          },
           onUploadProgress: (e) => {
             if (!e.total) return;
             const pct = Math.round((e.loaded / e.total) * 100);
@@ -1345,7 +1466,7 @@ export default function KnowledgeBase() {
                     ? (err.response?.data?.message || 'This file is already in this scope.')
                     : isPlanLimit
                       ? 'Upgrade for more pages'
-                      : (err.response?.data?.error || err.message),
+                      : friendlyUploadError(err),
                 // Duplicate → user gets an "Upload anyway" action. Stash the
                 // existing-doc info + a force re-ingest closure (same file/scope).
                 existingTitle: isDuplicate ? (err.response?.data?.existing_title || null) : undefined,
@@ -1872,10 +1993,26 @@ export default function KnowledgeBase() {
                       )}
                     </>
                   )}
-                  {u.status === 'uploading' && u.stage === 'processing' && (
+                  {u.status === 'uploading' && u.stage !== 'uploading' && (u.progress || 0) >= 100 && (
+                    /* Real server phase, not an elapsed-seconds guess. The stage
+                       comes from knowledge_ingest_jobs via onStatus, so a 2-minute
+                       ingest reads as progress ("Extracting memories") instead of
+                       looking hung ("Processing · 131s"). Falls back to the old
+                       counter only when the server has not reported a phase yet. */
                     <span className="text-[#117dff] font-semibold">
-                      Processing{u.processingSec ? ` · ${u.processingSec}s` : '…'}
+                      {u.stageLabel
+                        ? u.stageLabel
+                        : `Processing${u.processingSec ? ` · ${u.processingSec}s` : '…'}`}
+                      {u.segments != null && u.segments > 0 && (
+                        <span className="text-[#a3a3a3] font-normal"> · {u.segments} sections</span>
+                      )}
+                      {u.promoted != null && u.promoted > 0 && (
+                        <span className="text-[#16a34a] font-normal"> · {u.promoted} memories</span>
+                      )}
                     </span>
+                  )}
+                  {u.stage === 'checking' && (
+                    <span className="text-[#a3a3a3]">Checking if already uploaded…</span>
                   )}
                   {u.mode === 'document_first' && u.segmentCount != null && (
                     u.segmentCount > 0 || (u.promotedCount ?? 0) > 0 ? (

@@ -8,7 +8,8 @@ import { useAuth } from '../auth/AuthProvider';
  * CognitionSettings — Cognitive Layer org-level toggles.
  *
  * Renders inside WorkspaceAdmin (overview tab or its own tab).
- * Admin/owner-only — server enforces 403; we surface it as an error banner.
+ * Organization-admin-only — the server intentionally returns not-found for
+ * inaccessible tenants so this surface cannot be used to probe organization data.
  */
 export default function CognitionSettings() {
   const { t } = useTranslation('dashboard');
@@ -56,7 +57,7 @@ export default function CognitionSettings() {
       }
     } catch (err) {
       const status = err?.response?.status;
-      if (status === 403) {
+      if (status === 403 || status === 404) {
         setError(t('cognition.err403', 'Admin or owner role required to view cognitive layer settings.'));
       } else {
         setError(err?.response?.data?.error || err?.message || t('cognition.errLoad', 'Failed to load settings.'));
@@ -83,7 +84,7 @@ export default function CognitionSettings() {
     } catch (err) {
       setOrgEnabled(!next); // revert
       const status = err?.response?.status;
-      if (status === 403) {
+      if (status === 403 || status === 404) {
         setError(t('cognition.err403', 'Admin or owner role required to view cognitive layer settings.'));
       } else {
         setError(err?.response?.data?.error || err?.message || t('cognition.errSave', 'Failed to save setting.'));
@@ -107,7 +108,7 @@ export default function CognitionSettings() {
     } catch (err) {
       setPersonalEnabled(!next); // revert
       const status = err?.response?.status;
-      if (status === 403) {
+      if (status === 403 || status === 404) {
         setError(t('cognition.err403', 'Admin or owner role required to view cognitive layer settings.'));
       } else {
         setError(err?.response?.data?.error || err?.message || t('cognition.errSave', 'Failed to save setting.'));
@@ -163,7 +164,7 @@ export default function CognitionSettings() {
     } catch (err) {
       setProfileAutomaintain(!next); // revert
       const status = err?.response?.status;
-      if (status === 403) {
+      if (status === 403 || status === 404) {
         setError(t('cognition.err403', 'Admin or owner role required to view cognitive layer settings.'));
       } else {
         setError(err?.response?.data?.error || err?.message || t('cognition.errSave', 'Failed to save setting.'));
@@ -276,7 +277,8 @@ export default function CognitionSettings() {
     }
   }, [expandedRun, showToast, t]);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const roles = Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
+  const isAdmin = roles.some((role) => ['admin', 'owner', 'org_admin', 'org_owner'].includes(String(role).toLowerCase()));
   const lastRun = Array.isArray(runs) && runs.length ? runs[0] : null;
 
   return (

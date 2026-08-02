@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import RunwayUpgradePanel from '../components/RunwayUpgradePanel';
 import { useApiQuery } from '../shared/hooks';
 import apiClient from '../shared/api-client';
 
@@ -529,6 +530,9 @@ export default function Billing() {
           {checkoutNotice}
         </div>
       )}
+      {/* Runway upgrade — enterprise orgs configure + self-serve subscribe here
+          (shown after the 2-week onboarding; they can also re-configure anytime). */}
+      {org?.plan === 'enterprise' && <RunwayUpgradePanel />}
       {/* Current Plan Overview */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}

@@ -668,7 +668,17 @@ export default function TaraConfig() {
   const [providerSaving, setProviderSaving] = useState(false);
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
-  useEffect(() => { refreshCalls(); }, []);
+  // MERGE: both sides kept deliberately.
+  //  - main added 5s polling so a just-ended call's insight + leads land in the
+  //    dashboard without a manual Refresh (the insight is generated synchronously
+  //    at /calls/end, so a short poll surfaces it ASAP).
+  //  - reconcile/live-fe-meeting added the runtime-config fetch.
+  // Taking either alone would silently drop the other session's feature.
+  useEffect(() => {
+    refreshCalls();
+    const id = setInterval(refreshCalls, 5000);
+    return () => clearInterval(id);
+  }, []);
   useEffect(() => { apiClient.getTaraRuntimeConfig().then(setRuntimeConfig).catch(() => {}); }, []);
 
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
