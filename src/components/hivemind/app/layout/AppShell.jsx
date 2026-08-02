@@ -311,7 +311,7 @@ export default function AppShell() {
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview} />
+        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview || activeSection === 'hyperagents' || activeSection === 'tara'} />
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}

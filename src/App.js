@@ -7,6 +7,7 @@ import MobileHomepage from './components/mobile/MobileHomepage';
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
+const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/HivemindLogin'));
 
 // Research pages (three.js hero scenes → lazy)
 const ResearchIndex = React.lazy(() => import('./components/ResearchIndex'));
@@ -80,6 +81,12 @@ function App() {
               ? <React.Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}><HiveMindApp /></React.Suspense>
               : <HivemindExternalRedirect />)
           } />
+          {/* Public auth has its own small entry point. Do not load the dashboard
+              shell merely to show a sign-in form. */}
+          <Route
+            path="login"
+            element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><HivemindLogin /></React.Suspense>}
+          />
           {/* /hivemind/app, /hivemind/login, … — served locally on PRODUCT_HOST + hivemind subdomain. */}
           <Route
             path="*"

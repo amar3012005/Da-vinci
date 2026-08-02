@@ -290,7 +290,21 @@ class HiveMindApiClient {
   }
 
   async getHqWork() {
-    const { data } = await this.controlPlane.get('/v1/hq/work');
+    // HQ work is a live lifecycle projection. Browsers and intermediary caches
+    // must never reuse an earlier authority or activation-sprint snapshot.
+    const { data } = await this.controlPlane.get('/v1/hq/work', {
+      params: { _ts: Date.now() },
+    });
+    return data;
+  }
+
+  async getCurrentHqActivationSprint() {
+    const { data } = await this.controlPlane.get('/v1/hq/activation-sprints/current');
+    return data;
+  }
+
+  async reviewHqActivationSprint(sprintId, preference = 'manual') {
+    const { data } = await this.controlPlane.post(`/v1/hq/activation-sprints/${encodeURIComponent(sprintId)}/review`, { preference });
     return data;
   }
 
@@ -356,8 +370,9 @@ class HiveMindApiClient {
   }
 
   /** Approve a proposed call contract → Start the campaign (fires the first-contact dial). */
-  async startOutreachCampaign(campaignId) {
-    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/start`, {});
+  async startOutreachCampaign(campaignId, preference) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/start`,
+      preference ? { preference } : {});
     return data;
   }
 
@@ -681,8 +696,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async controlOutreachCampaign(campaignId, action /* 'start' | 'stop' */) {
-    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/${action}`);
+  async controlOutreachCampaign(campaignId, action /* 'start' | 'stop' */, payload = {}) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/${action}`, payload);
     return data;
   }
 
@@ -703,6 +718,13 @@ class HiveMindApiClient {
   async executeOutreachTarget(campaignId, targetId) {
     const { data } = await this.controlPlane.post(
       `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/execute`,
+    );
+    return data;
+  }
+
+  async reconcileOutreachTarget(campaignId, targetId) {
+    const { data } = await this.controlPlane.post(
+      `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/reconcile`,
     );
     return data;
   }

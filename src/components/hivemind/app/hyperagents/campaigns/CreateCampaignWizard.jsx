@@ -15,7 +15,10 @@ export const CAMPAIGN_TYPES = [
 
 const CAMPAIGN_CHANNELS = new Set(CAMPAIGN_CHANNEL_IDS);
 const PRIMARY_CHANNELS = new Set(['x_organic', 'gmail', 'tara', 'x_ads', 'google_ads', 'meta', 'linkedin']);
-const CONNECTABLE_CHANNELS = new Set(['x_organic', 'gmail', 'tara']);
+const CONNECTABLE_CHANNELS = new Set([
+  'x_organic', 'linkedin', 'instagram', 'facebook', 'tiktok', 'youtube', 'pinterest', 'reddit', 'threads', 'bluesky', 'google_business',
+  'x_ads', 'google_ads', 'meta', 'linkedin_ads', 'tiktok_ads', 'pinterest_ads', 'gmail', 'tara',
+]);
 export const CAMPAIGN_HORIZONS = [
   { days: 7, label: 'Quick test', note: '7 days' },
   { days: 14, label: 'Focused campaign', note: '2 weeks' },

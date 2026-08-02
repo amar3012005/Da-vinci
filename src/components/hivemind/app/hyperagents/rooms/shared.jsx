@@ -1448,7 +1448,7 @@ export function ProspectStack({ ev }) {
 // events into a collapsible vertical trail ("Used N tools" → step rows → Done) so the
 // user sees exactly what fired after their message (recall, connector reads, web search).
 // Pure render over events that already stream in — no new data, calm HIVEMIND-light theme.
-export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sealed }) {
+export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, actionIntents, connectionRequests, sealed }) {
   const { t } = useTranslation('dashboard');
   const [open, setOpen] = useState(true);
 
@@ -1495,6 +1495,18 @@ export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sea
       chip: (p.count != null) ? t('hyperAgents.tlFirms', '{{n}} firms', { n: p.count }) : null,
     });
   });
+  const missingCapabilities = new Set((connectionRequests || []).map(request => request.capability).filter(Boolean));
+  (actionIntents || []).forEach((action, i) => {
+    if (!action.capability) return;
+    steps.push({
+      key: `action-${i}`, ts: action.ts || Number.MAX_SAFE_INTEGER, kind: 'action',
+      connector: action.connector, label: action.operation || action.capability,
+      mono: action.capability,
+      chip: missingCapabilities.has(action.capability)
+        ? t('hyperAgents.tlConnectionRequired', 'Connection required')
+        : t('hyperAgents.tlAfterOutput', 'Runs after final output'),
+    });
+  });
   steps.sort((a, b) => (a.ts || 0) - (b.ts || 0));
   if (!steps.length) return null;
 
@@ -1509,35 +1521,62 @@ export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sea
     return <Zap size={12} className="text-[#117dff]" />;
   };
 
+  const presentationFor = (s) => {
+    if (s.kind === 'recall') {
+      return { operation: s.label, result: s.chip || t('hyperAgents.tlMemoryReady', 'Company context ready') };
+    }
+    if (s.kind === 'skill') {
+      return { operation: s.label, result: s.chip || t('hyperAgents.tlMethodReady', 'Method loaded') };
+    }
+    if (s.kind === 'web') {
+      return { operation: s.label, result: s.detail ? `“${s.detail}”` : t('hyperAgents.tlSourcesReady', 'Sources collected') };
+    }
+    if (s.kind === 'places') {
+      const detail = s.detail ? `“${s.detail}”` : '';
+      return { operation: s.label, result: [s.chip, detail].filter(Boolean).join(' · ') };
+    }
+    if (s.kind === 'action') {
+      return { operation: s.mono || s.label, result: s.chip || s.label };
+    }
+    return {
+      operation: s.mono || s.label,
+      result: [s.mono ? s.label : null, s.detail ? `“${s.detail}”` : null].filter(Boolean).join(' · '),
+    };
+  };
+
   return (
-    <div className="rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-3 py-2">
-      <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 w-full text-left">
+    <div className="max-w-4xl py-3 pl-2 pr-2">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center gap-2 text-left text-[#8b877f] hover:text-[#5f5b54] transition-colors"
+        aria-expanded={open}
+      >
         {sealed
-          ? <CheckCheck size={13} className="text-emerald-600 shrink-0" />
-          : <Loader2 size={13} className="text-[#117dff] animate-spin shrink-0" />}
-        <span className="text-[11px] font-medium text-[#525252]">
-          {sealed
-            ? t('hyperAgents.tlUsedTools', 'Used {{n}} tools', { n: steps.length })
-            : t('hyperAgents.tlWorking', 'Working… {{n}} tools', { n: steps.length })}
-        </span>
-        <ChevronDown size={13} className={`ml-auto text-[#a3a3a3] transition-transform ${open ? '' : '-rotate-90'}`} />
+          ? <Clock size={15} className="shrink-0" />
+          : <Loader2 size={15} className="shrink-0 animate-spin text-[#117dff]" />}
+        <span className="text-[13px] font-medium">{t('hyperAgents.reasoning', 'Reasoning')}</span>
+        <ChevronDown size={14} className={`transition-transform ${open ? '' : '-rotate-90'}`} />
       </button>
       {open && (
-        <div className="mt-2">
-          {steps.map((s, i) => (
-            <div key={s.key} className="relative flex gap-2.5 pl-5 pb-2">
-              {i < steps.length - 1 && <span className="absolute left-[5.5px] top-3.5 bottom-0 w-px bg-[#e3e0db]" />}
-              <span className="absolute left-0 top-0.5 flex h-3 w-3 items-center justify-center">{iconFor(s)}</span>
-              <div className="min-w-0 text-[11px] text-[#525252] leading-snug">
-                <span className="font-medium">{s.label}</span>
-                {s.mono && <span className="font-mono text-[10px] text-[#117dff] ml-1">· {s.mono}</span>}
-                {s.chip && <span className="ml-1.5 rounded-full bg-white border border-[#e3e0db] px-1.5 py-0.5 text-[9px] text-[#737373]">{s.chip}</span>}
-                {s.detail && <span className="text-[#737373]"> · “{s.detail}”</span>}
+        <div className="mt-2.5 ml-[7px] border-l border-[#e5dfd6] pl-4 space-y-1.5">
+          {steps.map((s) => (
+            <div key={s.key} className="flex min-w-0 items-start gap-2.5 text-[12px] leading-5">
+              <span className="mt-1 flex h-3.5 w-3.5 shrink-0 items-center justify-center">{iconFor(s)}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <code className="max-w-full break-all rounded-[4px] bg-[#e8f0ff] px-1.5 py-0.5 font-mono text-[11.5px] text-[#1764d8]">
+                    {presentationFor(s).operation}
+                  </code>
+                  {presentationFor(s).result && (
+                    <span className="min-w-0 break-words text-[#329044]">→ {presentationFor(s).result}</span>
+                  )}
+                </div>
                 {Array.isArray(s.sources) && s.sources.length > 0 && (
-                  <span className="flex flex-wrap gap-1 mt-0.5">
+                  <span className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
                     {s.sources.map((src, j) => (
                       <a key={j} href={src.url} target="_blank" rel="noopener noreferrer"
-                         className="rounded-[6px] bg-white border border-[#e3e0db] px-1.5 py-0.5 text-[9px] text-[#117dff] hover:bg-[#f3f1ec] truncate max-w-[180px]"
+                         className="max-w-[220px] truncate text-[10.5px] text-[#1764d8] underline decoration-[#b9cff4] underline-offset-2 hover:text-[#0f4fae]"
                          title={src.url}>{src.title || src.url}</a>
                     ))}
                   </span>
@@ -1545,14 +1584,7 @@ export function ToolTimeline({ gathers, webIntels, prospectHunts, skillUses, sea
               </div>
             </div>
           ))}
-          <div className="relative flex items-center gap-2.5 pl-5">
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 flex h-3 w-3 items-center justify-center">
-              {sealed ? <CheckCheck size={12} className="text-emerald-600" /> : <Loader2 size={11} className="text-[#117dff] animate-spin" />}
-            </span>
-            <span className="text-[11px] font-medium text-[#0a0a0a]">
-              {sealed ? t('hyperAgents.tlDone', 'Done') : t('hyperAgents.tlRunning', 'Running…')}
-            </span>
-          </div>
+          {!sealed && <div className="pl-6 text-[11px] text-[#8b877f]">{t('hyperAgents.tlRunning', 'Running…')}</div>}
         </div>
       )}
     </div>

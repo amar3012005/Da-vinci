@@ -1,10 +1,9 @@
 // Outreach campaign panel — the post-report execution step. Renders under the
 // prospect stack on a sealed turn: "Send outreach emails (N)" / "Start outreach
 // calls (M)". Creating a campaign snapshots the eligible prospects server-side;
-// this panel then drives the run ONE BY ONE (generate → execute per target) with
-// a live progress bar, stop/resume, per-target deselect and inline payload edit.
-// The backend drain worker finishes a run if this tab dies — the panel is the
-// pace-setter, not the owner. Room-agnostic: keyed on the prospects artifact.
+// Email batches retain the paced browser runner. TARA call sequences are owned
+// by Core: it prepares one target, waits for the real post-call analysis, saves
+// the learning, and only then advances. The panel observes that durable state.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Loader2, Mail, PhoneCall, Play, Square, CheckCheck, X, ChevronDown, Pencil,
@@ -120,6 +119,10 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
   const sel = st !== 'deselected';
   const chip = {
     sent: ['✓ sent', 'bg-emerald-100 text-emerald-700'],
+    dialing: ['dialing...', 'bg-blue-100 text-blue-700'],
+    in_call: ['in call', 'bg-blue-100 text-blue-700'],
+    analyzing: ['analyzing...', 'bg-violet-100 text-violet-700'],
+    analyzed: ['✓ analyzed', 'bg-emerald-100 text-emerald-700'],
     failed: ['✗ failed', 'bg-red-100 text-red-700'],
     sending: [c.channel === 'call' ? '📞 dialing…' : 'sending…', 'bg-blue-100 text-blue-700'],
     browser: ['browser call', 'bg-violet-100 text-violet-700'],
@@ -129,10 +132,10 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
     deselected: ['off', 'bg-[#f4f2ec] text-[#a3a3a3]'],
     selected: ['queued', 'bg-[#f4f2ec] text-[#a3a3a3]'],
   }[st] || [st, 'bg-[#f4f2ec] text-[#a3a3a3]'];
-  const immutable = ['sending', 'sent', 'browser'].includes(st);
+  const immutable = ['sending', 'sent', 'dialing', 'in_call', 'analyzing', 'analyzed', 'browser'].includes(st);
   const p = target.payload || {};
   return (
-    <div className={`rounded-lg border px-3 py-2 ${st === 'sent' ? 'border-emerald-200 bg-emerald-50/40'
+    <div className={`rounded-lg border px-3 py-2 ${['sent', 'analyzed'].includes(st) ? 'border-emerald-200 bg-emerald-50/40'
       : st === 'failed' ? 'border-red-200 bg-red-50/40' : 'border-[#e3e0db] bg-white'} ${!sel ? 'opacity-50' : ''}`}>
       <div className="flex items-center gap-2">
         <input type="checkbox" checked={sel} disabled={immutable || disabled}
@@ -143,7 +146,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
           {c.channel === 'email' ? target.email : target.phone}
         </span>
         <span className={`ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider shrink-0 ${chip[1]}`}>
-          {st === 'sending' && <Loader2 size={9} className="inline animate-spin mr-1" />}{chip[0]}
+          {['sending', 'dialing', 'analyzing'].includes(st) && <Loader2 size={9} className="inline animate-spin mr-1" />}{chip[0]}
         </span>
         {(p.subject || p.goal) && (
           <button onClick={() => { setOpen(o => !o); setDraft(null); }}
@@ -182,7 +185,7 @@ function TargetRow({ c, target, onPatch, disabled, post }) {
         </div>
       )}
       {/* Live-listen while a TARA call is in flight (dial placed → sessionId known). */}
-      {c.channel === 'call' && ['sending', 'sent'].includes(st) && target.resultRef?.sessionId && (
+      {c.channel === 'call' && ['dialing', 'in_call', 'analyzing'].includes(st) && target.resultRef?.sessionId && (
         <div className="mt-1.5">
           <LiveListen sessionId={target.resultRef.sessionId} provider={target.resultRef.provider || c.voiceProvider} />
         </div>
@@ -309,6 +312,14 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
         const next = {};
         for (const call of calls || []) if (call?.sessionId) next[call.sessionId] = call;
         setPostCall(next);
+        const terminalCalls = (calls || []).filter((call) => ['ready', 'none'].includes(call?.post_call));
+        for (const call of terminalCalls) {
+          const target = (campaignRef.current?.targets || []).find((item) => item.resultRef?.sessionId === call.sessionId);
+          if (target && !['analyzed', 'failed'].includes(target.state)) {
+            await apiClient.reconcileOutreachTarget(campaignRef.current.id, target.id).catch(() => null);
+          }
+        }
+        if (terminalCalls.length && campaignRef.current?.id) await refresh(campaignRef.current.id);
         const unresolved = postKey.split(',').some((s) => {
           const st = next[s]?.post_call || 'processing';
           return st !== 'ready' && st !== 'none';  // 'none' is terminal too
@@ -320,7 +331,16 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
     };
     tick();
     return () => { dead = true; if (timer) clearTimeout(timer); };
-  }, [postKey, isCallCampaign]);
+  }, [postKey, isCallCampaign, refresh]);
+
+  useEffect(() => {
+    if (!isCallCampaign || campaign?.status !== 'running' || !campaign?.id) return undefined;
+    let dead = false;
+    const timer = window.setInterval(() => {
+      if (!dead) refresh(campaign.id);
+    }, 2500);
+    return () => { dead = true; window.clearInterval(timer); };
+  }, [campaign?.id, campaign?.status, isCallCampaign, refresh]);
 
   // Create the campaign (snapshot) on mount.
   useEffect(() => {
@@ -357,6 +377,11 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
     }
     runningRef.current = true;
     let c = await refresh(c0.id);
+    if (c0.channel === 'call') {
+      runningRef.current = false;
+      setBusy(false);
+      return;
+    }
     while (runningRef.current && c) {
       const next = (c.targets || []).find(t => ['selected', 'ready'].includes(t.state));
       if (!next) break;
@@ -414,9 +439,9 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
 
   const targets = campaign.targets || [];
   const inRun = targets.filter(t => t.state !== 'deselected');
-  const done = targets.filter(t => t.state === 'sent' || t.state === 'browser').length;
+  const done = targets.filter(t => t.state === 'sent' || t.state === 'analyzed' || t.state === 'browser').length;
   const failed = targets.filter(t => t.state === 'failed').length;
-  const running = runningRef.current || busy;
+  const running = runningRef.current || busy || campaign.status === 'running';
   const finished = campaign.status === 'done' || (!running && done + failed >= inRun.length && inRun.length > 0);
 
   return (
@@ -453,7 +478,7 @@ export default function CampaignPanel({ roomId, turnId, channel, eligibleCount, 
           )}
           {finished && (
             <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-mono uppercase tracking-wider">
-              <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls ready`}
+              <CheckCheck size={12} /> {campaign.channel === 'email' ? `${done} emails sent` : `${done} calls analyzed`}
             </span>
           )}
           {err && <span className="text-[10px] text-red-600 truncate">{err}</span>}
