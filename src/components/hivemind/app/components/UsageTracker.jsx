@@ -33,6 +33,7 @@ const LABELS = {
   searches: 'Searches',
   tokens: 'Tokens',
   uploads: 'Uploads',
+  meetingMinutes: 'Meeting minutes',
 };
 
 const BILLING_PATH = '/hivemind/app/billing';
