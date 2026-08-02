@@ -14,6 +14,7 @@ const ALL_SCOPES = [
   { id: 'memory:write', label: 'Memory Write', icon: Brain,       group: 'core',  description: 'Create, update, delete memories' },
   { id: 'mcp',          label: 'MCP Access',   icon: Wrench,      group: 'core',  description: 'Model Context Protocol tools' },
   { id: 'web_search',   label: 'Web Search',   icon: Globe,       group: 'web',   description: 'Search the web via async jobs' },
+  { id: 'web_research', label: 'Web Research', icon: FileText,    group: 'web',   description: 'Run cited multi-source research' },
   { id: 'web_crawl',    label: 'Web Crawl',    icon: Globe,       group: 'web',   description: 'Crawl and extract web pages' },
   { id: 'web_admin',    label: 'Web Admin',    icon: ShieldCheck, group: 'admin', description: 'View admin metrics and telemetry' },
 ];
@@ -287,8 +288,14 @@ function KeyRow({ apiKey, onRevoke }) {
 // ── Main Page ───────────────────────────────────────────────────────
 export default function ApiKeysPage() {
   const { t } = useTranslation('dashboard');
-  const DEFAULT_SCOPES = ['memory:read', 'memory:write', 'mcp', 'web_search', 'web_crawl', 'web_admin'];
+  const PRESETS = {
+    developer: ['memory:read', 'mcp'],
+    web: ['memory:read', 'mcp', 'web_search', 'web_research', 'web_crawl'],
+    readOnly: ['memory:read'],
+  };
   const [label, setLabel] = useState('');
+  const [keyKind, setKeyKind] = useState('personal');
+  const [selectedScopes, setSelectedScopes] = useState(PRESETS.developer);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState(null);
@@ -308,9 +315,9 @@ export default function ApiKeysPage() {
     setCreating(true);
     setCreateError(null);
     try {
-      const result = await apiClient.createApiKey(label.trim(), { scopes: DEFAULT_SCOPES });
+      const result = await apiClient.createApiKey(label.trim(), { scopes: selectedScopes, key_kind: keyKind });
       setNewlyCreatedKey(result.api_key);
-      setNewlyCreatedScopes([...DEFAULT_SCOPES]);
+      setNewlyCreatedScopes([...selectedScopes]);
       apiClient.setApiKey(result.api_key);
       setLabel('');
       refetch();
@@ -396,16 +403,43 @@ export default function ApiKeysPage() {
                 />
               </div>
 
-              {/* All keys get full access by default */}
-              <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] text-[#a3a3a3] font-mono mr-1 self-center">{t('apikeys.scopesLabel', 'SCOPES:')}</span>
-                {DEFAULT_SCOPES.map(s => <ScopeBadge key={s} scope={s} />)}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider">
+                  Key type
+                  <select value={keyKind} onChange={(event) => setKeyKind(event.target.value)} className="mt-2 w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2 normal-case tracking-normal text-sm font-['Space_Grotesk'] text-[#0a0a0a]">
+                    <option value="personal">Personal developer key</option>
+                    <option value="service">Organization service key</option>
+                  </select>
+                </label>
+                <label className="block text-[#525252] text-xs font-mono uppercase tracking-wider">
+                  Permission preset
+                  <select value="custom" onChange={(event) => { const preset = PRESETS[event.target.value]; if (preset) setSelectedScopes(preset); }} className="mt-2 w-full rounded-lg border border-[#e3e0db] bg-white px-3 py-2 normal-case tracking-normal text-sm font-['Space_Grotesk'] text-[#0a0a0a]">
+                    <option value="custom">Custom permissions</option>
+                    <option value="developer">Developer</option>
+                    <option value="web">Web intelligence</option>
+                    <option value="readOnly">Read only</option>
+                  </select>
+                </label>
               </div>
+
+              <fieldset>
+                <legend className="text-[10px] text-[#a3a3a3] font-mono uppercase tracking-wider">Permissions</legend>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {ALL_SCOPES.filter((scope) => scope.id !== 'web_admin').map((scope) => {
+                    const checked = selectedScopes.includes(scope.id);
+                    return <label key={scope.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#e3e0db] px-3 py-2 text-xs text-[#525252]">
+                      <input type="checkbox" checked={checked} onChange={() => setSelectedScopes((current) => checked ? current.filter((id) => id !== scope.id) : [...current, scope.id])} />
+                      <scope.icon size={14} className="text-[#117dff]" />
+                      <span className="font-medium text-[#0a0a0a]">{scope.label}</span>
+                    </label>;
+                  })}
+                </div>
+              </fieldset>
 
               {/* Submit */}
               <button
                 type="submit"
-                disabled={!label.trim() || creating}
+                disabled={!label.trim() || !selectedScopes.length || creating}
                 className="flex items-center gap-2 bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-xl transition-all text-sm font-['Space_Grotesk']"
               >
                 {creating ? (
