@@ -318,6 +318,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async startHqFirstLife(firstLifeId, decision = 'start') {
+    const { data } = await this.controlPlane.post(`/v1/hq/first-life/${encodeURIComponent(firstLifeId)}/start`, { decision });
+    return data;
+  }
+
   async decideHqPlaybookAuthority(runId, { gate, preference, approve }) {
     const { data } = await this.controlPlane.post(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/authority`, {
       gate, preference, approve,

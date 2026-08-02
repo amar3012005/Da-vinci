@@ -228,7 +228,7 @@ const QUEUE_STATUS = {
   READY: ['Ready', 'border-[#171717] bg-white text-[#171717]'],
   WAITING_FOR_AUTHORITY: ['Waiting for approval', 'border-[#171717] bg-white text-[#171717]'],
   WAITING_FOR_EVIDENCE: ['Waiting for evidence', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#6c6257]'],
-  MONITORING: ['Monitoring replies', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#4f4942]'],
+  MONITORING: ['Monitoring', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#4f4942]'],
   WAITING_FOR_CONNECTOR: ['Waiting for access', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#6c6257]'],
   BLOCKED: ['Blocked', 'border-[#171717] border-dashed bg-white text-[#171717]'],
   NEEDS_ATTENTION: ['Needs attention', 'border-[#171717] border-dashed bg-white text-[#171717]'],
@@ -252,53 +252,29 @@ function queueBlockerSummary(reason) {
   }
   return trimmed.length > 180 ? `${trimmed.slice(0, 177)}...` : trimmed;
 }
-function RuntimeQueuePanel({ queue, onClose, embedded = false }) {
-  const active = queue.filter((item) => ['RUNNING', 'READY'].includes(item.status));
-  const shell = embedded
-    ? 'w-full border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]'
-    : 'absolute right-0 top-[calc(100%+8px)] z-30 w-[min(360px,calc(100vw-2rem))] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_18px_50px_-24px_rgba(0,0,0,0.5)]';
-  return <section id={embedded ? 'runtime-operating-queue' : undefined} className={shell} aria-label="Runtime operating queue">
-    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-white px-4 py-3"><ListTodo size={14} className="text-[#171717]" /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#171717]">Operating queue</span><span className="font-mono text-[9px] text-[#737373]">{active.length} active</span>{!embedded && onClose ? <button type="button" onClick={onClose} aria-label="Close runtime queue" title="Close" className="grid h-7 w-7 place-items-center text-[#777168] hover:bg-[#f0eee9]"><X size={14} /></button> : null}</header>
-    <div className={embedded ? 'max-h-[calc(100vh-190px)] overflow-y-auto p-2' : 'max-h-[min(62vh,520px)] overflow-y-auto p-2'}>
-      {queue.map((item) => {
-        const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
-        const blocker = queueBlockerSummary(item.blocked_reason);
-        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
-      })}
-      {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
-    </div>
+function GrowthBrief({ brief }) {
+  if (!brief) return null;
+  return <section className="mb-3 border border-[#d8d3cc] bg-white px-4 py-3" aria-label="Growth brief">
+    <div className="font-mono text-[8px] uppercase tracking-[0.15em] text-[#8a8577]">Growth brief</div>
+    <div className="mt-2 text-[12px] font-semibold leading-5 text-[#262626]">{brief.primary_constraint?.statement || brief.primary_constraint?.type || brief.current_position || 'Current position retained'}</div>
+    {brief.recommended_motion?.title ? <p className="mt-1 text-[10px] leading-4 text-[#777168]">Recommended: {brief.recommended_motion.title}</p> : null}
+    <div className="mt-2 flex gap-3 font-mono text-[7px] uppercase tracking-[0.1em] text-[#9a948b]"><span>{brief.confidence || 'Evidence bounded'}</span><span>{brief.evidence_refs?.length || 0} evidence refs</span></div>
   </section>;
 }
 
-const FIRST_LIFE_STATUS = {
-  AWAITING_POLICY: ['Awaiting policy', 'bg-[#171717] text-white'],
-  PROPOSED: ['Proposed', 'bg-[#e8e4dd] text-[#34312d]'],
-  READY_FOR_REVIEW: ['Ready for review', 'bg-[#171717] text-white'],
-  READY: ['Ready', 'bg-[#171717] text-white'],
-  RUNNING: ['Building', 'bg-[#e8e4dd] text-[#34312d]'],
-  PREPARING: ['Preparing', 'bg-[#e8e4dd] text-[#34312d]'],
-  MONITORING: ['Monitoring', 'bg-[#e8e4dd] text-[#34312d]'],
-  COMPLETED: ['Live', 'bg-[#dcebdd] text-[#285b31]'],
-  NEEDS_ATTENTION: ['Needs attention', 'bg-[#f2dfd8] text-[#823f2e]'],
-};
-
-export function FirstOperatingPlanPanel({ plan, onReview }) {
-  if (!plan) return null;
-  return <section className="mb-3 border border-[#171717] bg-white shadow-[0_16px_42px_-34px_rgba(0,0,0,0.8)]" aria-label="First operating plan">
-    <header className="border-b border-[#d8d3cc] bg-[#171717] px-4 py-3 text-white">
-      <div className="flex items-center gap-2"><Sparkles size={13} /><span className="flex-1 font-mono text-[9px] font-semibold uppercase tracking-[0.16em]">First operating plan</span><span className="font-mono text-[8px] text-white/70">{plan.completed_count || 0}/{plan.proposal_count || plan.item_count || 0}</span></div>
-      <p className="mt-2 text-[11px] leading-4 text-white/72">Evidence-backed opportunities. Execution remains deliberately bounded.</p>
-    </header>
-    <div>
-      {(plan.items || []).map((item, index) => {
-        const [label, tone] = FIRST_LIFE_STATUS[item.status] || FIRST_LIFE_STATUS.PREPARING;
-        const evidenceCount = Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0;
-        return <article key={item.todo_id} className="border-b border-[#ebe8e3] px-4 py-3 last:border-b-0">
-          <div className="flex items-start gap-3"><span className="font-mono text-[9px] text-[#a19b92]">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</h3><span className={`px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span></div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[8px] uppercase tracking-[0.08em] text-[#8a8577]"><span>{item.recommended ? 'Recommended' : `Rank ${item.recommendation_rank || index + 1}`}</span><span>{item.effect_class === 'external' ? 'External outcome' : 'Internal work'}</span>{evidenceCount ? <span>{evidenceCount} evidence ref{evidenceCount === 1 ? '' : 's'}</span> : null}</div></div></div>
-        </article>;
+export function AgentRuntimeTasksPanel({ queue, firstLife, onDecision }) {
+  const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
+  return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Agent Runtime tasks">
+    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Agent Runtime tasks</span><span className="font-mono text-[9px] text-white/65">{active.length} active</span></header>
+    <div className="max-h-[min(46vh,430px)] overflow-y-auto p-2">
+      {queue.map((item) => {
+        const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
+        const blocker = queueBlockerSummary(item.blocker || item.blocked_reason);
+        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p><div className="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[7px] uppercase tracking-[0.08em] text-[#9a948b]">{item.owner ? <span>{item.owner}</span> : null}{item.lifecycle_stage ? <span>{String(item.lifecycle_stage).replaceAll('_', ' ')}</span> : null}{item.checkpoint_sequence ? <span>Checkpoint {item.checkpoint_sequence}</span> : null}</div>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
       })}
+      {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
     </div>
-    {plan.status === 'AWAITING_POLICY' ? <div className="border-t border-[#d8d3cc] bg-[#f5f3ef] p-3"><button type="button" onClick={onReview} className="inline-flex h-9 w-full items-center justify-center gap-2 bg-[#171717] px-4 text-[10px] font-semibold text-white"><ShieldCheck size={13} />Choose operating policy <ArrowRight size={12} /></button></div> : null}
+    {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white"><Play size={12} />Start recommended work</button></div> : null}
   </section>;
 }
 
@@ -313,9 +289,14 @@ export function HqRuntimeRail({ baselineReady }) {
     let active = true;
     const load = () => Promise.all([apiClient.getHqRuntime(), apiClient.getHqWork()])
       .then(([state, queued]) => { if (active) { setRuntime(state?.runtime || null); setWork(queued || {}); } }).catch(() => {});
+    const synchronize = (event) => {
+      if (!active) return;
+      if (event.detail?.runtime) setRuntime(event.detail.runtime);
+      if (event.detail?.work) setWork(event.detail.work);
+    };
     load();
-    const timer = window.setInterval(load, 5000);
-    return () => { active = false; window.clearInterval(timer); };
+    window.addEventListener('hq-runtime-projection', synchronize);
+    return () => { active = false; window.removeEventListener('hq-runtime-projection', synchronize); };
   }, []);
   const schedules = work.schedules || [];
   const outboundPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_messages)
@@ -353,7 +334,7 @@ export function HqRuntimeRail({ baselineReady }) {
           ['outbound_messages', 'Outbound email', outboundPermission],
           ['outbound_calls', 'TARA calls', outboundCallPermission],
           ['outbound_campaigns', 'Campaign launches', outboundCampaignPermission],
-        ].map(([policyKey, label, currentPreference]) => <div key={policyKey} className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">{label}</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{currentPreference === 'unconfigured' ? 'Choose a policy' : 'Organization policy'}</div></div><div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => { const busyKey = `${policyKey}:${preference}`; return <button key={preference} type="button" onClick={() => updateOutboundPermission(policyKey, currentPreference, preference)} disabled={Boolean(permissionBusy)} aria-pressed={currentPreference === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${currentPreference === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === busyKey ? 'Saving' : preference}</button>; })}</div></div>)}
+        ].map(([policyKey, label, currentPreference]) => <div key={policyKey} className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">{label}</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{currentPreference === 'unconfigured' ? 'Chosen at the first exact gate' : 'Organization policy'}</div></div>{currentPreference === 'unconfigured' ? <span className="border border-[#d8d3cc] bg-white px-2 py-1 font-mono text-[8px] uppercase text-[#8a8577]">Not configured</span> : <div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => { const busyKey = `${policyKey}:${preference}`; return <button key={preference} type="button" onClick={() => updateOutboundPermission(policyKey, currentPreference, preference)} disabled={Boolean(permissionBusy)} aria-pressed={currentPreference === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${currentPreference === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === busyKey ? 'Saving' : preference}</button>; })}</div>}</div>)}
         <div className="mt-3 space-y-2 border-t border-[#ebe8e3] pt-3">{[
           ['Internal work', runtime?.authorityPolicy?.internal_autonomy === false ? 'Restricted' : 'Allowed'],
           ['External writes', runtime?.authorityPolicy?.external_writes === 'auto' ? 'Automatic' : 'Approval required'],
@@ -427,7 +408,7 @@ function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, queue = [], firstLife = null, onReviewFirstLife, liveSequence = null }) {
+function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -453,7 +434,7 @@ function RuntimeTranscript({ events, state, queue = [], firstLife = null, onRevi
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
         </div> : null}
       </main>
-      <aside className="sticky top-[78px] z-10 w-full" aria-label="Runtime todo list"><FirstOperatingPlanPanel plan={firstLife} onReview={onReviewFirstLife} /><RuntimeQueuePanel queue={queue} embedded /></aside>
+      <aside className="sticky top-[78px] z-10 w-full" aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} onDecision={onFirstLifeDecision} /></aside>
     </div>
   </div>;
 }
@@ -485,7 +466,6 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [instructionBusy, setInstructionBusy] = useState(false);
   const [instructionNotice, setInstructionNotice] = useState('');
   const [approvalBusy, setApprovalBusy] = useState('');
-  const [sprintReviewOpen, setSprintReviewOpen] = useState(false);
   const [dismissedWorkflowApprovalId, setDismissedWorkflowApprovalId] = useState(null);
   const [dismissedCapabilityRequestId, setDismissedCapabilityRequestId] = useState(null);
   const [liveSequence, setLiveSequence] = useState(null);
@@ -563,6 +543,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     cursorRef.current = eventData?.next || rows.at(-1)?.sequence || '0';
     const workData = await workPromise;
     setWork(workData || { todos: [], capability_requests: [] });
+    window.dispatchEvent(new CustomEvent('hq-runtime-projection', { detail: { runtime: activeRuntime, work: workData || {} } }));
   }, [enqueueEvents]);
   useEffect(() => {
     const key = streamCacheKeyRef.current;
@@ -592,6 +573,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
           setRuntime(data?.runtime || null);
           setUsage(data?.usage || { input_tokens: 0, output_tokens: 0 });
           setWork(workData || { todos: [], capability_requests: [] });
+          window.dispatchEvent(new CustomEvent('hq-runtime-projection', { detail: { runtime: data?.runtime || null, work: workData || {} } }));
         }).catch(() => {});
       }, 400);
     } catch { /* malformed edge event */ } };
@@ -658,18 +640,9 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     status: projectLifecycleQueueStatus(snapshot),
     priority: 0,
   }));
-  const runtimeQueue = (work.runtime_queue || []).length ? work.runtime_queue : lifecycleQueue;
+  const runtimeQueue = (work.agent_runtime_tasks || work.runtime_queue || []).length ? (work.agent_runtime_tasks || work.runtime_queue) : lifecycleQueue;
   const firstLifePlan = work.first_life || work.activation_sprint || null;
   const queueActiveCount = runtimeQueue.filter((item) => ['RUNNING', 'READY'].includes(item.status)).length;
-  useEffect(() => {
-    if (firstLifePlan?.status !== 'AWAITING_POLICY' || !firstLifePlan.id) return;
-    const key = `hq-first-life-policy:${firstLifePlan.id}`;
-    try {
-      if (window.sessionStorage.getItem(key)) return;
-      window.sessionStorage.setItem(key, 'shown');
-    } catch { /* showing the review does not depend on storage */ }
-    setSprintReviewOpen(true);
-  }, [firstLifePlan?.id, firstLifePlan?.status]);
   const waitForInstructionAcceptance = async (instructionId) => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
@@ -726,16 +699,15 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
     } finally { setApprovalBusy(''); }
   };
-  const reviewFirstLife = async (preference) => {
+  const reviewFirstLife = async (decision) => {
     if (!firstLifePlan?.id || approvalBusy) return;
-    setApprovalBusy(`sprint-${preference}`); setError('');
+    setApprovalBusy(`first-life-${decision}`); setError('');
     try {
       if (firstLifePlan.policy?.id === 'runtime.first-life-policy') {
-        await apiClient.setHqFirstLifePolicy(firstLifePlan.id, preference);
+        await apiClient.startHqFirstLife(firstLifePlan.id, decision);
       } else {
-        await apiClient.reviewHqActivationSprint(firstLifePlan.id, preference);
+        await apiClient.reviewHqActivationSprint(firstLifePlan.id, 'manual');
       }
-      setSprintReviewOpen(false);
       await load();
     } catch (requestError) {
       setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
@@ -748,7 +720,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         <RuntimeMark state={runtime?.state} />
         <div className="relative flex min-w-0 shrink-0 items-center gap-1.5">
           <TokenMeter usage={usage} />
-          <RuntimeButton icon={ListTodo} label="Queue" badge={queueActiveCount || undefined} onClick={() => document.getElementById('runtime-operating-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} title="Operating queue and todos" />
+          <RuntimeButton icon={ListTodo} label="Tasks" badge={queueActiveCount || undefined} onClick={() => document.getElementById('agent-runtime-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} title="Agent Runtime tasks" />
           <RuntimeButton icon={SlidersHorizontal} label="Instructions" trailing={ArrowUpRight} tone="solid" onClick={() => { setInstructionNotice(''); setInstructionsOpen(true); }} title="Standing operating instructions" />
           {!runtime
             ? <RuntimeButton icon={Power} label="Activate" tone="solid" onClick={() => run('activate')} disabled={!baselineReady || Boolean(busy)} spinning={busy === 'activate'} />
@@ -760,24 +732,9 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} queue={runtimeQueue} firstLife={firstLifePlan} onReviewFirstLife={() => setSprintReviewOpen(true)} liveSequence={liveSequence} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} /> : <RuntimePageLoader />}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
-    {sprintReviewOpen && firstLifePlan?.status === 'AWAITING_POLICY' ? <div className="fixed inset-0 z-[73] grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Choose first operating policy">
-      <div className="flex max-h-[min(760px,88vh)] w-full max-w-2xl flex-col overflow-hidden border border-[#171717] bg-[#fbfaf7] shadow-2xl">
-        <div className="relative border-b border-[#d8d3cc] bg-[#171717] px-6 py-5 text-white">
-          <button type="button" onClick={() => setSprintReviewOpen(false)} aria-label="Close operating policy" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-white/70 hover:bg-white/10 hover:text-white"><X size={16} /></button>
-          <div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.16em] text-white/70"><Sparkles size={13} />First operating plan</div>
-          <h3 className="mt-3 pr-9 text-[23px] font-semibold">Runtime found the first opportunities worth pursuing.</h3>
-          <p className="mt-2 max-w-xl text-[12px] leading-5 text-white/70">The plan is preserved, but nothing has started. Choose the default Runtime should use when future work reaches an exact external-action gate.</p>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{(firstLifePlan.items || []).map((item, index) => <article key={item.todo_id} className="mb-2 border border-[#dedbd6] bg-white p-4 last:mb-0"><div className="flex items-start gap-3"><span className="font-mono text-[9px] text-[#a19b92]">{String(index + 1).padStart(2, '0')}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h4 className="text-[12px] font-semibold text-[#262626]">{item.title}</h4>{item.recommended ? <span className="bg-[#171717] px-1.5 py-0.5 font-mono text-[7px] uppercase text-white">Recommended</span> : null}</div><p className="mt-1 text-[11px] leading-5 text-[#777168]">{item.objective}</p><div className="mt-2 flex gap-3 font-mono text-[8px] uppercase tracking-[0.1em] text-[#8a8577]"><span>Proposed, not started</span><span>{item.effect_class === 'external' ? 'External outcome' : 'Internal work'}</span></div></div></div></article>)}</div>
-        <div className="border-t border-[#d8d3cc] bg-white px-5 py-4">
-          <p className="mb-3 text-[10px] leading-4 text-[#777168]">This choice records a default policy only. It grants no action now. Manual pauses at every immutable external gate; Auto may grant only the exact verified artifacts present at that future gate.</p>
-          <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => reviewFirstLife('manual')} disabled={Boolean(approvalBusy)} className="h-10 border border-[#171717] bg-white px-4 text-[11px] font-semibold text-[#171717] disabled:opacity-40">{approvalBusy === 'sprint-manual' ? 'Saving...' : 'Review exact actions'}</button><button type="button" onClick={() => reviewFirstLife('auto')} disabled={Boolean(approvalBusy)} className="inline-flex h-10 items-center gap-2 bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'sprint-auto' ? <ArcSpin size={13} /> : <Play size={13} />}Allow verified gates</button></div>
-        </div>
-      </div>
-    </div> : null}
     {playbookApproval && playbookApproval.run_id !== dismissedWorkflowApprovalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Choose ${approvalNoun} policy`}>
       <div className="flex max-h-[min(760px,88vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl">
         <div className="relative border-b border-[#e3e0db] px-5 py-4">

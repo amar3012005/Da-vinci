@@ -1,28 +1,25 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FirstOperatingPlanPanel, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { AgentRuntimeTasksPanel, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 
-test('renders a truthful domain-neutral first operating plan', () => {
-  const markup = renderToStaticMarkup(<FirstOperatingPlanPanel plan={{
-    status: 'AWAITING_POLICY',
-    proposal_count: 2,
-    completed_count: 0,
-    items: [
+test('renders one truthful domain-neutral Agent Runtime task panel', () => {
+  const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
+    status: 'AWAITING_START',
+  }} queue={[
       {
-        todo_id: 'one', title: 'Improve the primary customer journey', objective: 'Resolve the highest-evidence constraint.',
+        id: 'one', title: 'Improve the primary customer journey', objective: 'Resolve the highest-evidence constraint.',
         status: 'PROPOSED', recommended: true, recommendation_rank: 1, effect_class: 'internal', evidence_refs: ['baseline-1'],
       },
       {
-        todo_id: 'two', title: 'Validate the next opportunity', objective: 'Gather a bounded result before expanding.',
+        id: 'two', title: 'Validate the next opportunity', objective: 'Gather a bounded result before expanding.',
         status: 'PROPOSED', recommended: false, recommendation_rank: 2, effect_class: 'external', evidence_refs: [],
       },
-    ],
-  }} onReview={() => {}} />);
+    ]} onDecision={() => {}} />);
 
-  expect(markup).toContain('aria-label="First operating plan"');
+  expect(markup).toContain('aria-label="Agent Runtime tasks"');
   expect(markup).toContain('Improve the primary customer journey');
-  expect(markup).toContain('Recommended');
-  expect(markup).toContain('Choose operating policy');
+  expect(markup).toContain('Start recommended work');
+  expect(markup).toContain('Review later');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
 });
 
