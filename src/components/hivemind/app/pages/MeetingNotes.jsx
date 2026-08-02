@@ -364,6 +364,7 @@ export default function MeetingNotes() {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false); // ingest in flight — gives the button feedback + blocks double-submit
+  const [retryingMeetingSave, setRetryingMeetingSave] = useState(false);
   const [meetingId, setMeetingId] = useState(null); // Past-meetings row id (persisted on finish, before any HIVEMIND save)
   const [multiSpeaker, setMultiSpeaker] = useState(false);
   // 'mic'  → microphone only (in-person / you on a phone call)
@@ -585,9 +586,31 @@ export default function MeetingNotes() {
         const row = await persistRow({ insights: insights || {}, transcript: text, segments: segs.length ? segs : null, language: lang });
         if (row?.id) setMeetingId(row.id);
         loadMeetings();
-      } catch { /* non-fatal — recording is still usable / re-savable */ }
+      } catch (saveError) {
+        // Keep the completed transcript and insights on screen. The user can
+        // retry just the durable row write without spending another LLM call.
+        setError(saveError?.response?.data?.error || saveError?.message || 'Meeting could not be saved. Retry when ready.');
+      }
     } catch (e) { setStatus('error'); setError(e.response?.data?.error || e.message || 'Processing failed.'); }
   }, [notes, participants, persistRow, loadMeetings]);
+
+  const retryMeetingSave = useCallback(async () => {
+    if (!transcript.trim() || retryingMeetingSave || meetingId) return;
+    setRetryingMeetingSave(true); setError(null);
+    try {
+      const row = await persistRow({
+        insights: insights || {}, transcript,
+        segments: speakerSegments?.length ? speakerSegments : null,
+        language,
+      });
+      if (row?.id) setMeetingId(row.id);
+      await loadMeetings();
+    } catch (saveError) {
+      setError(saveError?.response?.data?.error || saveError?.message || 'Meeting could not be saved. Retry when ready.');
+    } finally {
+      setRetryingMeetingSave(false);
+    }
+  }, [insights, language, loadMeetings, meetingId, persistRow, retryingMeetingSave, speakerSegments, transcript]);
 
   const start = useCallback(async () => {
     setError(null); setTranscript(''); setInsights(null); setSaved(false); setElapsed(0); setSpeakerSegments(null); setMeetingId(null);
@@ -1204,7 +1227,16 @@ export default function MeetingNotes() {
             </div>
           </div>
 
-          {error && (<div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2"><AlertTriangle size={12} className="inline mr-1" /> {error}</div>)}
+          {error && (
+            <div className="flex items-center justify-between gap-3 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-[8px] px-3 py-2">
+              <span><AlertTriangle size={12} className="inline mr-1" /> {error}</span>
+              {transcript.trim() && !meetingId && (
+                <button onClick={retryMeetingSave} disabled={retryingMeetingSave} className="shrink-0 px-2.5 py-1 rounded-[6px] bg-red-700 text-white text-[11px] font-semibold disabled:opacity-50">
+                  {retryingMeetingSave ? 'Retrying…' : 'Retry save'}
+                </button>
+              )}
+            </div>
+          )}
 
           {insights && (
             <div className="space-y-3">

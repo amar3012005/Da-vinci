@@ -246,10 +246,10 @@ export function QuickRecorderProvider({ children }) {
   const finalize = useCallback(async () => {
     setError(null); setStatus('transcribing'); setCollapsed(false);
     const cfg = cfgRef.current;
-    // Recording is over (user pressed Stop) — clear the resume state so a
-    // later reload doesn't try to revive a finished session.
-    writeSession(null);
-    if (sessionIdRef.current) idbClear(sessionIdRef.current);
+    // The recording has ended, but its final row is not durable yet. A reload
+    // must reopen this as a recovery task, never resume the microphone.
+    const savedSession = readSession();
+    if (savedSession) writeSession({ ...savedSession, finalizing: true });
     try {
       await Promise.allSettled(segPromisesRef.current);
       // Last-chance flush of any window whose durable write never confirmed —
@@ -277,11 +277,38 @@ export function QuickRecorderProvider({ children }) {
         session_id: sessionIdRef.current || undefined,
       }, { timeout: 60000 });
       setMeetingId(row.data?.id || null);
+      // Only discard recovery material after the Past Meeting row is durable.
+      // A 5xx here used to erase the only client-side recovery handle.
+      writeSession(null);
+      if (sessionIdRef.current) idbClear(sessionIdRef.current);
       setStatus('done');
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
   }, [flushPendingSegments]);
+
+  const retryMeetingSave = useCallback(async () => {
+    const text = transcript.trim();
+    if (!text) return;
+    const cfg = cfgRef.current;
+    setError(null); setStatus('analyzing');
+    try {
+      const row = await apiClient.core.post('/api/meetings', {
+        title: insights?.title || `Meeting ${new Date().toLocaleString()}`,
+        transcript: text, insights: insights || {}, language: langRef.current,
+        notes: cfg.notes || null,
+        participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
+        scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
+        session_id: sessionIdRef.current || undefined,
+      }, { timeout: 60000 });
+      setMeetingId(row.data?.id || null);
+      writeSession(null);
+      if (sessionIdRef.current) idbClear(sessionIdRef.current);
+      setStatus('done');
+    } catch (e) {
+      setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Meeting save failed. Your transcript is still recoverable.');
+    }
+  }, [insights, transcript]);
 
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }
@@ -371,6 +398,16 @@ export function QuickRecorderProvider({ children }) {
           segIdxRef.current = Math.max(segIdxRef.current, Number(row.idx) + 1);
         }
       } catch { /* keep what we have */ }
+      if (s.finalizing) {
+        const restored = Object.keys(segTextsRef.current).map(Number).sort((a, b) => a - b)
+          .map((idx) => segTextsRef.current[idx]).filter(Boolean).join('\n').trim();
+        setTranscript(restored);
+        setStatus('error');
+        setError(restored
+          ? 'Meeting processing was interrupted before it was saved. Retry the save to keep this meeting.'
+          : 'Meeting processing was interrupted before any transcript could be recovered.');
+        return;
+      }
       // 2) the interrupted segment's raw audio lives in IndexedDB — rescue it
       try {
         const cached = await idbTakeChunks(s.sessionId);
@@ -622,7 +659,16 @@ export function QuickRecorderProvider({ children }) {
           </div>
         </div>
       )}
-      {status === 'error' && <p className="mt-3 text-[12.5px] text-[#dc2626]">{error}</p>}
+      {status === 'error' && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-[12.5px] text-[#dc2626]">{error}</p>
+          {transcript.trim() && (
+            <button onClick={retryMeetingSave} className="shrink-0 px-3 py-1.5 rounded-[8px] bg-[#117dff] text-white text-[12px] font-semibold hover:bg-[#0066e0]">
+              Retry saving meeting
+            </button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 
