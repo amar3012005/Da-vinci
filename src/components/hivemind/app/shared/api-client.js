@@ -1959,6 +1959,42 @@ class HiveMindApiClient {
     return data;
   }
 
+  async getKnowledgeUploadCapabilities() {
+    const { data } = await this.controlPlane.get('/v1/proxy/knowledge/upload-capabilities');
+    return data;
+  }
+
+  _knowledgeJobsKey(ownerKey) {
+    return ownerKey ? `hm-kb-jobs:${ownerKey}` : null;
+  }
+
+  rememberKnowledgeJob(ownerKey, job) {
+    const key = this._knowledgeJobsKey(ownerKey);
+    if (!key || !job?.job_id) return;
+    try {
+      const current = JSON.parse(localStorage.getItem(key) || '[]');
+      localStorage.setItem(key, JSON.stringify([
+        job, ...current.filter((item) => item.job_id !== job.job_id),
+      ].slice(0, 40)));
+    } catch { /* storage unavailable */ }
+  }
+
+  forgetKnowledgeJob(ownerKey, jobId) {
+    const key = this._knowledgeJobsKey(ownerKey);
+    if (!key) return;
+    try {
+      const current = JSON.parse(localStorage.getItem(key) || '[]');
+      localStorage.setItem(key, JSON.stringify(current.filter((item) => item.job_id !== jobId)));
+    } catch { /* storage unavailable */ }
+  }
+
+  listPendingKnowledgeJobs(ownerKey) {
+    const key = this._knowledgeJobsKey(ownerKey);
+    if (!key) return [];
+    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+    catch { return []; }
+  }
+
   // Async upload: the server returns a job id immediately (no 152s sync
   // request → no proxy 502 on large PDFs) and ingests in the background; we
   // poll status to completion. Transparent to callers — same return shape
@@ -1970,17 +2006,16 @@ class HiveMindApiClient {
     if (options.tags) formData.append('tags', options.tags);
     if (options.containerTag) formData.append('containerTag', options.containerTag);
     if (options.targetScope) formData.append('targetScope', options.targetScope);
-    // force=true re-ingests past the same-scope duplicate gate (user approved the
-    // "upload anyway" prompt shown on a 409 duplicate_document).
-    if (options.force) formData.append('force', 'true');
-    formData.append('async', 'true');
+    if (options.projectId) formData.append('projectId', options.projectId);
+    if (options.primaryTeamId) formData.append('primaryTeamId', options.primaryTeamId);
+    if (options.hint) formData.append('hint', options.hint);
 
     // 1. Kick off — fast 202 with job_id (only the byte-upload is awaited here).
     const { data: started } = await this.controlPlane.post('/v1/proxy/knowledge/upload?async=true', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000, // byte upload only; ingestion runs server-side
-      maxBodyLength: 110 * 1024 * 1024, // 110MB
-      maxContentLength: 110 * 1024 * 1024,
+      maxBodyLength: 52 * 1024 * 1024,
+      maxContentLength: 52 * 1024 * 1024,
       onUploadProgress: options.onUploadProgress,
       signal: options.signal,
     });
@@ -1991,6 +2026,9 @@ class HiveMindApiClient {
 
     // 2. Poll status until terminal.
     const jobId = started.job_id;
+    this.rememberKnowledgeJob(options.pendingOwner, {
+      job_id: jobId, filename: file.name, created_at: new Date().toISOString(),
+    });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
     while (Date.now() < deadline) {
@@ -2003,17 +2041,19 @@ class HiveMindApiClient {
         continue; // transient — keep polling
       }
       const meta = st?.metadata || {};
+      const counts = st?.counts || {};
       // Doc fields may arrive nested under `metadata` (in-memory tracker path)
       // or flat at the top level (durable-queue Redis mirror). Read both so a
       // queued upload still resolves a real documentId.
       const docId = meta.document_id ?? st.document_id;
-      const segs = meta.segmentCount ?? st.segmentCount;
-      const promoted = meta.promotedCount ?? st.promotedCount;
-      const candidates = meta.candidateCount ?? st.candidateCount;
+      const segs = counts.segments ?? meta.segmentCount ?? st.segmentCount;
+      const promoted = counts.memories ?? meta.promotedCount ?? st.promotedCount;
+      const candidates = counts.candidates ?? meta.candidateCount ?? st.candidateCount;
       if (options.onStatus) {
-        options.onStatus({ status: st.status, progress: st.progress, stage: meta.stage, segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted });
+        options.onStatus({ status: st.status, progress: st.progress, stage: st.stage ?? meta.stage, segments: segs ?? meta.segments, promoted: promoted ?? meta.promoted });
       }
-      if (st.status === 'indexed') {
+      if (st.status === 'ready' || st.status === 'indexed') {
+        this.forgetKnowledgeJob(options.pendingOwner, jobId);
         return {
           documentId: docId,
           segmentCount: segs,
@@ -2022,8 +2062,11 @@ class HiveMindApiClient {
           job_id: jobId,
         };
       }
-      if (st.status === 'failed') {
-        throw new Error(st.error || 'Ingestion failed');
+      if (['failed', 'dead', 'cancelled'].includes(st.status)) {
+        this.forgetKnowledgeJob(options.pendingOwner, jobId);
+        const error = new Error(st.error?.message || st.error || 'Ingestion failed');
+        error.code = st.error?.code;
+        throw error;
       }
     }
     throw new Error('Ingestion timed out');
@@ -2035,19 +2078,7 @@ class HiveMindApiClient {
   // Hint is an optional "what is this" string the user types at upload to
   // bias the classifier (e.g. "Saturn receipt from Tuesday").
   async uploadImage(file, options = {}) {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (options.hint) formData.append('hint', options.hint);
-    if (options.projectId) formData.append('projectId', options.projectId);
-    const { data } = await this.controlPlane.post('/v1/proxy/ingest/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
-      maxBodyLength: 25 * 1024 * 1024,
-      maxContentLength: 25 * 1024 * 1024,
-      onUploadProgress: options.onUploadProgress,
-      signal: options.signal,
-    });
-    return data;
+    return this.uploadDocument(file, options);
   }
 
   // ─── Core: Enterprise Upload ────────────────────────────────

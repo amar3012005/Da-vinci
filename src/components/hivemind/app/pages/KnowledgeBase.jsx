@@ -735,6 +735,54 @@ function EnterpriseDetectModal({ open, onClose, detectionResult, onIngest, inges
   );
 }
 
+// Server-side upload limits, verified live against core:
+//   60 MB  -> 413 {"error":"payload_too_large","max_bytes":52428800}
+//   0 B    -> 400 "The uploaded file is empty — nothing to ingest."
+//   1 B    -> 400 "...below the 32-byte minimum"
+// Those raw codes reached the user verbatim ("payload_too_large"), which is a
+// machine string, not something a person can act on. Map them to what the user
+// should DO. Everything else falls through to the server's own message, which is
+// already written for humans on the validation paths.
+export const KB_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const KB_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+export const KB_MIN_UPLOAD_BYTES = 32;
+
+function friendlyUploadError(err) {
+  const st = err?.response?.status;
+  const data = err?.response?.data || {};
+  const raw = String(data.error || data.message || err?.message || '');
+  if (st === 413 || raw.includes('payload_too_large')) {
+    const cap = Number(data.max_bytes) || KB_MAX_UPLOAD_BYTES;
+    return `Too large — the limit is ${Math.round(cap / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  if (st === 400 && /empty/i.test(raw)) return 'This file is empty — there is nothing to ingest.';
+  if (st === 400 && /minimum|too small/i.test(raw)) return 'This file is too small to contain readable content.';
+  if (st === 415 || /unsupported|mime/i.test(raw)) {
+    return 'Unsupported file type. Use PDF, Word, Excel, PowerPoint, CSV, Markdown, text or an image.';
+  }
+  if (st === 401 || st === 403) return 'You are not signed in, or lack access to this workspace.';
+  return raw || 'Upload failed.';
+}
+
+// Pre-flight so an oversized file is refused instantly instead of after a full
+// upload that ends in 413 — on a 60 MB file that is minutes of the user's time
+// spent to be told no.
+function preflightRejectReason(file, capabilities = null) {
+  const size = Number(file?.size ?? 0);
+  const ext = String(file?.name || '').split('.').pop()?.toLowerCase();
+  const kind = IMAGE_EXTS.has(ext) || /^image\//.test(file?.type || '') ? 'image'
+    : AUDIO_EXTS.has(ext) || /^audio\//.test(file?.type || '') ? 'audio' : 'document';
+  const limits = capabilities?.kinds?.[kind];
+  const maximum = Number(limits?.maxBytes) || (kind === 'image' ? KB_MAX_IMAGE_BYTES : KB_MAX_UPLOAD_BYTES);
+  const minimum = Number(limits?.minBytes) || (kind === 'document' ? KB_MIN_UPLOAD_BYTES : 1);
+  if (size === 0) return 'This file is empty — there is nothing to ingest.';
+  if (size < minimum) return 'This file is too small to contain readable content.';
+  if (size > maximum) {
+    return `Too large — the limit is ${Math.round(maximum / (1024 * 1024))} MB. Split the file and upload the parts.`;
+  }
+  return null;
+}
+
 export default function KnowledgeBase() {
   const { t } = useTranslation('dashboard');
   const { org, user } = useAuth();
@@ -753,9 +801,53 @@ export default function KnowledgeBase() {
   const [teamProjects, setTeamProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
+  const [uploadCapabilities, setUploadCapabilities] = useState(null);
   // Hydrate pending docs from sessionStorage so a refresh mid-indexing
   // doesn't visually "lose" docs the user just uploaded.
   const [justUploadedDocs, setJustUploadedDocs] = useState(() => loadPendingFromSession());
+  const pendingOwner = org?.id && user?.id ? `${org.id}:${user.id}` : null;
+
+  useEffect(() => {
+    let active = true;
+    apiClient.getKnowledgeUploadCapabilities()
+      .then((value) => { if (active) setUploadCapabilities(value); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingOwner) return undefined;
+    let disposed = false;
+    const restore = async () => {
+      const pending = apiClient.listPendingKnowledgeJobs(pendingOwner);
+      for (const item of pending) {
+        if (disposed) return;
+        setUploads((prev) => prev.some((entry) => entry.jobId === item.job_id) ? prev : [...prev, {
+          id: `job-${item.job_id}`, jobId: item.job_id, filename: item.filename,
+          status: 'uploading', stage: 'restoring', progress: 0,
+        }]);
+        try {
+          const status = await apiClient.getKnowledgeStatus(item.job_id);
+          if (disposed) return;
+          const terminal = ['ready', 'indexed', 'failed', 'dead', 'cancelled'].includes(status.status);
+          setUploads((prev) => prev.map((entry) => entry.jobId === item.job_id ? {
+            ...entry,
+            status: status.status === 'ready' || status.status === 'indexed' ? 'success'
+              : ['failed', 'dead'].includes(status.status) ? 'error' : status.status,
+            stage: status.stage, progress: status.progress,
+            documentId: status.document_id,
+            error: status.error?.message,
+          } : entry));
+          if (terminal) apiClient.forgetKnowledgeJob(pendingOwner, item.job_id);
+        } catch (error) {
+          if (error?.response?.status === 404) apiClient.forgetKnowledgeJob(pendingOwner, item.job_id);
+        }
+      }
+    };
+    restore();
+    const timer = setInterval(restore, 3000);
+    return () => { disposed = true; clearInterval(timer); };
+  }, [pendingOwner, setUploads]);
   const [pageIndexModalOpen, setPageIndexModalOpen] = useState(false);
   const [smartExtract, setSmartExtract] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -1102,7 +1194,10 @@ export default function KnowledgeBase() {
     const nowBase = Date.now();
     files.forEach((file, idx) => {
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (!ACCEPTED_EXTS.includes(ext)) {
+      const serverExts = uploadCapabilities
+        ? Object.values(uploadCapabilities.kinds || {}).flatMap((kind) => kind.extensions || [])
+        : ACCEPTED_EXTS;
+      if (!serverExts.includes(ext)) {
         setUploads((prev) => [...prev, {
           id: nowBase + idx + Math.random(),
           filename: file.name,
@@ -1111,12 +1206,19 @@ export default function KnowledgeBase() {
         }]);
         return;
       }
-      if (file.size > 100 * 1024 * 1024) {
+      // This gate said 100 MB while the server rejects at 50 MB — verified live:
+      // a 60 MB upload returns 413 {"error":"payload_too_large","max_bytes":52428800}.
+      // So anything between 50 and 100 MB uploaded in FULL, over the wire, before
+      // being refused — minutes of the user's time spent to be told no, and the
+      // raw string "payload_too_large" was what they saw. Now the client gate
+      // matches the server contract and also catches empty/undersized files.
+      const rejectReason = preflightRejectReason(file, uploadCapabilities);
+      if (rejectReason) {
         setUploads((prev) => [...prev, {
           id: nowBase + idx + Math.random(),
           filename: file.name,
           status: 'error',
-          error: 'File too large (max 100MB)',
+          error: rejectReason,
         }]);
         return;
       }
@@ -1190,17 +1292,12 @@ export default function KnowledgeBase() {
         const fileExt = (file.name.split('.').pop() || '').toLowerCase();
         const isImage = IMAGE_EXTS.has(fileExt) || /^image\//.test(file.type || '');
         const uploadFn = isImage ? apiClient.uploadImage.bind(apiClient) : apiClient.uploadDocument.bind(apiClient);
-        const uploadOpts = isImage
-          ? {
-              projectId: targetScope === 'organization' ? null : (project || null),
-              signal: uploadEntry.controller.signal,
-            }
-          : {
+        const uploadOpts = {
               tags: customTags || undefined,
               targetScope,
-              containerTag: targetScope === 'organization' ? (project || undefined) : undefined,
-              force, // re-ingest past the same-scope duplicate gate when approved
+              projectId: targetScope === 'project' ? (project || undefined) : undefined,
               signal: uploadEntry.controller.signal,
+              pendingOwner,
             };
         const result = await uploadFn(file, {
           ...uploadOpts,
@@ -1308,7 +1405,7 @@ export default function KnowledgeBase() {
         const isCancelled = err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
         // Upfront server-side dedup: 409 = identical content already ingested.
         // Not a failure — mark distinctly and let the rest of the batch run.
-        const isDuplicate = err?.response?.status === 409 && err?.response?.data?.duplicate;
+        const isDuplicate = err?.response?.status === 409 && err?.response?.data?.error === 'duplicate_document';
         // Transient saturation: during a bulk upload the core is briefly overloaded
         // (heavy docling parses hold the Prisma pool) → the proxy returns 502/503/504
         // or 429, or the request times out with no response. NOT a real failure —
@@ -1345,11 +1442,8 @@ export default function KnowledgeBase() {
                     ? (err.response?.data?.message || 'This file is already in this scope.')
                     : isPlanLimit
                       ? 'Upgrade for more pages'
-                      : (err.response?.data?.error || err.message),
-                // Duplicate → user gets an "Upload anyway" action. Stash the
-                // existing-doc info + a force re-ingest closure (same file/scope).
-                existingTitle: isDuplicate ? (err.response?.data?.existing_title || null) : undefined,
-                _retryForce: isDuplicate ? (() => uploadOne({ uploadEntry, file }, { force: true })) : undefined,
+                      : friendlyUploadError(err),
+                existingDocumentId: isDuplicate ? (err.response?.data?.existing_document_id || null) : undefined,
               }
             : u
         ));
@@ -1365,7 +1459,7 @@ export default function KnowledgeBase() {
       }
     });
     await Promise.all(workers);
-  }, [customTags, refetchKb, pickConcurrency, kbMemories, setUploads]);
+  }, [customTags, refetchKb, pickConcurrency, kbMemories, setUploads, pendingOwner, uploadCapabilities]);
 
   // Cancel a queued/uploading entry
   const handleCancelUpload = useCallback((entryId) => {
@@ -1904,13 +1998,13 @@ export default function KnowledgeBase() {
                       {u.error}{u.status === 'duplicate' && u.existingTitle ? ` (as "${u.existingTitle}")` : ''}
                     </span>
                   )}
-                  {u.status === 'duplicate' && u._retryForce && (
+                  {u.status === 'duplicate' && u.existingDocumentId && (
                     <button
-                      onClick={() => u._retryForce()}
+                      onClick={() => window.location.assign(`/hivemind/app/knowledge?document=${encodeURIComponent(u.existingDocumentId)}`)}
                       className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#d97706]/10 text-[#b45309] border border-[#fcd34d] hover:bg-[#d97706]/20 transition-colors whitespace-nowrap"
-                      title={t('knowledgebase.uploadAnyway', 'This file already exists in this scope. Upload another copy anyway?')}
+                      title={t('knowledgebase.viewExisting', 'Open the existing document')}
                     >
-                      {t('knowledgebase.uploadAnyway', 'Upload anyway')}
+                      {t('knowledgebase.viewExisting', 'View existing')}
                     </button>
                   )}
                   {u.status === 'queued' && <span className="text-[#a3a3a3]">{t('knowledgebase.waiting', 'Waiting...')}</span>}
