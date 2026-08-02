@@ -671,7 +671,17 @@ export function QuickRecorderProvider({ children }) {
   const card = (
     <motion.div key="qr-card" initial={{ opacity: 0, scale: 0.96, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 10 }}
       transition={{ type: 'spring', stiffness: 340, damping: 30 }}
-      className="bg-white border border-[#e3e0db] rounded-[18px] shadow-xl w-full max-w-[420px] p-5 pointer-events-auto">
+      className="bg-[#fbfaf7] border border-[#d8d5cf] rounded-[12px] shadow-[0_24px_70px_rgba(10,10,10,0.16)] w-full max-w-[560px] overflow-hidden pointer-events-auto">
+      <div className="h-12 px-4 flex items-center justify-between border-b border-[#e3e0db] bg-white/80">
+        <div className="flex items-center gap-2" aria-hidden="true">
+          <span className="w-3 h-3 rounded-full bg-[#ef6258]" />
+          <span className="w-3 h-3 rounded-full bg-[#f4bd4f]" />
+          <span className="w-3 h-3 rounded-full bg-[#58c653]" />
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a3a3a3]">meeting · intelligence</span>
+        <span className="w-[52px]" aria-hidden="true" />
+      </div>
+      <div className="p-5 md:p-6">
       <div className="flex items-center justify-between">
         {recording ? (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[11px] font-semibold text-red-600 font-['Space_Grotesk'] tracking-wide">
@@ -862,6 +872,7 @@ export function QuickRecorderProvider({ children }) {
           )}
         </div>
       )}
+      </div>
     </motion.div>
   );
 
@@ -899,9 +910,20 @@ export function QuickRecorderProvider({ children }) {
 
   const results = (
     <motion.div key="qr-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[80] bg-white overflow-y-auto pointer-events-auto">
+      className="fixed inset-0 z-[80] bg-[#0a0a0a]/30 backdrop-blur-[4px] p-3 md:p-8 flex items-center justify-center pointer-events-auto">
+      <motion.div initial={{ opacity: 0, scale: 0.98, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="w-full max-w-[980px] max-h-[92vh] overflow-hidden bg-[#fbfaf7] border border-[#d8d5cf] rounded-[12px] shadow-[0_28px_90px_rgba(10,10,10,0.2)]">
+      <div className="h-12 px-4 flex items-center justify-between border-b border-[#e3e0db] bg-white/80">
+        <div className="flex items-center gap-2" aria-hidden="true">
+          <span className="w-3 h-3 rounded-full bg-[#ef6258]" />
+          <span className="w-3 h-3 rounded-full bg-[#f4bd4f]" />
+          <span className="w-3 h-3 rounded-full bg-[#58c653]" />
+        </div>
+        <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a3a3a3]">meeting · operating report</span>
+        <span className="text-[10px] font-mono text-emerald-700">READY</span>
+      </div>
       {/* sticky header: title + actions */}
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-[#e3e0db] px-4 md:px-8 py-3 flex items-center justify-between gap-3">
+      <div className="bg-[#fbfaf7]/95 backdrop-blur border-b border-[#e3e0db] px-4 md:px-7 py-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="font-['Space_Grotesk'] leading-none">
             <span className="text-[20px] font-semibold text-[#525252]">{startedAtLabel.split(' ')[0] || '@Today'}</span>
@@ -921,10 +943,10 @@ export function QuickRecorderProvider({ children }) {
         </div>
       </div>
       {/* sections — revealed one by one */}
-      <div className="max-w-[860px] mx-auto px-4 md:px-8 py-6 space-y-6">
+      <div className="overflow-y-auto max-h-[calc(92vh-126px)] px-4 md:px-7 py-5 space-y-3">
         {sections.map((s, i) => (
           <motion.section key={s.key} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.12, duration: 0.3 }}
-            className="bg-white border border-[#e3e0db] rounded-[12px] p-4 md:p-5">
+            className="bg-white border border-[#e3e0db] rounded-[8px] p-4 md:p-5">
             <div className="flex items-center gap-2 mb-2.5">
               <s.icon size={14} className="text-[#117dff]" />
               <h3 className="text-[13px] font-semibold font-['Space_Grotesk'] text-[#0a0a0a]">{s.title}</h3>
@@ -935,6 +957,7 @@ export function QuickRecorderProvider({ children }) {
         {!sections.length && <p className="text-center text-[#a3a3a3] py-16">No insights extracted — the raw transcript is saved in desktop → Past meetings.</p>}
         {error && <p className="text-[12.5px] text-[#dc2626]">{error}</p>}
       </div>
+      </motion.div>
     </motion.div>
   );
 

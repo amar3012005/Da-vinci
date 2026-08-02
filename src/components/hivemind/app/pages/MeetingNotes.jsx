@@ -1328,8 +1328,18 @@ export default function MeetingNotes() {
 
       {/* ───────── MEETING DETAIL ───────── */}
       {tab === 'past' && selected && (
-        <div className="fixed inset-0 z-[80] bg-[#0a0a0a]/25 backdrop-blur-[3px] p-0 md:p-5 overflow-y-auto" onClick={() => setSelected(null)}>
-        <div className="relative mx-auto min-h-full md:min-h-0 md:max-w-[1080px] bg-white md:border border-[#e3e0db] md:rounded-[10px] p-5 md:p-7" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[80] bg-[#0a0a0a]/30 backdrop-blur-[4px] p-3 md:p-8 flex items-center justify-center" onClick={() => setSelected(null)}>
+        <div className="relative w-full max-w-[980px] max-h-[92vh] overflow-hidden bg-[#fbfaf7] border border-[#d8d5cf] rounded-[12px] shadow-[0_28px_90px_rgba(10,10,10,0.2)]" onClick={(e) => e.stopPropagation()}>
+          <div className="h-12 px-4 flex items-center justify-between border-b border-[#e3e0db] bg-white/80">
+            <div className="flex items-center gap-2" aria-hidden="true">
+              <span className="w-3 h-3 rounded-full bg-[#ef6258]" />
+              <span className="w-3 h-3 rounded-full bg-[#f4bd4f]" />
+              <span className="w-3 h-3 rounded-full bg-[#58c653]" />
+            </div>
+            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-[#a3a3a3]">past meeting · intelligence</span>
+            <span className="text-[10px] font-mono text-emerald-700">ARCHIVED</span>
+          </div>
+          <div className="relative p-5 md:p-7 overflow-y-auto max-h-[calc(92vh-48px)]">
           <button onClick={() => setSelected(null)} className="absolute right-4 top-4 w-9 h-9 grid place-items-center rounded-[8px] text-[#737373] hover:bg-[#faf9f4]" aria-label="Close report"><X size={18} /></button>
           <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] mb-3"><ArrowLeft size={12} /> {t('meetingnotes.back', 'All meetings')}</button>
           {detailErr && (<div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2.5 py-1.5 mb-3"><AlertTriangle size={11} className="inline mr-1" /> {t('meetingnotes.detailErr', 'Could not load the full record — showing the overview only.')}</div>)}
@@ -1402,6 +1412,7 @@ export default function MeetingNotes() {
               <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{nameFor(s.speaker, (selected.insights && selected.insights.speaker_names) || null)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
             ) : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{selected.transcript || 'No transcript saved.'}</p>)
           )}
+          </div>
         </div></div>
       )}
     </motion.div>
