@@ -687,8 +687,11 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     }
   };
   const playbookApproval = (work.playbook_approvals || [])[0] || null;
-  const approvalKind = playbookApproval?.kind || 'message';
-  const approvalNoun = approvalKind === 'campaign' ? 'campaign launch' : approvalKind === 'call' ? 'outbound call' : 'email batch';
+  const approvalNoun = playbookApproval?.campaign
+    ? 'campaign launch'
+    : (playbookApproval?.messages || []).length
+      ? 'message batch'
+      : 'external action';
   const decidePlaybookAuthority = async ({ preference, approve }) => {
     if (!playbookApproval || approvalBusy) return;
     const action = approve ? `${preference}-send` : preference;
