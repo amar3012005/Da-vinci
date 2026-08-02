@@ -213,9 +213,147 @@ class HiveMindApiClient {
     return data;
   }
 
+  /** Dated, source-backed growth snapshot. Runs independently from Rooms. */
+  async runGrowthBaseline(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-baseline', payload);
+    return data;
+  }
+
+  async getGrowthBaselines(limit = 12) {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-baselines', { params: { limit } });
+    return data;
+  }
+
+  async getGrowthOperatingState() {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-operating-state');
+    return data;
+  }
+
+  async runGrowthPlan(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-plan', payload);
+    return data;
+  }
+
+  async getGrowthPlans(limit = 12) {
+    const { data } = await this.controlPlane.get('/v1/hyper/growth-plans', { params: { limit } });
+    return data;
+  }
+
+  async createGrowthGoal(payload) {
+    const { data } = await this.controlPlane.post('/v1/hyper/growth-goals', payload);
+    return data;
+  }
+
+  async getHqRuntime() {
+    const { data } = await this.controlPlane.get('/v1/hq/runtime');
+    return data;
+  }
+
+  async updateHqAuthorityPolicy(payload) {
+    const { data } = await this.controlPlane.patch('/v1/hq/authority-policy', payload);
+    return data;
+  }
+
+  async activateHqRuntime(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hq/activate', payload);
+    return data;
+  }
+
+  async launchHqRuntime(payload = {}) {
+    const { data } = await this.controlPlane.post('/v1/hq/launch', payload);
+    return data;
+  }
+
+  async pauseHqRuntime(reason) {
+    const { data } = await this.controlPlane.post('/v1/hq/pause', { reason });
+    return data;
+  }
+
+  async resumeHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/resume', {});
+    return data;
+  }
+
+  async wakeHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/wake', {});
+    return data;
+  }
+
+  async restartHqRuntime() {
+    const { data } = await this.controlPlane.post('/v1/hq/restart', {});
+    return data;
+  }
+
+  async getHqEvents(after = '0', limit = 100) {
+    const { data } = await this.controlPlane.get('/v1/hq/events', { params: { after, limit } });
+    return data;
+  }
+
+  async getHqWork() {
+    // HQ work is a live lifecycle projection. Browsers and intermediary caches
+    // must never reuse an earlier authority or activation-sprint snapshot.
+    const { data } = await this.controlPlane.get('/v1/hq/work', {
+      params: { _ts: Date.now() },
+    });
+    return data;
+  }
+
+  async getCurrentHqActivationSprint() {
+    const { data } = await this.controlPlane.get('/v1/hq/activation-sprints/current');
+    return data;
+  }
+
+  async reviewHqActivationSprint(sprintId, preference = 'manual') {
+    const { data } = await this.controlPlane.post(`/v1/hq/activation-sprints/${encodeURIComponent(sprintId)}/review`, { preference });
+    return data;
+  }
+
+  async decideHqPlaybookAuthority(runId, { gate, preference, approve }) {
+    const { data } = await this.controlPlane.post(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/authority`, {
+      gate, preference, approve,
+    });
+    return data;
+  }
+
+  async getHqPlaybookSnapshot(runId) {
+    const { data } = await this.controlPlane.get(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/snapshot`);
+    return data;
+  }
+
+  async addHqInstruction(instruction) {
+    const { data } = await this.controlPlane.post('/v1/hq/instructions', { instruction });
+    return data;
+  }
+
+  async recheckHqCapabilities() {
+    const { data } = await this.controlPlane.post('/v1/hq/capabilities/recheck', {});
+    return data;
+  }
+
+  async getHqResources() {
+    const { data } = await this.controlPlane.get('/v1/hq/resources');
+    return data;
+  }
+
+  hqEventStreamUrl(after = '0') {
+    const base = API_DEFAULTS.controlPlaneBase.replace(/\/$/, '');
+    return `${base}/v1/hq/events/stream?after=${encodeURIComponent(after)}`;
+  }
+
   /** Company operating dashboard (HyperAgents hero) — persisted onboarding state. */
   async hyperCompany() {
     const { data } = await this.controlPlane.get('/v1/hyper/company');
+    return data;
+  }
+
+  /** Confirm the organization's headquarters before entering its workspace. */
+  async updateHyperCompanyLocation(location) {
+    const { data } = await this.controlPlane.patch('/v1/hyper/company/location', { location });
+    return data;
+  }
+
+  async updateHyperCompanyContacts(payload) {
+    const { data } = await this.controlPlane.patch('/v1/hyper/company/contacts', payload);
     return data;
   }
 
@@ -232,8 +370,9 @@ class HiveMindApiClient {
   }
 
   /** Approve a proposed call contract → Start the campaign (fires the first-contact dial). */
-  async startOutreachCampaign(campaignId) {
-    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/start`, {});
+  async startOutreachCampaign(campaignId, preference) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/start`,
+      preference ? { preference } : {});
     return data;
   }
 
@@ -498,6 +637,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async ensureHyperDomainRooms() {
+    const { data } = await this.controlPlane.post('/v1/hyper/domain-rooms/ensure', {});
+    return data;
+  }
+
   async createHyperRoom(payload) {
     const { data } = await this.controlPlane.post('/v1/hyper-rooms', payload);
     return data;
@@ -552,8 +696,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async controlOutreachCampaign(campaignId, action /* 'start' | 'stop' */) {
-    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/${action}`);
+  async controlOutreachCampaign(campaignId, action /* 'start' | 'stop' */, payload = {}) {
+    const { data } = await this.controlPlane.post(`/v1/outreach-campaigns/${campaignId}/${action}`, payload);
     return data;
   }
 
@@ -574,6 +718,13 @@ class HiveMindApiClient {
   async executeOutreachTarget(campaignId, targetId) {
     const { data } = await this.controlPlane.post(
       `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/execute`,
+    );
+    return data;
+  }
+
+  async reconcileOutreachTarget(campaignId, targetId) {
+    const { data } = await this.controlPlane.post(
+      `/v1/outreach-campaigns/${campaignId}/targets/${targetId}/reconcile`,
     );
     return data;
   }
@@ -669,6 +820,67 @@ class HiveMindApiClient {
   async getTaraCall(id) {
     const { data } = await this.controlPlane.get(`/v1/proxy/tara/calls/${id}`);
     return data; // { call, turns, insight }
+  }
+
+  async getTaraRuntimeConfig() {
+    const { data } = await this.controlPlane.get('/v1/tara/runtime-config');
+    return data?.config;
+  }
+
+  async updateTaraRuntimeConfig({ default_provider, grok, deepgram, expected_revision }) {
+    const { data } = await this.controlPlane.patch('/v1/tara/runtime-config', {
+      default_provider, grok, deepgram, expected_revision,
+    });
+    return data?.config;
+  }
+
+  async createTaraVoiceSession(payload) {
+    const { data } = await this.controlPlane.post('/v1/tara/voice-sessions', payload);
+    return data;
+  }
+
+  async listTaraVoices(provider) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/tara/voices?provider=${encodeURIComponent(provider)}`);
+    return data;
+  }
+
+  // Browser-initiated outbound dial. Goes through the control plane, NOT the
+  // adapter: the adapter's dial gate needs a shared key that must never reach a
+  // browser (it authorizes calling anyone). The session cookie proves who is
+  // asking and the tenant is pinned server-side.
+  async startTaraOutbound({ to, language, voice_id, goal, company }) {
+    const { data } = await this.controlPlane.post('/v1/tara/outbound', {
+      to, language, voice_id, goal, company,
+    });
+    return data;
+  }
+
+  async hangupTaraOutbound(callLegId) {
+    const { data } = await this.controlPlane.post(`/v1/tara/outbound/${encodeURIComponent(callLegId)}/hangup`, {});
+    return data;
+  }
+
+  // Post-call state for specific sessions: post_call is 'live' | 'processing' |
+  // 'ready', and `insight` carries summary + outcome + leads + learnings in one
+  // shot. Lets the campaign panel show a truthful "analysing" state instead of a
+  // timer-driven spinner, and render everything the moment it lands.
+  async listTaraCallsBySessions(sessionIds) {
+    const ids = (sessionIds || []).filter(Boolean);
+    if (!ids.length) return { calls: [] };
+    const { data } = await this.controlPlane.get(
+      `/v1/proxy/tara/calls?session_ids=${encodeURIComponent(ids.join(','))}`,
+    );
+    return data;
+  }
+
+  // Short-lived, session-scoped live-listen capability. Core verifies the
+  // caller's org owns the call before signing, so the privileged adapter dial
+  // key never reaches the browser. 404 = not this org's call / no longer live.
+  async createTaraListenToken(sessionId) {
+    const { data } = await this.controlPlane.post('/v1/proxy/tara/calls/listen-token', {
+      session_id: sessionId,
+    });
+    return data;
   }
 
   // ── TARA Skills (named prompt presets, org-scoped) ──
@@ -1521,6 +1733,229 @@ class HiveMindApiClient {
     return data;
   }
 
+  // ─── Standalone X paid campaigns ─────────────────────────────
+  async startXAdsOAuth(kind) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/start`, {});
+    return data;
+  }
+
+  async disconnectXAdsOAuth(kind) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/oauth/${kind}/disconnect`, {});
+    return data;
+  }
+
+  async createXPost(text) {
+    const { data } = await this.controlPlane.post('/v1/proxy/x-ads/posts', { text, confirmed: true });
+    return data;
+  }
+
+  async deleteXPost(id) {
+    const { data } = await this.controlPlane.delete(`/v1/proxy/x-ads/posts/${id}`, { data: { confirmed: true } });
+    return data;
+  }
+
+  async getXAdsStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/status');
+    return data;
+  }
+
+  async getXAdsAccounts() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/accounts');
+    return data;
+  }
+
+  async getXAdsFundingInstruments(accountId) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/accounts/${encodeURIComponent(accountId)}/funding-instruments`);
+    return data;
+  }
+
+  async searchXAdsTargets(type, params = {}) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/targeting/${type}`, { params });
+    return data;
+  }
+
+  async getXAdsCampaigns() {
+    const { data } = await this.controlPlane.get('/v1/proxy/x-ads/campaigns');
+    return data;
+  }
+
+  async getXAdsCampaign(id) {
+    const { data } = await this.controlPlane.get(`/v1/proxy/x-ads/campaigns/${id}`);
+    return data;
+  }
+
+  async createXAdsCampaign(payload) {
+    const { data } = await this.controlPlane.post('/v1/proxy/x-ads/campaigns', payload);
+    return data;
+  }
+
+  async updateXAdsCampaign(id, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/proxy/x-ads/campaigns/${id}`, payload);
+    return data;
+  }
+
+  async uploadXAdsCampaignImage(id, file) {
+    const form = new FormData();
+    form.append('image', file);
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  }
+
+  async prepareXAdsCampaign(id) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/prepare`, {});
+    return data;
+  }
+
+  async publishXAdsCampaign(id, confirmationToken) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/publish`, { confirmation_token: confirmationToken });
+    return data;
+  }
+
+  async controlXAdsCampaign(id, action) {
+    const { data } = await this.controlPlane.post(`/v1/proxy/x-ads/campaigns/${id}/${action}`, {});
+    return data;
+  }
+
+  // ─── Unified AI Campaigns ───────────────────────────────────
+  async getCampaignCapabilities() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/capabilities');
+    return data;
+  }
+
+  async getCampaignSettings() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/settings');
+    return data;
+  }
+
+  async updateCampaignSettings(autonomyMode) {
+    const { data } = await this.controlPlane.patch('/v1/campaigns/settings', { autonomy_mode: autonomyMode });
+    return data;
+  }
+
+  async getCampaignConnections() {
+    const { data } = await this.controlPlane.get('/v1/campaigns/connections');
+    return data;
+  }
+
+  async provisionCampaignConnections() {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/provision', {});
+    return data;
+  }
+
+  async syncCampaignConnections() {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/sync', {});
+    return data;
+  }
+
+  async startCampaignConnection(platform, returnPath, connectionKind = 'organic', accountRef = null) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/connect', {
+      platform,
+      return_path: returnPath,
+      connection_kind: connectionKind,
+      account_ref: accountRef,
+    });
+    return data;
+  }
+
+  async disconnectCampaignConnection(accountRef) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/disconnect', {
+      account_ref: accountRef,
+    });
+    return data;
+  }
+
+  async getCampaignAdAccounts(accountRef) {
+    const params = new URLSearchParams({ account_ref: accountRef });
+    const { data } = await this.controlPlane.get(`/v1/campaigns/connections/ad-accounts?${params.toString()}`);
+    return data;
+  }
+
+  async selectCampaignAdAccount(channel, accountRef, adAccountRef) {
+    const { data } = await this.controlPlane.post('/v1/campaigns/connections/ad-accounts/select', {
+      channel, account_ref: accountRef, ad_account_ref: adAccountRef,
+    });
+    return data;
+  }
+
+  async getCampaigns() {
+    const { data } = await this.controlPlane.get('/v1/campaigns');
+    return data;
+  }
+
+  async getCampaign(id) {
+    const { data } = await this.controlPlane.get(`/v1/campaigns/${id}`);
+    return data;
+  }
+
+  async createCampaign(payload) {
+    const { data } = await this.controlPlane.post('/v1/campaigns', payload);
+    return data;
+  }
+
+  async deleteCampaign(id) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}`);
+    return data;
+  }
+
+  async controlCampaign(id, action) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/${action}`, {});
+    return data;
+  }
+
+  async approveCampaignAction(id, actionId) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/approve`, {});
+    return data;
+  }
+
+  async controlCampaignAction(id, actionId, action) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/${action}`, {});
+    return data;
+  }
+
+  async editCampaignAction(id, actionId, payload) {
+    const { data } = await this.controlPlane.patch(`/v1/campaigns/${id}/actions/${actionId}`, payload);
+    return data;
+  }
+
+  async removeCampaignAction(id, actionId) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}/actions/${actionId}`);
+    return data;
+  }
+
+  async generateCampaignImage(id, actionId, payload = {}) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/generate`, payload);
+    return data;
+  }
+
+  async uploadCampaignImage(id, actionId, file, altText = '') {
+    const form = new FormData();
+    form.append('image', file); form.append('alt_text', altText);
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/upload`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return data;
+  }
+
+  async selectCampaignImage(id, actionId, assetId) {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/actions/${actionId}/assets/${assetId}`, {});
+    return data;
+  }
+
+  async removeCampaignImage(id, actionId, assetId) {
+    const { data } = await this.controlPlane.delete(`/v1/campaigns/${id}/actions/${actionId}/assets/${assetId}`);
+    return data;
+  }
+
+  async getCampaignImageBlob(contentUrl) {
+    const { data } = await this.controlPlane.get(contentUrl, { responseType: 'blob' });
+    return data;
+  }
+
+  async regenerateCampaign(id, feedback = '') {
+    const { data } = await this.controlPlane.post(`/v1/campaigns/${id}/regenerate`, { feedback });
+    return data;
+  }
+
   /**
    * Batch relations summary for KB documents.
    * Returns { summaries: { <docId>: { total, byType:{Updates,Extends,Derives,...}, cluster_size } }}
@@ -1793,6 +2228,26 @@ class HiveMindApiClient {
   async googleWorkspaceDisconnect(provider) {
     // provider: 'gmail' | 'google_drive' | 'google_calendar' | ... | 'all'
     const { data } = await this.controlPlane.post('/v1/proxy/connectors/google/disconnect', { provider });
+    return data;
+  }
+
+  async searchConsoleStatus() {
+    const { data } = await this.controlPlane.get('/v1/proxy/seo/search-console/status');
+    return data;
+  }
+
+  async searchConsoleProperties() {
+    const { data } = await this.controlPlane.get('/v1/proxy/seo/search-console/properties');
+    return data;
+  }
+
+  async selectSearchConsoleProperty(siteUrl) {
+    const { data } = await this.controlPlane.post('/v1/proxy/seo/search-console/property', { site_url: siteUrl });
+    return data;
+  }
+
+  async collectSearchConsoleEvidence() {
+    const { data } = await this.controlPlane.post('/v1/proxy/seo/search-console/collect', {});
     return data;
   }
 

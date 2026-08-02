@@ -21,23 +21,37 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Sparkles, Send, Users, Hash, X, Archive, Globe, FolderOpen, ChevronDown,
-  AlertTriangle, Loader2, Trash2, Eraser, RotateCcw,
+  AlertTriangle, CheckCircle2, Loader2, Trash2, Eraser, RotateCcw,
   Network, Shield, Crown, Lightbulb, MessageCircle, Check,
   Clock, LayoutGrid, Zap, CheckCheck,
   Swords, Gavel, Scale, Coffee, History, ClipboardCheck, ListChecks, Search, Layers,
   UserPlus, LogOut, ExternalLink, Brain, Tag, FileText, Boxes, Paperclip,
   ArrowLeft, ArrowRight, ArrowUpRight, Target, Eye, Pencil, PhoneCall,
   User, Gauge, CreditCard, Settings, Building2, Megaphone, Rocket,
-  MapPin, Mail,
+  MapPin, Mail, Copy, Download, Power,
+  ContactRound,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import apiClient from '../shared/api-client';
-import { EmailComposeCard, CallRingingCard, EmailBlock, parseEmailMarkdown, GmailConnectGate } from '../hyperagents/elements';
+import { EmailComposeCard, CallRingingCard, GmailConnectGate } from '../hyperagents/elements';
 import { useAuth } from '../auth/AuthProvider';
 import DigitalEmployees from './DigitalEmployees';
 import { HyperOnboarding, CompanyDashboard } from '../hyperagents';
 import CampaignPanel from '../hyperagents/CampaignPanel';
 import LeadsView from '../hyperagents/LeadsView';
+import CampaignsView from '../hyperagents/CampaignsView';
+import CampaignDashboardModal from '../hyperagents/campaigns/CampaignDashboardModal';
+import CampaignProgressDashboard from '../hyperagents/campaigns/CampaignProgressDashboard';
+import CreateCampaignWizard from '../hyperagents/campaigns/CreateCampaignWizard';
+import CampaignActivation from '../hyperagents/campaigns/CampaignActivation';
+import HqRuntimeConsole, { HqRuntimeRail } from '../hyperagents/HqRuntimeConsole';
+import {
+  CAMPAIGN_INTELLIGENCE_V2,
+  CampaignConnectionsRail,
+  CampaignIntelligenceQuickRuns,
+} from '../hyperagents/campaigns/CampaignIntelligenceV2';
+import { SeoRoomBanner, SeoRoomProgress, latestSeoAuditFromTurns } from '../hyperagents/seo/SeoRoomWorkspace';
+import AaasVoiceWidget from '../../AaasVoiceWidget';
 import { reportViewFor } from '../hyperagents/rooms';
 import {
   FinalReportCard, SwarmRounds, ArtifactPreviewModal, AgentBubble, DeepSimulationPanel,
@@ -45,7 +59,7 @@ import {
   LANE_META, AGREEMENT_META,
   fmtTs, eventDisplayTs, getPersonaContract, contractSnippet,
   SwarmSpinningUp, SimTheater, HqReportBubble, ProspectStack, ToolTimeline,
-  relTime, sectionIconFor, splitSynthesisSections, hyperEventKey,
+  relTime, hyperEventKey,
 } from '../hyperagents/rooms/shared';
 import { PageWalkthrough, HYPER_AGENTS_STEPS } from '../shared/Walkthrough';
 import { BRAND_LOGOS } from '../shared/connectors-catalog';
@@ -68,7 +82,6 @@ const ROOM_CONNECTORS = [
   { id: 'airtable', label: 'Airtable', color: '#2d7ff9', desc: 'Bases & records' },
   { id: 'linear', label: 'Linear', color: '#5e6ad2', desc: 'Issues & projects' },
 ];
-
 
 /* ─── Lane → glyph + color ──────────────────────────────────────────── */
 
@@ -115,76 +128,91 @@ const ROOM_FORMATS = [
     descKey: 'hyperAgents.tmplStandupDesc',     desc: 'Yesterday / Today / Blockers status report.' },
 ];
 
-const SYNTHESIS_PRESENTATIONS = {
-  RESEARCH: { label: 'Evidence brief', accent: '#0f766e', soft: '#ecfdf5', icon: Search, note: 'Grounded findings and confidence signals' },
-  OUTREACH: { label: 'Outreach desk', accent: '#be185d', soft: '#fdf2f8', icon: Send, note: 'Targets, personalisation, and ready-to-use sequences' },
-  MARKETING: { label: 'Campaign board', accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Positioning, assets, channels, and experiments' },
-  STRATEGY: { label: 'Decision memo', accent: '#4338ca', soft: '#eef2ff', icon: Gavel, note: 'Trade-offs, accountability, and the next institutional move' },
-  FEATURE: { label: 'Delivery plan', accent: '#0369a1', soft: '#f0f9ff', icon: Rocket, note: 'Requirements, validation, and rollout control' },
-  GENERAL: { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
-  // Room-KIND desks (preferred key — derived from skill_used.room_kind; the
-  // upper-case task tags above remain as aliases for old turns):
-  market:   { label: 'Competitive desk', accent: '#0f766e', soft: '#ecfdf5', icon: Layers,   note: 'Landscape, asymmetries, threats, and the next moves' },
-  content:  { label: 'Editorial desk',   accent: '#c2410c', soft: '#fff7ed', icon: Megaphone, note: 'Pillars, calendar, hooks, and distribution' },
-  outreach: { label: 'Outreach desk',    accent: '#be185d', soft: '#fdf2f8', icon: Send,     note: 'ICP, ranked prospects, sequence, and signals' },
-  business: { label: 'Operating desk',   accent: '#0369a1', soft: '#f0f9ff', icon: Gauge,    note: 'Unit economics, pricing, risks, and the fatal metric' },
-  strategy: { label: 'Decision memo',    accent: '#4338ca', soft: '#eef2ff', icon: Gavel,    note: 'Options scored, decision taken, tripwire set' },
-  general:  { label: 'Operating synthesis', accent: '#7c3aed', soft: '#f5f3ff', icon: Sparkles, note: 'A clear answer, evidence, and accountable next steps' },
+// Expertise and collaboration are orthogonal. `room_tag` selects a versioned
+// Director/skills/toolkit/report pack; `template` still selects how agents work.
+const DOMAIN_ROOMS = [
+  { key: 'general', label: 'General', icon: Sparkles, color: '#7c3aed', desc: 'Your company command center for cross-functional priorities, decisions, and execution.' },
+  { key: 'campaign', label: 'Campaign Intelligence', icon: Megaphone, color: '#256d5b', desc: 'One permanent workspace for campaign research, debate, creative development, scheduling, and launch readiness.' },
+  { key: 'seo', label: 'SEO', icon: Search, color: '#047857', desc: 'Search demand, SERPs, technical discovery, and organic growth.' },
+  { key: 'marketing', label: 'Marketing', icon: Megaphone, color: '#c2410c', desc: 'Audience, campaigns, channels, assets, and experiments.' },
+  { key: 'outreach', label: 'Outreach Intelligence', icon: ContactRound, color: '#0f766e', desc: 'Prospect discovery, qualification, lead intelligence, and governed outreach preparation.' },
+  { key: 'branding', label: 'Branding', icon: Eye, color: '#9d174d', desc: 'Positioning, narrative, voice, and visual direction.' },
+  { key: 'fundraising', label: 'Fundraising', icon: CreditCard, color: '#4338ca', desc: 'Investor narrative, readiness, targeting, and process.' },
+  { key: 'research', label: 'Research', icon: FileText, color: '#0369a1', desc: 'Source-backed investigation and decision evidence.' },
+  { key: 'product', label: 'Product', icon: Rocket, color: '#0f766e', desc: 'Discovery, requirements, prioritization, and rollout.' },
+  { key: 'design', label: 'Design', icon: LayoutGrid, color: '#be185d', desc: 'User flows, interaction systems, and accessibility.' },
+  { key: 'legal_finance', label: 'Legal & Finance', icon: Scale, color: '#4a3550', desc: 'Contracts, compliance, financial analysis, and controls.' },
+];
+const domainRoomDefinition = (key) => DOMAIN_ROOMS.find((domain) => domain.key === key) || DOMAIN_ROOMS[0];
+
+const DOMAIN_ROOM_STAGES = {
+  general: [
+    ['Understand', 'Assess the company now', 'Synthesize what the company is, what it offers, its audience, current evidence, and the most important unknowns.', 'Assess everything currently known about the company. Separate verified facts from assumptions, identify the most consequential gaps, and produce a concise operating diagnosis.'],
+    ['Prioritize', 'Find the highest-leverage move', 'Compare the strongest opportunities across the company before committing resources.', 'Compare the highest-leverage opportunities across product, growth, operations, finance, and risk. Recommend one priority with explicit trade-offs and evidence.'],
+    ['Plan', 'Build the next 30 days', 'Turn the chosen priority into owners, milestones, dependencies, and success checks.', 'Build a practical 30-day operating plan for the company. Include milestones, owners, dependencies, risks, and measurable success criteria.'],
+    ['Execute', 'Create the first deliverable', 'Produce the most useful ready-to-use artifact from the plan.', 'Choose and create the highest-value first deliverable from the current operating plan. Make it complete, usable, and grounded in company context.'],
+  ],
+  campaign: [
+    ['Ground', 'Audit campaign evidence', 'Bring company truth, audience context, prior performance, and channel constraints onto the board.', 'Audit the evidence available for the active campaign. Separate verified company and audience facts from assumptions, identify missing channel requirements, and recommend what the team must learn before building.'],
+    ['Decide', 'Debate the strongest strategy', 'Challenge positioning, audience, offer, channel roles, and the campaign sequence before committing.', 'Debate the strongest strategy for the active campaign. Compare credible routes, challenge unsupported claims, resolve trade-offs, and record one clear recommendation.'],
+    ['Build', 'Create the complete sequence', 'Produce channel-correct copy, creative briefs, timing, rationale, and dependencies for every action.', 'Build the complete scheduled campaign sequence from the accepted strategy. Include final channel-ready copy, visual briefs where useful, timing, rationale, dependencies, and success signals. Do not return a single sample action.'],
+    ['Verify', 'Check launch readiness', 'Validate claims, providers, budgets, approvals, schedule, and measurement before anything can launch.', 'Run a launch-readiness review for the active campaign. Validate every claim, channel provider, budget, approval, scheduled action, creative requirement, and measurement rule. Return explicit blockers and recovery steps.'],
+  ],
+  outreach: [
+    ['Scope', 'Define the prospect assignment', 'Resolve the requested audience, geography, quantity, evidence requirements, and outreach authority.', 'Read the current company ICP and the active assignment. Define the exact prospect segment, geography, quantity, evidence requirements, and whether the work is research-only, draft-only, or authorized for contact.'],
+    ['Discover', 'Find source-backed prospects', 'Use existing leads first, then connected discovery tools to find relevant organizations without inventing records.', 'Search the shared lead book first. If it is insufficient, use approved discovery tools to find source-backed prospects that match the company ICP and the exact assignment.'],
+    ['Qualify', 'Verify fit and distinct angles', 'Validate every selected prospect and write a company-specific reason and outreach angle.', 'Qualify each prospect against the requested criteria. Persist source evidence, a distinct fit rationale, and a personalized outreach angle for every accepted record.'],
+    ['Deliver', 'Return the governed lead packet', 'Verify persistence, requested counts, evidence, and authority before returning work to HQ.', 'Verify that the requested number of qualified lead records exists in the shared lead book with evidence and distinct outreach angles. Report exact counts and blockers. Do not contact anyone unless explicitly authorized.'],
+  ],
+  seo: [
+    ['Baseline', 'Audit search readiness', 'Inspect positioning, site structure, technical discoverability, and current search evidence.', 'Audit the company search baseline using available company knowledge and live evidence. Cover technical discoverability, content, authority, and measurement gaps.'],
+    ['Demand', 'Map search opportunities', 'Find intent clusters and questions the company can credibly win.', 'Map the most valuable search-intent clusters for the company and its real audience. Include evidence, intent, difficulty assumptions, and business relevance.'],
+    ['Build', 'Create the SEO roadmap', 'Prioritize technical fixes, pages, content, and internal linking.', 'Create a prioritized SEO execution roadmap with technical fixes, page opportunities, content briefs, internal links, owners, and timing.'],
+    ['Measure', 'Define the learning loop', 'Choose leading and lagging indicators with review intervals.', 'Define an SEO measurement system with baseline requirements, leading indicators, business outcomes, review cadence, and decision thresholds.'],
+  ],
+  marketing: [
+    ['Audience', 'Clarify audience and offer', 'Test the target, pain, promise, proof, and call to action.', 'Clarify the company audience and offer. Challenge the pain, promise, proof, objections, and call to action using available evidence.'],
+    ['Strategy', 'Choose the channel system', 'Decide where the audience can be reached and how channels work together.', 'Design the best evidence-backed channel strategy for this company. Explain channel roles, sequencing, trade-offs, and prerequisites.'],
+    ['Create', 'Build campaign assets', 'Produce ready-to-use content matched to the chosen channels.', 'Create a coherent set of launch-ready marketing assets for the recommended channels. Keep every claim grounded and every action channel-correct.'],
+    ['Learn', 'Plan the experiments', 'Schedule tests with hypotheses, metrics, and stop or scale rules.', 'Build a marketing experiment calendar with hypotheses, variants, success metrics, minimum evidence, and stop, iterate, or scale rules.'],
+  ],
+  branding: [
+    ['Audit', 'Review the current brand', 'Identify strengths, contradictions, sameness, and missing proof.', 'Audit the current company brand using all available context. Assess positioning, differentiation, narrative, voice, visual signals, and proof gaps.'],
+    ['Position', 'Define the market position', 'Choose the category, audience, differentiated promise, and reasons to believe.', 'Develop a defensible positioning system: audience, category, problem, differentiated promise, reasons to believe, alternatives, and boundaries.'],
+    ['Express', 'Build the messaging system', 'Create the narrative hierarchy, voice, messages, and examples.', 'Create a complete messaging architecture with narrative, message hierarchy, voice rules, proof points, objections, and channel examples.'],
+    ['Activate', 'Plan brand activation', 'Apply the system consistently across the highest-impact surfaces.', 'Plan brand activation across the company website, product, sales, social, and customer touchpoints with priorities and quality checks.'],
+  ],
+  fundraising: [
+    ['Readiness', 'Assess fundraising readiness', 'Review traction, evidence, economics, team, risks, and missing materials.', 'Assess the company fundraising readiness. Separate evidence from aspiration and identify the critical gaps in traction, economics, team, narrative, and diligence.'],
+    ['Narrative', 'Build the investor story', 'Connect problem, insight, solution, market, traction, model, and ask.', 'Build an investor narrative grounded only in known company facts. Include problem, insight, solution, market, traction, business model, moat, team, roadmap, and ask.'],
+    ['Target', 'Define investor fit', 'Specify the investor profile and a research method for a qualified list.', 'Define the ideal investor profile and create an evidence-first method to identify and rank suitable investors without inventing names or fit.'],
+    ['Process', 'Create the raise plan', 'Design materials, outreach waves, meetings, diligence, and decision gates.', 'Create a fundraising operating plan with materials, outreach waves, meeting sequence, diligence readiness, owners, timing, and decision gates.'],
+  ],
+  research: [
+    ['Frame', 'Define the research question', 'Turn the business need into answerable questions, scope, and evidence standards.', 'Frame the highest-value research question for the company. Define scope, sub-questions, evidence standards, exclusions, and the decision it must inform.'],
+    ['Gather', 'Build the evidence base', 'Collect relevant company, market, customer, and external sources.', 'Gather a source-backed evidence base for the current research question. Keep verified facts, source quality, assumptions, and unknowns visibly separate.'],
+    ['Challenge', 'Test competing explanations', 'Debate interpretations, contradictions, limitations, and confidence.', 'Challenge the evidence through competing hypotheses. Identify contradictions, weak sources, missing data, confidence levels, and what would change the conclusion.'],
+    ['Decide', 'Produce the decision brief', 'Convert findings into implications, recommendation, and next research.', 'Produce a decision-ready research brief with findings, sources, confidence, implications, recommendation, risks, and the next evidence to collect.'],
+  ],
+  product: [
+    ['Discover', 'Clarify the user problem', 'Connect users, jobs, pain, evidence, alternatives, and desired outcomes.', 'Clarify the most important user problem using current company knowledge. Separate observed evidence from assumptions and define the desired outcome.'],
+    ['Define', 'Write the product requirements', 'Specify outcomes, scope, flows, constraints, states, and acceptance criteria.', 'Write decision-ready product requirements for the priority problem, including users, outcomes, scope, flows, constraints, edge states, and acceptance criteria.'],
+    ['Prioritize', 'Choose what to build', 'Compare impact, evidence, effort, risk, and strategic fit.', 'Prioritize the product opportunities using impact, evidence, effort, risk, dependencies, and strategic fit. Make one explicit recommendation.'],
+    ['Deliver', 'Plan validation and rollout', 'Define prototype, experiment, instrumentation, release, and review gates.', 'Create the validation and rollout plan with prototype or experiment, instrumentation, release stages, owners, risks, and review gates.'],
+  ],
+  design: [
+    ['Journey', 'Map the user journey', 'Identify actors, steps, goals, friction, handoffs, and failure states.', 'Map the end-to-end user journey for the priority experience. Include actors, goals, steps, friction, handoffs, edge cases, and failure states.'],
+    ['Interaction', 'Design the core flow', 'Specify information hierarchy, actions, states, feedback, and recovery.', 'Design the core interaction flow with information hierarchy, controls, states, feedback, empty states, errors, and recovery paths.'],
+    ['System', 'Define reusable patterns', 'Turn the flow into components, behavior rules, content, and accessibility.', 'Define the reusable design system patterns needed for this experience, including components, behaviors, content rules, responsive constraints, and accessibility.'],
+    ['Validate', 'Create the validation plan', 'Test comprehension, completion, confidence, and accessibility.', 'Create a design validation plan with target users, scenarios, tasks, success measures, accessibility checks, and decision thresholds.'],
+  ],
+  legal_finance: [
+    ['Scope', 'Define jurisdiction and exposure', 'Identify the decision, entities, regions, contracts, money flows, and review boundaries.', 'Define the legal and financial scope of the current company decision. Identify entities, jurisdictions, contracts, money flows, assumptions, and professional-review boundaries.'],
+    ['Analyze', 'Assess obligations and economics', 'Map requirements, liabilities, costs, revenue effects, and scenarios.', 'Analyze the relevant obligations, liabilities, controls, unit economics, cash effects, and scenarios. Clearly distinguish facts, assumptions, and items requiring qualified review.'],
+    ['Control', 'Design safeguards', 'Create approvals, records, limits, monitoring, and escalation paths.', 'Design practical legal and financial controls with owners, approvals, evidence records, thresholds, monitoring, and escalation paths.'],
+    ['Decide', 'Prepare the review package', 'Summarize recommendation, exposure, alternatives, and required sign-offs.', 'Prepare a decision package with recommendation, alternatives, financial impact, legal exposure, unresolved questions, and required expert sign-offs.'],
+  ],
 };
-
-// Per-section icons matched by heading keyword — the row-cards read like a
-// specialist's dossier, not uniform bullets. Fallback = accent dot (existing).
-
-
-function TaskSynthesisRenderer({ taskTag, roomKind, content }) {
-  // room_kind (from skill_used events) wins; task tag stays as the legacy alias.
-  const kind = String(roomKind || '').toLowerCase();
-  const spec = SYNTHESIS_PRESENTATIONS[kind]
-    || SYNTHESIS_PRESENTATIONS[String(taskTag || 'GENERAL').toUpperCase()]
-    || SYNTHESIS_PRESENTATIONS.GENERAL;
-  const Icon = spec.icon;
-  const sections = splitSynthesisSections(content);
-  return (
-    <div className="overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: `${spec.accent}33` }}>
-      <div className="px-4 py-3" style={{ background: `linear-gradient(110deg, ${spec.soft}, white)` }}>
-        <div className="flex items-start gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${spec.accent}16`, color: spec.accent }}><Icon size={17} /></span>
-          <div className="min-w-0">
-            <div className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em]" style={{ color: spec.accent }}>
-              {kind && SYNTHESIS_PRESENTATIONS[kind] ? `${kind.toUpperCase()} · ${spec.label}` : spec.label}
-            </div>
-            <p className="mt-0.5 text-[12px] text-[#525252]">{spec.note}</p>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-px bg-[#e9e6e0]">
-        {sections.map((section, index) => (
-          <section key={`${section.title}-${index}`} className="bg-white px-4 py-3">
-            <div className="mb-2 flex items-center gap-2">
-              {(() => {
-                const SIcon = sectionIconFor(kind, section.title);
-                return SIcon
-                  ? <SIcon size={12} style={{ color: spec.accent }} />
-                  : <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: spec.accent }} />;
-              })()}
-              <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#262626]">{section.title}</h4>
-            </div>
-            {(() => {
-              const bodyMd = section.body.join('\n').trim();
-              // An outreach section that IS an email renders as a real email
-              // artifact (envelope + letter body), never raw markdown prose.
-              const email = parseEmailMarkdown(bodyMd);
-              if (email) {
-                return <EmailBlock subject={email.subject} envelope={email.envelope} body={email.body} renderMarkdown={renderMarkdownLite} />;
-              }
-              return <div className="text-[12.5px] leading-relaxed text-[#262626] break-words">{renderMarkdownLite(bodyMd)}</div>;
-            })()}
-          </section>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Top-level page ─────────────────────────────────────────────────── */
 
@@ -204,8 +232,10 @@ export default function HyperAgents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAgentRooms, setShowAgentRooms] = useState(false);
+  const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
-  // | 'thread' (room chat — /employees/rooms/:id) | 'roster' (/employees/agents).
+  // | 'runtime' | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
   // The URL is the source of truth on mount/deep-link; goMode() keeps it in
   // sync on every in-app switch so each feature has its own address.
   const _parsePath = () => {
@@ -214,22 +244,29 @@ export default function HyperAgents() {
       const m = p.match(/\/employees\/rooms\/([0-9a-f-]{36})/i);
       if (m) return { mode: 'thread', roomId: m[1] };
       if (/\/employees\/agents/.test(p)) return { mode: 'roster', roomId: null };
+      if (/\/employees\/runtime/.test(p)) return { mode: 'runtime', roomId: null };
       if (/\/employees\/leads/.test(p)) return { mode: 'leads', roomId: null };
+      if (/\/employees\/campaigns/.test(p)) return { mode: 'campaigns', roomId: null };
       return { mode: 'hero', roomId: null };
     } catch { return { mode: 'hero', roomId: null }; }
   };
   const _init = _parsePath();
   const [activeRoomId, setActiveRoomId] = useState(_init.roomId);
   const [viewMode, setViewMode] = useState(_init.mode);
-  const goMode = useCallback((mode, roomId) => {
+  const goMode = useCallback((mode, roomId, query = {}) => {
     setViewMode(mode);
     if (roomId !== undefined) setActiveRoomId(roomId);
     const base = '/hivemind/app/employees';
     const url = mode === 'hero' ? `${base}/mycompany`
       : mode === 'roster' ? `${base}/agents`
+        : mode === 'runtime' ? `${base}/runtime`
         : mode === 'leads' ? `${base}/leads`
+          : mode === 'campaigns' ? `${base}/campaigns`
           : (roomId ? `${base}/rooms/${roomId}` : base);
-    navigate(url, { replace: true });
+    const params = new URLSearchParams();
+    if (query.campaignReturn) params.set('campaignReturn', query.campaignReturn);
+    if (query.campaign) params.set('campaign', query.campaign);
+    navigate(`${url}${params.size ? `?${params.toString()}` : ''}`, { replace: true });
   }, [navigate]);
   // Canonicalize the bare /employees URL to /employees/mycompany (keep ?onboard=1).
   useEffect(() => {
@@ -242,11 +279,23 @@ export default function HyperAgents() {
   const fetchRooms = useCallback(async () => {
     setError(null);
     try {
+      if (!domainRoomsEnsuredRef.current) {
+        domainRoomsEnsuredRef.current = true;
+        try {
+          await apiClient.ensureHyperDomainRooms();
+        } catch {
+          domainRoomsEnsuredRef.current = false;
+        }
+      }
       const resp = await apiClient.listHyperRooms();
       const list = resp?.rooms || [];
-      setRooms(list);
-      if (!activeRoomId && list.length && !list[0].archived_at) {
-        setActiveRoomId(list[0].id);
+      const campaignHome = list.find((candidate) => (candidate.room_tag || candidate.roomTag) === 'campaign' && (candidate.is_domain_home || candidate.isDomainHome));
+      const visibleRooms = campaignHome
+        ? list.filter((candidate) => (candidate.room_tag || candidate.roomTag) !== 'campaign' || candidate.id === campaignHome.id)
+        : list;
+      setRooms(visibleRooms);
+      if (!activeRoomId && visibleRooms.length && !visibleRooms[0].archived_at) {
+        setActiveRoomId(visibleRooms[0].id);
       }
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -285,6 +334,21 @@ export default function HyperAgents() {
 
   const liveRooms = useMemo(() => rooms.filter(r => !r.archived_at), [rooms]);
   const archivedRooms = useMemo(() => rooms.filter(r => r.archived_at), [rooms]);
+  const domainHomeRooms = useMemo(() => {
+    const order = Object.fromEntries(DOMAIN_ROOMS.map((domain, index) => [domain.key, index]));
+    return liveRooms
+      .filter(room => room.is_domain_home)
+      .sort((a, b) => (order[a.room_tag] ?? 99) - (order[b.room_tag] ?? 99));
+  }, [liveRooms]);
+  const hqRoom = useMemo(
+    () => domainHomeRooms.find((room) => (room.room_tag || room.roomTag || 'general') === 'general') || null,
+    [domainHomeRooms],
+  );
+  const agentHomeRooms = useMemo(
+    () => domainHomeRooms.filter((room) => room.id !== hqRoom?.id),
+    [domainHomeRooms, hqRoom?.id],
+  );
+  const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
   // A brand-new org (no rooms yet, never onboarded/skipped) gets the
@@ -310,6 +374,7 @@ export default function HyperAgents() {
       if (u.searchParams.has('onboard')) { u.searchParams.delete('onboard'); window.history.replaceState({}, '', u); }
     } catch { /* noop */ }
     goMode('hero', null); // Enter your workspace → the mycompany dashboard
+    domainRoomsEnsuredRef.current = false;
     fetchRooms();
     emitUsageChanged();
   }, [fetchRooms, goMode]);
@@ -377,7 +442,7 @@ export default function HyperAgents() {
     <div className="font-['Space_Grotesk'] flex h-[calc(100vh-3.5rem)] min-h-[600px] -m-6 max-w-none bg-white border-t border-[#e3e0db] overflow-hidden">
       <PageWalkthrough pageKey="hyper-agents" steps={HYPER_AGENTS_STEPS} />
       {/* Left rail: rooms */}
-      <aside className="w-[240px] min-w-[240px] border-r border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
+      <aside className="hidden w-[240px] min-w-[240px] shrink-0 flex-col border-r border-[#e3e0db] bg-[#faf9f4] md:flex">
         <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles size={13} className="text-violet-500" />
@@ -405,6 +470,14 @@ export default function HyperAgents() {
             <Building2 size={13} className={viewMode === 'hero' ? 'text-white' : 'text-violet-500'} />
             {t('hyperAgents.yourCompany', 'Your Company')}
           </button>
+          <button
+            onClick={() => goMode('runtime', hqRoom?.id || null)}
+            disabled={!hqRoom}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-45 ${viewMode === 'runtime' ? 'bg-[#185bcc] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#bcd0ef]'}`}
+          >
+            <Power size={13} className={viewMode === 'runtime' ? 'text-white' : 'text-[#185bcc]'} />
+            Runtime
+          </button>
           {/* YOUR LEADS — outreach progress board (Notion-style). */}
           <button
             onClick={() => goMode('leads', null)}
@@ -413,13 +486,51 @@ export default function HyperAgents() {
             <ListChecks size={13} className={viewMode === 'leads' ? 'text-white' : 'text-[#117dff]'} />
             {t('hyperAgents.yourLeads', 'Your Leads')}
           </button>
+          {/* YOUR CAMPAIGNS — standalone paid media workspace, outside rooms. */}
+          <button
+            onClick={() => goMode('campaigns', null)}
+            className={`mt-1.5 w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${viewMode === 'campaigns' ? 'bg-[#0a0a0a] text-white' : 'text-[#0a0a0a] hover:bg-white border border-[#e3e0db]'}`}
+          >
+            <Megaphone size={13} className={viewMode === 'campaigns' ? 'text-white' : 'text-[#c2410c]'} />
+            {t('hyperAgents.runAdsOnX', 'Run Ads on X')}
+          </button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-            {t('hyperAgents.rooms', 'Rooms')}
+            {t('hyperAgents.companyRooms', 'Company rooms')}
           </div>
-          {liveRooms.map(r => (
+          {agentHomeRooms.length > 0 ? (
+            <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
+              <button
+                type="button"
+                onClick={() => setShowAgentRooms((current) => !current)}
+                aria-expanded={showAgentRooms}
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white"
+              >
+                <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-violet-500" />View agent rooms <span className="font-mono text-[9px] text-[#a3a3a3]">{agentHomeRooms.length}</span></span>
+                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms ? 'rotate-180' : ''}`} />
+              </button>
+              {showAgentRooms ? (
+                <div className="border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
+                  {agentHomeRooms.map(r => (
+                    <RoomRow
+                      key={r.id}
+                      room={r}
+                      active={r.id === activeRoomId && viewMode === 'thread'}
+                      onClick={() => goMode('thread', r.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {workRooms.length > 0 && (
+            <div className="px-3 pt-3 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3] border-t border-[#e3e0db] mt-1">
+              {t('hyperAgents.workRooms', 'Work rooms')}
+            </div>
+          )}
+          {workRooms.map(r => (
             <RoomRow
               key={r.id}
               room={r}
@@ -514,9 +625,18 @@ export default function HyperAgents() {
             }}
             onShowRoster={() => goMode('roster')}
             onOpenLeads={() => goMode('leads', null)}
+            onOpenRuntime={() => goMode('runtime', hqRoom?.id || null)}
+          />
+        ) : viewMode === 'runtime' && hqRoom ? (
+          <RoomThread
+            key={`runtime-${hqRoom.id}`}
+            roomId={hqRoom.id}
+            onArchived={() => { fetchRooms(); goMode('hero', null); }}
           />
         ) : viewMode === 'leads' ? (
           <LeadsView />
+        ) : viewMode === 'campaigns' ? (
+          <CampaignsView onOpenRoom={(roomId, campaignId) => goMode('thread', roomId, { campaignReturn: campaignId })} />
         ) : viewMode === 'roster' ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center gap-2 sticky top-0 z-10">
@@ -583,6 +703,9 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   const { t } = useTranslation('dashboard');
   const participants = room.participants || [];
   const projectLabel = room.project?.name || room.project?.slug || null;
+  const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const domainLabel = room.is_domain_home && domain.key === 'general' ? 'HQ' : domain.label;
+  const DomainIcon = domain.icon;
   return (
     <div
       role="button"
@@ -604,6 +727,10 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
           )}
         </div>
         <div className="flex items-center gap-1 mt-0.5 text-[9px] text-[#a3a3a3] font-mono">
+          <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase" style={{ color: domain.color }}>
+            <DomainIcon size={9} /> {domainLabel}
+          </span>
+          <span className="text-[#d4d0ca]">·</span>
           {participants.slice(0, 4).map(p => (
             <AgentAvatar key={p.id} agent={p} size={18} />
           ))}
@@ -639,6 +766,227 @@ function RoomRow({ room, active, onClick, archived, onDelete }) {
   );
 }
 
+function DomainRoomIntro({ room, company, busy, onRun, onEnter, onStartCampaign, onAnalyseGrowth, campaignV2 = false }) {
+  const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const DomainIcon = domain.icon;
+  const displayLabel = domain.key === 'general' ? (room.name || 'Company HQ') : domain.label;
+  const stages = DOMAIN_ROOM_STAGES[domain.key] || DOMAIN_ROOM_STAGES.general;
+  const profile = company?.profile || {};
+  const companyName = company?.company || 'Your company';
+  const facts = [
+    ['Mission', company?.mission],
+    ['What you do', profile.what_it_does],
+    ['Positioning', profile.positioning],
+    ['Audience', profile.icp],
+    ['Offer', profile.offer],
+  ].filter(([, value]) => typeof value === 'string' && value.trim());
+  const contextPrefix = [
+    `Company: ${companyName}.`,
+    company?.mission ? `Mission: ${company.mission}` : '',
+    profile.positioning ? `Positioning: ${profile.positioning}` : '',
+    profile.icp ? `Audience: ${profile.icp}` : '',
+    profile.offer ? `Offer: ${profile.offer}` : '',
+  ].filter(Boolean).join('\n');
+
+  if (campaignV2) {
+    return (
+      <div className="-mx-4 -mt-4 mb-6 border-b border-[#bfd3ff] bg-[#f7f9fd]">
+        <section
+          className="relative isolate h-[238px] overflow-hidden border-b border-[#8dadf0] bg-[#1d3d92] text-white md:h-[276px]"
+          aria-label="Campaign Intelligence workspace"
+        >
+          <div className="absolute inset-0" aria-hidden="true">
+            <div className="absolute inset-y-0 left-0 w-[42%] bg-[#2447a3]" />
+            <div className="absolute -right-[7%] top-[-34%] h-[168%] w-[57%] -skew-x-[29deg] border-l border-[#a6c0ff] bg-[#dbe6fb]" />
+            <div className="absolute right-[18%] top-[-31%] h-[92%] w-[34%] -rotate-[29deg] border border-[#aac4ff] bg-[#4478e0]" />
+            <div className="absolute bottom-[-42%] right-[-8%] h-[83%] w-[55%] -skew-x-[28deg] border border-[#6f98ee] bg-[#173276]" />
+            <div className="absolute left-[57%] top-0 h-[36%] w-px bg-[#6d98ed]/80" />
+            <div className="absolute left-[73%] top-0 h-[51%] w-px bg-[#6d98ed]/80" />
+            <div className="absolute left-[56.6%] top-[35%] h-2 w-2 rounded-full border border-[#a8c2ff] bg-[#1d3d92]" />
+            <div className="absolute left-[72.6%] top-[50%] h-2 w-2 rounded-full border border-[#a8c2ff] bg-[#1d3d92]" />
+          </div>
+          <div className="relative z-10 flex h-full flex-col justify-between px-5 py-5 md:px-8 md:py-6">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-[#c3d6ff]">
+                <DomainIcon size={14} /> Company room
+              </span>
+              <button type="button" onClick={onEnter} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#f4f7ff] transition hover:text-white">
+                Enter discussion <ArrowRight size={12} />
+              </button>
+            </div>
+            <div className="max-w-[650px] pb-2">
+              <p className="text-[10px] font-mono uppercase tracking-[0.17em] text-[#c3d6ff]">Result · Campaign Intelligence</p>
+              <h1 className="mt-2 text-[36px] font-semibold leading-[0.96] text-white md:text-[54px]">Campaign Intelligence</h1>
+              <p className="mt-3 max-w-[540px] text-[12px] leading-5 text-[#e1eaff] md:text-[14px]">Research, debate, creative direction, scheduling, and launch readiness in one room.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[8.5px] font-mono uppercase tracking-[0.1em] text-[#c3d6ff]">
+              <span>{facts.length} company facts</span>
+              <span>{Array.isArray(company?.research) ? company.research.length : 0} research signals</span>
+              <span>{Array.isArray(company?.team) ? company.team.length : 0} team members</span>
+            </div>
+          </div>
+        </section>
+        <CampaignIntelligenceQuickRuns busy={busy} onRun={onRun} onStartCampaign={onStartCampaign} />
+      </div>
+    );
+  }
+
+  // HQ is an operating surface, not another specialist briefing. Its evidence,
+  // growth state, and controls live in the dedicated panels below the thread.
+  // Keep the entry point as a durable category banner only.
+  if (domain.key === 'general') {
+    return (
+      <div className="-mx-4 -mt-4 mb-5 border-b border-[#ded8ff] bg-[#fbfaff]">
+        <section
+          className="relative isolate overflow-hidden border-b px-6 py-7 md:px-10 md:py-9"
+          style={{ background: `${domain.color}12`, borderColor: `${domain.color}35` }}
+          aria-label="Company HQ"
+        >
+          <div className="absolute inset-y-0 right-0 w-[34%] bg-white/35" aria-hidden="true" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div>
+              <span className="inline-flex items-center gap-2 text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-[#5b21b6]">
+                <DomainIcon size={13} /> Company HQ
+              </span>
+              <h1 className="mt-3 text-[32px] font-semibold leading-none text-[#171717] md:text-[46px]">{displayLabel}</h1>
+            </div>
+            <button type="button" onClick={onEnter} className="relative inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#404040] hover:text-[#0a0a0a]">
+              Enter discussion <ArrowRight size={12} />
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="-mx-4 -mt-4 mb-6 border-b border-[#e3e0db] bg-white">
+      <section
+        className="min-h-[42vh] max-h-[520px] px-6 py-8 md:px-10 md:py-10 flex flex-col justify-between overflow-hidden border-b"
+        style={{
+          background: `${domain.color}14`,
+          borderColor: `${domain.color}35`,
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2 text-[11px] font-mono font-semibold uppercase text-[#404040]">
+            <DomainIcon size={15} style={{ color: domain.color }} /> Company room
+          </span>
+          <button type="button" onClick={onEnter} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#404040] hover:text-[#0a0a0a]">
+            Enter discussion <ArrowRight size={13} />
+          </button>
+        </div>
+        <div
+          className="max-w-[880px] px-5 py-5 md:px-7 md:py-6 shadow-[0_18px_50px_-36px_rgba(0,0,0,0.45)] border"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.72)',
+            borderColor: `${domain.color}55`,
+            backdropFilter: 'blur(18px)',
+          }}
+        >
+          <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-[#525252]">{companyName} · {displayLabel}</p>
+          <h1 className="text-[38px] md:text-[58px] mt-3 leading-[1.02] font-semibold text-[#0a0a0a] break-words">
+            {displayLabel}
+          </h1>
+          <p className="mt-4 max-w-[720px] text-[14px] md:text-[16px] leading-relaxed text-[#404040]">
+            {domain.desc}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10.5px] font-mono text-[#525252]">
+          <span>{facts.length} company facts loaded</span>
+          <span>{Array.isArray(company?.research) ? company.research.length : 0} research signals</span>
+          <span>{Array.isArray(company?.team) ? company.team.length : 0} team members</span>
+        </div>
+      </section>
+
+      <section className="px-6 py-7 md:px-10 md:py-8 border-b border-[#e3e0db]">
+        <div className="max-w-[1080px]">
+          <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Company context</p>
+          <h2 className="mt-1 text-[20px] font-semibold text-[#0a0a0a]">What this Room already knows</h2>
+          <div className="mt-5 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+            {facts.map(([label, value]) => (
+              <div key={label} className="grid grid-cols-1 gap-1 py-3 md:grid-cols-[150px_1fr] md:gap-5">
+                <span className="text-[10px] font-mono uppercase text-[#737373]">{label}</span>
+                <span className="text-[12.5px] leading-relaxed text-[#262626]">{value}</span>
+              </div>
+            ))}
+            {facts.length === 0 && (
+              <div className="py-3 text-[12px] text-[#737373]">Company context will appear here after onboarding completes.</div>
+            )}
+          </div>
+          <div className="mt-7 grid grid-cols-1 gap-7 lg:grid-cols-2">
+            <div>
+              <h3 className="text-[11px] font-semibold text-[#262626]">Evidence already available</h3>
+              <div className="mt-2 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+                {(Array.isArray(company?.research) ? company.research : []).slice(0, 8).map((item, index) => (
+                  <div key={`${item?.url || item?.title || 'signal'}-${index}`} className="py-2.5">
+                    <p className="text-[11.5px] font-medium text-[#262626]">{item?.title || `Research signal ${index + 1}`}</p>
+                    {item?.snippet && <p className="mt-0.5 text-[10.5px] leading-relaxed text-[#737373] line-clamp-2">{item.snippet}</p>}
+                  </div>
+                ))}
+                {(!Array.isArray(company?.research) || company.research.length === 0) && (
+                  <div className="py-2.5 text-[11px] text-[#a3a3a3]">No external research has been filed yet.</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-[11px] font-semibold text-[#262626]">Team and company documents</h3>
+              <div className="mt-2 divide-y divide-[#e3e0db] border-y border-[#e3e0db]">
+                {(Array.isArray(company?.team) ? company.team : []).map((member) => (
+                  <div key={member.id || member.name} className="flex items-center justify-between gap-4 py-2.5">
+                    <span className="text-[11.5px] font-medium text-[#262626]">{member.name}</span>
+                    <span className="text-[9.5px] font-mono uppercase text-[#737373] text-right">{member.role || 'Agent'}</span>
+                  </div>
+                ))}
+                {(Array.isArray(company?.documents) ? company.documents : []).map((document) => (
+                  <div key={document} className="flex items-center gap-2 py-2.5 text-[11px] text-[#525252]">
+                    <FileText size={11} style={{ color: domain.color }} /> {document}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {!campaignV2 ? <section className="px-6 py-7 md:px-10 md:py-8">
+        <div className="max-w-[1080px]">
+          <p className="text-[10px] font-mono uppercase text-[#a3a3a3]">Suggested operating path</p>
+          <h2 className="mt-1 text-[20px] font-semibold text-[#0a0a0a]">Start with the next useful task</h2>
+          <div className="mt-5 border-y border-[#e3e0db] divide-y divide-[#e3e0db]">
+            {domain.key === 'general' ? <div className="grid grid-cols-[34px_1fr_auto] items-center gap-3 py-4"><span className="h-7 w-7 flex items-center justify-center rounded-[6px] text-[10px] font-mono font-semibold border" style={{ color: domain.color, borderColor: `${domain.color}55`, backgroundColor: `${domain.color}12` }}>0</span><div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-2"><span className="text-[9.5px] font-mono uppercase" style={{ color: domain.color }}>Baseline</span><h3 className="text-[13px] font-semibold text-[#171717]">Analyse current state</h3></div><p className="mt-1 text-[11.5px] leading-relaxed text-[#737373]">Collect a sourced view of your website, social accounts, content, performance, outreach, campaigns, and market signals.</p></div><button type="button" disabled={busy} onClick={onAnalyseGrowth} className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] text-white text-[10.5px] font-semibold hover:bg-[#262626] disabled:opacity-50"><ArrowUpRight size={12} /> Analyse</button></div> : null}
+            {stages.map(([stage, title, detail, prompt], index) => (
+              <div key={title} className="grid grid-cols-[34px_1fr_auto] items-center gap-3 py-4">
+                <span
+                  className="h-7 w-7 flex items-center justify-center rounded-[6px] text-[10px] font-mono font-semibold border"
+                  style={{ color: domain.color, borderColor: `${domain.color}55`, backgroundColor: `${domain.color}12` }}
+                >
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-[9.5px] font-mono uppercase" style={{ color: domain.color }}>{stage}</span>
+                    <h3 className="text-[13px] font-semibold text-[#171717]">{title}</h3>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#737373]">{detail}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRun(`${contextPrefix}\n\nTask: ${prompt}`)}
+                  className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[6px] bg-[#0a0a0a] text-white text-[10.5px] font-semibold hover:bg-[#262626] disabled:opacity-50"
+                >
+                  <ArrowUpRight size={12} /> Run
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section> : null}
+    </div>
+  );
+}
+
 /* ─── Room thread (middle + right) ───────────────────────────────────── */
 
 
@@ -664,8 +1012,22 @@ function mergeHyperEvents(base, overlay) {
 
 function RoomThread({ roomId, onArchived }) {
   const { t, i18n } = useTranslation('dashboard');
+  const { user, org } = useAuth() || {};
   const [room, setRoom] = useState(null);
   const [turns, setTurns] = useState([]);
+  const [companyContext, setCompanyContext] = useState(null);
+  const [seoJobAudit, setSeoJobAudit] = useState(null);
+  const [seoConnection, setSeoConnection] = useState(null);
+  const [growthBaseline, setGrowthBaseline] = useState(null);
+  const [growthOperatingState, setGrowthOperatingState] = useState(null);
+  const [growthPlans, setGrowthPlans] = useState([]);
+  const [growthBaselineHistory, setGrowthBaselineHistory] = useState([]);
+  const [growthBaselineRunning, setGrowthBaselineRunning] = useState(false);
+  const [growthBaselineEvents, setGrowthBaselineEvents] = useState([]);
+  const [growthBaselineError, setGrowthBaselineError] = useState('');
+  const growthBaselineStartedRef = useRef(false);
+  const [showRoomIntro, setShowRoomIntro] = useState(true);
+  const [roomIntroAcknowledged, setRoomIntroAcknowledged] = useState(false);
   const [hqActivity, setHqActivity] = useState([]); // HQ control-room feed (agent reports)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -687,13 +1049,15 @@ function RoomThread({ roomId, onArchived }) {
   const [evoFlash, setEvoFlash] = useState(null);
   const evoFlashTimer = useRef(null);
   const [showJournal, setShowJournal] = useState(false);
-  // Gmail connect gate — the outreach-powers nudge. Opens once per room when a
-  // task room loads and no Google connector is connected; also opened when Send
-  // is pressed with no connection. `null` = unknown (still checking).
+  // Connection gates are driven by typed Director events. Gmail has a direct
+  // in-Room OAuth gate; other capabilities fall back to the Room connector picker.
   const [gmailConnected, setGmailConnected] = useState(null);
   const [gmailGateOpen, setGmailGateOpen] = useState(false);
-  const gmailGateShownRef = useRef(false);
+  const [gmailConnecting, setGmailConnecting] = useState(false);
+  const [gmailResumeTurnId, setGmailResumeTurnId] = useState(null);
+  const gmailGateShownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   // Swarm Instructions: per-room free-form override the director follows on top of all defaults.
   const [showSwarm, setShowSwarm] = useState(false);
   const [swarmDraft, setSwarmDraft] = useState('');
@@ -708,6 +1072,7 @@ function RoomThread({ roomId, onArchived }) {
   const [callNumber, setCallNumber] = useState('');
   const [callBusy, setCallBusy] = useState(false);
   const [callStatus, setCallStatus] = useState(null);
+  const [browserCall, setBrowserCall] = useState(null);
   const [projects, setProjects] = useState([]);
   const [scopeOpen, setScopeOpen] = useState(false);
   const [savingScope, setSavingScope] = useState(false);
@@ -715,9 +1080,26 @@ function RoomThread({ roomId, onArchived }) {
   const [savingGoal, setSavingGoal] = useState(false);
   const threadEndRef = useRef(null);
   const scrollRef = useRef(null);
+  const discussionStartRef = useRef(null);
+  const campaignReturn = useMemo(() => new URLSearchParams(location.search).get('campaignReturn'), [location.search]);
+  const [roomCampaigns, setRoomCampaigns] = useState([]);
+  const [campaignCapabilities, setCampaignCapabilities] = useState(null);
+  const [campaignConnections, setCampaignConnections] = useState(null);
+  const [campaignSettings, setCampaignSettings] = useState({ autonomy_mode: 'MANUAL_REVIEW' });
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [campaignDetailLoading, setCampaignDetailLoading] = useState(false);
+  const [showCampaignCreate, setShowCampaignCreate] = useState(false);
+  const [campaignActivation, setCampaignActivation] = useState(null);
+  const [campaignBusy, setCampaignBusy] = useState(false);
+  const [pendingCampaignId, setPendingCampaignId] = useState(campaignReturn || null);
+  const isCampaignRoom = Boolean(campaignReturn || room?.campaign_id || room?.campaignId || (room?.room_tag || room?.roomTag) === 'campaign');
+  const isHqRoom = Boolean(room?.is_domain_home && (room?.room_tag || room?.roomTag) === 'general');
+  const growthBaselineRequested = useMemo(() => new URLSearchParams(location.search).get('growthBaseline') === '1', [location.search]);
   // Auto-scroll only when the user is already pinned to the bottom — so a live turn's rapid SSE
   // events don't yank them back down while they scroll up to read. Updated on manual scroll.
-  const pinnedRef = useRef(true);
+  // Normal rooms open on their permanent category workspace. Once the user
+  // sends or scrolls to the discussion, live activity follows the bottom.
+  const pinnedRef = useRef(false);
   const onThreadScroll = useCallback(() => {
     const el = scrollRef.current;
     if (el) pinnedRef.current = (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
@@ -742,12 +1124,19 @@ function RoomThread({ roomId, onArchived }) {
     if (!/^\+[1-9]\d{7,14}$/.test(to) || callBusy) return;
     setCallBusy(true);
     setCallStatus(null);
+    setBrowserCall(null);
     setCallOverlay({ number: to, status: 'dialing' });
     try {
       const result = await apiClient.callHyperRoom(roomId, { to, goal: room?.goal || '' });
-      setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
-      setCallOverlay({ number: to, status: 'ok' });
-      setCallNumber('');
+      if (result?.delivery === 'browser') {
+        setCallStatus({ ok: true, message: t('hyperAgents.browserCallReady', 'Telephony is not connected for this provider. Run the same call contract in your browser.') });
+        setBrowserCall(result.browser_call || { provider: result.provider, goal: room?.goal || '', language: 'en', mode: 'external' });
+        setCallOverlay(null);
+      } else {
+        setCallStatus({ ok: true, message: t('hyperAgents.callStarted', 'TARA is dialing now.'), result });
+        setCallOverlay({ number: to, status: 'ok' });
+        setCallNumber('');
+      }
     } catch (err) {
       setCallStatus({ ok: false, message: err.response?.data?.error || err.message });
       setCallOverlay({ number: to, status: 'error' });
@@ -769,6 +1158,68 @@ function RoomThread({ roomId, onArchived }) {
       setSavingScope(false);
     }
   }, [roomId]);
+
+  useEffect(() => {
+    if (!isHqRoom) return;
+    apiClient.getGrowthBaselines(12)
+      .then((data) => {
+        const baselines = data?.baselines || [];
+        setGrowthBaselineHistory(baselines);
+        // A targeted refresh is intentionally small. It must never replace the
+        // last complete company audit as HQ's default view.
+        const latestFullTransfer = baselines.find((entry) => entry?.payload?.scope?.mode === 'full_all');
+        setGrowthBaseline(latestFullTransfer?.payload || baselines[0]?.payload || null);
+      })
+      .catch(() => { setGrowthBaseline(null); setGrowthBaselineHistory([]); });
+  }, [isHqRoom, roomId]);
+
+  useEffect(() => {
+    if (!isHqRoom) return;
+    Promise.all([apiClient.getGrowthOperatingState(), apiClient.getGrowthPlans(12)])
+      .then(([state, plans]) => { setGrowthOperatingState(state); setGrowthPlans(plans?.plans || []); })
+      .catch(() => { setGrowthOperatingState(null); setGrowthPlans([]); });
+  }, [isHqRoom, roomId]);
+
+  const runGrowthBaseline = useCallback(async (mode = 'full_all') => {
+    if (!isHqRoom || growthBaselineRunning) return;
+    const stages = [
+      ['Amira Patel', 'Researcher', 'Read the company profile, offer, ICP, and website structure.'],
+      ['Ravi Patel', 'Social analyst', 'Collected Instagram profile, recent content, and account insights.'],
+      ['Elena Kovacs', 'Market analyst', 'Reconciled the LinkedIn organization profile and page analytics.'],
+      ['Luca Romano', 'Channel strategist', 'Reviewed X activity, follower trends, and content performance.'],
+      ['HQ', 'Operating system', 'Filed source artifacts and calculated the current company baseline.'],
+    ].map(([agent, role, label], index) => ({ id: `baseline-${index}`, agent, role, label, done: false }));
+    setGrowthBaselineError(''); setGrowthBaselineEvents(stages); setGrowthBaselineRunning(true);
+    let stage = 0;
+    const timer = window.setInterval(() => {
+      stage = Math.min(stage + 1, stages.length - 1);
+      setGrowthBaselineEvents((current) => current.map((item, index) => ({ ...item, done: index < stage })));
+    }, 850);
+    try {
+      const data = await apiClient.runGrowthBaseline({ mode });
+      setGrowthBaselineEvents(stages.map((item) => ({ ...item, done: true })));
+      setGrowthBaseline(data?.baseline || null);
+      const refreshed = await apiClient.getGrowthBaselines(12);
+      setGrowthBaselineHistory(refreshed?.baselines || []);
+    } catch (error) {
+      setGrowthBaselineError(error?.response?.data?.message || error?.message || 'The baseline could not be collected.');
+    } finally {
+      window.clearInterval(timer);
+      setGrowthBaselineRunning(false);
+    }
+  }, [growthBaselineRunning, isHqRoom]);
+
+  const selectGrowthBaseline = useCallback((resourceId) => {
+    const selected = growthBaselineHistory.find((entry) => entry.id === resourceId);
+    if (selected?.payload) setGrowthBaseline(selected.payload);
+  }, [growthBaselineHistory]);
+
+  useEffect(() => {
+    if (!isHqRoom || !growthBaselineRequested || growthBaselineStartedRef.current) return;
+    growthBaselineStartedRef.current = true;
+    runGrowthBaseline();
+    navigate(location.pathname, { replace: true });
+  }, [growthBaselineRequested, isHqRoom, location.pathname, navigate, runGrowthBaseline]);
 
   const handleSaveGoal = useCallback(async () => {
     const nextGoal = goalDraft.trim();
@@ -814,6 +1265,250 @@ function RoomThread({ roomId, onArchived }) {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    apiClient.hyperCompany()
+      .then((data) => setCompanyContext(data?.company || null))
+      .catch(() => setCompanyContext(null));
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!room?.id) return;
+    if (room.archivedAt || room.archived_at) {
+      setShowRoomIntro(false);
+      setRoomIntroAcknowledged(true);
+      return;
+    }
+    // The category workspace is a permanent part of the room. A separate
+    // acknowledgement flag sequences the optional first-run setup without
+    // making the banner disappear after the first task.
+    setShowRoomIntro(true);
+    try {
+      setRoomIntroAcknowledged(Boolean(window.localStorage.getItem(`hm-room-intro-${room.id}`)));
+    } catch {
+      setRoomIntroAcknowledged(false);
+    }
+  }, [room?.id, room?.archivedAt, room?.archived_at]);
+
+  const finishRoomIntro = useCallback(() => {
+    try { window.localStorage.setItem(`hm-room-intro-${roomId}`, '1'); } catch { /* noop */ }
+    setRoomIntroAcknowledged(true);
+    window.requestAnimationFrame(() => {
+      discussionStartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [roomId]);
+
+  const loadRoomCampaigns = useCallback(async () => {
+    if (!isCampaignRoom) return [];
+    try {
+      const connectionRequest = CAMPAIGN_INTELLIGENCE_V2
+        ? apiClient.getCampaignConnections().then((state) => (
+          state?.status === 'UNPROVISIONED' && state?.configured
+            ? apiClient.provisionCampaignConnections()
+            : state
+        )).catch(() => null)
+        : Promise.resolve(null);
+      const [list, capabilities, settings, connections] = await Promise.all([
+        apiClient.getCampaigns(),
+        apiClient.getCampaignCapabilities(),
+        apiClient.getCampaignSettings(),
+        connectionRequest,
+      ]);
+      const related = (list?.campaigns || []).filter((campaign) => campaign.roomId === roomId || campaign.room_id === roomId);
+      setRoomCampaigns(related);
+      setCampaignCapabilities(capabilities);
+      setCampaignConnections(connections);
+      setCampaignSettings(settings || { autonomy_mode: 'MANUAL_REVIEW' });
+      return related;
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not load campaigns');
+      return [];
+    }
+  }, [isCampaignRoom, roomId]);
+
+  const openRoomCampaign = useCallback(async (campaignOrId) => {
+    const campaignId = typeof campaignOrId === 'string' ? campaignOrId : campaignOrId?.id;
+    if (!campaignId) return;
+    setCampaignDetailLoading(true);
+    try {
+      const response = await apiClient.getCampaign(campaignId);
+      setSelectedCampaign(response?.campaign || null);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not open campaign');
+    } finally {
+      setCampaignDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (isCampaignRoom) loadRoomCampaigns(); }, [isCampaignRoom, loadRoomCampaigns]);
+  useEffect(() => { if (campaignReturn) setPendingCampaignId(campaignReturn); }, [campaignReturn]);
+
+  // The Room owns completion: poll the campaign associated with the active run and
+  // open the existing dashboard in-place as soon as its governed plan is available.
+  useEffect(() => {
+    if (!isCampaignRoom || !pendingCampaignId) return undefined;
+    let active = true;
+    const checkCampaign = async () => {
+      try {
+        const response = await apiClient.getCampaign(pendingCampaignId);
+        const campaign = response?.campaign;
+        if (!active || !campaign) return;
+        setRoomCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)]);
+        if (campaign.planVersions?.length && ['READY_FOR_APPROVAL', 'RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status)) {
+          setSelectedCampaign(campaign);
+          setPendingCampaignId(null);
+        }
+      } catch { /* The visible Room remains usable during a transient campaign read failure. */ }
+    };
+    checkCampaign();
+    const timer = window.setInterval(checkCampaign, 3500);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [isCampaignRoom, pendingCampaignId]);
+
+  useEffect(() => {
+    const pendingCampaignAssets = (selectedCampaign?.actions || []).some((action) => (action.assets || []).some((asset) => ['QUEUED', 'GENERATING'].includes(asset.status)));
+    if (!selectedCampaign || !(['GENERATING', 'PREPARING_ASSETS', 'RUNNING', 'SCHEDULED'].includes(selectedCampaign.status) || pendingCampaignAssets)) return undefined;
+    const timer = window.setInterval(() => openRoomCampaign(selectedCampaign.id), 5000);
+    return () => window.clearInterval(timer);
+  }, [openRoomCampaign, selectedCampaign]);
+
+  const createCampaignInRoom = useCallback(async (payload) => {
+    setShowCampaignCreate(false);
+    setCampaignActivation({ status: 'working', step: 1, goal: payload.goal });
+    const delay = (milliseconds) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    try {
+      const response = await apiClient.createCampaign({
+        ...payload,
+        autonomy_mode: campaignSettings.autonomy_mode === 'AUTO' ? 'FULL_AUTO' : 'APPROVE_PLAN_ONCE',
+      });
+      for (const step of [2, 3, 4]) { setCampaignActivation((current) => ({ ...current, step })); await delay(250); }
+      setCampaignActivation((current) => ({ ...current, status: 'opening', step: 5, campaign: response.campaign }));
+      setPendingCampaignId(response.campaign?.id || null);
+      await load({ quiet: true });
+      await loadRoomCampaigns();
+      await delay(500);
+      setCampaignActivation(null);
+    } catch (err) {
+      setCampaignActivation((current) => ({ ...current, status: 'failed', error: err?.response?.data?.message || err.message || 'Could not create campaign' }));
+      throw err;
+    }
+  }, [campaignSettings.autonomy_mode, load, loadRoomCampaigns]);
+
+  const startCampaignFromPreset = useCallback(async ({ title, prompt }) => {
+    const organicPriority = ['x_organic', 'linkedin', 'instagram', 'facebook', 'tiktok', 'youtube', 'pinterest', 'reddit', 'threads', 'bluesky'];
+    const eligible = new Set(
+      (campaignCapabilities?.channels || [])
+        .filter((channel) => channel.execution_ready && channel.executable)
+        .map((channel) => channel.id),
+    );
+    const channels = organicPriority.filter((channel) => eligible.has(channel)).slice(0, 3);
+    if (!channels.length) {
+      setError('Connect and enable at least one organic channel before starting this campaign.');
+      return;
+    }
+    await createCampaignInRoom({
+      name: title,
+      objective: 'AWARENESS',
+      goal: `${prompt}\n\nUse only these connected organic channels: ${channels.join(', ')}.`,
+      channels,
+      audience: { mode: 'existing_first', discover_if_insufficient: true },
+      offer: '', cta: '', destination_url: '', geography: [], languages: ['English'],
+      duration_days: 7,
+      intensity: 'focused',
+      cadence: { preset: 'focused' },
+      brand_constraints: '', prohibited_claims: '',
+      success_metrics: ['Impressions', 'Engagements', 'Link clicks'],
+      idempotency_key: `campaign-preset:${roomId}:${Date.now()}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    });
+  }, [campaignCapabilities?.channels, createCampaignInRoom, roomId]);
+
+  const connectCampaignChannel = useCallback(async (channel) => {
+    const providerPlatforms = {
+      x_organic: 'twitter', x_ads: 'twitter', linkedin: 'linkedin', linkedin_ads: 'linkedin', instagram: 'instagram',
+      meta: 'facebook', facebook: 'facebook', tiktok: 'tiktok', youtube: 'youtube',
+      tiktok_ads: 'tiktok', pinterest: 'pinterest', pinterest_ads: 'pinterest', google_ads: 'googleads',
+      reddit: 'reddit', threads: 'threads', bluesky: 'bluesky',
+    };
+    const platform = providerPlatforms[channel];
+    if (!platform) {
+      window.location.assign(channel === 'tara' ? '/hivemind/app/tara' : '/hivemind/app/connectors');
+      return;
+    }
+    try {
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      const connectionKind = ['x_ads', 'google_ads', 'meta', 'linkedin_ads', 'tiktok_ads', 'pinterest_ads'].includes(channel) ? 'ads' : 'organic';
+      const data = await apiClient.startCampaignConnection(platform, returnPath, connectionKind);
+      if (data.connected) {
+        setCampaignConnections(await apiClient.syncCampaignConnections());
+        setCampaignCapabilities(await apiClient.getCampaignCapabilities());
+      } else {
+        window.location.assign(data.authorization_url);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not connect this channel');
+    }
+  }, []);
+
+  const disconnectCampaignChannel = useCallback(async (accountRef) => {
+    if (!accountRef) return;
+    try {
+      setCampaignConnections(await apiClient.disconnectCampaignConnection(accountRef));
+      const nextCapabilities = await apiClient.getCampaignCapabilities();
+      setCampaignCapabilities(nextCapabilities);
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not disconnect this account');
+    }
+  }, []);
+
+  const selectCampaignAdAccount = useCallback(async (channel, accountRef, adAccountRef) => {
+    try {
+      const state = await apiClient.selectCampaignAdAccount(channel, accountRef, adAccountRef);
+      setCampaignConnections(state);
+      setCampaignCapabilities(await apiClient.getCampaignCapabilities());
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not select this advertising account');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isCampaignRoom) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('campaign_connection') && !params.get('connected')) return;
+    const connectionFailed = params.get('campaign_connection_error');
+    const refresh = connectionFailed
+      ? Promise.reject(new Error('The account connection was not approved. No access was saved.'))
+      : Promise.all([apiClient.syncCampaignConnections(), apiClient.getCampaignCapabilities()]);
+    refresh
+      .then(([state, capabilities]) => { setCampaignConnections(state); setCampaignCapabilities(capabilities); })
+      .catch((err) => setError(err?.response?.data?.message || err.message || 'Could not refresh connected channels'))
+      .finally(() => {
+        params.delete('campaign_connection');
+        params.delete('campaign_connection_error');
+        params.delete('connected');
+        params.delete('profileId');
+        params.delete('accountId');
+        params.delete('username');
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', next);
+      });
+  }, [isCampaignRoom]);
+
+  const controlRoomCampaign = useCallback(async (action) => {
+    if (!selectedCampaign?.id || campaignBusy) return false;
+    setCampaignBusy(true);
+    try {
+      await apiClient.controlCampaign(selectedCampaign.id, action);
+      await openRoomCampaign(selectedCampaign.id);
+      await loadRoomCampaigns();
+      return true;
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Campaign control failed');
+      return false;
+    } finally {
+      setCampaignBusy(false);
+    }
+  }, [campaignBusy, loadRoomCampaigns, openRoomCampaign, selectedCampaign]);
+
   // HQ control-room feed — agent reports from every other room's runs. Non-HQ
   // rooms just get an empty list, so this is safe to call for any room. Refreshes
   // when a turn seals (activeTurnId clears) so new reports appear live.
@@ -825,7 +1520,41 @@ function RoomThread({ roomId, onArchived }) {
     return () => { alive = false; };
   }, [roomId, activeTurnId]);
 
-  // Probe Gmail connection so outreach rooms can nudge (and gate Send).
+  // SEO workspace state is read from tenant-scoped deterministic evidence.
+  // The final Room report wins below; this ledger snapshot supplies continuity
+  // before the first turn is opened and after a browser refresh.
+  useEffect(() => {
+    const roomKind = String(room?.room_tag || room?.roomTag || '').toLowerCase();
+    if (roomKind !== 'seo') {
+      setSeoJobAudit(null);
+      setSeoConnection(null);
+      return undefined;
+    }
+    let alive = true;
+    Promise.allSettled([
+      apiClient.listWebJobs({ type: 'seo_audit', limit: 10 }),
+      apiClient.searchConsoleStatus(),
+    ]).then(([jobsResult, connectionResult]) => {
+      if (!alive) return;
+      if (jobsResult.status === 'fulfilled') {
+        const jobs = jobsResult.value?.jobs || [];
+        const companyWebsite = companyContext?.website || '';
+        const companyHost = (() => { try { return new URL(companyWebsite).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+        const latest = jobs.find((job) => {
+          const audit = Array.isArray(job?.results) ? job.results[0] : null;
+          if (job?.status !== 'succeeded' || audit?.schema !== 'seo-audit-v1') return false;
+          if (!companyHost) return true;
+          try { return new URL(audit.seed_url).hostname.replace(/^www\./, '') === companyHost; } catch { return false; }
+        });
+        setSeoJobAudit(latest?.results?.[0] || null);
+      }
+      setSeoConnection(connectionResult.status === 'fulfilled' ? connectionResult.value : { connected: false, status: 'not_connected' });
+    });
+    return () => { alive = false; };
+  }, [room?.id, room?.room_tag, room?.roomTag, companyContext?.website, activeTurnId]);
+
+  // Probe the tenant-scoped global connector state so an explicit Gmail action
+  // can run from any Room without a second per-Room toggle.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -839,18 +1568,77 @@ function RoomThread({ roomId, onArchived }) {
     return () => { alive = false; };
   }, [roomId]);
 
-  // Auto-open the gate ONCE for an outreach-shaped room with no Gmail.
+  // The Director emits this only for an explicit action in the active message.
+  // Room names/goals never trigger connector prompts on their own.
   useEffect(() => {
-    if (gmailConnected === false && !gmailGateShownRef.current && room) {
-      const outreachy = /outreach|cold[- ]?email|email (campaign|sequence|messaging)|messaging|prospect/i
-        .test(`${room.name || ''} ${room.goal || ''}`);
-      if (outreachy) { gmailGateShownRef.current = true; setGmailGateOpen(true); }
+    if (gmailGateShownRef.current === activeTurnId || !activeTurnId) return;
+    const request = [...(liveLines || [])].reverse().find((line) => (
+      line?.t === 'connection_required'
+      && line?.explicit === true
+    ));
+    if (!request) return;
+    if (request.connector === 'gmail' && gmailConnected == null) return;
+    gmailGateShownRef.current = activeTurnId;
+    if (request.connector === 'gmail') {
+      if (gmailConnected === false) {
+        setGmailResumeTurnId(activeTurnId);
+        setGmailGateOpen(true);
+      }
+      return;
     }
-  }, [gmailConnected, room]);
+    setShowConnectors(true);
+  }, [activeTurnId, gmailConnected, liveLines]);
 
-  const connectGmail = useCallback(() => {
-    navigate('/hivemind/app/connectors?connect=gmail');
-  }, [navigate]);
+  const connectGmail = useCallback(async () => {
+    setGmailConnecting(true);
+    setError(null);
+    let didConnect = false;
+    try {
+      const baseURL = process.env.REACT_APP_NANGO_CONNECT_URL || 'https://api.hivemind.davinciai.eu:8043';
+      const apiURL = process.env.REACT_APP_NANGO_HOST || 'https://api.hivemind.davinciai.eu:8042';
+      const nango = new Nango();
+      await new Promise((resolve, reject) => {
+        const ui = nango.openConnectUI({
+          baseURL,
+          apiURL,
+          onEvent: async (event) => {
+            try {
+              if (event?.type === 'connect') {
+                const payload = event.payload || {};
+                const providerKey = payload.providerConfigKey || payload.provider_config_key || 'gmail';
+                const connectionId = payload.connectionId || payload.connection_id;
+                if (!connectionId) throw new Error('Nango did not return a connection id');
+                await apiClient.finalizeNangoConnection(providerKey, connectionId);
+                didConnect = true;
+                resolve();
+              } else if (event?.type === 'close') {
+                resolve();
+              } else if (event?.type === 'error') {
+                reject(new Error(event?.payload?.error || 'Gmail connection failed'));
+              }
+            } catch (err) { reject(err); }
+          },
+        });
+        apiClient.getNangoConnectSession('gmail')
+          .then(({ connect_session_token }) => {
+            if (ui && typeof ui.setSessionToken === 'function') ui.setSessionToken(connect_session_token);
+            else reject(new Error('Gmail Connect UI unavailable'));
+          })
+          .catch((err) => {
+            try { ui?.close?.(); } catch { /* noop */ }
+            reject(err);
+          });
+      });
+      if (didConnect) {
+        setGmailConnected(true);
+        setGmailGateOpen(false);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || 'Could not connect Gmail');
+    } finally {
+      setGmailConnecting(false);
+    }
+  }, []);
 
   // Auto-scroll on new content — ONLY when pinned to the bottom, and INSTANTLY (no 'smooth', which
   // fights itself when live SSE events fire in rapid succession). Scrolls just the thread container,
@@ -888,12 +1676,24 @@ function RoomThread({ roomId, onArchived }) {
           evoFlashTimer.current = setTimeout(() => setEvoFlash(null), 7000);
           return;
         }
+        if ((e.type === 'room_journal' || data.t === 'room_journal') && data.entry) {
+          setRoom(p => {
+            if (!p) return p;
+            const journal = [...(Array.isArray(p.room_journal) ? p.room_journal : (p.evo_journal || [])), data.entry].slice(-8);
+            return { ...p, room_journal: journal, evo_journal: journal };
+          });
+          return;
+        }
         // TARA call contract: the OS proposed an outbound call. Surface the global
         // first-contact-HITL popup (<CallContractModal> in AppShell). Not a thread line.
         if ((e.type === 'call_contract' || data.t === 'call_contract') && data.contract) {
           try {
             window.dispatchEvent(new CustomEvent('hm:call-contract', {
-              detail: { campaign_id: data.campaign_id, contract: data.contract },
+              detail: {
+                campaign_id: data.campaign_id,
+                contract: data.contract,
+                authority_preference: data.authority_preference,
+              },
             }));
           } catch { /* ignore */ }
           return;
@@ -936,6 +1736,9 @@ function RoomThread({ roomId, onArchived }) {
       // Phase 1-6: lead plan, recon/verify verdict, write-approval cards,
       // goalkeeper re-plan rounds:
       'plan', 'verify', 'approval_request', 'approval_resolved', 'goalkeeper_round',
+      // Director-owned event-driven execution: the natural work brief, selected
+      // post-output capability, and resumable connector gate must arrive live.
+      'work_brief', 'action_intent', 'connection_required',
       // Additional Population-Sim report (hideable popup dashboard):
       'sim_report',
       'connector_logo', 'gather', 'recon_pre', 'execute',
@@ -943,6 +1746,9 @@ function RoomThread({ roomId, onArchived }) {
       'prospects',
       // Self-evolving employees: per-turn playbook learning signal.
       'self_evolve',
+      'room_journal',
+      // Durable, progressively visible Campaign Intelligence stages.
+      'campaign_stage',
       // Room METHOD skills: progressive-disclosure skill loads (timeline chips).
       'skill_used',
       // Post-seal follow-up suggestions (clickable, one-click auto-run):
@@ -951,7 +1757,8 @@ function RoomThread({ roomId, onArchived }) {
       'call_contract',
     ].forEach(name => es.addEventListener(name, onAny));
     es.addEventListener('error', () => {
-      // network blip — let auto-reconnect handle it
+      // A terminal 404 is handled by the poll below. Keep EventSource's normal
+      // reconnect behavior for transient network failures.
     });
 
     // Fallback poll — guarantees the turn renders + completes even when the
@@ -979,7 +1786,25 @@ function RoomThread({ roomId, onArchived }) {
             });
           }
         }
-      } catch { /* ignore — SSE may still deliver */ }
+      } catch (error) {
+        const status = error?.response?.status;
+        // The user may clear/archive a Room in another tab while this view is
+        // open. A missing turn cannot recover through retrying every 250ms;
+        // stop the live loop and refresh the durable Room state once.
+        if (status === 404) {
+          stopped = true;
+          clearInterval(poll);
+          try { es.close(); } catch { /* noop */ }
+          if (!sealedRef.current) {
+            sealedRef.current = true;
+            Promise.resolve(load({ quiet: true })).finally(() => {
+              setActiveTurnId(null);
+              setSubmitting(false);
+            });
+          }
+        }
+        // Other errors may be transient while SSE continues delivering.
+      }
     };
     // Poll is the reliable path when SSE is buffered/blocked (wallet extensions,
     // partitioned storage, or an edge proxy holding text/event-stream). Fire it
@@ -1063,12 +1888,12 @@ function RoomThread({ roomId, onArchived }) {
   // Clear the room's journal (forget prior-turn memory). Optimistic + reverts.
   async function resetJournal() {
     if (!room) return;
-    const prev = room.evo_journal || [];
-    setRoom(p => ({ ...p, evo_journal: [] }));
+    const prev = room.room_journal || room.evo_journal || [];
+    setRoom(p => ({ ...p, room_journal: [], evo_journal: [] }));
     try {
       await apiClient.updateHyperRoom(roomId, { journal_reset: true });
     } catch (e) {
-      setRoom(p => ({ ...p, evo_journal: prev }));
+      setRoom(p => ({ ...p, room_journal: prev, evo_journal: prev }));
       setError(e.response?.data?.error || e.message);
     }
   }
@@ -1096,13 +1921,16 @@ function RoomThread({ roomId, onArchived }) {
   useEffect(() => {
     if (!room?.id) return;
     if (room.archived_at) return;  // no setup walkthrough on archived rooms
+    if (isCampaignRoom) return;    // Campaign orchestration owns model and simulation choices.
+    if (!roomIntroAcknowledged) return; // Acknowledge the workspace before advanced controls.
+    if (submitting || activeTurnId) return; // Never interrupt a task launched from the welcome surface.
     try {
       if (!window.localStorage.getItem(`hm-room-setup-${room.id}`)) {
         setSetupStep(0);
         setShowSetup(true);
       }
     } catch { /* noop */ }
-  }, [room?.id, room?.archived_at]);
+  }, [activeTurnId, isCampaignRoom, room?.id, room?.archived_at, roomIntroAcknowledged, submitting]);
 
   function finishSetup() {
     try { window.localStorage.setItem(`hm-room-setup-${room?.id}`, '1'); } catch { /* noop */ }
@@ -1129,9 +1957,9 @@ function RoomThread({ roomId, onArchived }) {
     setAttachments(prev => prev.filter(a => a.id !== id));
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e, suggestedText = '') {
     e?.preventDefault?.();
-    const base = draft.trim();
+    const base = String(suggestedText || draft).trim();
     const doneAtts = attachments.filter(a => a.status === 'done');
     if (attachments.some(a => a.status === 'uploading')) return;   // wait for uploads
     if ((!base && doneAtts.length === 0) || submitting) return;
@@ -1148,6 +1976,7 @@ function RoomThread({ roomId, onArchived }) {
     const echo = (base || `Please review the attached ${doneAtts.length > 1 ? 'documents' : 'document'}.`)
       + (doneAtts.length ? `   📎 ${names}` : '');
     setSubmitting(true);
+    if (suggestedText) finishRoomIntro();
     pinnedRef.current = true;  // user just sent → pin to bottom so they see their message + the reply
     setLiveLines([]);
     setDraft('');
@@ -1259,6 +2088,15 @@ function RoomThread({ roomId, onArchived }) {
     }
   }
 
+  // OAuth can finish while the original turn is still synthesizing. Wait for its
+  // seal, then replace only that turn and continue with Gmail now available.
+  useEffect(() => {
+    if (!gmailConnected || !gmailResumeTurnId || submitting || activeTurnId) return;
+    const turn = turns.find((item) => item.id === gmailResumeTurnId);
+    setGmailResumeTurnId(null);
+    if (turn) handleRerunTurn(turn);
+  }, [activeTurnId, gmailConnected, gmailResumeTurnId, submitting, turns]);
+
   // One-click follow-up: a suggested next task becomes a NEW auto-run turn in
   // this room (keeps the journal/context; no dashboard round-trip).
   async function runNextTask(taskLine) {
@@ -1369,6 +2207,40 @@ function RoomThread({ roomId, onArchived }) {
   const participants = room.participants || [];
   const archived = !!room.archivedAt;
   const participantBySlug = Object.fromEntries(participants.map(p => [p.slug, p]));
+  const roomDomain = domainRoomDefinition(isCampaignRoom ? 'campaign' : (room.room_tag || room.roomTag || 'general'));
+  const isSeoRoom = roomDomain.key === 'seo';
+  const RoomDomainIcon = roomDomain.icon;
+  const roomDomainLabel = room.is_domain_home && roomDomain.key === 'general' ? 'HQ' : roomDomain.label;
+  const campaignProgressStages = (() => {
+    if (!isCampaignRoom) return [];
+    const active = turns.find(turn => turn.id === activeTurnId);
+    const fallback = [...turns].reverse().find(turn => (turn.lines || []).some(line => line?.t === 'campaign_stage'));
+    const selected = active || fallback;
+    const lines = selected
+      ? mergeHyperEvents(Array.isArray(selected.lines) ? selected.lines : [], selected.id === activeTurnId ? liveLines : [])
+      : liveLines;
+    const latestByStage = new Map();
+    (lines || []).filter(line => line?.t === 'campaign_stage').forEach(stage => latestByStage.set(stage.stage || stage.title, stage));
+    const stages = Array.from(latestByStage.values());
+    const accepted = stages.some(stage => stage.status === 'complete' && stage.title === 'Campaign contract accepted');
+    return stages.filter(stage => !(accepted && stage.stage === 'validation')).slice(-6);
+  })();
+  const launchedCampaigns = roomCampaigns.filter((campaign) => ['RUNNING', 'SCHEDULED', 'PAUSED', 'COMPLETED'].includes(campaign.status));
+  const latestLaunchedCampaign = launchedCampaigns[0] || null;
+  const selectedExecutionBlockers = selectedCampaign?.requestedChannels?.filter((channel) => !campaignCapabilities?.channels?.find((item) => item.id === channel)?.execution_ready) || [];
+  const latestRoomSeoAudit = latestSeoAuditFromTurns(turns, liveLines);
+  const roomSeoAudit = (() => {
+    if (!latestRoomSeoAudit || !companyContext?.website) return latestRoomSeoAudit || seoJobAudit;
+    try {
+      const reportHost = new URL(latestRoomSeoAudit.seed_url).hostname.replace(/^www\./, '');
+      const companyHost = new URL(companyContext.website).hostname.replace(/^www\./, '');
+      return reportHost === companyHost ? latestRoomSeoAudit : seoJobAudit;
+    } catch { return seoJobAudit; }
+  })();
+  const seoWebsite = roomSeoAudit?.seed_url || companyContext?.website || '';
+  const seoRunning = isSeoRoom && Boolean(submitting || activeTurnId);
+  const runSeoTask = (prompt) => handleSubmit(null, prompt);
+  const connectSeoEvidence = () => navigate('/hivemind/app/connectors');
 
   // Total LLM usage across the room = sum of every sealed turn's cost_tokens
   // (+ the live turn's seal if present). Surfaced top-right of the navbar.
@@ -1386,11 +2258,15 @@ function RoomThread({ roomId, onArchived }) {
 
   return (
     <div className="flex flex-1 min-w-0 min-h-0 h-full">
-      <GmailConnectGate open={gmailGateOpen} onClose={() => setGmailGateOpen(false)}
-        onConnect={connectGmail} connecting={false} />
-      <section className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {/* Header */}
-        <header className="px-4 py-3 border-b border-[#e3e0db] bg-white flex items-center justify-between">
+      <GmailConnectGate
+        open={gmailGateOpen}
+        onClose={() => { setGmailGateOpen(false); setGmailResumeTurnId(null); }}
+        onConnect={connectGmail}
+        connecting={gmailConnecting}
+      />
+      <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#fbfaf7]">
+        {/* Human rooms retain their room chrome. HQ is a dedicated runtime surface. */}
+        {!isHqRoom && <header className="px-4 py-3 border-b border-[#e3e0db] bg-[#fbfaf7] flex items-center justify-between">
           <div className="min-w-0 flex items-center gap-2">
             {/* "Out of Room" moved to the left-rail footer for a calmer, more
                 feasible room UX — exit lives with the room list, not the header. */}
@@ -1398,6 +2274,12 @@ function RoomThread({ roomId, onArchived }) {
             <div className="flex items-center gap-1.5 text-[#0a0a0a]">
               <Hash size={13} className="text-[#a3a3a3]" />
               <h2 className="text-[14px] font-semibold truncate">{room.name}</h2>
+              <span
+                className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded-[4px] border"
+                style={{ color: roomDomain.color, borderColor: `${roomDomain.color}55`, backgroundColor: `${roomDomain.color}12` }}
+              >
+                <RoomDomainIcon size={9} /> {roomDomainLabel}
+              </span>
               {archived && (
                 <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 bg-[#f3f1ec] text-[#525252] rounded">
                   {t('hyperAgents.archived', 'archived')}
@@ -1448,7 +2330,7 @@ function RoomThread({ roomId, onArchived }) {
             <div className="text-[10px] text-[#a3a3a3] font-mono mt-0.5">
               {t('hyperAgents.participantsTurns', '{{pCount}} participant{{pPlural}} · {{tCount}} turn{{tPlural}}', { pCount: participants.length, pPlural: participants.length !== 1 ? 's' : '', tCount: turns.length, tPlural: turns.length !== 1 ? 's' : '' })}
             </div>
-            {!archived && (
+            {!archived && !isCampaignRoom && !isHqRoom && (
               <div className="mt-1 inline-flex items-center gap-1.5">
                 <span className="text-[9px] font-mono uppercase tracking-wider text-[#a3a3a3]">{t('hyperAgents.quality', 'Quality')}</span>
                 <div className="inline-flex rounded-lg border border-[#e3e0db] overflow-hidden">
@@ -1514,7 +2396,7 @@ function RoomThread({ roomId, onArchived }) {
                   );
                 })()}
                 {(() => {
-                  const jr = Array.isArray(room.evo_journal) ? room.evo_journal : [];
+                  const jr = Array.isArray(room.room_journal) ? room.room_journal : (Array.isArray(room.evo_journal) ? room.evo_journal : []);
                   if (!jr.length) return null;
                   return (
                     <button type="button" onClick={() => setShowJournal(true)}
@@ -1547,12 +2429,29 @@ function RoomThread({ roomId, onArchived }) {
                   </div>
                   <div className="overflow-y-auto px-5 py-4 space-y-2">
                     <p className="text-[11px] text-[#737373] leading-snug">{t('hyperAgents.journalBlurb', 'What this room asked and decided in prior turns — injected at the start of each new turn so the team has continuity (and answers direct recall questions instantly).')}</p>
-                    {(Array.isArray(room.evo_journal) ? room.evo_journal : []).map((entry, i) => (
-                      <div key={i} className="flex gap-2 border border-[#e3e0db] rounded-lg px-3 py-2 text-[11px] leading-snug text-[#404040] bg-[#faf9f7]">
-                        <span className="text-[#117dff] font-mono shrink-0">{i + 1}.</span>
-                        <span className="break-words">{String(entry)}</span>
-                      </div>
-                    ))}
+                    {(Array.isArray(room.room_journal) ? room.room_journal : (room.evo_journal || [])).map((entry, i) => {
+                      const structured = entry && typeof entry === 'object';
+                      return (
+                        <div key={entry?.turn_id || i} className="border border-[#e3e0db] rounded-lg px-3 py-2.5 text-[11px] leading-snug text-[#404040] bg-[#faf9f7]">
+                          <div className="flex gap-2">
+                            <span className="text-[#117dff] font-mono shrink-0">{i + 1}.</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-[#171717] break-words">{structured ? entry.asked : String(entry)}</p>
+                              {structured && <p className="mt-1 break-words">{entry.swarm_summary}</p>}
+                              {structured && Array.isArray(entry.agents) && entry.agents.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-[#e3e0db] space-y-1">
+                                  {entry.agents.map((agent, j) => (
+                                    <p key={`${agent.slug || agent.name}-${j}`} className="break-words">
+                                      <span className="font-medium text-[#171717]">{agent.name}:</span> {agent.contribution}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1663,6 +2562,17 @@ function RoomThread({ roomId, onArchived }) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {!archived && isCampaignRoom && (
+              <button
+                type="button"
+                onClick={() => setShowCampaignCreate(true)}
+                disabled={!campaignCapabilities?.enabled}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10.5px] font-semibold text-white disabled:bg-[#aaa49c]"
+                title="Create and run a campaign in this Campaign Intelligence Room"
+              >
+                <Plus size={12} /> Create campaign
+              </button>
+            )}
             {!archived && (
               <button
                 type="button"
@@ -1698,7 +2608,17 @@ function RoomThread({ roomId, onArchived }) {
               </button>
             )}
           </div>
-        </header>
+        </header>}
+
+        {isSeoRoom && !archived && <SeoRoomBanner
+          audit={roomSeoAudit}
+          website={seoWebsite}
+          connection={seoConnection}
+          running={seoRunning}
+          busy={submitting}
+          onRun={runSeoTask}
+          onConnect={connectSeoEvidence}
+        />}
 
         {callOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !callBusy && setCallOpen(false)}>
@@ -1726,6 +2646,18 @@ function RoomThread({ roomId, onArchived }) {
                   {callStatus.message}
                 </div>
               )}
+              {browserCall && (
+                <div className="mt-3">
+                  <AaasVoiceWidget
+                    userId={user?.id}
+                    orgId={org?.id}
+                    provider={browserCall.provider || 'grok'}
+                    language={browserCall.language || 'en'}
+                    initialGoal={browserCall.goal || room?.goal || ''}
+                    initialMode={browserCall.mode || 'external'}
+                  />
+                </div>
+              )}
               {callOverlay && (
                 <CallRingingCard number={callOverlay.number} status={callOverlay.status}
                   onClose={() => setCallOverlay(null)} />
@@ -1747,9 +2679,46 @@ function RoomThread({ roomId, onArchived }) {
         )}
 
         {/* Thread */}
-        <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4">
+        <div ref={scrollRef} onScroll={onThreadScroll} className={`flex-1 min-h-0 overflow-y-auto bg-[#fbfaf7] ${isHqRoom ? 'px-4 py-4' : 'px-4 py-4 space-y-4'}`}>
+          {showRoomIntro && !isSeoRoom && !isHqRoom && (
+            <DomainRoomIntro
+              room={room}
+              company={companyContext}
+              busy={submitting}
+              onRun={(prompt) => handleSubmit(null, prompt)}
+              onEnter={finishRoomIntro}
+              onStartCampaign={startCampaignFromPreset}
+              onAnalyseGrowth={isHqRoom ? runGrowthBaseline : undefined}
+              campaignV2={CAMPAIGN_INTELLIGENCE_V2 && isCampaignRoom}
+            />
+          )}
+          <div ref={discussionStartRef} />
+          {isHqRoom && <HqRuntimeConsole
+            objective={growthOperatingState?.goals?.find((goal) => goal.status === 'ACTIVE')?.objective || room?.goal || companyContext?.mission}
+            baselineReady={Boolean(growthBaseline)}
+          />}
+          {latestLaunchedCampaign && (
+            <div className="sticky top-0 z-20 -mx-1 border-b border-[#b7d0ff] bg-[#f5f9ff]/95 px-1 py-2 backdrop-blur" aria-label="Current launched campaign">
+              <button
+                type="button"
+                onClick={() => openRoomCampaign(latestLaunchedCampaign)}
+                className="w-full overflow-hidden rounded-md border border-[#9ebff8] bg-[#eaf2ff] text-left shadow-[0_14px_36px_-28px_rgba(17,63,142,0.65)]"
+                aria-label={`View launched campaign ${latestLaunchedCampaign.name}`}
+              >
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#185bcc] text-white"><Rocket size={16} /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] font-mono uppercase tracking-wider text-[#185bcc]">Campaign launched</div>
+                    <div className="mt-0.5 truncate text-[12.5px] font-semibold text-[#102c60]">{latestLaunchedCampaign.name}</div>
+                    <div className="mt-0.5 text-[10px] text-[#46658f]">The schedule and controls are active. Open the dashboard to inspect posts, timing, and reactions.</div>
+                  </div>
+                  <ArrowUpRight size={15} className="shrink-0 text-[#185bcc]" />
+                </div>
+              </button>
+            </div>
+          )}
           {/* HQ control-room feed — agents reporting their room activity to you. */}
-          {hqActivity.length > 0 && (
+          {!isHqRoom && hqActivity.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">
                 <Network size={11} className="text-violet-500" />
@@ -1761,14 +2730,15 @@ function RoomThread({ roomId, onArchived }) {
               ))}
             </div>
           )}
-          {turns.length === 0 && hqActivity.length === 0 && (
+          {!isHqRoom && !showRoomIntro && turns.length === 0 && hqActivity.length === 0 && (
             <div className="text-center text-[12px] text-[#a3a3a3] py-8">
               {t('hyperAgents.startConversation', 'Start the conversation — ask your team anything.')}
             </div>
           )}
-          {turns.map(turn => (
+          {!isHqRoom && turns.map(turn => (
+            <div key={turn.id} className="space-y-2">
+              {turn.runtimePlaybookRunId ? <div className="flex items-center justify-between border border-[#dedbd6] bg-white px-3 py-2 text-[9px] text-[#625f58]" aria-label="Runtime lifecycle phase"><span className="font-mono uppercase tracking-[0.12em]">Runtime · {String(turn.runtimeStageId || 'phase').replaceAll('_', ' ')}</span><span className="font-mono">checkpoint {turn.runtimeCheckpointSequence || '-'} · attempt {turn.runtimeAttempt || 1}</span></div> : null}
             <TurnView
-              key={turn.id}
               turn={turn}
               participants={participantBySlug}
               liveLines={turn.id === activeTurnId ? liveLines : null}
@@ -1784,6 +2754,7 @@ function RoomThread({ roomId, onArchived }) {
               roomId={roomId}
               taskTag={room?.taskTag || 'GENERAL'}
             />
+            </div>
           ))}
           {error && (
             <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -1810,7 +2781,7 @@ function RoomThread({ roomId, onArchived }) {
         )}
 
         {/* Composer */}
-        {!archived && (
+        {!archived && !isHqRoom && (
           <form onSubmit={handleSubmit} className="border-t border-[#e3e0db] bg-[#faf9f4] px-4 py-3">
             <input
               ref={fileInputRef}
@@ -1909,9 +2880,9 @@ function RoomThread({ roomId, onArchived }) {
         )}
       </section>
 
-      {/* Right rail: participants */}
-      <aside className="w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex flex-col shrink-0">
-        <header className="px-3 py-3 border-b border-[#e3e0db] flex items-center justify-between">
+      {/* HQ owns a persistent runtime rail. Human rooms keep participants. */}
+      <aside className={`${isHqRoom ? 'hidden lg:flex' : 'flex'} w-[260px] min-w-[260px] border-l border-[#e3e0db] bg-[#faf9f4] flex-col shrink-0`}>
+        <header className={`${isHqRoom ? 'hidden' : 'flex'} px-3 py-3 border-b border-[#e3e0db] items-center justify-between`}>
           <div className="flex items-center gap-1.5">
             <Users size={12} className="text-[#525252]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#525252]">{t('hyperAgents.participants', 'Participants')}</span>
@@ -1926,8 +2897,8 @@ function RoomThread({ roomId, onArchived }) {
             </button>
           )}
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
-          {participants.map(p => (
+        <div className={`flex-1 min-h-0 overflow-y-auto ${isHqRoom ? '' : 'p-3 space-y-2'}`}>
+          {!isHqRoom && participants.map(p => (
             <ParticipantChip
               key={p.id}
               agent={p}
@@ -1938,11 +2909,64 @@ function RoomThread({ roomId, onArchived }) {
               )}
             />
           ))}
-          {participants.length === 0 && (
+          {!isHqRoom && participants.length === 0 && (
             <p className="text-[11px] text-[#a3a3a3]">{t('hyperAgents.noAgentsYet', 'No agents yet. Add one to start.')}</p>
           )}
+          {isHqRoom && <HqRuntimeRail baselineReady={Boolean(growthBaseline)} />}
+          {isSeoRoom && <SeoRoomProgress
+            audit={roomSeoAudit}
+            connection={seoConnection}
+            running={seoRunning}
+            busy={submitting}
+            onRun={runSeoTask}
+            onConnect={connectSeoEvidence}
+          />}
+          {CAMPAIGN_INTELLIGENCE_V2 && isCampaignRoom ? (
+            <CampaignConnectionsRail capabilities={campaignCapabilities || campaignConnections} onConnect={connectCampaignChannel} onDisconnect={disconnectCampaignChannel} onSelectAdAccount={selectCampaignAdAccount} />
+          ) : null}
+          {isCampaignRoom && launchedCampaigns.length > 0 ? (
+            <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Launched campaigns">
+              <div className="flex items-center justify-between">
+                <div className="text-[9px] font-mono uppercase text-[#256d5b]">Launched campaigns</div>
+                <span className="rounded border border-[#b9d5ca] px-1.5 py-0.5 text-[8px] font-mono text-[#256d5b]">{launchedCampaigns.length}</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {launchedCampaigns.map((campaign) => (
+                  <button key={campaign.id} type="button" onClick={() => openRoomCampaign(campaign)} className="w-full rounded-md border border-[#d8d3cc] bg-white px-3 py-2.5 text-left hover:border-[#8ebaaa] hover:bg-[#f4faf7]">
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded bg-[#e3f2ec] text-[#256d5b]"><Megaphone size={12} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[10.5px] font-semibold text-[#2f342f]">{campaign.name}</div>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <span className="truncate text-[8.5px] font-mono uppercase text-[#6f746f]">{campaign.status.replaceAll('_', ' ')}</span>
+                          <ArrowUpRight size={10} className="shrink-0 text-[#256d5b]" />
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : campaignProgressStages.length > 0 ? (
+            <section className="mt-4 border-t border-[#d8d3cc] pt-4" aria-label="Campaign Intelligence progress">
+              <div className="text-[9px] font-mono uppercase text-[#256d5b]">Campaign Intelligence progress</div>
+              <div className="mt-3 space-y-3">
+                {campaignProgressStages.map((stage, index) => (
+                  <div key={`${stage.stage}-${index}`} className="flex items-start gap-2">
+                    {stage.status === 'complete'
+                      ? <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-700" />
+                      : <Loader2 size={12} className="mt-0.5 shrink-0 animate-spin text-[#256d5b]" />}
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold leading-4 text-[#2f342f]">{stage.title}</div>
+                      <div className="mt-0.5 text-[9px] leading-4 text-[#817b74]">{stage.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
-        {!archived && (
+        {!archived && !isHqRoom && (
           <div className="p-3 border-t border-[#e3e0db]">
             <button
               onClick={() => setShowHire(true)}
@@ -1953,6 +2977,32 @@ function RoomThread({ roomId, onArchived }) {
           </div>
         )}
       </aside>
+
+      {selectedCampaign || campaignDetailLoading ? (
+        <CampaignDashboardModal campaign={selectedCampaign} loading={campaignDetailLoading} onClose={() => setSelectedCampaign(null)}>
+          {selectedCampaign ? (
+            <CampaignProgressDashboard
+              campaign={selectedCampaign}
+              loading={campaignDetailLoading}
+              onClose={() => setSelectedCampaign(null)}
+              onOpenRoom={() => setSelectedCampaign(null)}
+              onLaunch={controlRoomCampaign}
+              busy={campaignBusy}
+              executionEnabled={Boolean(campaignCapabilities?.execution_enabled) && selectedExecutionBlockers.length === 0}
+            />
+          ) : null}
+        </CampaignDashboardModal>
+      ) : null}
+      {showCampaignCreate ? (
+        <CreateCampaignWizard
+          capabilities={campaignCapabilities}
+          autonomyMode={campaignSettings.autonomy_mode}
+          onClose={() => setShowCampaignCreate(false)}
+          onCreate={createCampaignInRoom}
+          onConnect={connectCampaignChannel}
+        />
+      ) : null}
+      {campaignActivation ? <CampaignActivation activation={campaignActivation} onClose={() => setCampaignActivation(null)} /> : null}
 
       <AnimatePresence>
         {showPicker && (
@@ -1991,7 +3041,7 @@ function RoomThread({ roomId, onArchived }) {
 
       {/* First-run setup walkthrough — 4 small slides. No Save: each choice applies live.
           Finishing (or skipping) just closes it; the room then works as usual. */}
-      {showSetup && room && (
+      {showSetup && room && !isCampaignRoom && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={finishSetup}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 pt-3">
@@ -2097,6 +3147,64 @@ function RoomThread({ roomId, onArchived }) {
 // Immediate "it's working" feedback shown while a live turn has no events yet.
 // Cycles through the real startup phases so the room never looks frozen.
 
+function legacyPlanNarrative(plan) {
+  if (!plan) return '';
+  const steps = [...new Set((Array.isArray(plan.steps) ? plan.steps : []).map((step) => String(step || '').trim()).filter(Boolean))];
+  const assignments = Object.entries(plan.assignments || {})
+    .filter(([owner, task]) => owner && task)
+    .slice(0, 2)
+    .map(([owner, task]) => `${owner} will ${String(task).replace(/^debate\s*/i, 'review ').replace(/^[A-Z]/, (c) => c.toLowerCase())}`);
+  const opening = steps.length
+    ? `We’ll start by ${steps[0].replace(/^[A-Z]/, (c) => c.toLowerCase())}.`
+    : 'We’ll start by grounding this in the most relevant company context.';
+  const collaboration = assignments.length ? ` ${assignments.join(' while ')}.` : '';
+  const report = ['answer', 'report', 'doc', 'notion'].includes(String(plan.intended_output || '').toLowerCase())
+    ? ' Then we’ll bring the evidence and recommendations together in one polished report.'
+    : ' Then we’ll return one clear, ready-to-use result.';
+  return `${opening}${collaboration}${report}`;
+}
+
+function reportMarkdown(report) {
+  return String(report?.bundle?.report_markdown || report?.report_markdown || report?.content || '').trim();
+}
+
+function ReportActions({ report, title }) {
+  const [copied, setCopied] = useState(false);
+  const markdown = reportMarkdown(report);
+  if (!markdown) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard permission is browser-owned */ }
+  };
+  const download = () => {
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `${String(title || 'room-report').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'room-report'}.md`;
+    anchor.click();
+    URL.revokeObjectURL(href);
+  };
+  return <div className="mb-1 flex items-center justify-end gap-1" aria-label="Report actions">
+    <button type="button" onClick={copy} className="grid h-8 w-8 place-items-center text-[#77716a] hover:text-[#0a0a0a]" title={copied ? 'Copied' : 'Copy report'} aria-label={copied ? 'Copied' : 'Copy report'}>
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+    <button type="button" onClick={download} className="grid h-8 w-8 place-items-center text-[#77716a] hover:text-[#0a0a0a]" title="Download report as Markdown" aria-label="Download report as Markdown">
+      <Download size={14} />
+    </button>
+  </div>;
+}
+
+function RoomLeadResponse({ content }) {
+  if (!content) return null;
+  return <div className="max-w-4xl py-3 pl-2 pr-5 text-[15px] leading-7 text-[#292724]">
+    {renderMarkdownLite(content)}
+  </div>;
+}
+
 function TurnView({ turn, participants: participantsProp, liveLines, archived, busy, onClear, onRerun, onFlybyDecision, flybyBusy, onApprove, approveBusy, roomId, taskTag, onRunNextTask }) {
   // Normalise participants to an ARRAY once. This component used it both as an
   // array ((participants || []).find, line ~3009) and as an object
@@ -2171,8 +3279,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const simulationClaims = lines.filter(l => l.t === 'simulation_claim');
   const trustDeltas = seal?.trust || {};
   const template = router?.template || 'debate';
-  const sealStatus = seal?.status || 'complete';
-  const qualityLow = seal?.quality_low;
   const toolCallCounts = seal?.tool_call_counts || {};
   const toolCallTotal = seal?.tool_call_total || 0;
 
@@ -2206,11 +3312,15 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   const costCapHit = lines.find(l => l.t === 'cost_cap_hit') || lines.find(l => l.t === 'seal' && l.cost_cap_hit);
   const deadlineHit = lines.find(l => l.t === 'deadline_hit');
   const roomWarnings = lines.filter(l => l.t === 'warning');
+  const campaignHandoff = [...lines].reverse().find(l => l.t === 'campaign_handoff' && l.campaign_id);
+  const campaignHandoffFailed = [...lines].reverse().find(l => l.t === 'campaign_handoff_failed');
 
   // Phase 1-6 — lead plan, recon/verify verdict, write-approval cards, and the
   // goalkeeper's re-plan rounds. A turn may re-plan (one `plan` per round, all
   // under the same turn_id), so take the LATEST plan/verdict and group rounds.
   const planLine = [...lines].reverse().find(l => l.t === 'plan');
+  const workBrief = lines.find(l => l.t === 'work_brief' && l.content);
+  const workBriefText = workBrief?.content || legacyPlanNarrative(planLine);
   // Every tool call the room made, in order — recall sweeps + live web searches —
   // so the simulation shows its working (not just the final answer).
   const gathers = lines.filter(l => l.t === 'gather');
@@ -2225,13 +3335,18 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
     return Object.values(byQuery);
   })();
   const skillUses = lines.filter(l => l.t === 'skill_used');
+  const actionIntents = lines.filter(l => l.t === 'action_intent' && l.explicit);
+  const connectionRequests = lines.filter(l => l.t === 'connection_required' && l.explicit);
   // Room kind for the sealed report's desk identity — already emitted on every
   // skill_used event; old turns without it fall back to the task-tag alias.
-  const roomKind = (skillUses.find(sk => sk.room_kind) || {}).room_kind || '';
+  const domainPack = lines.find(l => l.t === 'domain_pack');
+  const roomKind = domainPack?.room_kind
+    || (skillUses.find(sk => sk.room_kind) || {}).room_kind
+    || router?.room_kind
+    || '';
   const reconPreLine = [...lines].reverse().find(l => l.t === 'recon_pre');
   const executeLines = lines.filter(l => l.t === 'execute');
   const verifyLine = [...lines].reverse().find(l => l.t === 'verify');
-  const goalkeeperRounds = lines.filter(l => l.t === 'goalkeeper_round');
   // Produced artifacts (docs/sheets) — "view in new tab" buttons with the
   // connector's brand logo. Dedup to the last per (connector,url).
   const connectorLogos = (() => {
@@ -2249,6 +3364,42 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
   // In-app artifact preview (email draft / doc / notion) — no Google redirect.
   const [artifactPreview, setArtifactPreview] = useState(null);
 
+  const isCampaignTurn = roomKind === 'campaign'
+    || String(taskTag || '').toUpperCase() === 'CAMPAIGN'
+    || /^Create a [^\n]+? campaign for this goal:/i.test(turn.userMessage || turn.user_message || '');
+  const campaignBundleLine = [...lines].reverse().find((line) => line.t === 'campaign_bundle' && line.bundle);
+  const campaignBundle = campaignBundleLine?.bundle || null;
+  const campaignInvalid = [...lines].reverse().find((line) => line.t === 'campaign_bundle_invalid');
+  if (campaignHandoff || campaignHandoffFailed) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col items-end">
+          <div className="max-w-[80%] rounded-2xl rounded-tr-md bg-violet-500 px-3 py-2 text-[13px] text-white shadow-sm">{visibleUserMessage}</div>
+        </div>
+        {campaignHandoff ? (
+          <section className="overflow-hidden rounded-md border border-[#d8d3cc] bg-white" aria-label="Campaign created">
+            <div className="border-b border-[#e4e0da] bg-[#171d1a] px-4 py-4 text-white">
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase"><Megaphone size={13} />Campaign toolkit</div>
+              <h3 className="mt-2 text-[16px] font-semibold">{campaignHandoff.name || 'Campaign Room started'}</h3>
+              <p className="mt-1 text-[11px] text-[#cfd7d2]">The specialist Room is building the strategy, evidence, complete sequence, and schedule. Nothing has been published.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-2 text-[10px] text-[#6f6962]"><span className="h-2 w-2 rounded-full bg-emerald-600" />{String(campaignHandoff.status || 'GENERATING').replaceAll('_', ' ')}</div>
+              <div className="flex flex-wrap gap-2">
+                {campaignHandoff.room_url && <a href={campaignHandoff.room_url} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#cfc9c1] px-3 text-[10.5px] font-semibold text-[#26221f] hover:bg-[#f6f4f0]"><Users size={12} />Open Campaign Room</a>}
+                <a href={campaignHandoff.campaign_url} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#171717] px-3 text-[10.5px] font-semibold text-white"><Megaphone size={12} />Open Campaign<ExternalLink size={11} /></a>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[10.5px] text-red-800">
+            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+            <span>{campaignHandoffFailed.message || 'The Campaign Room could not be created.'}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className="space-y-2">
       {/* User bubble */}
@@ -2291,55 +3442,23 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         )}
       </div>
 
-      {/* Phase 1/3/6 — the lead's plan + goal progress. Frames the turn: target
-          output, done-criterion, ordered steps, per-agent assignments, and (if
-          the goalkeeper re-planned) the current round. */}
-      {planLine && (
-        <div className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2">
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <ListChecks size={12} className="text-violet-600" />
-            <span className="text-[11px] font-medium text-violet-800">{t('hyperAgents.planLabel', 'Plan')}</span>
-            <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[9px] font-mono uppercase tracking-wider">→ {planLine.intended_output}</span>
-            {goalkeeperRounds.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-mono uppercase tracking-wider" title={t('hyperAgents.goalkeeperTitle', 'The goalkeeper re-planned because the previous round fell short of the done-criterion.')}>
-                {t('hyperAgents.round', 'round')} {goalkeeperRounds.length + 1}
-              </span>
-            )}
-          </div>
-          {planLine.done_criterion && (
-            <div className="text-[10px] text-[#525252] mb-1">
-              <span className="text-[#a3a3a3]">{t('hyperAgents.doneWhen', 'done when:')}</span> {planLine.done_criterion}
-            </div>
-          )}
-          {Array.isArray(planLine.steps) && planLine.steps.length > 0 && (
-            <ol className="list-decimal list-inside text-[10px] text-[#525252] space-y-0.5 mb-1 marker:text-violet-400">
-              {planLine.steps.map((s, i) => <li key={i}>{s}</li>)}
-            </ol>
-          )}
-          {planLine.assignments && Object.keys(planLine.assignments).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {Object.entries(planLine.assignments).map(([who, task]) => (
-                <span key={who} className="px-1.5 py-0.5 rounded bg-white border border-violet-100 text-[9px] text-[#525252]" title={String(task)}>
-                  <span className="text-violet-700 font-medium">{who}</span>: {String(task).slice(0, 64)}{String(task).length > 64 ? '…' : ''}
-                </span>
-              ))}
-            </div>
-          )}
-          {goalkeeperRounds.length > 0 && (
-            <div className="mt-1.5 pt-1.5 border-t border-violet-100 space-y-0.5">
-              {goalkeeperRounds.map((g, i) => (
-                <div key={i} className="text-[9px] text-amber-700 font-mono">
-                  ↻ {t('hyperAgents.replanned', 'round')} {g.round} → {g.next_round}: {(g.gaps || []).join('; ') || t('hyperAgents.unmet', 'done-criterion unmet')}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* The structured plan remains an internal execution contract. The user sees
+          one short, natural account of what the team is about to do. */}
+      {workBriefText && !synthLine?.conversational && (
+        <RoomLeadResponse content={workBriefText} />
       )}
 
       {/* ROOM ACTIVITY — Claude-style tool timeline: every recall / connector read /
           web search the room ran after the user's message, in order, ending in Done. */}
-      <ToolTimeline gathers={gathers} webIntels={webIntels} prospectHunts={prospectHunts} skillUses={skillUses} sealed={!!seal} />
+      <ToolTimeline
+        gathers={gathers}
+        webIntels={webIntels}
+        prospectHunts={prospectHunts}
+        skillUses={skillUses}
+        actionIntents={actionIntents}
+        connectionRequests={connectionRequests}
+        sealed={!!seal}
+      />
 
 
 
@@ -2643,64 +3762,11 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         </>
       )}
 
-      {synthLine && (() => {
-        // Report-card chrome around the deliverable: WHO wrote it (lead + the team),
-        // whether the recon pass VERIFIED it as grounded, and the turn's true cost —
-        // so the final card reads like a signed-off report, not an anonymous blob.
-        const _leadP = participants[synthLine.agent] || {};
-        const _crew = participants.filter(p => (p.slug || p.id) !== synthLine.agent);
-        const _v = verifyLine || {};
-        const _verified = _v.grounded_ok === true || _v.met === true;
-        const _durS = seal?.duration_ms ? Math.round(Number(seal.duration_ms) / 1000) : null;
-        return (
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/60 to-white shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-3.5 py-2 border-b border-violet-100 bg-violet-50/50 flex-wrap">
-              <Sparkles size={13} className="text-violet-600" />
-              <span className="text-[11px] font-semibold text-violet-800 uppercase tracking-wider font-mono">
-                {t('hyperAgents.finalOutput', 'Final — room synthesis')}
-              </span>
-              {_verified && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-medium"
-                      title={t('hyperAgents.verifiedTitle', 'The recon pass checked this deliverable against the gathered evidence — grounded.')}>
-                  <CheckCheck size={10} /> {t('hyperAgents.verified', 'verified')}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => { try { navigator.clipboard.writeText(synthLine.content || ''); } catch { /* noop */ } }}
-                className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider text-violet-600 hover:bg-violet-100"
-                title={t('hyperAgents.copySynth', 'Copy the deliverable as markdown')}
-              >{t('hyperAgents.copy', 'copy')}</button>
-              {eventDisplayTs(synthLine) ? (
-                <span className="text-[9px] font-mono text-[#a3a3a3]">{fmtTs(eventDisplayTs(synthLine))}</span>
-              ) : null}
-            </div>
-            <div className="px-4 py-3">
-              {(() => {
-                // Kind report views (brochure) own the synthesis when registered —
-                // the legacy desk renderer is the fallback. This is the SAME
-                // registry the final_report path uses, so both paths match.
-                const KindReport = reportViewFor(roomKind);
-                return KindReport
-                  ? <KindReport report={{ content: synthLine.content }} roomKind={roomKind} prospectHunts={prospectHunts}
-                      taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)} />
-                  : <TaskSynthesisRenderer taskTag={taskTag} roomKind={roomKind} content={synthLine.content} />;
-              })()}
-            </div>
-            <div className="flex items-center gap-2 px-3.5 py-1.5 border-t border-violet-100 bg-[#faf9f4] flex-wrap">
-              <AgentAvatar agent={_leadP && _leadP.name ? _leadP : { name: synthLine.agent, slug: synthLine.agent }} size={20} />
-              <span className="text-[10px] text-[#525252]">
-                {t('hyperAgents.synthBy', 'by')} <span className="font-medium text-[#0a0a0a]">{_leadP.name || synthLine.agent}</span>
-                {_crew.length > 0 && <> · {t('hyperAgents.synthWith', 'with')} {_crew.map(p => p.name || p.slug).filter(Boolean).join(', ')}</>}
-              </span>
-              <span className="ml-auto flex items-center gap-2 text-[9px] font-mono text-[#a3a3a3] tabular-nums">
-                {_durS != null && <span>{_durS}s</span>}
-                {seal?.cost_tokens != null && <span>{Number(seal.cost_tokens).toLocaleString()} tok</span>}
-              </span>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Conversational and handoff replies are direct prose. Task synthesis is
+          intentionally not rendered here: final_report is the sole report source. */}
+      {synthLine && !finalReport && (synthLine.conversational || campaignHandoff) ? (
+        <RoomLeadResponse content={synthLine.content} />
+      ) : null}
 
       {revises.map((rev, i) => (
         <div key={`revise-${i}`} className="border-l-2 border-dashed border-[#a3a3a3] ml-3 pl-3">
@@ -2798,23 +3864,36 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
         // Per-kind report view (P3) if the kind registers one; else the default
         // FinalReportCard. Registry falls back to null, so behavior is unchanged
         // until a kind ships its dedicated view.
-        const KindReport = reportViewFor(roomKind);
-        return KindReport ? (
-          <KindReport
-            report={finalReport}
-            roomKind={roomKind}
-            webSources={webIntel?.sources || []}
-            prospectHunts={prospectHunts}
-            taskTitle={String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90)}
-            onOpenMemory={setEvidenceMemoryId}
-          />
-        ) : (
-          <FinalReportCard
-            report={finalReport}
-            webSources={webIntel?.sources || []}
-            onOpenMemory={setEvidenceMemoryId}
-          />
-        );
+        const KindReport = reportViewFor(isCampaignTurn ? 'campaign' : roomKind);
+        if (isCampaignTurn && !campaignBundle) {
+          const errors = Array.isArray(campaignInvalid?.errors) ? campaignInvalid.errors : [];
+          return <section className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50/60" aria-label="Campaign plan needs refinement">
+            <div className="border-b border-amber-200 px-4 py-3"><div className="flex items-center gap-2 text-[11px] font-semibold text-amber-900"><AlertTriangle size={14} />Campaign plan needs refinement</div><p className="mt-1 text-[10.5px] leading-5 text-amber-800">The Room did not submit an executable campaign contract, so no plan was marked ready and nothing was published.</p></div>
+            {errors.length ? <div className="px-4 py-3"><div className="text-[9px] font-mono uppercase text-amber-700">Contract checks</div><ul className="mt-2 space-y-1 text-[10.5px] leading-5 text-amber-900">{errors.slice(0, 8).map((item) => <li key={item}>• {item}</li>)}</ul></div> : null}
+          </section>;
+        }
+        const renderedReport = isCampaignTurn ? { ...finalReport, bundle: campaignBundle } : finalReport;
+        const reportTitle = String(turn.userMessage || '').replace(/^Start task:\s*/i, '').split(/[.\n]/)[0].slice(0, 90);
+        return <section className="mt-5 border-t border-[#e3e0db] pt-2" aria-label="Final report">
+          <ReportActions report={renderedReport} title={reportTitle} />
+          {KindReport ? (
+            <KindReport
+              report={renderedReport}
+              roomKind={roomKind}
+              surface="room"
+              webSources={webIntel?.sources || []}
+              prospectHunts={prospectHunts}
+              taskTitle={reportTitle}
+              onOpenMemory={setEvidenceMemoryId}
+            />
+          ) : (
+            <FinalReportCard
+              report={renderedReport}
+              webSources={webIntel?.sources || []}
+              onOpenMemory={setEvidenceMemoryId}
+            />
+          )}
+        </section>;
       })()}
 
       {/* OUTREACH PROSPECTS — full stacked cards with all firm info; green "email
@@ -3058,42 +4137,6 @@ function TurnView({ turn, participants: participantsProp, liveLines, archived, b
       })()}
       {seal && (
         <div className="space-y-1 py-1">
-          <div className={`text-[9px] uppercase tracking-wider font-mono text-center ${
-            sealStatus === 'escalated' ? 'text-amber-700' :
-            sealStatus === 'blocked' ? 'text-amber-700' :
-            sealStatus === 'failed' ? 'text-red-600' :
-            qualityLow ? 'text-amber-600' :
-            'text-[#a3a3a3]'
-          }`}>
-            {errorLine
-              ? t('hyperAgents.sealFailed', '─── failed: {{msg}} ───', { msg: errorLine.message || t('hyperAgents.unknownError', 'unknown error') })
-              : sealStatus === 'blocked'
-                ? t('hyperAgents.sealBlocked', '─── blocked · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                : sealStatus === 'escalated'
-                  ? t('hyperAgents.sealEscalated', '─── escalated · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                  : qualityLow
-                    ? t('hyperAgents.sealLowQuality', '─── sealed (low quality) · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })
-                    : t('hyperAgents.sealComplete', '─── sealed · {{tok}} tok ───', { tok: seal.cost_tokens || 0 })}
-          </div>
-          {seal && (Number(seal.tokens_in) > 0 || Number(seal.tokens_out) > 0) && (
-            <div className="mt-1 flex flex-wrap justify-center items-center gap-x-2 gap-y-0.5 text-[9px] font-mono text-[#a3a3a3]">
-              {Number(seal.tokens_in) > 0 && <span><span className="text-[#737373]">{Number(seal.tokens_in).toLocaleString()}</span> in</span>}
-              {Number(seal.tokens_out) > 0 && <span>· <span className="text-[#737373]">{Number(seal.tokens_out).toLocaleString()}</span> out</span>}
-              {Number(seal.tokens_cached) > 0 && (
-                <span className="text-emerald-600" title={t('hyperAgents.cachedHint', 'Groq prompt-cache hits — cached input billed at 50%')}>
-                  · {Number(seal.tokens_cached).toLocaleString()} cached ⚡
-                </span>
-              )}
-              {seal.tok_by && ((seal.tok_by.director || 0) + (seal.tok_by.synth || 0) + (seal.tok_by.debate || 0) + (seal.tok_by.web || 0)) > 0 && (
-                <span title={t('hyperAgents.tokByHint', 'director = gather plan (fast model) · synth = final deliverable (best model) · debate = the room · web = live search')}>
-                  · plan {Math.round((seal.tok_by.director || 0) / 1000)}k
-                  {(seal.tok_by.synth || 0) > 0 ? ` · synth ${Math.round(seal.tok_by.synth / 1000)}k` : ''}
-                  {(seal.tok_by.debate || 0) > 0 ? ` · debate ${Math.round(seal.tok_by.debate / 1000)}k` : ''}
-                  {(seal.tok_by.web || 0) > 0 ? ` · web ${Math.round(seal.tok_by.web / 1000)}k` : ''}
-                </span>
-              )}
-            </div>
-          )}
           {Object.keys(trustDeltas).length > 0 && (
             <div className="text-[9px] text-[#737373] font-mono text-center flex flex-wrap justify-center gap-2">
               {Object.entries(trustDeltas).map(([slug, score]) => (
@@ -3338,6 +4381,7 @@ function CreateRoomModal({ onClose, onCreated }) {
   // Default to Smart (auto) — the orchestrator picks the best format from the
   // first question. No-code users never have to understand the 10 templates.
   const [template, setTemplate] = useState('auto');
+  const [roomTag, setRoomTag] = useState('');
   const [employees, setEmployees] = useState([]);
   const [picked, setPicked] = useState(new Set());
   const [skepticId, setSkepticId] = useState('');
@@ -3384,7 +4428,7 @@ function CreateRoomModal({ onClose, onCreated }) {
     { n: 2, label: t('hyperAgents.stepFlow', 'Collaboration'), icon: Network },
     { n: 3, label: t('hyperAgents.stepAgents', 'Agents'), icon: Users },
   ];
-  const step1Valid = !!name.trim() && !!goal.trim() && scopeReady;
+  const step1Valid = !!roomTag && !!name.trim() && !!goal.trim() && scopeReady;
   const step3Valid = picked.size > 0;
   const canCreate = step1Valid && step3Valid && !busy;
   const stepValid = step === 1 ? step1Valid : step === 3 ? step3Valid : true;
@@ -3402,6 +4446,7 @@ function CreateRoomModal({ onClose, onCreated }) {
         goal: goal.trim(),
         participant_ids: Array.from(picked),
         template,
+        room_tag: roomTag,
       };
       if (template === 'swarm' && skepticId) {
         payload.permanent_skeptic_id = skepticId;
@@ -3492,6 +4537,34 @@ function CreateRoomModal({ onClose, onCreated }) {
               {/* ───────── STEP 1 — Room ───────── */}
               {step === 1 && (
                 <div className="space-y-5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-2 block">Room expertise</label>
+                    <p className="text-[10.5px] text-[#737373] -mt-1 mb-2.5">Choose the operating specialty that controls this Room's skills, toolkit, and final report.</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {DOMAIN_ROOMS.map((domain) => {
+                        const Icon = domain.icon;
+                        const on = roomTag === domain.key;
+                        return (
+                          <button
+                            type="button"
+                            key={domain.key}
+                            onClick={() => {
+                              setRoomTag(domain.key);
+                              if (!name.trim() && domain.key !== 'general') setName(`${domain.label} room`);
+                            }}
+                            title={domain.desc}
+                            className={`min-h-[86px] text-left p-3 rounded-[8px] border transition-colors ${on ? 'border-[#117dff] bg-[#117dff]/[0.04]' : 'border-[#e3e0db] bg-white hover:border-[#d4d0ca]'}`}
+                          >
+                            <span className="w-7 h-7 rounded-[6px] flex items-center justify-center mb-2" style={{ background: `${domain.color}16`, color: domain.color }}>
+                              <Icon size={14} />
+                            </span>
+                            <span className="block text-[12.5px] font-semibold text-[#171717]">{domain.label}</span>
+                            <span className="block mt-0.5 text-[10px] leading-snug text-[#737373]">{domain.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div>
                     <label className="text-[11px] font-semibold text-[#737373] uppercase tracking-wider mb-1.5 block">{t('hyperAgents.nameLbl', 'Name')}</label>
                     <input

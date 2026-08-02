@@ -4,6 +4,7 @@ import { Search, X, ChevronRight, GitFork, Lock } from 'lucide-react';
 import apiClient from '../../shared/api-client';
 import MobileShell from '../MobileShell';
 import { useAuth } from '../../auth/AuthProvider';
+import { filterUserVisibleMemories } from '../../shared/memory-filters';
 
 const TYPES = ['all', 'fact', 'decision', 'preference', 'procedure', 'experience', 'synthesis'];
 
@@ -169,12 +170,14 @@ export default function MobileMemories() {
         const data = query.trim()
           ? await apiClient.searchMemories(query.trim(), { ...params, limit: 40 })
           : await apiClient.listMemories(params);
-        const rows = data?.memories || data?.results || data || [];
+        const rawRows = data?.memories || data?.results || data || [];
+        const sourceRows = Array.isArray(rawRows) ? rawRows : [];
+        const rows = filterUserVisibleMemories(sourceRows);
         if (!cancelled) {
           setMemories(rows);
-          setTotalCount(data?.pagination?.total ?? data?.total ?? null);
-          offsetRef.current = rows.length;
-          setHasMore(!query.trim() && rows.length >= PAGE_SIZE);
+          setTotalCount(null);
+          offsetRef.current = sourceRows.length;
+          setHasMore(!query.trim() && sourceRows.length >= PAGE_SIZE);
           // Refresh the instant-paint cache only for the default view.
           if (!query.trim() && type === 'all') saveMemCache(user?.id, org?.id, rows);
         }
@@ -195,13 +198,15 @@ export default function MobileMemories() {
       const params = { limit: PAGE_SIZE, offset: offsetRef.current, hide_noise: 'true', is_latest: 'all' };
       if (type !== 'all') params.memory_type = type;
       const data = await apiClient.listMemories(params);
-      const rows = data?.memories || data?.results || data || [];
+      const rawRows = data?.memories || data?.results || data || [];
+      const sourceRows = Array.isArray(rawRows) ? rawRows : [];
+      const rows = filterUserVisibleMemories(sourceRows);
       setMemories((prev) => {
         const seen = new Set(prev.map((m) => m.id));
         return [...prev, ...rows.filter((m) => !seen.has(m.id))];
       });
-      offsetRef.current += rows.length;
-      if (rows.length < PAGE_SIZE) setHasMore(false);
+      offsetRef.current += sourceRows.length;
+      if (sourceRows.length < PAGE_SIZE) setHasMore(false);
     } catch { setHasMore(false); }
     finally { setLoadingMore(false); }
   }, [loadingMore, hasMore, query, type]);

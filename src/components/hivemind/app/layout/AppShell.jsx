@@ -248,6 +248,9 @@ export default function AppShell() {
   }, [isSelfHost, shGate]);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [compactViewport, setCompactViewport] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+  ));
   const [activeSection, setActiveSection] = useState(() => sectionForPath(location.pathname));
   useEffect(() => {
     const section = sectionForPath(location.pathname);
@@ -268,6 +271,7 @@ export default function AppShell() {
   // Talk-to-HIVE button would duplicate it there. Hidden on Overview ONLY;
   // every other page keeps the FAB.
   const onOverview = /\/hivemind\/app(\/overview)?\/?$/.test(location.pathname);
+  const onMeetingNotes = /\/hivemind\/app\/meeting-notes\/?$/.test(location.pathname);
 
   // Track sidebar state for dynamic margin
   useEffect(() => {
@@ -287,6 +291,14 @@ export default function AppShell() {
       window.removeEventListener('hivemind:open-sidebar', handleExpand);
       window.removeEventListener('hivemind:open-chat', handleOpenChat);
     };
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const handleChange = (event) => setCompactViewport(event.matches);
+    setCompactViewport(media.matches);
+    media.addEventListener?.('change', handleChange);
+    return () => media.removeEventListener?.('change', handleChange);
   }, []);
 
   if (needsOnboarding) {
@@ -318,19 +330,19 @@ export default function AppShell() {
     <QuickRecorderProvider>
     <TeamProvider>
       <div className="min-h-screen bg-[#faf9f4] font-[Inter,ui-sans-serif,system-ui,sans-serif]">
-        {!graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
+        {!compactViewport && !graphFullscreen && !hyperFullscreen && <Sidebar activeSection={activeSection} />}
         <div
           className={`transition-all duration-300 ${sidebarCollapsed || graphFullscreen || hyperFullscreen ? 'sidebar-content-expanded' : ''}`}
-          style={{ marginLeft: (graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
+          style={{ marginLeft: (compactViewport || graphFullscreen || hyperFullscreen) ? '0px' : sidebarCollapsed ? '68px' : '260px' }}
         >
           {!graphFullscreen && <TopBar activeSection={activeSection} onSectionChange={handleSectionChange} />}
-          <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-6 overflow-y-auto"}>
+          <main className={graphFullscreen ? "flex-1 overflow-hidden" : "flex-1 p-4 md:p-6 overflow-y-auto"}>
             <Outlet />
           </main>
         </div>
 
         {/* Chat FAB — glass-morph pill, slides in from right, blinking pulse */}
-        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview} />
+        <TalkToHiveFAB onOpen={() => setChatOpen(true)} hidden={chatOpen || graphFullscreen || onOverview || onMeetingNotes || activeSection === 'hyperagents' || activeSection === 'tara'} />
 
         {/* Global upload strip — survives KB unmount so users can browse
             other pages while files are still uploading */}

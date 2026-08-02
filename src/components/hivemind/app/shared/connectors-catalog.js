@@ -96,6 +96,15 @@ export const CONNECTOR_CATALOG = [
     status: 'beta',
     description: 'Spaces, messages — live query.',
   },
+  {
+    id: 'google-search-console',
+    name: 'Google Search Console',
+    category: 'data',
+    mode: ['live'],
+    authType: 'oauth2',
+    status: 'stable',
+    description: 'First-party queries, pages, clicks, impressions, CTR, and position for SEO Intelligence.',
+  },
 
   // ── INGESTION / LIVE — Microsoft 365 ──────────────────────────────────
   {
@@ -186,6 +195,26 @@ export const CONNECTOR_CATALOG = [
     authType: 'oauth2',
     status: 'planned',
     description: 'Contacts, deals, companies, tickets.',
+  },
+  {
+    id: 'x-account',
+    name: 'X',
+    category: 'marketing',
+    mode: ['live'],
+    authType: 'oauth2',
+    status: 'needs_oauth_setup',
+    description: 'X identity, media upload and public Post creation.',
+    setupHint: 'Uses the official X OAuth 2.0 PKCE flow.',
+  },
+  {
+    id: 'x-ads',
+    name: 'X Ads',
+    category: 'marketing',
+    mode: ['live'],
+    authType: 'oauth1',
+    status: 'needs_oauth_setup',
+    description: 'Advertiser accounts, paid campaigns, budgets and performance.',
+    setupHint: 'Uses official X OAuth 1.0a and requires Ads API access.',
   },
 
   // ── INGESTION — Database ─────────────────────────────────────────────
@@ -294,6 +323,7 @@ export const CONNECTOR_CATEGORIES = [
   { id: 'productivity', name: 'Productivity' },
   { id: 'comms', name: 'Communication' },
   { id: 'crm', name: 'CRM & Sales' },
+  { id: 'marketing', name: 'Marketing & Ads' },
   { id: 'project', name: 'Project Management' },
   { id: 'code', name: 'Code & DevOps' },
   { id: 'database', name: 'Databases' },

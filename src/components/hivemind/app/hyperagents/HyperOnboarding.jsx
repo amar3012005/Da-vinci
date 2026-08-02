@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2 } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Users, ListChecks, Target, FileText, Building2, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
 import OnboardingTerminal from './OnboardingTerminal';
 import AgentAvatar from './AgentAvatar';
+import WebsitePreview from './WebsitePreview';
 
 /**
  * HyperOnboarding — Polsia-style company genesis for HyperAgents.
@@ -18,7 +19,7 @@ import AgentAvatar from './AgentAvatar';
  * agents right).
  *
  * Server contract:
- *   POST /v1/hyper/onboarding/start  { website_url, goal? }
+ *   POST /v1/hyper/onboarding/start  { website_url, company_location?, goal? }
  *   GET  /v1/hyper/onboarding/status → { running, done, error, lines, result }
  */
 
@@ -35,10 +36,10 @@ function panelsLitBy(lines) {
   };
 }
 
-function Panel({ icon: Icon, title, lit, children }) {
+function Panel({ icon: Icon, title, lit, children, className = '' }) {
   return (
-    <div className={`bg-white border rounded-xl p-4 transition-all duration-500 ${lit ? 'border-[#e3e0db] opacity-100' : 'border-[#efece6] opacity-45'}`}>
-      <div className="flex items-center gap-2 mb-2.5">
+    <div className={`bg-white border rounded-lg p-3 overflow-hidden transition-all duration-500 ${lit ? 'border-[#e3e0db] opacity-100' : 'border-[#efece6] opacity-45'} ${className}`}>
+      <div className="flex items-center gap-2 mb-2">
         <Icon size={13} className={lit ? 'text-[#117dff]' : 'text-[#c9c4bc]'} />
         <span className="text-[11px] font-semibold uppercase tracking-wide text-[#a3a3a3] font-['Space_Grotesk']">{title}</span>
         {lit && <CheckCircle2 size={12} className="text-[#16a34a] ml-auto" />}
@@ -52,11 +53,15 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const { t } = useTranslation('dashboard');
   const [phase, setPhase] = useState('input'); // input | running | done
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [companyLocation, setCompanyLocation] = useState('');
   const [goal, setGoal] = useState('');
   const [lines, setLines] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [locationPromptOpen, setLocationPromptOpen] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const pollRef = useRef(null);
 
   const stopPolling = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
@@ -69,9 +74,12 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         const s = await apiClient.hyperOnboardingStatus();
         setLines(s.lines || []);
         if (s.done) {
-          stopPolling();
           if (s.error) setError(s.error);
-          else { setResult(s.result); setPhase('done'); }
+          else {
+            setResult(s.result);
+            setPhase('done');
+            if (!s.result?.screenshot_pending) stopPolling();
+          }
         }
       } catch { /* transient */ }
     }, 1100);
@@ -82,7 +90,10 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
       try {
         const s = await apiClient.hyperOnboardingStatus();
         if (s.running) { setPhase('running'); setLines(s.lines || []); poll(); }
-        else if (s.done && !s.error && s.result) { setResult(s.result); setLines(s.lines || []); setPhase('done'); }
+        else if (s.done && !s.error && s.result) {
+          setResult(s.result); setLines(s.lines || []); setPhase('done');
+          if (s.result?.screenshot_pending) poll();
+        }
       } catch { /* fresh */ }
     })();
   }, [poll]);
@@ -97,6 +108,35 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally { setStarting(false); }
+  };
+
+  const requestWorkspaceEntry = () => {
+    setCompanyLocation(result?.profile?.location || result?.company_location || '');
+    setLocationError('');
+    setLocationPromptOpen(true);
+  };
+
+  const confirmWorkspaceLocation = async (event) => {
+    event?.preventDefault();
+    const location = companyLocation.trim();
+    if (!location || savingLocation) return;
+    setSavingLocation(true);
+    setLocationError('');
+    try {
+      const updated = await apiClient.updateHyperCompanyLocation(location);
+      const nextResult = updated?.company || {
+        ...result,
+        company_location: location,
+        profile: { ...(result?.profile || {}), location, location_source: 'user_claim' },
+      };
+      setResult(nextResult);
+      setLocationPromptOpen(false);
+      onComplete?.(nextResult);
+    } catch (err) {
+      setLocationError(err.response?.data?.error || err.message);
+    } finally {
+      setSavingLocation(false);
+    }
   };
 
   // ── Phase: input ──────────────────────────────────────────────────────
@@ -147,7 +187,7 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
   const companyName = result?.company || (websiteUrl.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0] || 'Your company').toUpperCase();
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-6rem)] min-h-[560px]">
+    <div className="flex flex-col gap-3 h-[calc(100vh-6.5rem)] min-h-[560px] overflow-hidden">
       {/* ── Top build-log strip (Polsia position, day-mode styling) ── */}
       <div className="shrink-0">
         <div className="flex items-center gap-2 mb-1.5 px-0.5">
@@ -155,14 +195,14 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           <span className="text-[11px] font-semibold text-[#525252] font-['Space_Grotesk']">{t('hyperOnboarding.buildLog', 'Build log')}</span>
           <span className="text-[10px] font-mono text-[#a3a3a3] ml-auto">{lines.length} steps</span>
         </div>
-        <div className={done ? 'h-[96px]' : 'h-[168px]'}>
+        <div className={done ? 'h-[58px]' : 'h-[128px]'}>
           <OnboardingTerminal lines={lines} done={done} error={error} />
         </div>
       </div>
 
       {/* ── Dashboard ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto pr-1">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex-1 min-w-0 overflow-y-auto lg:overflow-hidden pr-1">
+        <div className="flex items-center justify-between mb-2.5">
           <div>
             <div className="flex items-center gap-2 text-[11px] font-mono text-[#a3a3a3]">
               <span className="text-violet-500">〉</span> HYPERAGENTS · {done ? 'READY' : 'BUILDING'}
@@ -176,18 +216,43 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3.5">
-          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company}>
-            <p className="text-[12.5px] text-[#0a0a0a] leading-relaxed">{p.what_it_does || '—'}</p>
-            {p.icp ? <p className="text-[11.5px] text-[#525252] mt-1.5"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
-            {p.positioning ? <p className="text-[11.5px] text-[#525252] mt-1"><span className="text-[#a3a3a3]">Positioning:</span> {p.positioning}</p> : null}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="col-span-2">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-[#a3a3a3] uppercase mb-2">
+              <Globe size={11} /> {t('hyperOnboarding.websitePreview', 'Website preview')}
+            </div>
+            <WebsitePreview
+              image={result?.screenshot}
+              source={result?.website_visual_source}
+              website={result?.website || websiteUrl}
+              company={companyName}
+              tagline={p.tagline}
+              loading={Boolean(result?.screenshot_pending) || (!done && !result?.screenshot)}
+              compact
+              className="h-[204px] w-full max-w-none"
+            />
+          </div>
+
+          <Panel icon={Building2} title={t('hyperOnboarding.company', 'Company')} lit={lit.company} className="h-[122px]">
+            <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-2">{p.what_it_does || '—'}</p>
+            {p.location ? <p className="text-[11px] text-[#525252] mt-1 truncate"><span className="text-[#a3a3a3]">HQ:</span> {p.location}</p> : null}
+            {p.icp ? <p className="text-[11px] text-[#525252] mt-1 line-clamp-1"><span className="text-[#a3a3a3]">ICP:</span> {p.icp}</p> : null}
+            {(p.social_profiles || []).length ? (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {p.social_profiles.map((social) => (
+                  <a key={social.url} href={social.url} target="_blank" rel="noreferrer" className="text-[9.5px] font-mono uppercase border border-[#d9dee5] rounded px-1.5 py-0.5 text-[#117dff] hover:border-[#117dff]">
+                    {social.platform}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </Panel>
 
-          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission}>
-            <p className="text-[12.5px] text-[#0a0a0a] leading-relaxed">{result?.mission || '—'}</p>
+          <Panel icon={Target} title={t('hyperOnboarding.mission', 'Mission')} lit={lit.mission} className="h-[122px]">
+            <p className="text-[12px] text-[#0a0a0a] leading-snug line-clamp-4">{result?.mission || '—'}</p>
           </Panel>
 
-          <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team}>
+          <Panel icon={Users} title={t('hyperOnboarding.team', 'Your team')} lit={lit.team} className="h-[116px]">
             <div className="flex flex-wrap gap-1.5">
               {(result?.team || []).map((m, i) => (
                 <motion.span
@@ -204,22 +269,19 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
             </div>
           </Panel>
 
-          <Panel icon={ListChecks} title={t('hyperOnboarding.firstTasks', 'First tasks')} lit={lit.tasks}>
-            <ul className="space-y-1.5">
+          <Panel icon={ListChecks} title={t('hyperOnboarding.firstTasks', 'First tasks')} lit={lit.tasks} className="h-[122px]">
+            <ul className="grid grid-cols-3 gap-1">
               {(result?.tasks || []).map((task, i) => (
-                <li key={i} className="text-[12px] text-[#0a0a0a] flex gap-2">
-                  <span className="text-[#a3a3a3] font-mono text-[10px] mt-0.5">{String(i + 1).padStart(2, '0')}</span>
-                  <span>
-                    {typeof task === 'string' ? task : task.title}
-                    {typeof task === 'object' && task.detail ? <span className="text-[#525252]"> — {task.detail}</span> : null}
-                  </span>
+                <li key={task.id || i} title={typeof task === 'object' ? task.detail : ''} className="h-6 min-w-0 border border-[#ece9e3] rounded-md px-1.5 text-[9.5px] text-[#0a0a0a] flex items-center gap-1">
+                  <span className="text-[#117dff] font-mono text-[8.5px] uppercase shrink-0">{task.room_name || task.room_tag || String(i + 1).padStart(2, '0')}</span>
+                  <span className="truncate font-medium">{typeof task === 'string' ? task : task.title}</span>
                 </li>
               ))}
             </ul>
           </Panel>
 
           <div className="col-span-2">
-            <Panel icon={FileText} title={t('hyperOnboarding.documents', 'Documents filed to HIVEMIND memory')} lit={lit.company}>
+            <Panel icon={FileText} title={t('hyperOnboarding.documents', 'Documents filed to HIVEMIND memory')} lit={lit.company} className="h-[58px]">
               <div className="flex flex-wrap gap-2">
                 {[`${companyName} — Company profile`, `${companyName} — Mission`].map((d) => (
                   <span key={d} className="text-[11.5px] px-2.5 py-1 rounded-lg bg-[#faf9f4] border border-[#e3e0db] text-[#525252] font-mono">{d}</span>
@@ -232,8 +294,8 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
         <AnimatePresence>
           {done && (
             <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              onClick={() => onComplete?.(result)}
-              className="mt-5 w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[13px] font-semibold px-4 py-3 rounded-xl transition-colors">
+              onClick={requestWorkspaceEntry}
+              className="mt-3 w-full flex items-center justify-center gap-2 bg-[#0a0a0a] hover:bg-[#262626] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
               {t('hyperOnboarding.enterWorkspace', 'Enter your workspace')} <ArrowRight size={15} />
             </motion.button>
           )}
@@ -247,6 +309,28 @@ export default function HyperOnboarding({ onComplete, onSkip }) {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {locationPromptOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.form initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} onSubmit={confirmWorkspaceLocation} className="w-full max-w-[430px] bg-white border border-[#d9dee5] rounded-lg shadow-2xl p-5">
+              <div className="w-9 h-9 rounded-lg bg-[#117dff]/10 text-[#117dff] grid place-items-center mb-4"><MapPin size={17} /></div>
+              <h2 className="text-[18px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Where is your headquarters?</h2>
+              <p className="text-[12.5px] text-[#525252] mt-1.5">We use your company HQ to find relevant leads, prospects, regulations, and market evidence around you. This is company context, not your home address.</p>
+              <label className="block text-[10px] font-mono uppercase text-[#77716a] mt-5 mb-1.5">Headquarters location</label>
+              <input autoFocus value={companyLocation} onChange={(event) => setCompanyLocation(event.target.value)} placeholder="City, region, country" className="w-full h-11 border border-[#d9dee5] rounded-lg px-3 text-[13px] focus:outline-none focus:border-[#117dff] focus:ring-2 focus:ring-[#117dff]/15" />
+              {locationError ? <p className="text-[11px] text-[#dc2626] mt-2">{locationError}</p> : null}
+              <div className="flex justify-end gap-2 mt-5">
+                <button type="button" onClick={() => setLocationPromptOpen(false)} className="h-9 px-3 border border-[#d9dee5] rounded-lg text-[12px] font-medium text-[#525252] hover:bg-[#faf9f4]">Back</button>
+                <button type="submit" disabled={!companyLocation.trim() || savingLocation} className="h-9 px-4 bg-[#0a0a0a] text-white rounded-lg text-[12px] font-semibold disabled:opacity-40 inline-flex items-center gap-2">
+                  {savingLocation ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                  Enter workspace
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
