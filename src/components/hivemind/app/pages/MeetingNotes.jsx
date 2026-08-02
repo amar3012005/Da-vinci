@@ -1346,7 +1346,7 @@ export default function MeetingNotes() {
           <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight flex items-baseline gap-2 flex-wrap">{selected.title || 'Meeting'}
             <AtChip iso={selected.created_at} />
             {selected.language && <span className="text-[12px] font-normal text-[#a3a3a3]">· {selected.language}</span>}</h2>
-          <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4">
+          <nav className="border-b border-[#e3e0db] flex items-center gap-0.5 mt-4 mb-4 overflow-x-auto">
             {[['intelligence', 'Intelligence', Brain], ['summary', 'Summary', ListChecks], ['notes', 'Notes', AlignLeft], ['transcript', 'Transcript', ScrollText]].map(([key, label, Icon]) => (
               <button key={key} onClick={() => setDetailTab(key)} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-medium border-b-2 -mb-px transition-colors ${detailTab === key ? 'border-[#0a0a0a] text-[#0a0a0a]' : 'border-transparent text-[#737373] hover:text-[#0a0a0a]'}`}><Icon size={14} /> {label}</button>
             ))}
