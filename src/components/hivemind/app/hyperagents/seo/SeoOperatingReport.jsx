@@ -50,7 +50,7 @@ function FindingRow({ finding, selected, onSelect }) {
   </button>;
 }
 
-export default function SeoOperatingReport({ report, taskTitle }) {
+export default function SeoOperatingReport({ report, taskTitle, surface = 'card' }) {
   const parsed = useMemo(() => parseSeoAudit(report), [report]);
   const audit = parsed.audit;
   const [view, setView] = useState('fixes');
@@ -61,10 +61,10 @@ export default function SeoOperatingReport({ report, taskTitle }) {
   const selected = findings.find((row) => row.id === selectedId) || findings[0];
 
   if (!audit) {
-    return <BrochureReport report={report} taskTitle={taskTitle} eyebrow="SEO · Search operating desk" title="SEO operating report" accent={ACCENT} />;
+    return <BrochureReport report={report} taskTitle={taskTitle} surface={surface} eyebrow="SEO · Search operating desk" title="SEO operating report" accent={ACCENT} />;
   }
 
-  return <div className="overflow-hidden rounded-lg border border-[#dedbd5] bg-[#fbfaf7] text-[#191919]">
+  return <div className={`overflow-hidden text-[#191919] ${surface === 'room' ? '' : 'rounded-lg border border-[#dedbd5] bg-[#fbfaf7]'}`}>
     <header className="border-b border-[#dedbd5] px-6 py-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -157,7 +157,7 @@ export default function SeoOperatingReport({ report, taskTitle }) {
       <div className="p-6"><h3 className="text-[14px] font-semibold">Crawl errors</h3>{(audit.crawl_errors || []).length ? <div className="mt-4 divide-y divide-[#dedbd5]">{audit.crawl_errors.map((row, index) => <div key={`${row.url}-${index}`} className="py-3 text-[11px]"><div className="font-medium">{readable(row.type)}</div><div className="mt-1 break-all text-[#77716a]">{row.url || row.message}</div></div>)}</div> : <div className="mt-5 text-[12px] text-[#77716a]">No crawl errors were recorded in this sample.</div>}</div>
     </section>}
 
-    {parsed.content && <div className="border-t border-[#dedbd5]"><BrochureReport report={{ ...report, content: parsed.content }} taskTitle={taskTitle} eyebrow="SEO · Search operating desk" title="SEO operating report" accent={ACCENT} /></div>}
+    {parsed.content && <div className="border-t border-[#dedbd5]"><BrochureReport report={{ ...report, content: parsed.content }} taskTitle={taskTitle} surface={surface} eyebrow="SEO · Search operating desk" title="SEO operating report" accent={ACCENT} /></div>}
   </div>;
 }
 

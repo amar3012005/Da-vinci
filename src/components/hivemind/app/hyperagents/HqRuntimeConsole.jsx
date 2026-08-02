@@ -222,27 +222,66 @@ function TokenMeter({ usage }) {
 const QUEUE_STATUS = {
   RUNNING: ['Running', 'border-[#171717] bg-[#171717] text-white'],
   READY: ['Ready', 'border-[#171717] bg-white text-[#171717]'],
+  WAITING_FOR_AUTHORITY: ['Waiting for approval', 'border-[#171717] bg-white text-[#171717]'],
   WAITING_FOR_EVIDENCE: ['Waiting for evidence', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#6c6257]'],
+  MONITORING: ['Monitoring replies', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#4f4942]'],
   WAITING_FOR_CONNECTOR: ['Waiting for access', 'border-[#c2bcb2] bg-[#f2f0eb] text-[#6c6257]'],
   BLOCKED: ['Blocked', 'border-[#171717] border-dashed bg-white text-[#171717]'],
   COMPLETED: ['Completed', 'border-[#dedbd6] bg-[#eeebe5] text-[#8a8577]'],
 };
-const QUEUE_DOT = {
-  COMPLETED: 'bg-[#c2bcb2]', RUNNING: 'bg-[#171717]', READY: 'bg-[#171717]',
-  BLOCKED: 'bg-[#171717]', WAITING_FOR_CONNECTOR: 'bg-[#a8a29a]', WAITING_FOR_EVIDENCE: 'bg-[#a8a29a]',
-};
-
-function RuntimeQueuePanel({ queue, onClose }) {
+function queueBlockerSummary(reason) {
+  if (!reason) return '';
+  if (typeof reason !== 'string') return 'The latest Room result needs review before this work can continue.';
+  const trimmed = reason.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return 'The latest Room result needs review before this work can continue.';
+  }
+  return trimmed.length > 180 ? `${trimmed.slice(0, 177)}...` : trimmed;
+}
+function RuntimeQueuePanel({ queue, onClose, embedded = false }) {
   const active = queue.filter((item) => ['RUNNING', 'READY'].includes(item.status));
-  return <section className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(360px,calc(100vw-2rem))] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_18px_50px_-24px_rgba(0,0,0,0.5)]" aria-label="Runtime operating queue">
-    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-white px-4 py-3"><ListTodo size={14} className="text-[#171717]" /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#171717]">Operating queue</span><span className="font-mono text-[9px] text-[#737373]">{active.length} active</span><button type="button" onClick={onClose} aria-label="Close runtime queue" title="Close" className="grid h-7 w-7 place-items-center text-[#777168] hover:bg-[#f0eee9]"><X size={14} /></button></header>
-    <div className="max-h-[min(62vh,520px)] overflow-y-auto p-2">
+  const shell = embedded
+    ? 'w-full border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]'
+    : 'absolute right-0 top-[calc(100%+8px)] z-30 w-[min(360px,calc(100vw-2rem))] border border-[#d8d3cc] bg-[#fbfaf7] shadow-[0_18px_50px_-24px_rgba(0,0,0,0.5)]';
+  return <section id={embedded ? 'runtime-operating-queue' : undefined} className={shell} aria-label="Runtime operating queue">
+    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-white px-4 py-3"><ListTodo size={14} className="text-[#171717]" /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#171717]">Operating queue</span><span className="font-mono text-[9px] text-[#737373]">{active.length} active</span>{!embedded && onClose ? <button type="button" onClick={onClose} aria-label="Close runtime queue" title="Close" className="grid h-7 w-7 place-items-center text-[#777168] hover:bg-[#f0eee9]"><X size={14} /></button> : null}</header>
+    <div className={embedded ? 'max-h-[calc(100vh-190px)] overflow-y-auto p-2' : 'max-h-[min(62vh,520px)] overflow-y-auto p-2'}>
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
-        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.blocked_reason ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{item.blocked_reason}</p> : null}</div></div></article>;
+        const blocker = queueBlockerSummary(item.blocked_reason);
+        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
       })}
       {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
     </div>
+  </section>;
+}
+
+const SPRINT_STATUS = {
+  READY_FOR_REVIEW: ['Ready for review', 'bg-[#171717] text-white'],
+  RUNNING: ['Building', 'bg-[#e8e4dd] text-[#34312d]'],
+  PREPARING: ['Preparing', 'bg-[#e8e4dd] text-[#34312d]'],
+  MONITORING: ['Monitoring', 'bg-[#e8e4dd] text-[#34312d]'],
+  COMPLETED: ['Live', 'bg-[#dcebdd] text-[#285b31]'],
+  NEEDS_ATTENTION: ['Needs attention', 'bg-[#f2dfd8] text-[#823f2e]'],
+};
+
+function FirstGrowthSprintPanel({ sprint, onReview }) {
+  if (!sprint) return null;
+  return <section className="mb-3 border border-[#171717] bg-white shadow-[0_16px_42px_-34px_rgba(0,0,0,0.8)]" aria-label="First Growth Sprint">
+    <header className="border-b border-[#d8d3cc] bg-[#171717] px-4 py-3 text-white">
+      <div className="flex items-center gap-2"><Sparkles size={13} /><span className="flex-1 font-mono text-[9px] font-semibold uppercase tracking-[0.16em]">First Growth Sprint</span><span className="font-mono text-[8px] text-white/70">{sprint.completed_count || 0}/{sprint.item_count || 0}</span></div>
+      <p className="mt-2 text-[11px] leading-4 text-white/72">Your first evidence-grounded growth actions, prepared together.</p>
+    </header>
+    <div>
+      {(sprint.items || []).map((item, index) => {
+        const [label, tone] = SPRINT_STATUS[item.status] || SPRINT_STATUS.PREPARING;
+        const channelText = item.campaign?.requestedChannels?.length ? item.campaign.requestedChannels.join(' + ') : item.room_tag;
+        return <article key={item.todo_id} className="border-b border-[#ebe8e3] px-4 py-3 last:border-b-0">
+          <div className="flex items-start gap-3"><span className="font-mono text-[9px] text-[#a19b92]">0{index + 1}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><h3 className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</h3><span className={`px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span></div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p><div className="mt-2 font-mono text-[8px] uppercase tracking-[0.08em] text-[#8a8577]">{channelText}</div></div></div>
+        </article>;
+      })}
+    </div>
+    {sprint.status === 'READY_FOR_REVIEW' ? <div className="border-t border-[#d8d3cc] bg-[#f5f3ef] p-3"><button type="button" onClick={onReview} className="inline-flex h-9 w-full items-center justify-center gap-2 bg-[#171717] px-4 text-[10px] font-semibold text-white"><ShieldCheck size={13} />Review and launch <ArrowRight size={12} /></button></div> : null}
   </section>;
 }
 
@@ -264,11 +303,15 @@ export function HqRuntimeRail({ baselineReady }) {
   const schedules = work.schedules || [];
   const outboundPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_messages)
     ? runtime.authorityPolicy.outbound_messages : 'unconfigured';
-  const updateOutboundPermission = async (preference) => {
-    if (permissionBusy || preference === outboundPermission) return;
-    setPermissionBusy(preference); setPermissionError('');
+  const outboundCallPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_calls)
+    ? runtime.authorityPolicy.outbound_calls : 'unconfigured';
+  const outboundCampaignPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_campaigns)
+    ? runtime.authorityPolicy.outbound_campaigns : 'unconfigured';
+  const updateOutboundPermission = async (policyKey, currentPreference, preference) => {
+    if (permissionBusy || preference === currentPreference) return;
+    setPermissionBusy(`${policyKey}:${preference}`); setPermissionError('');
     try {
-      const response = await apiClient.updateHqAuthorityPolicy({ outbound_messages: preference });
+      const response = await apiClient.updateHqAuthorityPolicy({ [policyKey]: preference });
       setRuntime(response?.runtime || runtime);
     } catch (requestError) {
       setPermissionError(requestError?.response?.data?.error || requestError?.message || 'Permission could not be updated.');
@@ -289,7 +332,11 @@ export function HqRuntimeRail({ baselineReady }) {
       <div className="border-y border-[#e3e0db] py-3"><div className="font-mono text-[8px] uppercase text-[#a3a3a3]">State</div><div className="mt-1 text-[10px] font-semibold text-[#171717]">{runtime?.state?.replaceAll('_', ' ') || (baselineReady ? 'READY' : 'BASELINE REQUIRED')}</div></div>
       <div className="mt-5 border-y border-[#e3e0db] py-3" aria-label="Runtime permissions">
         <div className="flex items-center gap-2"><ShieldCheck size={12} className="text-[#171717]" /><div className="font-mono text-[8px] uppercase tracking-[0.14em] text-[#737373]">Permissions granted</div></div>
-        <div className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">Outbound email</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{outboundPermission === 'unconfigured' ? 'Choose a policy' : 'Organization policy'}</div></div><div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => <button key={preference} type="button" onClick={() => updateOutboundPermission(preference)} disabled={Boolean(permissionBusy)} aria-pressed={outboundPermission === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${outboundPermission === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === preference ? 'Saving' : preference}</button>)}</div></div>
+        {[
+          ['outbound_messages', 'Outbound email', outboundPermission],
+          ['outbound_calls', 'TARA calls', outboundCallPermission],
+          ['outbound_campaigns', 'Campaign launches', outboundCampaignPermission],
+        ].map(([policyKey, label, currentPreference]) => <div key={policyKey} className="mt-3 flex items-center justify-between gap-3"><div><div className="text-[10px] font-semibold text-[#262626]">{label}</div><div className="mt-0.5 text-[9px] text-[#8a8577]">{currentPreference === 'unconfigured' ? 'Choose a policy' : 'Organization policy'}</div></div><div className="inline-flex border border-[#d8d3cc] bg-white p-0.5">{['manual', 'auto'].map((preference) => { const busyKey = `${policyKey}:${preference}`; return <button key={preference} type="button" onClick={() => updateOutboundPermission(policyKey, currentPreference, preference)} disabled={Boolean(permissionBusy)} aria-pressed={currentPreference === preference} className={`h-7 px-2.5 font-mono text-[8px] uppercase tracking-[0.08em] transition-colors disabled:opacity-40 ${currentPreference === preference ? 'bg-[#171717] text-white' : 'text-[#777168] hover:text-[#171717]'}`}>{permissionBusy === busyKey ? 'Saving' : preference}</button>; })}</div></div>)}
         <div className="mt-3 space-y-2 border-t border-[#ebe8e3] pt-3">{[
           ['Internal work', runtime?.authorityPolicy?.internal_autonomy === false ? 'Restricted' : 'Allowed'],
           ['External writes', runtime?.authorityPolicy?.external_writes === 'auto' ? 'Automatic' : 'Approval required'],
@@ -363,7 +410,7 @@ function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, queue = [], liveSequence = null }) {
+function RuntimeTranscript({ events, state, queue = [], sprint = null, onReviewSprint, liveSequence = null }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -373,8 +420,6 @@ function RuntimeTranscript({ events, state, queue = [], liveSequence = null }) {
       else chunks.push({ type: 'execution', items: [item] });
     } else chunks.push({ type: 'narrative', item });
   }
-  const done = queue.filter((item) => item.status === 'COMPLETED').length;
-  const progress = queue.length ? Math.round((done / queue.length) * 100) : 0;
   const [glyphLabel] = STATE_LABEL[state] || [];
   return <div className="relative w-full px-5 py-8 sm:px-8 sm:py-10">
     <div className="mb-7 border-b border-[#e7e4df] pb-5">
@@ -383,7 +428,7 @@ function RuntimeTranscript({ events, state, queue = [], liveSequence = null }) {
         {working ? glyphLabel || 'HQ is thinking aloud' : 'HQ is thinking aloud'}
       </div>
     </div>
-    <div className="mx-auto grid max-w-[1180px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="ml-auto grid w-full max-w-[1420px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
       <main className="min-w-0">{chunks.map((chunk) => chunk.type === 'execution'
         ? <ExecutionTrace key={`execution-${chunk.items[0]?.sequence}`} items={chunk.items} />
         : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && String(chunk.item.sequence) === String(liveSequence || '')} />)}
@@ -391,20 +436,7 @@ function RuntimeTranscript({ events, state, queue = [], liveSequence = null }) {
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
         </div> : null}
       </main>
-      <aside className="sticky top-[78px] z-10 w-full border border-[#dedbd6] bg-white shadow-[0_10px_30px_-28px_rgba(0,0,0,0.8)]" aria-label="Runtime todo list">
-        <div className="border-b border-[#e7e4df] px-4 pb-2.5 pt-3">
-          <div className="flex items-center justify-between gap-3"><span className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#171717]"><ListTodo size={13} />Progress</span><span className="font-mono text-[10px] text-[#777168]">{done} of {queue.length}</span></div>
-          <div className="mt-2.5 flex h-[3px] w-full bg-[#eeebe5]" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span className="h-full bg-[#171717] transition-[width] duration-500" style={{ width: `${progress}%` }} /></div>
-        </div>
-        <div className="max-h-[min(42vh,360px)] overflow-y-auto">
-          {queue.map((item, index) => {
-            const [label] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
-            const live = item.status === 'RUNNING';
-            return <div key={item.id || `${item.title}-${index}`} className={`border-b border-[#eeeae5] px-4 py-3 last:border-b-0 ${live ? 'bg-[#faf9f6]' : ''}`}><div className="flex items-start gap-2.5"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${QUEUE_DOT[item.status] || 'bg-[#aaa49c]'}`} style={live ? { animation: 'hm-rt-breathe 1.3s ease-in-out infinite' } : undefined} /><div className="min-w-0 flex-1"><div className={`text-[11px] font-semibold leading-4 ${item.status === 'COMPLETED' ? 'text-[#8a8577]' : 'text-[#262626]'}`}>{item.title}</div><div className="mt-1 font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">{label}</div>{item.objective ? <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p> : null}</div></div></div>;
-          })}
-          {!queue.length ? <div className="px-4 py-5 text-[11px] text-[#777168]">No queued work.</div> : null}
-        </div>
-      </aside>
+      <aside className="sticky top-[78px] z-10 w-full" aria-label="Runtime todo list"><FirstGrowthSprintPanel sprint={sprint} onReview={onReviewSprint} /><RuntimeQueuePanel queue={queue} embedded /></aside>
     </div>
   </div>;
 }
@@ -431,12 +463,12 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [instructionsOpen, setInstructionsOpen] = useState(false);
-  const [queueOpen, setQueueOpen] = useState(false);
   const [work, setWork] = useState({ todos: [], capability_requests: [] });
   const [instruction, setInstruction] = useState('');
   const [instructionBusy, setInstructionBusy] = useState(false);
   const [instructionNotice, setInstructionNotice] = useState('');
   const [approvalBusy, setApprovalBusy] = useState('');
+  const [sprintReviewOpen, setSprintReviewOpen] = useState(false);
   const [dismissedWorkflowApprovalId, setDismissedWorkflowApprovalId] = useState(null);
   const [dismissedCapabilityRequestId, setDismissedCapabilityRequestId] = useState(null);
   const [liveSequence, setLiveSequence] = useState(null);
@@ -594,8 +626,18 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     status: snapshot.status === 'WAITING_AUTHORITY' ? 'WAITING_FOR_AUTHORITY' : snapshot.status === 'WAITING_EVENT' ? 'WAITING_FOR_EVIDENCE' : snapshot.status === 'NEEDS_INTERVENTION' ? 'BLOCKED' : 'RUNNING',
     priority: 0,
   }));
-  const runtimeQueue = [...lifecycleQueue, ...(work.runtime_queue || work.todos || [])];
+  const runtimeQueue = (work.runtime_queue || []).length ? work.runtime_queue : lifecycleQueue;
+  const activationSprint = work.activation_sprint || null;
   const queueActiveCount = runtimeQueue.filter((item) => ['RUNNING', 'READY'].includes(item.status)).length;
+  useEffect(() => {
+    if (activationSprint?.status !== 'READY_FOR_REVIEW' || !activationSprint.id) return;
+    const key = `hq-activation-sprint-review:${activationSprint.id}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, 'shown');
+    } catch { /* showing the review does not depend on storage */ }
+    setSprintReviewOpen(true);
+  }, [activationSprint?.id, activationSprint?.status]);
   const waitForInstructionAcceptance = async (instructionId) => {
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
@@ -641,6 +683,17 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
     } finally { setApprovalBusy(''); }
   };
+  const reviewActivationSprint = async (preference) => {
+    if (!activationSprint?.id || approvalBusy) return;
+    setApprovalBusy(`sprint-${preference}`); setError('');
+    try {
+      await apiClient.reviewHqActivationSprint(activationSprint.id, preference);
+      setSprintReviewOpen(false);
+      await load();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || requestError?.response?.data?.error || requestError.message);
+    } finally { setApprovalBusy(''); }
+  };
   return <section className="relative -mx-4 -my-4 min-h-full bg-[#fbfaf7]" aria-label="Company HQ runtime">
     <RuntimeMotion />
     <header className="sticky top-0 z-20 border-y border-[#e3e0db] bg-white/95 px-5 py-3 shadow-[0_8px_24px_-22px_rgba(0,0,0,0.45)] backdrop-blur sm:px-8">
@@ -648,7 +701,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         <RuntimeMark state={runtime?.state} />
         <div className="relative flex min-w-0 shrink-0 items-center gap-1.5">
           <TokenMeter usage={usage} />
-          <RuntimeButton icon={ListTodo} label="Queue" badge={queueActiveCount || undefined} onClick={() => setQueueOpen((open) => !open)} title="Operating queue and todos" />
+          <RuntimeButton icon={ListTodo} label="Queue" badge={queueActiveCount || undefined} onClick={() => document.getElementById('runtime-operating-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} title="Operating queue and todos" />
           <RuntimeButton icon={SlidersHorizontal} label="Instructions" trailing={ArrowUpRight} tone="solid" onClick={() => { setInstructionNotice(''); setInstructionsOpen(true); }} title="Standing operating instructions" />
           {!runtime
             ? <RuntimeButton icon={Power} label="Activate" tone="solid" onClick={() => run('activate')} disabled={!baselineReady || Boolean(busy)} spinning={busy === 'activate'} />
@@ -656,14 +709,14 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
               ? <RuntimeButton icon={Play} label="Resume" onClick={() => run('resume')} disabled={Boolean(busy)} spinning={busy === 'resume'} />
               : <><RuntimeIconButton icon={RefreshCw} title="Wake now" onClick={() => run('wake')} disabled={Boolean(busy)} spinning={busy === 'wake'} />
                 <RuntimeIconButton icon={Pause} title="Pause HQ" onClick={() => run('pause')} disabled={Boolean(busy)} spinning={busy === 'pause'} /></>}
-          {queueOpen ? <RuntimeQueuePanel queue={runtimeQueue} onClose={() => setQueueOpen(false)} /> : null}
         </div>
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} queue={runtimeQueue} liveSequence={liveSequence} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} queue={runtimeQueue} sprint={activationSprint} onReviewSprint={() => setSprintReviewOpen(true)} liveSequence={liveSequence} /> : <RuntimePageLoader />}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
-    {playbookApproval && playbookApproval.run_id !== dismissedWorkflowApprovalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Choose email send policy"><div className="flex max-h-[min(760px,88vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedWorkflowApprovalId(playbookApproval.run_id)} aria-label="Close email approval" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><ShieldCheck size={13} />Outbound message authority</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookApproval.preference === 'unconfigured' ? 'Emails are ready. How should Runtime send?' : 'Emails are ready for review'}</h3><p className="mt-2 pr-9 text-[12px] leading-5 text-[#777168]">{playbookApproval.preference === 'unconfigured' ? 'Choose once for this organization. Auto sends future verified email batches; Manual pauses every batch until you approve it.' : 'Manual review is active. Nothing will be sent until you approve this exact batch.'}</p></div><div className="min-h-0 flex-1 overflow-y-auto p-4"><div className="space-y-3">{(playbookApproval.messages || []).map((message, index) => <article key={`${message.id || message.to || 'message'}-${index}`} className="border border-[#dedbd6] bg-white"><div className="grid gap-2 border-b border-[#ebe8e3] px-4 py-3 sm:grid-cols-[100px_1fr]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">To</span><span className="truncate text-[11px] font-medium text-[#262626]">{message.to}</span><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Subject</span><span className="text-[11px] font-medium text-[#262626]">{message.subject}</span></div><p className="whitespace-pre-wrap px-4 py-3 text-[12px] leading-5 text-[#525252]">{message.body}</p></article>)}</div></div><div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4">{playbookApproval.preference === 'unconfigured' ? <><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: false })} disabled={Boolean(approvalBusy)} className="h-9 rounded-md border border-[#d8d3cc] px-4 text-[11px] font-semibold text-[#525252] disabled:opacity-40">{approvalBusy === 'manual' ? 'Saving...' : 'Review every time'}</button><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'auto', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'auto-send' ? <ArcSpin size={13} /> : <Send size={13} />}Auto send</button></> : <button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'manual-send' ? <ArcSpin size={13} /> : <Send size={13} />}Approve and send</button>}</div></div></div> : null}
+    {sprintReviewOpen && activationSprint?.status === 'READY_FOR_REVIEW' ? <div className="fixed inset-0 z-[73] grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Review First Growth Sprint"><div className="flex max-h-[min(760px,88vh)] w-full max-w-2xl flex-col overflow-hidden border border-[#171717] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#d8d3cc] bg-[#171717] px-6 py-5 text-white"><button type="button" onClick={() => setSprintReviewOpen(false)} aria-label="Close sprint review" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-white/70 hover:bg-white/10 hover:text-white"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.16em] text-white/70"><Sparkles size={13} />First Growth Sprint</div><h3 className="mt-3 pr-9 text-[23px] font-semibold">Your first growth actions are ready.</h3><p className="mt-2 max-w-xl text-[12px] leading-5 text-white/70">Review the coordinated launch once. Runtime will preserve each exact artifact, authority decision, schedule, and measurement checkpoint.</p></div><div className="min-h-0 flex-1 overflow-y-auto p-4">{(activationSprint.items || []).map((item, index) => <article key={item.todo_id} className="mb-2 border border-[#dedbd6] bg-white p-4 last:mb-0"><div className="flex items-start gap-3"><span className="font-mono text-[9px] text-[#a19b92]">0{index + 1}</span><div><h4 className="text-[12px] font-semibold text-[#262626]">{item.title}</h4><p className="mt-1 text-[11px] leading-5 text-[#777168]">{item.objective}</p><div className="mt-2 font-mono text-[8px] uppercase tracking-[0.1em] text-[#8a8577]">{item.status.replaceAll('_', ' ')}</div></div></div></article>)}</div><div className="border-t border-[#d8d3cc] bg-white px-5 py-4"><p className="mb-3 text-[10px] leading-4 text-[#777168]">Manual reviews future external batches. Auto lets Runtime continue future verified launch gates under organization policy. This review grants only the immutable batches shown here.</p><div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => reviewActivationSprint('manual')} disabled={Boolean(approvalBusy)} className="h-10 border border-[#171717] bg-white px-4 text-[11px] font-semibold text-[#171717] disabled:opacity-40">{approvalBusy === 'sprint-manual' ? 'Launching...' : 'Launch, review future work'}</button><button type="button" onClick={() => reviewActivationSprint('auto')} disabled={Boolean(approvalBusy)} className="inline-flex h-10 items-center gap-2 bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'sprint-auto' ? <ArcSpin size={13} /> : <Play size={13} />}Launch and continue automatically</button></div></div></div></div> : null}
+    {activationSprint?.status !== 'READY_FOR_REVIEW' && playbookApproval && playbookApproval.run_id !== dismissedWorkflowApprovalId ? <div className="fixed inset-0 z-[72] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Choose email send policy"><div className="flex max-h-[min(760px,88vh)] w-full max-w-2xl flex-col overflow-hidden rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedWorkflowApprovalId(playbookApproval.run_id)} aria-label="Close email approval" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><ShieldCheck size={13} />Outbound message authority</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookApproval.preference === 'unconfigured' ? 'Emails are ready. How should Runtime send?' : 'Emails are ready for review'}</h3><p className="mt-2 pr-9 text-[12px] leading-5 text-[#777168]">{playbookApproval.preference === 'unconfigured' ? 'Choose once for this organization. Auto sends future verified email batches; Manual pauses every batch until you approve it.' : 'Manual review is active. Nothing will be sent until you approve this exact batch.'}</p></div><div className="min-h-0 flex-1 overflow-y-auto p-4"><div className="space-y-3">{(playbookApproval.messages || []).map((message, index) => <article key={`${message.id || message.to || 'message'}-${index}`} className="border border-[#dedbd6] bg-white"><div className="grid gap-2 border-b border-[#ebe8e3] px-4 py-3 sm:grid-cols-[100px_1fr]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">To</span><span className="truncate text-[11px] font-medium text-[#262626]">{message.to}</span><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Subject</span><span className="text-[11px] font-medium text-[#262626]">{message.subject}</span></div><p className="whitespace-pre-wrap px-4 py-3 text-[12px] leading-5 text-[#525252]">{message.body}</p></article>)}</div></div><div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4">{playbookApproval.preference === 'unconfigured' ? <><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: false })} disabled={Boolean(approvalBusy)} className="h-9 rounded-md border border-[#d8d3cc] px-4 text-[11px] font-semibold text-[#525252] disabled:opacity-40">{approvalBusy === 'manual' ? 'Saving...' : 'Review every time'}</button><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'auto', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'auto-send' ? <ArcSpin size={13} /> : <Send size={13} />}Auto send</button></> : <button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'manual-send' ? <ArcSpin size={13} /> : <Send size={13} />}Approve and send</button>}</div></div></div> : null}
   </section>;
 }
