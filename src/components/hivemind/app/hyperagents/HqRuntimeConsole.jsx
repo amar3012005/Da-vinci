@@ -186,7 +186,7 @@ function RuntimeButton({ icon: Icon, label, trailing: Trailing, tone = 'ghost', 
   const skin = tone === 'solid'
     ? 'bg-[#171717] text-white border-[#171717] hover:bg-[#292929]'
     : 'bg-white text-[#525252] border-[#d8d3cc] hover:border-[#171717] hover:text-[#171717]';
-  return <button type="button" onClick={onClick} disabled={disabled} title={title || label}
+  return <button type="button" onClick={onClick} disabled={disabled} title={title || label} aria-label={title || label}
     className={`inline-flex h-9 shrink-0 items-center gap-2 border px-3 text-[10px] font-semibold transition-colors disabled:opacity-40 ${skin}`}>
     {spinning ? <ArcSpin size={13} /> : Icon ? <Icon size={13} /> : null}
     {label ? <span className="hidden sm:inline">{label}</span> : null}
@@ -224,6 +224,7 @@ function TokenMeter({ usage }) {
 }
 
 const QUEUE_STATUS = {
+  PROPOSED: ['Proposed', 'border-[#c2bcb2] bg-white text-[#6c6257]'],
   RUNNING: ['Running', 'border-[#171717] bg-[#171717] text-white'],
   READY: ['Ready', 'border-[#171717] bg-white text-[#171717]'],
   WAITING_FOR_AUTHORITY: ['Waiting for approval', 'border-[#171717] bg-white text-[#171717]'],

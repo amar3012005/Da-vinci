@@ -20,6 +20,8 @@ test('renders one truthful domain-neutral Agent Runtime task panel', () => {
   expect(markup).toContain('Improve the primary customer journey');
   expect(markup).toContain('Start recommended work');
   expect(markup).toContain('Review later');
+  expect(markup).toContain('Proposed');
+  expect(markup).not.toContain('>Ready<');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
 });
 
