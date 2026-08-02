@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Users, FolderKanban, UserCog, Send, ScrollText, KeyRound,
   LayoutDashboard, Activity, ArrowUpRight, Building2, RefreshCw, Loader2,
-  Clock, CheckCircle2, XCircle, Brain,
+  Clock, CheckCircle2, XCircle, Brain, Bell,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { useAuth } from '../auth/AuthProvider';
@@ -39,10 +39,10 @@ export default function WorkspaceAdmin() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Viewer-role probe: guests (project-scoped invitees) are NOT org admins —
-  // every admin endpoint correctly 403s for them. Without this gate the page
-  // fired members/invites/audit fetches unconditionally, spamming 403s and
-  // rendering broken admin panels. One probe decides: 200 → full admin
-  // surface; 403 → guest view (Projects tab only, which is role-filtered
+  // every admin endpoint correctly returns the same not-found response for
+  // an unauthorized caller. Without this gate the page fired members/invites/
+  // audit fetches unconditionally and rendered broken admin panels. One probe
+  // decides: 200 → full admin surface; 403/404 → guest view (Projects tab only,
   // server-side).
   const [viewerIsAdmin, setViewerIsAdmin] = useState(null); // null = probing
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function WorkspaceAdmin() {
       .then(() => { if (!cancelled) setViewerIsAdmin(true); })
       .catch((err) => {
         if (cancelled) return;
-        setViewerIsAdmin(err?.response?.status === 403 ? false : true);
+        setViewerIsAdmin([403, 404].includes(err?.response?.status) ? false : true);
       });
     return () => { cancelled = true; };
   }, [org?.id]);
@@ -155,25 +155,21 @@ export default function WorkspaceAdmin() {
 
 function MetricsStrip({ orgId }) {
   const { t } = useTranslation('dashboard');
-  const [data, setData] = useState({ members: 0, teams: 0, projects: 0, pending: 0, accepted: 0, loading: true });
+  const [data, setData] = useState({ members: 0, teams: 0, projects: 0, pending: 0, accepted: 0, seats: null, projectQuota: null, loading: true });
 
   const refresh = useCallback(async () => {
     if (!orgId) return;
     setData(d => ({ ...d, loading: true }));
     try {
-      const [membersResp, teamsResp, projectsResp, pendingResp, acceptedResp] = await Promise.all([
-        apiClient.listOrgMembers?.(orgId).catch(() => ({})),
-        apiClient.listTeams?.().catch(() => ({})),
-        apiClient.listAccessibleProjects?.().catch(() => ({})),
-        apiClient.listInvites?.(orgId, { status: 'pending' }).catch(() => ({})),
-        apiClient.listInvites?.(orgId, { status: 'accepted' }).catch(() => ({})),
-      ]);
+      const summary = await apiClient.getWorkspaceSummary();
       setData({
-        members:  (membersResp?.members || membersResp || []).length || 0,
-        teams:    (teamsResp?.teams    || teamsResp    || []).length || 0,
-        projects: (projectsResp?.projects || projectsResp || []).length || 0,
-        pending:  (pendingResp?.invites || []).length || 0,
-        accepted: (acceptedResp?.invites || []).length || 0,
+        members: summary?.seats?.used || 0,
+        teams: summary?.teams?.used || 0,
+        projects: summary?.projects?.used || 0,
+        pending: summary?.invitations?.pending || 0,
+        accepted: 0,
+        seats: summary?.seats || null,
+        projectQuota: summary?.projects || null,
         loading: false,
       });
     } catch {
@@ -184,9 +180,9 @@ function MetricsStrip({ orgId }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const cards = [
-    { id: 'members',  label: t('workspaceadmin.metric.orgMembers', 'Org members'),      value: data.members,  Icon: UserCog,      color: '#117dff' },
+    { id: 'members',  label: t('workspaceadmin.metric.orgMembers', 'Org members'),      value: data.seats?.limit >= 0 ? `${data.members}/${data.seats.limit}` : data.members,  Icon: UserCog,      color: '#117dff', warning: data.seats?.warning },
     { id: 'teams',    label: t('workspaceadmin.metric.activeTeams', 'Active teams'),    value: data.teams,    Icon: Users,        color: '#0A66C2' },
-    { id: 'projects', label: t('workspaceadmin.metric.liveProjects', 'Live projects'),  value: data.projects, Icon: FolderKanban, color: '#10b981' },
+    { id: 'projects', label: t('workspaceadmin.metric.liveProjects', 'Live projects'),  value: data.projectQuota?.limit >= 0 ? `${data.projects}/${data.projectQuota.limit}` : data.projects, Icon: FolderKanban, color: '#10b981', warning: data.projectQuota?.warning },
     { id: 'pending',  label: t('workspaceadmin.metric.pendingInvites', 'Pending invites'), value: data.pending, Icon: Clock,       color: '#f59e0b' },
     { id: 'accepted', label: t('workspaceadmin.metric.joinedViaInvite', 'Joined via invite'), value: data.accepted, Icon: CheckCircle2, color: '#0a0a0a' },
   ];
@@ -200,7 +196,7 @@ function MetricsStrip({ orgId }) {
         >
           <div className="flex items-center justify-between mb-1.5">
             <c.Icon size={14} style={{ color: c.color }} />
-            {data.loading && <Loader2 size={10} className="animate-spin text-[#a3a3a3]" />}
+            {data.loading ? <Loader2 size={10} className="animate-spin text-[#a3a3a3]" /> : c.warning ? <span className="text-[9px] text-amber-700">80%</span> : null}
           </div>
           <div className="text-[22px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] tabular-nums leading-none">
             {data.loading ? '—' : c.value}
@@ -220,6 +216,7 @@ function OverviewTab({ orgId, setTab }) {
   const { t } = useTranslation('dashboard');
   const [recentInvites, setRecentInvites] = useState([]);
   const [recentAudit, setRecentAudit] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     if (!orgId) return;
@@ -232,6 +229,10 @@ function OverviewTab({ orgId, setTab }) {
       try {
         const { data } = await apiClient.controlPlane.get('/v1/audit/logs?limit=8');
         if (!cancelled) setRecentAudit(data?.logs || data?.rows || []);
+      } catch { /* noop */ }
+      try {
+        const result = await apiClient.listWorkspaceNotifications({ limit: 6 });
+        if (!cancelled) setNotifications(result?.items || []);
       } catch { /* noop */ }
     })();
     return () => { cancelled = true; };
@@ -306,6 +307,24 @@ function OverviewTab({ orgId, setTab }) {
                       ? new Date(e.createdAt || e.created_at).toLocaleString()
                       : ''}
                   </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="Workspace notifications">
+          {notifications.length === 0 ? (
+            <Empty text="No workspace notifications." />
+          ) : (
+            <ul className="divide-y divide-[#eae7e1] text-[12px]">
+              {notifications.map((notice) => (
+                <li key={notice.id} className="py-2 flex items-start gap-2">
+                  <Bell size={12} className={notice.readAt || notice.read_at ? 'text-[#a3a3a3]' : 'text-[#117dff]'} />
+                  <button className="text-left min-w-0" onClick={() => apiClient.markWorkspaceNotificationRead(notice.id).then(() => setNotifications((items) => items.map((item) => item.id === notice.id ? { ...item, readAt: new Date().toISOString() } : item)))}>
+                    <div className="font-medium text-[#0a0a0a] truncate">{notice.title}</div>
+                    {notice.body && <div className="text-[10px] text-[#737373] truncate">{notice.body}</div>}
+                  </button>
                 </li>
               ))}
             </ul>

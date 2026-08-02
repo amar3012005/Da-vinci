@@ -470,7 +470,23 @@ class HiveMindApiClient {
   }
 
   async createInvite(orgId, payload = {}) {
-    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites`, payload);
+    const idempotencyKey = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites`, payload, { headers: { 'Idempotency-Key': idempotencyKey } });
+    return data;
+  }
+
+  async getWorkspaceSummary() {
+    const { data } = await this.controlPlane.get('/v1/workspace/summary');
+    return data;
+  }
+
+  async listWorkspaceNotifications({ limit = 8, unread = false } = {}) {
+    const { data } = await this.controlPlane.get('/v1/workspace/notifications', { params: { limit, ...(unread ? { unread: 'true' } : {}) } });
+    return data;
+  }
+
+  async markWorkspaceNotificationRead(notificationId) {
+    const { data } = await this.controlPlane.post(`/v1/workspace/notifications/${notificationId}/read`, {});
     return data;
   }
 
