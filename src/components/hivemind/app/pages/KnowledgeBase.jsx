@@ -803,6 +803,8 @@ export default function KnowledgeBase() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
   const [uploadCapabilities, setUploadCapabilities] = useState(null);
+  const documentLimitMb = Math.round((uploadCapabilities?.kinds?.document?.maxBytes || KB_MAX_UPLOAD_BYTES) / (1024 * 1024));
+  const imageLimitMb = Math.round((uploadCapabilities?.kinds?.image?.maxBytes || KB_MAX_IMAGE_BYTES) / (1024 * 1024));
   // Hydrate pending docs from sessionStorage so a refresh mid-indexing
   // doesn't visually "lose" docs the user just uploaded.
   const [justUploadedDocs, setJustUploadedDocs] = useState(() => loadPendingFromSession());
@@ -1716,7 +1718,11 @@ export default function KnowledgeBase() {
             {t('knowledgebase.pickFolder', 'Pick a folder instead')}
           </button>
           <p className="text-[#a3a3a3] text-xs font-['Space_Grotesk'] mt-2">
-            {t('knowledgebase.acceptedFormats', 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · PNG · JPG · TIFF · MP3 · WAV — max 100MB per file')}
+            {t('knowledgebase.acceptedFormatsServer', {
+              documentLimitMb,
+              imageLimitMb,
+              defaultValue: 'PDF · DOCX · PPTX · XLSX · CSV · TXT · MD · HTML · MP3 · WAV — max {{documentLimitMb}}MB · PNG · JPG · TIFF — max {{imageLimitMb}}MB',
+            })}
           </p>
           {/* Two-tier ingestion: sections index synchronously (searchable in
               seconds, no LLM in the request); facts + relations distill in a
