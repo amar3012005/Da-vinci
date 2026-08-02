@@ -470,7 +470,7 @@ class HiveMindApiClient {
   }
 
   async createInvite(orgId, payload = {}) {
-    const idempotencyKey = typeof globalThis.crypto?.randomUUID === 'function' ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    const idempotencyKey = typeof window.crypto?.randomUUID === 'function' ? window.crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     const { data } = await this.controlPlane.post(`/v1/orgs/${orgId}/invites`, payload, { headers: { 'Idempotency-Key': idempotencyKey } });
     return data;
   }
