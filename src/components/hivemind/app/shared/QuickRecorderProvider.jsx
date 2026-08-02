@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Sparkles, CheckCircle2, X, Users, FolderOpen, NotebookPen, ChevronRight, ChevronLeft, Minimize2, ListChecks, Lightbulb, HelpCircle, Quote, AlignLeft, Save } from 'lucide-react';
+import { Mic, MonitorUp, Pause, Play, Square, Sparkles, CheckCircle2, X, Users, FolderOpen, NotebookPen, ChevronRight, ChevronLeft, Minimize2, ListChecks, Lightbulb, HelpCircle, Quote, AlignLeft, Save, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import apiClient from './api-client';
+import { useAuth } from '../auth/AuthProvider';
+import { emitUsageChanged } from './useUsage';
 
 /**
  * QuickRecorderProvider — app-wide "record a meeting from anywhere" engine.
@@ -35,9 +37,11 @@ const SUPPORTED = typeof navigator !== 'undefined' && !!navigator.mediaDevices
    the server (per-segment POST). On mount we rebuild all three and either
    auto-resume the mic or park in an explicit "interrupted" state. Recording
    ends ONLY on the user's Stop. */
-const LS_KEY = 'hm_qrec_session_v1';
-const readSession = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch { return null; } };
-const writeSession = (s) => { try { s ? localStorage.setItem(LS_KEY, JSON.stringify(s)) : localStorage.removeItem(LS_KEY); } catch { /* noop */ } };
+const LS_PREFIX = 'hm_qrec_session_v2';
+const readSession = (key) => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
+const writeSession = (key, value) => {
+  try { value ? localStorage.setItem(key, JSON.stringify(value)) : localStorage.removeItem(key); } catch { /* noop */ }
+};
 
 const IDB_NAME = 'hm-qrec'; const IDB_STORE = 'chunks';
 function idbOpen() {
@@ -68,6 +72,21 @@ async function idbTakeChunks(sid, seg = null) {
         const c = e.target.result;
         if (!c) return resolve(out);
         if (c.value?.sid === sid && (seg === null || c.value?.seg === seg)) { out.push(c.value); c.delete(); }
+        c.continue();
+      };
+    });
+  } catch { return []; }
+}
+async function idbReadChunks(sid, seg = null) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve) => {
+      const st = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE);
+      const out = [];
+      st.openCursor().onsuccess = (e) => {
+        const c = e.target.result;
+        if (!c) return resolve(out);
+        if (c.value?.sid === sid && (seg === null || c.value?.seg === seg)) out.push(c.value);
         c.continue();
       };
     });
@@ -130,6 +149,10 @@ const SCOPES = [
 ];
 
 export function QuickRecorderProvider({ children }) {
+  const { org, user } = useAuth();
+  const recoveryKey = `${LS_PREFIX}:${org?.id || 'none'}:${user?.id || 'none'}`;
+  const readRecovery = useCallback(() => readSession(recoveryKey), [recoveryKey]);
+  const writeRecovery = useCallback((value) => writeSession(recoveryKey, value), [recoveryKey]);
   const [status, setStatus] = useState('idle'); // idle | config | recording | transcribing | analyzing | done | error
   const [step, setStep] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -149,6 +172,10 @@ export function QuickRecorderProvider({ children }) {
   const [meetingId, setMeetingId] = useState(null);
   const [ingesting, setIngesting] = useState(false);
   const [ingested, setIngested] = useState(false);
+  const [autoSave, setAutoSave] = useState(true);
+  const [captureMode, setCaptureMode] = useState('mic');
+  const [remainingSeconds, setRemainingSeconds] = useState(-1);
+  const [paused, setPaused] = useState(false);
   const [, forceTick] = useState(0); // re-render for stream-attach
 
   const streamRef = useRef(null);
@@ -163,11 +190,15 @@ export function QuickRecorderProvider({ children }) {
   const finalizingRef = useRef(false);
   const segTimerRef = useRef(null);
   const clockRef = useRef(null);
+  const stopRef = useRef(null);
+  const teardownRef = useRef([]);
   const cfgRef = useRef({ participants: [], scope: 'personal', projectId: null, notes: '' });
 
   const cleanup = useCallback(() => {
     if (segTimerRef.current) { clearInterval(segTimerRef.current); segTimerRef.current = null; }
     if (clockRef.current) { clearInterval(clockRef.current); clockRef.current = null; }
+    teardownRef.current.forEach((stopTrack) => { try { stopTrack(); } catch { /* ignore */ } });
+    teardownRef.current = [];
     if (streamRef.current) { streamRef.current.getTracks().forEach((tr) => tr.stop()); streamRef.current = null; }
   }, []);
 
@@ -181,6 +212,13 @@ export function QuickRecorderProvider({ children }) {
     try {
       await apiClient.core.post('/api/meetings/segments', { session_id: sid, idx, text });
       pendingSegRef.current.delete(idx);
+      await idbTakeChunks(sid, idx);
+      const saved = readRecovery();
+      if (saved) writeRecovery({
+        ...saved,
+        segIdx: Math.max(Number(saved.segIdx) || 0, idx + 1),
+        transcriptSegments: { ...(saved.transcriptSegments || {}), [idx]: text },
+      });
     } catch {
       // Keep the window queued and retry with backoff; also flushed on the next
       // segment tick and once more before finalize. Bounded so it can't spin.
@@ -189,7 +227,7 @@ export function QuickRecorderProvider({ children }) {
         setTimeout(() => persistSegment(idx, text, attempt + 1), Math.min(2000 * 2 ** attempt, 30000));
       }
     }
-  }, []);
+  }, [readRecovery, writeRecovery]);
 
   // Re-attempt any windows whose server write hasn't confirmed yet.
   const flushPendingSegments = useCallback(() => {
@@ -230,16 +268,15 @@ export function QuickRecorderProvider({ children }) {
       const idx = segIdxRef.current++;
       const blob = new Blob(segChunksRef.current, { type: rec.mimeType || mime || 'audio/webm' });
       if (blob.size > 1024) transcribeSegment(idx, blob); else segIdxRef.current--;
-      // This segment is now in-memory + headed to the server — drop its cached
-      // chunks and advance the persisted resume cursor.
+      // Keep cached audio until persistSegment confirms the transcript is
+      // durable. Starting an STT request is not an acknowledgement.
       if (sessionIdRef.current) {
-        idbTakeChunks(sessionIdRef.current, idx);
-        const s = readSession(); if (s) writeSession({ ...s, segIdx: segIdxRef.current });
+        const s = readRecovery(); if (s) writeRecovery({ ...s, segIdx: segIdxRef.current });
       }
       if (!finalizingRef.current) rollSegment();
     };
     rec.start(1000);
-  }, [transcribeSegment]);
+  }, [readRecovery, transcribeSegment, writeRecovery]);
 
   // Stop → stitch → analyze → save the meeting ROW (Past meetings) — NO ingest.
   // The user decides in the results popup via "Save to HIVEMIND memory".
@@ -248,8 +285,8 @@ export function QuickRecorderProvider({ children }) {
     const cfg = cfgRef.current;
     // The recording has ended, but its final row is not durable yet. A reload
     // must reopen this as a recovery task, never resume the microphone.
-    const savedSession = readSession();
-    if (savedSession) writeSession({ ...savedSession, finalizing: true });
+    const savedSession = readRecovery();
+    if (savedSession) writeRecovery({ ...savedSession, finalizing: true, elapsed });
     try {
       await Promise.allSettled(segPromisesRef.current);
       // Last-chance flush of any window whose durable write never confirmed —
@@ -275,17 +312,30 @@ export function QuickRecorderProvider({ children }) {
         participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
         scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
         session_id: sessionIdRef.current || undefined,
+        duration_sec: elapsed,
+        consent: true,
       }, { timeout: 60000 });
-      setMeetingId(row.data?.id || null);
+      const savedMeetingId = row.data?.id || null;
+      setMeetingId(savedMeetingId);
+      emitUsageChanged();
+      if (savedMeetingId && cfg.autoSave !== false) {
+        try {
+          await apiClient.core.post(`/api/meetings/${savedMeetingId}/ingest`, {}, { timeout: 180000 });
+          setIngested(true);
+          emitUsageChanged();
+        } catch {
+          setError('Meeting saved. HIVEMIND memory sync failed; retry it from the report.');
+        }
+      }
       // Only discard recovery material after the Past Meeting row is durable.
       // A 5xx here used to erase the only client-side recovery handle.
-      writeSession(null);
+      writeRecovery(null);
       if (sessionIdRef.current) idbClear(sessionIdRef.current);
       setStatus('done');
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Processing failed.');
     }
-  }, [flushPendingSegments]);
+  }, [elapsed, flushPendingSegments, readRecovery, writeRecovery]);
 
   const retryMeetingSave = useCallback(async () => {
     const text = transcript.trim();
@@ -300,15 +350,28 @@ export function QuickRecorderProvider({ children }) {
         participants: cfg.participants.map((n) => ({ type: 'external', name: n })),
         scope: cfg.scope, project_id: cfg.scope === 'project' ? cfg.projectId : null,
         session_id: sessionIdRef.current || undefined,
+        duration_sec: elapsed,
+        consent: true,
       }, { timeout: 60000 });
-      setMeetingId(row.data?.id || null);
-      writeSession(null);
+      const savedMeetingId = row.data?.id || null;
+      setMeetingId(savedMeetingId);
+      emitUsageChanged();
+      if (savedMeetingId && cfg.autoSave !== false) {
+        try {
+          await apiClient.core.post(`/api/meetings/${savedMeetingId}/ingest`, {}, { timeout: 180000 });
+          setIngested(true);
+          emitUsageChanged();
+        } catch {
+          setError('Meeting saved. HIVEMIND memory sync failed; retry it from the report.');
+        }
+      }
+      writeRecovery(null);
       if (sessionIdRef.current) idbClear(sessionIdRef.current);
       setStatus('done');
     } catch (e) {
       setStatus('error'); setError(e?.response?.data?.error || e?.message || 'Meeting save failed. Your transcript is still recoverable.');
     }
-  }, [insights, transcript]);
+  }, [elapsed, insights, transcript, writeRecovery]);
 
   const openConfig = useCallback(() => {
     if (!SUPPORTED) { setError('Recording not supported on this device.'); setStatus('error'); return; }
@@ -319,26 +382,88 @@ export function QuickRecorderProvider({ children }) {
   }, [status]);
 
   const start = useCallback(async () => {
-    cfgRef.current = { participants: participants.slice(0, 12), scope, projectId, notes };
+    cfgRef.current = { participants: participants.slice(0, 12), scope, projectId, notes, autoSave, captureMode };
     setError(null); setElapsed(0); setCollapsed(false);
     segIdxRef.current = 0; segChunksRef.current = []; segPromisesRef.current = [];
     segTextsRef.current = {}; langRef.current = null; finalizingRef.current = false;
-    sessionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
+    const displayPromise = captureMode === 'tab' && navigator.mediaDevices?.getDisplayMedia
+      ? navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      : null;
+    try {
+      if (navigator.storage?.persist) await navigator.storage.persist();
+      if (navigator.storage?.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const available = Number(estimate.quota || 0) - Number(estimate.usage || 0);
+        if (estimate.quota && available < 50 * 1024 * 1024) {
+          setError('Less than 50 MB of browser recovery storage is available. Free space before recording.');
+          setStatus('error');
+          return;
+        }
+      }
+    } catch { /* browser storage checks are best-effort */ }
+    let allowance = -1;
+    try {
+      const admission = await apiClient.core.post('/api/meetings/sessions', { consent: true });
+      sessionIdRef.current = admission.data?.session_id || null;
+      allowance = Number(admission.data?.remaining_seconds ?? -1);
+      setRemainingSeconds(allowance);
+    } catch (e) {
+      if (displayPromise) displayPromise.then((stream) => stream.getTracks().forEach((track) => track.stop())).catch(() => {});
+      setError(e?.response?.data?.message || e?.response?.data?.error || 'Unable to start a meeting.');
+      setStatus('error');
+      return;
+    }
     let mic;
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    } catch { setError('Microphone permission denied.'); setStatus('error'); return; }
-    streamRef.current = mic;
+    } catch {
+      if (displayPromise) displayPromise.then((stream) => stream.getTracks().forEach((track) => track.stop())).catch(() => {});
+      setError('Microphone permission denied.'); setStatus('error'); return;
+    }
+    let recordingStream = mic;
+    teardownRef.current.push(() => mic.getTracks().forEach((track) => track.stop()));
+    if (displayPromise) {
+      try {
+        const display = await displayPromise;
+        const displayAudio = display.getAudioTracks();
+        if (!displayAudio.length) {
+          display.getTracks().forEach((track) => track.stop());
+          cleanup();
+          setError('Share a browser tab with “Share tab audio” enabled.');
+          setStatus('error');
+          return;
+        }
+        const context = new AudioContext();
+        const destination = context.createMediaStreamDestination();
+        context.createMediaStreamSource(mic).connect(destination);
+        context.createMediaStreamSource(new MediaStream(displayAudio)).connect(destination);
+        recordingStream = destination.stream;
+        teardownRef.current.push(() => display.getTracks().forEach((track) => track.stop()));
+        teardownRef.current.push(() => context.close());
+        display.getVideoTracks().forEach((track) => { track.onended = () => stopRef.current?.(); });
+      } catch {
+        cleanup();
+        setError('Tab audio sharing was cancelled.');
+        setStatus('error');
+        return;
+      }
+    }
+    streamRef.current = recordingStream;
     const label = atNow();
     setStartedAtLabel(label);
     // Persist session meta — a reload/back must NOT kill the recording.
-    writeSession({ sessionId: sessionIdRef.current, startedAt: Date.now(), label, segIdx: 0, cfg: cfgRef.current });
+    writeRecovery({
+      sessionId: sessionIdRef.current, startedAt: Date.now(), label, segIdx: 0,
+      cfg: cfgRef.current, owner: { orgId: org?.id || null, userId: user?.id || null },
+      remainingSeconds: allowance, elapsed: 0,
+    });
     rollSegment(); setStatus('recording'); forceTick((x) => x + 1);
+    setPaused(false);
     segTimerRef.current = setInterval(() => {
       if (recRef.current && recRef.current.state === 'recording') recRef.current.stop();
     }, SEGMENT_MS);
     clockRef.current = setInterval(() => setElapsed((x) => x + 1), 1000);
-  }, [participants, scope, projectId, notes, rollSegment]);
+  }, [participants, scope, projectId, notes, autoSave, captureMode, org?.id, user?.id, cleanup, rollSegment, writeRecovery]);
 
   const stop = useCallback(() => {
     finalizingRef.current = true;
@@ -355,6 +480,37 @@ export function QuickRecorderProvider({ children }) {
       rec.stop();
     } else { cleanup(); finalize(); }
   }, [transcribeSegment, cleanup, finalize]);
+  stopRef.current = stop;
+
+  const togglePause = useCallback(() => {
+    const recorder = recRef.current;
+    if (!recorder || status !== 'recording') return;
+    if (recorder.state === 'recording') {
+      recorder.pause();
+      if (clockRef.current) { clearInterval(clockRef.current); clockRef.current = null; }
+      if (segTimerRef.current) { clearInterval(segTimerRef.current); segTimerRef.current = null; }
+      setPaused(true);
+      return;
+    }
+    if (recorder.state === 'paused') {
+      recorder.resume();
+      clockRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);
+      segTimerRef.current = setInterval(() => {
+        if (recRef.current?.state === 'recording') recRef.current.stop();
+      }, SEGMENT_MS);
+      setPaused(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === 'recording' && remainingSeconds >= 0 && elapsed >= remainingSeconds) stop();
+  }, [elapsed, remainingSeconds, status, stop]);
+
+  useEffect(() => {
+    if (status !== 'recording' || elapsed % 5 !== 0) return;
+    const saved = readRecovery();
+    if (saved) writeRecovery({ ...saved, elapsed });
+  }, [elapsed, readRecovery, status, writeRecovery]);
 
   /* ── Resume after reload / back-navigation ──────────────────────────────
      Rebuild the session (meta from localStorage, transcribed text from the
@@ -381,15 +537,25 @@ export function QuickRecorderProvider({ children }) {
   useEffect(() => {
     if (resumedRef.current || !SUPPORTED) return;
     resumedRef.current = true;
-    const s = readSession();
+    const s = readRecovery();
     if (!s || !s.sessionId) return;
+    if (s.owner && (s.owner.orgId !== (org?.id || null) || s.owner.userId !== (user?.id || null))) {
+      idbClear(s.sessionId);
+      writeRecovery(null);
+      return;
+    }
     (async () => {
       sessionIdRef.current = s.sessionId;
       cfgRef.current = s.cfg || cfgRef.current;
+      setAutoSave(s.cfg?.autoSave !== false);
+      setRemainingSeconds(Number(s.remainingSeconds ?? -1));
       segIdxRef.current = s.segIdx || 0;
       setStartedAtLabel(s.label || atNow());
-      setElapsed(Math.max(0, Math.floor((Date.now() - (s.startedAt || Date.now())) / 1000)));
+      setElapsed(Math.max(0, Number(s.elapsed) || 0));
       setCollapsed(true);
+      for (const [idx, text] of Object.entries(s.transcriptSegments || {})) {
+        segTextsRef.current[Number(idx)] = String(text || '');
+      }
       // 1) already-transcribed segments live on the server
       try {
         const { data } = await apiClient.core.get(`/api/meetings/session/${s.sessionId}/segments`);
@@ -410,7 +576,7 @@ export function QuickRecorderProvider({ children }) {
       }
       // 2) the interrupted segment's raw audio lives in IndexedDB — rescue it
       try {
-        const cached = await idbTakeChunks(s.sessionId);
+        const cached = await idbReadChunks(s.sessionId);
         const bySeg = new Map();
         for (const c of cached) { if (!bySeg.has(c.seg)) bySeg.set(c.seg, []); bySeg.get(c.seg).push(c.blob); }
         for (const [seg, blobs] of bySeg) {
@@ -435,7 +601,7 @@ export function QuickRecorderProvider({ children }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [org?.id, readRecovery, user?.id, writeRecovery]);
 
   const saveToHivemind = useCallback(async () => {
     if (!meetingId || ingesting || ingested) return;
@@ -449,12 +615,14 @@ export function QuickRecorderProvider({ children }) {
   }, [meetingId, ingesting, ingested]);
 
   const dismiss = useCallback(() => {
-    writeSession(null);
+    writeRecovery(null);
     if (sessionIdRef.current) idbClear(sessionIdRef.current);
     setStatus('idle'); setError(null); setCollapsed(false);
     setParticipants([]); setPName(''); setScope('personal'); setProjectId(null); setNotes('');
+    setCaptureMode('mic'); setAutoSave(true); setRemainingSeconds(-1);
+    setPaused(false);
     setInsights(null); setMeetingId(null); setTranscript(''); setIngested(false); setIngesting(false);
-  }, []);
+  }, [writeRecovery]);
 
   useEffect(() => () => cleanup(), [cleanup]);
 
@@ -591,10 +759,27 @@ export function QuickRecorderProvider({ children }) {
             )}
             {step === 2 && (
               <div>
+                <div className="grid grid-cols-2 gap-1.5 mb-2.5" aria-label="Recording source">
+                  <button type="button" onClick={() => setCaptureMode('mic')}
+                    className={`inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-[8px] border text-[11px] font-semibold ${captureMode === 'mic' ? 'border-[#0a0a0a] bg-[#0a0a0a] text-white' : 'border-[#e3e0db] text-[#525252]'}`}>
+                    <Mic size={12} /> Microphone
+                  </button>
+                  <button type="button" onClick={() => setCaptureMode('tab')}
+                    className={`inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-[8px] border text-[11px] font-semibold ${captureMode === 'tab' ? 'border-[#0a0a0a] bg-[#0a0a0a] text-white' : 'border-[#e3e0db] text-[#525252]'}`}>
+                    <MonitorUp size={12} /> Tab + microphone
+                  </button>
+                </div>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4}
                   placeholder="Topic, who is speaking (names), companies, key terms…"
                   className="w-full px-3 py-2 rounded-[8px] border border-[#e3e0db] bg-[#faf9f4] text-[13px] outline-none focus:border-[#117dff] resize-none" />
                 <p className="text-[11px] text-[#a3a3a3] mt-1.5">Crucial — used to spell names right + sharpen insights.</p>
+                <label className="mt-3 flex items-center justify-between gap-3 rounded-[8px] border border-[#e3e0db] bg-white px-3 py-2 cursor-pointer">
+                  <span>
+                    <span className="block text-[12px] font-semibold text-[#0a0a0a]">Save to HIVEMIND</span>
+                    <span className="block text-[10px] text-[#737373]">Create searchable meeting memories automatically.</span>
+                  </span>
+                  <input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} className="accent-[#117dff]" />
+                </label>
               </div>
             )}
           </div>
@@ -626,6 +811,9 @@ export function QuickRecorderProvider({ children }) {
               <span className="font-semibold text-[#d4d0ca]">{mm}:</span><span className="font-semibold text-[#0a0a0a] tabular-nums">{ss}</span>
             </div>
           )}
+          {recording && remainingSeconds >= 0 && remainingSeconds - elapsed <= 60 && (
+            <p className="mb-2 text-[11px] font-medium text-amber-700">{Math.max(0, remainingSeconds - elapsed)} seconds remain in this month's meeting allowance.</p>
+          )}
           {/* live wave — reactive while recording, shimmer while analyzing */}
           <div className="rounded-[10px] border border-[#e3e0db] bg-[#faf9f4] px-2 py-1.5">
             <QuickWave stream={recording ? streamRef.current : null} mode={recording ? 'record' : 'analyze'} />
@@ -633,9 +821,14 @@ export function QuickRecorderProvider({ children }) {
           <div className="flex items-center justify-between mt-3.5">
             <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-[#a3a3a3]">Meeting notes</span>
             {recording ? (
-              <button onClick={stop} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600">
-                <Square size={11} fill="currentColor" /> Stop
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={togglePause} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-[#e3e0db] text-[#525252] text-[12px] font-semibold hover:border-[#0a0a0a]">
+                  {paused ? <Play size={12} /> : <Pause size={12} />} {paused ? 'Resume' : 'Pause'}
+                </button>
+                <button onClick={stop} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600">
+                  <Square size={11} fill="currentColor" /> Stop
+                </button>
+              </div>
             ) : (
               <span className="text-[12px] text-[#525252]">You can collapse this and keep working.</span>
             )}
@@ -688,6 +881,15 @@ export function QuickRecorderProvider({ children }) {
     ) : null },
     { key: 'questions', title: 'Open questions', icon: HelpCircle, body: arr(ins.questions).length ? (
       <ul className="space-y-1.5">{arr(ins.questions).map((q, i) => <li key={i} className="flex gap-2"><span className="text-[#a3a3a3]">?</span>{typeof q === 'string' ? q : q?.text || q?.question}</li>)}</ul>
+    ) : null },
+    { key: 'risks', title: 'Risks', icon: AlertTriangle, body: arr(ins.risks).length ? (
+      <ul className="space-y-1.5">{arr(ins.risks).map((risk, i) => <li key={i} className="flex gap-2"><span className="text-amber-600">!</span>{String(risk)}</li>)}</ul>
+    ) : null },
+    { key: 'next', title: 'Recommended next steps', icon: ArrowUpRight, body: arr(ins.next_steps).length ? (
+      <ul className="space-y-1.5">{arr(ins.next_steps).map((next, i) => <li key={i} className="flex gap-2"><span className="text-emerald-600">·</span>{String(next)}</li>)}</ul>
+    ) : null },
+    { key: 'participants', title: 'Participants', icon: Users, body: cfgRef.current.participants.length ? (
+      <div className="flex flex-wrap gap-1.5">{cfgRef.current.participants.map((name) => <span key={name} className="rounded-full border border-[#e3e0db] bg-[#faf9f4] px-2.5 py-1 text-[11px]">{name}</span>)}</div>
     ) : null },
     { key: 'quotes', title: 'Notable quotes', icon: Quote, body: arr(ins.quotes).length ? (
       <ul className="space-y-2">{arr(ins.quotes).map((q, i) => { const tx = typeof q === 'string' ? q : q?.quote; return tx ? <li key={i} className="border-l-2 border-[#117dff]/40 pl-3 italic text-[#525252]">"{tx}"{q?.speaker ? <span className="not-italic text-[#a3a3a3]"> — {q.speaker}</span> : null}</li> : null; })}</ul>

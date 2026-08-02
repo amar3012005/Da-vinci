@@ -22,6 +22,7 @@ import EntityText from '../shared/EntityText';
 import { useTranslation } from 'react-i18next';
 import UsageTracker from '../components/UsageTracker';
 import { emitUsageChanged } from '../shared/useUsage';
+import { useQuickRecorder } from '../shared/QuickRecorderProvider';
 
 // Pick a MediaRecorder MIME the browser actually supports. Chrome/Firefox do
 // webm/opus; Safari + iOS do NOT support webm and only offer mp4 — hardcoding
@@ -350,6 +351,7 @@ function Panel({ icon: Icon, title, accent = '#117dff', children, className = ''
 
 export default function MeetingNotes() {
   const { t } = useTranslation('dashboard');
+  const quickRecorder = useQuickRecorder();
   const [tab, setTab] = useState('record'); // record | past
   const [status, setStatus] = useState('idle');
   // Once a session ends (idle/done/error), reset minimize so the next recording opens expanded.
@@ -780,7 +782,7 @@ export default function MeetingNotes() {
           <p className="text-[12px] text-[#737373] mt-1">{t('meetingnotes.subtitle', 'Record, transcribe and extract insights — saved straight into your memory.')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <UsageTracker resource="memories" />
+          <UsageTracker resource="meetingMinutes" />
           <ClockChip />
         </div>
       </div>
@@ -818,6 +820,36 @@ export default function MeetingNotes() {
           )
         )}
       </AnimatePresence>
+
+      {tab === 'record' && (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4">
+          <section className="bg-white border border-[#e3e0db] rounded-[10px] p-5 min-h-[220px] flex flex-col justify-between">
+            <div>
+              <div className="w-10 h-10 rounded-[8px] bg-blue-50 border border-blue-100 grid place-items-center">
+                <Mic size={19} className="text-[#117dff]" />
+              </div>
+              <h2 className="mt-4 text-[19px] font-semibold text-[#0a0a0a] font-['Space_Grotesk']">Capture the meeting, keep the decisions</h2>
+              <p className="mt-1.5 max-w-[620px] text-[12px] leading-relaxed text-[#737373]">Add the people and context once. The recorder preserves transcript checkpoints, builds the report, and saves searchable meeting memories.</p>
+              {quickRecorder.status === 'interrupted' && (
+                <div className="mt-4 rounded-[8px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-800">An interrupted meeting is ready to resume. Open the recorder to continue or finish it.</div>
+              )}
+            </div>
+            <button onClick={quickRecorder.openConfig} disabled={!quickRecorder.supported}
+              className="mt-5 self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-[8px] bg-[#117dff] text-white text-[13px] font-semibold hover:bg-[#0066e0] disabled:opacity-40">
+              <Mic size={14} /> {quickRecorder.active ? 'Open current meeting' : 'Start meeting'}
+            </button>
+          </section>
+          <section className="bg-[#faf9f4] border border-[#e3e0db] rounded-[10px] p-4">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#a3a3a3]">Meeting flow</div>
+            {['Transcript protected', 'Summary and decisions', 'Company context', 'Saved to HIVEMIND'].map((label, index) => (
+              <div key={label} className="flex items-center gap-3 py-3 border-b last:border-b-0 border-[#e3e0db]">
+                <span className="w-6 h-6 rounded-full border border-[#d4d0ca] bg-white grid place-items-center text-[10px] font-semibold text-[#737373]">{index + 1}</span>
+                <span className="text-[12px] font-medium text-[#525252]">{label}</span>
+              </div>
+            ))}
+          </section>
+        </div>
+      )}
 
       {/* ───────── DELETE MEETING MODAL ───────── */}
       <AnimatePresence>
@@ -984,7 +1016,7 @@ export default function MeetingNotes() {
       </AnimatePresence>
 
       {/* ───────── RECORD TAB ───────── */}
-      {tab === 'record' && (
+      {false && tab === 'record' && (
         <div className="space-y-4">
           <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -1328,7 +1360,9 @@ export default function MeetingNotes() {
 
       {/* ───────── MEETING DETAIL ───────── */}
       {tab === 'past' && selected && (
-        <div className="bg-white border border-[#e3e0db] rounded-[10px] p-5">
+        <div className="fixed inset-0 z-[80] bg-[#0a0a0a]/25 backdrop-blur-[3px] p-0 md:p-5 overflow-y-auto" onClick={() => setSelected(null)}>
+        <div className="relative mx-auto min-h-full md:min-h-0 md:max-w-[1080px] bg-white md:border border-[#e3e0db] md:rounded-[10px] p-5 md:p-7" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => setSelected(null)} className="absolute right-4 top-4 w-9 h-9 grid place-items-center rounded-[8px] text-[#737373] hover:bg-[#faf9f4]" aria-label="Close report"><X size={18} /></button>
           <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-[11px] text-[#a3a3a3] hover:text-[#0a0a0a] mb-3"><ArrowLeft size={12} /> {t('meetingnotes.back', 'All meetings')}</button>
           {detailErr && (<div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-[6px] px-2.5 py-1.5 mb-3"><AlertTriangle size={11} className="inline mr-1" /> {t('meetingnotes.detailErr', 'Could not load the full record — showing the overview only.')}</div>)}
           <h2 className="text-[20px] font-semibold text-[#0a0a0a] font-['Space_Grotesk'] leading-tight flex items-baseline gap-2 flex-wrap">{selected.title || 'Meeting'}
@@ -1400,7 +1434,7 @@ export default function MeetingNotes() {
               <div className="space-y-2 max-h-[460px] overflow-y-auto">{selected.segments.map((s, i) => (<div key={i} className="text-[12px] leading-relaxed"><span className="font-semibold font-['Space_Grotesk']" style={{ color: SPEAKER_COLORS[s.speaker] || '#117dff' }}>{nameFor(s.speaker, (selected.insights && selected.insights.speaker_names) || null)}:</span> <span className="text-[#525252]">{s.text}</span></div>))}</div>
             ) : (<p className="text-[12px] text-[#525252] leading-relaxed whitespace-pre-wrap max-h-[460px] overflow-y-auto">{selected.transcript || 'No transcript saved.'}</p>)
           )}
-        </div>
+        </div></div>
       )}
     </motion.div>
   );
