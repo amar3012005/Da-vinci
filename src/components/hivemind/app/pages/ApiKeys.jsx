@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Key, Plus, Copy, Check, Trash2, Shield, AlertTriangle,
-  Globe, Brain, Wrench, ShieldCheck, Zap, CheckCircle2, XCircle,
+  Globe, Brain, Wrench, ShieldCheck, Zap, CheckCircle2, XCircle, FileText,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../shared/api-client';
