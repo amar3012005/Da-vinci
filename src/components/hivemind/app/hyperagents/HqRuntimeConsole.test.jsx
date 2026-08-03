@@ -1,11 +1,15 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, mergeRuntimeTaskProjection, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
 
-test('renders one truthful domain-neutral Agent Runtime task panel', () => {
+test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Brief first', () => {
   const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
     status: 'AWAITING_START',
+  }} growthBrief={{
+    current_position: 'Current retained position.',
+    primary_constraint: { statement: 'Primary evidenced constraint.' },
+    evidence_refs: ['baseline-1'],
   }} queue={[
       {
         id: 'one', title: 'Improve the primary customer journey', objective: 'Resolve the highest-evidence constraint.',
@@ -18,7 +22,8 @@ test('renders one truthful domain-neutral Agent Runtime task panel', () => {
       },
     ]} onDecision={() => {}} />);
 
-  expect(markup).toContain('aria-label="Agent Runtime tasks"');
+  expect(markup).toContain('aria-label="Runtime tasks"');
+  expect(markup).toContain('Growth brief');
   expect(markup).toContain('Improve the primary customer journey');
   expect(markup).toContain('Start recommended work');
   expect(markup).toContain('Review later');
@@ -27,6 +32,20 @@ test('renders one truthful domain-neutral Agent Runtime task panel', () => {
   expect(markup).toContain('Proposed');
   expect(markup).not.toContain('>Ready<');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
+  expect(markup.indexOf('Growth brief')).toBeLessThan(markup.indexOf('Improve the primary customer journey'));
+});
+
+test('keeps later user-instruction todos in the same queue as first-life opportunities', () => {
+  const merged = mergeRuntimeTaskProjection([
+    { id: 'planned', title: 'Recommended proposal', status: 'RUNNING' },
+    { id: 'instruction', title: 'User-requested follow-up', status: 'READY' },
+  ], [
+    { id: 'planned', title: 'Recommended proposal', status: 'PROPOSED', recommended: true },
+    { id: 'remaining', title: 'Dormant proposal', status: 'PROPOSED' },
+  ]);
+  expect(merged.map((item) => item.id)).toEqual(['planned', 'instruction', 'remaining']);
+  expect(merged.find((item) => item.id === 'planned').status).toBe('RUNNING');
+  expect(merged.find((item) => item.id === 'planned').recommended).toBe(true);
 });
 
 test('renders explicit zero while omitting unobserved baseline values', () => {

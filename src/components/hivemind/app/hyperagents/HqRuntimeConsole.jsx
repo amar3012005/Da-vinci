@@ -246,6 +246,24 @@ export function projectLifecycleQueueStatus(snapshot = {}) {
   if (['NEEDS_INTERVENTION', 'TERMINATED'].includes(snapshot.status)) return 'NEEDS_ATTENTION';
   return 'RUNNING';
 }
+export function mergeRuntimeTaskProjection(tasks = [], opportunities = []) {
+  const canonical = Array.isArray(tasks) ? tasks : [];
+  const proposed = Array.isArray(opportunities) ? opportunities : [];
+  const opportunityById = new Map(proposed.map((item) => [String(item.id || item.todo_id || ''), item]));
+  const merged = canonical.map((task) => {
+    const opportunity = opportunityById.get(String(task.id || ''));
+    return opportunity ? { ...opportunity, ...task } : task;
+  });
+  const seen = new Set(merged.map((item) => String(item.id || item.todo_id || '')));
+  for (const opportunity of proposed) {
+    const id = String(opportunity.id || opportunity.todo_id || '');
+    if (id && !seen.has(id)) {
+      merged.push(opportunity);
+      seen.add(id);
+    }
+  }
+  return merged;
+}
 function queueBlockerSummary(reason) {
   if (!reason) return '';
   if (typeof reason !== 'string') return 'The latest Room result needs review before this work can continue.';
@@ -255,9 +273,9 @@ function queueBlockerSummary(reason) {
   }
   return trimmed.length > 180 ? `${trimmed.slice(0, 177)}...` : trimmed;
 }
-export function GrowthBrief({ brief }) {
+export function GrowthBrief({ brief, embedded = false }) {
   if (!brief) return null;
-  return <section className="mb-3 border border-[#d8d3cc] bg-white px-4 py-3" aria-label="Growth brief">
+  return <section className={`${embedded ? 'bg-white px-4 py-4' : 'mb-3 border border-[#d8d3cc] bg-white px-4 py-3'}`} aria-label="Growth brief">
     <div className="font-mono text-[8px] uppercase tracking-[0.15em] text-[#8a8577]">Growth brief</div>
     {brief.current_position ? <p className="mt-2 text-[10px] leading-4 text-[#777168]">{brief.current_position}</p> : null}
     <div className="mt-2 text-[12px] font-semibold leading-5 text-[#262626]">{brief.primary_constraint?.statement || brief.primary_constraint?.type || 'Current position retained'}</div>
@@ -268,17 +286,20 @@ export function GrowthBrief({ brief }) {
   </section>;
 }
 
-export function AgentRuntimeTasksPanel({ queue, firstLife, experience, onDecision, onClose }) {
+export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experience, onDecision, onClose }) {
   const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
-  return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Agent Runtime tasks">
-    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Agent Runtime tasks</span><span className="font-mono text-[9px] text-white/65">{active.length} active</span>{onClose ? <button type="button" onClick={onClose} aria-label="Close Agent Runtime tasks" title="Close" className="grid h-7 w-7 place-items-center text-white/70 hover:bg-white/10 hover:text-white lg:hidden"><X size={14} /></button> : null}</header>
-    <div className="max-h-[min(46vh,430px)] overflow-y-auto p-2">
+  return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Runtime tasks">
+    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Runtime Tasks</span><span className="font-mono text-[8px] text-white/65">{queue.length} tasks · {active.length} active</span>{onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="grid h-7 w-7 place-items-center text-white/70 hover:bg-white/10 hover:text-white lg:hidden"><X size={14} /></button> : null}</header>
+    <div className="max-h-[min(68vh,620px)] overflow-y-auto">
+      {growthBrief ? <div className="border-b border-[#d8d3cc]"><GrowthBrief brief={growthBrief} embedded /></div> : null}
+      <div className="p-2">
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
         const blocker = queueBlockerSummary(item.blocker || item.blocked_reason);
         return <article key={item.id} className={`border-b border-[#ebe8e3] px-2 py-3 last:border-b-0 ${item.recommended ? 'border-l-2 border-l-[#171717] bg-white' : ''}`}><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="flex items-start gap-2"><div className="flex-1 text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div>{item.recommended ? <span className="font-mono text-[7px] uppercase tracking-[0.08em] text-[#525252]">Recommended</span> : null}</div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.expected_outcome ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Outcome: {item.expected_outcome}</p> : null}{item.selection_reason ? <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-[#777168]">{item.selection_reason}</p> : null}{item.child_progress?.current_recipient ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Current recipient: {item.child_progress.current_recipient}</p> : null}<div className="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[7px] uppercase tracking-[0.08em] text-[#9a948b]">{item.owner ? <span>{item.owner}</span> : null}{item.lifecycle_stage ? <span>{String(item.lifecycle_stage).replaceAll('_', ' ')}</span> : null}{item.required_capabilities?.length ? <span>{item.required_capabilities.length} capabilities</span> : null}{item.child_progress?.total ? <span>{item.child_progress.settled}/{item.child_progress.total} calls</span> : null}{item.checkpoint_sequence ? <span>Checkpoint {item.checkpoint_sequence}</span> : null}</div>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
       })}
       {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
+      </div>
     </div>
     {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
   </section>;
@@ -515,8 +536,8 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
         </div> : null}
       </main>
-      {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Agent Runtime tasks" onClick={onCloseTasks} /> : null}
-      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
+      {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Runtime tasks" onClick={onCloseTasks} /> : null}
+      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Runtime tasks"><AgentRuntimeTasksPanel queue={tasks} growthBrief={growthBrief} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
     </div>
   </div>;
 }
@@ -747,9 +768,9 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   }));
   const firstLifeExperience = work.first_life_experience || null;
   const projectedOpportunities = firstLifeExperience?.opportunities || [];
-  const runtimeQueue = projectedOpportunities.length
-    ? projectedOpportunities
-    : (work.agent_runtime_tasks || work.runtime_queue || []).length ? (work.agent_runtime_tasks || work.runtime_queue) : lifecycleQueue;
+  const canonicalTasks = (work.agent_runtime_tasks || work.runtime_queue || []);
+  const projectedTasks = mergeRuntimeTaskProjection(canonicalTasks, projectedOpportunities);
+  const runtimeQueue = projectedTasks.length ? projectedTasks : lifecycleQueue;
   const firstLifePlan = work.first_life || work.activation_sprint || null;
   const queueActiveCount = runtimeQueue.filter((item) => ['RUNNING', 'READY'].includes(item.status)).length;
   const waitForInstructionAcceptance = async (instructionId) => {
@@ -846,7 +867,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         <RuntimeMark state={runtime?.state} />
         <div className="relative flex min-w-0 shrink-0 items-center gap-1.5">
           <TokenMeter usage={usage} />
-          <RuntimeButton icon={ListTodo} label="Tasks" badge={queueActiveCount || undefined} onClick={() => { if (window.matchMedia('(max-width: 1023px)').matches) setTasksOpen(true); else document.getElementById('agent-runtime-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} title="Agent Runtime tasks" />
+          <RuntimeButton icon={ListTodo} label="Tasks" badge={queueActiveCount || undefined} onClick={() => { if (window.matchMedia('(max-width: 1023px)').matches) setTasksOpen(true); else document.getElementById('agent-runtime-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} title="Runtime tasks" />
           <RuntimeButton icon={SlidersHorizontal} label="Instructions" trailing={ArrowUpRight} tone="solid" onClick={() => { setInstructionNotice(''); setInstructionsOpen(true); }} title="Standing operating instructions" />
           {!runtime
             ? <RuntimeButton icon={Power} label="Activate" tone="solid" onClick={() => run('activate')} disabled={!baselineReady || Boolean(busy)} spinning={busy === 'activate'} />
