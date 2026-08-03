@@ -2883,6 +2883,63 @@ class HiveMindApiClient {
     return data;
   }
 
+  /**
+   * sha256 of a File, in the browser. Used to ask the server "do you already have
+   * this?" BEFORE spending the upload.
+   *
+   * crypto.subtle needs a secure context; on http:// it is undefined. Returns null
+   * there so callers skip the pre-check and upload normally rather than breaking.
+   */
+  async fileChecksum(file) {
+    try {
+      if (!window.crypto?.subtle?.digest) return null;
+      const buf = await file.arrayBuffer();
+      const hash = await window.crypto.subtle.digest('SHA-256', buf);
+      return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      return null;
+    }
+  }
+  /**
+   * Ask whether a checksum is already ingested, before uploading the bytes.
+   *
+   * Without this the client had to transfer an entire file to learn it was a
+   * duplicate — a full 8.3 MB transfer to be told "already have it", and across a
+   * 27-file batch, most of the elapsed time. Sends only the hash.
+   *
+   * Returns { duplicate, in_progress, stage, existing_document_id, existing_title,
+   * promoted_count }. Fails OPEN: any error resolves to duplicate:false so a
+   * pre-check problem can never block a real upload.
+   */
+  async precheckUpload(checksum, { scopeKey = null } = {}) {
+    if (!checksum) return { duplicate: false, in_progress: false };
+    try {
+      const { data } = await this.core.post('/api/knowledge/upload/precheck', {
+        checksum, ...(scopeKey ? { scope_key: scopeKey } : {}),
+      });
+      return data || { duplicate: false, in_progress: false };
+    } catch {
+      return { duplicate: false, in_progress: false };
+    }
+  }
+  /**
+   * Runway self-serve: server-authoritative price for a scope config.
+   * config = { mode:'managed'|'self-hosted', dataGb, seats, tokens }.
+   * Returns { mode, config, currency, rows:[{label,detail,amount}], monthly_total, setup_one_time }.
+   */
+  async runwayQuote(config) {
+    const { data } = await this.controlPlane.post('/v1/billing/runway/quote', config);
+    return data;
+  }
+  /**
+   * Runway self-serve: start checkout for the configured scope. Returns
+   * { checkout_url, session_id, monthly_total }. Caller redirects to checkout_url.
+   */
+  async runwayCheckout(config) {
+    const { data } = await this.controlPlane.post('/v1/billing/runway/checkout', config);
+    return data;
+  }
+
 }
 
 const apiClient = new HiveMindApiClient();
