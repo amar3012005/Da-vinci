@@ -71,6 +71,10 @@ function App() {
   if (isPlatformAdminHost) {
     return (
       <Router>
+        <Helmet>
+          <title>HIVEMIND Admin — Commercial</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Helmet>
         <Routes>
           <Route
             path="*"
