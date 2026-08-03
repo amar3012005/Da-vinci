@@ -738,7 +738,7 @@ function CompanyRoomActivityRow({ room, tasks = [], active, onClick }) {
       : status === 'MONITORING' ? 'Monitoring'
         : status === 'NEEDS_ATTENTION' || status === 'BLOCKED' ? 'Attention'
           : task ? 'Waiting' : '';
-  return <motion.div layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8, height: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }}>
+  return <motion.div className="overflow-hidden" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }}>
     <button type="button" onClick={onClick} className={`flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors ${active ? 'bg-white' : 'hover:bg-white/80'}`}>
       <DomainIcon size={12} style={{ color: domain.color }} className="shrink-0" />
       <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#171717]">{room.name}</span>
