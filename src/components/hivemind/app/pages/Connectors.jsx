@@ -496,6 +496,13 @@ function ConnectorStatusBadge({ status }) {
       label: t('connectors.statusError', 'Error'),
       dot: 'bg-[#dc2626]',
     },
+    not_connected: {
+      bg: 'bg-[#f3f1ec]',
+      text: 'text-[#737373]',
+      border: 'border-[#e3e0db]',
+      label: t('connectors.statusNotConnected', 'Not connected'),
+      dot: 'bg-[#a3a3a3]',
+    },
     available: {
       bg: 'bg-[#f3f1ec]',
       text: 'text-[#525252]',
@@ -1038,12 +1045,12 @@ function EndpointTable({ endpoints, loading, onRefresh }) {
           {endpoints.map((ep, i) => (
             <tr key={ep.url || ep.name || i} className="border-b border-[#eae7e1] hover:bg-[#faf9f4] transition-colors">
               <td className="px-4 py-2.5">
-                <span className="text-[#525252] font-mono text-[11px] truncate block max-w-[280px]">
-                  {ep.url || ep.name}
+                <span className="text-[#525252] font-mono text-[11px] truncate block max-w-[280px]" title={ep.url || ep.name}>
+                  {ep.label || ep.name}
                 </span>
               </td>
               <td className="px-4 py-2.5">
-                <ConnectorStatusBadge status={ep.healthy ? 'connected' : 'error'} />
+                <ConnectorStatusBadge status={ep.state === 'not_connected' ? 'not_connected' : ep.healthy ? 'connected' : 'error'} />
               </td>
               <td className="px-4 py-2.5 text-[#525252] font-mono text-[11px]">
                 {ep.tool_count ?? ep.toolCount ?? '-'}
