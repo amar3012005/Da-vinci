@@ -14,6 +14,9 @@ gsap.registerPlugin(ScrollTrigger);
  * Props:
  *   frameDir      — public dir holding f_001.webp … (no leading slash)
  *   frameCount    — number of frames
+ *   scrubKeys     — optional [[scrollFrac, frameFrac], …] (monotonic, 0→1 both
+ *                    ends) remapping scroll to frames, so a beat can be held
+ *                    longer. Omit for the default linear scrub.
  *   videoSrc      — optional public video URL for scroll-scrubbing
  *   posterSrc     — optional fallback poster for reduced-motion/mobile
  *   steps         — [{ at: 0..1, label, sub?, accent? }] narration beats
@@ -26,6 +29,8 @@ gsap.registerPlugin(ScrollTrigger);
 const CinematicScrollScene = ({
   frameDir,
   frameCount,
+  scrubKeys = null,
+  heroTitle = null,
   videoSrc = '',
   posterSrc = '',
   steps = [],
@@ -50,6 +55,8 @@ const CinematicScrollScene = ({
   const pinRef = useRef(null);
   const canvasRef = useRef(null);
   const stepRefs = useRef([]);
+  const heroCenterRef = useRef(null);
+  const heroSideRef = useRef(null);
   const [reduced, setReduced] = useState(false);
 
   const framePath = (i) => `/${frameDir}/f_${String(i + 1).padStart(3, '0')}.webp`;
@@ -67,6 +74,8 @@ const CinematicScrollScene = ({
     const images = [];
     let loaded = 0;
     const state = { frame: 0 };
+    // assigned by the frame-sequence branch below; no-op in video mode
+    let requestFrame = () => {};
 
     const draw = () => {
       if (video) {
@@ -81,7 +90,17 @@ const CinematicScrollScene = ({
         try { ctx.drawImage(video, x, y, w, h); } catch { /* wait for decodable frame */ }
         return;
       }
-      const img = images[Math.round(state.frame)];
+      const idx = Math.round(state.frame);
+      requestFrame(idx);
+      let img = images[idx];
+      // A fast scrub can outrun the staged loader. Rather than blank the
+      // canvas, fall back to the nearest already-decoded earlier frame — the
+      // scrub reads as slightly coarse for a moment instead of empty.
+      if (!img || !img.complete) {
+        for (let k = idx - 1; k >= 0; k--) {
+          if (images[k] && images[k].complete) { img = images[k]; break; }
+        }
+      }
       if (!img || !img.complete) return;
       const cw = window.innerWidth, ch = window.innerHeight;
       const ir = img.width / img.height, cr = cw / ch;
@@ -110,13 +129,33 @@ const CinematicScrollScene = ({
       video.addEventListener('loadeddata', draw, { once: true });
       video.load();
     } else {
+      // Staged loading: these sequences are 15-25MB. Firing every request on
+      // mount saturates the connection and starves the hero/first paint —
+      // especially now that a scene sits directly under the cover slide.
+      // Load a head chunk so the scene can paint immediately, then stream the
+      // remainder on idle, in order, so the scrub is always ahead of the user.
+      const HEAD = Math.min(24, frameCount);
       const makeOnLoad = (i) => () => { loaded++; if (loaded === 1 || Math.round(state.frame) === i) draw(); };
-      for (let i = 0; i < frameCount; i++) {
+      const load = (i) => {
+        if (images[i]) return;
         const img = new Image();
         img.src = framePath(i);
         img.onload = makeOnLoad(i);
         images[i] = img;
-      }
+      };
+      // demand-load whatever the scrub is actually asking for, plus a small
+      // look-ahead, so scrubbing ahead of the idle pump still resolves fast
+      requestFrame = (i) => { for (let k = i; k < Math.min(i + 6, frameCount); k++) load(k); };
+      for (let i = 0; i < HEAD; i++) load(i);
+
+      const idle = window.requestIdleCallback || ((fn) => window.setTimeout(fn, 200));
+      let next = HEAD;
+      const pump = () => {
+        const stop = Math.min(next + 12, frameCount);
+        for (; next < stop; next++) load(next);
+        if (next < frameCount) idle(pump);
+      };
+      if (frameCount > HEAD) idle(pump);
     }
 
     window.addEventListener('resize', resize);
@@ -155,8 +194,47 @@ const CinematicScrollScene = ({
           draw();
         },
       }, 0);
+    } else if (scrubKeys && scrubKeys.length >= 2) {
+      // Non-linear scrub: piecewise-linear map from scroll fraction → frame
+      // fraction, so a chosen stretch of the film can be given a bigger share
+      // of the scroll (dwell on a beat) without changing the frame count.
+      for (let i = 1; i < scrubKeys.length; i++) {
+        const [s0, f0] = scrubKeys[i - 1];
+        const [s1, f1] = scrubKeys[i];
+        if (s1 <= s0) continue;
+        tl.fromTo(
+          state,
+          { frame: f0 * (frameCount - 1) },
+          { frame: f1 * (frameCount - 1), duration: s1 - s0, ease: 'none', onUpdate: draw },
+          s0,
+        );
+      }
     } else {
       tl.to(state, { frame: frameCount - 1, duration: 1, ease: 'none', onUpdate: draw }, 0);
+    }
+
+    // Hero title choreography, riding the same scrubbed timeline:
+    //   1. large + centred over the opening shot
+    //   2. shrinks away to the left as we move through, handing off to a
+    //      vertical side marker
+    //   3. the side marker clears entirely once the figure is on screen, so
+    //      nothing competes with the human moment or the end card.
+    if (heroTitle && heroCenterRef.current && heroSideRef.current) {
+      const { from = 0.06, to = 0.20, outFrom = 0.62, outTo = 0.72 } = heroTitle;
+      // Straight vanish — no drift. The wordmark simply goes as the window opens.
+      tl.to(heroCenterRef.current,
+        { opacity: 0, duration: Math.max(0.03, to - from), ease: 'power2.in' },
+        from);
+      // …then the side marker POPS in (opacity + a touch of scale, no slide).
+      // Only this inner node is animated; its parent owns the centring
+      // transform, which GSAP would otherwise overwrite.
+      tl.fromTo(heroSideRef.current,
+        { opacity: 0, scale: 0.9 },
+        { opacity: 1, scale: 1, duration: 0.045, ease: 'back.out(2.2)' },
+        to);
+      tl.to(heroSideRef.current,
+        { opacity: 0, duration: Math.max(0.04, outTo - outFrom), ease: 'power1.inOut' },
+        outFrom);
     }
 
     // narration reveals ride the SAME scrubbed timeline (fade/slide IN, then stay)
@@ -177,7 +255,7 @@ const CinematicScrollScene = ({
       if (!isLight) document.documentElement.classList.remove('cinematic-mode');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasVideo, videoSrc, isLight]);
+  }, [hasVideo, videoSrc, isLight, heroTitle]);
 
   if (reduced) {
     // mobile / reduced-motion: a tall poster header + the full narration stacked
@@ -227,18 +305,71 @@ const CinematicScrollScene = ({
     <section ref={wrapRef} className="relative w-full" style={{ height: `${heightVh}vh`, background: bg }}>
       <div ref={pinRef} className="relative h-screen w-full overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ display: 'block' }} />
-        {/* scrim on the right so the rail reads over any frame */}
+        {/* Film grain as an overlay, not baked into the frames: identical look
+            to the SINGULANCE splash, costs zero bytes per frame, and masks the
+            webp banding that smooth sky gradients otherwise show. Baking it in
+            cost ~8MB because noise is incompressible. */}
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-[440px]"
+          className="pointer-events-none absolute inset-0"
           style={{
-            background: isLight
-              ? 'linear-gradient(to left, rgba(251,251,248,0.85), rgba(251,251,248,0.3), transparent)'
-              : 'linear-gradient(to left, rgba(5,7,15,0.8), rgba(5,7,15,0.3), transparent)',
+            opacity: isLight ? 0.03 : 0.05,
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
           }}
         />
+        {/* scrim on the right so the rail reads over any frame — only when
+            there IS a rail; without steps it would just be a dark band. */}
+        {steps.length > 0 && (
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-[440px]"
+            style={{
+              background: isLight
+                ? 'linear-gradient(to left, rgba(251,251,248,0.85), rgba(251,251,248,0.3), transparent)'
+                : 'linear-gradient(to left, rgba(5,7,15,0.8), rgba(5,7,15,0.3), transparent)',
+            }}
+          />
+        )}
+
+        {/* Hero title: centred wordmark that hands off to a vertical side
+            marker, then clears. Replaces the static act label when used. */}
+        {heroTitle && (
+          <>
+            <div
+              ref={heroCenterRef}
+              className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-8"
+            >
+              <h2
+                className={`text-center font-['Space_Grotesk'] text-[clamp(34px,7vw,86px)] font-bold uppercase leading-[0.95] tracking-[0.06em] ${inkFull}`}
+                style={{ textShadow: isLight ? 'none' : '0 4px 40px rgba(0,0,0,0.45)' }}
+              >
+                {heroTitle.text}
+              </h2>
+            </div>
+            {/* Outer node owns the vertical centring; the inner node is what
+                GSAP animates, so the transform isn't fought over. */}
+            <div className="pointer-events-none absolute left-8 top-1/2 z-20 -translate-y-1/2 md:left-12 lg:left-16">
+              <div ref={heroSideRef} style={{ opacity: 0 }}>
+                <h2
+                  className={`font-['Space_Grotesk'] text-4xl font-bold uppercase leading-none tracking-tight ${inkStrong}`}
+                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', textShadow: isLight ? 'none' : '0 2px 24px rgba(0,0,0,0.5)' }}
+                >
+                  {heroTitle.text}
+                </h2>
+                {heroTitle.sub && (
+                  <p
+                    className="mt-3 font-mono text-[11px] uppercase tracking-[0.28em]"
+                    style={{ color: accentColor, textShadow: isLight ? 'none' : '0 2px 18px rgba(0,0,0,0.6)' }}
+                  >
+                    {heroTitle.sub}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* left act label — vertical "THE FALL" stage marker */}
-        {title && (
+        {!heroTitle && title && (
           <>
             <div
               className="pointer-events-none absolute inset-y-0 left-0 z-10 w-[280px]"

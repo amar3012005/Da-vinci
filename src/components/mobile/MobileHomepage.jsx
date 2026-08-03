@@ -5,7 +5,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ThemeProvider } from './ThemeContext';
 import MobileNavigation from './MobileNavigation';
 import MobileHero from './MobileHero';
-import FallScene from './FallScene';
+import HorizonScene from './HorizonScene';
+import SceneBridge from './SceneBridge';
+// PAUSED: Act II "THE FALL". The Horizon film now carries the opening on its
+// own and runs straight into the updates via SceneBridge. Re-add below
+// <HorizonScene /> to bring the pain narrative back.
+// import FallScene from './FallScene';
 import CinematicMode from './CinematicMode';
 import LatestUpdates from './LatestUpdates';
 import SubProducts from './SubProducts';
@@ -72,7 +77,9 @@ const PageContent = () => {
             <MobileNavigation />
             <CinematicMode />
             <MobileHero />
-            <FallScene field={field} />
+            <HorizonScene />
+            {/* <FallScene field={field} /> */}
+            <SceneBridge />
             <LatestUpdates />
             <SubProducts />
             <AudienceSection field={field} onChange={() => setPickerOpen(true)} />

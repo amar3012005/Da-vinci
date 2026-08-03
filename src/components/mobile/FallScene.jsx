@@ -82,6 +82,7 @@ const FallScene = ({ field }) => {
       steps={steps}
       title="THE FALL"
       subtitle={subtitle}
+      actLabel="Act II"
       staticFrame={150}
       staticHeadline="It falls — into memory."
       heightVh={440}

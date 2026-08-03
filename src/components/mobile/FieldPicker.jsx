@@ -3,9 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Scale, Banknote, Compass, Megaphone, Building2, HeartPulse, X } from 'lucide-react';
 
 /**
- * FieldPicker — a small board shown on first visit. The visitor picks the
- * function they run; the choice is persisted and drives the adaptive narration
- * section further down the page (AudienceSection). Cinematic dark, sharp edges.
+ * FieldPicker — a thin rail that slides in from the LEFT edge on first visit.
+ * The visitor picks the function they run; the choice is persisted and drives
+ * the adaptive narration further down the page (AudienceSection).
+ *
+ * Deliberately NOT a modal: the old centered dialog + blurred backdrop blocked
+ * the cover slide and the scroll cinematics on every visit. This rail floats
+ * over the left gutter, never traps scroll or clicks, and widens to reveal
+ * labels on hover. Same props as before ({ open, onPick, onClose }).
  */
 
 export const FIELDS = [
@@ -19,55 +24,67 @@ export const FIELDS = [
 
 const ease = [0.16, 1, 0.3, 1];
 
-const FieldPicker = ({ open, onPick, onClose }) => (
-  <AnimatePresence>
-    {open && (
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-center justify-center p-5"
-        style={{ background: 'rgba(5,7,15,0.72)', backdropFilter: 'blur(8px)' }}
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 24, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.98 }}
-          transition={{ duration: 0.5, ease }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-lg overflow-hidden rounded-xl border border-white/12 bg-[#0a0d18] p-7 shadow-[0_40px_120px_-30px_rgba(0,0,0,0.9)]"
-        >
-          <button onClick={onClose} aria-label="Close" className="absolute right-4 top-4 text-white/40 transition-colors hover:text-white">
-            <X size={18} />
-          </button>
+const FieldPicker = ({ open, onPick, onClose }) => {
+  // The rail belongs to the cover slide only — once the visitor scrolls into
+  // the cinematics it slides back out so nothing overlaps the pinned canvases.
+  const [pastCover, setPastCover] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onScroll = () => setPastCover(window.scrollY > window.innerHeight * 0.6);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-          <p className="font-mono text-[10px] uppercase tracking-[0.32em] text-white/45">Tailor your view</p>
-          <h2 className="font-['Space_Grotesk'] mt-3 text-2xl font-semibold tracking-tight text-white md:text-3xl">
+  return (
+  <AnimatePresence>
+    {open && !pastCover && (
+      // pointer-events-none on the wrapper so the rail never eats page clicks
+      <motion.div
+        // y:-50% rides the motion transform — a Tailwind -translate-y-1/2 class
+        // would be clobbered by framer's own transform and drop the rail low.
+        initial={{ x: '-100%', y: '-50%', opacity: 0 }}
+        animate={{ x: 0, y: '-50%', opacity: 1 }}
+        exit={{ x: '-100%', y: '-50%', opacity: 0 }}
+        transition={{ duration: 0.6, ease, delay: 0.05 }}
+        className="pointer-events-none fixed left-0 top-1/2 z-[200]"
+      >
+        <div className="pointer-events-auto group/rail flex flex-col items-stretch overflow-hidden rounded-r-md border-y border-r border-white/12 bg-[#0a0d18]/90 py-2 shadow-[0_24px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-md">
+          <p
+            className="px-3 pb-2 pt-1 font-mono text-[8px] uppercase tracking-[0.3em] text-white/35"
+            style={{ writingMode: 'vertical-rl' }}
+          >
             What do you run?
-          </h2>
-          <p className="mt-2 text-sm font-light leading-relaxed text-white/55">
-            Pick your function — we’ll show how SINGULANCE runs it as an AI workforce.
           </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {FIELDS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => onPick(id)}
-                className="group flex flex-col items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-4 text-left transition-colors hover:border-[#ff7a2f]/50 hover:bg-white/[0.06]"
-              >
-                <Icon size={20} className="text-white/60 transition-colors group-hover:text-[#ff7a2f]" />
-                <span className="text-[13px] font-medium text-white/85">{label}</span>
-              </button>
-            ))}
-          </div>
+          {FIELDS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => onPick(id)}
+              title={label}
+              aria-label={label}
+              className="group/item flex items-center gap-0 px-3 py-2.5 transition-colors hover:bg-white/[0.07]"
+            >
+              <Icon size={17} className="flex-shrink-0 text-white/55 transition-colors group-hover/item:text-[#ff7a2f]" />
+              {/* label unrolls only when the rail is hovered — keeps the strip thin */}
+              <span className="max-w-0 overflow-hidden whitespace-nowrap text-[12.5px] font-medium text-white/85 transition-all duration-300 group-hover/rail:ml-2.5 group-hover/rail:max-w-[130px]">
+                {label}
+              </span>
+            </button>
+          ))}
 
-          <button onClick={onClose} className="mt-6 text-[12px] font-medium text-white/45 transition-colors hover:text-white/80">
-            Or explore everything →
+          <button
+            onClick={onClose}
+            aria-label="Dismiss"
+            className="mt-1 flex items-center justify-center border-t border-white/10 px-3 pb-1 pt-2 text-white/30 transition-colors hover:text-white/70"
+          >
+            <X size={13} />
           </button>
-        </motion.div>
+        </div>
       </motion.div>
     )}
   </AnimatePresence>
-);
+  );
+};
 
 export default FieldPicker;
