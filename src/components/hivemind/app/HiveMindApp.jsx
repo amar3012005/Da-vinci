@@ -105,6 +105,14 @@ function PageSuspense({ children }) {
  * Mounts under /hivemind/app/* and /hivemind/login
  */
 export default function HiveMindApp() {
+  const isPlatformAdminHost = typeof window !== 'undefined'
+    && window.location.hostname === 'admin.hivemind.singulancelabs.com';
+  // The admin host deliberately exposes only the passkey-gated platform
+  // surface. API authorization remains server-side; this prevents normal
+  // product navigation and stale deep links from appearing on that hostname.
+  if (isPlatformAdminHost) {
+    return <Routes><Route path="*" element={<PageSuspense><PlatformAdmin /></PageSuspense>} /></Routes>;
+  }
   return (
     <AuthProvider>
       <Routes>
