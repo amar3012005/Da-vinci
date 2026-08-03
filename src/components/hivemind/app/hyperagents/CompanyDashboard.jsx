@@ -228,6 +228,16 @@ export default function CompanyDashboard({ onOpenRoom, onShowRoster, onOpenRunti
         focuses: runtimeFocuses,
         authority_policy: { internal_autonomy: true },
       });
+      if (result?.runtime?.id && result?.activation_event?.sequence) {
+        const epoch = result.runtime.epoch || result.runtime.activatedAt || result.runtime.createdAt || 'current';
+        const key = `hm_hq_runtime_stream:${result.runtime.id}:${epoch}`;
+        try {
+          window.sessionStorage.setItem(key, JSON.stringify({
+            cursor: String(result.activation_event.sequence),
+            events: [result.activation_event],
+          }));
+        } catch { /* persisted SSE hydration remains the fallback */ }
+      }
       try { window.localStorage.setItem(runtimeInviteStorageKey, 'seen'); } catch { /* noop */ }
       setRuntimeInvite(null);
       onOpenRuntime?.(result);
