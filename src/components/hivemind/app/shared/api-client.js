@@ -1207,8 +1207,8 @@ class HiveMindApiClient {
     return data;
   }
 
-  async unlockPlatformAdmin(passkey) {
-    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey });
+  async unlockPlatformAdmin(passkey, operatorName) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/unlock', { passkey, operator_name: operatorName });
     return data;
   }
 
@@ -1239,6 +1239,31 @@ class HiveMindApiClient {
 
   async revokePlatformPromotion(id) {
     const { data } = await this.controlPlane.post(`/admin/api/platform/promotions/${id}/revoke`);
+    return data;
+  }
+
+  async listPlatformPilots() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/pilots');
+    return data;
+  }
+
+  async listPlatformOrganizations() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/organizations');
+    return data;
+  }
+
+  async grantPlatformPilot(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/pilots/grant', payload);
+    return data;
+  }
+
+  async amendPlatformPilot(grantId, payload) {
+    const { data } = await this.controlPlane.post(`/admin/api/platform/pilots/${grantId}/entitlement`, payload);
+    return data;
+  }
+
+  async listPlatformRedemptions() {
+    const { data } = await this.controlPlane.get('/admin/api/platform/redemptions');
     return data;
   }
 
