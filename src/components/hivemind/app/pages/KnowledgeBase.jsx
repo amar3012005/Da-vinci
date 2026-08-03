@@ -43,7 +43,16 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
 };
 
+// Mirrors the server's FORMAT_PROFILES + tier cascade. The SERVER is the
+// authority on what it can parse — this list exists only to fail fast in the
+// browser instead of spending an upload on a rejection. When they disagree the
+// server wins, so err on the side of ALLOWING here: a false reject is invisible
+// to the user ("unsupported file type" for a workbook SheetJS reads natively),
+// while a false accept just surfaces the server's own clear 415.
 const ACCEPTED_EXTS = ['pdf', 'docx', 'txt', 'md', 'csv', 'tsv', 'xlsx', 'xls',
+  // Macro-enabled + OpenDocument siblings: same parsers as their twins
+  // (sheet-direct reads xlsm/ods natively), previously rejected client-side.
+  'xlsm', 'ods', 'docm', 'odt', 'rtf', 'epub', 'pptm', 'odp',
   // pptx/ppt are parsed by Docling server-side + listed in the picker accept=
   // attr; they were missing here, so the client rejected them before upload.
   'pptx', 'ppt', 'html', 'htm',
