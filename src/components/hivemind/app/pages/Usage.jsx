@@ -144,11 +144,12 @@ function MetricCard({ metric, data, spark, active, onClick }) {
   const barColor = danger ? '#dc2626' : warn ? '#d97706' : metric.accent;
   return (
     <button onClick={onClick}
-      className={`text-left bg-white rounded-2xl border p-4 flex flex-col gap-2.5 shadow-sm transition-all hover:shadow-md ${active ? 'border-[2px]' : 'border-[#e3e0db]'}`}
-      style={active ? { borderColor: metric.accent } : undefined}>
+      aria-pressed={active}
+      className="min-h-[148px] text-left border-b border-[#e6e3dd] px-1 py-4 flex flex-col gap-2.5 transition-colors hover:bg-[#faf9f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#117dff]"
+      style={active ? { borderBottomColor: metric.accent, borderBottomWidth: 2 } : undefined}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${metric.accent}14` }}>
+          <div className="w-8 h-8 flex items-center justify-center" style={{ background: `${metric.accent}14` }}>
             <Icon size={16} style={{ color: metric.accent }} />
           </div>
           <div>
@@ -264,25 +265,25 @@ export default function Usage() {
       </div>
 
       {/* Hero graph */}
-      <div className="bg-white rounded-2xl border border-[#e3e0db] p-5 shadow-sm mb-4">
+      <section className="mb-7 border-y border-[#e6e3dd] py-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <heroMetric.icon size={17} style={{ color: heroMetric.accent }} />
             <span className="text-sm font-semibold text-[#0a0a0a] font-['Space_Grotesk']">{heroMetric.label} · per day</span>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 justify-end">
             {METRICS.map((m) => (
               <button key={m.key} onClick={() => setMetricKey(m.key)}
-                className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${metricKey === m.key ? 'text-white' : 'text-[#666] hover:bg-[#faf9f4] border border-[#e3e0db]'}`}
+                className={`px-2 py-1 text-[11px] font-medium transition-colors ${metricKey === m.key ? 'text-white' : 'text-[#666] hover:bg-[#faf9f4]'}`}
                 style={metricKey === m.key ? { background: m.accent } : undefined}>{m.label}</button>
             ))}
           </div>
         </div>
         <BarChart values={seriesByKey[metricKey] || []} days={axis} accent={heroMetric.accent} />
-      </div>
+      </section>
 
       {/* Metric cards (click → set hero) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-0">
         {METRICS.map((m, i) => (
           <motion.div key={m.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: i * 0.03 }}>
             <MetricCard metric={m} data={data?.[m.key]} spark={(seriesByKey[m.key] || []).slice(-14)}
