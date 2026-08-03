@@ -26,6 +26,7 @@ import {
 import apiClient from '../shared/api-client';
 import { useApiQuery, useDebounce } from '../shared/hooks';
 import { useTeamContext } from '../shared/team-context';
+import { filterUserVisibleMemories } from '../shared/memory-filters';
 import UsageTracker from '../components/UsageTracker';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1087,7 +1088,7 @@ export default function Memories() {
   const resolvedList = useMemo(() => {
     if (isSearching) {
       const results = searchData?.results || searchData?.memories || searchData || [];
-      return Array.isArray(results) ? results : [];
+      return filterUserVisibleMemories(Array.isArray(results) ? results : []);
     }
     const base = listData?.memories || listData?.results || listData || [];
     const arr = Array.isArray(base) ? base : [];
@@ -1107,7 +1108,7 @@ export default function Memories() {
     if (activeCognitiveRole) {
       result = result.filter((m) => m.cognitive_layer_role === activeCognitiveRole);
     }
-    return result;
+    return filterUserVisibleMemories(result);
   }, [isSearching, searchData, listData, allMemories, offset, activeCognitiveRole]);
 
   // Total count from API pagination (server-side truth), not client array length
@@ -1139,6 +1140,8 @@ export default function Memories() {
     return Array.from(tags).sort();
   // eslint-disable-next-line no-unused-vars
   }, [resolvedList]);
+  // eslint-disable-next-line no-unused-vars
+  const visibleMemoryCount = resolvedList.length;
 
   // ─── Handlers ───────────────────────────────────────────────────
 
@@ -1574,7 +1577,7 @@ function MemoriesTab({
   const resolvedList = useMemo(() => {
     if (isSearching) {
       const results = searchData?.results || searchData?.memories || searchData || [];
-      return Array.isArray(results) ? results : [];
+      return filterUserVisibleMemories(Array.isArray(results) ? results : []);
     }
     const base = listData?.memories || listData?.results || listData || [];
     const arr = Array.isArray(base) ? base : [];
@@ -1594,7 +1597,7 @@ function MemoriesTab({
     if (activeCognitiveRole) {
       result = result.filter((m) => m.cognitive_layer_role === activeCognitiveRole);
     }
-    return result;
+    return filterUserVisibleMemories(result);
   }, [isSearching, searchData, listData, allMemories, offset, activeCognitiveRole]);
 
   // Total count from API pagination (server-side truth), not client array length
@@ -1619,6 +1622,11 @@ function MemoriesTab({
     resolvedList.forEach((m) => (m.tags || []).forEach((t) => tags.add(t)));
     return Array.from(tags).sort();
   }, [resolvedList]);
+  const visibleMemoryCount = resolvedList.length;
+  const displayedMemoryCount = Math.min(
+    totalCount ?? profileMemoryCount ?? visibleMemoryCount,
+    visibleMemoryCount,
+  );
 
   // ─── Handlers ───────────────────────────────────────────────────
 
@@ -1943,7 +1951,7 @@ function MemoriesTab({
               <p className="text-[#d4d0ca] text-[11px] font-mono mb-3">
                 {isSearching
                   ? t('memories.searchResultCount', '{{count}} result{{suffix}}', { count: resolvedList.length, suffix: resolvedList.length !== 1 ? 's' : '' })
-                  : t('memories.memoryCount', '{{count}} memories', { count: totalCount != null ? totalCount : (profileMemoryCount != null ? profileMemoryCount : resolvedList.length) })}
+                  : t('memories.memoryCount', '{{count}} memories', { count: displayedMemoryCount })}
                 {loading && <Loader2 size={10} className="inline-block ml-2 animate-spin" />}
               </p>
 

@@ -120,6 +120,7 @@ export default function LoginPage() {
   );
 
   const [showOnboarding, setShowOnboarding] = useState(wantsCreate);
+  const [loadArtwork, setLoadArtwork] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [accountType, setAccountType] = useState(null);
   const [hostingChoice, setHostingChoice] = useState(null); // 'managed' | 'self_hosted'
@@ -135,6 +136,18 @@ export default function LoginPage() {
     () => new URLSearchParams(location.search).get('onboarding_error'),
     [location.search]
   );
+
+  // The poster is decorative. Give the sign-in controls and auth bootstrap the
+  // first network slot, then hydrate the visual once the page is usable.
+  useEffect(() => {
+    const schedule = window.requestIdleCallback
+      ? window.requestIdleCallback(() => setLoadArtwork(true), { timeout: 1500 })
+      : window.setTimeout(() => setLoadArtwork(true), 900);
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(schedule);
+      else window.clearTimeout(schedule);
+    };
+  }, []);
 
   // Restore an interrupted OAuth signup on the login surface. This keeps
   // enterprise setup out of /app while avoiding a second round of questions.
@@ -698,11 +711,14 @@ export default function LoginPage() {
 
           {/* Right pane — poster fills its half edge-to-edge */}
           <div className={`hidden md:block bg-[#f8f7f2] overflow-hidden relative ${showOnboarding ? 'md:w-[576px]' : 'md:w-[448px]'}`}>
-            <img
-              src="/images/hivemind-login-art.webp"
-              alt="HIVEMIND memory system"
-              className="h-full w-full object-cover object-top block"
-            />
+            {loadArtwork && (
+              <img
+                src="/images/hivemind-login-art.webp"
+                alt="HIVEMIND memory system"
+                decoding="async"
+                className="h-full w-full object-cover object-top block"
+              />
+            )}
             {/* mono caption over the art, supermemory-style */}
             <div className="absolute bottom-3 left-0 right-0 flex justify-center">
               <span className="px-2.5 py-1 rounded-[4px] bg-black/35 backdrop-blur-sm text-white/85 text-[9px] font-mono uppercase tracking-[0.26em]">

@@ -44,7 +44,7 @@ function splitSections(md) {
 const _CTA_RE = /^\s*(next steps?|call to action|closing|get started|ready to|let'?s talk|book (a|your)|get in touch|take action)\b/i;
 const _isEmailSubject = (b) => /^\s*\*{0,2}subject\s*:/i.test(b);
 
-export default function BrochureReport({ report, eyebrow, title, taskTitle, accent = '#B0836A' }) {
+export default function BrochureReport({ report, eyebrow, title, taskTitle, accent = '#B0836A', surface = 'card' }) {
   const content = String(report?.content || '');
   if (!content.trim()) return null;
   const secs = splitSections(content);
@@ -59,8 +59,8 @@ export default function BrochureReport({ report, eyebrow, title, taskTitle, acce
   const displayTitle = runTitle || (taskTitle ? String(taskTitle).slice(0, 90) : '') || title;
 
   return (
-    <div className="hyper-brochure rounded-2xl overflow-hidden"
-      style={{ background: B.ground, color: B.ink, fontFamily: B.sans }}>
+    <div className={`hyper-brochure overflow-hidden ${surface === 'room' ? '' : 'rounded-2xl'}`}
+      style={{ background: surface === 'room' ? 'transparent' : B.ground, color: B.ink, fontFamily: B.sans }}>
       {/* Outer reading frame — centered column, brochure horizontal padding */}
       <div className="mx-auto" style={{ maxWidth: 'min(100%, 960px)', padding: '0 clamp(20px, 4vw, 48px) 44px' }}>
 

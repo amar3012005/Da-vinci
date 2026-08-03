@@ -79,9 +79,9 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
   const tDesc = description ? t(`topbar.descriptions.${routeSlug}`, { defaultValue: description }) : '';
 
   return (
-    <header className="h-14 bg-[#faf9f4]/90 backdrop-blur-xl border-b border-[#e3e0db] flex items-center justify-between px-6 sticky top-0 z-30">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-center border-b border-[#e3e0db] bg-[#faf9f4]/90 px-3 backdrop-blur-xl md:justify-between md:px-6">
       {/* Left: Title + Description + Team switcher */}
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="hidden min-w-0 items-center gap-4 lg:flex">
         <div>
           <h1 className="text-[#0a0a0a] text-[15px] font-semibold font-['Space_Grotesk'] tracking-tight leading-none">
             {tTitle}
@@ -113,7 +113,7 @@ export default function TopBar({ activeSection = 'hivemind', onSectionChange }) 
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2">
+      <div className="hidden items-center gap-2 md:flex">
         {/* Global Search */}
         <button
           onClick={() => navigate('/hivemind/app/memories')}

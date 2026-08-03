@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Mic,
   Save,
   Play,
   Clock,
@@ -380,20 +379,16 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
     setErr(null);
     setCallState('dialing');
     try {
-      const r = await fetch(`${apiBase}/calls/outbound`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: phone.trim(),
-          session_id: `out-${Date.now()}`,
-          user_id: identity?.userId,
-          org_id: identity?.orgId,
-          company: identity?.orgName || undefined,
-          language: callLang,
-          goal: goal.trim() || undefined,
-        }),
+      // Dial through the control plane, never the adapter directly: the
+      // adapter's gate needs a shared key the browser must not hold, so the
+      // direct call 401'd. Tenant + provider are resolved server-side.
+      const d0 = await apiClient.startTaraOutbound({
+        to: phone.trim(),
+        language: callLang,
+        company: identity?.orgName || undefined,
+        goal: goal.trim() || undefined,
       });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `HTTP ${r.status}`); }
+      const r = { ok: true, json: async () => d0 };
       const d = await r.json();
       setCallLegId(d.call_leg_id);
     } catch (e) {
@@ -404,7 +399,7 @@ function OutboundPanel({ identity, onSwitchTab, language = 'en' }) {
 
   const hangup = async () => {
     if (!callLegId) return;
-    try { await fetch(`${apiBase}/calls/outbound/${callLegId}/hangup`, { method: 'POST' }); } catch { /* ignore */ }
+    try { await apiClient.hangupTaraOutbound(callLegId); } catch { /* ignore */ }
     setCallState('ended');
     stopPoll();
   };
@@ -669,16 +664,22 @@ export default function TaraConfig() {
   }, []);
   const [calls, setCalls] = useState([]);
   const [callDetail, setCallDetail] = useState(null); // { call, turns, insight }
+  const [runtimeConfig, setRuntimeConfig] = useState(null);
+  const [providerSaving, setProviderSaving] = useState(false);
 
   const refreshCalls = () => apiClient.listTaraCalls(30).then(setCalls).catch(() => {});
-  // Poll the call list so a just-ended call's insight + leads land in the
-  // dashboard within seconds — no manual Refresh. The post-call insight is
-  // generated synchronously at /calls/end, so a short poll surfaces it ASAP.
+  // MERGE: both sides kept deliberately.
+  //  - main added 5s polling so a just-ended call's insight + leads land in the
+  //    dashboard without a manual Refresh (the insight is generated synchronously
+  //    at /calls/end, so a short poll surfaces it ASAP).
+  //  - reconcile/live-fe-meeting added the runtime-config fetch.
+  // Taking either alone would silently drop the other session's feature.
   useEffect(() => {
     refreshCalls();
     const id = setInterval(refreshCalls, 5000);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => { apiClient.getTaraRuntimeConfig().then(setRuntimeConfig).catch(() => {}); }, []);
 
   const openCall = (id) => apiClient.getTaraCall(id).then(setCallDetail).catch(() => {});
 
@@ -701,6 +702,18 @@ export default function TaraConfig() {
       .then((d) => setIdentity({ userId: d?.user?.id || null, orgId: d?.organization?.id || null, orgName: d?.organization?.name || null, role: d?.user?.role || null }))
       .catch(() => {});
   }, []);
+  const canManageProvider = ['owner', 'admin'].includes(String(identity.role || '').toLowerCase());
+  const switchProvider = async (provider) => {
+    // Guard on runtimeConfig: before it loads, reading .revision below threw and
+    // the click silently did nothing. Buttons are also disabled until it arrives.
+    if (!canManageProvider || !runtimeConfig || provider === runtimeConfig.default_provider) return;
+    setProviderSaving(true);
+    try {
+      const next = await apiClient.updateTaraRuntimeConfig({ default_provider: provider, expected_revision: runtimeConfig.revision });
+      setRuntimeConfig(next);
+    } catch { /* stale or unauthorized state remains visible */ }
+    finally { setProviderSaving(false); }
+  };
 
   return (
     <motion.div
@@ -712,22 +725,29 @@ export default function TaraConfig() {
       {/* Header — eyebrow + big title + subtitle (Workspace-Admin style) */}
       <motion.div variants={fadeUp} className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-[#a3a3a3] mb-1">
-            <Mic size={12} className="text-[#117dff]" /> HIVEMIND
-          </div>
           <h1 className="text-[#0a0a0a] text-3xl font-bold font-['Space_Grotesk'] leading-tight">TARA × HIVEMIND</h1>
           <p className="text-[#737373] text-[14px] mt-1">{t('taraconfig.subtitle', 'Voice agent conversational runtime — real-time STT, recall-grounded answers, TTS.')}</p>
+        </div>
+        <div className="flex items-center rounded-lg border border-[#e3e0db] overflow-hidden text-[12px] font-semibold">
+          {['deepgram', 'grok'].map((provider) => (
+            <button key={provider} type="button" disabled={!canManageProvider || providerSaving || !runtimeConfig}
+              title={!runtimeConfig ? 'Loading provider configuration…' : (!canManageProvider ? 'Owners and admins can change the voice provider' : `Use ${provider}`)}
+              onClick={() => switchProvider(provider)}
+              className={`px-3 py-2 capitalize ${runtimeConfig?.default_provider === provider ? 'bg-[#117dff] text-white' : 'bg-white text-[#525252]'} disabled:cursor-default`}>
+              {provider}
+            </button>
+          ))}
         </div>
       </motion.div>
 
       {/* Talk to TARA — self-hosted AaaS (STT→tara_stream→TTS, one service).
           The ONE Start. Voice/lang config + current-turn chat live inside. */}
       <motion.div variants={fadeUp}>
-        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} language={(i18n.language || 'en').split('-')[0]} />
+        <AaasVoiceWidget userId={identity.userId} orgId={identity.orgId} provider={runtimeConfig?.default_provider || 'deepgram'} language={(i18n.language || 'en').split('-')[0]} />
       </motion.div>
 
       {/* Stat cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-2">
         {[
           { icon: Play, label: 'Total Calls', value: String(calls.length), color: '#117dff' },
           { icon: Clock, label: 'Minutes', value: totalMinutes.toFixed(1), color: '#117dff' },
@@ -735,10 +755,13 @@ export default function TaraConfig() {
           { icon: Zap, label: 'Tokens', value: totalTokens.toLocaleString(), color: '#117dff' },
           { icon: TrendingUp, label: 'Goal Rate', value: accuracy === null ? '—' : `${accuracy}%`, color: '#16a34a' },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-[#e3e0db] rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            <s.icon size={15} style={{ color: s.color }} />
-            <p className="text-[#0a0a0a] text-xl font-bold font-['Space_Grotesk'] tabular-nums mt-2">{s.value}</p>
-            <p className="text-[#a3a3a3] text-[10px] font-mono uppercase tracking-wider mt-0.5">{s.label}</p>
+          // Compact single-line tile: icon + value inline, label beneath.
+          <div key={s.label} className="bg-white border border-[#e3e0db] rounded-lg px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <div className="flex items-center gap-1.5">
+              <s.icon size={12} style={{ color: s.color }} />
+              <p className="text-[#0a0a0a] text-[15px] font-bold font-['Space_Grotesk'] tabular-nums leading-none">{s.value}</p>
+            </div>
+            <p className="text-[#a3a3a3] text-[9px] font-mono uppercase tracking-wider mt-1 truncate">{s.label}</p>
           </div>
         ))}
       </motion.div>
