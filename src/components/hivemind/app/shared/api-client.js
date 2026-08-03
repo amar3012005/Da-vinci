@@ -335,6 +335,11 @@ class HiveMindApiClient {
     return data;
   }
 
+  async provideHqPlaybookInput(runId, inputKey, value) {
+    const { data } = await this.controlPlane.post(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/inputs/${encodeURIComponent(inputKey)}`, { value });
+    return data;
+  }
+
   async addHqInstruction(instruction) {
     const { data } = await this.controlPlane.post('/v1/hq/instructions', { instruction });
     return data;
