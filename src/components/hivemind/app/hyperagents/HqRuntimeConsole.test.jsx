@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, mergeRuntimeTaskProjection, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, collectRuntimeArtifacts, mergeRuntimeTaskProjection, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
 
 test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Brief first', () => {
@@ -22,7 +22,8 @@ test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Br
       },
     ]} onDecision={() => {}} />);
 
-  expect(markup).toContain('aria-label="Runtime tasks"');
+  expect(markup).toContain('aria-label="Artifacts and Runtime tasks"');
+  expect(markup).toContain('Artifacts');
   expect(markup).toContain('Growth brief');
   expect(markup).toContain('Improve the primary customer journey');
   expect(markup).toContain('Start recommended work');
@@ -33,6 +34,18 @@ test('renders one truthful domain-neutral Runtime Tasks panel with the Growth Br
   expect(markup).not.toContain('>Ready<');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
   expect(markup.indexOf('Growth brief')).toBeLessThan(markup.indexOf('Improve the primary customer journey'));
+});
+
+test('projects unique persisted Runtime artifacts from the brief and task checkpoints', () => {
+  expect(collectRuntimeArtifacts([
+    { artifact_refs: [{ id: 'receipt-1', key: 'provider_receipt', status: 'ACCEPTED' }] },
+    { artifact_refs: [{ id: 'receipt-1', key: 'provider_receipt', status: 'ACCEPTED' }, { id: 'report-1', key: 'room_report' }] },
+  ], { baseline_id: 'baseline-1', plan_id: 'plan-1', evidence_refs: ['baseline-1'] })).toEqual([
+    { id: 'baseline-1', key: 'company_baseline' },
+    { id: 'plan-1', key: 'growth_plan' },
+    { id: 'receipt-1', key: 'provider_receipt', status: 'ACCEPTED' },
+    { id: 'report-1', key: 'room_report' },
+  ]);
 });
 
 test('keeps later user-instruction todos in the same queue as first-life opportunities', () => {

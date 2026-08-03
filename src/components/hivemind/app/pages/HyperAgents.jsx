@@ -233,6 +233,7 @@ export default function HyperAgents() {
   const [error, setError] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showAgentRooms, setShowAgentRooms] = useState(false);
+  const [runtimeWork, setRuntimeWork] = useState({ agent_runtime_tasks: [] });
   const domainRoomsEnsuredRef = useRef(false);
   // viewMode: 'hero' (company dashboard — /employees/mycompany, the landing)
   // | 'runtime' | 'leads' | 'campaigns' | 'thread' (room chat) | 'roster'.
@@ -306,6 +307,19 @@ export default function HyperAgents() {
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
+  useEffect(() => {
+    let active = true;
+    apiClient.getHqWork().then((work) => { if (active) setRuntimeWork(work || { agent_runtime_tasks: [] }); }).catch(() => {});
+    const synchronize = (event) => {
+      if (active && event.detail?.work) setRuntimeWork(event.detail.work);
+    };
+    window.addEventListener('hq-runtime-projection', synchronize);
+    return () => {
+      active = false;
+      window.removeEventListener('hq-runtime-projection', synchronize);
+    };
+  }, []);
+
   const handleDeleteRoom = useCallback(async (room) => {
     if (!window.confirm(t('hyperAgents.confirmDeleteRoom', 'Permanently delete #{{name}}? This removes the room and all its discussion. Cannot be undone.', { name: room.name }))) return;
     try {
@@ -348,6 +362,22 @@ export default function HyperAgents() {
     () => domainHomeRooms.filter((room) => room.id !== hqRoom?.id),
     [domainHomeRooms, hqRoom?.id],
   );
+  const roomAssignments = useMemo(() => {
+    const assignments = new Map();
+    const visibleStatuses = new Set(['READY', 'RUNNING', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING', 'NEEDS_ATTENTION', 'BLOCKED']);
+    for (const task of runtimeWork.agent_runtime_tasks || runtimeWork.runtime_queue || []) {
+      const owner = String(task?.owner || '').trim().toLowerCase();
+      const status = String(task?.status || '').toUpperCase();
+      if (!owner || !visibleStatuses.has(status)) continue;
+      if (!assignments.has(owner)) assignments.set(owner, []);
+      assignments.get(owner).push(task);
+    }
+    return assignments;
+  }, [runtimeWork]);
+  const assignedAgentRooms = useMemo(() => agentHomeRooms.filter((room) => (
+    roomAssignments.has(String(room.room_tag || room.roomTag || '').toLowerCase())
+  )), [agentHomeRooms, roomAssignments]);
+  const displayedAgentRooms = showAgentRooms ? agentHomeRooms : assignedAgentRooms;
   const workRooms = useMemo(() => liveRooms.filter(room => !room.is_domain_home), [liveRooms]);
 
   // ── First-run gate: Polsia-style company onboarding ────────────────
@@ -497,32 +527,30 @@ export default function HyperAgents() {
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
-          <div className="px-3 pt-2 pb-1 text-[9.5px] font-mono uppercase tracking-wider text-[#a3a3a3]">
-            {t('hyperAgents.companyRooms', 'Company rooms')}
-          </div>
           {agentHomeRooms.length > 0 ? (
             <div className="mt-1 border-y border-[#e3e0db] bg-white/45">
               <button
                 type="button"
                 onClick={() => setShowAgentRooms((current) => !current)}
-                aria-expanded={showAgentRooms}
+                aria-expanded={showAgentRooms || assignedAgentRooms.length > 0}
                 className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[10px] font-semibold text-[#525252] transition-colors hover:bg-white"
               >
-                <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-violet-500" />View agent rooms <span className="font-mono text-[9px] text-[#a3a3a3]">{agentHomeRooms.length}</span></span>
-                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms ? 'rotate-180' : ''}`} />
+                <span className="inline-flex items-center gap-1.5"><Users size={11} className="text-[#525252]" />{t('hyperAgents.companyRooms', 'Company rooms')}{assignedAgentRooms.length ? <span className="font-mono text-[8px] text-[#185bcc]">{assignedAgentRooms.length} active</span> : null}</span>
+                <ChevronDown size={13} className={`text-[#737373] transition-transform ${showAgentRooms || assignedAgentRooms.length ? 'rotate-180' : ''}`} />
               </button>
-              {showAgentRooms ? (
-                <div className="border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
-                  {agentHomeRooms.map(r => (
-                    <RoomRow
-                      key={r.id}
-                      room={r}
-                      active={r.id === activeRoomId && viewMode === 'thread'}
-                      onClick={() => goMode('thread', r.id)}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <AnimatePresence initial={false}>
+                {displayedAgentRooms.length ? <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-[#e3e0db] bg-[#faf9f4] pb-1">
+                  <AnimatePresence initial={false}>
+                    {displayedAgentRooms.map((room) => <CompanyRoomActivityRow
+                      key={room.id}
+                      room={room}
+                      tasks={roomAssignments.get(String(room.room_tag || room.roomTag || '').toLowerCase()) || []}
+                      active={room.id === activeRoomId && viewMode === 'thread'}
+                      onClick={() => goMode('thread', room.id)}
+                    />)}
+                  </AnimatePresence>
+                </motion.div> : null}
+              </AnimatePresence>
             </div>
           ) : null}
           {workRooms.length > 0 && (
@@ -698,6 +726,32 @@ export default function HyperAgents() {
 }
 
 /* ─── Room row in the left rail ──────────────────────────────────────── */
+
+function CompanyRoomActivityRow({ room, tasks = [], active, onClick }) {
+  const domain = domainRoomDefinition(room.room_tag || room.roomTag || 'general');
+  const DomainIcon = domain.icon;
+  const task = tasks.find((candidate) => String(candidate.status).toUpperCase() === 'RUNNING') || tasks[0] || null;
+  const status = String(task?.status || '').toUpperCase();
+  const working = status === 'RUNNING';
+  const capsuleLabel = working ? 'Working'
+    : status === 'READY' ? 'Queued'
+      : status === 'MONITORING' ? 'Monitoring'
+        : status === 'NEEDS_ATTENTION' || status === 'BLOCKED' ? 'Attention'
+          : task ? 'Waiting' : '';
+  return <motion.div layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8, height: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }}>
+    <button type="button" onClick={onClick} className={`flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors ${active ? 'bg-white' : 'hover:bg-white/80'}`}>
+      <DomainIcon size={12} style={{ color: domain.color }} className="shrink-0" />
+      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#171717]">{room.name}</span>
+      {task ? <span title={task.title} aria-label={`${room.name} ${capsuleLabel.toLowerCase()}`} className={`relative h-5 w-[72px] shrink-0 overflow-hidden rounded-full border ${working ? 'border-[#84a9ef] bg-[#10285f]' : 'border-[#d8d3cc] bg-white'}`}>
+        {working ? <>
+          <motion.span aria-hidden="true" className="absolute -inset-y-4 -left-8 w-20 rotate-12 rounded-full bg-gradient-to-r from-[#152d66] via-[#72a4ff] to-[#1f4ba8] blur-[5px]" animate={{ x: [-30, 68, -30] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }} />
+          <motion.span aria-hidden="true" className="absolute -inset-y-3 left-8 w-16 -rotate-12 rounded-full bg-gradient-to-r from-transparent via-[#b8d2ff] to-transparent blur-[6px]" animate={{ x: [32, -48, 32] }} transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }} />
+        </> : null}
+        <span className={`relative z-10 grid h-full place-items-center font-mono text-[7px] uppercase tracking-[0.08em] ${working ? 'text-white' : status === 'NEEDS_ATTENTION' || status === 'BLOCKED' ? 'text-[#9a3412]' : 'text-[#777168]'}`}>{capsuleLabel}</span>
+      </span> : null}
+    </button>
+  </motion.div>;
+}
 
 function RoomRow({ room, active, onClick, archived, onDelete }) {
   const { t } = useTranslation('dashboard');

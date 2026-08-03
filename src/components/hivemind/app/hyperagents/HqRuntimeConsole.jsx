@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, ArrowRight, ArrowUpRight, Check, Clock3, Cable, Send,
   Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles,
   TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo, RotateCcw,
-  ChevronLeft, ChevronRight,
+  ChevronDown, ChevronLeft, ChevronRight, FileText,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
 import { AuthorityReviewContent, CallPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
@@ -286,20 +286,62 @@ export function GrowthBrief({ brief, embedded = false }) {
   </section>;
 }
 
+function artifactLabel(key) {
+  const value = String(key || 'runtime artifact').replaceAll('_', ' ').trim();
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Runtime artifact';
+}
+
+export function collectRuntimeArtifacts(queue = [], growthBrief = null) {
+  const artifacts = [];
+  if (growthBrief?.baseline_id) artifacts.push({ id: growthBrief.baseline_id, key: 'company_baseline' });
+  if (growthBrief?.plan_id) artifacts.push({ id: growthBrief.plan_id, key: 'growth_plan' });
+  for (const ref of growthBrief?.evidence_refs || []) {
+    artifacts.push(typeof ref === 'string' ? { id: ref, key: 'planning_evidence' } : ref);
+  }
+  for (const task of queue || []) {
+    for (const ref of task.artifact_refs || []) artifacts.push(ref);
+  }
+  const unique = new Map();
+  for (const artifact of artifacts) {
+    if (!artifact?.id || unique.has(String(artifact.id))) continue;
+    unique.set(String(artifact.id), artifact);
+  }
+  return [...unique.values()];
+}
+
 export function AgentRuntimeTasksPanel({ queue, growthBrief, firstLife, experience, onDecision, onClose }) {
   const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
-  return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Runtime tasks">
-    <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Runtime Tasks</span><span className="font-mono text-[8px] text-white/65">{queue.length} tasks · {active.length} active</span>{onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="grid h-7 w-7 place-items-center text-white/70 hover:bg-white/10 hover:text-white lg:hidden"><X size={14} /></button> : null}</header>
-    <div className="max-h-[min(68vh,620px)] overflow-y-auto">
-      {growthBrief ? <div className="border-b border-[#d8d3cc]"><GrowthBrief brief={growthBrief} embedded /></div> : null}
-      <div className="p-2">
+  const artifacts = collectRuntimeArtifacts(queue, growthBrief);
+  const [artifactsOpen, setArtifactsOpen] = useState(true);
+  const [tasksExpanded, setTasksExpanded] = useState(true);
+  return <section id="agent-runtime-tasks" className="relative w-full overflow-hidden rounded-[14px] border border-[#e3e0db] bg-white shadow-[0_14px_36px_-30px_rgba(0,0,0,0.55)]" aria-label="Artifacts and Runtime tasks">
+    {onClose ? <button type="button" onClick={onClose} aria-label="Close Runtime tasks" title="Close" className="absolute right-3 top-3 z-10 grid h-7 w-7 place-items-center rounded-full text-[#8a8577] hover:bg-[#f2f0eb] hover:text-[#171717] lg:hidden"><X size={14} /></button> : null}
+    <div className="max-h-[min(72vh,680px)] overflow-y-auto">
+      {growthBrief ? <div className="border-b border-[#ece9e4]"><GrowthBrief brief={growthBrief} embedded /></div> : null}
+      <section className="border-b border-[#ece9e4]" aria-label="Runtime artifacts">
+        <button type="button" onClick={() => setArtifactsOpen((current) => !current)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={artifactsOpen}>
+          <span className="flex-1 text-[13px] font-medium text-[#777168]">Artifacts</span>
+          <span className="font-mono text-[8px] text-[#9a948b]">{artifacts.length}</span>
+          <ChevronDown size={14} className={`text-[#777168] transition-transform ${artifactsOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {artifactsOpen ? <div className="space-y-1 px-4 pb-3">
+          {artifacts.slice(0, 6).map((artifact) => <div key={artifact.id} className="flex items-center gap-2 rounded-[6px] px-1 py-1.5"><FileText size={13} className="shrink-0 text-[#262626]" /><span className="min-w-0 flex-1 truncate text-[11px] text-[#393733]">{artifactLabel(artifact.key)}</span><span className="font-mono text-[7px] uppercase text-[#9a948b]">{artifact.status || ''}</span></div>)}
+          {!artifacts.length ? <p className="px-1 pb-1 text-[10px] text-[#9a948b]">Artifacts appear here as Room and provider checkpoints are accepted.</p> : null}
+        </div> : null}
+      </section>
+      <section aria-label="Runtime tasks">
+        <button type="button" onClick={() => setTasksExpanded((current) => !current)} className="flex w-full items-center gap-2 px-4 py-3 text-left" aria-expanded={tasksExpanded}>
+          <ListTodo size={14} className="text-[#262626]" /><span className="flex-1 text-[13px] font-medium text-[#777168]">Runtime Tasks</span><span className="font-mono text-[8px] text-[#9a948b]">{queue.length} · {active.length} active</span><ChevronDown size={14} className={`text-[#777168] transition-transform ${tasksExpanded ? 'rotate-180' : ''}`} />
+        </button>
+        {tasksExpanded ? <div className="border-t border-[#f0ede8] p-2">
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
         const blocker = queueBlockerSummary(item.blocker || item.blocked_reason);
         return <article key={item.id} className={`border-b border-[#ebe8e3] px-2 py-3 last:border-b-0 ${item.recommended ? 'border-l-2 border-l-[#171717] bg-white' : ''}`}><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="flex items-start gap-2"><div className="flex-1 text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div>{item.recommended ? <span className="font-mono text-[7px] uppercase tracking-[0.08em] text-[#525252]">Recommended</span> : null}</div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.expected_outcome ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Outcome: {item.expected_outcome}</p> : null}{item.selection_reason ? <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-[#777168]">{item.selection_reason}</p> : null}{item.child_progress?.current_recipient ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Current recipient: {item.child_progress.current_recipient}</p> : null}<div className="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[7px] uppercase tracking-[0.08em] text-[#9a948b]">{item.owner ? <span>{item.owner}</span> : null}{item.lifecycle_stage ? <span>{String(item.lifecycle_stage).replaceAll('_', ' ')}</span> : null}{item.required_capabilities?.length ? <span>{item.required_capabilities.length} capabilities</span> : null}{item.child_progress?.total ? <span>{item.child_progress.settled}/{item.child_progress.total} calls</span> : null}{item.checkpoint_sequence ? <span>Checkpoint {item.checkpoint_sequence}</span> : null}</div>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
       })}
       {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
-      </div>
+        </div> : null}
+      </section>
     </div>
     {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
   </section>;
