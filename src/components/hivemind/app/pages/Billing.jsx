@@ -366,6 +366,7 @@ export default function Billing() {
   const [referralCode, setReferralCode] = useState('');
   const [dummyConfirming, setDummyConfirming] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState('');
+  const [billingError, setBillingError] = useState('');
 
   const { data: profile } = useApiQuery(
     () => apiClient.getProfile().catch(() => null),
@@ -406,6 +407,7 @@ export default function Billing() {
 
   const subscription = billing?.subscription || {};
   const currentPlan = billing?.plan?.id || profile?.plan || org?.plan || 'free';
+  const canManageBilling = Boolean(billing?.can_manage_billing);
   const isEnterpriseWorkspace = billing?.billing_model === 'enterprise_contract' || currentPlan === 'enterprise';
   const enterpriseEngagement = billing?.enterprise_engagement || null;
   const dummyCheckoutId = searchParams.get('dummy_checkout');
@@ -455,6 +457,7 @@ export default function Billing() {
   }, [checkoutState, refetchBilling, refetchInvoices, refetchUsage, setSearchParams]);
 
   const handleUpgrade = async (planId) => {
+    if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
     if (isEnterpriseWorkspace) return;
     setUpgrading(true);
     try {
@@ -467,20 +470,21 @@ export default function Billing() {
     } catch (e) {
       console.error('Upgrade failed:', e);
       const msg = e?.response?.data?.error || e.message || 'Upgrade failed.';
-      alert(`Upgrade failed: ${msg}`);
+      setBillingError(`Upgrade failed: ${msg}`);
     } finally {
       setUpgrading(false);
     }
   };
 
   const handleEnterpriseCheckout = async () => {
+    if (!canManageBilling) { setBillingError('Only an organization owner or admin can change the subscription.'); return; }
     setUpgrading(true);
     try {
       const res = await apiClient.createEnterpriseCheckout();
       if (!res?.checkout_url) throw new Error('Enterprise checkout is unavailable.');
       window.location.href = res.checkout_url;
     } catch (error) {
-      alert(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
+      setBillingError(error?.response?.data?.error || error.message || 'Enterprise checkout failed.');
       setUpgrading(false);
     }
   };
@@ -492,24 +496,35 @@ export default function Billing() {
       setSearchParams({}, { replace: true });
       await refetchBilling();
     } catch (e) {
-      alert(e?.response?.data?.error || e.message || 'Checkout confirmation failed.');
+      setBillingError(e?.response?.data?.error || e.message || 'Checkout confirmation failed.');
     } finally {
       setDummyConfirming(false);
     }
   };
 
   const handleManageSubscription = async () => {
+    if (!canManageBilling) { setBillingError('Only an organization owner or admin can manage payment details.'); return; }
     try {
       const res = await apiClient.createBillingPortal();
       if (res?.portal_url) window.location.href = res.portal_url;
     } catch (e) {
       const msg = e?.response?.data?.error || e.message;
-      alert(`Could not open billing portal: ${msg}`);
+      setBillingError(`Could not open billing portal: ${msg}`);
     }
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {billingError && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <span>{billingError}</span><button type="button" onClick={() => setBillingError('')} className="text-xs font-semibold">Dismiss</button>
+        </div>
+      )}
+      {billing && !canManageBilling && (
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+          You can view your workspace plan and shared allowance. Contact an organization owner or admin for invoices, payment details, or subscription changes.
+        </div>
+      )}
       {dummyCheckoutId && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -582,7 +597,7 @@ export default function Billing() {
                 </div>
               )}
             </div>
-            {!isEnterpriseWorkspace && subscription?.stripe_customer_id && (
+            {canManageBilling && !isEnterpriseWorkspace && subscription?.stripe_customer_id && (
               <button
                 onClick={handleManageSubscription}
                 className="px-3 py-1.5 rounded-lg border border-[#e3e0db] bg-white hover:bg-[#f3f1ec] text-[#525252] text-[11px] font-medium font-['Space_Grotesk']"
@@ -666,7 +681,7 @@ export default function Billing() {
       </motion.div>
 
       {/* Invoices */}
-      {invoiceList?.invoices?.length > 0 && (
+      {canManageBilling && invoiceList?.invoices?.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -766,7 +781,7 @@ export default function Billing() {
               key={plan.id}
               plan={plan}
               currentPlan={currentPlan}
-              onSelect={(id) => setUpgradeModal(id)}
+              onSelect={(id) => canManageBilling ? setUpgradeModal(id) : setBillingError('Only an organization owner or admin can change the subscription.')}
             />
           ))}
         </div>
@@ -808,7 +823,7 @@ export default function Billing() {
         </div>
       </div>
 
-      {!isEnterpriseWorkspace && upgradeModal && (
+      {canManageBilling && !isEnterpriseWorkspace && upgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

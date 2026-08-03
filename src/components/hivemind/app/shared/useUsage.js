@@ -76,6 +76,10 @@ function wireGlobalEvents() {
   };
   window.addEventListener(USAGE_CHANGED_EVENT, onChanged);
   window.addEventListener(PLAN_LIMIT_EVENT, onChanged);
+  window.addEventListener('hm:tenant-changed', () => {
+    // Never retain an organization-scoped meter across account/org switches.
+    cache = null; inflight = null; loading = false; notify();
+  });
 }
 
 /**
