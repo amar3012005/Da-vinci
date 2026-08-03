@@ -7,6 +7,7 @@ import MobileHomepage from './components/mobile/MobileHomepage';
 // Hivemind
 const HivemindRedirect = React.lazy(() => import('./components/hivemind/HivemindRedirect'));
 const HiveMindApp = React.lazy(() => import('./components/hivemind/app/HiveMindApp'));
+const PlatformAdmin = React.lazy(() => import('./components/hivemind/app/pages/PlatformAdmin'));
 const HivemindLogin = React.lazy(() => import('./components/hivemind/app/auth/HivemindLogin'));
 
 // Research pages (three.js hero scenes → lazy)
@@ -17,6 +18,7 @@ const CsiResearch = React.lazy(() => import('./components/CsiResearch'));
 const PostQuantumResearch = React.lazy(() => import('./components/research/PostQuantumResearch'));
 
 const HIVEMIND_SITE_HOST = process.env.REACT_APP_HIVEMIND_SITE_HOST || 'hivemind.davinciai.eu';
+const PLATFORM_ADMIN_HOST = 'admin.hivemind.singulancelabs.com';
 
 // PRODUCT_HOST — this domain serves the WHOLE product on ONE host (singulancelabs.com):
 //   /              → SINGULANCE marketing cover (DavinciHomepage)
@@ -58,11 +60,26 @@ const MarketingHomepage = () => (
 );
 
 function App() {
+  const isPlatformAdminHost =
+    typeof window !== 'undefined' && window.location.hostname === PLATFORM_ADMIN_HOST;
   const isHivemindHost =
     typeof window !== 'undefined' && (
       window.location.hostname === HIVEMIND_SITE_HOST ||
       window.location.protocol === 'file:'
     );
+
+  if (isPlatformAdminHost) {
+    return (
+      <Router>
+        <Routes>
+          <Route
+            path="*"
+            element={<React.Suspense fallback={<div className="min-h-screen bg-[#FBFBF8]" />}><PlatformAdmin /></React.Suspense>}
+          />
+        </Routes>
+      </Router>
+    );
+  }
 
   return (
     <Router>
