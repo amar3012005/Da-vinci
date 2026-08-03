@@ -649,7 +649,16 @@ function MemoryDetailPanel({ memory, onClose, onDelete, onViewEvidence, orgKey }
   useEffect(() => {
     apiClient.getMemoryEvidence(memory.id)
       .then(data => {
-        const count = data?.evidence?.length || data?.length || 0;
+        // The API returns { success, memoryId, evidenceLinks: [...], count } — not `evidence`,
+        // and not a bare array. Reading `data.evidence?.length || data.length` always
+        // evaluated to 0, so the "Evidence — source segments and citations" tab showed nothing
+        // for EVERY memory in EVERY storage mode, hybrid included. Verified against a real
+        // memory holding one link: the endpoint returned {"evidenceLinks":[…1…],"count":1}
+        // while this expression computed 0.
+        const count = Array.isArray(data?.evidenceLinks) ? data.evidenceLinks.length
+          : Number.isFinite(data?.count) ? data.count
+            : Array.isArray(data) ? data.length
+              : 0;
         setEvidenceCount(count);
       })
       .catch(() => setEvidenceCount(0));
