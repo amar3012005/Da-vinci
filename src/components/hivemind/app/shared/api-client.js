@@ -1227,6 +1227,18 @@ class HiveMindApiClient {
     return data;
   }
 
+  async listPlatformPlans({ planId } = {}) {
+    const { data } = await this.controlPlane.get('/admin/api/platform/plans', {
+      params: planId ? { plan_id: planId } : undefined,
+    });
+    return data;
+  }
+
+  async updatePlatformPlanCaps(payload) {
+    const { data } = await this.controlPlane.post('/admin/api/platform/plans', payload);
+    return data;
+  }
+
   async listPlatformPromotions() {
     const { data } = await this.controlPlane.get('/admin/api/platform/promotions');
     return data;
