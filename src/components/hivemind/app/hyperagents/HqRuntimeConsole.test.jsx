@@ -1,6 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentRuntimeTasksPanel, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
 
 test('renders one truthful domain-neutral Agent Runtime task panel', () => {
   const markup = renderToStaticMarkup(<AgentRuntimeTasksPanel firstLife={{
@@ -30,4 +31,27 @@ test('projects Runtime lifecycle waits from canonical snapshot data', () => {
   expect(projectLifecycleQueueStatus({ status: 'WAITING_EVENT', waiting_for: { types: ['capability.connected'] } })).toBe('WAITING_FOR_CONNECTOR');
   expect(projectLifecycleQueueStatus({ status: 'WAITING_EVENT', waiting_for: { types: ['provider.reply'] } })).toBe('MONITORING');
   expect(projectLifecycleQueueStatus({ status: 'NEEDS_INTERVENTION' })).toBe('NEEDS_ATTENTION');
+});
+
+test('renders persisted campaign actions in platform-native review frames', () => {
+  const markup = renderToStaticMarkup(<CampaignLaunchPreview campaign={{
+    name: 'SINGULANCE', status: 'READY_FOR_APPROVAL', actions: [
+      { id: 'x', channel: 'x_organic', payload: { text: 'A truthful text-only post.' }, assets: [] },
+      { id: 'instagram', channel: 'instagram', payload: { final_copy: 'An Instagram launch note.' }, assets: [] },
+      { id: 'linkedin', channel: 'linkedin', payload: { final_copy: 'A LinkedIn launch note.' }, assets: [] },
+    ],
+  }} />);
+  expect(markup).toContain('aria-label="X post preview"');
+  expect(markup).toContain('aria-label="Instagram post preview"');
+  expect(markup).toContain('aria-label="LinkedIn post preview"');
+  expect(markup).toContain('“A truthful text-only post.”');
+});
+
+test('renders persisted email content as a Gmail composer preview', () => {
+  const markup = renderToStaticMarkup(<GmailMessagePreview message={{
+    to: 'lead@example.com', subject: 'A relevant idea', body: 'Grounded message body.',
+  }} />);
+  expect(markup).toContain('aria-label="Gmail message preview"');
+  expect(markup).toContain('lead@example.com');
+  expect(markup).toContain('Grounded message body.');
 });
