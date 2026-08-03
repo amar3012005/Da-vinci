@@ -579,7 +579,7 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experi
         </div> : null}
       </main>
       {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Runtime tasks" onClick={onCloseTasks} /> : null}
-      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Runtime tasks"><AgentRuntimeTasksPanel queue={tasks} growthBrief={growthBrief} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
+      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime inspector"><AgentRuntimeTasksPanel queue={tasks} growthBrief={growthBrief} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
     </div>
   </div>;
 }
