@@ -378,6 +378,14 @@ function StreamedText({ children, active = false, className = '' }) {
   return <p className={className}>{visible}{active && visible.length < text.length ? <span className="ml-0.5 inline-block h-[1em] w-px animate-pulse bg-current align-[-0.12em]" /> : null}</p>;
 }
 
+function LiveModelNarration({ stream }) {
+  if (!stream?.text && stream?.phase !== 'start') return null;
+  return <div className="my-7 first:mt-0" aria-live="polite" aria-label="Runtime response streaming">
+    <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8a8577]"><Power size={13} className="text-[#171717]" />[ Waking up ]<span className="ml-auto text-[8px] tracking-normal text-[#aaa49c]">live</span></div>
+    <p className="mt-3 max-w-4xl font-serif text-[19px] leading-8 text-[#292824]">{stream.text}<span className="ml-0.5 inline-block h-[1em] w-px animate-pulse bg-current align-[-0.12em]" /></p>
+  </div>;
+}
+
 function ExecutionTrace({ items }) {
   return <div className="my-5 ml-1 border-l border-[#ddd9d1] pl-5">
     {items.map((item, index) => {
@@ -414,7 +422,7 @@ function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, tasksOpen = false, onCloseTasks }) {
+function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -435,7 +443,8 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growth
     <div className="ml-auto grid w-full max-w-[1420px] items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
       <main className="min-w-0">{chunks.map((chunk) => chunk.type === 'execution'
         ? <ExecutionTrace key={`execution-${chunk.items[0]?.sequence}`} items={chunk.items} />
-        : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && String(chunk.item.sequence) === String(liveSequence || '')} />)}
+        : <NarrativeEvent key={chunk.item.id || chunk.item.sequence} item={chunk.item} active={working && chunk.item.details?.model_streamed !== true && String(chunk.item.sequence) === String(liveSequence || '')} />)}
+        <LiveModelNarration stream={liveNarration} />
         {working ? <div className="mt-7 border border-[#e7e4df] bg-white/70 px-4 py-3">
           <RuntimeLoader variant={STATE_GLYPH[state] || 'matrix'} label={(STATE_LABEL[state] || ['Thinking'])[0]} hint={(STATE_LABEL[state] || [null, 'Working through the next bounded action.'])[1]} />
         </div> : null}
@@ -480,6 +489,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const [runtimeInputValue, setRuntimeInputValue] = useState('');
   const [runtimeInputBusy, setRuntimeInputBusy] = useState(false);
   const [liveSequence, setLiveSequence] = useState(null);
+  const [liveNarration, setLiveNarration] = useState(null);
   const [streamState, setStreamState] = useState('hydrating');
   const cursorRef = useRef('0');
   const streamCacheKeyRef = useRef(null);
@@ -498,6 +508,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     knownEventSequencesRef.current.add(String(item.sequence));
     setLiveSequence(String(item.sequence));
     setEvents((current) => mergeEvents(current, [item]));
+    const completedStreamId = String(item?.details?.stream_id || '');
+    if (completedStreamId) setLiveNarration((current) => String(current?.streamId || '') === completedStreamId ? null : current);
     eventDrainTimerRef.current = window.setTimeout(drainEvents, 700);
   }, []);
   const enqueueEvents = useCallback((rows = []) => {
@@ -589,6 +601,22 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       }, 400);
     } catch { /* malformed edge event */ } };
     source.addEventListener('hq_event', onEvent);
+    const onStreamDelta = (message) => { try {
+      const item = JSON.parse(message.data);
+      const streamId = String(item?.stream_id || '');
+      if (!streamId || item?.type !== 'model_stream') return;
+      if (item.phase === 'start') {
+        setLiveNarration({ streamId, phase: 'start', text: '' });
+        return;
+      }
+      if (item.phase === 'delta') {
+        const delta = String(item.delta || '');
+        setLiveNarration((current) => ({ streamId, phase: 'delta', text: `${String(current?.streamId) === streamId ? current?.text || '' : ''}${delta}` }));
+        return;
+      }
+      if (item.phase === 'done') setLiveNarration((current) => String(current?.streamId || '') === streamId ? { ...current, phase: 'done' } : current);
+    } catch { /* malformed transient model delta */ } };
+    source.addEventListener('hq_stream_delta', onStreamDelta);
     return () => { active = false; source.close(); window.clearTimeout(stateRefreshTimerRef.current); };
   }, [runtime?.id, enqueueEvents]);
   useEffect(() => {
@@ -760,7 +788,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
     {playbookInput && playbookInput.run_id !== dismissedInputRunId ? <div className="fixed inset-0 z-[71] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={playbookInput.label}><form onSubmit={provideRuntimeInput} className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedInputRunId(playbookInput.run_id)} aria-label="Close information request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">Information required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookInput.label}</h3><p className="mt-2 text-[12px] leading-5 text-[#777168]">{playbookInput.description}</p></div><div className="p-5"><input autoFocus type={playbookInput.value_type === 'email' ? 'email' : 'tel'} value={runtimeInputValue} onChange={(event) => setRuntimeInputValue(event.target.value)} placeholder={playbookInput.value_type === 'phone' ? '+49...' : 'name@company.com'} className="h-11 w-full border border-[#d8d3cc] bg-white px-3 text-[13px] outline-none focus:border-[#171717]" /><div className="mt-4 flex justify-end"><button type="submit" disabled={!runtimeInputValue.trim() || runtimeInputBusy} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{runtimeInputBusy ? 'Saving...' : 'Continue Runtime'}</button></div></div></form></div> : null}
