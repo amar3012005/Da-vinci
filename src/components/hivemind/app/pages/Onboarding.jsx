@@ -85,11 +85,16 @@ export default function OnboardingFlow() {
       : (saved.name ? `${saved.name}'s Workspace` : (saved.hivemind_name || 'My Workspace'));
     const dep = saved.deployment === 'selfhost' || saved.deployment === 'self_hosted' ? 'selfhost' : 'managed';
     const accessCode = `${saved.enterprise_access_code || ''}`.trim();
+    const signupTicket = `${saved.signup_ticket || ''}`.trim();
     setEnterpriseAccessCode(accessCode);
     setReferralCode(String(saved.referral_code || '').trim().toUpperCase());
     if (isEnt && !accessCode) {
       // Account setup belongs on the login surface, never inside /app.
       window.location.replace('/hivemind/login?create=1&onboarding_error=missing_enterprise_code');
+      return;
+    }
+    if (!signupTicket) {
+      window.location.replace('/hivemind/login?create=1&onboarding_error=invitation_required');
       return;
     }
     (async () => {
@@ -100,6 +105,8 @@ export default function OnboardingFlow() {
           plan: isEnt ? 'enterprise' : 'free',
           deployment: dep,
           enterprise_access_code: isEnt ? accessCode : undefined,
+          signup_ticket: signupTicket,
+          referralCode: String(saved.referral_code || '').trim() || undefined,
         });
         try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         if (created?.organization?.billing_action_required) { window.location.href = '/hivemind/app/billing?phase=onboarding'; return; }

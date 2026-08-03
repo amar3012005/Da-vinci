@@ -153,19 +153,29 @@ class HiveMindApiClient {
     return `${this.controlPlane.defaults.baseURL}/auth/login${qs ? `?${qs}` : ''}`;
   }
 
-  getGoogleLoginUrl(returnTo) {
+  getGoogleLoginUrl(returnTo, signupTicket) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
+    if (signupTicket) params.set('signup_ticket', signupTicket);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/google${qs ? `?${qs}` : ''}`;
   }
 
-  getRegisterUrl(returnTo, idpHint) {
+  getRegisterUrl(returnTo, idpHint, signupTicket) {
     const params = new URLSearchParams();
     if (returnTo) params.set('return_to', returnTo);
     if (idpHint) params.set('idp_hint', idpHint);
+    if (signupTicket) params.set('signup_ticket', signupTicket);
     const qs = params.toString();
     return `${this.controlPlane.defaults.baseURL}/auth/register${qs ? `?${qs}` : ''}`;
+  }
+
+  async requestSignupAdmission({ accountType, invitationCode }) {
+    const { data } = await this.controlPlane.post('/auth/signup-admission', {
+      account_type: accountType,
+      invitation_code: invitationCode,
+    });
+    return data;
   }
 
   /**

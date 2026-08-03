@@ -132,6 +132,8 @@ export default function LoginPage() {
     return params.get('enterprise_code') || new URLSearchParams(window.location.search).get('enterprise_code') || '';
   });
   const [referralCode, setReferralCode] = useState('');
+  const [personalInvitationCode, setPersonalInvitationCode] = useState('');
+  const [createError, setCreateError] = useState('');
   const onboardingError = useMemo(
     () => new URLSearchParams(location.search).get('onboarding_error'),
     [location.search]
@@ -198,7 +200,20 @@ export default function LoginPage() {
     }
   }, [userName, enterpriseName, accountType]);
 
-  const handleCreateAccount = (provider = 'google') => {
+  const handleCreateAccount = async (provider = 'google') => {
+    setCreateError('');
+    const accessCode = accountType === 'personal' ? personalInvitationCode.trim() : enterpriseAccessCode.trim();
+    if (!accessCode) {
+      setCreateError(accountType === 'personal' ? 'Enter the invitation code to continue.' : 'Enter the Enterprise access code to continue.');
+      return;
+    }
+    let admission;
+    try {
+      admission = await apiClient.requestSignupAdmission({ accountType, invitationCode: accessCode });
+    } catch {
+      setCreateError('This invitation is unavailable.');
+      return;
+    }
     const onboardingIntent = {
       type: accountType,
       name: userName,
@@ -207,6 +222,7 @@ export default function LoginPage() {
       deployment: accountType === 'enterprise' ? (hostingChoice || 'managed') : 'managed',
       enterprise_access_code: enterpriseAccessCode.trim(),
       referral_code: referralCode.trim() || null,
+      signup_ticket: admission.signup_ticket,
     };
     // Save onboarding data for post-auth pickup
     try {
@@ -224,13 +240,13 @@ export default function LoginPage() {
       || `${window.location.origin}/hivemind/app/overview?auth=callback&onboarding=true#onboarding=${intentFragment}`;
     if (provider === 'zitadel') {
       // Zitadel with prompt=create → shows registration screen
-      window.location.href = apiClient.getRegisterUrl(returnTo);
+      window.location.href = apiClient.getRegisterUrl(returnTo, undefined, admission.signup_ticket);
     } else if (provider === 'microsoft' || provider === 'apple') {
       // Federated registration through ZITADEL's matching IdP
-      window.location.href = apiClient.getRegisterUrl(returnTo, provider);
+      window.location.href = apiClient.getRegisterUrl(returnTo, provider, admission.signup_ticket);
     } else {
       // Google OAuth auto-creates accounts
-      window.location.href = apiClient.getGoogleLoginUrl(returnTo);
+      window.location.href = apiClient.getGoogleLoginUrl(returnTo, admission.signup_ticket);
     }
   };
 
@@ -243,6 +259,8 @@ export default function LoginPage() {
     setEnterpriseName('');
     setHivemindName('');
     setEnterpriseAccessCode('');
+    setPersonalInvitationCode('');
+    setCreateError('');
     setReferralCode('');
   };
 
@@ -507,25 +525,38 @@ export default function LoginPage() {
                         <input value={hivemindName} onChange={e => setHivemindName(e.target.value)} placeholder={`${userName || 'your'}_secondbrain`} className={INPUT_CLS} />
                         <p className="text-[11px] text-[#a3a3a3] mt-1">This is your memory workspace name</p>
                       </div>
+                      <div>
+                        <label className={LABEL_CLS}>Invitation code</label>
+                        <input
+                          value={personalInvitationCode}
+                          onChange={e => setPersonalInvitationCode(e.target.value)}
+                          placeholder="Enter your invitation code"
+                          maxLength={128}
+                          autoComplete="off"
+                          className={`${INPUT_CLS} font-mono`}
+                        />
+                        <p className="text-[11px] text-[#a3a3a3] mt-1">Personal workspaces are currently available by invitation.</p>
+                      </div>
+                      {(createError || onboardingError) && <p role="alert" className="text-[12px] text-red-600">{createError || 'Your invitation could not be verified. Please try again.'}</p>}
                       <button
                         onClick={() => handleCreateAccount('google')}
-                        disabled={!userName.trim()}
+                        disabled={!userName.trim() || !personalInvitationCode.trim()}
                         className="w-full h-11 rounded-[6px] bg-[#117dff] hover:bg-[#0066e0] disabled:opacity-40 text-white font-semibold text-[12px] font-['Space_Grotesk'] uppercase tracking-[0.08em] transition-all cursor-pointer border-none flex items-center justify-center gap-2"
                       >
                         <span className="w-5 h-5 rounded-[4px] bg-white flex items-center justify-center"><GoogleIcon size={12} /></span>
                         Continue with Google
                       </button>
                       <div className="flex items-center gap-2">
-                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && handleCreateAccount('microsoft')}>
+                        <ProviderTile label="Create with Microsoft" onClick={() => userName.trim() && personalInvitationCode.trim() && handleCreateAccount('microsoft')}>
                           <MicrosoftIcon size={14} /><span className="text-[12px] font-medium">Microsoft</span>
                         </ProviderTile>
-                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && handleCreateAccount('apple')}>
+                        <ProviderTile label="Create with Apple" onClick={() => userName.trim() && personalInvitationCode.trim() && handleCreateAccount('apple')}>
                           <AppleIcon size={15} /><span className="text-[12px] font-medium">Apple</span>
                         </ProviderTile>
                       </div>
                       <button
                         onClick={() => handleCreateAccount('zitadel')}
-                        disabled={!userName.trim()}
+                        disabled={!userName.trim() || !personalInvitationCode.trim()}
                         className="w-full h-10 rounded-[6px] bg-white hover:bg-[#faf9f4] disabled:opacity-40 text-[#0a0a0a] font-medium text-[12px] font-['Space_Grotesk'] transition-all cursor-pointer border border-[#e3e0db] hover:border-[#0a0a0a] flex items-center justify-center gap-2"
                       >
                         <Shield size={13} className="text-[#117dff]" /> Enterprise SSO (EU Sovereign)
