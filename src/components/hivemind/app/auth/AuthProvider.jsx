@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
   const [connectivity, setConnectivity] = useState(null);
   const [clientSupport, setClientSupport] = useState([]);
   const bootstrapAttempted = useRef(false);
+  const activeTenantRef = useRef(null);
   const location = useLocation();
 
   const runBootstrap = useCallback(async () => {
@@ -43,6 +44,8 @@ export function AuthProvider({ children }) {
       setClientSupport(data.client_support || []);
 
       if (data.authenticated === false || !data.user) {
+        if (activeTenantRef.current) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
+        activeTenantRef.current = null;
         setUser(null);
         setOrg(null);
         setOnboarding(null);
@@ -55,6 +58,9 @@ export function AuthProvider({ children }) {
         setOrg(data.organization || null);
         setOnboarding(data.onboarding || null);
         setAuthState('signed_in');
+        const nextTenant = `${data.organization?.id || ''}:${data.user?.id || ''}`;
+        if (activeTenantRef.current && activeTenantRef.current !== nextTenant) window.dispatchEvent(new CustomEvent('hm:tenant-changed'));
+        activeTenantRef.current = nextTenant;
         if (data.organization?.id) {
           try { localStorage.removeItem('hivemind_onboarding'); } catch { /* ignore */ }
         }
@@ -156,6 +162,8 @@ export function AuthProvider({ children }) {
     setOrg(null);
     setOnboarding(null);
     setAuthState('signed_out');
+    activeTenantRef.current = null;
+    try { window.dispatchEvent(new CustomEvent('hm:tenant-changed')); } catch { /* noop */ }
     // Purge this account's chat caches + storage identity so the next login
     // on this device starts clean (the cross-account cache bug).
     try { setStorageUser(null); clearUserScopedStorage(); } catch { /* noop */ }
