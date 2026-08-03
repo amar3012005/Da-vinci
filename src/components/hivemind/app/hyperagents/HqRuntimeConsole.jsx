@@ -254,17 +254,20 @@ function queueBlockerSummary(reason) {
   }
   return trimmed.length > 180 ? `${trimmed.slice(0, 177)}...` : trimmed;
 }
-function GrowthBrief({ brief }) {
+export function GrowthBrief({ brief }) {
   if (!brief) return null;
   return <section className="mb-3 border border-[#d8d3cc] bg-white px-4 py-3" aria-label="Growth brief">
     <div className="font-mono text-[8px] uppercase tracking-[0.15em] text-[#8a8577]">Growth brief</div>
-    <div className="mt-2 text-[12px] font-semibold leading-5 text-[#262626]">{brief.primary_constraint?.statement || brief.primary_constraint?.type || brief.current_position || 'Current position retained'}</div>
-    {brief.recommended_motion?.title ? <p className="mt-1 text-[10px] leading-4 text-[#777168]">Recommended: {brief.recommended_motion.title}</p> : null}
+    {brief.current_position ? <p className="mt-2 text-[10px] leading-4 text-[#777168]">{brief.current_position}</p> : null}
+    <div className="mt-2 text-[12px] font-semibold leading-5 text-[#262626]">{brief.primary_constraint?.statement || brief.primary_constraint?.type || 'Current position retained'}</div>
+    {brief.supporting_evidence?.length ? <p className="mt-1 text-[10px] leading-4 text-[#525252]">{brief.supporting_evidence.slice(0, 2).join(' ')}</p> : null}
+    {brief.recommended_motion?.title ? <div className="mt-3 border-l-2 border-[#171717] pl-2"><div className="text-[10px] font-semibold text-[#262626]">{brief.recommended_motion.title}</div>{brief.recommended_motion.selection_reason ? <p className="mt-0.5 text-[9px] leading-4 text-[#777168]">{brief.recommended_motion.selection_reason}</p> : null}</div> : null}
+    {brief.material_unknowns?.length ? <p className="mt-2 text-[9px] leading-4 text-[#8c6514]">Unknown: {brief.material_unknowns.slice(0, 2).join('; ')}</p> : null}
     <div className="mt-2 flex gap-3 font-mono text-[7px] uppercase tracking-[0.1em] text-[#9a948b]"><span>{brief.confidence || 'Evidence bounded'}</span><span>{brief.evidence_refs?.length || 0} evidence refs</span></div>
   </section>;
 }
 
-export function AgentRuntimeTasksPanel({ queue, firstLife, onDecision, onClose }) {
+export function AgentRuntimeTasksPanel({ queue, firstLife, experience, onDecision, onClose }) {
   const active = queue.filter((item) => ['RUNNING', 'READY', 'WAITING_FOR_AUTHORITY', 'WAITING_FOR_CONNECTOR', 'MONITORING'].includes(item.status));
   return <section id="agent-runtime-tasks" className="w-full border border-[#171717] bg-[#fbfaf7] shadow-[0_14px_36px_-30px_rgba(0,0,0,0.7)]" aria-label="Agent Runtime tasks">
     <header className="flex items-center gap-2 border-b border-[#e3e0db] bg-[#171717] px-4 py-3 text-white"><ListTodo size={14} /><span className="flex-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em]">Agent Runtime tasks</span><span className="font-mono text-[9px] text-white/65">{active.length} active</span>{onClose ? <button type="button" onClick={onClose} aria-label="Close Agent Runtime tasks" title="Close" className="grid h-7 w-7 place-items-center text-white/70 hover:bg-white/10 hover:text-white lg:hidden"><X size={14} /></button> : null}</header>
@@ -272,11 +275,11 @@ export function AgentRuntimeTasksPanel({ queue, firstLife, onDecision, onClose }
       {queue.map((item) => {
         const [label, tone] = QUEUE_STATUS[item.status] || QUEUE_STATUS.READY;
         const blocker = queueBlockerSummary(item.blocker || item.blocked_reason);
-        return <article key={item.id} className="border-b border-[#ebe8e3] px-2 py-3 last:border-b-0"><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.child_progress?.current_recipient ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Current recipient: {item.child_progress.current_recipient}</p> : null}<div className="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[7px] uppercase tracking-[0.08em] text-[#9a948b]">{item.owner ? <span>{item.owner}</span> : null}{item.lifecycle_stage ? <span>{String(item.lifecycle_stage).replaceAll('_', ' ')}</span> : null}{item.child_progress?.total ? <span>{item.child_progress.settled}/{item.child_progress.total} calls</span> : null}{item.checkpoint_sequence ? <span>Checkpoint {item.checkpoint_sequence}</span> : null}</div>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
+        return <article key={item.id} className={`border-b border-[#ebe8e3] px-2 py-3 last:border-b-0 ${item.recommended ? 'border-l-2 border-l-[#171717] bg-white' : ''}`}><div className="flex items-start gap-2"><span className={`mt-0.5 shrink-0 border px-1.5 py-0.5 font-mono text-[7px] uppercase ${tone}`}>{label}</span><div className="min-w-0 flex-1"><div className="flex items-start gap-2"><div className="flex-1 text-[11px] font-semibold leading-4 text-[#262626]">{item.title}</div>{item.recommended ? <span className="font-mono text-[7px] uppercase tracking-[0.08em] text-[#525252]">Recommended</span> : null}</div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#777168]">{item.objective}</p>{item.expected_outcome ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Outcome: {item.expected_outcome}</p> : null}{item.selection_reason ? <p className="mt-1 line-clamp-2 text-[9px] leading-4 text-[#777168]">{item.selection_reason}</p> : null}{item.child_progress?.current_recipient ? <p className="mt-1 text-[9px] leading-4 text-[#525252]">Current recipient: {item.child_progress.current_recipient}</p> : null}<div className="mt-1.5 flex flex-wrap gap-x-2 font-mono text-[7px] uppercase tracking-[0.08em] text-[#9a948b]">{item.owner ? <span>{item.owner}</span> : null}{item.lifecycle_stage ? <span>{String(item.lifecycle_stage).replaceAll('_', ' ')}</span> : null}{item.required_capabilities?.length ? <span>{item.required_capabilities.length} capabilities</span> : null}{item.child_progress?.total ? <span>{item.child_progress.settled}/{item.child_progress.total} calls</span> : null}{item.checkpoint_sequence ? <span>Checkpoint {item.checkpoint_sequence}</span> : null}</div>{blocker ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{blocker}</p> : null}</div></div></article>;
       })}
       {!queue.length ? <p className="px-2 py-5 text-[11px] text-[#737373]">HQ has no pending operating work.</p> : null}
     </div>
-    {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white"><Play size={12} />Start recommended work</button></div> : null}
+    {['AWAITING_START', 'REVIEW_LATER'].includes(firstLife?.status) ? <div className={`grid gap-2 border-t border-[#d8d3cc] bg-white p-3 ${firstLife.status === 'AWAITING_START' ? 'grid-cols-2' : 'grid-cols-1'}`}>{firstLife.status === 'AWAITING_START' ? <button type="button" onClick={() => onDecision('review_later')} className="h-9 border border-[#d8d3cc] px-3 text-[10px] font-semibold text-[#525252]">Review later</button> : null}<button type="button" onClick={() => onDecision('start')} disabled={experience && !experience.can_start} className="inline-flex h-9 items-center justify-center gap-2 bg-[#171717] px-3 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Play size={12} />Start recommended work</button></div> : null}
   </section>;
 }
 
@@ -407,12 +410,28 @@ function ExecutionTrace({ items }) {
   </div>;
 }
 
-function NarrativeEvent({ item, active }) {
+export function NarrativeEvent({ item, active }) {
   const wake = item.eventType === 'wake';
   const sleep = item.eventType === 'sleep';
   const blocked = item.eventType === 'blocked';
   const verdict = ['decision', 'work_order_created', 'blocked'].includes(item.eventType);
   const Icon = wake ? Power : sleep ? Moon : blocked ? AlertTriangle : item.eventType === 'work_order_created' ? TerminalSquare : Activity;
+  if (item.eventType === 'baseline_observation') {
+    const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
+    const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
+    const values = Object.entries(facts).flatMap(([key, value]) => {
+      if (value === null || value === undefined || value === '') return [];
+      const label = key.replaceAll('_', ' ');
+      if (Array.isArray(value)) return value.length ? [`${label}: ${value.length}`] : [];
+      if (typeof value === 'object') return [`${label}: ${Object.keys(value).length}`];
+      return [`${label}: ${String(value)}`];
+    }).slice(0, 5);
+    return <div className="my-3 max-w-4xl border-l border-[#d8d3cc] py-1 pl-4" data-testid={`baseline-observation-${item.details?.source_key || item.title}`}>
+      <div className="flex items-center gap-2"><Activity size={12} className="text-[#525252]" /><span className="text-[11px] font-semibold capitalize text-[#262626]">{String(item.details?.source_key || item.title).replaceAll('_', ' ')}</span><span className="border border-[#d8d3cc] px-1.5 py-0.5 font-mono text-[7px] uppercase text-[#777168]">{status}</span><time className="ml-auto font-mono text-[8px] text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
+      {values.length ? <p className="mt-1 text-[10px] leading-5 text-[#777168]">{values.join(' · ')}</p> : null}
+      {item.details?.limitations?.length ? <p className="mt-1 text-[9px] leading-4 text-[#8c6514]">{item.details.limitations.slice(0, 2).join('; ')}</p> : null}
+    </div>;
+  }
   if (wake || sleep) return <div className="my-7 first:mt-0">
     <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[#8a8577]"><Icon size={13} className={wake ? 'text-[#171717]' : ''} />{wake ? '[ Waking up ]' : '[ Sleeping ]'}<time className="ml-auto text-[8px] tracking-normal text-[#aaa49c]">{fmtTime(item.createdAt)}</time></div>
     <StreamedText active={active} className="mt-3 max-w-4xl font-serif text-[19px] leading-8 text-[#292824]">{visibleEventSummary(item)}</StreamedText>
@@ -423,7 +442,7 @@ function NarrativeEvent({ item, active }) {
   </div>;
 }
 
-function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
+function RuntimeTranscript({ events, state, tasks = [], firstLife = null, experience = null, growthBrief = null, onFirstLifeDecision, liveSequence = null, liveNarration = null, tasksOpen = false, onCloseTasks }) {
   const working = isWorking(state);
   const chunks = [];
   for (const item of events) {
@@ -451,7 +470,7 @@ function RuntimeTranscript({ events, state, tasks = [], firstLife = null, growth
         </div> : null}
       </main>
       {tasksOpen ? <button type="button" className="fixed inset-0 z-30 bg-black/30 lg:hidden" aria-label="Close Agent Runtime tasks" onClick={onCloseTasks} /> : null}
-      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
+      <aside className={`${tasksOpen ? 'fixed inset-x-3 top-[82px] z-40 block max-h-[calc(100dvh-98px)] overflow-y-auto' : 'hidden'} w-auto lg:sticky lg:top-[78px] lg:z-10 lg:block lg:w-full lg:max-h-none lg:overflow-visible`} aria-label="Agent Runtime tasks"><GrowthBrief brief={growthBrief} /><AgentRuntimeTasksPanel queue={tasks} firstLife={firstLife} experience={experience} onDecision={onFirstLifeDecision} onClose={tasksOpen ? onCloseTasks : null} /></aside>
     </div>
   </div>;
 }
@@ -680,7 +699,11 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
     status: projectLifecycleQueueStatus(snapshot),
     priority: 0,
   }));
-  const runtimeQueue = (work.agent_runtime_tasks || work.runtime_queue || []).length ? (work.agent_runtime_tasks || work.runtime_queue) : lifecycleQueue;
+  const firstLifeExperience = work.first_life_experience || null;
+  const projectedOpportunities = firstLifeExperience?.opportunities || [];
+  const runtimeQueue = projectedOpportunities.length
+    ? projectedOpportunities
+    : (work.agent_runtime_tasks || work.runtime_queue || []).length ? (work.agent_runtime_tasks || work.runtime_queue) : lifecycleQueue;
   const firstLifePlan = work.first_life || work.activation_sprint || null;
   const queueActiveCount = runtimeQueue.filter((item) => ['RUNNING', 'READY'].includes(item.status)).length;
   const waitForInstructionAcceptance = async (instructionId) => {
@@ -789,7 +812,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
       </div>
     </header>
     {error ? <div className="border-b border-red-200 bg-red-50 px-8 py-2 text-[10px] text-red-700">{error}</div> : null}
-    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} growthBrief={work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
+    {!runtime ? <div className="mx-auto grid min-h-[260px] max-w-5xl place-items-center px-6 text-center"><div><span className="mx-auto grid h-14 w-14 place-items-center border border-[#d8d3cc] bg-white"><DotMatrix size={28} columns={7} rows={5} active={false} /></span><div className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#171717]">Waiting to become operational</div><div className="mt-2 text-[11px] text-[#8a8577]">Activate after the company baseline is ready.</div></div></div> : latest.length || liveNarration ? <RuntimeTranscript events={latest} state={runtime.state} tasks={runtimeQueue} firstLife={firstLifePlan} experience={firstLifeExperience} growthBrief={firstLifeExperience?.growth_brief || work.growth_brief || null} onFirstLifeDecision={reviewFirstLife} liveSequence={liveSequence} liveNarration={liveNarration} tasksOpen={tasksOpen} onCloseTasks={() => setTasksOpen(false)} /> : <RuntimePageLoader />}
     {instructionsOpen ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label="Runtime instructions"><form onSubmit={async (event) => { if (await submitInstruction(event)) setInstructionsOpen(false); }} className="w-full max-w-lg rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setInstructionsOpen(false)} aria-label="Close runtime instructions" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#171717]"><SlidersHorizontal size={13} />Runtime instructions</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Set a standing priority</h3></div><div className="p-5"><textarea autoFocus value={instruction} onChange={(event) => setInstruction(event.target.value)} rows={5} placeholder="Focus on getting qualified clients in Hannover..." className="w-full resize-none border border-[#d8d3cc] bg-white p-3 text-[13px] leading-6 outline-none placeholder:text-[#aaa49c] focus:border-[#171717]" />{instructionNotice ? <p className="mt-3 text-[11px] leading-5 text-[#525252]">{instructionNotice}</p> : null}<div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setInstructionsOpen(false)} className="h-9 px-3 text-[11px] font-semibold text-[#525252]">Cancel</button><button type="submit" disabled={!instruction.trim() || instructionBusy} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-35">{instructionBusy ? <ArcSpin size={13} /> : <Send size={13} />}Save instruction</button></div></div></form></div> : null}
     {capabilityRequest && capabilityRequest.id !== dismissedCapabilityRequestId ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={`Connect ${providerLabel(capabilityRequest.provider)}`}><div className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedCapabilityRequestId(capabilityRequest.id)} aria-label="Close connection request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md text-[#777168] transition-colors hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="flex items-center gap-2 pr-9 font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]"><Cable size={13} />Capability required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">Connect {providerLabel(capabilityRequest.provider)}</h3><p className="mt-2 text-[13px] leading-6 text-[#625f58]">{publicRuntimeText(capabilityRequest.reason)}</p></div><div className="px-5 py-4"><p className="text-[11px] leading-5 text-[#777168]">I paused this todo without discarding it. I am watching the organization connection state and will continue automatically when access is ready.</p><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={async () => { await apiClient.recheckHqCapabilities(); await load(); }} className="h-9 rounded-md border border-[#d8d3cc] px-3 text-[11px] font-semibold text-[#525252]">Check connection</button><button type="button" onClick={openCapability} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white">Connect {providerLabel(capabilityRequest.provider)}</button></div></div></div></div> : null}
     {playbookInput && playbookInput.run_id !== dismissedInputRunId ? <div className="fixed inset-0 z-[71] grid place-items-center bg-black/35 p-4" role="dialog" aria-modal="true" aria-label={playbookInput.label}><form onSubmit={provideRuntimeInput} className="w-full max-w-md rounded-[8px] border border-[#d8d3cc] bg-[#fbfaf7] shadow-2xl"><div className="relative border-b border-[#e3e0db] px-5 py-4"><button type="button" onClick={() => setDismissedInputRunId(playbookInput.run_id)} aria-label="Close information request" title="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center text-[#777168] hover:bg-[#f0eee9] hover:text-[#171717]"><X size={16} /></button><div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#525252]">Information required</div><h3 className="mt-3 pr-9 text-[20px] font-semibold text-[#171717]">{playbookInput.label}</h3><p className="mt-2 text-[12px] leading-5 text-[#777168]">{playbookInput.description}</p></div><div className="p-5"><input autoFocus type={playbookInput.value_type === 'email' ? 'email' : 'tel'} value={runtimeInputValue} onChange={(event) => setRuntimeInputValue(event.target.value)} placeholder={playbookInput.value_type === 'phone' ? '+49...' : 'name@company.com'} className="h-11 w-full border border-[#d8d3cc] bg-white px-3 text-[13px] outline-none focus:border-[#171717]" /><div className="mt-4 flex justify-end"><button type="submit" disabled={!runtimeInputValue.trim() || runtimeInputBusy} className="h-9 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{runtimeInputBusy ? 'Saving...' : 'Continue Runtime'}</button></div></div></form></div> : null}

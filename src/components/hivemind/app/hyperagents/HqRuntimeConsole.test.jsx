@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AgentRuntimeTasksPanel, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { AgentRuntimeTasksPanel, GrowthBrief, NarrativeEvent, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
 
 test('renders one truthful domain-neutral Agent Runtime task panel', () => {
@@ -10,6 +10,7 @@ test('renders one truthful domain-neutral Agent Runtime task panel', () => {
       {
         id: 'one', title: 'Improve the primary customer journey', objective: 'Resolve the highest-evidence constraint.',
         status: 'PROPOSED', recommended: true, recommendation_rank: 1, effect_class: 'internal', evidence_refs: ['baseline-1'],
+        expected_outcome: 'A measurable customer result', selection_reason: 'It has the strongest retained evidence.',
       },
       {
         id: 'two', title: 'Validate the next opportunity', objective: 'Gather a bounded result before expanding.',
@@ -21,9 +22,36 @@ test('renders one truthful domain-neutral Agent Runtime task panel', () => {
   expect(markup).toContain('Improve the primary customer journey');
   expect(markup).toContain('Start recommended work');
   expect(markup).toContain('Review later');
+  expect(markup).toContain('Recommended');
+  expect(markup).toContain('A measurable customer result');
   expect(markup).toContain('Proposed');
   expect(markup).not.toContain('>Ready<');
   expect(markup).not.toMatch(/campaign|outreach|seo/i);
+});
+
+test('renders explicit zero while omitting unobserved baseline values', () => {
+  const markup = renderToStaticMarkup(<NarrativeEvent active={false} item={{
+    eventType: 'baseline_observation', sequence: '4', createdAt: '2026-08-03T10:00:00Z',
+    title: 'lead_customer_activity', summary: 'observed',
+    details: { source_key: 'lead_customer_activity', status: 'observed', facts: { total: 0, website: null } },
+  }} />);
+  expect(markup).toContain('total: 0');
+  expect(markup).not.toContain('website:');
+});
+
+test('renders the evidence-backed Growth Brief without fabricating confidence', () => {
+  const markup = renderToStaticMarkup(<GrowthBrief brief={{
+    current_position: 'Current retained position.',
+    primary_constraint: { statement: 'Primary evidenced constraint.' },
+    supporting_evidence: ['Observed fact.'],
+    material_unknowns: ['A source was not observed.'],
+    evidence_refs: ['baseline-1'],
+    recommended_motion: { title: 'Begin the recommended motion', selection_reason: 'Highest evidence.' },
+  }} />);
+  expect(markup).toContain('Current retained position.');
+  expect(markup).toContain('Primary evidenced constraint.');
+  expect(markup).toContain('A source was not observed.');
+  expect(markup).toContain('Evidence bounded');
 });
 
 test('projects Runtime lifecycle waits from canonical snapshot data', () => {
