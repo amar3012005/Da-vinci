@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AgentRuntimeTasksPanel, GrowthBrief, NarrativeEvent, projectLifecycleQueueStatus } from './HqRuntimeConsole';
+import { AgentRuntimeTasksPanel, ExternalActionMarker, GrowthBrief, NarrativeEvent, projectLifecycleQueueStatus } from './HqRuntimeConsole';
 import { CampaignLaunchPreview, GmailMessagePreview } from './RuntimeAuthorityPreview';
 
 test('renders one truthful domain-neutral Agent Runtime task panel', () => {
@@ -82,4 +82,21 @@ test('renders persisted email content as a Gmail composer preview', () => {
   expect(markup).toContain('aria-label="Gmail message preview"');
   expect(markup).toContain('lead@example.com');
   expect(markup).toContain('Grounded message body.');
+});
+
+test('renders provider-confirmed actions inline as one fixed carousel marker', () => {
+  const markup = renderToStaticMarkup(<ExternalActionMarker item={{
+    id: 'event-1', createdAt: '2026-08-03T10:00:00Z', title: 'Actions launched',
+    details: { items: [
+      { id: 'mail-1', presentation_type: 'message', status: 'sent', headline: 'Congratulations! Your email was sent.', payload: { to: 'lead@example.com', subject: 'Hello', body: 'A grounded note.' } },
+      { id: 'call-1', presentation_type: 'call', status: 'dialing', headline: 'Your TARA outreach call has started.', payload: { prospect: 'Amar', phone: '+49123', goal: 'Discuss the product.' } },
+      { id: 'post-1', presentation_type: 'social_post', channel: 'linkedin', status: 'published', headline: 'Your LinkedIn post was published.', payload: { final_copy: 'A published update.' } },
+    ] },
+  }} />);
+  expect(markup).toContain('data-testid="runtime-external-action-marker"');
+  expect(markup).toContain('3 actions launched');
+  expect(markup).toContain('lead@example.com');
+  expect(markup).toContain('aria-label="TARA call preview"');
+  expect(markup).toContain('aria-label="LinkedIn post preview"');
+  expect(markup).toContain('h-[430px]');
 });

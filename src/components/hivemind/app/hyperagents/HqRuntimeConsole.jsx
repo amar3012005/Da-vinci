@@ -3,9 +3,10 @@ import {
   Activity, AlertTriangle, ArrowRight, ArrowUpRight, Check, Clock3, Cable, Send,
   Moon, Pause, Play, Power, RefreshCw, ShieldCheck, Sparkles,
   TerminalSquare, Wrench, X, SlidersHorizontal, ListTodo, RotateCcw,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import apiClient from '../shared/api-client';
-import { AuthorityReviewContent } from './RuntimeAuthorityPreview';
+import { AuthorityReviewContent, CallPreview, GmailMessagePreview, PlatformActionPreview } from './RuntimeAuthorityPreview';
 
 const EXECUTION_TYPES = new Set(['skill_loaded', 'tool_started', 'tool_result', 'schedule_created', 'verification']);
 const EXECUTION_META = {
@@ -410,12 +411,57 @@ function ExecutionTrace({ items }) {
   </div>;
 }
 
+function ExternalActionSlide({ item }) {
+  const payload = item?.payload || {};
+  if (item?.presentation_type === 'message') {
+    return <GmailMessagePreview message={payload} statusLabel="Sent" />;
+  }
+  if (item?.presentation_type === 'call') {
+    return <CallPreview call={payload} statusLabel={item.status === 'completed' ? 'Completed' : 'In call'} />;
+  }
+  return <PlatformActionPreview action={{
+    id: item.id,
+    channel: item.channel,
+    payload,
+    assets: item.assets || [],
+    scheduled_at: item.scheduled_at,
+    status_label: item.status === 'published' ? 'Published' : item.status === 'scheduled' ? 'Scheduled' : providerLabel(item.status || 'Live'),
+  }} accountName={payload.account_name || payload.campaign_name || 'Company'} />;
+}
+
+export function ExternalActionMarker({ item }) {
+  const actions = Array.isArray(item?.details?.items) ? item.details.items : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const railRef = useRef(null);
+  useEffect(() => setActiveIndex(0), [item?.id, item?.sequence]);
+  const move = (next) => {
+    const index = Math.max(0, Math.min(actions.length - 1, next));
+    setActiveIndex(index);
+    railRef.current?.children?.[index]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  };
+  if (!actions.length) return null;
+  return <section className="my-7 h-[430px] max-w-4xl overflow-hidden border border-[#171717] bg-white shadow-[0_18px_44px_-34px_rgba(0,0,0,0.8)]" aria-label="Runtime external action marker" data-testid="runtime-external-action-marker">
+    <header className="flex h-[86px] items-start gap-3 border-b border-[#dedbd6] bg-[#171717] px-4 py-3 text-white sm:px-5">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center border border-white/30"><Check size={15} /></span>
+      <div className="min-w-0 flex-1"><div className="font-mono text-[8px] uppercase tracking-[0.18em] text-white/60">Provider-confirmed action</div><h3 className="mt-1 truncate text-[15px] font-semibold">{actions.length === 1 ? actions[0].headline || item.title : `${actions.length} actions launched`}</h3><p className="mt-1 truncate text-[10px] text-white/65">{actions.length === 1 ? actions[0].note || item.summary : 'Slide through the exact actions retained at this checkpoint.'}</p></div>
+      <time className="shrink-0 font-mono text-[8px] text-white/50">{fmtTime(item.createdAt)}</time>
+    </header>
+    <div className="relative h-[344px] bg-[#f5f3ef]">
+      <div ref={railRef} onScroll={(event) => { const width = event.currentTarget.clientWidth; if (width) setActiveIndex(Math.round(event.currentTarget.scrollLeft / width)); }} className="flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {actions.map((action) => <div key={action.id} className="h-full w-full shrink-0 snap-start overflow-y-auto px-5 py-4 sm:px-10"><ExternalActionSlide item={action} /></div>)}
+      </div>
+      {actions.length > 1 ? <><button type="button" onClick={() => move(activeIndex - 1)} disabled={activeIndex === 0} className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-[#d8d3cc] bg-white text-[#171717] shadow-sm disabled:opacity-25" aria-label="Previous launched action"><ChevronLeft size={15} /></button><button type="button" onClick={() => move(activeIndex + 1)} disabled={activeIndex === actions.length - 1} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center border border-[#d8d3cc] bg-white text-[#171717] shadow-sm disabled:opacity-25" aria-label="Next launched action"><ChevronRight size={15} /></button><div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5" aria-label={`${activeIndex + 1} of ${actions.length}`}>{actions.map((action, index) => <button key={action.id} type="button" onClick={() => move(index)} aria-label={`Show action ${index + 1}`} className={`h-1.5 w-5 ${index === activeIndex ? 'bg-[#171717]' : 'bg-[#c9c4bb]'}`} />)}</div></> : null}
+    </div>
+  </section>;
+}
+
 export function NarrativeEvent({ item, active }) {
   const wake = item.eventType === 'wake';
   const sleep = item.eventType === 'sleep';
   const blocked = item.eventType === 'blocked';
   const verdict = ['decision', 'work_order_created', 'blocked'].includes(item.eventType);
   const Icon = wake ? Power : sleep ? Moon : blocked ? AlertTriangle : item.eventType === 'work_order_created' ? TerminalSquare : Activity;
+  if (item.eventType === 'external_action_committed') return <ExternalActionMarker item={item} />;
   if (item.eventType === 'baseline_observation') {
     const status = String(item.details?.status || item.summary || 'limited').replaceAll('_', ' ');
     const facts = item.details?.facts && typeof item.details.facts === 'object' ? item.details.facts : {};
