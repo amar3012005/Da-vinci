@@ -300,12 +300,15 @@ export function HqRuntimeRail({ baselineReady }) {
     return () => { active = false; window.removeEventListener('hq-runtime-projection', synchronize); };
   }, []);
   const schedules = work.schedules || [];
-  const outboundPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_messages)
-    ? runtime.authorityPolicy.outbound_messages : 'unconfigured';
-  const outboundCallPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_calls)
-    ? runtime.authorityPolicy.outbound_calls : 'unconfigured';
-  const outboundCampaignPermission = ['manual', 'auto'].includes(runtime?.authorityPolicy?.outbound_campaigns)
-    ? runtime.authorityPolicy.outbound_campaigns : 'unconfigured';
+  const authorityPreference = (policyKey) => {
+    const value = runtime?.authorityPolicy?.gate_overrides?.[policyKey]
+      || runtime?.authorityPolicy?.[policyKey]
+      || runtime?.authorityPolicy?.external_default;
+    return ['manual', 'auto'].includes(value) ? value : 'unconfigured';
+  };
+  const outboundPermission = authorityPreference('outbound_messages');
+  const outboundCallPermission = authorityPreference('outbound_calls');
+  const outboundCampaignPermission = authorityPreference('outbound_campaigns');
   const updateOutboundPermission = async (policyKey, currentPreference, preference) => {
     if (permissionBusy || preference === currentPreference) return;
     setPermissionBusy(`${policyKey}:${preference}`); setPermissionError('');
@@ -689,6 +692,8 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
   const playbookApproval = (work.playbook_approvals || [])[0] || null;
   const approvalNoun = playbookApproval?.campaign
     ? 'campaign launch'
+    : (playbookApproval?.calls || []).length
+      ? 'TARA call'
     : (playbookApproval?.messages || []).length
       ? 'message batch'
       : 'external action';
@@ -751,6 +756,7 @@ export default function HqRuntimeConsole({ objective, baselineReady }) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {playbookApproval.campaign ? <article className="border border-[#dedbd6] bg-white p-4"><div className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Campaign</div><h4 className="mt-2 text-[13px] font-semibold text-[#262626]">{playbookApproval.campaign.name}</h4><p className="mt-2 text-[11px] leading-5 text-[#777168]">Channels: {(playbookApproval.campaign.channels || []).join(', ') || 'None selected'}</p><p className="mt-1 font-mono text-[8px] uppercase tracking-[0.1em] text-[#8a8577]">{playbookApproval.campaign.status}</p></article> : null}
+          <div className="space-y-3">{(playbookApproval.calls || []).map((call, index) => <article key={`${call.id || call.phone || 'call'}-${index}`} className="border border-[#dedbd6] bg-white"><div className="grid gap-2 border-b border-[#ebe8e3] px-4 py-3 sm:grid-cols-[100px_1fr]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Call</span><span className="text-[11px] font-semibold text-[#262626]">{call.prospect || call.phone}</span><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Phone</span><span className="font-mono text-[10px] text-[#262626]">{call.phone}</span><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Goal</span><span className="text-[11px] leading-5 text-[#525252]">{call.goal}</span></div>{call.opener ? <p className="px-4 pt-3 text-[11px] leading-5 text-[#525252]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Opening</span><br />{call.opener}</p> : null}{call.strategy ? <p className="px-4 py-3 text-[11px] leading-5 text-[#525252]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Strategy</span><br />{call.strategy}</p> : null}</article>)}</div>
           <div className="space-y-3">{(playbookApproval.messages || []).map((message, index) => <article key={`${message.id || message.to || 'message'}-${index}`} className="border border-[#dedbd6] bg-white"><div className="grid gap-2 border-b border-[#ebe8e3] px-4 py-3 sm:grid-cols-[100px_1fr]"><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">To</span><span className="truncate text-[11px] font-medium text-[#262626]">{message.to}</span><span className="font-mono text-[8px] uppercase tracking-[0.12em] text-[#8a8577]">Subject</span><span className="text-[11px] font-medium text-[#262626]">{message.subject}</span></div><p className="whitespace-pre-wrap px-4 py-3 text-[12px] leading-5 text-[#525252]">{message.body}</p></article>)}</div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#e3e0db] bg-white px-5 py-4">{playbookApproval.preference === 'unconfigured' ? <><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: false })} disabled={Boolean(approvalBusy)} className="h-9 rounded-md border border-[#d8d3cc] px-4 text-[11px] font-semibold text-[#525252] disabled:opacity-40">{approvalBusy === 'manual' ? 'Saving...' : 'Review every time'}</button><button type="button" onClick={() => decidePlaybookAuthority({ preference: 'auto', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'auto-send' ? <ArcSpin size={13} /> : <Play size={13} />}Approve and use Auto</button></> : <button type="button" onClick={() => decidePlaybookAuthority({ preference: 'manual', approve: true })} disabled={Boolean(approvalBusy)} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#171717] px-4 text-[11px] font-semibold text-white disabled:opacity-40">{approvalBusy === 'manual-send' ? <ArcSpin size={13} /> : <Play size={13} />}Approve this action</button>}</div>
