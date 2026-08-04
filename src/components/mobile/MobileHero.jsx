@@ -6,6 +6,7 @@ import HeroCtas from './HeroCtas';
 import { HIVEMIND_URL } from './hivemindLinks';
 
 const HeroScene = lazy(() => import('./three/HeroScene'));
+const CinematicPlate = lazy(() => import('./three/CinematicPlate'));
 
 /**
  * SINGULANCE cinematic hero.
@@ -134,15 +135,47 @@ const DesktopHero = ({ immersive }) => (
   </section>
 );
 
-/* Mobile is deliberately a single, static entry cover. The campaign film and
-   every scroll-driven homepage section stay desktop-only. */
-const MobileHeroBand = () => (
-  <section id="hero-m" className="relative flex min-h-[100svh] items-end overflow-hidden bg-[#05070f] pb-10 md:hidden">
-    <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
-    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/75" />
-    <div className="relative z-10 w-full">
+/* ---------- mobile width-fit band ---------- */
+const MobileHeroBand = ({ water }) => (
+  <section id="hero-m" className="relative flex min-h-[100svh] flex-col justify-center gap-8 pb-10 pt-24 md:hidden" style={{ background: '#05070f' }}>
+    <motion.p
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease }}
+      className="px-5 text-center text-[10px] font-medium uppercase tracking-[0.32em] text-white/70"
+    >
+      The AI Operating Layer for Regulated Europe
+    </motion.p>
+
+    {/* full poster fit to screen edges (no side padding, no rounding), water shader */}
+    <motion.div
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3, ease }}
+      className="relative aspect-[1586/992] w-full overflow-hidden bg-[#05070f]"
+      style={{ backgroundImage: `url(${COVER_LQIP})`, backgroundSize: 'cover' }}
+    >
+      {water ? (
+        <Suspense fallback={<img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" />}>
+          <CinematicPlate src={COVER} zoom={1} warp={1} bloom={0.5} tint={[0.04, 0.015, 0.0]} />
+        </Suspense>
+      ) : (
+        <img src={COVER} alt="SINGULANCE" className="absolute inset-0 h-full w-full object-cover" decoding="async" fetchpriority="high" />
+      )}
+    </motion.div>
+
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="w-full">
       <BannerLockup />
-    </div>
+    </motion.div>
+
+    <HeroActionRail delay={0.6} />
+
+    {/* scroll-down cue replaces the CTA */}
+    <button
+      onClick={() => document.getElementById('solutions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      aria-label="Scroll down"
+      className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/5 text-white backdrop-blur-md"
+    >
+      <motion.span animate={{ y: [0, 5, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+        <ChevronDown size={20} />
+      </motion.span>
+    </button>
   </section>
 );
 
@@ -151,7 +184,7 @@ const MobileHero = () => {
   return (
     <>
       <DesktopHero immersive={mode === 'immersive'} />
-      <MobileHeroBand />
+      <MobileHeroBand water={mode === 'water-mobile'} />
     </>
   );
 };
