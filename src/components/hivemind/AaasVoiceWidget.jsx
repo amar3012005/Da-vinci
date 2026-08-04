@@ -42,7 +42,7 @@ function resolveCatalogLanguages(catalog, voices, preferredLanguage) {
   ].map((value) => String(value || '').toLowerCase()).filter((value) => value && value !== 'multilingual'))];
 }
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', onSessionCreated = null, onSessionEnded = null }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', interactionProfile = null, onSessionCreated = null, onSessionEnded = null }) {
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
@@ -217,6 +217,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       mode,
       voice_id: voiceId || undefined,
       goal: goal.trim() || undefined,
+      interaction_profile: interactionProfile || undefined,
     });
     let stream;
     try {
