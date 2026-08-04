@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linkedin, Twitter, Youtube, Github, MessageCircle, Apple, Play } from 'lucide-react';
+import { Instagram, Linkedin, Twitter, Youtube, Github, MessageCircle, Apple, Play } from 'lucide-react';
 import { HIVEMIND_URL, hivemindHref } from './hivemindLinks';
 
 /**
@@ -56,8 +56,9 @@ const COLS = [
 ];
 
 const SOCIALS = [
-  [Linkedin, 'https://www.linkedin.com/company/singulance', 'LinkedIn'],
+  [Linkedin, 'https://linkedin.com/company/singulance-ai', 'LinkedIn'],
   [Twitter, 'https://x.com/singulanceai', 'X'],
+  [Instagram, 'https://instagram.com/singulancelabs', 'Instagram'],
   [Youtube, 'https://youtube.com', 'YouTube'],
   [MessageCircle, 'https://discord.com', 'Discord'],
   [Github, 'https://github.com', 'GitHub'],
