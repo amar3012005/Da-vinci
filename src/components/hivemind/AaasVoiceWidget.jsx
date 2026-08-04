@@ -207,18 +207,24 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const start = useCallback(async () => {
     setError(null);
     if (!userId) { setError('Not signed in — no user id.'); return; }
-    // Capability issuance is network-bound while mic permission is user/browser
-    // bound. Start both together so Grok does not pay those waits serially.
-    const grokSessionPromise = provider === 'grok'
-      ? apiClient.createTaraVoiceSession({ provider, language: langFilter || language, mode, voice_id: voiceId || undefined, goal: goal.trim() || undefined })
-      : null;
+    // The server owns the effective provider through organization policy. Create
+    // one browser session before opening audio so its returned provider and URL
+    // are always consumed together; never combine a Grok UI assumption with a
+    // Deepgram session URL.
+    const voiceSessionPromise = apiClient.createTaraVoiceSession({
+      provider,
+      language: langFilter || language,
+      mode,
+      voice_id: voiceId || undefined,
+      goal: goal.trim() || undefined,
+    });
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
     } catch {
-      grokSessionPromise?.catch(() => {});
+      voiceSessionPromise.catch(() => {});
       setError('Microphone permission denied.'); return;
     }
     micStreamRef.current = stream;
@@ -230,19 +236,21 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     lastPlayRef.current = playCtx.currentTime;
 
     let url;
-    let grokCapability = null;
+    let sessionCapability = null;
+    let sessionProvider = null;
     try {
-      if (provider === 'grok') {
-        const session = await grokSessionPromise;
-        sessionIdRef.current = session.session_id;
-        sessionCreatedRef.current?.({ sessionId: session.session_id });
+      const session = await voiceSessionPromise;
+      sessionIdRef.current = session.session_id;
+      sessionCreatedRef.current?.({ sessionId: session.session_id });
+      sessionProvider = session.provider;
+      if (sessionProvider === 'grok') {
         url = new URL(`${session.ws_url.replace(/\/$/, '')}/${encodeURIComponent(session.session_id)}`);
-        grokCapability = session.capability;
+        sessionCapability = session.capability;
       } else {
-        url = new URL(engineWs);
+        url = new URL(session.ws_url || engineWs);
         url.searchParams.set('user_id', userId);
         if (orgId) url.searchParams.set('org_id', orgId);
-        url.searchParams.set('session_id', `tara_${Date.now()}`);
+        url.searchParams.set('session_id', session.session_id);
         url.searchParams.set('language', langFilter || language);
         url.searchParams.set('mode', mode);
         if (voiceId) url.searchParams.set('voice_id', voiceId);
@@ -254,14 +262,14 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       return;
     }
 
-    if (provider === 'grok' && !grokCapability) {
+    if (sessionProvider === 'grok' && !sessionCapability) {
       setError('TARA did not return a browser session capability. Please try again.');
       stopAll('missing-capability');
       return;
     }
     let ws;
     try {
-      const protocols = provider === 'grok' ? ['hm.tara.v1', `hm.tara.cap.${grokCapability}`] : undefined;
+      const protocols = sessionProvider === 'grok' ? ['hm.tara.v1', `hm.tara.cap.${sessionCapability}`] : undefined;
       ws = protocols ? new WebSocket(url.toString(), protocols) : new WebSocket(url.toString());
     } catch {
       setError('The browser could not open the TARA voice connection.');
