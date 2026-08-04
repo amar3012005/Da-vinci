@@ -25,7 +25,7 @@ const MODE_DESC = {
   internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
 };
 
-export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external' }) {
+export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', onSessionCreated = null, onSessionEnded = null }) {
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
   const [active, setActive] = useState(false);
@@ -127,6 +127,13 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const sourcesRef = useRef([]);
   const outVolRef = useRef(0);   // TARA speaking volume → orb
   const inVolRef = useRef(0);    // mic volume → orb
+  const sessionIdRef = useRef(null);
+  const activeRef = useRef(false);
+  const sessionCreatedRef = useRef(onSessionCreated);
+  const sessionEndedRef = useRef(onSessionEnded);
+  useEffect(() => { sessionCreatedRef.current = onSessionCreated; }, [onSessionCreated]);
+  useEffect(() => { sessionEndedRef.current = onSessionEnded; }, [onSessionEnded]);
+  useEffect(() => { activeRef.current = active; }, [active]);
 
   const stopAll = useCallback((reason) => {
     sourcesRef.current.forEach((s) => { try { s.stop(); } catch { /* noop */ } });
@@ -141,6 +148,9 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     }
     setActive(false);
     setState('idle');
+    const sessionId = sessionIdRef.current;
+    sessionIdRef.current = null;
+    if (sessionId) sessionEndedRef.current?.({ sessionId, reason: reason || 'stop' });
   }, []);
 
   // Schedule a raw-PCM (s16le @16k) chunk for gapless playback.
@@ -196,6 +206,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
     try {
       if (provider === 'grok') {
         const session = await grokSessionPromise;
+        sessionIdRef.current = session.session_id;
+        sessionCreatedRef.current?.({ sessionId: session.session_id });
         url = new URL(`${session.ws_url.replace(/\/$/, '')}/${encodeURIComponent(session.session_id)}`);
         grokCapability = session.capability;
       } else {
@@ -260,7 +272,7 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       }
     };
     ws.onerror = () => setError('Connection error.');
-    ws.onclose = () => { if (active) stopAll('closed'); };
+    ws.onclose = () => { if (activeRef.current) stopAll('closed'); };
   }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, active, stopAll, provider]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);

@@ -333,6 +333,14 @@ class HiveMindApiClient {
     return data;
   }
 
+  async decideHqFirstLifeAdminCheckin(decision, sessionId = null) {
+    const { data } = await this.controlPlane.post('/v1/hq/first-life/admin-checkin', {
+      decision,
+      ...(sessionId ? { session_id: sessionId } : {}),
+    });
+    return data;
+  }
+
   async decideHqPlaybookAuthority(runId, { gate, preference, approve }) {
     const { data } = await this.controlPlane.post(`/v1/hq/playbooks/runs/${encodeURIComponent(runId)}/authority`, {
       gate, preference, approve,
