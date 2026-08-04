@@ -24,7 +24,7 @@ const useHeroMode = () => {
     if (typeof window === 'undefined') return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wide = window.matchMedia('(min-width: 768px)').matches;
-    setMode(wide ? (reduced ? 'static-desktop' : 'immersive') : reduced ? 'static-mobile' : 'water-mobile');
+    setMode(wide ? (reduced ? 'static-desktop' : 'immersive') : 'static-mobile');
   }, []);
   return mode;
 };
