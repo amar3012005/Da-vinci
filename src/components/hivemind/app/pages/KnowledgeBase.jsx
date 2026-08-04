@@ -1209,7 +1209,10 @@ export default function KnowledgeBase() {
       };
     })();
 
-    const uploadOne = async ({ uploadEntry, file }, { force = false, attempt = 1 } = {}) => {
+    // Takes the whole queue entry (not a destructured copy) so it can reach `_slotReleased`, the
+    // signal that frees this file's transfer slot the moment its bytes are in.
+    const uploadOne = async (queueEntry, { force = false, attempt = 1 } = {}) => {
+      const { uploadEntry, file } = queueEntry;
       // Move queued → uploading
       setUploads((prev) => prev.map((u) =>
         u.id === uploadEntry.id ? { ...u, status: 'uploading', error: undefined } : u
@@ -1310,6 +1313,9 @@ export default function KnowledgeBase() {
           // Showing the true phase is what makes a 2-minute ingest trustworthy
           // instead of looking hung: "indexing (12 segments)" reads as progress,
           // "processing 131s" reads as broken.
+          // Bytes are in and the server owns the job — free the transfer slot so the next file
+          // starts NOW rather than after this document's 30-134s ingest.
+          onQueued: () => queueEntry._slotReleased?.(),
           onStatus: ({ status, progress, stage, segments, promoted } = {}) => {
             const LABEL = {
               queued: 'Queued — waiting for a worker',
@@ -1347,18 +1353,26 @@ export default function KnowledgeBase() {
                 etaSec,
                 bytesLoaded: e.loaded,
                 bytesTotal: e.total,
-                stage: pct < 100 ? 'uploading' : 'processing',
+                // ONE OWNER PER FIELD. This used to write `stage` too, which fought onStatus above:
+                // the server would report a real phase ('embedding'), then this timer overwrote
+                // stage:'processing' 2x/second. Because the row's bar and its percentage/speed/eta
+                // are chosen by `stage === 'processing'`, the row FLIPPED between a determinate
+                // 100% bar showing a stale upload speed and an indeterminate pulse — twice a second,
+                // for the whole ingest. That flicker is the "confusing to watch" part, and it was
+                // self-inflicted: the accurate server phase was already arriving.
+                // Byte progress owns `progress`/`bytesDone`; the server owns `stage`/`stageLabel`.
+                bytesDone: pct >= 100,
               } : u
             ));
-            // After byte-upload hits 100% server still processes (parse → segment
-            // → embed → promote). Switch into indeterminate "processing" mode
-            // so the bar doesn't lie about being done.
+            // After byte-upload hits 100% the server is still working (parse → segment → embed →
+            // promote). The counter below is ONLY a fallback for the window before the server has
+            // reported its first phase; it must never overwrite the phase once one arrives.
             if (pct >= 100 && !processingTimer) {
               const tProcessStart = Date.now();
               processingTimer = setInterval(() => {
                 setUploads((prev) => prev.map((u) =>
                   u.id === uploadEntry.id ? {
-                    ...u, stage: 'processing',
+                    ...u,
                     processingSec: Math.round((Date.now() - tProcessStart) / 1000),
                   } : u
                 ));
@@ -1457,12 +1471,18 @@ export default function KnowledgeBase() {
           const backoff = Math.min(8000, 1000 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 400);
           setUploads((prev) => prev.map((u) =>
             u.id === uploadEntry.id
+              // Reset the transfer-phase facts: a retry re-sends the bytes from zero. Leaving
+              // bytesDone/progress from the failed attempt showed the indeterminate "server is
+              // working" pulse while the file was in fact uploading again from the start.
               ? { ...u, status: 'uploading', stage: 'retrying', error: undefined,
+                  bytesDone: false, progress: 0, processingSec: undefined, stageLabel: undefined,
                   message: `Server busy — retrying (${attempt}/${MAX_UPLOAD_ATTEMPTS - 1})…` }
               : u
           ));
           await new Promise((r) => setTimeout(r, backoff));
-          return uploadOne({ uploadEntry, file }, { force, attempt: attempt + 1 });
+          // Pass the SAME entry, not a fresh literal — a copy would lose `_slotReleased` and the
+          // retry could never free its transfer slot.
+          return uploadOne(queueEntry, { force, attempt: attempt + 1 });
         }
         setUploads((prev) => prev.map((u) =>
           u.id === uploadEntry.id
@@ -1487,14 +1507,35 @@ export default function KnowledgeBase() {
     };
 
     // Worker loop: each worker pulls the next index until cursor exhausts queue.
+    //
+    // THE SLOT BOUNDS THE TRANSFER, NOT THE INGEST. `uploadOne` resolves only when the server has
+    // finished parsing/embedding/promoting, which is long and highly variable (measured
+    // promote=134118ms on a single document). Awaiting it here pinned one of `concurrency` (4) slots
+    // for that entire time, so files 5+ sat at "Waiting to upload" for minutes with nothing
+    // happening — the reported "only the top 4 upload and then it stops". The server's own kb-queue
+    // (cap 6) is the real throughput limit, so a second client-side gate on PROCESSING added no
+    // protection and destroyed the appearance of progress.
+    // Each upload now signals `_slotReleased` once its bytes are in, and the worker waits on THAT.
+    // The ingest keeps running and reporting; we still await every one before returning.
+    const inFlight = [];
     const workers = Array.from({ length: concurrency }, async () => {
       while (cursor < validQueue.length) {
         const myIdx = cursor++;
         if (myIdx >= validQueue.length) break;
-        await uploadOne(validQueue[myIdx]);
+        const entry = validQueue[myIdx];
+        let release;
+        const transferred = new Promise((r) => { release = r; });
+        entry._slotReleased = release;
+        // Never let a rejection escape: uploadOne already records failures onto the row, and an
+        // unhandled rejection here would abort the worker and strand the rest of the queue.
+        const done = uploadOne(entry).catch(() => {}).finally(() => release());
+        inFlight.push(done);
+        await transferred;
       }
     });
     await Promise.all(workers);
+    // Byte transfers are done; wait for the server-side ingests we started before reporting done.
+    await Promise.all(inFlight);
   }, [customTags, refetchKb, pickConcurrency, kbMemories, setUploads]);
 
   // Cancel a queued/uploading entry
@@ -1972,13 +2013,16 @@ export default function KnowledgeBase() {
                 {/* Per-file progress bar (background fill).
                     During byte-upload: actual %.
                     During server-side processing: shimmer/indeterminate. */}
-                {u.status === 'uploading' && u.stage !== 'processing' && (u.progress || 0) > 0 && (
+                {/* Exactly two mutually-exclusive bars, both keyed off ONE fact — whether the bytes
+                    have finished uploading. Previously both were keyed off `stage`, which two
+                    writers updated, so a row could satisfy neither or alternate between them. */}
+                {u.status === 'uploading' && !u.bytesDone && (u.progress || 0) > 0 && (
                   <div
                     className="absolute inset-y-0 left-0 bg-[#117dff]/10 transition-all duration-200 pointer-events-none"
                     style={{ width: `${u.progress}%` }}
                   />
                 )}
-                {u.status === 'uploading' && u.stage === 'processing' && (
+                {u.status === 'uploading' && u.bytesDone && (
                   <div className="absolute inset-y-0 left-0 right-0 pointer-events-none bg-[#117dff]/8 animate-pulse" />
                 )}
                 <div className="relative flex items-center gap-3 flex-1 min-w-0">
@@ -1991,7 +2035,10 @@ export default function KnowledgeBase() {
                   {u.status === 'cancelled' && <XCircle size={14} className="text-[#a3a3a3]" />}
                   <span className="flex-1 text-[#0a0a0a] truncate">{u.filename}</span>
                   {u.size && <span className="text-[#a3a3a3]">{formatBytes(u.size)}</span>}
-                  {u.status === 'uploading' && u.stage !== 'processing' && (u.progress || 0) > 0 && (
+                  {/* Transfer stats belong to the TRANSFER only. Showing "100% · 4.2MB/s · eta 0s"
+                      next to "Extracting memories" told the user the upload was still running
+                      minutes after it had finished. */}
+                  {u.status === 'uploading' && !u.bytesDone && (u.progress || 0) > 0 && (
                     <>
                       <span className="text-[#117dff] font-semibold">{u.progress}%</span>
                       {u.speedBps > 0 && (
@@ -2002,7 +2049,7 @@ export default function KnowledgeBase() {
                       )}
                     </>
                   )}
-                  {u.status === 'uploading' && u.stage !== 'uploading' && (u.progress || 0) >= 100 && (
+                  {u.status === 'uploading' && u.bytesDone && (
                     /* Real server phase, not an elapsed-seconds guess. The stage
                        comes from knowledge_ingest_jobs via onStatus, so a 2-minute
                        ingest reads as progress ("Extracting memories") instead of
@@ -2019,6 +2066,15 @@ export default function KnowledgeBase() {
                         <span className="text-[#16a34a] font-normal"> · {u.promoted} memories</span>
                       )}
                     </span>
+                  )}
+                  {/* TWO DIFFERENT QUEUES, said differently. `status:'queued'` means this file has
+                      not been sent yet (waiting for a client upload slot); the server's own
+                      'queued' stage means it IS uploaded and waiting for a worker. Both used to be
+                      indistinguishable — one showed a bare clock icon and the other said
+                      "Queued — waiting for a worker" — so a row that had not started looked
+                      identical to one that was already server-side. */}
+                  {u.status === 'queued' && (
+                    <span className="text-[#a3a3a3]">Waiting to upload…</span>
                   )}
                   {u.stage === 'checking' && (
                     <span className="text-[#a3a3a3]">Checking if already uploaded…</span>

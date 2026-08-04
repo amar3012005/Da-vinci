@@ -2062,6 +2062,13 @@ class HiveMindApiClient {
 
     // 2. Poll status until terminal.
     const jobId = started.job_id;
+    // THE BYTES ARE IN AND THE SERVER OWNS THE JOB. Tell the caller now, so an upload QUEUE can
+    // release its slot here instead of holding it for the whole server-side ingest. That ingest is
+    // long and variable — measured `promote=134118ms` on one document — and the caller's slot was
+    // pinned for all of it, so with a concurrency of 4 the 5th file sat untouched for minutes while
+    // the user watched "Waiting to upload". The server already has its own BullMQ queue (cap 6),
+    // which is the real throughput limit; gating on the client too just hid progress.
+    options.onQueued?.({ job_id: jobId });
     const deadline = Date.now() + (options.timeoutMs || 10 * 60 * 1000);
     const pollMs = options.pollMs || 2500;
     while (Date.now() < deadline) {
