@@ -43,25 +43,18 @@ const Viewfinder = () => (
 const scrollNext = () => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
 
 const BannerLockup = () => (
-  <div className="w-full max-w-5xl px-5 sm:px-8">
-    <div className="relative border border-white/65 bg-black/20 px-5 py-6 shadow-[0_18px_70px_rgba(0,0,0,0.32)] backdrop-blur-[2px] sm:px-10 sm:py-9">
-      <span className="absolute -left-px -top-px h-5 w-5 border-l-2 border-t-2 border-white" />
-      <span className="absolute -right-px -top-px h-5 w-5 border-r-2 border-t-2 border-white" />
-      <span className="absolute -bottom-px -left-px h-5 w-5 border-b-2 border-l-2 border-white" />
-      <span className="absolute -bottom-px -right-px h-5 w-5 border-b-2 border-r-2 border-white" />
-      <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-3 text-[9px] font-mono uppercase tracking-[0.22em] text-white/55 sm:text-[10px]">
-        <span>Singulance / 01</span>
-        <span>European AI workforce</span>
-      </div>
-      <a href={HIVEMIND_URL} className="group mt-5 block text-center text-white no-underline sm:mt-7">
-        <span className="block text-[clamp(2rem,5.9vw,5.4rem)] font-semibold leading-[0.9] tracking-[0.06em]">
-          Run your AI company
-        </span>
-        <span className="mt-4 inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.34em] text-white/70 transition-colors duration-300 group-hover:text-white">
-          <span className="text-white/35">[</span>
-          Enter
-          <span className="text-white/35">]</span>
-        </span>
+  <div className="w-full max-w-6xl px-5 sm:px-8">
+    <div className="relative flex h-14 items-center justify-center border border-white/60 bg-black/20 px-5 shadow-[0_10px_40px_rgba(0,0,0,0.22)] backdrop-blur-[2px] sm:h-16">
+      <span className="absolute -left-px -top-px h-3 w-3 border-l-2 border-t-2 border-white" />
+      <span className="absolute -right-px -top-px h-3 w-3 border-r-2 border-t-2 border-white" />
+      <span className="absolute -bottom-px -left-px h-3 w-3 border-b-2 border-l-2 border-white" />
+      <span className="absolute -bottom-px -right-px h-3 w-3 border-b-2 border-r-2 border-white" />
+      <a
+        href={HIVEMIND_URL}
+        aria-label="Run your AI company. Enter Hivemind."
+        className="font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-white no-underline transition-opacity duration-300 hover:opacity-70 sm:text-xs sm:tracking-[0.34em]"
+      >
+        [ Run your AI company ]
       </a>
     </div>
   </div>
@@ -70,12 +63,12 @@ const BannerLockup = () => (
 const HeroActionRail = ({ delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
-    className="w-full max-w-5xl px-5 sm:px-8"
+    className="w-full max-w-6xl px-5 sm:px-8"
   >
-    <div className="grid items-center gap-4 border-y border-white/20 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(250px,1.4fr)_minmax(0,1fr)] sm:gap-6">
+    <div className="flex flex-col items-center gap-3 border-y border-white/20 py-4 lg:grid lg:grid-cols-[minmax(180px,1fr)_minmax(440px,2.1fr)_minmax(180px,1fr)] lg:gap-6">
       <HeroCtas delay={0} banner />
-      <p className="order-first text-center text-sm font-light leading-relaxed text-white/75 sm:order-2 sm:px-2">
-        The AI workforce that runs inside your organization&apos;s memory.
+      <p className="order-first whitespace-nowrap text-center text-[clamp(0.58rem,1.05vw,1rem)] font-light leading-relaxed text-white/75 lg:order-2 lg:px-2">
+        The AI workforce that runs inside your organization&apos;s&nbsp;memory.
       </p>
     </div>
   </motion.div>
