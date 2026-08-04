@@ -878,7 +878,7 @@ class HiveMindApiClient {
   }
 
   async listTaraVoices(provider) {
-    const { data } = await this.controlPlane.get(`/v1/proxy/tara/voices?provider=${encodeURIComponent(provider)}`);
+    const { data } = await this.controlPlane.get(`/v1/tara/voices?provider=${encodeURIComponent(provider)}`);
     return data;
   }
 

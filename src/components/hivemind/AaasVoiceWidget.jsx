@@ -25,6 +25,23 @@ const MODE_DESC = {
   internal: 'Agent acts as your private HIVEMIND — answers you directly with full recall, for internal use.',
 };
 
+// A multilingual provider accepts the requested conversation language rather
+// than exposing a separate voice for every locale. Keep that choice explicit.
+const MULTILINGUAL_LANGUAGE_OPTIONS = ['en', 'de', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ar', 'hi', 'ja', 'ko', 'zh'];
+
+function resolveCatalogLanguages(catalog, voices, preferredLanguage) {
+  const advertised = Array.isArray(catalog?.languages) ? catalog.languages : [];
+  const voiceLanguages = voices.flatMap((voice) => Array.isArray(voice?.languages)
+    ? voice.languages : voice?.language ? [voice.language] : []);
+  const multilingual = [...advertised, ...voiceLanguages].some((value) => String(value).toLowerCase() === 'multilingual');
+  return [...new Set([
+    ...(multilingual ? MULTILINGUAL_LANGUAGE_OPTIONS : []),
+    ...advertised,
+    ...voiceLanguages,
+    preferredLanguage,
+  ].map((value) => String(value || '').toLowerCase()).filter((value) => value && value !== 'multilingual'))];
+}
+
 export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase = null, provider = 'deepgram', initialGoal = '', initialMode = 'external', onSessionCreated = null, onSessionEnded = null }) {
   const engineWs = wsBase || DG_WS;
   const engineHttp = DG_HTTP;
@@ -37,6 +54,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   // Voice picker
   const [voices, setVoices] = useState([]);
   const [langs, setLangs] = useState([]);
+  const [catalogState, setCatalogState] = useState('loading');
+  const [catalogError, setCatalogError] = useState('');
   const [langFilter, setLangFilter] = useState((language || 'en').split('-')[0].toLowerCase());
   const [genderFilter, setGenderFilter] = useState('');
   const [voiceId, setVoiceId] = useState('');
@@ -49,26 +68,37 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const previewAudioRef = useRef(null);
 
   useEffect(() => {
-    const catalog = provider === 'grok'
-      ? apiClient.listTaraVoices('grok')
-      : fetch(`${engineHttp}/voices`).then((r) => r.json());
-    catalog
+    let cancelled = false;
+    const want = (language || 'en').split('-')[0].toLowerCase();
+    setCatalogState('loading');
+    setCatalogError('');
+    apiClient.listTaraVoices(provider)
       .then((d) => {
+        if (cancelled) return;
         const list = d.voices || [];
+        if (!Array.isArray(list) || !list.length) throw new Error('voice_catalog_empty');
         setVoices(list);
-        setLangs(d.languages || []);
+        setLangs(resolveCatalogLanguages(d, list, want));
+        setCatalogState('ready');
         // Robust default: exact 'en' → any 'en*' → first available (never leave empty,
         // which would make Start send no voice_id and fall back to Cartesia's default).
         // Prefer a voice in the caller's chosen language, then any en, then first.
-        const want = (language || 'en').split('-')[0].toLowerCase();
         const def = list.find((v) => v.language === want)
           || list.find((v) => (v.language || '').startsWith(want))
           || list.find((v) => v.language === 'en')
           || list[0];
         if (def) setVoiceId(def.id);
       })
-      .catch(() => {});
-  }, [engineHttp, language, provider]);
+      .catch(() => {
+        if (cancelled) return;
+        setCatalogState('error');
+        setCatalogError('Voice options could not be loaded. Check the selected TARA provider, then try again.');
+        setVoices([]);
+        setLangs([want]);
+        setVoiceId('');
+      });
+    return () => { cancelled = true; };
+  }, [language, provider]);
 
   useEffect(() => {
     if (!active && initialGoal) setGoal(initialGoal);
@@ -128,12 +158,10 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
   const outVolRef = useRef(0);   // TARA speaking volume → orb
   const inVolRef = useRef(0);    // mic volume → orb
   const sessionIdRef = useRef(null);
-  const activeRef = useRef(false);
   const sessionCreatedRef = useRef(onSessionCreated);
   const sessionEndedRef = useRef(onSessionEnded);
   useEffect(() => { sessionCreatedRef.current = onSessionCreated; }, [onSessionCreated]);
   useEffect(() => { sessionEndedRef.current = onSessionEnded; }, [onSessionEnded]);
-  useEffect(() => { activeRef.current = active; }, [active]);
 
   const stopAll = useCallback((reason) => {
     sourcesRef.current.forEach((s) => { try { s.stop(); } catch { /* noop */ } });
@@ -226,8 +254,20 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       return;
     }
 
-    const protocols = provider === 'grok' ? ['hm.tara.v1', `hm.tara.cap.${grokCapability}`] : undefined;
-    const ws = protocols ? new WebSocket(url.toString(), protocols) : new WebSocket(url.toString());
+    if (provider === 'grok' && !grokCapability) {
+      setError('TARA did not return a browser session capability. Please try again.');
+      stopAll('missing-capability');
+      return;
+    }
+    let ws;
+    try {
+      const protocols = provider === 'grok' ? ['hm.tara.v1', `hm.tara.cap.${grokCapability}`] : undefined;
+      ws = protocols ? new WebSocket(url.toString(), protocols) : new WebSocket(url.toString());
+    } catch {
+      setError('The browser could not open the TARA voice connection.');
+      stopAll('socket-create-error');
+      return;
+    }
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
 
@@ -272,8 +312,12 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
       }
     };
     ws.onerror = () => setError('Connection error.');
-    ws.onclose = () => { if (activeRef.current) stopAll('closed'); };
-  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, active, stopAll, provider]);
+    ws.onclose = (closeEvent) => {
+      if (wsRef.current !== ws) return;
+      if (closeEvent.code !== 1000) setError('TARA closed before the voice session became ready. You can adjust the settings and try again.');
+      stopAll('closed');
+    };
+  }, [userId, orgId, language, langFilter, voiceId, mode, goal, engineWs, playPcm, stopAll, provider]);
 
   useEffect(() => () => stopAll('unmount'), [stopAll]);
 
@@ -366,6 +410,8 @@ export default function AaasVoiceWidget({ userId, orgId, language = 'en', wsBase
                   {previewing ? <Loader2 size={13} className="animate-spin" /> : <Volume2 size={13} />} Hear
                 </button>
               </div>
+              {catalogState === 'loading' ? <p className="text-[10px] text-[#777168]">Loading available voices…</p> : null}
+              {catalogError ? <p className="text-[10px] leading-4 text-red-700">{catalogError}</p> : null}
               {/* Session goal — drives the strategist (phase + confidence) like outbound */}
               <input
                 type="text" value={goal} onChange={(e) => setGoal(e.target.value)}

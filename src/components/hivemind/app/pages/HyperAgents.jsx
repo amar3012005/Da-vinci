@@ -2721,11 +2721,11 @@ function RoomThread({ roomId, onArchived }) {
                 <button
                   type="button"
                   onClick={handleRoomCall}
-                  disabled={callBusy || !/^\+[1-9]\d{7,14}$/.test(callNumber.trim())}
+                  disabled={callBusy || Boolean(browserCall) || !/^\+[1-9]\d{7,14}$/.test(callNumber.trim())}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0a0a0a] px-3 text-[11px] font-semibold text-white disabled:opacity-50"
                 >
                   {callBusy ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
-                  {callBusy ? t('hyperAgents.dialing', 'Dialing…') : t('hyperAgents.startCall', 'Start call')}
+                  {callBusy ? t('hyperAgents.dialing', 'Dialing…') : browserCall ? t('hyperAgents.browserCallReady', 'Browser call ready') : t('hyperAgents.startCall', 'Start call')}
                 </button>
               </div>
             </div>
