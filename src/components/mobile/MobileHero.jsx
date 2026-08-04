@@ -42,6 +42,45 @@ const Viewfinder = () => (
 
 const scrollNext = () => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' });
 
+const BannerLockup = () => (
+  <div className="w-full max-w-5xl px-5 sm:px-8">
+    <div className="relative border border-white/65 bg-black/20 px-5 py-6 shadow-[0_18px_70px_rgba(0,0,0,0.32)] backdrop-blur-[2px] sm:px-10 sm:py-9">
+      <span className="absolute -left-px -top-px h-5 w-5 border-l-2 border-t-2 border-white" />
+      <span className="absolute -right-px -top-px h-5 w-5 border-r-2 border-t-2 border-white" />
+      <span className="absolute -bottom-px -left-px h-5 w-5 border-b-2 border-l-2 border-white" />
+      <span className="absolute -bottom-px -right-px h-5 w-5 border-b-2 border-r-2 border-white" />
+      <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-3 text-[9px] font-mono uppercase tracking-[0.22em] text-white/55 sm:text-[10px]">
+        <span>Singulance / 01</span>
+        <span>European AI workforce</span>
+      </div>
+      <a href={HIVEMIND_URL} className="group mt-5 block text-center text-white no-underline sm:mt-7">
+        <span className="block text-[clamp(2rem,5.9vw,5.4rem)] font-semibold leading-[0.9] tracking-[0.06em]">
+          Run your AI company
+        </span>
+        <span className="mt-4 inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.34em] text-white/70 transition-colors duration-300 group-hover:text-white">
+          <span className="text-white/35">[</span>
+          Enter
+          <span className="text-white/35">]</span>
+        </span>
+      </a>
+    </div>
+  </div>
+);
+
+const HeroActionRail = ({ delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay, ease }}
+    className="w-full max-w-5xl px-5 sm:px-8"
+  >
+    <div className="grid items-center gap-4 border-y border-white/20 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(250px,1.4fr)_minmax(0,1fr)] sm:gap-6">
+      <HeroCtas delay={0} banner />
+      <p className="order-first text-center text-sm font-light leading-relaxed text-white/75 sm:order-2 sm:px-2">
+        The AI workforce that runs inside your organization&apos;s memory.
+      </p>
+    </div>
+  </motion.div>
+);
+
 /* ---------- desktop full-bleed ---------- */
 const DesktopHero = ({ immersive }) => (
   <section
@@ -84,25 +123,15 @@ const DesktopHero = ({ immersive }) => (
       </p>
     </motion.div>
 
-    {/* bottom block — title + bracket CTA + scroll cue */}
-    <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-7 px-6 pb-[8vh] text-center">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="pointer-events-none max-w-2xl">
-        <p className="text-[2rem] font-semibold leading-tight tracking-tight text-white">Run your institution as an AI company</p>
-        <p className="mt-2 text-base font-light leading-relaxed text-white/65">The AI workforce that runs inside your organization&apos;s memory.</p>
+    {/* Framed operating banner: the clear public entry point. */}
+    <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-5 pb-[7vh] text-center">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.55, ease }} className="w-full">
+        <BannerLockup />
       </motion.div>
-      <motion.a
-        href={HIVEMIND_URL}
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.75, ease }}
-        className="group inline-flex items-center gap-4 text-white no-underline"
-      >
-        <span className="font-mono text-base text-white/40 transition-transform duration-300 group-hover:-translate-x-1">[</span>
-        <span className="text-xs font-semibold uppercase tracking-[0.34em]">Enter SINGULANCE</span>
-        <span className="font-mono text-base text-white/40 transition-transform duration-300 group-hover:translate-x-1">]</span>
-      </motion.a>
-      <HeroCtas delay={0.9} />
+      <HeroActionRail delay={0.78} />
       <motion.button
         onClick={scrollNext} aria-label="Scroll down"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 1, ease }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9, delay: 0.95, ease }}
         className="text-white/45 transition-colors hover:text-white"
       >
         <motion.span animate={{ y: [0, 5, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }} className="block">
@@ -138,12 +167,11 @@ const MobileHeroBand = ({ water }) => (
       )}
     </motion.div>
 
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="px-5 text-center">
-      <p className="text-xl font-semibold tracking-tight text-white">Run your institution as an AI company</p>
-      <p className="mt-2 text-sm font-light leading-relaxed text-white/65">The AI workforce that runs inside your organization&apos;s memory.</p>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.45, ease }} className="w-full">
+      <BannerLockup />
     </motion.div>
 
-    <HeroCtas delay={0.6} compact />
+    <HeroActionRail delay={0.6} />
 
     {/* scroll-down cue replaces the CTA */}
     <button
